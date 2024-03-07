@@ -1,0 +1,19 @@
+{
+    auto_https off
+}
+(common) {
+    reverse_proxy /api/* localhost:5138
+    reverse_proxy /hub/* localhost:5138
+    reverse_proxy localhost:5173
+}
+http://192.168.31.163:42080 {
+    import common
+}
+192.168.31.163:42443 {
+    tls ./.cert/cert.pem ./.cert/key.pem {
+    }
+    import common
+}
+
+
+
