@@ -1,95 +1,96 @@
-import { useState } from "preact/hooks";
 import { Component } from "preact";
 import { signal } from "@preact/signals";
-import { HubConnectionBuilder, HubConnectionState } from "@microsoft/signalr";
+import { HubConnectionState } from "@microsoft/signalr";
 import "./App.css";
-import { ClientPeer, OfferPeer, RTCRole } from "./rtc";
+import { CameraBiStreamPeer, RTCRole } from "./CameraBiStreamPeer";
 import { createPeerSignalServer } from "./peer";
-import { AutoPlayVideo } from "./cam";
+import { Subject, interval, takeUntil } from "rxjs";
+import { TestServerPeer } from "./TestServerPeer";
 
 export class App extends Component<{}, {}> {
-  readonly signalServer = createPeerSignalServer("/hub/rtc");
-  readonly clientId = signal<string | null>(null);
+  readonly server = createPeerSignalServer("/hub/rtc");
+  readonly selfId = signal<string | null>(null);
+  readonly peerId = signal<string | null>(null);
+  readonly role = signal<RTCRole | null>(null);
+  readonly done$ = new Subject<{}>();
   readonly stream = signal<MediaStream | null>(null);
   connectionState = signal(HubConnectionState.Disconnected);
 
   componentDidMount() {
     (async () => {
       this.connectionState.value = HubConnectionState.Connecting;
-      await this.signalServer.connection.start();
-      this.clientId.value = this.signalServer.connection.connectionId;
-      console.log(this.signalServer.connection.connectionId);
-      await this.signalServer.broadcast("test-object", { test: "data" });
-      await this.signalServer.broadcast('test-string', "string data test");
+      await this.server.connection.start();
+      this.connectionState.value = this.server.connection.state;
+      this.selfId.value = this.server.connection.connectionId;
+      console.log(this.server.connection.connectionId);
+
+      interval(500)
+        .pipe(takeUntil(this.done$))
+        .subscribe((_) => {
+          if (this.role.value !== null) {
+            this.server.broadcast(this.role.value, this.selfId.value);
+          }
+        });
+      this.server.broadcast$.pipe(takeUntil(this.done$)).subscribe((m) => {
+        if (
+          (m.label === "offer" || m.label === "answer") &&
+          m.label !== this.role.value &&
+          this.role.value !== null
+        ) {
+          this.peerId.value = m.data as string;
+        }
+      });
     })();
   }
 
   componentWillUnmount(): void {
-    this.signalServer.connection.stop();
+    this.server.connection.stop();
+    this.connectionState.value = this.server.connection.state;
+    this.done$.next({});
+    this.done$.complete();
   }
 
   render = () => {
-    const [role, setRole] = useState<RTCRole | null>(null);
-    const [withServerVideo, setWithServerVideo] = useState(false);
-
     return (
       <div>
         <h1>Drilla Engine</h1>
         <div>
-          <span>clientId {this.clientId} </span>{" "}
-          <button
-            onClick={() => {
-              setWithServerVideo(true);
-              this.signalServer.createServerPeer(
-                async () => {
-                  const pc = new RTCPeerConnection();
-                  pc.ontrack = (e) => {
-                    this.stream.value = e.streams[0];
-                  };
-                  return pc;
-                },
-                {
-                  offerToReceiveVideo: true,
-                }
-              );
-            }}
-          >
-            test server peer
-          </button>
-          {withServerVideo ? (
-            <AutoPlayVideo stream={this.stream.value}></AutoPlayVideo>
-          ) : (
-            <></>
-          )}
+          <div>Self Id: {this.selfId}</div>
+          <div>Peer Id: {this.peerId}</div>
         </div>
+        <TestServerPeer server={this.server}></TestServerPeer>
 
-        {role === null ? (
+        {this.role.value === null ? (
           <>
             <button
               onClick={() => {
-                setRole("offer");
+                this.role.value = "offer";
               }}
             >
               Start As Offer
             </button>
             <button
               onClick={() => {
-                setRole("client");
+                this.role.value = "answer";
               }}
             >
-              Start As Client
+              Start As Answer
             </button>
           </>
-        ) : role === "offer" ? (
-          <OfferPeer
-            hubConnection={this.signalServer.connection}
-            signalServer={this.signalServer}
-          ></OfferPeer>
         ) : (
-          <ClientPeer
-            hubConnection={this.signalServer.connection}
-            peerSignalServer={this.signalServer}
-          ></ClientPeer>
+          <></>
+        )}
+        {this.role.value !== null &&
+        this.selfId.value !== null &&
+        this.peerId.value !== null ? (
+          <CameraBiStreamPeer
+            server={this.server}
+            selfId={this.selfId.value}
+            peerId={this.peerId.value}
+            role={this.role.value}
+          ></CameraBiStreamPeer>
+        ) : (
+          <></>
         )}
       </div>
     );

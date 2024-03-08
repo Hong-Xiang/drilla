@@ -7,7 +7,7 @@ interface BroadcastMessage {
   data: unknown;
 }
 
-export interface SignalServer {
+export interface PeerSignalServer {
   createServerPeer(
     builder: () => Promise<RTCPeerConnection>,
     offerOptions?: RTCOfferOptions
@@ -37,7 +37,7 @@ interface WebRTCPeerHub {
   negotiateServer(offerSdp: string): Promise<string>;
 }
 
-export function createPeerSignalServer(url: string): SignalServer {
+export function createPeerSignalServer(url: string): PeerSignalServer {
   const connection = new HubConnectionBuilder().withUrl(url).build();
 
   const hub: WebRTCPeerHub = {
@@ -148,7 +148,7 @@ export function createPeerSignalServer(url: string): SignalServer {
     return pc;
   }
 
-  const result: SignalServer = {
+  const result: PeerSignalServer = {
     createClientPeer: async (clientId, builder, options) => {
       return await createOfferPeer(clientId, builder, options);
     },
