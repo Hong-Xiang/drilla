@@ -1,21 +1,5 @@
-import { mat4, vec2 } from "gl-matrix";
-import { RenderServiceBuilder } from "./RenderServiceBuilder";
-
-export type ViewRenderer = (viewContext: {
-  gl: WebGL2RenderingContext;
-  time: number;
-  view: mat4;
-  proj: mat4;
-  target: {
-    framebuffer: WebGLFramebuffer | null;
-    extend: vec2;
-  };
-}) => void;
-
-export interface RenderService {
-  readonly gl: WebGL2RenderingContext;
-  run(drawView: ViewRenderer): void;
-}
+import { mat4, vec3 } from "gl-matrix";
+import { RenderPlatform, RenderService } from "./RenderService";
 
 export interface WebXRService extends RenderService {
   readonly session: XRSession;
@@ -23,20 +7,15 @@ export interface WebXRService extends RenderService {
   readonly localRefSpace: XRReferenceSpace;
 }
 
-export async function createXRRenderService({
-  canvas,
-}: RenderServiceBuilder): Promise<WebXRService> {
-  const gl = canvas.getContext("webgl2", { xrCompatible: true });
-  if (!gl) {
-    throw new Error(`failed to get webgl2 context compatible with xr`);
-  }
-
+export async function createWebXRRenderService({
+  gl,
+}: RenderPlatform): Promise<WebXRService> {
   const xr = navigator.xr;
   if (!xr) {
     throw new Error(`navigator.xr is undefined`);
   }
 
-  const session = await xr.requestSession("immersive-vr");
+  const session = await xr.requestSession("immersive-ar");
   const localRefSpace = await session.requestReferenceSpace("local");
 
   const baseLayer = new XRWebGLLayer(session, gl, {
@@ -62,16 +41,55 @@ export async function createXRRenderService({
     localRefSpace,
     run: (drawView) => {
       session.requestAnimationFrame((time, xrFrame) => {
-        drawView({
-          time,
-          gl,
-          view: mat4.identity(mat4.create()),
-          proj: mat4.identity(mat4.create()),
-          target: {
-            framebuffer: baseLayer.framebuffer,
-            extend: [baseLayer.framebufferWidth, baseLayer.framebufferHeight],
-          },
-        });
+        const pose = xrFrame.getViewerPose(localRefSpace);
+        if (!pose) {
+          throw new Error("failed to get pose");
+        }
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        for (const view of pose.views) {
+          console.log(view.transform.position);
+          const viewPort = baseLayer.getViewport(view);
+
+          const fov = (30 * Math.PI) / 180;
+          const aspect =
+            baseLayer.framebufferWidth / baseLayer.framebufferHeight;
+          const zNear = 0.5;
+          const zFar = 10;
+          const proj = mat4.create();
+          mat4.perspective(proj, fov, aspect, zNear, zFar);
+
+          const eye = vec3.fromValues(0, 0, 0);
+          const target = vec3.fromValues(0, 0, 0);
+          const up = vec3.fromValues(0, 1, 0);
+          const viewM = mat4.create();
+          mat4.lookAt(viewM, eye, target, up);
+
+          drawView({
+            time,
+            gl,
+            viewPort: viewPort ?? {
+              x: 0,
+              y: 0,
+              width: baseLayer.framebufferWidth,
+              height: baseLayer.framebufferHeight,
+            },
+            // view: mat4.identity(mat4.create()),
+            // proj: mat4.identity(mat4.create()),
+            // view: view.transform.matrix,
+            proj: view.projectionMatrix,
+            // proj,
+            view: view.transform.inverse.matrix,
+            // view: viewM,
+            // proj,
+            target: {
+              framebuffer: baseLayer.framebuffer,
+              extend: [baseLayer.framebufferWidth, baseLayer.framebufferHeight],
+            },
+          });
+        }
+
         if (!sessionEnded) {
           service.run(drawView);
         }

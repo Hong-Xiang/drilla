@@ -5,7 +5,7 @@ in vec2 v_texCoord;
 in vec3 v_normal;
 
 uniform vec3 u_lightDirection;
-uniform sampler2D u_diffuse;
+uniform sampler2D diffuseColor;
 
 out vec4 outColor;
 
@@ -14,8 +14,10 @@ vec4 lit(float l, float h, float m) {
 }
 
 void main() {
-    vec4 diffuseColor = texture(u_diffuse, v_texCoord);
+    vec4 diffuseColor = texture(diffuseColor, v_texCoord);
     vec3 a_normal = normalize(v_normal);
     float l = dot(a_normal, u_lightDirection) * 0.5f + 0.5f;
     outColor = vec4(diffuseColor.rgb * l, diffuseColor.a);
+    // outColor = vec4(v_normal, 1.0f);
+    outColor = diffuseColor;
 }

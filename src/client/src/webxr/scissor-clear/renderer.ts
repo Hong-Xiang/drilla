@@ -1,4 +1,4 @@
-import { ViewRenderer } from "../WebXRRenderService";
+import { ViewRenderer } from "../RenderService";
 
 export const ScissorClear: ViewRenderer = ({
   gl,
