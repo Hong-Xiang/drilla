@@ -11,6 +11,9 @@ dependencies:
   '@preact/signals':
     specifier: ^1.2.2
     version: 1.2.2(preact@10.19.6)
+  gl-matrix:
+    specifier: ^3.4.3
+    version: 3.4.3
   preact:
     specifier: ^10.19.5
     version: 10.19.6
@@ -20,6 +23,9 @@ dependencies:
   styled-components:
     specifier: ^6.1.8
     version: 6.1.8(react-dom@18.2.0)(react@18.2.0)
+  twgl.js:
+    specifier: ^5.5.4
+    version: 5.5.4
 
 devDependencies:
   '@preact/preset-vite':
@@ -28,6 +34,12 @@ devDependencies:
   '@types/node':
     specifier: ^20.11.1
     version: 20.11.24
+  '@types/webxr':
+    specifier: ^0.5.14
+    version: 0.5.14
+  '@webgpu/types':
+    specifier: ^0.1.40
+    version: 0.1.40
   typescript:
     specifier: ^5.2.2
     version: 5.3.3
@@ -747,6 +759,14 @@ packages:
     resolution: {integrity: sha512-n4sx2bqL0mW1tvDf/loQ+aMX7GQD3lc3fkCMC55VFNDu/vBOabO+LTIeXKM14xK0ppk5TUGcWRjiSpIlUpghKw==}
     dev: false
 
+  /@types/webxr@0.5.14:
+    resolution: {integrity: sha512-UEMMm/Xn3DtEa+gpzUrOcDj+SJS1tk5YodjwOxcqStNhCfPcwgyC5Srg2ToVKyg2Fhq16Ffpb0UWUQHqoT9AMA==}
+    dev: true
+
+  /@webgpu/types@0.1.40:
+    resolution: {integrity: sha512-/BBkHLS6/eQjyWhY2H7Dx5DHcVrS2ICj9owvSRdgtQT6KcafLZA86tPze0xAOsd4FbsYKCUBUQyNi87q7gV7kw==}
+    dev: true
+
   /abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
@@ -973,6 +993,10 @@ packages:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
     dev: true
+
+  /gl-matrix@3.4.3:
+    resolution: {integrity: sha512-wcCp8vu8FT22BnvKVPjXa/ICBWRq/zjFfdofZy1WSpQZpphblv12/bOQLBC1rMM7SGOFS9ltVmKOHil5+Ml7gA==}
+    dev: false
 
   /globals@11.12.0:
     resolution: {integrity: sha512-WOBp/EEGUiIsJSp7wcv/y6MO+lV9UoncWqxuFfm8eBwzWNgyfBd6Gz+IeKQ9jCmyhoH99g15M3T+QaVHFjizVA==}
@@ -1272,6 +1296,10 @@ packages:
 
   /tslib@2.6.2:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
+    dev: false
+
+  /twgl.js@5.5.4:
+    resolution: {integrity: sha512-6kFOmijOpmblTN9CCwOTCxK4lPg7rCyQjLuub6EMOlEp89Ex6yUcsMjsmH7andNPL2NE3XmHdqHeP5gVKKPhxw==}
     dev: false
 
   /typescript@5.3.3:

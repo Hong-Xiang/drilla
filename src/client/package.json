@@ -11,13 +11,17 @@
   "dependencies": {
     "@microsoft/signalr": "^8.0.0",
     "@preact/signals": "^1.2.2",
+    "gl-matrix": "^3.4.3",
     "preact": "^10.19.5",
     "rxjs": "^7.8.1",
-    "styled-components": "^6.1.8"
+    "styled-components": "^6.1.8",
+    "twgl.js": "^5.5.4"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.8.1",
     "@types/node": "^20.11.1",
+    "@types/webxr": "^0.5.14",
+    "@webgpu/types": "^0.1.40",
     "typescript": "^5.2.2",
     "vite": "^5.1.4"
   }

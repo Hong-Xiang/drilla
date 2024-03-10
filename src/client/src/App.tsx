@@ -6,6 +6,7 @@ import { CameraBiStreamPeer, RTCRole } from "./CameraBiStreamPeer";
 import { createPeerSignalServer } from "./peer";
 import { Subject, interval, takeUntil } from "rxjs";
 import { TestServerPeer } from "./TestServerPeer";
+import { PoseMonitor } from "./PoseMonitor";
 
 export class App extends Component<{}, {}> {
   readonly server = createPeerSignalServer("/hub/rtc");
@@ -54,6 +55,8 @@ export class App extends Component<{}, {}> {
     return (
       <div>
         <h1>Drilla Engine</h1>
+        <a href="render-tutorial.html">render page</a>
+        <PoseMonitor></PoseMonitor>
         <div>
           <div>Self Id: {this.selfId}</div>
           <div>Peer Id: {this.peerId}</div>
