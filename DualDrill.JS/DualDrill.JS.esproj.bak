@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>96a0aa95-6474-41dc-acb9-9c2f3d34097e</ProjectGuid>
+  </PropertyGroup>
+  <Target Name="Build">
+    <Exec Command="pnpm esbuild .\src\lib\client.ts --format=esm --bundle --target=es2020 --outfile=dist/client.js" />
+  </Target>
+</Project>

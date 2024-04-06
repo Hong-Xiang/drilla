@@ -1,0 +1,35 @@
+{
+  "name": "drilla.client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "esbuild ./src/lib/client.ts --format=esm --bundle --target=es2020 --outfile=dist/client.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^8.0.0",
+    "@shigen/polyfill-symbol-dispose": "^1.0.1",
+    "gl-matrix": "^3.4.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rxjs": "^7.8.1",
+    "styled-components": "^6.1.8",
+    "tsyringe": "^4.8.0",
+    "twgl.js": "^5.5.4"
+  },
+  "devDependencies": {
+    "@microsoft/dotnet-js-interop": "^8.0.0",
+    "@types/node": "^20.11.1",
+    "@types/react": "^18.2.71",
+    "@types/react-dom": "^18.2.22",
+    "@types/webxr": "^0.5.14",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@webgpu/types": "^0.1.40",
+    "esbuild": "0.20.2",
+    "prettier": "^3.2.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.6"
+  }
+}
