@@ -1,0 +1,45 @@
+﻿@page "/desktop"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<h3>Desktop Client</h3>
+
+<p>
+    id = @CircuitId
+</p>
+
+@if (Pair is null)
+{
+    <p>
+        <h4>Peer Ids</h4>
+        <button @onclick=RefreshPeerIds>refresh</button>
+
+        <ul>
+            @foreach (var pid in PeerIds)
+            {
+                <li>@pid</li>
+                <button @onclick=@(() => Connect(pid))>connect</button>
+            }
+        </ul>
+    </p>
+}
+else
+{
+    <p>
+        <span>
+            Pair Peer Id =  @Pair.SourceClient.Id - @Pair.TargetClient.Id
+        </span>
+        <span>
+            Pair Peer State = @SourcePeerState - @TargetPeerState
+        </span>
+        <button @onclick="RefreshPairState" >Refresh State</button>
+
+    </p>
+}
+
+
+
+<video autoplay playsinline @ref="SelfVideoElement" />
+<video autoplay playsinline @ref="PeerVideoElement" />
+<button @onclick="PlayCameraStream">Play Camera Stream</button>
+
+

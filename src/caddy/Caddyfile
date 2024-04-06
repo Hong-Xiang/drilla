@@ -2,9 +2,15 @@
     auto_https off
 }
 (common) {
+    route {
+
+    file_server /static/* {
+        root ../static
+    }
     reverse_proxy /api/* localhost:5138
     reverse_proxy /hub/* localhost:5138
     reverse_proxy localhost:5173
+    }
 }
 http://{$DRILLA_SITE_ADDRESS}:42080 {
     import common
@@ -14,6 +20,5 @@ http://{$DRILLA_SITE_ADDRESS}:42080 {
     }
     import common
 }
-
 
 
