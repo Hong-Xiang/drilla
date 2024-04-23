@@ -4,6 +4,8 @@ using DualDrill.Server.BrowserClient;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using System.Collections.Concurrent;
 using DualDrill.Engine.Connection;
+using DualDrill.Engine.UI;
+using DualDrill.Server.Application;
 
 namespace DualDrill.Server;
 
@@ -17,12 +19,13 @@ public class Program
             WebRootPath = "../DualDrill.JS/dist"
         });
 
-        builder.Services.AddSingleton<ClientHub>();
+        builder.Services.AddSingleton<DistributeXRUpdateLoopService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<DistributeXRUpdateLoopService>());
+        builder.Services.AddSingleton<DistributeXRApplicationService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<DistributeXRApplicationService>());
 
-        builder.Services.AddScoped<BrowserClient.BrowserClient>();
-        builder.Services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<BrowserClient.BrowserClient>());
-        builder.Services.AddBrowserClients();
-
+        //builder.Services.AddHostedService<DistributeXRApplicationService>();
+        builder.Services.AddClients();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()
@@ -47,7 +50,7 @@ public class Program
 
         app.UseStaticFiles();
         app.UseAntiforgery();
-        app.MapBrowserClients();
+        app.MapClients();
 
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()

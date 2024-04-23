@@ -1,0 +1,36 @@
+﻿@page "/desktop"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<h3>Desktop DrillA Client Home</h3>
+
+<p>
+    id = @Client?.Id
+</p>
+<p>
+    peer id = @PeerClient?.Id
+</p>
+
+<p>Frame count @FrameCount</p>
+<button @onclick="UpdateFrameCount">Update Frame Count</button>
+
+@if (!Connected)
+{
+    <p>
+        <h4>Peer Ids</h4>
+        <button @onclick=RefreshPeerIds>refresh</button>
+
+        <ul>
+            @foreach (var pid in PeerIds)
+            {
+                <li>@pid</li>
+                <button @onclick=@(() => Connect(pid))>connect</button>
+            }
+        </ul>
+    </p>
+}
+else
+{
+    <button @onclick="SendVideo">Send Video</button>
+}
+<video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video>
+<video id="peerVideo" @ref="PeerVideoElement" autoplay playsinline></video>

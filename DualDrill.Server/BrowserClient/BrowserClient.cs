@@ -1,64 +1,54 @@
-﻿using DualDrill.Engine.Connection;
+﻿using DualDrill.Common.ResourceManagement;
+using DualDrill.Engine.Connection;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.JSInterop;
-using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using DualDrill.Engine.UI;
 
 namespace DualDrill.Server.BrowserClient;
 
-sealed class BrowserClient(IServiceProvider ServiceProvider, ClientHub ClientHub, IJSRuntime JSRuntime)
-    : CircuitHandler, IClient, IAsyncDisposable
+public class BrowserClient(IServiceProvider Services, Circuit Circuit, IJSRuntime JSRuntime, JSDrillClientModule Module)
+    : IClient, IBrowserClient, IAsyncDisposable
 {
-    private readonly TaskCompletionSource InitializedSource = new();
-
-    private Circuit? _circuit = null;
-    public Circuit Circuit => _circuit ?? throw new Exception("Not initialized yet");
-    public IServiceProvider ServiceProvider { get; } = ServiceProvider;
+    public Circuit Circuit { get; } = Circuit;
     public IJSRuntime JSRuntime { get; } = JSRuntime;
+    public JSDrillClientModule Module { get; } = Module;
+    public IServiceProvider Services { get; } = Services;
 
-    public Task Initialized => InitializedSource.Task;
+    public string Id => Circuit.Id;
 
-    public string Id => Circuit?.Id ?? throw new Exception("Not initialized yet");
+    private Subject<IP2PClientPair> PairedAsTargetSubject { get; } = new();
+    public IObservable<IP2PClientPair> PairedAsTarget => PairedAsTargetSubject;
 
-    private ClientModule? _module = null;
-    public ClientModule Module => _module ?? throw new Exception("Not initialized yet");
-
-    private Subject<IClientPeerToPeerPair> SourcePeer = new();
-    private Subject<IClientPeerToPeerPair> TargetPeer = new();
-
-    public IObservable<IClientPeerToPeerPair> ConnectAsTargetPair => TargetPeer;
-
-    public override async Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
+    public static async Task<BrowserClient> CreateAsync(
+        IServiceProvider services,
+        Circuit circuit,
+        IJSRuntime jsRuntime
+    )
     {
-        await base.OnCircuitOpenedAsync(circuit, cancellationToken).ConfigureAwait(false);
-        _circuit = circuit;
-        _module = await ClientModule.ImportAsync(JSRuntime).ConfigureAwait(false);
-        InitializedSource.SetResult();
-        ClientHub.AddClient(circuit.Id, this);
+        Console.WriteLine("Loading client js module");
+        var module = await JSDrillClientModule.ImportModuleAsync(jsRuntime).ConfigureAwait(false);
+        return new BrowserClient(services, circuit, jsRuntime, module);
     }
 
-    public override async Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
-    {
-        ClientHub.RemoveClient(this);
-        await base.OnCircuitClosedAsync(circuit, cancellationToken);
-    }
-
-    public async Task<IClientPeerToPeerPair> CreatePairAsync(IClient target)
+    public async Task<IP2PClientPair> CreatePairAsync(IClient target)
     {
         var browserTarget = (BrowserClient)target;
         var pair = await BrowserClientPair.CreateAsync(this, browserTarget);
-        SourcePeer.OnNext(pair);
-        browserTarget.TargetPeer.OnNext(pair);
+        browserTarget.PairedAsTargetSubject.OnNext(pair);
         return pair;
     }
 
     public async ValueTask DisposeAsync()
     {
-        SourcePeer.Dispose();
-        TargetPeer.Dispose();
-        if (_module is not null)
-        {
-            await _module.DisposeAsync();
-        }
+        await Module.DisposeAsync().ConfigureAwait(false);
+        PairedAsTargetSubject.Dispose();
+    }
+
+    public bool Equals(IClient? other) => other?.Id == Id;
+
+    public ValueTask<JSMediaStreamProxy> GetCameraStreamAsync()
+    {
+        throw new NotImplementedException();
     }
 }

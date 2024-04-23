@@ -9,12 +9,15 @@ using System.Threading.Channels;
 namespace DualDrill.Server.BrowserClient;
 
 
-sealed class RTCPeerConnectionProxy(IJSObjectReference JS,
+sealed class RTCPeerConnectionProxy(
+    IBrowserClient Client,
+    IJSObjectReference JS,
     IObservable<string> ConnectionStateChange,
     IObservable<object> IceCandidate,
     IObservable<Unit> NegotiationNeeded,
     IAsyncDisposable Resource) : IAsyncDisposable
 {
+    public IBrowserClient Client { get; } = Client;
     public IObservable<string> ConnectionStateChange { get; } = ConnectionStateChange;
     public IObservable<object> IceCandidate { get; } = IceCandidate;
     public IObservable<Unit> NegotiationNeeded { get; } = NegotiationNeeded;
@@ -74,7 +77,7 @@ sealed class RTCPeerConnectionProxy(IJSObjectReference JS,
         }
     }
 
-    public async Task<JSUnmanagedResourceReference> WaitDataChannelAsync(string label,
+    public async Task<JSDisposableReference> WaitDataChannelAsync(string label,
         DotNetObjectReference<TaskCompletionSourceJSWrapper<IJSObjectReference>> tcs)
     {
         var sub = await JS.InvokeAsync<IJSObjectReference>("waitDataChannel", label, tcs).ConfigureAwait(false);
@@ -83,22 +86,31 @@ sealed class RTCPeerConnectionProxy(IJSObjectReference JS,
     public async Task<RTCDataChannelProxy> CreateDataChannelAsync(string label)
     {
         var channel = await JS.InvokeAsync<IJSObjectReference>("createDataChannel", label).ConfigureAwait(false);
-        return new RTCDataChannelProxy(channel);
+        return new RTCDataChannelProxy(Client, channel);
     }
 
+    public async Task<JSDisposableReference> WaitVideoStream(string id,
+        DotNetObjectReference<JSPromiseLikeBuilder<IJSObjectReference>> tcs)
+    {
+        var sub = await JS.InvokeAsync<IJSObjectReference>("waitVideoStream", id, tcs).ConfigureAwait(false);
+        return new(sub);
+    }
+    public async Task AddVideoStream(IJSObjectReference stream)
+    {
+        await JS.InvokeVoidAsync("addVideoStream", stream).ConfigureAwait(false);
+    }
 
-
-
-    static async Task<JSUnmanagedResourceReference> SubscribeAsync<T>(
+    static async Task<JSDisposableReference> SubscribeAsync<T>(
         IJSObjectReference jsProxy, DotNetObjectReference<SubjectJSWrapper<T>> subject, string type)
     {
         var sub = await jsProxy.InvokeAsync<IJSObjectReference>("subscribe", subject, type);
-        return new JSUnmanagedResourceReference(sub);
+        return new JSDisposableReference(sub);
     }
 
-    static async IAsyncEnumerable<Func<IAsyncDisposable, RTCPeerConnectionProxy>> CreateInternalAsync(ClientModule clientModule)
+    static async IAsyncEnumerable<Func<IAsyncDisposable, RTCPeerConnectionProxy>> CreateInternalAsync(
+        IBrowserClient client)
     {
-        await using var jsConnection = await clientModule.CreateRtcPeerConnection();
+        await using var jsConnection = await client.Module.CreateRtcPeerConnection();
         using var observer = new EventObserver();
         using var observerReference = DotNetObjectReference.Create(observer);
 
@@ -114,19 +126,16 @@ sealed class RTCPeerConnectionProxy(IJSObjectReference JS,
         using var negotiationNeededSubjectReference = DotNetObjectReference.Create(negotiationNeededSubject);
         await using var negotiationNeededSub = await SubscribeAsync(jsConnection.Value, negotiationNeededSubjectReference, "negotiationneeded");
 
-
-        yield return (dispose) => new(jsConnection.Value, stateChangeSubject.Observable, iceCandidateSubject.Observable, negotiationNeededSubject.Observable.Select(x => default(Unit)), dispose);
-        Console.WriteLine("Dispose called");
+        yield return (dispose) => new(client, jsConnection.Value, stateChangeSubject.Observable, iceCandidateSubject.Observable, negotiationNeededSubject.Observable.Select(x => default(Unit)), dispose);
     }
 
-    public static async Task<RTCPeerConnectionProxy> CreateAsync(ClientModule clientModule)
+    public static async Task<RTCPeerConnectionProxy> CreateAsync(IBrowserClient client)
     {
-        return await AsyncResource.CreateAsync(CreateInternalAsync(clientModule)).ConfigureAwait(false);
+        return await AsyncResource.CreateAsync(CreateInternalAsync(client)).ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
     {
-        Console.WriteLine("RTCPeer Dispose called");
         await Resource.DisposeAsync().ConfigureAwait(false);
     }
 }

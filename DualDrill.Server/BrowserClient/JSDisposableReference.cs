@@ -2,7 +2,7 @@
 
 namespace DualDrill.Server.BrowserClient;
 
-public sealed record class JSUnmanagedResourceReference(IJSObjectReference Value) : IAsyncDisposable
+public sealed record class JSDisposableReference(IJSObjectReference Value) : IAsyncDisposable
 {
     bool disposed = false;
     static readonly string JSDisposeMethodName = "dispose";

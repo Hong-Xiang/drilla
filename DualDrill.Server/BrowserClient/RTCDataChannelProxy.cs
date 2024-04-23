@@ -3,26 +3,51 @@ using Microsoft.JSInterop;
 
 namespace DualDrill.Server.BrowserClient;
 
-public sealed class RTCDataChannelProxy(IJSObjectReference Value) : IAsyncDisposable, IDataChannelReference
+public sealed class RTCDataChannelProxy(IBrowserClient Client, IJSObjectReference Value) : IAsyncDisposable, IDataChannelReference
 {
-    public IJSObjectReference Value { get; } = Value;
+    public IBrowserClient Client { get; } = Client;
+    IJSObjectReference Handle { get; } = Value;
 
     public async ValueTask DisposeAsync()
     {
-        await Value.DisposeAsync().ConfigureAwait(false);
+        await Handle.DisposeAsync().ConfigureAwait(false);
     }
 
-    public async Task Send<T>(T message)
+    public async Task SendAsync<T>(T message)
     {
-        await Value.InvokeVoidAsync("send", message);
+        await Handle.InvokeVoidAsync("send", message);
     }
 }
 
-public sealed class RTCDataChannelPair(RTCDataChannelProxy Source, RTCDataChannelProxy Target) : IDataChannelReferncePair
+sealed class RTCDataChannelPair(
+   RTCDataChannelProxy Source,
+   RTCDataChannelProxy Target) : IDataChannelReferencePair, IAsyncDisposable
 {
     public IDataChannelReference Source { get; } = Source;
 
     public IDataChannelReference Target { get; } = Target;
+
+    public IClient SourceClient { get; } = Source.Client;
+
+    public IClient TargetClient { get; } = Target.Client;
+    static async Task<RTCDataChannelPair> CreateDataChannelInternal(
+           string label,
+           RTCPeerConnectionProxy source,
+           RTCPeerConnectionProxy target)
+    {
+        var waitTCS = new TaskCompletionSourceJSWrapper<IJSObjectReference>(new TaskCompletionSource<IJSObjectReference>());
+
+        using var waitTCSReference = DotNetObjectReference.Create(waitTCS);
+        await using var sub = await target.WaitDataChannelAsync(label, waitTCSReference);
+        var sourceChannel = await source.CreateDataChannelAsync(label).ConfigureAwait(false);
+        var targetChannel = new RTCDataChannelProxy(target.Client, await waitTCS.Task);
+        return new(sourceChannel, targetChannel);
+    }
+
+    public static async Task<IDataChannelReferencePair> CreateAsync(BrowserRTCPeerConnectionPair peers, string label)
+    {
+        return await CreateDataChannelInternal(label, peers.Source, peers.Target).ConfigureAwait(false);
+    }
 
     public async ValueTask DisposeAsync()
     {

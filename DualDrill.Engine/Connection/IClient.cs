@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Engine.Connection;
 
-public interface IClient
+public interface IClient : IEquatable<IClient>
 {
     public string Id { get; }
-
-    public Task<IClientPeerToPeerPair> CreatePairAsync(IClient target);
+    public Task<IP2PClientPair> CreatePairAsync(IClient target);
+    public IObservable<IP2PClientPair> PairedAsTarget { get; }
 }

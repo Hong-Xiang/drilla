@@ -1,0 +1,31 @@
+﻿<h3>PairViewer</h3>
+
+<p>
+    <span>
+        Pair Peer Id =  @(IsSource ? Pair.SourceClient.Id : Pair.TargetClient.Id)
+    </span>
+    <span>
+        Pair Peer State = @SourcePeerState - @TargetPeerState
+    </span>
+    <button @onclick="RefreshPairState">Refresh State</button>
+    <div>
+        <span>Log Message @(IsLogDataChannelMessage ? "On" : "Off")</span>
+        <button @onclick="ToggleSystemDataChannel">Toggle Log DataChannel Message</button>
+    </div>
+    <button @onclick="SendPing">Ping!</button>
+
+    <button @onclick="SendVideo">SendVideo</button>
+</p>
+
+<div class="pure-g">
+    <div class="pure-u-1-2">
+        <h4>Self</h4>
+        <video autoplay playsinline @ref="SelfVideoElement" />
+    </div>
+    <div class="pure-u-1-2">
+        <h4>Peer</h4>
+        <video autoplay playsinline @ref="PeerVideoElement" />
+    </div>
+</div>
+
+
