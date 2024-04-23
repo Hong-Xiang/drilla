@@ -2,51 +2,33 @@
 using DualDrill.Engine.Connection;
 using System.Reactive.Disposables;
 using DualDrill.Common.ResourceManagement;
+using System.Reactive.Subjects;
+using DualDrill.Server.Components;
 
 namespace DualDrill.Server.BrowserClient;
 
-
-sealed class BrowserClientPair(
-    BrowserClient SourceClient,
-    RTCPeerConnectionProxy SourcePeer,
-    BrowserClient TargetClient,
-    RTCPeerConnectionProxy TargetPeer,
-    RTCDataChannelPair SystemDataChannel,
-    IAsyncDisposable Resource) : IClientPeerToPeerPair, IAsyncDisposable
+sealed class BrowserRTCPeerConnectionPair(
+   RTCPeerConnectionProxy Source,
+   RTCPeerConnectionProxy Target,
+   IAsyncDisposable Done) : IConnectedPair<RTCPeerConnectionProxy>
 {
-    public IClient SourceClient { get; } = SourceClient;
-    public RTCPeerConnectionProxy SourcePeer { get; } = SourcePeer;
-    public IClient TargetClient { get; } = TargetClient;
-    public RTCPeerConnectionProxy TargetPeer { get; } = TargetPeer;
-    public IDataChannelReferncePair SystemDataChannel { get; } = SystemDataChannel;
+    public RTCPeerConnectionProxy Source { get; } = Source;
+    public RTCPeerConnectionProxy Target { get; } = Target;
+    public IClient SourceClient => Source.Client;
+    public IClient TargetClient => Target.Client;
 
-    static async IAsyncEnumerable<Func<IAsyncDisposable, BrowserClientPair>> CreateAsyncInternal(BrowserClient source, BrowserClient target)
+    static async IAsyncEnumerable<Func<IAsyncDisposable, BrowserRTCPeerConnectionPair>> CreateAsyncInternal(IBrowserClient source, IBrowserClient target)
     {
-        var sourcePeer = await RTCPeerConnectionProxy.CreateAsync(source.Module).ConfigureAwait(false);
-        var targetPeer = await RTCPeerConnectionProxy.CreateAsync(target.Module).ConfigureAwait(false);
-        await source.JSRuntime.InvokeVoidAsync("console.log", "source log!");
-        await target.JSRuntime.InvokeVoidAsync("console.log", "target log!");
+        await using var sourcePeer = await RTCPeerConnectionProxy.CreateAsync(source).ConfigureAwait(false);
+        await using var targetPeer = await RTCPeerConnectionProxy.CreateAsync(target).ConfigureAwait(false);
         using var sub = new CompositeDisposable(
-       sourcePeer.IceCandidate.Subscribe(async (candidate) =>
-        {
-            Console.WriteLine("source candidate");
-            await targetPeer.AddIceCandidate(candidate);
-        }),
-        targetPeer.IceCandidate.Subscribe(async (candidate) =>
-        {
-            Console.WriteLine("target candidate");
-            await sourcePeer.AddIceCandidate(candidate);
-        }),
-        sourcePeer.NegotiationNeeded.Subscribe(async (_) =>
-        {
-            await Negotiation(sourcePeer, targetPeer);
-        }));
-
+            targetPeer.IceCandidate.Subscribe(async (candidate) => await sourcePeer.AddIceCandidate(candidate)),
+            sourcePeer.IceCandidate.Subscribe(async (candidate) => await targetPeer.AddIceCandidate(candidate)),
+            sourcePeer.NegotiationNeeded.Subscribe(async (_) => await Negotiation(sourcePeer, targetPeer)),
+            targetPeer.NegotiationNeeded.Subscribe(async (_) => await Negotiation(targetPeer, sourcePeer))
+        );
         await Negotiation(sourcePeer, targetPeer).ConfigureAwait(false);
-        Console.WriteLine("Before Create Data Channel");
-        var (sd, td) = await CreateDataChannelInternal(sourcePeer, targetPeer);
-        await sd.Send("ping");
-        yield return (dispose) => new BrowserClientPair(source, sourcePeer, target, targetPeer, new(sd, td), dispose); ;
+        yield return (dispose) => new BrowserRTCPeerConnectionPair(sourcePeer, targetPeer, dispose); ;
     }
 
     static async Task Negotiation(RTCPeerConnectionProxy source, RTCPeerConnectionProxy target)
@@ -54,45 +36,88 @@ sealed class BrowserClientPair(
         var offer = await source.CreateOffer().ConfigureAwait(false);
         var answer = await target.SetOffer(offer).ConfigureAwait(false);
         await source.SetAnswer(answer).ConfigureAwait(false);
-        Console.WriteLine(offer);
     }
-
-
-    static async Task<(RTCDataChannelProxy, RTCDataChannelProxy)> CreateDataChannelInternal(
-        RTCPeerConnectionProxy source,
-        RTCPeerConnectionProxy target
-    )
-    {
-        var id = Guid.NewGuid().ToString();
-        var waitTCS = new TaskCompletionSourceJSWrapper<IJSObjectReference>(new TaskCompletionSource<IJSObjectReference>());
-        using var waitTCSReference = DotNetObjectReference.Create(waitTCS);
-        await using var sub = await target.WaitDataChannelAsync(id, waitTCSReference);
-        Console.WriteLine("after call wait data channel");
-        var sourceChannel = await source.CreateDataChannelAsync(id).ConfigureAwait(false);
-        Console.WriteLine("after call source create data channel");
-        var targetChannel = new RTCDataChannelProxy(await waitTCS.Task);
-        return (sourceChannel, targetChannel);
-    }
-
-
-    public static async Task<BrowserClientPair> CreateAsync(BrowserClient source, BrowserClient target)
+    public static async Task<BrowserRTCPeerConnectionPair> CreateAsync(IBrowserClient source, IBrowserClient target)
     {
         return await AsyncResource.CreateAsync(CreateAsyncInternal(source, target)).ConfigureAwait(false);
     }
 
-    public Task<IDataChannelReferncePair> CreateDataChannel()
+    public async ValueTask DisposeAsync()
     {
-        throw new NotImplementedException();
+        await Done.DisposeAsync().ConfigureAwait(false);
+    }
+}
+
+sealed class BrowserClientPair(BrowserRTCPeerConnectionPair Peers) : IP2PClientPair, IAsyncDisposable
+{
+    public IClient Source => SourceClient;
+    public IClient Target => TargetClient;
+    public IClient SourceClient { get; } = Peers.SourceClient;
+    public IClient TargetClient { get; } = Peers.TargetClient;
+    public BrowserRTCPeerConnectionPair Peers { get; } = Peers;
+
+    readonly Subject<IClientVideoReference> VideoReceivedSubject = new();
+    public IObservable<IClientVideoReference> VideoReceived => VideoReceivedSubject;
+    public static async Task<BrowserClientPair> CreateAsync(BrowserClient source, BrowserClient target)
+    {
+        var peerPair = await BrowserRTCPeerConnectionPair.CreateAsync(source, target).ConfigureAwait(false);
+        return new BrowserClientPair(peerPair);
     }
 
-    public Task<IVideoChannelReferencePair> CreateVideoChannel(IVideoChannelReference video)
+    private TaskCompletionSource SourceUISetSource = new();
+    public Task SourceUISet => SourceUISetSource.Task;
+    private TaskCompletionSource TargetUISetSource = new();
+    public Task TargetUISet => TargetUISetSource.Task;
+    public PairViewer? SourceViewer { get; private set; } = default;
+    public PairViewer? TargetViewer { get; private set; } = default;
+    public void SetSourceUI(PairViewer viewer)
     {
-        throw new NotImplementedException();
+        SourceViewer = viewer;
+        SourceUISetSource.SetResult();
+    }
+    public void SetTargetUI(PairViewer viewer)
+    {
+        TargetViewer = viewer;
+        TargetUISetSource.SetResult();
+    }
+
+    public Task UISet()
+        => Task.WhenAll(SourceUISet, TargetUISet);
+
+    public async Task<IDataChannelReferencePair> CreateDataChannel(string label)
+    {
+        return await RTCDataChannelPair.CreateAsync(Peers, label).ConfigureAwait(false);
+    }
+
+    public async Task<IClientVideoReference> SendVideo(IClientVideoReference video)
+    {
+        var sendClient = video.Client;
+        var receiveClient = this.GetPeer(sendClient) as BrowserClient ?? throw new Exception("Not support client type");
+        var sendPeer = Peers.GetSelf(sendClient);
+        var receivePeer = Peers.GetSelf(receiveClient);
+
+        var waitTCS = new TaskCompletionSource<JSMediaStreamProxy>();
+        var jsPromise = new JSPromiseLikeBuilder<IJSObjectReference>(async (stream) =>
+        {
+            var id = await receiveClient.Module.GetProperty<string>(stream, "id");
+            waitTCS.SetResult(new JSMediaStreamProxy(receiveClient, stream, id));
+        }, async (msg) =>
+        {
+            Console.WriteLine(msg);
+        });
+
+        using var waitTCSReference = DotNetObjectReference.Create(waitTCS);
+        using var pref = jsPromise.CreateReference();
+        await using var sub = await receivePeer.WaitVideoStream(video.Id, pref);
+        Console.WriteLine("Wait called");
+        await sendPeer.AddVideoStream(((JSMediaStreamProxy)video).MediaStream).ConfigureAwait(false);
+        Console.WriteLine("JS Add video stream called");
+        return await waitTCS.Task.ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
     {
-        await Resource.DisposeAsync().ConfigureAwait(false);
+        await Peers.DisposeAsync().ConfigureAwait(false);
     }
 }
 

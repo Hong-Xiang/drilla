@@ -1,0 +1,29 @@
+﻿<h3>ServerSideCounter</h3>
+@rendermode InteractiveServer
+@inject Services.CircuitService CircuitService
+
+<p>Client Id @ClientId</p>
+<p role="status">@Count</p>
+<button @onclick="AddOne">AddOne</button>
+<button @onclick="RefreshClientId">Refresh Client Id</button>
+
+
+@code {
+    private int Count { get; set; } = 0;
+    private string ClientId { get; set; } = "unknown";
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    void AddOne()
+    {
+        Count++;
+    }
+
+    async Task RefreshClientId()
+    {
+        ClientId = (await CircuitService.GetCircuitAsync().ConfigureAwait(false)).Id;
+    }
+}

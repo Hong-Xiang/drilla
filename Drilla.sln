@@ -13,7 +13,7 @@ Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "DualDrill.JS", "DualDrill.J
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Engine", "DualDrill.Engine\DualDrill.Engine.csproj", "{CD5B7346-7767-48CE-91C4-53FB2C063D00}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DualDrill.Common", "DualDrill.Common\DualDrill.Common.csproj", "{8561C01E-FC29-4DE6-BA11-2552D496ECC0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Common", "DualDrill.Common\DualDrill.Common.csproj", "{8561C01E-FC29-4DE6-BA11-2552D496ECC0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

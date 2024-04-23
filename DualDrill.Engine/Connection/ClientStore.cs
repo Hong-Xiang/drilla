@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DualDrill.Engine.UI;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Engine.Connection;
 
-public sealed class ClientHub(ILogger<ClientHub> Logger) : IDisposable
+public sealed class ClientStore(ILogger<ClientStore> Logger) : IDisposable
 {
     readonly ConcurrentDictionary<string, IClient> ClientsStore = new();
 
@@ -31,7 +32,7 @@ public sealed class ClientHub(ILogger<ClientHub> Logger) : IDisposable
     {
         if (!ClientsStore.TryAdd(id, client))
         {
-            Logger.LogError("Failed to add client with id {0}", id);
+            Logger.LogError("Failed to add client with id {ClientId}", id);
         }
         ClientsSubject.OnNext([.. ClientsStore.Values]);
     }
@@ -49,7 +50,7 @@ public sealed class ClientHub(ILogger<ClientHub> Logger) : IDisposable
 
     public IObservable<ImmutableArray<IClient>> Clients => ClientsSubject;
 
-    public Task<IClientPeerToPeerPair> CreatePeerPairAsync(IClient source, IClient target)
+    public Task<IP2PClientPair> CreatePeerPairAsync(IClient source, IClient target)
     {
         return source.CreatePairAsync(target);
     }
