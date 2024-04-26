@@ -34,3 +34,9 @@ else
 }
 <video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video>
 <video id="peerVideo" @ref="PeerVideoElement" autoplay playsinline></video>
+
+<button @onclick="CreateRenderContext">Create Render Context</button>
+<button @onclick="Render">Start Render</button>
+<button @onclick="StopRender">Stop Render</button>
+<canvas id="render-root" @ref="RenderRootElement" width="800" height="600" />
+

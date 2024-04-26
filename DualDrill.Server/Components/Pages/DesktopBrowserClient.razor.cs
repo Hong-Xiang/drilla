@@ -6,11 +6,18 @@ using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.JSInterop;
+using SIPSorcery.Net;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 
 namespace DualDrill.Server.Components.Pages;
+
+sealed class FrameCount
+{
+    public int Value { get; set; } = 0;
+}
 
 public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 {
@@ -39,11 +46,49 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     ElementReference PeerVideoElement { get; set; }
     ElementReference SelfVideoElement { get; set; }
 
+    ElementReference RenderRootElement { get; set; }
+
+    JSRenderService RenderService { get; set; }
+
+    IDisposable? Rendering { get; set; } = default;
+    public async Task Render()
+    {
+        var FPS = 60;
+        var pc = new RTCPeerConnection();
+        var dc = await pc.createDataChannel("render");
+        dc.send([1]);
+        Rendering = TimeProvider.System.CreateTimer(async (s) =>
+        {
+            var fc = (FrameCount)s;
+            var st = Stopwatch.StartNew();
+            await RenderService.Render(fc.Value);
+            Console.WriteLine(fc.Value);
+            fc.Value++;
+            st.Stop();
+            if (st.ElapsedMilliseconds * FPS > 1000)
+            {
+                Console.WriteLine("not matched fps");
+            }
+        }, new FrameCount(), TimeSpan.Zero, TimeSpan.FromSeconds(1.0 / (double)FPS));
+        await RenderService.Render(DateTime.Now.Microsecond / 10);
+    }
+
+    public void StopRender()
+    {
+        Rendering?.Dispose();
+    }
+
+    async Task CreateRenderContext()
+    {
+        RenderService = await Client.Module.CreateRenderContext(RenderRootElement);
+    }
+
     protected override async Task OnInitializedAsync()
     {
         var circuit = await BrowserClientService.GetCircuitAsync().ConfigureAwait(false);
         Client = await BrowserUIClient.CreateAsync(ServiceProvider, circuit, this);
         ClientHub.AddClient(Id, Client);
+
 
         Subscription.Add(
             ClientHub.Clients.Subscribe(async (clients) =>
@@ -145,6 +190,11 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         PeerClient = client;
         await InvokeAsync(StateHasChanged).ConfigureAwait(false);
 
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
     }
 
     public async ValueTask RenderUpdatedState()
