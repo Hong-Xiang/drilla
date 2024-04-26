@@ -6,6 +6,8 @@ import {
   subscribeByPromiseLike,
 } from "./dotnet-server-interop";
 
+export { createRenderContext } from "../render/RenderService";
+
 export function getProperty<T, K extends keyof T>(target: T, key: K): T[K] {
   return target[key];
 }
