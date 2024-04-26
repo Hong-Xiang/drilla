@@ -24,6 +24,11 @@ public sealed class JSDrillClientModule(IJSRuntime JS, IJSObjectReference Module
         return new(await Module.InvokeAsync<IJSObjectReference>("createRTCPeerConnection").ConfigureAwait(false));
     }
 
+    public async ValueTask<JSRenderService> CreateRenderContext(ElementReference canvas)
+    {
+        return new(await Module.InvokeAsync<IJSObjectReference>("createRenderContext", canvas));
+    }
+
     public async Task<JSDisposableReference> AddDataChannelLogMessageListener(IJSObjectReference dataChannel)
     {
         return new(await Module.InvokeAsync<IJSObjectReference>("addDataChannelLogMessageListener", dataChannel).ConfigureAwait(false));
