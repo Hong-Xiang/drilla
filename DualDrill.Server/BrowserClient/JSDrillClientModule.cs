@@ -15,6 +15,11 @@ public sealed class JSDrillClientModule(IJSRuntime JS, IJSObjectReference Module
     {
         await Module.DisposeAsync().ConfigureAwait(false);
     }
+
+    public async ValueTask JsConsolelog(string s)
+    {
+        await JSRuntime.InvokeVoidAsync("console.log", s);
+    }
     public async ValueTask SetVideoElementStream(ElementReference videoElement, IJSObjectReference mediaStream)
     {
         await SetProperty(videoElement, "srcObject", mediaStream).ConfigureAwait(false);
