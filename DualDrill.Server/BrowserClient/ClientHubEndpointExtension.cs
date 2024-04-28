@@ -1,5 +1,5 @@
-﻿using DualDrill.Engine.Connection;
-using DualDrill.Engine.UI;
+﻿using DualDrill.Engine.BrowserProxy;
+using DualDrill.Engine.Connection;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -12,15 +12,17 @@ public static class ClientHubEndpointExtension
 {
     static Ok<string[]> GetConnectedClients([FromServices] ClientStore clients)
     {
-        return TypedResults.Ok(clients.ClientIds);
+        return TypedResults.Ok(clients.ClientUris.Select(static s => s.ToString()).ToArray());
     }
 
     public static void AddClients(this IServiceCollection services)
     {
         services.AddSingleton<ClientStore>();
-        services.AddSingleton<ClientUIStore>();
 
         services.AddScoped<MediaDevices>();
+        services.AddScoped<JSClientModule>();
+        services.AddScoped<BrowserClient>();
+        services.AddScoped<IClient>(sp => sp.GetRequiredService<BrowserClient>());
         services.AddScoped<CircuitService>();
         services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<CircuitService>());
     }

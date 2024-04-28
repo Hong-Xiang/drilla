@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DualDrill.Engine.Connection;
+namespace DualDrill.Engine.UI;
 
-public interface IUIClient : IClient
+public interface ICanvasElement
 {
 }

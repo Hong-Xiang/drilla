@@ -34,6 +34,10 @@ export function setProperty<T, K extends keyof T>(
   target[key] = value;
 }
 
+export function asObjectReference<T>(x: T) {
+  return x;
+}
+
 export function createRTCPeerConnection() {
   const connection = new RTCPeerConnection();
 
@@ -154,35 +158,28 @@ export function createRTCPeerConnection() {
       const offer = await connection.createOffer({
         offerToReceiveVideo: true,
       });
-      await connection.setLocalDescription(offer);
       console.log("create offer");
       console.log(offer.sdp);
       return offer.sdp;
     },
-    setAnswer: async (sdp: string) => {
-      console.log("set answer");
-      console.log(sdp);
-
+    async setRemoteDescription(type: "offer" | "answer", sdp: string) {
       await connection.setRemoteDescription({
-        type: "answer",
+        type,
         sdp,
       });
     },
-    setOffer: async (sdp: string) => {
-      console.log("set offer");
-      console.log(sdp);
-
-      await connection.setRemoteDescription({
-        type: "offer",
+    async setLocalDescription(type: "offer" | "answer", sdp: string) {
+      await connection.setLocalDescription({
+        type,
         sdp,
       });
+    },
+    createAnswer: async () => {
       const answer = await connection.createAnswer();
-      await connection.setLocalDescription(answer);
       console.log("return answer");
       console.log(answer.sdp);
       return answer.sdp;
     },
-
     dispose: () => {
       connection.close();
     },

@@ -4,10 +4,10 @@
 <h3>Desktop DrillA Client Home</h3>
 
 <p>
-    id = @Client?.Id
+    id = @Client?.Uri
 </p>
 <p>
-    peer id = @PeerClient?.Id
+    peer id = @PeerClient?.Uri
 </p>
 
 <p>Frame count @FrameCount</p>
@@ -20,7 +20,7 @@
         <button @onclick=RefreshPeerIds>refresh</button>
 
         <ul>
-            @foreach (var pid in PeerIds)
+            @foreach (var pid in PeerUris)
             {
                 <li>@pid</li>
                 <button @onclick=@(() => Connect(pid))>connect</button>

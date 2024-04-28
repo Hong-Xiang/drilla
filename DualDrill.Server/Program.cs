@@ -4,7 +4,6 @@ using DualDrill.Server.BrowserClient;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using System.Collections.Concurrent;
 using DualDrill.Engine.Connection;
-using DualDrill.Engine.UI;
 using DualDrill.Server.Application;
 
 namespace DualDrill.Server;

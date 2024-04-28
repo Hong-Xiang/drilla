@@ -1,23 +1,17 @@
-﻿using DualDrill.Engine.UI;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Reactive.Subjects;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.Engine.Connection;
 
 public sealed class ClientStore(ILogger<ClientStore> Logger) : IDisposable
 {
-    readonly ConcurrentDictionary<string, IClient> ClientsStore = new();
+    readonly ConcurrentDictionary<Uri, IClient> ClientsStore = new();
 
     readonly BehaviorSubject<ImmutableArray<IClient>> ClientsSubject = new([]);
 
-    public IClient? GetClient(string id)
+    public IClient? GetClient(Uri id)
     {
         if (ClientsStore.TryGetValue(id, out var client))
         {
@@ -28,32 +22,32 @@ public sealed class ClientStore(ILogger<ClientStore> Logger) : IDisposable
             return null;
         }
     }
-    public void AddClient(string id, IClient client)
+    public void AddClient(IClient client)
     {
-        if (!ClientsStore.TryAdd(id, client))
+        if (!ClientsStore.TryAdd(client.Uri, client))
         {
-            Logger.LogError("Failed to add client with id {ClientId}", id);
+            Logger.LogError("Failed to add client with id {ClientUri}", client.Uri);
         }
         ClientsSubject.OnNext([.. ClientsStore.Values]);
     }
 
     public void RemoveClient(IClient client)
     {
-        if (!ClientsStore.TryRemove(client.Id, out var _))
+        if (!ClientsStore.TryRemove(client.Uri, out var _))
         {
-            Logger.LogError("Failed to remove client with id {0}", client.Id);
+            Logger.LogError("Failed to remove client with uri {ClientUri}", client.Uri);
         }
         ClientsSubject.OnNext([.. ClientsStore.Values]);
     }
 
-    public string[] ClientIds => [.. ClientsStore.Keys];
+    public Uri[] ClientUris => [.. ClientsStore.Keys];
 
     public IObservable<ImmutableArray<IClient>> Clients => ClientsSubject;
 
-    public Task<IP2PClientPair> CreatePeerPairAsync(IClient source, IClient target)
-    {
-        return source.CreatePairAsync(target);
-    }
+    //public Task<IPeerToPeerClientPair> CreatePeerPairAsync(IClient source, IClient target)
+    //{
+    //    return source.CreatePairAsync(target);
+    //}
 
     public void Dispose()
     {

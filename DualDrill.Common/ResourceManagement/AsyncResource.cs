@@ -23,37 +23,44 @@ public sealed class AsyncResource<T>(IAsyncEnumerator<Func<IAsyncDisposable, T>>
     }
 }
 
-public interface IAsyncResourceBuilder<T>
+public interface IAsyncResourceBuilder<T> : IAsyncDisposable
 {
     public bool SetResult(T value);
     public ValueTask<bool> Done();
 }
 
-struct AsyncResource2Builder<T>(Channel<T> OutChannel, Channel<bool> DoneChannel) : IAsyncResourceBuilder<T>
+sealed class AsyncResourceBuilder<T>
+    : IAsyncResourceBuilder<T>, IAsyncDisposable
 {
-    public readonly bool SetResult(T value) => OutChannel.Writer.TryWrite(value);
-    public readonly ValueTask<T> Resource() => OutChannel.Reader.ReadAsync();
-    public readonly ValueTask<bool> Done() => DoneChannel.Reader.ReadAsync();
-}
+    readonly Channel<T> OutChannel = Channel.CreateBounded<T>(1);
+    readonly Channel<bool> DoneChannel = Channel.CreateBounded<bool>(1);
+    public bool SetResult(T value) => OutChannel.Writer.TryWrite(value);
+    public ValueTask<T> Resource() => OutChannel.Reader.ReadAsync();
+    public ValueTask<bool> Done() => DoneChannel.Reader.ReadAsync();
 
-public sealed class AsyncResource2<T>(T Value, ChannelWriter<bool> Done, ValueTask DisposeDone) : IAsyncDisposable
-{
-    public delegate ValueTask AsyncScopedFactory(IAsyncResourceBuilder<T> builder);
+    Task DisposeFinished { get; }
 
-    public T Value { get; } = Value;
-
-    public static async ValueTask<AsyncResource2<T>> CreateAsync(AsyncScopedFactory asyncFactory)
+    public AsyncResourceBuilder(Func<IAsyncResourceBuilder<T>, Task> factory)
     {
-        var outChannel = Channel.CreateBounded<T>(1);
-        var doneChannel = Channel.CreateBounded<bool>(1);
-        var builder = new AsyncResource2Builder<T>(outChannel, doneChannel);
-        var result = await builder.Resource().ConfigureAwait(false);
-        return new AsyncResource2<T>(result, doneChannel, asyncFactory(builder));
+        DisposeFinished = factory(this);
     }
 
     public async ValueTask DisposeAsync()
     {
-        await Done.WriteAsync(true).ConfigureAwait(false);
-        await DisposeDone.ConfigureAwait(false);
+        DoneChannel.Writer.TryWrite(true);
+        if (DisposeFinished is not null)
+        {
+            await DisposeFinished.ConfigureAwait(false);
+        }
+    }
+}
+
+
+public sealed class AsyncResource2
+{
+    public static async ValueTask<T> CreateAsync<T>(Func<IAsyncResourceBuilder<T>, Task> asyncFactory)
+    {
+        var builder = new AsyncResourceBuilder<T>(asyncFactory);
+        return await builder.Resource().ConfigureAwait(false);
     }
 }

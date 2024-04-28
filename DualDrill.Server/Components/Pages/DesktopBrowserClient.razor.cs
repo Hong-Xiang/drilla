@@ -1,23 +1,16 @@
+using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
-using DualDrill.Engine.UI;
+using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Application;
 using DualDrill.Server.BrowserClient;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Server.Circuits;
-using Microsoft.JSInterop;
 using SIPSorcery.Net;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 
 namespace DualDrill.Server.Components.Pages;
-
-sealed class FrameCount
-{
-    public int Value { get; set; } = 0;
-}
 
 public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 {
@@ -27,22 +20,19 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     [Inject] DistributeXRApplicationService Application { get; set; } = default!;
     [Inject] DistributeXRUpdateLoopService UpdateLoop { get; set; } = default!;
-    [Inject] IServiceProvider ServiceProvider { get; set; }
+    [Inject] BrowserClient.BrowserClient Client { get; set; }
+    [Inject] JSClientModule Module { get; set; } = default!;
 
-    private ImmutableArray<string> PeerIds { get; set; } = [];
-
-    private IP2PClientPair? Pair = null;
+    private ImmutableArray<Uri> PeerUris { get; set; } = [];
 
     private readonly CompositeDisposable Subscription = [];
 
-    BrowserUIClient Client { get; set; } = default!;
-    public string Id => Client.Id;
+    public string Id => Client.Uri.AbsolutePath;
     public IClient? PeerClient { get; set; } = null;
 
 
     bool Connected => !(PeerClient is null);
 
-    JSMediaStreamProxy? PeerVideoStream { get; set; }
     ElementReference PeerVideoElement { get; set; }
     ElementReference SelfVideoElement { get; set; }
 
@@ -50,77 +40,54 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     JSRenderService RenderService { get; set; }
 
-    IDisposable? Rendering { get; set; } = default;
     public async Task Render()
     {
         var FPS = 60;
         var pc = new RTCPeerConnection();
         var dc = await pc.createDataChannel("render");
         dc.send([1]);
-        Rendering = TimeProvider.System.CreateTimer(async (s) =>
-        {
-            var fc = (FrameCount)s;
-            var st = Stopwatch.StartNew();
-            await RenderService.Render(fc.Value);
-            Console.WriteLine(fc.Value);
-            fc.Value++;
-            st.Stop();
-            if (st.ElapsedMilliseconds * FPS > 1000)
-            {
-                Console.WriteLine("not matched fps");
-            }
-        }, new FrameCount(), TimeSpan.Zero, TimeSpan.FromSeconds(1.0 / (double)FPS));
-        await RenderService.Render(DateTime.Now.Microsecond / 10);
+
+        _ = Task.Run(async () =>
+           {
+               await foreach (var f in UpdateLoop.ReadAllRenderCommands())
+               {
+                   await RenderService.Render(f);
+               }
+           });
+        UpdateLoop.IsRendering = true;
     }
 
     public void StopRender()
     {
-        Rendering?.Dispose();
+        UpdateLoop.IsRendering = false;
     }
 
     async Task CreateRenderContext()
     {
-        RenderService = await Client.Module.CreateRenderContext(RenderRootElement);
+        RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
     }
 
     protected override async Task OnInitializedAsync()
     {
         var circuit = await BrowserClientService.GetCircuitAsync().ConfigureAwait(false);
-        Client = await BrowserUIClient.CreateAsync(ServiceProvider, circuit, this);
-        ClientHub.AddClient(Id, Client);
-
-
+        ClientHub.AddClient(Client);
         Subscription.Add(
             ClientHub.Clients.Subscribe(async (clients) =>
             {
-                Logger.LogInformation("[id = {ClientId}] clients update, clients = {Clients}", Client.Id, string.Join(',', clients.Select(c => c.Id)));
+                Logger.LogInformation("[uri = {ClientUri}] clients update, clients = {Clients}", Client.Uri, string.Join(',', clients.Select(c => c.Uri.ToString())));
                 RefreshPeerIds();
                 await InvokeAsync(StateHasChanged).ConfigureAwait(false);
             })
         );
+        if (Client is BrowserClient.BrowserClient bc)
+        {
+            bc.UserInterface = this;
+        }
         await base.OnInitializedAsync().ConfigureAwait(false);
-        Console.WriteLine(Client);
-        Console.WriteLine("intialized end");
-
-        //Subscription.Add(client.PairedAsTarget.Subscribe(async (pair) =>
-        //    {
-        //        Logger.LogInformation("[id = {0}] pair update", client.Id);
-        //        if (Pair is null)
-        //        {
-        //            Pair = pair;
-        //            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-        //        }
-        //        else
-        //        {
-        //            Logger.LogWarning("multiple pair constructed");
-        //        }
-        //    }) ?? Disposable.Empty);
-
     }
 
     int FrameCount { get; set; } = -1;
 
-    public IObservable<IP2PClientPair> PairedAsTarget => throw new NotImplementedException();
 
     void UpdateFrameCount()
     {
@@ -129,49 +96,24 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     void RefreshPeerIds()
     {
-        PeerIds = [.. ClientHub.ClientIds.Where(c => c != Client.Id)];
+        PeerUris = [.. ClientHub.ClientUris.Where(c => c != Client.Uri)];
     }
 
-    async Task Connect(string targetId)
+    async Task Connect(Uri targetUri)
     {
-        var targetClient = ClientHub.GetClient(targetId);
+        var targetClient = ClientHub.GetClient(targetUri);
         if (targetClient is null || Client is null)
         {
-            Console.WriteLine("Failed to get client");
+            Logger.LogError("Failed to get client for connection");
             return;
         }
-        if (targetClient is IBrowserClient bc)
-        {
-            await Application.SetClients(Client, bc).ConfigureAwait(false);
-        }
+        await Application.SetClients(Client, targetClient).ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
     {
         Subscription.Dispose();
-        if (Pair is BrowserClientPair bp)
-        {
-            await bp.DisposeAsync().ConfigureAwait(false);
-        }
     }
-
-    async Task IPeerVideoUI.ShowPeerVideo(JSMediaStreamProxy mediaStream)
-    {
-        await Client.Module.SetVideoElementStream(PeerVideoElement, mediaStream.MediaStream);
-        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-    }
-    async Task IPeerVideoUI.ShowSelfVideo(JSMediaStreamProxy mediaStream)
-    {
-        await Client.Module.SetVideoElementStream(SelfVideoElement, mediaStream.MediaStream);
-        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-    }
-
-    public Task<IP2PClientPair> CreatePairAsync(IClient target)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Equals(IClient? other) => Client.Id == other?.Id;
 
     private async Task SendVideo()
     {
@@ -197,9 +139,19 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         await base.OnAfterRenderAsync(firstRender);
     }
 
-    public async ValueTask RenderUpdatedState()
+    public async ValueTask ShowPeerVideo(IMediaStream stream)
     {
-        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+        Console.WriteLine("Show Peer Video");
+        await using var videoElementRef = await Module.CreateObjectReferenceAsync(PeerVideoElement).ConfigureAwait(false);
+        await Module.SetVideoElementStreamAsync(videoElementRef, ((JSMediaStreamProxy)stream).Reference);
     }
 
+    public async ValueTask ShowSelfVideo(IMediaStream stream)
+    {
+        Console.WriteLine("Show Self Video");
+        await using var videoElementRef = await Module.CreateObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
+        await Module.SetVideoElementStreamAsync(videoElementRef, ((JSMediaStreamProxy)stream).Reference);
+
+    }
 }
+
