@@ -1,10 +1,10 @@
 using DualDrill.Client.Pages;
 using DualDrill.Server.Components;
-using DualDrill.Server.BrowserClient;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using System.Collections.Concurrent;
 using DualDrill.Engine.Connection;
 using DualDrill.Server.Application;
+using DualDrill.Server.Browser;
 
 namespace DualDrill.Server;
 
@@ -18,10 +18,9 @@ public class Program
             WebRootPath = "../DualDrill.JS/dist"
         });
 
-        builder.Services.AddSingleton<DistributeXRUpdateLoopService>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<DistributeXRUpdateLoopService>());
-        builder.Services.AddSingleton<DistributeXRApplicationService>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<DistributeXRApplicationService>());
+        builder.Services.AddSingleton<DistributeXRConnectionService>();
+        builder.Services.AddSingleton<DistributeXRApplication>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<DistributeXRApplication>());
 
         //builder.Services.AddHostedService<DistributeXRApplicationService>();
         builder.Services.AddClients();

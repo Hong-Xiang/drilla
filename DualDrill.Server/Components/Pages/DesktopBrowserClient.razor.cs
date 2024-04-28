@@ -2,7 +2,7 @@ using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Application;
-using DualDrill.Server.BrowserClient;
+using DualDrill.Server.Browser;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
 using SIPSorcery.Net;
@@ -18,9 +18,9 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
 
-    [Inject] DistributeXRApplicationService Application { get; set; } = default!;
-    [Inject] DistributeXRUpdateLoopService UpdateLoop { get; set; } = default!;
-    [Inject] BrowserClient.BrowserClient Client { get; set; }
+    [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
+    [Inject] DistributeXRApplication XRApplication { get; set; } = default!;
+    [Inject] BrowserClient Client { get; set; }
     [Inject] JSClientModule Module { get; set; } = default!;
 
     private ImmutableArray<Uri> PeerUris { get; set; } = [];
@@ -42,29 +42,18 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     public async Task Render()
     {
-        var FPS = 60;
-        var pc = new RTCPeerConnection();
-        var dc = await pc.createDataChannel("render");
-        dc.send([1]);
-
-        _ = Task.Run(async () =>
-           {
-               await foreach (var f in UpdateLoop.ReadAllRenderCommands())
-               {
-                   await RenderService.Render(f);
-               }
-           });
-        UpdateLoop.IsRendering = true;
+        XRApplication.RenderService = RenderService;
     }
 
     public void StopRender()
     {
-        UpdateLoop.IsRendering = false;
+        XRApplication.RenderService = null;
     }
 
     async Task CreateRenderContext()
     {
-        RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
+        await using var canvasElement = await Client.Module.CreateObjectReferenceAsync(RenderRootElement);
+        RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync(canvasElement));
     }
 
     protected override async Task OnInitializedAsync()
@@ -79,7 +68,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
                 await InvokeAsync(StateHasChanged).ConfigureAwait(false);
             })
         );
-        if (Client is BrowserClient.BrowserClient bc)
+        if (Client is Browser.BrowserClient bc)
         {
             bc.UserInterface = this;
         }
@@ -91,7 +80,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     void UpdateFrameCount()
     {
-        FrameCount = UpdateLoop.FrameCount;
+        FrameCount = XRApplication.FrameCount;
     }
 
     void RefreshPeerIds()
@@ -107,7 +96,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
             Logger.LogError("Failed to get client for connection");
             return;
         }
-        await Application.SetClients(Client, targetClient).ConfigureAwait(false);
+        await ConnectionService.SetClients(Client, targetClient).ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
@@ -123,7 +112,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
             return;
         }
         var cameraStream = await Client.GetCameraStreamAsync().ConfigureAwait(false);
-        await Application.SendVideo(cameraStream, PeerClient).ConfigureAwait(false);
+        await ConnectionService.SendVideo(cameraStream, PeerClient).ConfigureAwait(false);
         await InvokeAsync(StateHasChanged).ConfigureAwait(false);
     }
 
@@ -151,7 +140,6 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         Console.WriteLine("Show Self Video");
         await using var videoElementRef = await Module.CreateObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
         await Module.SetVideoElementStreamAsync(videoElementRef, ((JSMediaStreamProxy)stream).Reference);
-
     }
 }
 

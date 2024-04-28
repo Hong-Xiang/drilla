@@ -6,7 +6,7 @@ readonly struct ShowPeerClientCommand(IClient PeerClient) : IClientAsyncCommand<
 {
     public readonly async ValueTask ExecuteAsyncOn(IClient client)
     {
-        if (client is BrowserClient.BrowserClient bc)
+        if (client is Browser.BrowserClient bc)
         {
             var ui = bc.UserInterface;
             if (ui is not null)

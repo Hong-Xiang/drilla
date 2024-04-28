@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Concurrent;
 
-namespace DualDrill.Server.BrowserClient;
+namespace DualDrill.Server.Browser;
 
 public static class ClientHubEndpointExtension
 {

@@ -1,4 +1,6 @@
-export async function createRenderContext(
+import { Subject, animationFrameScheduler, observeOn } from "rxjs";
+
+export async function createWebGPURenderService(
   canvas: HTMLCanvasElement
 ): Promise<RenderRoot> {
   const adapter = await navigator.gpu.requestAdapter();
@@ -54,7 +56,9 @@ export async function createRenderContext(
   });
 
   const result: RenderRoot = {
-    render(t) {
+    render(f) {
+      const t = f / 100;
+
       // Get the current texture from the canvas context and
       // set it as the texture to render to.
       const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -82,25 +86,21 @@ export async function createRenderContext(
       device.queue.submit([commandBuffer]);
     },
   };
-  let requested = false;
-  let previousCount = 0;
-  const datas: number[] = [];
-  setInterval(() => {
-    console.warn(new Set(datas).size, datas.length);
-  }, 1000);
+
+  const renderStates = new Subject<number>();
+
+  renderStates.pipe(observeOn(animationFrameScheduler)).subscribe({
+    next: (t) => {
+      result.render(t);
+    },
+    error: (e) => {
+      console.error(e);
+    },
+  });
+
   return {
     render: (t) => {
-      console.log(`render called ${t}`);
-      datas.push(t);
-      if (!requested) {
-        requestAnimationFrame(() => {
-          result.render((t / 60) * Math.PI * 2);
-          console.log(t);
-          requested = false;
-        });
-      } else {
-        console.warn(`missed render`);
-      }
+      renderStates.next(t);
     },
   };
 }

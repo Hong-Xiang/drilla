@@ -9,7 +9,7 @@ readonly struct ShowSelfVideoCommand(IMediaStream Stream) : IClientAsyncCommand<
 {
     public readonly async ValueTask ExecuteAsyncOn(IClient client)
     {
-        if (client is BrowserClient.BrowserClient bc && bc.UserInterface is IDesktopBrowserUI ui)
+        if (client is Browser.BrowserClient bc && bc.UserInterface is IDesktopBrowserUI ui)
         {
             await ui.ShowSelfVideo(Stream);
         }
