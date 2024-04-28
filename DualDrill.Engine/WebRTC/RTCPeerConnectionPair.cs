@@ -4,7 +4,7 @@ using DualDrill.Common.ResourceManagement;
 
 namespace DualDrill.Engine.WebRTC;
 
-sealed class RTCPeerConnectionPair(
+public sealed class RTCPeerConnectionPair(
    IRTCPeerConnection Source,
    IRTCPeerConnection Target,
    IAsyncDisposable Done) : IConnectedPair<IClient, IClient, IRTCPeerConnection>

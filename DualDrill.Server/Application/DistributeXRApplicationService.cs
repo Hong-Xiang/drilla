@@ -1,8 +1,6 @@
-﻿
-using DualDrill.Engine.BrowserProxy;
+﻿using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
-using DualDrill.Server.BrowserClient;
 using DualDrill.Server.Command;
 using Microsoft.JSInterop;
 using System.Threading.Channels;
