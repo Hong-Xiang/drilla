@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DualDrill.Engine.UI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -18,17 +19,19 @@ public enum PairRole
     Target
 }
 
-public interface IConnectedPair<T> : IAsyncDisposable
+public interface IConnectedPair<out TSourceClient, out TTargetClient, T> : IAsyncDisposable
+    where TSourceClient : IClient
+    where TTargetClient : IClient
 {
     T Source { get; }
     T Target { get; }
-    IClient SourceClient { get; }
-    IClient TargetClient { get; }
+    TSourceClient SourceClient { get; }
+    TTargetClient TargetClient { get; }
 }
 
 public static class ConnectedPairExtension
 {
-    public static T GetSelf<T>(this IConnectedPair<T> pair, IClient client)
+    public static T GetSelf<T>(this IConnectedPair<IClient, IClient, T> pair, IClient client)
     {
         return pair.GetRole(client) switch
         {
@@ -38,7 +41,7 @@ public static class ConnectedPairExtension
         };
     }
 
-    public static T GetPeer<T>(this IConnectedPair<T> pair, IClient client)
+    public static T GetPeer<T>(this IConnectedPair<IClient, IClient, T> pair, IClient client)
     {
         return pair.GetRole(client) switch
         {
@@ -48,7 +51,7 @@ public static class ConnectedPairExtension
         };
     }
 
-    public static PairRole GetRole<T>(this IConnectedPair<T> pair, IClient client)
+    public static PairRole GetRole<T>(this IConnectedPair<IClient, IClient, T> pair, IClient client)
     {
         if (client.Equals(pair.SourceClient))
         {
@@ -61,31 +64,3 @@ public static class ConnectedPairExtension
         throw new NotPartitionClientException(client);
     }
 }
-
-public interface IDataChannelReference
-{
-}
-
-public interface IDataChannelReferencePair : IConnectedPair<IDataChannelReference>
-{
-}
-
-
-
-public interface IClientVideoReference
-{
-    IClient Client { get; }
-    string Id { get; }
-}
-
-public interface IVideoChannelReferencePair : IConnectedPair<IClientVideoReference>
-{
-}
-
-public interface IP2PClientPair : IConnectedPair<IClient>
-{
-    Task<IDataChannelReferencePair> CreateDataChannel(string label);
-    Task<IClientVideoReference> SendVideo(IClientVideoReference video);
-    IObservable<IClientVideoReference> VideoReceived { get; }
-}
-

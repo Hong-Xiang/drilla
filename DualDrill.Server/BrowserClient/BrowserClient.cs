@@ -1,53 +1,51 @@
 ﻿using DualDrill.Common.ResourceManagement;
+using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
+using DualDrill.Engine.WebRTC;
+using DualDrill.Server.Application;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.JSInterop;
 using System.Reactive.Subjects;
-using DualDrill.Engine.UI;
 
 namespace DualDrill.Server.BrowserClient;
 
-public class BrowserClient(IServiceProvider Services, Circuit Circuit, IJSRuntime JSRuntime, JSDrillClientModule Module)
-    : IClient, IBrowserClient, IAsyncDisposable
+class BrowserClient(
+   IServiceProvider Services,
+   IJSRuntime JSRuntime,
+   JSClientModule Module)
+   : IClient
 {
-    public Circuit Circuit { get; } = Circuit;
+    public Uri Uri { get; } = new Uri($"uuid:{Guid.NewGuid()}");
     public IJSRuntime JSRuntime { get; } = JSRuntime;
-    public JSDrillClientModule Module { get; } = Module;
+    public JSClientModule Module { get; } = Module;
     public IServiceProvider Services { get; } = Services;
 
-    public string Id => Circuit.Id;
+    public IDesktopBrowserUI? UserInterface { get; set; } = default;
 
-    private Subject<IP2PClientPair> PairedAsTargetSubject { get; } = new();
-    public IObservable<IP2PClientPair> PairedAsTarget => PairedAsTargetSubject;
-
-    public static async Task<BrowserClient> CreateAsync(
-        IServiceProvider services,
-        Circuit circuit,
-        IJSRuntime jsRuntime
-    )
+    public async ValueTask<IRTCPeerConnection> CreatePeerConnection()
     {
-        Console.WriteLine("Loading client js module");
-        var module = await JSDrillClientModule.ImportModuleAsync(jsRuntime).ConfigureAwait(false);
-        return new BrowserClient(services, circuit, jsRuntime, module);
+        return await RTCPeerConnectionProxy.CreateAsync(this, Module);
+    }
+    public async ValueTask<JSMediaStreamProxy> GetCameraStreamAsync()
+    {
+        return await Services.GetRequiredService<MediaDevices>().GetUserMedia(audio: false, video: true);
     }
 
-    public async Task<IP2PClientPair> CreatePairAsync(IClient target)
+
+    //public async Task<IPeerToPeerClientPair> CreatePairAsync(IClient target)
+    //{
+    //    var browserTarget = (BrowserClient)target;
+    //    var pair = await BrowserClientPair.CreateAsync(this, browserTarget);
+    //    browserTarget.PairedAsTargetSubject.OnNext(pair);
+    //    return pair;
+    //}
+
+    public ValueTask SendDataStream<T>(Uri uri, IAsyncEnumerable<T> dataStream)
     {
-        var browserTarget = (BrowserClient)target;
-        var pair = await BrowserClientPair.CreateAsync(this, browserTarget);
-        browserTarget.PairedAsTargetSubject.OnNext(pair);
-        return pair;
+        throw new NotImplementedException();
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await Module.DisposeAsync().ConfigureAwait(false);
-        PairedAsTargetSubject.Dispose();
-    }
-
-    public bool Equals(IClient? other) => other?.Id == Id;
-
-    public ValueTask<JSMediaStreamProxy> GetCameraStreamAsync()
+    public ValueTask<IAsyncEnumerable<T>> SubscribeDataStream<T>(Uri uri)
     {
         throw new NotImplementedException();
     }

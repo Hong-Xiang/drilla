@@ -1,12 +1,8 @@
-﻿using Microsoft.JSInterop;
-using DualDrill.Engine.Connection;
+﻿using DualDrill.Engine.Connection;
 using System.Reactive.Disposables;
 using DualDrill.Common.ResourceManagement;
-using System.Reactive.Subjects;
-using DualDrill.Server.Components;
-using DualDrill.Engine.WebRTC;
 
-namespace DualDrill.Server.BrowserClient;
+namespace DualDrill.Engine.WebRTC;
 
 sealed class RTCPeerConnectionPair(
    IRTCPeerConnection Source,
@@ -23,10 +19,10 @@ sealed class RTCPeerConnectionPair(
         await using var sourcePeer = await source.CreatePeerConnection().ConfigureAwait(false);
         await using var targetPeer = await target.CreatePeerConnection().ConfigureAwait(false);
         using var sub = new CompositeDisposable(
-            targetPeer.IceCandidate.Subscribe(async (candidate) => await sourcePeer.AddIceCandidate(candidate)),
             sourcePeer.IceCandidate.Subscribe(async (candidate) => await targetPeer.AddIceCandidate(candidate)),
+            targetPeer.IceCandidate.Subscribe(async (candidate) => await sourcePeer.AddIceCandidate(candidate)),
             sourcePeer.NegotiationNeeded.Subscribe(async (_) => await Negotiation(sourcePeer, targetPeer)),
-            targetPeer.NegotiationNeeded.Subscribe(async (_) => await Negotiation(targetPeer, sourcePeer))
+            targetPeer.NegotiationNeeded.Subscribe(async (_) => await Negotiation(sourcePeer, targetPeer))
         );
         await Negotiation(sourcePeer, targetPeer).ConfigureAwait(false);
         yield return (dispose) => new RTCPeerConnectionPair(sourcePeer, targetPeer, dispose); ;
