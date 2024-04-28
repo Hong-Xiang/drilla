@@ -1,13 +1,10 @@
-﻿using DualDrill.Common.ResourceManagement;
-using DualDrill.Engine.BrowserProxy;
+﻿using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Application;
-using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.JSInterop;
-using System.Reactive.Subjects;
 
-namespace DualDrill.Server.BrowserClient;
+namespace DualDrill.Server.Browser;
 
 class BrowserClient(
    IServiceProvider Services,

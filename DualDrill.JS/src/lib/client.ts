@@ -6,32 +6,36 @@ import {
   subscribeByPromiseLike,
 } from "./dotnet-server-interop";
 
-export { createRenderContext } from "../render/RenderService";
+export { createWebGPURenderService } from "../render/RenderService";
 
-export function getProperty<T, K extends keyof T>(target: T, key: K): T[K] {
-  return target[key];
-}
-
-export function getProperty2<T, K1 extends keyof T, K2 extends keyof T[K1]>(
-  target: T,
-  key1: K1,
-  key2: K2
-): T[K1][K2] {
-  return target[key1][key2];
-}
-
-export function setProperty<T, K extends keyof T>(
-  target: T,
-  key: K,
-  value: T[K]
-): void {
-  console.log(target);
-  console.log(key);
-  console.log(value);
-  if (value instanceof MediaStream) {
-    console.log(`value is MediaStream(id=${value.id})`);
+export function getProperty(
+  target: unknown,
+  keys: readonly (string | number)[]
+): unknown {
+  let result: any = target;
+  for (const key of keys) {
+    result = result[key];
   }
-  target[key] = value;
+  return result;
+}
+
+export function setProperty(
+  target: unknown,
+  value: unknown,
+  keys: readonly (string | number)[]
+): void {
+  function go(target: any, value: unknown, keys: readonly (string | number)[]) {
+    if (keys.length === 0) {
+      throw new Error(`keys is empty`);
+    }
+    const [key, ...rest] = keys;
+    if (rest.length === 0) {
+      target[key] = value;
+      return;
+    }
+    go(target[key], value, rest);
+  }
+  go(target, value, keys);
 }
 
 export function asObjectReference<T>(x: T) {

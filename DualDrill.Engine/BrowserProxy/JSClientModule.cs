@@ -52,10 +52,10 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
     {
         throw new NotImplementedException();
     }
-    public async ValueTask<IJSObjectReference> CreateWebGPURenderServiceAsync()
+    public async ValueTask<IJSObjectReference> CreateWebGPURenderServiceAsync(IJSObjectReference canvasElement)
     {
         var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("createWebGPURenderService");
+        return await module.InvokeAsync<IJSObjectReference>("createWebGPURenderService", canvasElement);
     }
     public async ValueTask<IJSObjectReference> CreateWebGLRenderServiceAsync(IJSObjectReference canvasElement)
     {
@@ -71,7 +71,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
     public async ValueTask SetProperty<T>(IJSObjectReference target, T value, params PropertyKey[] path)
     {
         var module = await Module.ConfigureAwait(false);
-        await module.InvokeVoidAsync("setProperty", target, (object[])[.. path.Select(static x => x.Value)], value);
+        await module.InvokeVoidAsync("setProperty", target, value, (object[])[.. path.Select(static x => x.Value)]);
     }
 
     public async ValueTask DisposeAsync()

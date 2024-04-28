@@ -8,7 +8,7 @@ using System.Reactive.Subjects;
 
 namespace DualDrill.Server.Services;
 
-sealed class CircuitService(BrowserClient.BrowserClient Client, ClientStore ClientStore) : CircuitHandler
+sealed class CircuitService(Browser.BrowserClient Client, ClientStore ClientStore) : CircuitHandler
 {
     private readonly TaskCompletionSource<Circuit> CircuitSource = new();
     public Task<Circuit> GetCircuitAsync() => CircuitSource.Task;

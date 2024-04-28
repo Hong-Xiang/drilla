@@ -1,6 +1,6 @@
 ﻿using Microsoft.JSInterop;
 
-namespace DualDrill.Server.BrowserClient;
+namespace DualDrill.Server.Browser;
 
 public sealed class JSRenderService(IJSObjectReference JSRenderContext) : IAsyncDisposable
 {

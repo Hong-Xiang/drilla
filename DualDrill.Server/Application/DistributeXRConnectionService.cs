@@ -7,18 +7,8 @@ using System.Threading.Channels;
 
 namespace DualDrill.Server.Application;
 
-sealed class DistributeXRApplicationService(ILogger<DistributeXRApplicationService> Logger) : BackgroundService
+sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService> Logger)
 {
-    readonly Channel<Func<CancellationToken, DistributeXRApplicationService, ValueTask>> ConnectionWorkItems =
-        Channel.CreateUnbounded<Func<CancellationToken, DistributeXRApplicationService, ValueTask>>();
-
-    public void QueueConnectionWorkItemAsync(Func<CancellationToken, DistributeXRApplicationService, ValueTask> work)
-    {
-        if (!ConnectionWorkItems.Writer.TryWrite(work))
-        {
-            Logger.LogError("Failed to queue connection task");
-        }
-    }
     IClient? SourceClient { get; set; } = null;
     IClient? TargetClient { get; set; } = null;
 
@@ -31,12 +21,12 @@ sealed class DistributeXRApplicationService(ILogger<DistributeXRApplicationServi
         BrowserRTCPeerConnectionPair = await RTCPeerConnectionPair.CreateAsync(source, target);
         await source.ExecuteCommandAsync(new ShowPeerClientCommand(target));
         await target.ExecuteCommandAsync(new ShowPeerClientCommand(source));
-        if (source is BrowserClient.BrowserClient sui)
+        if (source is Browser.BrowserClient sui)
         {
             var sourceCameraMediaStream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
             await SendVideo(sourceCameraMediaStream, target);
         }
-        if (target is BrowserClient.BrowserClient tui)
+        if (target is Browser.BrowserClient tui)
         {
             var targetCameraMediaStream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
             await SendVideo(targetCameraMediaStream, source);
@@ -58,27 +48,16 @@ sealed class DistributeXRApplicationService(ILogger<DistributeXRApplicationServi
 
         using var tcs = new TaskCompletionSourceReferenceWrapper<IJSObjectReference>();
         await using var sub = await receivePeer.WaitVideoStream(video.Id, tcs);
-        Console.WriteLine("Wait called");
+        Logger.LogTrace("Wait called");
 
         await sendPeer.AddVideoStream(video.Reference).ConfigureAwait(false);
-        Console.WriteLine("JS Add video stream called");
+        Logger.LogTrace("JS Add video stream called");
         var targetVideoJS = await tcs.Task.ConfigureAwait(false);
         var targetModule = receiveClient.Services.GetRequiredService<JSClientModule>();
         var targetVideoId = await targetModule.GetProperty<string>(targetVideoJS, "id");
         var targetVideo = new JSMediaStreamProxy(receiveClient, targetModule, targetVideoJS, targetVideoId);
-        Console.WriteLine("Target Video Received");
+        Logger.LogTrace("Target Video Received");
         await sendClient.ExecuteCommandAsync(new ShowSelfVideoCommand(video));
         await receiveClient.ExecuteCommandAsync(new ShowPeerVideoElementCommand(targetVideo));
-    }
-
-
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            var workItem = await ConnectionWorkItems.Reader.ReadAsync(stoppingToken);
-            await workItem(stoppingToken, this);
-        }
     }
 }
