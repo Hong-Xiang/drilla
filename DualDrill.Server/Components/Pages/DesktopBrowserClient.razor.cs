@@ -59,7 +59,6 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     protected override async Task OnInitializedAsync()
     {
         var circuit = await BrowserClientService.GetCircuitAsync().ConfigureAwait(false);
-        ClientHub.AddClient(Client);
         Subscription.Add(
             ClientHub.Clients.Subscribe(async (clients) =>
             {
