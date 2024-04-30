@@ -5,6 +5,7 @@ using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using SIPSorcery.Net;
 using System.Collections.Immutable;
 using System.Reactive.Disposables;
@@ -146,6 +147,11 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
         Console.WriteLine("Show Self Video");
         await using var videoElementRef = await Module.CreateObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
         await Module.SetVideoElementStreamAsync(videoElementRef, ((JSMediaStreamProxy)stream).Reference);
+    }
+
+    public ValueTask<IJSObjectReference> GetCanvasElement()
+    {
+        throw new NotImplementedException();
     }
 }
 
