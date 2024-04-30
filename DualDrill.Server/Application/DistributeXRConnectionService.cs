@@ -3,6 +3,8 @@ using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Command;
 using Microsoft.JSInterop;
+using System.Reactive.Linq;
+using System.Security.Claims;
 using System.Threading.Channels;
 
 namespace DualDrill.Server.Application;
@@ -31,6 +33,74 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
             var targetCameraMediaStream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
             await SendVideo(targetCameraMediaStream, source);
         }
+        AutoResetClientsWhenFailed(BrowserRTCPeerConnectionPair);
+    }
+
+    public void AutoResetClientsWhenFailed(RTCPeerConnectionPair connectionPair)
+    {
+        connectionPair.Source.ConnectionStateChange
+            .Merge(connectionPair.Target.ConnectionStateChange)
+            .Where(state => state == "failed")
+            .Take(1)
+            .SelectMany(Observable.FromAsync(async c =>
+            {
+                await ResetClients();
+
+            }))
+            .Subscribe(_ => { });
+    }
+
+    public async ValueTask ResetClients()
+    {
+        if (SourceClient is Browser.BrowserClient sui)
+        {
+            Console.WriteLine("Reset SourceClient");
+            try
+            {
+                var sourceCameraMediaStream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
+                var mediaTrack = await sourceCameraMediaStream.GetVideoTrack(0);
+                await mediaTrack.Stop();
+                await CloseVideo(SourceClient);
+                await SourceClient.ExecuteCommandAsync(new RemovePeerClientCommand());
+            }
+            catch(Exception e)
+            {
+                Logger.LogError(e.Message);
+            }
+        }
+        Console.WriteLine("Reset TargetClient");
+
+        if (TargetClient is Browser.BrowserClient tui)
+        {
+            try
+            {
+                var targetCameraMediaStream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
+                var mediaTrack = await targetCameraMediaStream.GetVideoTrack(0);
+                await mediaTrack.Stop();
+                await CloseVideo(TargetClient);
+                await TargetClient.ExecuteCommandAsync(new RemovePeerClientCommand());
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message);
+            }
+        }
+        Console.WriteLine("Reset BrowserRTCPeerConnectionPair");
+        if (BrowserRTCPeerConnectionPair is not null)
+        {
+            try
+            {
+                await BrowserRTCPeerConnectionPair.DisposeAsync();
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message);
+            }
+        }
+
+        SourceClient = null;
+        TargetClient = null;
+        BrowserRTCPeerConnectionPair = null;
     }
 
     public async ValueTask SendVideo<TVideo, TClient>(TVideo video, TClient target)
@@ -59,5 +129,13 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
         Logger.LogTrace("Target Video Received");
         await sendClient.ExecuteCommandAsync(new ShowSelfVideoCommand(video));
         await receiveClient.ExecuteCommandAsync(new ShowPeerVideoElementCommand(targetVideo));
+    }
+
+    public async ValueTask CloseVideo<TClient>(TClient client)
+        where TClient : IClient
+    {
+        Logger.LogTrace("close video");
+        await client.ExecuteCommandAsync(new CloseSelfVideoCommand());
+        await client.ExecuteCommandAsync(new ClosePeerVideoElementCommand());
     }
 }

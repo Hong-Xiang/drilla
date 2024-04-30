@@ -17,7 +17,7 @@ class BrowserClient(
     public JSClientModule Module { get; } = Module;
     public IServiceProvider Services { get; } = Services;
 
-    public IDesktopBrowserUI? UserInterface { get; set; } = default;
+    public IDesktopBrowserUI  ? UserInterface { get; set; } = default;
 
     public async ValueTask<IRTCPeerConnection> CreatePeerConnection()
     {
@@ -27,7 +27,6 @@ class BrowserClient(
     {
         return await Services.GetRequiredService<MediaDevices>().GetUserMedia(audio: false, video: true);
     }
-
 
     //public async Task<IPeerToPeerClientPair> CreatePairAsync(IClient target)
     //{

@@ -15,10 +15,11 @@ public sealed class JSMediaStreamProxy(
     public IJSObjectReference Reference { get; } = MediaStream;
     public string Id { get; } = Id;
 
-    public async Task<IJSObjectReference> GetVideoTrack(int index)
+    public async Task<IMediaStreamTrack> GetVideoTrack(int index)
     {
         await using var videoTracks = await Reference.InvokeAsync<IJSObjectReference>("getVideoTracks").ConfigureAwait(false);
-        return await Module.GetProperty<IJSObjectReference>(videoTracks, index).ConfigureAwait(false);
+        var track = await Module.GetProperty<IJSObjectReference>(videoTracks, index).ConfigureAwait(false);
+        return new JsMediaStreamTracksProxy(Client, Module, track);
     }
 
     public async ValueTask DisposeAsync()

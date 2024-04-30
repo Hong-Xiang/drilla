@@ -31,7 +31,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     public IClient? PeerClient { get; set; } = null;
 
 
-    bool Connected => !(PeerClient is null);
+    bool Connected => PeerClient is not null;
 
     ElementReference PeerVideoElement { get; set; }
     ElementReference SelfVideoElement { get; set; }
@@ -98,6 +98,16 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         await ConnectionService.SetClients(Client, targetClient).ConfigureAwait(false);
     }
 
+    async Task Disconnect()
+    {
+        if (Client is null)
+        {
+            Logger.LogError("Failed to get client for connection");
+            return;
+        }
+        await ConnectionService.ResetClients().ConfigureAwait(false);
+    }
+
     public async ValueTask DisposeAsync()
     {
         Subscription.Dispose();
@@ -119,7 +129,12 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     {
         PeerClient = client;
         await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+    }
 
+    public async ValueTask RemovePeerClient()
+    {
+        PeerClient = null;
+        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -139,6 +154,29 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         Console.WriteLine("Show Self Video");
         await using var videoElementRef = await Module.CreateObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
         await Module.SetVideoElementStreamAsync(videoElementRef, ((JSMediaStreamProxy)stream).Reference);
+    }
+
+    public async ValueTask ClosePeerVideo()
+    {
+        Console.WriteLine("Close Peer Video");
+        await using var videoElementRef = await Module.CreateObjectReferenceAsync(PeerVideoElement).ConfigureAwait(false);
+        var videoProxy = new JsVideoElementProxy(Client, Module, videoElementRef);
+        var mediaStream = await videoProxy.GetStream();
+        var camera = await mediaStream.GetVideoTrack(0);
+        await camera.Stop();
+
+        await Module.RemoveVideoElementStreamAsync(videoElementRef);
+    }
+    public async ValueTask CloseSelfVideo()
+    {
+        Console.WriteLine("Close Self Video");
+        await using var videoElementRef = await Module.CreateObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
+        var videoProxy = new JsVideoElementProxy(Client, Module, videoElementRef);
+        var mediaStream = await videoProxy.GetStream();
+        var camera = await mediaStream.GetVideoTrack(0);
+        await camera.Stop();
+
+        await Module.RemoveVideoElementStreamAsync(videoElementRef) ;
     }
 }
 

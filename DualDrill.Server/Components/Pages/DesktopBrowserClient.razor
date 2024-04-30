@@ -34,6 +34,12 @@ else
 }
 <video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video>
 <video id="peerVideo" @ref="PeerVideoElement" autoplay playsinline></video>
+
+@if (Connected)
+{
+    <button @onclick=@(() => Disconnect())>disconnect</button>
+}
+
 <div>
     <span>Render Service</span>
     <button @onclick="CreateRenderContext">Create Render Context</button>
