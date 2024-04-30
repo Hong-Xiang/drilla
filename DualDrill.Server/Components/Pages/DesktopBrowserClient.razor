@@ -1,8 +1,20 @@
 ﻿@page "/desktop"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
-<h3>Desktop DrillA Client Home</h3>
-
+<h3>Desktop Client</h3>
+<InputNumber @bind-Value="Scale" ></InputNumber>
+<div>
+    <div>
+        <span>Render Service</span>
+        @if (RenderService is null)
+        {
+            <button @onclick="CreateRenderContext">Create Render Context</button>
+        }
+        <button @onclick="StartRender" disabled="@(RenderService is null)">Start Render</button>
+        <button @onclick="StopRender" disabled="@(RenderService is null)">Stop Render</button>
+    </div>
+    <canvas id="render-root" @ref="RenderRootElement" width="800" height="600" />
+</div>
 <p>
     id = @Client?.Uri
 </p>
@@ -34,12 +46,3 @@ else
 }
 <video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video>
 <video id="peerVideo" @ref="PeerVideoElement" autoplay playsinline></video>
-<div>
-    <span>Render Service</span>
-    <button @onclick="CreateRenderContext">Create Render Context</button>
-    <button @onclick="Render">Start Render</button>
-    <button @onclick="StopRender">Stop Render</button>
-</div>
-
-<canvas id="render-root" @ref="RenderRootElement" width="800" height="600" />
-

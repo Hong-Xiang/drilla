@@ -1,5 +1,6 @@
 ﻿using DualDrill.Engine.Connection;
 using DualDrill.Server.Browser;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading.Channels;
 
@@ -18,6 +19,40 @@ public sealed class DistributeXRApplication(ILogger<DistributeXRApplication> Log
     readonly TimeSpan SampleRate = TimeSpan.FromSeconds(1.0 / 60.0);
     public int FrameCount { get; private set; }
     public JSRenderService? RenderService { get; set; } = default;
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+
+
+    event Action<float> StateChangeEvent;
+    float m_Scale = 1.0f;
+    public float Scale
+    {
+        get => m_Scale;
+        set
+        {
+            m_Scale = value;
+            StateChangeEvent(value);
+        }
+    }
+
+    public async IAsyncEnumerable<float> ScaleChanges(CancellationToken token)
+    {
+        var channel = Channel.CreateBounded<float>(1);
+        var h = (float value) =>
+        {
+            channel.Writer.TryWrite(value);
+        };
+        StateChangeEvent += h;
+        yield return m_Scale;
+
+        while (!token.IsCancellationRequested)
+        {
+            yield return await channel.Reader.ReadAsync();
+        }
+        StateChangeEvent -= h;
+    }
+
 
     void FrameCallback(object? state)
     {
@@ -44,7 +79,7 @@ public sealed class DistributeXRApplication(ILogger<DistributeXRApplication> Log
             {
                 var st = new Stopwatch();
                 st.Start();
-                await rs.Render(frame);
+                await rs.Render(frame, Scale);
                 st.Stop();
                 Logger.LogInformation("Render Elapsed {RenderTime} ms", st.ElapsedMilliseconds);
             }
