@@ -32,6 +32,15 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
     public IJSRuntime JSRuntime { get; } = jsRuntime;
     Task<IJSObjectReference> Module { get; } = jsRuntime.InvokeAsync<IJSObjectReference>("import", $"/client.js?t={Guid.NewGuid()}").AsTask();
 
+    public async ValueTask<JSMediaStreamProxy> CaptureStream(IClient client, IJSObjectReference canvasElement)
+    {
+        var module = await Module;
+        var mediaStream = await module.InvokeAsync<IJSObjectReference>("captureStream", canvasElement);
+        var id = await GetProperty<string>(mediaStream, "id").ConfigureAwait(false);
+        return new(client, this, mediaStream, id);
+
+    }
+
     public async ValueTask<IJSObjectReference> CreateRtcPeerConnectionAsync()
     {
         var module = await Module.ConfigureAwait(false);

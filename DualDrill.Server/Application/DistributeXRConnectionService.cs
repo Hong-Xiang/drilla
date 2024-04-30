@@ -23,8 +23,10 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
         await target.ExecuteCommandAsync(new ShowPeerClientCommand(source));
         if (source is Browser.BrowserClient sui)
         {
-            var sourceCameraMediaStream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
-            await SendVideo(sourceCameraMediaStream, target);
+            //var sourceCameraMediaStream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
+            var canvas = await sui.ExecuteCommandAsync(new GetRenderCanvas());
+            var stream = await sui.Module.CaptureStream(sui, canvas);
+            await SendVideo(stream, target);
         }
         if (target is Browser.BrowserClient tui)
         {

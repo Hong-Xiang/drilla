@@ -42,6 +42,10 @@ export function asObjectReference<T>(x: T) {
   return x;
 }
 
+export function captureStream(canvas: HTMLCanvasElement): MediaStream {
+  return canvas.captureStream(30)
+}
+
 export function createRTCPeerConnection() {
   const connection = new RTCPeerConnection();
 
