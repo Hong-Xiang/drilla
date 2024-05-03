@@ -22,7 +22,7 @@ sealed class CircuitService(Browser.BrowserClient Client, ClientStore ClientStor
 
     public override async Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
-        await base.OnCircuitClosedAsync(circuit, cancellationToken).ConfigureAwait(false);
         ClientStore.RemoveClient(Client);
+        await base.OnCircuitClosedAsync(circuit, cancellationToken);
     }
 }

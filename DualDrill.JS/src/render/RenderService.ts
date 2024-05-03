@@ -56,7 +56,7 @@ export async function createWebGPURenderService(
   });
 
   const result: RenderRoot = {
-    render(f) {
+    render(f, scale) {
       const t = f / 100;
 
       // Get the current texture from the canvas context and
@@ -78,6 +78,12 @@ export async function createWebGPURenderService(
 
       // make a render pass encoder to encode render specific commands
       const pass = encoder.beginRenderPass(renderPassDescriptor);
+      const h = context.getCurrentTexture().height;
+      const w = context.getCurrentTexture().width;
+      const hs = h / scale;
+      const ws = w / scale;
+
+      pass.setViewport((w - ws) / 2, (h - hs) / 2, ws, hs, 0, 1);
       pass.setPipeline(pipeline);
       pass.draw(3); // call our vertex shader 3 times
       pass.end();
@@ -87,11 +93,14 @@ export async function createWebGPURenderService(
     },
   };
 
-  const renderStates = new Subject<number>();
+  const renderStates = new Subject<{
+    time: number,
+    scale: number
+  }>();
 
   renderStates.pipe(observeOn(animationFrameScheduler)).subscribe({
-    next: (t) => {
-      result.render(t);
+    next: ({ time, scale }) => {
+      result.render(time, scale);
     },
     error: (e) => {
       console.error(e);
@@ -99,13 +108,13 @@ export async function createWebGPURenderService(
   });
 
   return {
-    render: (t) => {
-      renderStates.next(t);
+    render: (t, scale) => {
+      renderStates.next({ time: t, scale });
     },
   };
 }
-export interface RenderGraph {}
-export interface RenderState {}
+export interface RenderGraph { }
+export interface RenderState { }
 export interface RenderRoot {
-  render(t: number): void;
+  render(t: number, scale: number): void;
 }

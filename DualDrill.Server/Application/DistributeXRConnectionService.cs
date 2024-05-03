@@ -25,13 +25,18 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
         await target.ExecuteCommandAsync(new ShowPeerClientCommand(source));
         if (source is Browser.BrowserClient sui)
         {
-            var sourceCameraMediaStream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
-            await SendVideo(sourceCameraMediaStream, target);
+            var stream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
+            //var canvas = await sui.ExecuteCommandAsync(new GetRenderCanvas());
+            //var stream = await sui.Module.CaptureStream(sui, canvas);
+            await SendVideo(stream, target);
         }
         if (target is Browser.BrowserClient tui)
         {
-            var targetCameraMediaStream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
-            await SendVideo(targetCameraMediaStream, source);
+            //var stream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
+            var canvas = await tui.ExecuteCommandAsync(new GetRenderCanvas());
+            var stream = await tui.Module.CaptureStream(tui, canvas);
+
+            await SendVideo(stream, source);
         }
         AutoResetClientsWhenFailed(BrowserRTCPeerConnectionPair);
     }
