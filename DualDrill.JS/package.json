@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "compile": "tsc",
     "build": "node esbuild.mjs",
     "preview": "vite preview"
   },
@@ -16,14 +17,17 @@
     "react-dom": "^18.2.0",
     "rxjs": "^7.8.1",
     "styled-components": "^6.1.8",
+    "three": "^0.164.1",
     "tsyringe": "^4.8.0",
-    "twgl.js": "^5.5.4"
+    "twgl.js": "^5.5.4",
+    "wgpu-matrix": "^2.8.0"
   },
   "devDependencies": {
     "@microsoft/dotnet-js-interop": "^8.0.0",
     "@types/node": "^20.11.1",
     "@types/react": "^18.2.71",
     "@types/react-dom": "^18.2.22",
+    "@types/three": "^0.164.0",
     "@types/webxr": "^0.5.14",
     "@vitejs/plugin-react": "^4.2.1",
     "@webgpu/types": "^0.1.40",

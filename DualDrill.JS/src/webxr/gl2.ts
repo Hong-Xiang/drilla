@@ -459,10 +459,11 @@ class Material {
 
 class Renderer {
   color = [0.0, 0.0, 0.0, 1.0];
-  masks: number = this.gl.COLOR_BUFFER_BIT;
   depthTest = false;
+  masks: number
   constructor(private readonly gl: WebGL2RenderingContext) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    this.masks = this.gl.COLOR_BUFFER_BIT;
   }
   depthTesting(enable: boolean) {
     if (enable && !this.depthTest) {
