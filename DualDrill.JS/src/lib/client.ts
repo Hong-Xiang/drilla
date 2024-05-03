@@ -6,40 +6,12 @@ import {
   subscribeByPromiseLike,
 } from "./dotnet-server-interop";
 
-export { createWebGPURenderService } from "../render/RenderService";
-
-export function getProperty(
-  target: unknown,
-  keys: readonly (string | number)[]
-): unknown {
-  let result: any = target;
-  for (const key of keys) {
-    result = result[key];
-  }
-  return result;
-}
-
-export function setProperty(
-  target: unknown,
-  value: unknown,
-  keys: readonly (string | number)[]
-): void {
-  function go(target: any, value: unknown, keys: readonly (string | number)[]) {
-    if (keys.length === 0) {
-      throw new Error(`keys is empty`);
-    }
-    const [key, ...rest] = keys;
-    if (rest.length === 0) {
-      target[key] = value;
-      return;
-    }
-    go(target[key], value, rest);
-  }
-  go(target, value, keys);
-}
+export { getProperty, setProperty } from './dotnet-server-interop'
+// export { createWebGPURenderService } from "../render/RenderService";
+export { createWebGPURenderService } from "../webgpu/rotateCube";
 
 export function asObjectReference<T>(x: T) {
-  return x;
+  return x
 }
 
 export function captureStream(canvas: HTMLCanvasElement): MediaStream {

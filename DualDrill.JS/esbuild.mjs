@@ -6,5 +6,8 @@ await esbuild.build({
   format: "esm",
   target: "es2020",
   outfile: "dist/client.js",
+  loader: {
+    ".wgsl": 'text'
+  }
 });
 

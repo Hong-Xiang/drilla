@@ -36,6 +36,23 @@ public sealed class DistributeXRApplication(ILogger<DistributeXRApplication> Log
         }
     }
 
+    public async IAsyncEnumerable<T> Where<T>(IAsyncEnumerable<T> source, Func<T, bool> predicator)
+    {
+        await foreach (var item in source)
+        {
+            if (predicator(item))
+            {
+                yield return item;
+            }
+        }
+    }
+
+    public void Test(IAsyncEnumerable<int> data)
+    {
+        var evenData = Where(data, x => x % 2 == 0);
+    }
+
+
     public async IAsyncEnumerable<float> ScaleChanges(CancellationToken token)
     {
         var channel = Channel.CreateBounded<float>(1);
@@ -77,11 +94,7 @@ public sealed class DistributeXRApplication(ILogger<DistributeXRApplication> Log
 
             if (rs is not null)
             {
-                var st = new Stopwatch();
-                st.Start();
                 await rs.Render(frame, Scale);
-                st.Stop();
-                Logger.LogInformation("Render Elapsed {RenderTime} ms", st.ElapsedMilliseconds);
             }
             RenderCommands.Writer.TryWrite(frame);
         }
