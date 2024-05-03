@@ -17,7 +17,7 @@ class BrowserClient(
     public JSClientModule Module { get; } = Module;
     public IServiceProvider Services { get; } = Services;
 
-    public IDesktopBrowserUI  ? UserInterface { get; set; } = default;
+    public IDesktopBrowserUI? UserInterface { get; set; } = default;
 
     public async ValueTask<IRTCPeerConnection> CreatePeerConnection()
     {
