@@ -116,15 +116,15 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         PeerUris = [.. ClientHub.ClientUris.Where(c => c != Client.Uri)];
     }
 
-    async Task Connect(Uri targetUri)
+    async Task Connect(Uri headsetUri)
     {
-        var targetClient = ClientHub.GetClient(targetUri);
-        if (targetClient is null || Client is null)
+        var headsetClient = ClientHub.GetClient(headsetUri);
+        if (headsetClient is null || Client is null)
         {
             Logger.LogError("Failed to get client for connection");
             return;
         }
-        await ConnectionService.SetClients(Client, targetClient).ConfigureAwait(false);
+        await ConnectionService.SetClients(headsetClient, Client).ConfigureAwait(false);
     }
 
     async Task Disconnect()

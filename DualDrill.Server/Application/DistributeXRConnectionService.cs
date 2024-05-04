@@ -16,27 +16,27 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
 
     RTCPeerConnectionPair? BrowserRTCPeerConnectionPair { get; set; } = null;
 
-    public async ValueTask SetClients(IClient source, IClient target)
+    public async ValueTask SetClients(IClient displayClient, IClient renderClient)
     {
-        SourceClient = source;
-        TargetClient = target;
-        BrowserRTCPeerConnectionPair = await RTCPeerConnectionPair.CreateAsync(source, target);
-        await source.ExecuteCommandAsync(new ShowPeerClientCommand(target));
-        await target.ExecuteCommandAsync(new ShowPeerClientCommand(source));
-        if (source is Browser.BrowserClient sui)
+        SourceClient = displayClient;
+        TargetClient = renderClient;
+        BrowserRTCPeerConnectionPair = await RTCPeerConnectionPair.CreateAsync(displayClient, renderClient);
+        await displayClient.ExecuteCommandAsync(new ShowPeerClientCommand(renderClient));
+        await renderClient.ExecuteCommandAsync(new ShowPeerClientCommand(displayClient));
+        if (displayClient is Browser.BrowserClient sui)
         {
             var stream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
             //var canvas = await sui.ExecuteCommandAsync(new GetRenderCanvas());
             //var stream = await sui.Module.CaptureStream(sui, canvas);
-            await SendVideo(stream, target);
+            await SendVideo(stream, renderClient);
         }
-        if (target is Browser.BrowserClient tui)
+        if (renderClient is Browser.BrowserClient tui)
         {
             //var stream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
             var canvas = await tui.ExecuteCommandAsync(new GetRenderCanvas());
             var stream = await tui.Module.CaptureStream(tui, canvas);
 
-            await SendVideo(stream, source);
+            await SendVideo(stream, displayClient);
         }
         AutoResetClientsWhenFailed(BrowserRTCPeerConnectionPair);
     }
