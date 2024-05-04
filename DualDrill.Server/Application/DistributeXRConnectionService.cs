@@ -3,6 +3,8 @@ using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Command;
 using Microsoft.JSInterop;
+using System.Reactive.Linq;
+using System.Security.Claims;
 using System.Threading.Channels;
 
 namespace DualDrill.Server.Application;
@@ -14,28 +16,96 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
 
     RTCPeerConnectionPair? BrowserRTCPeerConnectionPair { get; set; } = null;
 
-    public async ValueTask SetClients(IClient source, IClient target)
+    public async ValueTask SetClients(IClient displayClient, IClient renderClient)
     {
-        SourceClient = source;
-        TargetClient = target;
-        BrowserRTCPeerConnectionPair = await RTCPeerConnectionPair.CreateAsync(source, target);
-        await source.ExecuteCommandAsync(new ShowPeerClientCommand(target));
-        await target.ExecuteCommandAsync(new ShowPeerClientCommand(source));
-        if (source is Browser.BrowserClient sui)
+        SourceClient = displayClient;
+        TargetClient = renderClient;
+        BrowserRTCPeerConnectionPair = await RTCPeerConnectionPair.CreateAsync(displayClient, renderClient);
+        await displayClient.ExecuteCommandAsync(new ShowPeerClientCommand(renderClient));
+        await renderClient.ExecuteCommandAsync(new ShowPeerClientCommand(displayClient));
+        if (displayClient is Browser.BrowserClient sui)
         {
             var stream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
             //var canvas = await sui.ExecuteCommandAsync(new GetRenderCanvas());
             //var stream = await sui.Module.CaptureStream(sui, canvas);
-            await SendVideo(stream, target);
+            await SendVideo(stream, renderClient);
         }
-        if (target is Browser.BrowserClient tui)
+        if (renderClient is Browser.BrowserClient tui)
         {
             //var stream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
             var canvas = await tui.ExecuteCommandAsync(new GetRenderCanvas());
             var stream = await tui.Module.CaptureStream(tui, canvas);
 
-            await SendVideo(stream, source);
+            await SendVideo(stream, displayClient);
         }
+        AutoResetClientsWhenFailed(BrowserRTCPeerConnectionPair);
+    }
+
+    public void AutoResetClientsWhenFailed(RTCPeerConnectionPair connectionPair)
+    {
+        connectionPair.Source.ConnectionStateChange
+            .Merge(connectionPair.Target.ConnectionStateChange)
+            .Where(state => state == "failed")
+            .Take(1)
+            .SelectMany(Observable.FromAsync(async c =>
+            {
+                await ResetClients();
+
+            }))
+            .Subscribe(_ => { });
+    }
+
+    public async ValueTask ResetClients()
+    {
+        if (SourceClient is Browser.BrowserClient sui)
+        {
+            Console.WriteLine("Reset SourceClient");
+            try
+            {
+                var sourceCameraMediaStream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
+                var mediaTrack = await sourceCameraMediaStream.GetVideoTrack(0);
+                await mediaTrack.Stop();
+                await CloseVideo(SourceClient);
+                await SourceClient.ExecuteCommandAsync(new RemovePeerClientCommand());
+            }
+            catch(Exception e)
+            {
+                Logger.LogError(e.Message);
+            }
+        }
+        Console.WriteLine("Reset TargetClient");
+
+        if (TargetClient is Browser.BrowserClient tui)
+        {
+            try
+            {
+                var targetCameraMediaStream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
+                var mediaTrack = await targetCameraMediaStream.GetVideoTrack(0);
+                await mediaTrack.Stop();
+                await CloseVideo(TargetClient);
+                await TargetClient.ExecuteCommandAsync(new RemovePeerClientCommand());
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message);
+            }
+        }
+        Console.WriteLine("Reset BrowserRTCPeerConnectionPair");
+        if (BrowserRTCPeerConnectionPair is not null)
+        {
+            try
+            {
+                await BrowserRTCPeerConnectionPair.DisposeAsync();
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e.Message);
+            }
+        }
+
+        SourceClient = null;
+        TargetClient = null;
+        BrowserRTCPeerConnectionPair = null;
     }
 
     public async ValueTask SendVideo<TVideo, TClient>(TVideo video, TClient target)
@@ -64,5 +134,13 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
         Logger.LogTrace("Target Video Received");
         await sendClient.ExecuteCommandAsync(new ShowSelfVideoCommand(video));
         await receiveClient.ExecuteCommandAsync(new ShowPeerVideoElementCommand(targetVideo));
+    }
+
+    public async ValueTask CloseVideo<TClient>(TClient client)
+        where TClient : IClient
+    {
+        Logger.LogTrace("close video");
+        await client.ExecuteCommandAsync(new CloseSelfVideoCommand());
+        await client.ExecuteCommandAsync(new ClosePeerVideoElementCommand());
     }
 }

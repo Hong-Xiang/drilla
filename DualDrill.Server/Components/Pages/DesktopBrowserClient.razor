@@ -43,6 +43,7 @@
 else
 {
     <button @onclick="SendVideo">Send Video</button>
+    <button @onclick=@(Disconnect)>disconnect</button>
 }
 <video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video>
 <video id="peerVideo" @ref="PeerVideoElement" autoplay playsinline></video>

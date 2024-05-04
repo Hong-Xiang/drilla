@@ -28,7 +28,6 @@ class BrowserClient(
         return await Services.GetRequiredService<MediaDevices>().GetUserMedia(audio: false, video: true);
     }
 
-
     //public async Task<IPeerToPeerClientPair> CreatePairAsync(IClient target)
     //{
     //    var browserTarget = (BrowserClient)target;

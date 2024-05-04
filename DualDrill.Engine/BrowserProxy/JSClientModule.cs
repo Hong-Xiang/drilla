@@ -77,7 +77,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
         return await module.InvokeAsync<T>("getProperty", target, (object[])[.. path.Select(static x => x.Value)]);
     }
 
-    public async ValueTask SetProperty<T>(IJSObjectReference target, T value, params PropertyKey[] path)
+    public async ValueTask SetProperty<T>(IJSObjectReference target, T? value, params PropertyKey[] path)
     {
         var module = await Module.ConfigureAwait(false);
         await module.InvokeVoidAsync("setProperty", target, value, (object[])[.. path.Select(static x => x.Value)]);
@@ -95,6 +95,11 @@ public static class JSClientModuleExtension
     public static async ValueTask SetVideoElementStreamAsync(this JSClientModule client, IJSObjectReference videoElement, IJSObjectReference mediaStream)
     {
         await client.SetProperty(videoElement, mediaStream, "srcObject");
+    }
+
+    public static async ValueTask RemoveVideoElementStreamAsync(this JSClientModule client, IJSObjectReference videoElement)
+    {
+        await client.SetProperty<IJSObjectReference>(videoElement, null, "srcObject");
     }
 }
 

@@ -1,5 +1,6 @@
 ﻿namespace DualDrill.Engine.WebRTC;
 
-internal interface IMediaStreamTrack
+public interface IMediaStreamTrack
 {
+    Task Stop();
 }

@@ -153,5 +153,34 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     {
         throw new NotImplementedException();
     }
+
+    public async ValueTask RemovePeerClient()
+    {
+        PeerClient = null;
+        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+    }
+
+    public async ValueTask ClosePeerVideo()
+    {
+        Console.WriteLine("Close Peer Video");
+        await using var videoElementRef = await Module.CreateObjectReferenceAsync(PeerVideoElement).ConfigureAwait(false);
+        var videoProxy = new JsVideoElementProxy(Client, Module, videoElementRef);
+        var mediaStream = await videoProxy.GetStream();
+        var camera = await mediaStream.GetVideoTrack(0);
+        await camera.Stop();
+
+        await Module.RemoveVideoElementStreamAsync(videoElementRef);
+    }
+    public async ValueTask CloseSelfVideo()
+    {
+        Console.WriteLine("Close Self Video");
+        await using var videoElementRef = await Module.CreateObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
+        var videoProxy = new JsVideoElementProxy(Client, Module, videoElementRef);
+        var mediaStream = await videoProxy.GetStream();
+        var camera = await mediaStream.GetVideoTrack(0);
+        await camera.Stop();
+
+        await Module.RemoveVideoElementStreamAsync(videoElementRef);
+    }
 }
 

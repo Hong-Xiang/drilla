@@ -11,7 +11,7 @@ readonly struct ShowPeerVideoElementCommand(IMediaStream Stream) : IClientAsyncC
 {
     public async ValueTask ExecuteAsyncOn(IClient client)
     {
-        Console.WriteLine($"Execute {nameof(ShowPeerClientCommand)}");
+        Console.WriteLine($"Execute {nameof(ShowPeerVideoElementCommand)}");
         if (client is Browser.BrowserClient bc && bc.UserInterface is IDesktopBrowserUI ui)
         {
             await ui.ShowPeerVideo(Stream);

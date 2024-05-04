@@ -8,7 +8,12 @@ internal interface IDesktopBrowserUI
 {
     ValueTask<IJSObjectReference> GetCanvasElement();
     ValueTask SetPeerClient(IClient client);
+    ValueTask RemovePeerClient();
+
     ValueTask ShowPeerVideo(IMediaStream stream);
     ValueTask ShowSelfVideo(IMediaStream stream);
+
+    ValueTask ClosePeerVideo();
+    ValueTask CloseSelfVideo();
 }
 
