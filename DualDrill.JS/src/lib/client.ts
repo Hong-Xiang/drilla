@@ -7,8 +7,8 @@ import {
 } from "./dotnet-server-interop";
 
 export { getProperty, setProperty } from './dotnet-server-interop'
-// export { createWebGPURenderService } from "../render/RenderService";
-export { createWebGPURenderService } from "../webgpu/rotateCube";
+export { createWebGPURenderService } from "../render/RenderService";
+// export { createWebGPURenderService } from "../webgpu/rotateCube";
 
 export function asObjectReference<T>(x: T) {
   return x
