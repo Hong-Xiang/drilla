@@ -13,7 +13,12 @@
         <button @onclick="StartRender" disabled="@(RenderService is null)">Start Render</button>
         <button @onclick="StopRender" disabled="@(RenderService is null)">Stop Render</button>
     </div>
-    <canvas id="render-root" @ref="RenderRootElement" width="800" height="600" />
+    <div @ref="RenderRootElement"
+         @onpointerdown="PointerDown"
+         @onpointermove="PointerMove"
+         @onpointerup="PointerUp">
+        <canvas id="render-root" width="800" height="600" />
+    </div>
 </div>
 <p>
     id = @Client?.Uri

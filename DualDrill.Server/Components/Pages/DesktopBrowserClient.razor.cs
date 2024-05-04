@@ -5,6 +5,7 @@ using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using SIPSorcery.Net;
 using System.Collections.Immutable;
@@ -211,6 +212,19 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     public async ValueTask<IJSObjectReference> GetCanvasElement()
     {
         return await Module.CreateObjectReferenceAsync(RenderRootElement);
+    }
+
+    public void PointerDown(PointerEventArgs e)
+    {
+        Logger.LogInformation($"{nameof(PointerDown)}: {e.ClientX}, {e.ClientY}");
+    }
+    public void PointerMove(PointerEventArgs e)
+    {
+        Logger.LogInformation($"{nameof(PointerMove)}: {e.OffsetX}, {e.OffsetY}");
+    }
+    public void PointerUp(PointerEventArgs e)
+    {
+        Logger.LogInformation($"{nameof(PointerUp)}: {e.ClientX}, {e.ClientY}");
     }
 }
 
