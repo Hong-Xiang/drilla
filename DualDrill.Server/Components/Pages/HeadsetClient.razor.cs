@@ -5,6 +5,7 @@ using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using SIPSorcery.Net;
 using System.Collections.Immutable;
@@ -38,7 +39,7 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     ElementReference PeerVideoElement { get; set; }
     ElementReference SelfVideoElement { get; set; }
 
-    ElementReference RenderRootElement { get; set; }
+    ElementReference RenderCanvasElement { get; set; }
 
     JSRenderService RenderService { get; set; }
 
@@ -149,9 +150,9 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
         await Module.SetVideoElementStreamAsync(videoElementRef, ((JSMediaStreamProxy)stream).Reference);
     }
 
-    public ValueTask<IJSObjectReference> GetCanvasElement()
+    public async ValueTask<IJSObjectReference> GetCanvasElement()
     {
-        throw new NotImplementedException();
+        return await Module.CreateObjectReferenceAsync(RenderCanvasElement);
     }
 
     public async ValueTask RemovePeerClient()
