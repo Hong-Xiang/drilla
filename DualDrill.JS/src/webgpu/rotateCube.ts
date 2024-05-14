@@ -1,4 +1,4 @@
-import { mat4, vec3 } from 'wgpu-matrix';
+import { mat4, vec3 } from "wgpu-matrix";
 
 import {
   cubeVertexArray,
@@ -6,26 +6,22 @@ import {
   cubeUVOffset,
   cubePositionOffset,
   cubeVertexCount,
-} from './meshes/cube';
+} from "./meshes/cube";
 
-import basicVertWGSL from './shaders/basic.vert.wgsl';
-import vertexPositionColorWGSL from './shaders/vertexPositionColor.frag.wgsl';
-import { RenderRoot } from '../render/RenderService';
-import { Subject, animationFrameScheduler, observeOn } from 'rxjs';
+import basicVertWGSL from "./shaders/basic.vert.wgsl";
+import vertexPositionColorWGSL from "./shaders/vertexPositionColor.frag.wgsl";
+import { RenderRoot } from "../render/RenderService";
+import { Subject, animationFrameScheduler, observeOn } from "rxjs";
 
 export async function createWebGPURenderService(): Promise<RenderRoot> {
-
-
-
-
-  const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+  const canvas = document.querySelector("canvas") as HTMLCanvasElement;
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter?.requestDevice();
   if (!device) {
-    throw new Error(`Failed to request adapter`)
+    throw new Error(`Failed to request adapter`);
   }
 
-  const context = canvas.getContext('webgpu') as GPUCanvasContext;
+  const context = canvas.getContext("webgpu") as GPUCanvasContext;
 
   const devicePixelRatio = window.devicePixelRatio;
   canvas.width = canvas.clientWidth * devicePixelRatio;
@@ -35,7 +31,7 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
   context.configure({
     device,
     format: presentationFormat,
-    alphaMode: 'premultiplied',
+    alphaMode: "premultiplied",
   });
 
   // Create a vertex buffer from the cube data.
@@ -48,7 +44,7 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
   verticesBuffer.unmap();
 
   const pipeline = device.createRenderPipeline({
-    layout: 'auto',
+    layout: "auto",
     vertex: {
       module: device.createShaderModule({
         code: basicVertWGSL,
@@ -61,13 +57,13 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
               // position
               shaderLocation: 0,
               offset: cubePositionOffset,
-              format: 'float32x4',
+              format: "float32x4",
             },
             {
               // uv
               shaderLocation: 1,
               offset: cubeUVOffset,
-              format: 'float32x2',
+              format: "float32x2",
             },
           ],
         },
@@ -84,26 +80,26 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
       ],
     },
     primitive: {
-      topology: 'triangle-list',
+      topology: "triangle-list",
 
       // Backface culling since the cube is solid piece of geometry.
       // Faces pointing away from the camera will be occluded by faces
       // pointing toward the camera.
-      cullMode: 'back',
+      cullMode: "back",
     },
 
     // Enable depth testing so that the fragment closest to the camera
     // is rendered in front.
     depthStencil: {
       depthWriteEnabled: true,
-      depthCompare: 'less',
-      format: 'depth24plus',
+      depthCompare: "less",
+      format: "depth24plus",
     },
   });
 
   const depthTexture = device.createTexture({
     size: [canvas.width, canvas.height],
-    format: 'depth24plus',
+    format: "depth24plus",
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
@@ -125,10 +121,13 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
     ],
   });
 
-
-
   const aspect = canvas.width / canvas.height;
-  const projectionMatrix = mat4.perspective((2 * Math.PI) / 5, aspect, 1, 100.0);
+  const projectionMatrix = mat4.perspective(
+    (2 * Math.PI) / 5,
+    aspect,
+    1,
+    100.0
+  );
   const modelViewProjectionMatrix = mat4.create();
 
   function getTransformationMatrix() {
@@ -162,16 +161,16 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
           view: context.getCurrentTexture().createView(),
 
           clearValue: [0.5, 0.5, 0.5, 1.0],
-          loadOp: 'clear',
-          storeOp: 'store',
+          loadOp: "clear",
+          storeOp: "store",
         },
       ],
       depthStencilAttachment: {
         view: depthTexture.createView(),
 
         depthClearValue: 1.0,
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
+        depthLoadOp: "clear",
+        depthStoreOp: "store",
       },
     };
     const commandEncoder = device.createCommandEncoder();
@@ -182,16 +181,16 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
     passEncoder.draw(cubeVertexCount);
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
-  }
+  };
 
   const renderStates = new Subject<{
-    time: number,
-    scale: number
+    time: number;
+    scale: number;
   }>();
 
   renderStates.pipe(observeOn(animationFrameScheduler)).subscribe({
     next: ({ time, scale }) => {
-      frame()
+      frame();
     },
     error: (e) => {
       console.error(e);

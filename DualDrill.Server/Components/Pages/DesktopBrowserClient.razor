@@ -14,9 +14,9 @@
         <button @onclick="StopRender" disabled="@(RenderService is null)">Stop Render</button>
     </div>
     <div @ref="RenderRootElement"
-         @onpointerdown="PointerDown"
-         @onpointermove="PointerMove"
-         @onpointerup="PointerUp">
+         @onnormalizedpointerdown="PointerDown"
+         @onnormalizedpointermove="PointerMove"
+         @onnormalizedpointerup="PointerUp">
         <canvas id="render-root" width="800" height="600" />
     </div>
 </div>
@@ -29,6 +29,8 @@
 
 <p>Frame count @FrameCount</p>
 <button @onclick="UpdateFrameCount">Update Frame Count</button>
+<button @onclick="StartSignalR">Start SignalR</button>
+<div @ref="ClickTestElement" style="width: 500px; height: 500px; background-color: blue;">  </div>
 
 @if (!Connected)
 {

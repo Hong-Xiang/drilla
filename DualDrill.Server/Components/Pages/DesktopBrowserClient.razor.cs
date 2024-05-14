@@ -1,14 +1,17 @@
+using DualDrill.Engine;
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
+using DualDrill.Server.CustomEvents;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using SIPSorcery.Net;
 using System.Collections.Immutable;
+using System.Numerics;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 
@@ -21,7 +24,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
 
     [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
-    [Inject] DistributeXRApplication XRApplication { get; set; } = default!;
+    [Inject] UpdateService UpdateService { get; set; } = default!;
     [Inject] BrowserClient Client { get; set; }
     [Inject] JSClientModule Module { get; set; } = default!;
 
@@ -44,18 +47,18 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     public void StartRender()
     {
-        if (RenderService is not null && XRApplication is not null)
+        if (RenderService is not null && UpdateService is not null)
         {
 
-            XRApplication.RenderService = RenderService;
+            UpdateService.RenderService = RenderService;
         }
     }
 
     public void StopRender()
     {
-        if (XRApplication is not null)
+        if (UpdateService is not null)
         {
-            XRApplication.RenderService = null;
+            UpdateService.RenderService = null;
         }
     }
 
@@ -66,6 +69,8 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     }
 
     Task? ScaleSubscribe { get; set; } = null;
+
+    ElementSize? RootElementSize { get; set; } = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -87,7 +92,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     async Task SubscribeScale()
     {
-        await foreach (var s in XRApplication.ScaleChanges(CancellationToken.None))
+        await foreach (var s in UpdateService.ScaleChanges(CancellationToken.None))
         {
             await InvokeAsync(StateHasChanged);
         }
@@ -97,19 +102,19 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     public float Scale
     {
-        get => XRApplication.Scale;
+        get => UpdateService.Scale;
         set
         {
-            if (XRApplication.Scale != value)
+            if (UpdateService.Scale != value)
             {
-                XRApplication.Scale = value;
+                UpdateService.Scale = value;
             }
         }
     }
 
     void UpdateFrameCount()
     {
-        FrameCount = XRApplication.FrameCount;
+        FrameCount = UpdateService.FrameCount;
     }
 
     void RefreshPeerIds()
@@ -140,7 +145,16 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     public async ValueTask DisposeAsync()
     {
+        UpdateService.RenderService = null;
         Subscription.Dispose();
+    }
+
+    ElementReference ClickTestElement;
+
+    private async Task StartSignalR()
+    {
+        await using var jsRef = await Module.CreateObjectReferenceAsync(ClickTestElement);
+        await Module.StartSignalRConnection(jsRef).ConfigureAwait(false);
     }
 
     private async Task SendVideo()
@@ -167,9 +181,13 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         await InvokeAsync(StateHasChanged).ConfigureAwait(false);
     }
 
+
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
+        await using var el = await Module.CreateObjectReferenceAsync(RenderRootElement);
+        //RootElementSize = await Module.GetElementSize(el);
     }
 
     public async ValueTask ShowPeerVideo(IMediaStream stream)
@@ -206,7 +224,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         var camera = await mediaStream.GetVideoTrack(0);
         await camera.Stop();
 
-        await Module.RemoveVideoElementStreamAsync(videoElementRef) ;
+        await Module.RemoveVideoElementStreamAsync(videoElementRef);
     }
 
     public async ValueTask<IJSObjectReference> GetCanvasElement()
@@ -214,17 +232,29 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         return await Module.CreateObjectReferenceAsync(RenderRootElement);
     }
 
-    public void PointerDown(PointerEventArgs e)
+    Vector2? DragStart { get; set; } = null;
+
+    public void PointerDown(NormalizedPointEventArgs e)
     {
-        Logger.LogInformation($"{nameof(PointerDown)}: {e.ClientX}, {e.ClientY}");
+        DragStart = new Vector2
+        {
+            X = e.OffsetX / e.OffsetWidth,
+            Y = e.OffsetY / e.OffsetHeight,
+        };
     }
-    public void PointerMove(PointerEventArgs e)
+    public void PointerMove(NormalizedPointEventArgs e)
     {
-        Logger.LogInformation($"{nameof(PointerMove)}: {e.OffsetX}, {e.OffsetY}");
+        if (DragStart is null)
+        {
+            return;
+        }
+        var x = e.OffsetX / e.OffsetWidth;
+        var y = e.OffsetY / e.OffsetHeight;
+        var v = new Vector2 { X = x, Y = y };
+
     }
-    public void PointerUp(PointerEventArgs e)
+    public void PointerUp(NormalizedPointEventArgs e)
     {
-        Logger.LogInformation($"{nameof(PointerUp)}: {e.ClientX}, {e.ClientY}");
+        DragStart = null;
     }
 }
-

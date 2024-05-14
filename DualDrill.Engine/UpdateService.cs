@@ -1,28 +1,41 @@
 ﻿using DualDrill.Engine.Connection;
-using DualDrill.Server.Browser;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Threading.Channels;
 
-namespace DualDrill.Server.Application;
+namespace DualDrill.Engine;
+public sealed record class MouseEvent(
+    string Type,
+    double ClientY,
+    double ClientX
+)
+{
+}
+
 
 sealed class FrameState
 {
     public int Frame { get; set; } = 0;
 }
 
-public sealed class DistributeXRApplication(ILogger<DistributeXRApplication> Logger, ClientStore ClientStore) : BackgroundService
+public record struct RenderState(float Time, float State)
+{
+}
+
+public sealed class UpdateService(ILogger<UpdateService> Logger, ClientStore ClientStore) : BackgroundService
 {
     readonly TimeProvider TimeProvider = TimeProvider.System;
     readonly Channel<int> FrameChannel = Channel.CreateBounded<int>(1);
     readonly Channel<int> RenderCommands = Channel.CreateUnbounded<int>();
     readonly TimeSpan SampleRate = TimeSpan.FromSeconds(1.0 / 60.0);
     public int FrameCount { get; private set; }
-    public JSRenderService? RenderService { get; set; } = default;
+    public IRenderService<RenderState>? RenderService { get; set; } = default;
 
     public event PropertyChangedEventHandler PropertyChanged;
 
 
+    public List<ChannelReader<MouseEvent>> MouseEventChannels = [];
 
     event Action<float> StateChangeEvent;
     float m_Scale = 1.0f;
@@ -91,10 +104,23 @@ public sealed class DistributeXRApplication(ILogger<DistributeXRApplication> Log
         {
             var frame = await FrameChannel.Reader.ReadAsync(stoppingToken).ConfigureAwait(false);
             var rs = RenderService;
+            foreach (var cs in MouseEventChannels)
+            {
+                var eventCount = 0;
+                while (cs.TryRead(out var e))
+                {
+                    eventCount++;
+                    //Logger.LogInformation("MouseEvent {Event}", e);
+                }
+                if (eventCount > 0)
+                {
+                    Logger.LogInformation("MouseEvent Count {count}", eventCount);
+                }
+            }
 
             if (rs is not null)
             {
-                await rs.Render(frame, Scale);
+                await rs.Render(new RenderState(frame, Scale));
             }
             RenderCommands.Writer.TryWrite(frame);
         }

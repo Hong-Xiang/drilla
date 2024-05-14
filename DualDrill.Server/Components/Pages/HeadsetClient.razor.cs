@@ -1,3 +1,4 @@
+using DualDrill.Engine;
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
@@ -21,7 +22,7 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
 
     [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
-    [Inject] DistributeXRApplication XRApplication { get; set; } = default!;
+    [Inject] UpdateService XRApplication { get; set; } = default!;
     [Inject] BrowserClient Client { get; set; }
     [Inject] JSClientModule Module { get; set; } = default!;
 
