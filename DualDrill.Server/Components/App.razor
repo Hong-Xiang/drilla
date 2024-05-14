@@ -16,6 +16,44 @@
 <body>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
+    <script>
+        Blazor.registerCustomEventType('normalizedpointerup', {
+            browserEventName: 'pointerup',
+            createEventArgs: event => {
+                const result = {
+                    offsetX: event.offsetX,
+                    offsetY: event.offsetY,
+                    offsetWidth: event.target.offsetWidth,
+                    offsetHeight: event.target.offsetHeight,
+                };
+                return result;
+            }
+        });
+        Blazor.registerCustomEventType('normalizedpointerdown', {
+            browserEventName: 'pointerdown',
+            createEventArgs: event => {
+                const result = {
+                    offsetX: event.offsetX,
+                    offsetY: event.offsetY,
+                    offsetWidth: event.target.offsetWidth,
+                    offsetHeight: event.target.offsetHeight,
+                };
+                return result;
+            }
+        });
+        Blazor.registerCustomEventType('normalizedpointermove', {
+            browserEventName: 'pointermove',
+            createEventArgs: event => {
+                const result = {
+                    offsetX: event.offsetX,
+                    offsetY: event.offsetY,
+                    offsetWidth: event.target.offsetWidth,
+                    offsetHeight: event.target.offsetHeight,
+                };
+                return result;
+            }
+        });
+    </script>
 </body>
 
 </html>

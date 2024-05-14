@@ -1,21 +1,119 @@
-import { filter, first, fromEvent, fromEventPattern, map, take } from "rxjs";
-import { DotNetObject } from "../blazor-dotnet";
+import {
+  Subject,
+  filter,
+  first,
+  fromEvent,
+  fromEventPattern,
+  map,
+  take,
+  takeUntil,
+} from "rxjs";
+import { DotNetObject } from "./blazor-dotnet";
 import {
   PromiseLikeResultMapper,
   createJSObjectReference,
   subscribeByPromiseLike,
-} from "./dotnet-server-interop";
+} from "./lib/dotnet-server-interop";
+import { UUID } from "crypto";
+import { SignalRConnection } from "./lib/signalr-client";
+import * as signalR from "@microsoft/signalr";
 
-export { getProperty, setProperty } from './dotnet-server-interop'
+export { getProperty, setProperty } from "./lib/dotnet-server-interop";
 // export { createWebGPURenderService } from "../render/RenderService";
-export { createWebGPURenderService } from "../webgpu/rotateCube";
+export { createWebGPURenderService } from "./webgpu/rotateCube";
 
 export function asObjectReference<T>(x: T) {
-  return x
+  return x;
+}
+
+export async function StartSignalRConnection(element: HTMLElement) {
+  await SignalRConnection.start();
+
+  const response = await SignalRConnection.invoke("Echo", "Hello");
+  console.log(response);
+  const subject = new signalR.Subject<{
+    Type: string;
+    ClientX: number;
+    ClientY: number;
+  }>();
+  SignalRConnection.send("MouseEvent", subject);
+
+  console.log(element);
+  element.addEventListener("mousemove", (e) => {
+    console.log(e);
+    subject.next({
+      Type: e.type,
+      ClientX: e.clientX,
+      ClientY: e.clientY,
+    });
+  });
+
+  SignalRConnection.stream("RenderStates").subscribe({
+    next: (state) => {
+      console.log(state);
+    },
+    error: (e) => {
+      console.error(e);
+    },
+    complete: () => {
+      console.log("complete");
+    },
+  });
+}
+
+export function createCanvas(
+  pointerDown: DotNetObject,
+  pointerMove: DotNetObject,
+  pointerUp: DotNetObject
+) {
+  const canvas = new HTMLCanvasElement();
+  const normalizePosition = (e: PointerEvent) => {
+    const target = e.target as HTMLCanvasElement;
+    return {
+      OffsetX: e.offsetX,
+      OffsetY: e.offsetY,
+      Width: target.offsetWidth,
+      Height: target.offsetHeight,
+    };
+  };
+  const subscription = fromEvent<PointerEvent>(canvas, "pointerdown")
+    .pipe(map(normalizePosition))
+    .subscribe({
+      next: (e) => pointerDown.invokeMethodAsync("OnNext", e),
+    });
+
+  subscription.add(
+    fromEvent<PointerEvent>(canvas, "pointermove")
+      .pipe(map(normalizePosition))
+      .subscribe({
+        next: (e) => pointerMove.invokeMethodAsync("OnNext", e),
+      })
+  );
+  subscription.add(
+    fromEvent<PointerEvent>(canvas, "pointerup")
+      .pipe(map(normalizePosition))
+      .subscribe({
+        next: (e) => pointerUp.invokeMethodAsync("OnNext", e),
+      })
+  );
+
+  const done = new Subject<null>();
+  return {
+    dispose: () => {
+      subscription.unsubscribe();
+    },
+  };
+}
+
+export function getElementSize(element: HTMLElement) {
+  return {
+    OffsetWidth: element.offsetWidth,
+    OffsetHeight: element.offsetHeight,
+  };
 }
 
 export function captureStream(canvas: HTMLCanvasElement): MediaStream {
-  return canvas.captureStream(30)
+  return canvas.captureStream(30);
 }
 
 export function createRTCPeerConnection() {

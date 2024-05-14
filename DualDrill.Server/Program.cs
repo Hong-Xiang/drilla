@@ -5,6 +5,8 @@ using System.Collections.Concurrent;
 using DualDrill.Engine.Connection;
 using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
+using DualDrill.Engine;
+using DualDrill.Server.WebApi;
 
 namespace DualDrill.Server;
 
@@ -19,8 +21,11 @@ public class Program
         });
 
         builder.Services.AddSingleton<DistributeXRConnectionService>();
-        builder.Services.AddSingleton<DistributeXRApplication>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<DistributeXRApplication>());
+        builder.Services.AddSingleton<UpdateService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateService>());
+
+        //builder.Services.AddSingleton<WebGPUHeadlessService>();
+        //builder.Services.AddHostedService<WebGPUWindowService>();
 
         //builder.Services.AddHostedService<DistributeXRApplicationService>();
         builder.Services.AddClients();
@@ -44,11 +49,14 @@ public class Program
             app.UseHsts();
         }
 
+        app.MapHub<UserInputHub>("/hub/user-input");
+
         app.UseHttpsRedirection();
 
         app.UseStaticFiles();
         app.UseAntiforgery();
         app.MapClients();
+        app.MapRenderControls();
 
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()
@@ -56,6 +64,7 @@ public class Program
             .AddAdditionalAssemblies(typeof(Client._Imports).Assembly);
 
         app.MapGet("/webroot", () => app.Environment.WebRootPath);
+
 
         app.Run();
     }

@@ -27,10 +27,25 @@ public struct PropertyKey
     }
 }
 
+public sealed record class ElementSize(int OffsetWidth, int OffsetHeight)
+{
+}
+
 public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
 {
     public IJSRuntime JSRuntime { get; } = jsRuntime;
     Task<IJSObjectReference> Module { get; } = jsRuntime.InvokeAsync<IJSObjectReference>("import", $"/client.js?t={Guid.NewGuid()}").AsTask();
+
+    public async ValueTask StartSignalRConnection(IJSObjectReference element)
+    {
+        var module = await Module.ConfigureAwait(false);
+        await module.InvokeVoidAsync("StartSignalRConnection", element).ConfigureAwait(false);
+    }
+
+    public async ValueTask<ElementSize> GetElementSize(IJSObjectReference element)
+    {
+        return await JSRuntime.InvokeAsync<ElementSize>("getElementSize", element);
+    }
 
     public async ValueTask<JSMediaStreamProxy> CaptureStream(IClient client, IJSObjectReference canvasElement)
     {
@@ -46,10 +61,12 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
         var module = await Module.ConfigureAwait(false);
         return await module.InvokeAsync<IJSObjectReference>("createRTCPeerConnection").ConfigureAwait(false);
     }
-    public ValueTask<IJSObjectReference> CreateCanvasElementAsync()
-    {
-        throw new NotImplementedException();
-    }
+    //public async ValueTask<IJSObjectReference> CreateCanvasElementAsync(DotNetObjectReference<ICanvasElementObserver> observer)
+    //{
+    //    var module = await Module.ConfigureAwait(false);
+    //    var result = await module.InvokeAsync<IJSObjectReference>("createCanvasElement", observer);
+
+    //}
     public async ValueTask<IJSObjectReference> CreateObjectReferenceAsync(object value)
     {
         var module = await Module.ConfigureAwait(false);
