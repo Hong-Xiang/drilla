@@ -10,28 +10,72 @@ import {
 
 import basicVertWGSL from "./shaders/basic.vert.wgsl";
 import vertexPositionColorWGSL from "./shaders/vertexPositionColor.frag.wgsl";
-import { RenderRoot } from "../render/RenderService";
 import { Subject, animationFrameScheduler, observeOn } from "rxjs";
+import { SignalRConnection } from "../lib/signalr-client";
+import { RenderService } from "../render/RenderService";
+import * as signalR from "@microsoft/signalr";
 
-export async function createWebGPURenderService(): Promise<RenderRoot> {
-  const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+function createCanvasWithContext(
+  device: GPUDevice,
+  { width, height }: { width: number; height: number }
+) {
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("webgpu") as GPUCanvasContext;
+  context.configure({
+    device,
+    format: presentationFormat,
+    alphaMode: "premultiplied",
+  });
+  const subject = new signalR.Subject<{
+    Type: string;
+    ClientX: number;
+    ClientY: number;
+  }>();
+  SignalRConnection.send("MouseEvent", subject);
+  canvas.addEventListener("mousemove", (e) => {
+    subject.next({
+      Type: e.type,
+      ClientX: e.clientX,
+      ClientY: e.clientY,
+    });
+  });
+  canvas.addEventListener("mousedown", (e) => {
+    console.log(e.type);
+    subject.next({
+      Type: e.type,
+      ClientX: e.clientX,
+      ClientY: e.clientY,
+    });
+  });
+  canvas.addEventListener("mouseup", (e) => {
+    console.log(e.type);
+    subject.next({
+      Type: e.type,
+      ClientX: e.clientX,
+      ClientY: e.clientY,
+    });
+  });
+  return {
+    canvas,
+    context,
+  };
+}
+
+export async function createWebGPURenderService(): Promise<RenderService> {
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter?.requestDevice();
   if (!device) {
     throw new Error(`Failed to request adapter`);
   }
-
-  const context = canvas.getContext("webgpu") as GPUCanvasContext;
-
-  const devicePixelRatio = window.devicePixelRatio;
-  canvas.width = canvas.clientWidth * devicePixelRatio;
-  canvas.height = canvas.clientHeight * devicePixelRatio;
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-  context.configure({
-    device,
-    format: presentationFormat,
-    alphaMode: "premultiplied",
+  // const devicePixelRatio = window.devicePixelRatio;
+  const { canvas, context } = createCanvasWithContext(device, {
+    width: 800,
+    height: 600,
   });
 
   // Create a vertex buffer from the cube data.
@@ -185,11 +229,14 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
 
   const renderStates = new Subject<{
     time: number;
-    scale: number;
+    state: number;
   }>();
+  const subscription =
+    SignalRConnection.stream("RenderStates").subscribe(renderStates);
 
   renderStates.pipe(observeOn(animationFrameScheduler)).subscribe({
-    next: ({ time, scale }) => {
+    next: ({ time, state }) => {
+      console.log(time, state);
       frame();
     },
     error: (e) => {
@@ -198,8 +245,13 @@ export async function createWebGPURenderService(): Promise<RenderRoot> {
   });
 
   return {
-    render: (t, scale) => {
-      renderStates.next({ time: t, scale });
+    canvas,
+    dispose: () => {
+      subscription.dispose();
+      renderStates.complete();
+    },
+    attachToElement: (element) => {
+      element.appendChild(canvas);
     },
   };
 }

@@ -11,7 +11,12 @@ sealed class UserInputHub(UpdateService UpdateService, ILogger<UserInputHub> Log
 {
     public async Task MouseEvent(ChannelReader<MouseEvent> events)
     {
-        UpdateService.MouseEventChannels.Add(events);
+        UpdateService.MouseEvent = events;
+        //var writer = UpdateService.MouseEvents.Writer;
+        //await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
+        //{
+        //    await writer.WriteAsync(e).ConfigureAwait(false);
+        //}
         var tcs = new TaskCompletionSource();
         if (Context.ConnectionAborted.IsCancellationRequested)
         {
@@ -23,15 +28,8 @@ sealed class UserInputHub(UpdateService UpdateService, ILogger<UserInputHub> Log
 
     public async IAsyncEnumerable<RenderState> RenderStates([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var renderService = UpdateService.RenderService;
-        if (renderService is null)
+        await foreach (var s in UpdateService.RenderStates.Reader.ReadAllAsync(cancellationToken).WithCancellation(cancellationToken))
         {
-            Logger.LogWarning("Render Service not connected");
-            yield break;
-        }
-        await foreach (var s in renderService.States)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
             yield return s;
         }
     }

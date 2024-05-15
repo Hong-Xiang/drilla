@@ -5,7 +5,7 @@ using System.ComponentModel;
 using System.Threading.Channels;
 
 namespace DualDrill.Engine;
-public sealed record class MouseEvent(
+public readonly record struct MouseEvent(
     string Type,
     double ClientY,
     double ClientX
@@ -27,15 +27,26 @@ public sealed class UpdateService(ILogger<UpdateService> Logger, ClientStore Cli
 {
     readonly TimeProvider TimeProvider = TimeProvider.System;
     readonly Channel<int> FrameChannel = Channel.CreateBounded<int>(1);
-    readonly Channel<int> RenderCommands = Channel.CreateUnbounded<int>();
     readonly TimeSpan SampleRate = TimeSpan.FromSeconds(1.0 / 60.0);
     public int FrameCount { get; private set; }
-    public IRenderService<RenderState>? RenderService { get; set; } = default;
 
     public event PropertyChangedEventHandler PropertyChanged;
 
 
-    public List<ChannelReader<MouseEvent>> MouseEventChannels = [];
+    public readonly Channel<MouseEvent> MouseEvents = Channel.CreateUnbounded<MouseEvent>(new UnboundedChannelOptions
+    {
+        AllowSynchronousContinuations = true,
+        SingleReader = true,
+        SingleWriter = false
+    });
+
+    public ChannelReader<MouseEvent>? MouseEvent { get; set; }
+
+    public Channel<RenderState> RenderStates { get; }
+        = Channel.CreateBounded<RenderState>(new BoundedChannelOptions(3)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest
+        });
 
     event Action<float> StateChangeEvent;
     float m_Scale = 1.0f;
@@ -100,29 +111,37 @@ public sealed class UpdateService(ILogger<UpdateService> Logger, ClientStore Cli
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var frameTimer = TimeProvider.CreateTimer(FrameCallback, new FrameState(), TimeSpan.Zero, SampleRate);
+        var mouseEventReader = MouseEvents.Reader;
         while (!stoppingToken.IsCancellationRequested)
         {
             var frame = await FrameChannel.Reader.ReadAsync(stoppingToken).ConfigureAwait(false);
-            var rs = RenderService;
-            foreach (var cs in MouseEventChannels)
+
+            var eventCount = 0;
+            var reader = MouseEvent;
+            if (reader is not null)
             {
-                var eventCount = 0;
-                while (cs.TryRead(out var e))
+                //while (reader.TryRead(out var e))
+                //{
+                //    MouseEvents.Writer.TryWrite(e);
+                //    //Logger.LogInformation("MouseEvent {Event}", e);
+                //}
+                //reader = MouseEvents.Reader;
+                while (reader.TryRead(out var e))
                 {
+                    if (e.Type == "mousedown" || e.Type == "mouseup")
+                    {
+                        Console.WriteLine(e.Type);
+                    }
                     eventCount++;
-                    //Logger.LogInformation("MouseEvent {Event}", e);
-                }
-                if (eventCount > 0)
-                {
-                    Logger.LogInformation("MouseEvent Count {count}", eventCount);
                 }
             }
 
-            if (rs is not null)
+            if (eventCount > 0)
             {
-                await rs.Render(new RenderState(frame, Scale));
+                Logger.LogInformation("MouseEvent Count {count}", eventCount);
             }
-            RenderCommands.Writer.TryWrite(frame);
+
+            await RenderStates.Writer.WriteAsync(new RenderState(frame, 1.0f), stoppingToken).ConfigureAwait(false);
         }
     }
 }

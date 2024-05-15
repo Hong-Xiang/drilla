@@ -1,29 +1,20 @@
 ﻿using DualDrill.Engine;
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Threading.Channels;
 
 namespace DualDrill.Server.Browser;
 
-public sealed class JSRenderService(IJSObjectReference JSRenderContext) : IAsyncDisposable, IRenderService<RenderState>
+public sealed class JSRenderService(IJSObjectReference JSRenderContext) : IAsyncDisposable
 {
-    readonly Channel<RenderState> RenderChannel = Channel.CreateBounded<RenderState>(new BoundedChannelOptions(3)
-    {
-        FullMode = BoundedChannelFullMode.DropOldest,
-    });
-    public IAsyncEnumerable<RenderState> States => RenderChannel.Reader.ReadAllAsync();
-
     public async ValueTask DisposeAsync()
     {
+        await JSRenderContext.InvokeVoidAsync("dispose").ConfigureAwait(false);
         await JSRenderContext.DisposeAsync().ConfigureAwait(false);
     }
 
-    //public async ValueTask Render(float time, float state)
-    //{
-    //    await JSRenderContext.InvokeVoidAsync("render", time, state);
-    //}
-
-    public async ValueTask Render(RenderState state)
+    public async ValueTask AttachToElementAsync(ElementReference element)
     {
-        await RenderChannel.Writer.WriteAsync(state);
+        await JSRenderContext.InvokeVoidAsync("attachToElement", element);
     }
 }
