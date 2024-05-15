@@ -1,22 +1,10 @@
-import {
-  Subject,
-  filter,
-  first,
-  fromEvent,
-  fromEventPattern,
-  map,
-  take,
-  takeUntil,
-} from "rxjs";
+import { Subject, filter, first, fromEvent, map } from "rxjs";
 import { DotNetObject } from "./blazor-dotnet";
 import {
   PromiseLikeResultMapper,
-  createJSObjectReference,
   subscribeByPromiseLike,
 } from "./lib/dotnet-server-interop";
-import { UUID } from "crypto";
 import { SignalRConnection } from "./lib/signalr-client";
-import * as signalR from "@microsoft/signalr";
 
 export { getProperty, setProperty } from "./lib/dotnet-server-interop";
 // export { createWebGPURenderService } from "../render/RenderService";
@@ -26,39 +14,8 @@ export function asObjectReference<T>(x: T) {
   return x;
 }
 
-export async function StartSignalRConnection(element: HTMLElement) {
+export async function Initialization() {
   await SignalRConnection.start();
-
-  const response = await SignalRConnection.invoke("Echo", "Hello");
-  console.log(response);
-  const subject = new signalR.Subject<{
-    Type: string;
-    ClientX: number;
-    ClientY: number;
-  }>();
-  SignalRConnection.send("MouseEvent", subject);
-
-  console.log(element);
-  element.addEventListener("mousemove", (e) => {
-    console.log(e);
-    subject.next({
-      Type: e.type,
-      ClientX: e.clientX,
-      ClientY: e.clientY,
-    });
-  });
-
-  SignalRConnection.stream("RenderStates").subscribe({
-    next: (state) => {
-      console.log(state);
-    },
-    error: (e) => {
-      console.error(e);
-    },
-    complete: () => {
-      console.log("complete");
-    },
-  });
 }
 
 export function createCanvas(

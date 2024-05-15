@@ -42,8 +42,6 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
 
     ElementReference RenderCanvasElement { get; set; }
 
-    JSRenderService RenderService { get; set; }
-
     protected override async Task OnInitializedAsync()
     {
         var circuit = await BrowserClientService.GetCircuitAsync().ConfigureAwait(false);

@@ -36,10 +36,10 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
     public IJSRuntime JSRuntime { get; } = jsRuntime;
     Task<IJSObjectReference> Module { get; } = jsRuntime.InvokeAsync<IJSObjectReference>("import", $"/client.js?t={Guid.NewGuid()}").AsTask();
 
-    public async ValueTask StartSignalRConnection(IJSObjectReference element)
+    public async ValueTask Initialization()
     {
         var module = await Module.ConfigureAwait(false);
-        await module.InvokeVoidAsync("StartSignalRConnection", element).ConfigureAwait(false);
+        await module.InvokeVoidAsync("Initialization").ConfigureAwait(false);
     }
 
     public async ValueTask<ElementSize> GetElementSize(IJSObjectReference element)
@@ -78,10 +78,10 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
     {
         throw new NotImplementedException();
     }
-    public async ValueTask<IJSObjectReference> CreateWebGPURenderServiceAsync(IJSObjectReference canvasElement)
+    public async ValueTask<IJSObjectReference> CreateWebGPURenderServiceAsync()
     {
         var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("createWebGPURenderService", canvasElement);
+        return await module.InvokeAsync<IJSObjectReference>("createWebGPURenderService");
     }
     public async ValueTask<IJSObjectReference> CreateWebGLRenderServiceAsync(IJSObjectReference canvasElement)
     {

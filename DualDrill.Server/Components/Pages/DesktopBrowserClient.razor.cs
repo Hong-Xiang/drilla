@@ -47,25 +47,15 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     public void StartRender()
     {
-        if (RenderService is not null && UpdateService is not null)
-        {
-
-            UpdateService.RenderService = RenderService;
-        }
     }
 
     public void StopRender()
     {
-        if (UpdateService is not null)
-        {
-            UpdateService.RenderService = null;
-        }
     }
+
 
     async Task CreateRenderContext()
     {
-        await using var canvasElement = await Client.Module.CreateObjectReferenceAsync(RenderRootElement);
-        RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync(canvasElement));
     }
 
     Task? ScaleSubscribe { get; set; } = null;
@@ -94,6 +84,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     {
         await foreach (var s in UpdateService.ScaleChanges(CancellationToken.None))
         {
+            Console.WriteLine("Scale Changed");
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -145,17 +136,10 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     public async ValueTask DisposeAsync()
     {
-        UpdateService.RenderService = null;
         Subscription.Dispose();
     }
 
-    ElementReference ClickTestElement;
 
-    private async Task StartSignalR()
-    {
-        await using var jsRef = await Module.CreateObjectReferenceAsync(ClickTestElement);
-        await Module.StartSignalRConnection(jsRef).ConfigureAwait(false);
-    }
 
     private async Task SendVideo()
     {
@@ -181,13 +165,20 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         await InvokeAsync(StateHasChanged).ConfigureAwait(false);
     }
 
-
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
-        await using var el = await Module.CreateObjectReferenceAsync(RenderRootElement);
-        //RootElementSize = await Module.GetElementSize(el);
+        if (firstRender)
+        {
+            await Module.Initialization().ConfigureAwait(false);
+            await using var el = await Module.CreateObjectReferenceAsync(RenderRootElement);
+            RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
+        }
+        if (RenderService is not null)
+        {
+            await RenderService.AttachToElementAsync(RenderRootElement);
+        }
+        Console.WriteLine("Render called");
     }
 
     public async ValueTask ShowPeerVideo(IMediaStream stream)

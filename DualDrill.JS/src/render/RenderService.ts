@@ -94,8 +94,8 @@ export async function createWebGPURenderService(
   };
 
   const renderStates = new Subject<{
-    time: number,
-    scale: number
+    time: number;
+    scale: number;
   }>();
 
   renderStates.pipe(observeOn(animationFrameScheduler)).subscribe({
@@ -113,8 +113,14 @@ export async function createWebGPURenderService(
     },
   };
 }
-export interface RenderGraph { }
-export interface RenderState { }
+export interface RenderGraph {}
+export interface RenderState {}
 export interface RenderRoot {
   render(t: number, scale: number): void;
+}
+
+export interface RenderService {
+  readonly canvas: HTMLCanvasElement;
+  dispose(): void;
+  attachToElement(element: HTMLElement): void;
 }
