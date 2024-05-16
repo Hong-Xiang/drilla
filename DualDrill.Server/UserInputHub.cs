@@ -11,12 +11,11 @@ sealed class UserInputHub(UpdateService UpdateService, ILogger<UserInputHub> Log
 {
     public async Task MouseEvent(ChannelReader<MouseEvent> events)
     {
-        UpdateService.MouseEvent = events;
-        //var writer = UpdateService.MouseEvents.Writer;
-        //await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
-        //{
-        //    await writer.WriteAsync(e).ConfigureAwait(false);
-        //}
+        var writer = UpdateService.MouseEvents.Writer;
+        await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
+        {
+            await writer.WriteAsync(e).ConfigureAwait(false);
+        }
         var tcs = new TaskCompletionSource();
         if (Context.ConnectionAborted.IsCancellationRequested)
         {

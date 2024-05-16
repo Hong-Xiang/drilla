@@ -2,13 +2,16 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using System.Numerics;
 using System.Threading.Channels;
 
 namespace DualDrill.Engine;
 public readonly record struct MouseEvent(
     string Type,
     double ClientY,
-    double ClientX
+    double ClientX,
+    double ClientWidth,
+    double ClientHeight
 )
 {
 }
@@ -19,7 +22,7 @@ sealed class FrameState
     public int Frame { get; set; } = 0;
 }
 
-public record struct RenderState(float Time, float State)
+public record struct RenderState(float Time, float[] State)
 {
 }
 
@@ -117,32 +120,63 @@ public sealed class UpdateService(ILogger<UpdateService> Logger, ClientStore Cli
             var frame = await FrameChannel.Reader.ReadAsync(stoppingToken).ConfigureAwait(false);
 
             var eventCount = 0;
-            var reader = MouseEvent;
+            //var reader = MouseEvent;
+            var reader = mouseEventReader;
             if (reader is not null)
             {
-                //while (reader.TryRead(out var e))
-                //{
-                //    MouseEvents.Writer.TryWrite(e);
-                //    //Logger.LogInformation("MouseEvent {Event}", e);
-                //}
-                //reader = MouseEvents.Reader;
                 while (reader.TryRead(out var e))
                 {
-                    if (e.Type == "mousedown" || e.Type == "mouseup")
-                    {
-                        Console.WriteLine(e.Type);
-                    }
                     eventCount++;
+                    //MouseEvents.Writer.TryWrite(e);
+                    //Logger.LogInformation("MouseEvent {Event}", e);
                 }
+                //reader = MouseEvents.Reader;
+                //while (reader.TryRead(out var e))
+                //{
+                //    if (e.Type == "mousedown" || e.Type == "mouseup")
+                //    {
+                //        Console.WriteLine(e.Type);
+                //    }
+                //    eventCount++;
+                //}
             }
+
+            var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
+                MathF.PI * 2.0f / 5.0f,
+                8.0f / 6.0f,
+                1.0f,
+                100.0f
+            );
+            var viewMatrix = Matrix4x4.CreateLookAt(
+                  new Vector3(0, 0, -4),
+                  Vector3.Zero,
+                  Vector3.UnitY);
+            var rotateValue = frame / 60.0f;
+            var rotate = Matrix4x4.CreateFromYawPitchRoll(
+                MathF.Sin(rotateValue),
+                MathF.Cos(rotateValue),
+                0
+            );
+            var mvpMatrix = rotate * viewMatrix * projMatrix;
+            //var mvpMatrix = projMatrix * viewMatrix * rotate;
+
+            var buffer = CopyToBuffer(mvpMatrix);
 
             if (eventCount > 0)
             {
                 Logger.LogInformation("MouseEvent Count {count}", eventCount);
             }
 
-            await RenderStates.Writer.WriteAsync(new RenderState(frame, 1.0f), stoppingToken).ConfigureAwait(false);
+            await RenderStates.Writer.WriteAsync(new RenderState(frame, buffer), stoppingToken).ConfigureAwait(false);
         }
+    }
+
+    private unsafe float[] CopyToBuffer(Matrix4x4 m)
+    {
+        var result = new float[16];
+        var sourceBuffer = new Span<float>(&m, 16);
+        sourceBuffer.CopyTo(result);
+        return result;
     }
 }
 
