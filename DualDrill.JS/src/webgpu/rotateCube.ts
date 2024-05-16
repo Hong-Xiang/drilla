@@ -162,6 +162,7 @@ export async function createWebGPURenderService(): Promise<RenderService> {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
+
   const uniformBindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
@@ -173,39 +174,6 @@ export async function createWebGPURenderService(): Promise<RenderService> {
       },
     ],
   });
-
-  const aspect = canvas.width / canvas.height;
-  const projectionMatrix = mat4.perspective(
-    (2 * Math.PI) / 5,
-    aspect,
-    1,
-    100.0
-  );
-  console.log(aspect);
-  const modelViewProjectionMatrix = mat4.create();
-
-  function getTransformationMatrix(f: number) {
-    const viewMatrix = mat4.identity();
-    mat4.lookAt(
-      vec3.fromValues(0, 0, -4),
-      vec3.fromValues(0, 0, 0),
-      vec3.fromValues(0, 1, 0),
-      viewMatrix
-    );
-    // mat4.translate(viewMatrix, vec3.fromValues(0, 0, -4), viewMatrix);
-    // mat4.rotate(
-    //   viewMatrix,
-    //   vec3.fromValues(Math.sin(now), Math.cos(now), 0),
-    //   1,
-    //   viewMatrix
-    // );
-
-    mat4.multiply(projectionMatrix, viewMatrix, modelViewProjectionMatrix);
-
-    console.log(modelViewProjectionMatrix);
-
-    return modelViewProjectionMatrix as Float32Array;
-  }
 
   const frame = (frame: number, mvp: Float32Array) => {
     device.queue.writeBuffer(
@@ -252,7 +220,6 @@ export async function createWebGPURenderService(): Promise<RenderService> {
 
   renderStates.pipe(observeOn(animationFrameScheduler)).subscribe({
     next: ({ time, state }) => {
-      console.log(time, state);
       frame(time, new Float32Array(state));
     },
     error: (e) => {
