@@ -33,29 +33,38 @@ function createCanvasWithContext(
     Type: string;
     ClientX: number;
     ClientY: number;
+    ClientWidth: number;
+    ClientHeight: number;
   }>();
   SignalRConnection.send("MouseEvent", subject);
   canvas.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
     subject.next({
       Type: e.type,
       ClientX: e.clientX,
       ClientY: e.clientY,
+      ClientWidth: rect.width,
+      ClientHeight: rect.height,
     });
   });
   canvas.addEventListener("mousedown", (e) => {
-    console.log(e.type);
+    const rect = canvas.getBoundingClientRect();
     subject.next({
       Type: e.type,
       ClientX: e.clientX,
       ClientY: e.clientY,
+      ClientWidth: rect.width,
+      ClientHeight: rect.height,
     });
   });
   canvas.addEventListener("mouseup", (e) => {
-    console.log(e.type);
+    const rect = canvas.getBoundingClientRect();
     subject.next({
       Type: e.type,
       ClientX: e.clientX,
       ClientY: e.clientY,
+      ClientWidth: rect.width,
+      ClientHeight: rect.height,
     });
   });
   return {
@@ -172,32 +181,39 @@ export async function createWebGPURenderService(): Promise<RenderService> {
     1,
     100.0
   );
+  console.log(aspect);
   const modelViewProjectionMatrix = mat4.create();
 
-  function getTransformationMatrix() {
+  function getTransformationMatrix(f: number) {
     const viewMatrix = mat4.identity();
-    mat4.translate(viewMatrix, vec3.fromValues(0, 0, -4), viewMatrix);
-    const now = Date.now() / 1000;
-    mat4.rotate(
-      viewMatrix,
-      vec3.fromValues(Math.sin(now), Math.cos(now), 0),
-      1,
+    mat4.lookAt(
+      vec3.fromValues(0, 0, -4),
+      vec3.fromValues(0, 0, 0),
+      vec3.fromValues(0, 1, 0),
       viewMatrix
     );
+    // mat4.translate(viewMatrix, vec3.fromValues(0, 0, -4), viewMatrix);
+    // mat4.rotate(
+    //   viewMatrix,
+    //   vec3.fromValues(Math.sin(now), Math.cos(now), 0),
+    //   1,
+    //   viewMatrix
+    // );
 
     mat4.multiply(projectionMatrix, viewMatrix, modelViewProjectionMatrix);
+
+    console.log(modelViewProjectionMatrix);
 
     return modelViewProjectionMatrix as Float32Array;
   }
 
-  const frame = () => {
-    const transformationMatrix = getTransformationMatrix();
+  const frame = (frame: number, mvp: Float32Array) => {
     device.queue.writeBuffer(
       uniformBuffer,
       0,
-      transformationMatrix.buffer,
-      transformationMatrix.byteOffset,
-      transformationMatrix.byteLength
+      mvp.buffer,
+      mvp.byteOffset,
+      mvp.byteLength
     );
     const renderPassDescriptor: GPURenderPassDescriptor = {
       colorAttachments: [
@@ -229,7 +245,7 @@ export async function createWebGPURenderService(): Promise<RenderService> {
 
   const renderStates = new Subject<{
     time: number;
-    state: number;
+    state: number[];
   }>();
   const subscription =
     SignalRConnection.stream("RenderStates").subscribe(renderStates);
@@ -237,7 +253,7 @@ export async function createWebGPURenderService(): Promise<RenderService> {
   renderStates.pipe(observeOn(animationFrameScheduler)).subscribe({
     next: ({ time, state }) => {
       console.log(time, state);
-      frame();
+      frame(time, new Float32Array(state));
     },
     error: (e) => {
       console.error(e);
