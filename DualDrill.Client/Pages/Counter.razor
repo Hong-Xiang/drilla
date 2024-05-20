@@ -1,4 +1,14 @@
-﻿@rendermode InteractiveWebAssembly
+﻿@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using System.Runtime.InteropServices.JavaScript
+
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+@inject IJSRuntime JSRuntime
+@inject SignalRService SignalRService
+@inject NavigationManager NavigationManager
+
 
 <h1>Counter</h1>
 
@@ -8,6 +18,37 @@
 
 @code {
     private int currentCount = 0;
+
+
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender).ConfigureAwait(false);
+        if (firstRender)
+        {
+            await using var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/client.js");
+            await using var globalThis = await module.InvokeAsync<IJSObjectReference>("getGlobalThis");
+            using var clientModule = await JSHost.ImportAsync("client", "/client.js");
+            Console.WriteLine("Before get globalThis.Dotnet");
+            using var DotNet = JSHost.GlobalThis.GetPropertyAsJSObject("DotNet");
+            Console.WriteLine("After get globalThis.Dotnet");
+            // await using var DotNet = await module.InvokeAsync<IJSObjectReference>("getProperty", globalThis, new[] { "DotNet" });
+            // await JSRuntime.InvokeVoidAsync("console.log", DotNet);
+            using var RTCPeerConnectionCls = JSHost.GlobalThis.GetPropertyAsJSObject("RTCPeerConnection");
+            SimpleJSInterop.Log(RTCPeerConnectionCls);
+            using var conn = SimpleJSInterop.NewOperator(RTCPeerConnectionCls);
+            SimpleJSInterop.Log(conn);
+            SimpleJSInterop.Log(DotNet);
+            Console.WriteLine("After console.log(DotNet)");
+            await using var dotnetRuntime = await JSRuntime.InvokeAsync<IJSObjectReference>("getDotnetRuntime", 0);
+            await JSRuntime.InvokeVoidAsync("console.log", dotnetRuntime);
+
+            Console.WriteLine(NavigationManager.BaseUri);
+
+            await SignalRService.Initialization();
+        }
+    }
 
     private void IncrementCount()
     {
