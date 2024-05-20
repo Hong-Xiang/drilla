@@ -7,6 +7,7 @@ namespace DualDrill.Client
         static async Task Main(string[] args)
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
+            builder.Services.AddSingleton<SignalRService>();
 
             await builder.Build().RunAsync();
         }

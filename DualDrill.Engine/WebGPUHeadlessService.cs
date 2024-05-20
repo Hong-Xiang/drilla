@@ -1,5 +1,4 @@
-﻿using Silk.NET.Core.Native;
-using Silk.NET.WebGPU;
+﻿using Silk.NET.WebGPU;
 using System.Runtime.InteropServices;
 using System;
 using System.Collections.Generic;
@@ -7,26 +6,27 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SixLabors.ImageSharp;
+using Silk.NET.Core.Native;
 
 namespace DualDrill.Engine;
 
 public unsafe sealed class WebGPUHeadlessService
 {
 
-    Instance* Instance { get; }
-    Adapter* Adapter { get; set; }
-    Device* Device { get; set; }
+    Graphics.Instance Instance { get; }
+    Graphics.Adapter Adapter { get; }
+    Graphics.Device Device { get; }
 
-    ShaderModule* ShaderModule { get; set; }
-    RenderPipeline* Pipeline { get; set; }
+    Graphics.ShaderModule ShaderModule { get; }
+    RenderPipeline* Pipeline { get; }
 
-    Texture* TargetTexture { get; set; }
-    TextureView* TextureView { get; set; }
+    Texture* TargetTexture { get; }
+    TextureView* TextureView { get; }
+    TextureFormat TextureFormat = TextureFormat.Bgra8UnormSrgb;
+    Graphics.Buffer PixelBuffer { get; }
 
-    Silk.NET.WebGPU.Buffer* PixelBuffer { get; set; }
-
-    readonly int Width = 800;
-    readonly int Height = 600;
+    readonly int Width = 512;
+    readonly int Height = 512;
     uint BufferSize => (uint)(Width * Height * 4);
 
     private const string SHADER = @"@vertex
@@ -40,85 +40,29 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) ve
 fn fs_main() -> @location(0) vec4<f32> {
     return vec4<f32>(1.0, 1.0, 0.0, 1.0);
 }";
+    private static void DeviceLost(DeviceLostReason arg0, byte* arg1, void* arg2)
+    {
+        Console.WriteLine($"Device lost! Reason: {arg0} Message: {SilkMarshal.PtrToString((nint)arg1)}");
+    }
 
     public WebGPU WebGPU { get; } = WebGPU.GetApi();
     public WebGPUHeadlessService()
     {
+        Instance = Graphics.Instance.Create(new());
+        Adapter = Instance.RequestAdapter(new()
         {
-            var desc = new InstanceDescriptor();
-            Instance = WebGPU.CreateInstance(ref desc);
-        }
-
-        var requestAdapterOption = new RequestAdapterOptions
-        {
-            CompatibleSurface = null,
             PowerPreference = PowerPreference.HighPerformance
-        };
+        });
+        Adapter.PrintInfo();
+        Adapter.PrintFeatures();
 
-        WebGPU.InstanceRequestAdapter(Instance,
-            in requestAdapterOption,
-            new PfnRequestAdapterCallback((status, adapter, message, _) =>
-            {
-                if (status == RequestAdapterStatus.Success)
-                {
-                    Adapter = adapter;
-                }
-                else
-                {
-                    Console.WriteLine(Marshal.PtrToStringUTF8((nint)message));
-                }
-            }), null);
-        if (Adapter is null)
+        Device = Adapter.RequestDevice(new()
         {
-            throw new NullReferenceException("Failed to request adapter");
-        }
+            DeviceLostCallback = new PfnDeviceLostCallback(DeviceLost),
+        });
+        Console.WriteLine($"Got device {(nuint)Device.Handle:X}");
 
-        PrintAdapterFeatures();
-
-        WebGPU.AdapterRequestDevice(Adapter, new DeviceDescriptor
-        {
-            DefaultQueue = new QueueDescriptor()
-        },
-        new PfnRequestDeviceCallback((status, device, message, payload) =>
-        {
-            if (status == RequestDeviceStatus.Success)
-            {
-                Device = device;
-            }
-            else
-            {
-                Console.WriteLine($"Failed to get divice, message: {SilkMarshal.PtrToString((IntPtr)message)}");
-            }
-
-        }), null);
-        Console.WriteLine($"Got device {(nuint)Device:X}");
-
-        WebGPU.DeviceSetUncapturedErrorCallback(Device,
-            new PfnErrorCallback(
-            static (errorType, message, payload) =>
-            {
-                Console.WriteLine($"{errorType}: {SilkMarshal.PtrToString((nint)message)}");
-            }), default);
-
-        { //Load shader
-            var wgslDescriptor = new ShaderModuleWGSLDescriptor
-            {
-                Code = (byte*)SilkMarshal.StringToPtr(SHADER),
-                Chain = new ChainedStruct
-                {
-                    SType = SType.ShaderModuleWgslDescriptor
-                }
-            };
-
-            var shaderModuleDescriptor = new ShaderModuleDescriptor
-            {
-                NextInChain = (ChainedStruct*)(&wgslDescriptor),
-            };
-
-            ShaderModule = WebGPU.DeviceCreateShaderModule(Device, in shaderModuleDescriptor);
-
-            Console.WriteLine($"Created shader {(nuint)ShaderModule:X}");
-        } //Load shader
+        ShaderModule = Device.CreateShaderModule(SHADER);
 
         { //Create pipeline
 
@@ -140,14 +84,14 @@ fn fs_main() -> @location(0) vec4<f32> {
 
             var colorTargetState = new ColorTargetState
             {
-                Format = TextureFormat.Rgba8UnormSrgb,
+                Format = TextureFormat,
                 Blend = &blendState,
                 WriteMask = ColorWriteMask.All
             };
 
             var fragmentState = new FragmentState
             {
-                Module = ShaderModule,
+                Module = ShaderModule.Handle,
                 TargetCount = 1,
                 Targets = &colorTargetState,
                 EntryPoint = (byte*)SilkMarshal.StringToPtr("fs_main")
@@ -157,7 +101,7 @@ fn fs_main() -> @location(0) vec4<f32> {
             {
                 Vertex = new VertexState
                 {
-                    Module = ShaderModule,
+                    Module = ShaderModule.Handle,
                     EntryPoint = (byte*)SilkMarshal.StringToPtr("vs_main"),
                 },
                 Primitive = new PrimitiveState
@@ -177,25 +121,25 @@ fn fs_main() -> @location(0) vec4<f32> {
                 DepthStencil = null
             };
 
-            Pipeline = WebGPU.DeviceCreateRenderPipeline(Device, in renderPipelineDescriptor);
+            Pipeline = WebGPU.DeviceCreateRenderPipeline(Device.Handle, in renderPipelineDescriptor);
 
             Console.WriteLine($"Created pipeline {(nuint)Pipeline:X}");
         } //Create pipeline
 
-        var format = TextureFormat.Rgba8UnormSrgb;
         { // Create texture
             var targetTextureDescriptor = new TextureDescriptor
             {
                 Label = (byte*)SilkMarshal.StringToPtr("Render Target"),
                 Dimension = TextureDimension.Dimension2D,
                 Size = new((uint)Width, (uint)Height, 1),
-                Format = format,
+                Format = TextureFormat,
                 MipLevelCount = 1,
                 SampleCount = 1,
                 Usage = TextureUsage.RenderAttachment | TextureUsage.CopySrc,
                 ViewFormatCount = 0,
             };
-            TargetTexture = WebGPU.DeviceCreateTexture(Device, in targetTextureDescriptor);
+            TargetTexture = WebGPU.DeviceCreateTexture(Device.Handle, in targetTextureDescriptor);
+            SilkMarshal.Free((nint)targetTextureDescriptor.Label);
         }
 
         {
@@ -207,94 +151,126 @@ fn fs_main() -> @location(0) vec4<f32> {
                 BaseMipLevel = 0,
                 MipLevelCount = 1,
                 Dimension = TextureViewDimension.Dimension2D,
-                Format = format
+                Format = TextureFormat
             };
 
             TextureView = WebGPU.TextureCreateView(TargetTexture, in desc);
         }
 
+        PixelBuffer = Device.CreateBuffer(new()
         {
-            var desc = new BufferDescriptor
-            {
-                MappedAtCreation = false,
-                Usage = BufferUsage.MapRead | BufferUsage.CopyDst,
-                Size = (uint)(4 * Width * Height),
-            };
-
-            PixelBuffer = WebGPU.DeviceCreateBuffer(Device, in desc);
-        }
+            MappedAtCreation = false,
+            Usage = BufferUsage.MapRead | BufferUsage.CopyDst,
+            Size = (uint)(4 * Width * Height),
+        });
     }
 
-    public void Render()
+    public Task<Image> Render()
     {
-        var commandEncoderDescriptor = new CommandEncoderDescriptor();
-
-        var encoder = WebGPU.DeviceCreateCommandEncoder(Device, in commandEncoderDescriptor);
-
-        Console.WriteLine($"Texture view pointer: {(nint)TextureView}");
-        var colorAttachment = new RenderPassColorAttachment
+        Console.WriteLine("render called");
+        var queue = WebGPU.DeviceGetQueue(Device.Handle);
         {
-            View = TextureView,
-            ResolveTarget = null,
-            LoadOp = LoadOp.Clear,
-            StoreOp = StoreOp.Store,
-            ClearValue = new Silk.NET.WebGPU.Color
+
+            var commandEncoderDescriptor = new CommandEncoderDescriptor();
+
+            var encoder = WebGPU.DeviceCreateCommandEncoder(Device.Handle, in commandEncoderDescriptor);
+
+            Console.WriteLine($"Texture view pointer: {(nint)TextureView}");
+            var colorAttachment = new RenderPassColorAttachment
             {
-                R = 1,
-                G = 1,
-                B = 1,
-                A = 1
-            }
-        };
+                View = TextureView,
+                ResolveTarget = null,
+                LoadOp = LoadOp.Clear,
+                StoreOp = StoreOp.Store,
+                ClearValue = new Silk.NET.WebGPU.Color
+                {
+                    R = 1,
+                    G = 1,
+                    B = 1,
+                    A = 1
+                }
+            };
 
-        var renderPassDescriptor = new RenderPassDescriptor
+            var renderPassDescriptor = new RenderPassDescriptor
+            {
+                ColorAttachments = &colorAttachment,
+                ColorAttachmentCount = 1,
+                DepthStencilAttachment = null
+            };
+
+            var renderPass = WebGPU.CommandEncoderBeginRenderPass(encoder, in renderPassDescriptor);
+
+            WebGPU.RenderPassEncoderSetPipeline(renderPass, Pipeline);
+            WebGPU.RenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
+            WebGPU.RenderPassEncoderEnd(renderPass);
+
+
+            var commandBufferDescriptor = new CommandBufferDescriptor();
+            var commandBuffer = WebGPU.CommandEncoderFinish(encoder, in commandBufferDescriptor);
+
+            WebGPU.QueueSubmit(queue, 1, &commandBuffer);
+        }
         {
-            ColorAttachments = &colorAttachment,
-            ColorAttachmentCount = 1,
-            DepthStencilAttachment = null
-        };
+            var source = new ImageCopyTexture
+            {
+                Texture = TargetTexture,
+            };
+            var bytesPerRow = (uint)(4 * Width);
+            var alignedBytesPerRow = (bytesPerRow + 255) & ~255;
+            var destination = new ImageCopyBuffer
+            {
+                Buffer = PixelBuffer.Ptr,
+                Layout = new TextureDataLayout
+                {
+                    BytesPerRow = (uint)alignedBytesPerRow,
+                    Offset = 0,
+                    RowsPerImage = (uint)Height
+                }
+            };
+            var copySize = new Extent3D
+            {
+                Width = (uint)Width,
+                Height = (uint)Height,
+                DepthOrArrayLayers = 1
+            };
+            var encoderDesc = new CommandEncoderDescriptor { };
+            var encoder2 = WebGPU.DeviceCreateCommandEncoder(Device.Handle, in encoderDesc);
+            WebGPU.CommandEncoderCopyTextureToBuffer(encoder2,
+                source,
+                destination,
+                in copySize);
+            var desc2 = new CommandBufferDescriptor { };
+            var cmdBuffer = WebGPU.CommandEncoderFinish(encoder2, in desc2);
+            WebGPU.QueueSubmit(queue, 1, &cmdBuffer);
+        }
 
-        var renderPass = WebGPU.CommandEncoderBeginRenderPass(encoder, in renderPassDescriptor);
+        Console.WriteLine("all cmd submitted");
 
-        WebGPU.RenderPassEncoderSetPipeline(renderPass, Pipeline);
-        WebGPU.RenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
-        WebGPU.RenderPassEncoderEnd(renderPass);
-
-        var queue = WebGPU.DeviceGetQueue(Device);
-
-        var commandBufferDescriptor = new CommandBufferDescriptor();
-        var commandBuffer = WebGPU.CommandEncoderFinish(encoder, in commandBufferDescriptor);
-        WebGPU.QueueSubmit(queue, 1, &commandBuffer);
+        var resultTCS = new TaskCompletionSource<Image>();
+        Image<SixLabors.ImageSharp.PixelFormats.Bgra32>? result = null;
+        WebGPU.BufferMapAsync(PixelBuffer.Ptr, MapMode.Read, 0, BufferSize, new PfnBufferMapCallback((status, data) =>
+{
+    if (status == BufferMapAsyncStatus.Success)
+    {
+        Console.WriteLine("Map succeed");
+        var byteData = new Span<byte>(WebGPU.BufferGetConstMappedRange(PixelBuffer.Ptr, 0, BufferSize), (int)BufferSize);
+        var image = Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(byteData, Width, Height);
+        image.SaveAsPng("./output-headless.png");
+        result = image;
+        resultTCS.SetResult(image);
+        WebGPU.BufferUnmap(PixelBuffer.Ptr);
+    }
+    else
+    {
+        Console.WriteLine($"Map failed with status ${Enum.GetName(status)}");
+    }
+    //waitEvent.Set();
+}), default);
 
         //var waitEvent = new AutoResetEvent(false);
 
-        //WebGPU.BufferMapAsync(PixelBuffer, MapMode.Read, 0, BufferSize, new PfnBufferMapCallback((status, data) =>
-        //{
-        //    waitEvent.Set();
-        //}), default);
-
-        //waitEvent.WaitOne();
-        //var data = new Span<byte>(WebGPU.BufferGetConstMappedRange(PixelBuffer, 0, BufferSize), (int)BufferSize);
-
-        //var image = Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(data, Width, Height);
-        //image.SaveAsPng("./output.png");
-        //WebGPU.BufferUnmap(PixelBuffer);
-
+        return resultTCS.Task;
     }
 
-    private unsafe void PrintAdapterFeatures()
-    {
-        var count = (int)WebGPU.AdapterEnumerateFeatures(Adapter, null);
 
-        var features = stackalloc FeatureName[count];
-
-        WebGPU.AdapterEnumerateFeatures(Adapter, features);
-
-        Console.WriteLine("Adapter features:");
-
-        for (var i = 0; i < count; i++)
-        {
-            Console.WriteLine($"\t{features[i]}");
-        }
-    }
 }

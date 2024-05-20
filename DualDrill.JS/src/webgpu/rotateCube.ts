@@ -96,9 +96,11 @@ export async function createWebGPURenderService(): Promise<RenderService> {
   new Float32Array(verticesBuffer.getMappedRange()).set(cubeVertexArray);
   verticesBuffer.unmap();
 
+
   const pipeline = device.createRenderPipeline({
     layout: "auto",
     vertex: {
+
       module: device.createShaderModule({
         code: basicVertWGSL,
       }),
