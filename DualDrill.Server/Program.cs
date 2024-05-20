@@ -24,8 +24,10 @@ public class Program
         builder.Services.AddSingleton<UpdateService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateService>());
 
-        //builder.Services.AddSingleton<WebGPUHeadlessService>();
+        builder.Services.AddSingleton<WebGPUHeadlessService>();
+        builder.Services.AddSingleton<VulkanHeadlessService>();
         //builder.Services.AddHostedService<WebGPUWindowService>();
+        //builder.Services.AddHostedService<VulkanWindowService>();
 
         //builder.Services.AddHostedService<DistributeXRApplicationService>();
         builder.Services.AddClients();

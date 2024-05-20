@@ -17,16 +17,21 @@ public static class RenderControlApi
     }
     public static async Task<IResult> DoRender([FromServices] WebGPUHeadlessService renderService)
     {
+        await renderService.Render();
+        return Results.Ok();
+    }
+    public static async Task<IResult> VulkanRender([FromServices] VulkanHeadlessService renderService)
+    {
         renderService.Render();
         return Results.Ok();
     }
-
 
     public static void MapRenderControls(this WebApplication app)
     {
         app.MapPost("/api/render", StartRender);
         app.MapDelete("/api/render", StartRender);
         app.MapGet("/api/doRender", DoRender);
+        app.MapGet("/api/vulkan/render", VulkanRender);
     }
 }
 

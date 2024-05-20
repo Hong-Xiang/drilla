@@ -5,6 +5,7 @@ import {
   subscribeByPromiseLike,
 } from "./lib/dotnet-server-interop";
 import { SignalRConnection } from "./lib/signalr-client";
+import * as signalR from "@microsoft/signalr";
 
 export { getProperty, setProperty } from "./lib/dotnet-server-interop";
 // export { createWebGPURenderService } from "../render/RenderService";
@@ -14,8 +15,42 @@ export function asObjectReference<T>(x: T) {
   return x;
 }
 
+export function newOperator(cls: any, ...args: unknown[]) {
+  return new cls(...args);
+}
+
+export function callFunction(f: any, ...args: unknown[]) {
+  return f(...args);
+}
+
+export function unpackCallback(f: () => unknown) {
+  return f();
+}
+
+export function getGlobalThis() {
+  return globalThis;
+}
+
 export async function Initialization() {
   await SignalRConnection.start();
+  const subject = new signalR.Subject<number>();
+  let count = 0;
+  const h = setInterval(() => {
+    subject.next(count);
+    count++;
+  }, 1000);
+
+  SignalRConnection.stream("PingPongStream", subject).subscribe({
+    next: (value) => {
+      console.log(`pong ${value}`);
+    },
+    error: (e) => {
+      console.error(e);
+    },
+    complete: () => {
+      console.log("ping pong channel complete");
+    },
+  });
 }
 
 export function createCanvas(

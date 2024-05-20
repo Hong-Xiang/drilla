@@ -9,6 +9,15 @@ namespace DualDrill.Server;
 
 sealed class UserInputHub(UpdateService UpdateService, ILogger<UserInputHub> Logger) : Hub
 {
+    public async IAsyncEnumerable<int> PingPongStream(ChannelReader<int> events)
+    {
+        await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
+        {
+            Console.WriteLine(e);
+            yield return e;
+        }
+    }
+
     public async Task MouseEvent(ChannelReader<MouseEvent> events)
     {
         var writer = UpdateService.MouseEvents.Writer;

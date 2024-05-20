@@ -1,20 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<!-- <TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
+		<ImplicitUsings>enable</ImplicitUsings> -->
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
+
+	<Import Project="..\Silk.NET.Packages.props" />
 
 	<ItemGroup>
 		<ProjectReference Include="..\DualDrill.Client\DualDrill.Client.csproj" />
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 		<ProjectReference Include="..\DualDrill.Engine\DualDrill.Engine.csproj" />
+		<ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.2" />
-		<PackageReference Include="Silk.NET.WebGPU" Version="2.21.0" />
-		<PackageReference Include="Silk.NET.WebGPU.Extensions.WGPU" Version="2.21.0" />
-		<PackageReference Include="Silk.NET.WebGPU.Native.WGPU" Version="2.21.0" />
 		<PackageReference Include="SIPSorcery" Version="6.2.4" />
 		<PackageReference Include="System.Reactive" Version="6.0.1-preview.1" />
 		<Content Remove="wwwroot\**" />

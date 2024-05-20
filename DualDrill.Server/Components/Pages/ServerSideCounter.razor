@@ -1,6 +1,8 @@
-﻿<h3>ServerSideCounter</h3>
-@rendermode InteractiveServer
+﻿@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject Services.CircuitService CircuitService
+
+<h3>ServerSideCounter</h3>
+
 
 <p>Client Id @ClientId</p>
 <p role="status">@Count</p>
