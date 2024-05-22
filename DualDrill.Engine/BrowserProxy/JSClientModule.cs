@@ -67,7 +67,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
     //    var result = await module.InvokeAsync<IJSObjectReference>("createCanvasElement", observer);
 
     //}
-    public async ValueTask<IJSObjectReference> CreateObjectReferenceAsync(object value)
+    public async ValueTask<IJSObjectReference> CreateJSObjectReferenceAsync(object value)
     {
         var module = await Module.ConfigureAwait(false);
         return await module.InvokeAsync<IJSObjectReference>("asObjectReference", value).ConfigureAwait(false);
@@ -82,6 +82,11 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
     {
         var module = await Module.ConfigureAwait(false);
         return await module.InvokeAsync<IJSObjectReference>("createWebGPURenderService");
+    }
+    public async ValueTask<IJSObjectReference> CreateServerRenderPresentService()
+    {
+        var module = await Module.ConfigureAwait(false);
+        return await module.InvokeAsync<IJSObjectReference>("createServerRenderPresentService");
     }
     public async ValueTask<IJSObjectReference> CreateWebGLRenderServiceAsync(IJSObjectReference canvasElement)
     {

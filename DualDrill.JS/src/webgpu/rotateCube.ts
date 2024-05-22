@@ -12,7 +12,7 @@ import basicVertWGSL from "./shaders/basic.vert.wgsl";
 import vertexPositionColorWGSL from "./shaders/vertexPositionColor.frag.wgsl";
 import { Subject, animationFrameScheduler, observeOn } from "rxjs";
 import { SignalRConnection } from "../lib/signalr-client";
-import { RenderService } from "../render/RenderService";
+import { RenderServiceLegacy } from "../render/RenderService";
 import * as signalR from "@microsoft/signalr";
 
 function createCanvasWithContext(
@@ -73,7 +73,7 @@ function createCanvasWithContext(
   };
 }
 
-export async function createWebGPURenderService(): Promise<RenderService> {
+export async function createWebGPURenderService(): Promise<RenderServiceLegacy> {
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter?.requestDevice();
   if (!device) {
@@ -96,11 +96,9 @@ export async function createWebGPURenderService(): Promise<RenderService> {
   new Float32Array(verticesBuffer.getMappedRange()).set(cubeVertexArray);
   verticesBuffer.unmap();
 
-
   const pipeline = device.createRenderPipeline({
     layout: "auto",
     vertex: {
-
       module: device.createShaderModule({
         code: basicVertWGSL,
       }),
@@ -163,7 +161,6 @@ export async function createWebGPURenderService(): Promise<RenderService> {
     size: uniformBufferSize,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-
 
   const uniformBindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
