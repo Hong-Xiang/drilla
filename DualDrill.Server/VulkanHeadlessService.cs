@@ -16,8 +16,8 @@ namespace DualDrill.Server;
 
 public sealed unsafe class VulkanHeadlessService : IDisposable
 {
-    const int WIDTH = 800;
-    const int HEIGHT = 600;
+    public const int WIDTH = 800;
+    public const int HEIGHT = 600;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -28,10 +28,11 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
         "VK_LAYER_KHRONOS_validation"
     };
 
-    private readonly string[] deviceExtensions = new[]
-    {
-        KhrSwapchain.ExtensionName
-    };
+    private readonly string[] deviceExtensions = [];
+    //new[]
+    //{
+    //    KhrSwapchain.ExtensionName
+    //};
 
     private Vk? vk;
 
@@ -87,28 +88,21 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
         CreateGraphicsPipeline();
         CreateOffscreenFramebuffer();
         CreateCommandPool();
-        CreateCommandBuffers();
+        CreateCommandBuffer();
         CreateSyncObjects();
     }
 
     byte[] ResultBuffer = new byte[4 * WIDTH * HEIGHT];
 
-    public void Render()
+    public byte[] Render()
     {
         DrawFrame(0);
         vk!.DeviceWaitIdle(device);
         CopyToCPUBuffer(ResultBuffer);
-        var noneZeroCount = 0;
-        for (var i = 0; i < ResultBuffer.Length; i++)
-        {
-            if (ResultBuffer[i] > 0)
-            {
-                noneZeroCount++;
-            }
-        }
-        var image = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(ResultBuffer, WIDTH, HEIGHT);
-        image.SaveAsPng("./output-vulkan-headless.png");
-        Console.WriteLine($"None Zero #{noneZeroCount} / {4 * WIDTH * HEIGHT}");
+        //var image = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(ResultBuffer, WIDTH, HEIGHT);
+        //image.SaveAsPng("./output-vulkan-headless.png");
+        //Console.WriteLine($"None Zero #{noneZeroCount} / {4 * WIDTH * HEIGHT}");
+        return ResultBuffer;
     }
 
     private void CreateOffscreenImage()
@@ -707,7 +701,7 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
         }
     }
 
-    private void CreateCommandBuffers()
+    private void CreateCommandBuffer()
     {
         var commandBuffer = new CommandBuffer();
 
