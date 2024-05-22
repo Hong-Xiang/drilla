@@ -10,6 +10,7 @@ import * as signalR from "@microsoft/signalr";
 export { getProperty, setProperty } from "./lib/dotnet-server-interop";
 // export { createWebGPURenderService } from "../render/RenderService";
 export { createWebGPURenderService } from "./webgpu/rotateCube";
+export { createServerRenderPresentService } from "./render/DistributeRenderService";
 
 export function asObjectReference<T>(x: T) {
   return x;
@@ -51,6 +52,16 @@ export async function Initialization() {
       console.log("ping pong channel complete");
     },
   });
+
+  // async function testFetchRenderResult() {
+  //   const res = await fetch("/api/vulkan/render");
+  //   const b = await res.blob();
+  //   console.log(b.size);
+
+  //   requestAnimationFrame(testFetchRenderResult);
+  // }
+
+  // requestAnimationFrame(testFetchRenderResult);
 }
 
 export function createCanvas(

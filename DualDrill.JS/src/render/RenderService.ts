@@ -119,7 +119,7 @@ export interface RenderRoot {
   render(t: number, scale: number): void;
 }
 
-export interface RenderService {
+export interface RenderServiceLegacy {
   readonly canvas: HTMLCanvasElement;
   dispose(): void;
   attachToElement(element: HTMLElement): void;

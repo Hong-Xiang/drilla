@@ -162,14 +162,12 @@ fn fs_main() -> @location(0) vec4<f32> {
         { //Create pipeline
             var blendState = new BlendState
             {
-                Color = new BlendComponent
-                {
+                Color = {
                     SrcFactor = BlendFactor.One,
                     DstFactor = BlendFactor.Zero,
                     Operation = BlendOperation.Add
                 },
-                Alpha = new BlendComponent
-                {
+                Alpha = {
                     SrcFactor = BlendFactor.One,
                     DstFactor = BlendFactor.Zero,
                     Operation = BlendOperation.Add

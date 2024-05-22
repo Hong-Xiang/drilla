@@ -138,20 +138,20 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     public async ValueTask ShowPeerVideo(IMediaStream stream)
     {
         Console.WriteLine("Show Peer Video");
-        await using var videoElementRef = await Module.CreateObjectReferenceAsync(PeerVideoElement).ConfigureAwait(false);
+        await using var videoElementRef = await Module.CreateJSObjectReferenceAsync(PeerVideoElement).ConfigureAwait(false);
         await Module.SetVideoElementStreamAsync(videoElementRef, ((JSMediaStreamProxy)stream).Reference);
     }
 
     public async ValueTask ShowSelfVideo(IMediaStream stream)
     {
         Console.WriteLine("Show Self Video");
-        await using var videoElementRef = await Module.CreateObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
+        await using var videoElementRef = await Module.CreateJSObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
         await Module.SetVideoElementStreamAsync(videoElementRef, ((JSMediaStreamProxy)stream).Reference);
     }
 
     public async ValueTask<IJSObjectReference> GetCanvasElement()
     {
-        return await Module.CreateObjectReferenceAsync(RenderCanvasElement);
+        return await Module.CreateJSObjectReferenceAsync(RenderCanvasElement);
     }
 
     public async ValueTask RemovePeerClient()
@@ -163,7 +163,7 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     public async ValueTask ClosePeerVideo()
     {
         Console.WriteLine("Close Peer Video");
-        await using var videoElementRef = await Module.CreateObjectReferenceAsync(PeerVideoElement).ConfigureAwait(false);
+        await using var videoElementRef = await Module.CreateJSObjectReferenceAsync(PeerVideoElement).ConfigureAwait(false);
         var videoProxy = new JsVideoElementProxy(Client, Module, videoElementRef);
         var mediaStream = await videoProxy.GetStream();
         var camera = await mediaStream.GetVideoTrack(0);
@@ -174,7 +174,7 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     public async ValueTask CloseSelfVideo()
     {
         Console.WriteLine("Close Self Video");
-        await using var videoElementRef = await Module.CreateObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
+        await using var videoElementRef = await Module.CreateJSObjectReferenceAsync(SelfVideoElement).ConfigureAwait(false);
         var videoProxy = new JsVideoElementProxy(Client, Module, videoElementRef);
         var mediaStream = await videoProxy.GetStream();
         var camera = await mediaStream.GetVideoTrack(0);
