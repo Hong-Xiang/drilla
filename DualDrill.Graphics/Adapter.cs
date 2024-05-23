@@ -9,6 +9,11 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
+public sealed class GPUAdapter<TApi, THandle>
+    where TApi : IGraphicsApi<TApi, THandle>
+{
+}
+
 public unsafe sealed class Adapter(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.Adapter* Handle)
 {
     public Silk.NET.WebGPU.Adapter* Handle { get; } = Handle;
