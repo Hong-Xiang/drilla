@@ -1,4 +1,7 @@
-﻿using Silk.NET.WebGPU;
+﻿using DotNext;
+using DotNext.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+using Silk.NET.WebGPU;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +12,26 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
+public sealed class GPUInstance<TApi, THandle> : Disposable, IAsyncDisposable
+    where TApi : IGraphicsApi<TApi, THandle>
+{
+    internal GPUInstance(TApi api, THandle handle)
+    {
+        Api = api;
+        Handle = handle;
+    }
+
+    internal THandle Handle { get; }
+    internal TApi Api { get; }
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        await Api.DestroyInstance(Handle).ConfigureAwait(false);
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+    ValueTask IAsyncDisposable.DisposeAsync() => DisposeAsync();
+}
+
+
 public unsafe sealed class Instance(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.Instance* Handle) : IDisposable
 {
     public Silk.NET.WebGPU.Instance* Handle { get; } = Handle;
@@ -17,12 +40,12 @@ public unsafe sealed class Instance(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.
 
     public static Instance Create(InstanceDescriptor descriptor)
     {
-        var handle = WebGPUApi.API.CreateInstance(in descriptor);
+        var handle = WebGPUGraphicsApi.Api.CreateInstance(in descriptor);
         if (handle is null)
         {
             throw new Exception("Failed to create instance");
         }
-        return new(WebGPUApi.API, handle);
+        return new(WebGPUGraphicsApi.Api, handle);
     }
 
     struct RequestResult
@@ -62,7 +85,7 @@ public unsafe sealed class Instance(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.
         {
             if (disposing)
             {
-                WebGPUApi.API.InstanceRelease(Handle);
+                WebGPUGraphicsApi.Api.InstanceRelease(Handle);
                 // TODO: dispose managed state (managed objects)
             }
 
