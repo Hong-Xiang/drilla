@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
-internal unsafe record struct UnsafePointer<T>(T* Value)
-    where T : unmanaged
-{
-}
+//internal unsafe record struct UnsafePointer<T>(T* Value)
+//    where T : unmanaged
+//{
+//}

@@ -36,7 +36,7 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
 
     private Vk? vk;
 
-    private Instance instance;
+    private Graphics.GPUInstance Instance;
 
     private ExtDebugUtils? debugUtils;
     private DebugUtilsMessengerEXT debugMessenger;
@@ -77,8 +77,12 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
 
     public VulkanHeadlessService()
     {
-        CreateInstance();
-        SetupDebugMessenger();
+        //CreateInstance();
+        Instance = new(Graphics.GPUInstanceDescriptor.Default with
+        {
+            ApplicationName = "Hello Triangle",
+        });
+        //SetupDebugMessenger();
         PickPhysicalDevice();
         CreateLogicalDevice();
         CreateReadbackBuffer();
@@ -207,7 +211,7 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
 
     public void CopyToCPUBuffer(Span<byte> buffer)
     {
-        void* data;
+        void* data = null;
         vk!.MapMemory(device, readbackBufferMemory, 0, (ulong)buffer.Length, MemoryMapFlags.None, &data);
         var dataSpan = new Span<byte>(data, buffer.Length);
         dataSpan.CopyTo(buffer);
@@ -232,74 +236,75 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
 
         vk!.DestroyDevice(device, null);
 
-        if (EnableValidationLayers)
-        {
-            //DestroyDebugUtilsMessenger equivilant to method DestroyDebugUtilsMessengerEXT from original tutorial.
-            debugUtils!.DestroyDebugUtilsMessenger(instance, debugMessenger, null);
-        }
+        //if (EnableValidationLayers)
+        //{
+        //    //DestroyDebugUtilsMessenger equivilant to method DestroyDebugUtilsMessengerEXT from original tutorial.
+        //    debugUtils!.DestroyDebugUtilsMessenger(Instance, debugMessenger, null);
+        //}
 
-        vk!.DestroyInstance(instance, null);
+        //vk!.DestroyInstance(Instance, null);
+        Instance.Dispose();
         vk!.Dispose();
     }
 
-    private void CreateInstance()
-    {
-        vk = Vk.GetApi();
+    //private void CreateInstance()
+    //{
+    //    vk = Vk.GetApi();
 
-        if (EnableValidationLayers && !CheckValidationLayerSupport())
-        {
-            throw new Exception("validation layers requested, but not available!");
-        }
+    //    if (EnableValidationLayers && !CheckValidationLayerSupport())
+    //    {
+    //        throw new Exception("validation layers requested, but not available!");
+    //    }
 
-        ApplicationInfo appInfo = new()
-        {
-            SType = StructureType.ApplicationInfo,
-            PApplicationName = (byte*)Marshal.StringToHGlobalAnsi("Hello Triangle"),
-            ApplicationVersion = new Version32(1, 0, 0),
-            PEngineName = (byte*)Marshal.StringToHGlobalAnsi("No Engine"),
-            EngineVersion = new Version32(1, 0, 0),
-            ApiVersion = Vk.Version12
-        };
+    //    ApplicationInfo appInfo = new()
+    //    {
+    //        SType = StructureType.ApplicationInfo,
+    //        PApplicationName = (byte*)Marshal.StringToHGlobalAnsi("Hello Triangle"),
+    //        ApplicationVersion = new Version32(1, 0, 0),
+    //        PEngineName = (byte*)Marshal.StringToHGlobalAnsi("No Engine"),
+    //        EngineVersion = new Version32(1, 0, 0),
+    //        ApiVersion = Vk.Version12
+    //    };
 
-        InstanceCreateInfo createInfo = new()
-        {
-            SType = StructureType.InstanceCreateInfo,
-            PApplicationInfo = &appInfo
-        };
+    //    InstanceCreateInfo createInfo = new()
+    //    {
+    //        SType = StructureType.InstanceCreateInfo,
+    //        PApplicationInfo = &appInfo
+    //    };
 
-        var extensions = GetRequiredExtensions();
-        createInfo.EnabledExtensionCount = (uint)extensions.Length;
-        createInfo.PpEnabledExtensionNames = (byte**)SilkMarshal.StringArrayToPtr(extensions); ;
+    //    var extensions = GetRequiredExtensions();
+    //    createInfo.EnabledExtensionCount = (uint)extensions.Length;
+    //    createInfo.PpEnabledExtensionNames = (byte**)SilkMarshal.StringArrayToPtr(extensions); ;
 
-        if (EnableValidationLayers)
-        {
-            createInfo.EnabledLayerCount = (uint)validationLayers.Length;
-            createInfo.PpEnabledLayerNames = (byte**)SilkMarshal.StringArrayToPtr(validationLayers);
+    //    if (EnableValidationLayers)
+    //    {
+    //        createInfo.EnabledLayerCount = (uint)validationLayers.Length;
+    //        createInfo.PpEnabledLayerNames = (byte**)SilkMarshal.StringArrayToPtr(validationLayers);
 
-            DebugUtilsMessengerCreateInfoEXT debugCreateInfo = new();
-            PopulateDebugMessengerCreateInfo(ref debugCreateInfo);
-            createInfo.PNext = &debugCreateInfo;
-        }
-        else
-        {
-            createInfo.EnabledLayerCount = 0;
-            createInfo.PNext = null;
-        }
+    //        DebugUtilsMessengerCreateInfoEXT debugCreateInfo = new();
+    //        PopulateDebugMessengerCreateInfo(ref debugCreateInfo);
+    //        createInfo.PNext = &debugCreateInfo;
+    //    }
+    //    else
+    //    {
+    //        createInfo.EnabledLayerCount = 0;
+    //        createInfo.PNext = null;
+    //    }
 
-        if (vk.CreateInstance(createInfo, null, out instance) != Result.Success)
-        {
-            throw new Exception("failed to create instance!");
-        }
+    //    if (vk.CreateInstance(createInfo, null, out Instance) != Result.Success)
+    //    {
+    //        throw new Exception("failed to create instance!");
+    //    }
 
-        Marshal.FreeHGlobal((IntPtr)appInfo.PApplicationName);
-        Marshal.FreeHGlobal((IntPtr)appInfo.PEngineName);
-        SilkMarshal.Free((nint)createInfo.PpEnabledExtensionNames);
+    //    Marshal.FreeHGlobal((IntPtr)appInfo.PApplicationName);
+    //    Marshal.FreeHGlobal((IntPtr)appInfo.PEngineName);
+    //    SilkMarshal.Free((nint)createInfo.PpEnabledExtensionNames);
 
-        if (EnableValidationLayers)
-        {
-            SilkMarshal.Free((nint)createInfo.PpEnabledLayerNames);
-        }
-    }
+    //    if (EnableValidationLayers)
+    //    {
+    //        SilkMarshal.Free((nint)createInfo.PpEnabledLayerNames);
+    //    }
+    //}
 
     private void PopulateDebugMessengerCreateInfo(ref DebugUtilsMessengerCreateInfoEXT createInfo)
     {
@@ -313,27 +318,27 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
         createInfo.PfnUserCallback = (DebugUtilsMessengerCallbackFunctionEXT)DebugCallback;
     }
 
-    private void SetupDebugMessenger()
-    {
-        if (!EnableValidationLayers) return;
+    //private void SetupDebugMessenger()
+    //{
+    //    if (!EnableValidationLayers) return;
 
-        //TryGetInstanceExtension equivilant to method CreateDebugUtilsMessengerEXT from original tutorial.
-        if (!vk!.TryGetInstanceExtension(instance, out debugUtils)) return;
+    //    //TryGetInstanceExtension equivilant to method CreateDebugUtilsMessengerEXT from original tutorial.
+    //    if (!vk!.TryGetInstanceExtension(Instance, out debugUtils)) return;
 
-        DebugUtilsMessengerCreateInfoEXT createInfo = new();
-        PopulateDebugMessengerCreateInfo(ref createInfo);
+    //    DebugUtilsMessengerCreateInfoEXT createInfo = new();
+    //    PopulateDebugMessengerCreateInfo(ref createInfo);
 
-        if (debugUtils!.CreateDebugUtilsMessenger(instance, in createInfo, null, out debugMessenger) != Result.Success)
-        {
-            throw new Exception("failed to set up debug messenger!");
-        }
-    }
+    //    if (debugUtils!.CreateDebugUtilsMessenger(Instance.NativeHandle, in createInfo, null, out debugMessenger) != Result.Success)
+    //    {
+    //        throw new Exception("failed to set up debug messenger!");
+    //    }
+    //}
 
 
     private void PickPhysicalDevice()
     {
         uint devicedCount = 0;
-        vk!.EnumeratePhysicalDevices(instance, ref devicedCount, null);
+        vk!.EnumeratePhysicalDevices(Instance.NativeHandle, ref devicedCount, null);
 
         if (devicedCount == 0)
         {
@@ -343,7 +348,7 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
         var devices = new PhysicalDevice[devicedCount];
         fixed (PhysicalDevice* devicesPtr = devices)
         {
-            vk!.EnumeratePhysicalDevices(instance, ref devicedCount, devicesPtr);
+            vk!.EnumeratePhysicalDevices(Instance.NativeHandle, ref devicedCount, devicesPtr);
         }
 
         if (devices.Length == 1)
@@ -652,7 +657,7 @@ public sealed unsafe class VulkanHeadlessService : IDisposable
             BasePipelineHandle = default
         };
 
-        if (vk!.CreateGraphicsPipelines(device, default, 1, pipelineInfo, null, out graphicsPipeline) != Result.Success)
+        if (vk!.CreateGraphicsPipelines(device, default, 1, in pipelineInfo, null, out graphicsPipeline) != Result.Success)
         {
             throw new Exception("failed to create graphics pipeline!");
         }
