@@ -1,7 +1,9 @@
-﻿using Silk.NET.Core.Native;
+﻿using DotNext;
+using Silk.NET.Core.Native;
 using Silk.NET.WebGPU;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -9,10 +11,18 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
-public sealed class GPUAdapter<TApi, THandle>
-    where TApi : IGraphicsApi<TApi, THandle>
-{
-}
+//public sealed class GPUAdapter<TApi, THandle> : IAsyncDisposable
+//    where TApi : IGraphicsApi<TApi, THandle>
+//{
+//    internal GPUAdapter(TApi api, THandle handle)
+//    {
+//        Api = api;
+//        Handle = handle;
+//    }
+//    internal TApi Api { get; }
+//    internal THandle Handle { get; }
+//    public ValueTask DisposeAsync() => Api.DestroyAdapter(Handle);
+//}
 
 public unsafe sealed class Adapter(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.Adapter* Handle)
 {

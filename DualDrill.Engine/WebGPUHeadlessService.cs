@@ -85,7 +85,7 @@ fn fs_main() -> @location(0) vec4<f32> {
             var colorTargetState = new ColorTargetState
             {
                 Format = TextureFormat,
-                Blend = &blendState,
+                //Blend = &blendState,
                 WriteMask = ColorWriteMask.All
             };
 
@@ -107,15 +107,15 @@ fn fs_main() -> @location(0) vec4<f32> {
                 Primitive = new PrimitiveState
                 {
                     Topology = PrimitiveTopology.TriangleList,
-                    StripIndexFormat = IndexFormat.Undefined,
-                    FrontFace = FrontFace.Ccw,
-                    CullMode = CullMode.None
+                    //StripIndexFormat = IndexFormat.Undefined,
+                    //FrontFace = FrontFace.Ccw,
+                    //CullMode = CullMode.None
                 },
                 Multisample = new MultisampleState
                 {
                     Count = 1,
                     Mask = ~0u,
-                    AlphaToCoverageEnabled = false
+                    //AlphaToCoverageEnabled = false
                 },
                 Fragment = &fragmentState,
                 DepthStencil = null
@@ -165,7 +165,7 @@ fn fs_main() -> @location(0) vec4<f32> {
         });
     }
 
-    public Task<Image> Render()
+    public Image Render()
     {
         Console.WriteLine("render called");
         var queue = WebGPU.DeviceGetQueue(Device.Handle);
@@ -210,6 +210,10 @@ fn fs_main() -> @location(0) vec4<f32> {
 
             WebGPU.QueueSubmit(queue, 1, &commandBuffer);
         }
+        WebGPU.QueueOnSubmittedWorkDone(queue, new PfnQueueWorkDoneCallback((status, data) =>
+        {
+            Console.WriteLine("queued work done 1");
+        }), null);
         {
             var source = new ImageCopyTexture
             {
@@ -236,8 +240,8 @@ fn fs_main() -> @location(0) vec4<f32> {
             var encoderDesc = new CommandEncoderDescriptor { };
             var encoder2 = WebGPU.DeviceCreateCommandEncoder(Device.Handle, in encoderDesc);
             WebGPU.CommandEncoderCopyTextureToBuffer(encoder2,
-                source,
-                destination,
+                in source,
+                in destination,
                 in copySize);
             var desc2 = new CommandBufferDescriptor { };
             var cmdBuffer = WebGPU.CommandEncoderFinish(encoder2, in desc2);
@@ -245,31 +249,37 @@ fn fs_main() -> @location(0) vec4<f32> {
         }
 
         Console.WriteLine("all cmd submitted");
-
-        var resultTCS = new TaskCompletionSource<Image>();
         Image<SixLabors.ImageSharp.PixelFormats.Bgra32>? result = null;
-        WebGPU.BufferMapAsync(PixelBuffer.Ptr, MapMode.Read, 0, BufferSize, new PfnBufferMapCallback((status, data) =>
-{
-    if (status == BufferMapAsyncStatus.Success)
+        WebGPU.QueueOnSubmittedWorkDone(queue, new PfnQueueWorkDoneCallback((status, data) =>
+        {
+            Console.WriteLine("queued work done 2");
+            //var resultTCS = new TaskCompletionSource<Image>();
+            WebGPU.BufferMapAsync(PixelBuffer.Ptr, MapMode.Read, 0, BufferSize, new PfnBufferMapCallback((status, data) =>
     {
-        Console.WriteLine("Map succeed");
-        var byteData = new Span<byte>(WebGPU.BufferGetConstMappedRange(PixelBuffer.Ptr, 0, BufferSize), (int)BufferSize);
-        var image = Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(byteData, Width, Height);
-        image.SaveAsPng("./output-headless.png");
-        result = image;
-        resultTCS.SetResult(image);
-        WebGPU.BufferUnmap(PixelBuffer.Ptr);
-    }
-    else
-    {
-        Console.WriteLine($"Map failed with status ${Enum.GetName(status)}");
-    }
-    //waitEvent.Set();
-}), default);
+        if (status == BufferMapAsyncStatus.Success)
+        {
+            Console.WriteLine("Map succeed");
+            var byteData = new Span<byte>(WebGPU.BufferGetConstMappedRange(PixelBuffer.Ptr, 0, BufferSize), (int)BufferSize);
+            var image = Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(byteData, Width, Height);
+            image.SaveAsPng("./output-headless-2.png");
+            result = image;
+            //resultTCS.SetResult(image);
+            WebGPU.BufferUnmap(PixelBuffer.Ptr);
+        }
+        else
+        {
+            Console.WriteLine($"Map failed with status ${Enum.GetName(status)}");
+        }
+        //waitEvent.Set();
+    }), default);
+        }), null);
+
+
 
         //var waitEvent = new AutoResetEvent(false);
 
-        return resultTCS.Task;
+        //return resultTCS.Task;
+        return result!;
     }
 
 
