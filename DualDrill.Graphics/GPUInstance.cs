@@ -1,113 +1,114 @@
-﻿using DotNext;
-using DotNext.Runtime.InteropServices;
-using Microsoft.Win32.SafeHandles;
-using Silk.NET.WebGPU;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Silk.NET.Core;
+using Silk.NET.Core.Native;
+using Silk.NET.Vulkan;
+using Silk.NET.Vulkan.Extensions.EXT;
+using static DualDrill.Graphics.VulkanApi;
 
 namespace DualDrill.Graphics;
 
-public sealed class GPUInstance<TApi, THandle> : Disposable, IAsyncDisposable
-    where TApi : IGraphicsApi<TApi, THandle>
+public record struct GPUInstanceDescriptor(
+    string ApplicationName,
+    string EngineName,
+    Version32 EngineVersion,
+    bool EnableValidationLayers,
+    IReadOnlyList<string> RequiredExtensionNames
+)
 {
-    internal GPUInstance(TApi api, THandle handle)
-    {
-        Api = api;
-        Handle = handle;
-    }
-
-    internal THandle Handle { get; }
-    internal TApi Api { get; }
-    protected override async ValueTask DisposeAsyncCore()
-    {
-        await Api.DestroyInstance(Handle).ConfigureAwait(false);
-        await base.DisposeAsyncCore().ConfigureAwait(false);
-    }
-    ValueTask IAsyncDisposable.DisposeAsync() => DisposeAsync();
+    public readonly static GPUInstanceDescriptor Default = new(
+        "Unknown Application",
+        "Drill Engine",
+        new Version32(0, 0, 1),
+        true,
+        []
+    );
 }
 
-
-public unsafe sealed class Instance(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.Instance* Handle) : IDisposable
+public sealed class GPUInstance
+    : IDisposable
 {
-    public Silk.NET.WebGPU.Instance* Handle { get; } = Handle;
-
-    private bool disposedValue;
-
-    public static Instance Create(InstanceDescriptor descriptor)
+    static readonly string[] ValidationLayerNames = ["VK_LAYER_KHRONOS_validation"];
+    public unsafe GPUInstance(GPUInstanceDescriptor descriptor)
     {
-        var handle = WebGPUGraphicsApi.Api.CreateInstance(in descriptor);
-        if (handle is null)
+        using var applicationName = NativeStringRef.Create(descriptor.ApplicationName);
+        using var engineName = NativeStringRef.Create(descriptor.EngineName);
+        ApplicationInfo appInfo = new()
         {
-            throw new Exception("Failed to create instance");
+            SType = StructureType.ApplicationInfo,
+            PApplicationName = applicationName,
+            ApplicationVersion = new Version32(1, 0, 0),
+            PEngineName = engineName,
+            EngineVersion = new Version32(1, 0, 0),
+            ApiVersion = Vk.Version13
+        };
+        InstanceCreateInfo createInfo = new()
+        {
+            SType = StructureType.InstanceCreateInfo,
+            PApplicationInfo = &appInfo
+        };
+        using var extensionNames = NativeStringArrayRef.Create(descriptor.RequiredExtensionNames);
+        createInfo.EnabledExtensionCount = (uint)descriptor.RequiredExtensionNames.Count;
+        createInfo.PpEnabledExtensionNames = extensionNames;
+        using var layerNames = NativeStringArrayRef.Create(ValidationLayerNames);
+        var debugInfoExt = new DebugUtilsMessengerCreateInfoEXT();
+        PopulateDebugMessengerCreateInfo(ref debugInfoExt);
+        if (descriptor.EnableValidationLayers)
+        {
+            createInfo.EnabledLayerCount = (uint)ValidationLayerNames.Length;
+            createInfo.PpEnabledLayerNames = layerNames;
+            createInfo.PNext = &debugInfoExt;
         }
-        return new(WebGPUGraphicsApi.Api, handle);
-    }
-
-    struct RequestResult
-    {
-        public Silk.NET.WebGPU.Adapter* Adapter;
-    }
-
-    readonly PfnRequestAdapterCallback Callback = new((status, adapter, message, data) =>
+        if (Api.CreateInstance(in createInfo, null, out var instance) != Result.Success)
         {
-            var resultData = (RequestResult*)data;
-            if (status == RequestAdapterStatus.Success && resultData->Adapter is null)
-            {
-                resultData->Adapter = adapter;
-            }
-            else
-            {
-                Console.WriteLine(Marshal.PtrToStringUTF8((nint)message));
-            }
-        });
-
-
-    public Adapter RequestAdapter(in RequestAdapterOptions options)
-    {
-        var result = new RequestResult();
-        Api.InstanceRequestAdapter(Handle, in options, Callback, ref result);
-        if (result.Adapter is null)
-        {
-            throw new NullReferenceException("Failed to get adapter");
+            throw new GraphicsApiException("Failed to create GPUInstance using Vulkan API");
         }
-        return new Adapter(Api, result.Adapter);
-    }
-
-
-    private void Dispose(bool disposing)
-    {
-        if (!disposedValue)
+        InstanceHandle = instance;
+        if (descriptor.EnableValidationLayers)
         {
-            if (disposing)
+            if (VulkanApi.Api.TryGetInstanceExtension<ExtDebugUtils>(instance, out ExtDebugUtils))
             {
-                WebGPUGraphicsApi.Api.InstanceRelease(Handle);
-                // TODO: dispose managed state (managed objects)
+                if (ExtDebugUtils?.CreateDebugUtilsMessenger(instance, in debugInfoExt, null, out var debugMessengerExt) != Result.Success)
+                {
+                    throw new Exception("failed to set up debug messenger!");
+                }
+                DebugUtilsMessengerEXT = debugMessengerExt;
             }
-
-
-            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-            // TODO: set large fields to null
-            disposedValue = true;
         }
     }
-
-
-    // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-    ~Instance()
+    static unsafe void PopulateDebugMessengerCreateInfo(ref DebugUtilsMessengerCreateInfoEXT createInfo)
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: false);
+        createInfo.SType = StructureType.DebugUtilsMessengerCreateInfoExt;
+        createInfo.MessageSeverity = DebugUtilsMessageSeverityFlagsEXT.VerboseBitExt |
+                                     DebugUtilsMessageSeverityFlagsEXT.WarningBitExt |
+                                     DebugUtilsMessageSeverityFlagsEXT.ErrorBitExt;
+        createInfo.MessageType = DebugUtilsMessageTypeFlagsEXT.GeneralBitExt |
+                                 DebugUtilsMessageTypeFlagsEXT.PerformanceBitExt |
+                                 DebugUtilsMessageTypeFlagsEXT.ValidationBitExt;
+        createInfo.PfnUserCallback = (DebugUtilsMessengerCallbackFunctionEXT)DebugCallback;
     }
 
-    public void Dispose()
+    public Silk.NET.Vulkan.Instance NativeHandle => InstanceHandle;
+    internal GPUHandle<VulkanApi, Silk.NET.Vulkan.Instance> InstanceHandle;
+    internal ExtDebugUtils? ExtDebugUtils;
+    public DebugUtilsMessengerEXT? DebugUtilsMessengerEXT { get; }
+
+    private static unsafe uint DebugCallback(DebugUtilsMessageSeverityFlagsEXT messageSeverity, DebugUtilsMessageTypeFlagsEXT messageTypes, DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
+        Console.WriteLine($"validation layer:" + Marshal.PtrToStringUTF8((nint)pCallbackData->PMessage));
+        return Vk.False;
+    }
+
+    public unsafe void Dispose()
+    {
+        InstanceHandle.Dispose();
+        if (DebugUtilsMessengerEXT.HasValue)
+        {
+            ExtDebugUtils?.DestroyDebugUtilsMessenger(InstanceHandle, DebugUtilsMessengerEXT.Value, null);
+        }
     }
 }

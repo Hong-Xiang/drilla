@@ -19,7 +19,7 @@ public static class RenderControlApi
     }
     public static async Task<IResult> DoRender([FromServices] WebGPUHeadlessService renderService)
     {
-        await renderService.Render();
+        renderService.Render();
         return Results.Ok();
     }
     public static async Task<IResult> VulkanRender([FromServices] VulkanHeadlessService renderService)

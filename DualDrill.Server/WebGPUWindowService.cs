@@ -19,6 +19,7 @@ public unsafe sealed class WebGPUWindowService : BackgroundService
     Graphics.Device Device { get; set; }
 
     Graphics.ShaderModule Shader { get; set; }
+    PipelineLayout* PipelineLayout { get; set; }
     RenderPipeline* Pipeline { get; set; }
 
     Texture* TargetTexture { get; set; }
@@ -66,7 +67,7 @@ fn fs_main() -> @location(0) vec4<f32> {
             Height = (uint)Window.FramebufferSize.Y,
             AlphaMode = CompositeAlphaMode.Opaque,
         };
-        wgpu.SurfaceConfigure(Surface, in config);
+        wgpu.SurfaceConfigure(Surface, &config);
     }
 
     private static void DeviceLost(DeviceLostReason arg0, byte* arg1, void* arg2)
@@ -158,6 +159,11 @@ fn fs_main() -> @location(0) vec4<f32> {
 
         var surfaceCapabilities = new SurfaceCapabilities();
         wgpu.SurfaceGetCapabilities(Surface, Adapter.Handle, ref surfaceCapabilities);
+        var formats = new Span<TextureFormat>(surfaceCapabilities.Formats, (int)surfaceCapabilities.FormatCount);
+        foreach(var f in formats)
+        {
+            Console.WriteLine($"Surface formats : {Enum.GetName(f)}");
+        }
 
         { //Create pipeline
             var blendState = new BlendState
@@ -189,6 +195,11 @@ fn fs_main() -> @location(0) vec4<f32> {
                 EntryPoint = (byte*)SilkMarshal.StringToPtr("fs_main")
             };
 
+            {
+                var desc = new PipelineLayoutDescriptor();
+                PipelineLayout = wgpu.DeviceCreatePipelineLayout(Device.Handle, &desc);
+            }
+
             var renderPipelineDescriptor = new RenderPipelineDescriptor
             {
                 Vertex = new VertexState
@@ -200,17 +211,18 @@ fn fs_main() -> @location(0) vec4<f32> {
                 {
                     Topology = PrimitiveTopology.TriangleList,
                     //StripIndexFormat = IndexFormat.Undefined,
-                    FrontFace = FrontFace.Ccw,
-                    CullMode = CullMode.None
+                    //FrontFace = FrontFace.Ccw,
+                    //CullMode = CullMode.None
                 },
                 Multisample = new MultisampleState
                 {
                     Count = 1,
                     Mask = ~0u,
-                    AlphaToCoverageEnabled = false
+                    //AlphaToCoverageEnabled = false
                 },
                 Fragment = &fragmentState,
-                DepthStencil = null
+                //DepthStencil = null,
+                Layout = PipelineLayout
             };
 
             Pipeline = Device.CreateRenderPipeline(in renderPipelineDescriptor);
@@ -263,6 +275,7 @@ fn fs_main() -> @location(0) vec4<f32> {
             ResolveTarget = null,
             LoadOp = LoadOp.Clear,
             StoreOp = StoreOp.Store,
+            //DepthSlice = WebGPU.DepthSliceUndefined,
             ClearValue = new()
             {
                 R = 0,
@@ -321,9 +334,9 @@ fn fs_main() -> @location(0) vec4<f32> {
                 var encoderDesc = new CommandEncoderDescriptor { };
                 var encoder2 = wgpu.DeviceCreateCommandEncoder(Device.Handle, in encoderDesc);
                 wgpu.CommandEncoderCopyTextureToBuffer(encoder2,
-                    source,
-                    destination,
-                    in copySize);
+                   in source,
+                   in destination,
+                   in copySize);
                 var desc2 = new CommandBufferDescriptor { };
                 var cmdBuffer = wgpu.CommandEncoderFinish(encoder2, in desc2);
                 wgpu.QueueSubmit(queue, 1, &cmdBuffer);

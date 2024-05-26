@@ -172,8 +172,8 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         {
             await Module.Initialization().ConfigureAwait(false);
             await using var el = await Module.CreateJSObjectReferenceAsync(RenderRootElement);
-            //RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
-            RenderService = new(await Client.Module.CreateServerRenderPresentService());
+            RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
+            //RenderService = new(await Client.Module.CreateServerRenderPresentService());
         }
         if (RenderService is not null)
         {

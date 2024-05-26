@@ -30,16 +30,16 @@ public unsafe sealed class Device(
         {
             NextInChain = &wgslDescriptor.Chain,
         };
-        return new ShaderModule(Api, Api.DeviceCreateShaderModule(Handle, shaderDescriptor));
+        return new ShaderModule(Api, Api.DeviceCreateShaderModule(Handle, &shaderDescriptor));
     }
 
     public RenderPipeline* CreateRenderPipeline(in RenderPipelineDescriptor descriptor)
     {
-        return Api.DeviceCreateRenderPipeline(Handle, descriptor);
+        return Api.DeviceCreateRenderPipeline(Handle, in descriptor);
     }
 
     public Buffer CreateBuffer(in BufferDescriptor descriptor)
     {
-        return new(Api, Api.DeviceCreateBuffer(Handle, descriptor));
+        return new(Api, Api.DeviceCreateBuffer(Handle, in descriptor));
     }
 }
