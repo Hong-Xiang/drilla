@@ -82,10 +82,6 @@ public sealed class FrameSimulationService(
             }
         }
     }
-    static IAsyncEnumerable<int> Test(IAsyncEnumerable<int> source)
-    {
-        return source.Where(x => x > 0);
-    }
 
     ConcurrentDictionary<CancellationToken, Channel<float>> ScaleChangeSubscriptions = [];
 
@@ -149,7 +145,7 @@ public sealed class FrameSimulationService(
             };
             foreach (var (_, c) in ScaleChangeSubscriptions)
             {
-                c.Writer.TryWrite()
+                //c.Writer.TryWrite()
             }
             await FrameSchedulerService.AddFrameRenderSceneAsync(scene, stoppingToken).ConfigureAwait(false);
         }

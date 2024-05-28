@@ -29,7 +29,7 @@ public class Program
 
         //builder.Services.AddSingleton<WebGPUHeadlessService>();
         //builder.Services.AddSingleton<VulkanHeadlessService>();
-        //builder.Services.AddHostedService<WebGPUWindowService>();
+        builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
 
         //builder.Services.AddHostedService<DistributeXRApplicationService>();
