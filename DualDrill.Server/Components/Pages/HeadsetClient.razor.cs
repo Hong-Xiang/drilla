@@ -22,7 +22,7 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
 
     [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
-    [Inject] UpdateService XRApplication { get; set; } = default!;
+    [Inject] FrameSimulationService XRApplication { get; set; } = default!;
     [Inject] BrowserClient Client { get; set; }
     [Inject] JSClientModule Module { get; set; } = default!;
 
@@ -64,7 +64,7 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
 
     async Task SubscribeScale()
     {
-        await foreach (var s in XRApplication.ScaleChanges(CancellationToken.None))
+        await foreach (var s in XRApplication.CubeScaleChanges(CancellationToken.None))
         {
             await InvokeAsync(StateHasChanged);
         }
@@ -80,14 +80,6 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
                 XRApplication.Scale = value;
             }
         }
-    }
-
-    int FrameCount { get; set; } = -1;
-
-
-    void UpdateFrameCount()
-    {
-        FrameCount = XRApplication.FrameCount;
     }
 
     void RefreshPeerIds()

@@ -20,6 +20,11 @@
     private int currentCount = 0;
 
 
+    class ASimpleObject
+    {
+        public bool Audio { get; set; }
+        public bool Video { get; set; }
+    }
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -29,7 +34,6 @@
         {
             await using var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/client.js");
             await using var globalThis = await module.InvokeAsync<IJSObjectReference>("getGlobalThis");
-            using var clientModule = await JSHost.ImportAsync("client", "/client.js");
             Console.WriteLine("Before get globalThis.Dotnet");
             using var DotNet = JSHost.GlobalThis.GetPropertyAsJSObject("DotNet");
             Console.WriteLine("After get globalThis.Dotnet");
@@ -38,8 +42,14 @@
             using var RTCPeerConnectionCls = JSHost.GlobalThis.GetPropertyAsJSObject("RTCPeerConnection");
             SimpleJSInterop.Log(RTCPeerConnectionCls);
             using var conn = SimpleJSInterop.NewOperator(RTCPeerConnectionCls);
+            SimpleJSInterop.LogObject(new ASimpleObject
+                {
+                    Audio = true,
+                    Video = false
+                });
             SimpleJSInterop.Log(conn);
             SimpleJSInterop.Log(DotNet);
+            await SimpleJSInterop.TestDotnetExport();
             Console.WriteLine("After console.log(DotNet)");
             await using var dotnetRuntime = await JSRuntime.InvokeAsync<IJSObjectReference>("getDotnetRuntime", 0);
             await JSRuntime.InvokeVoidAsync("console.log", dotnetRuntime);

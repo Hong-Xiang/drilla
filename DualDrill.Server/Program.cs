@@ -20,11 +20,14 @@ public class Program
             WebRootPath = "../DualDrill.JS/dist"
         });
 
+        builder.Services.AddSingleton<FrameSchedulerService>();
+        builder.Services.AddSingleton<FrameInputService>();
+        builder.Services.AddSingleton<FrameSimulationService>();
         builder.Services.AddSingleton<DistributeXRConnectionService>();
-        builder.Services.AddSingleton<UpdateService>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateService>());
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<FrameSimulationService>());
 
-        builder.Services.AddSingleton<WebGPUHeadlessService>();
+
+        //builder.Services.AddSingleton<WebGPUHeadlessService>();
         //builder.Services.AddSingleton<VulkanHeadlessService>();
         //builder.Services.AddHostedService<WebGPUWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
@@ -51,7 +54,7 @@ public class Program
             app.UseHsts();
         }
 
-        app.MapHub<UserInputHub>("/hub/user-input");
+        app.MapHub<DrillHub>("/hub/user-input");
 
         app.UseHttpsRedirection();
 

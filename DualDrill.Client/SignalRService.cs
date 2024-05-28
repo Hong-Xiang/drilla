@@ -4,11 +4,17 @@ using System.Threading.Channels;
 
 namespace DualDrill.Client;
 
-public class SignalRService(NavigationManager NavigationManager)
+public class SignalRService(NavigationManager NavigationManager) : IAsyncDisposable
 {
     readonly HubConnection Connection = new HubConnectionBuilder()
         .WithUrl($"{NavigationManager.BaseUri}hub/user-input")
         .Build();
+
+    public async ValueTask DisposeAsync()
+    {
+        await Connection.DisposeAsync().ConfigureAwait(false);
+    }
+
     public async Task Initialization()
     {
         Console.WriteLine(NavigationManager.BaseUri);
