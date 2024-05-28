@@ -24,7 +24,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
 
     [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
-    [Inject] UpdateService UpdateService { get; set; } = default!;
+    [Inject] FrameSimulationService UpdateService { get; set; } = default!;
     [Inject] BrowserClient Client { get; set; }
     [Inject] JSClientModule Module { get; set; } = default!;
 
@@ -82,14 +82,12 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     async Task SubscribeScale()
     {
-        await foreach (var s in UpdateService.ScaleChanges(CancellationToken.None))
+        await foreach (var s in UpdateService.CubeScaleChanges(CancellationToken.None))
         {
             Console.WriteLine("Scale Changed");
             await InvokeAsync(StateHasChanged);
         }
     }
-
-    int FrameCount { get; set; } = -1;
 
     public float Scale
     {
@@ -101,11 +99,6 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
                 UpdateService.Scale = value;
             }
         }
-    }
-
-    void UpdateFrameCount()
-    {
-        FrameCount = UpdateService.FrameCount;
     }
 
     void RefreshPeerIds()
