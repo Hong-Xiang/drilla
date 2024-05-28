@@ -1,4 +1,5 @@
 ﻿using DualDrill.Engine;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
 using System.Numerics;
@@ -7,8 +8,13 @@ using System.Threading.Channels;
 
 namespace DualDrill.Server;
 
-sealed class UserInputHub(UpdateService UpdateService, ILogger<UserInputHub> Logger) : Hub
+sealed class DrillHub(FrameSimulationService UpdateService, ILogger<DrillHub> Logger) : Hub
 {
+    public override async Task OnConnectedAsync()
+    {
+        await base.OnConnectedAsync();
+    }
+
     public async IAsyncEnumerable<int> PingPongStream(ChannelReader<int> events)
     {
         await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
@@ -18,13 +24,14 @@ sealed class UserInputHub(UpdateService UpdateService, ILogger<UserInputHub> Log
         }
     }
 
-    public async Task MouseEvent(ChannelReader<MouseEvent> events)
+    public async Task MouseEvent(ChannelReader<MouseEvent> events, [FromServices] FrameInputService inputService)
     {
-        var writer = UpdateService.MouseEvents.Writer;
-        await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
-        {
-            await writer.WriteAsync(e).ConfigureAwait(false);
-        }
+        //var writer = UpdateService.MouseEvents.Writer;
+        //await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
+        //{
+        //    await writer.WriteAsync(e).ConfigureAwait(false);
+        //}
+        inputService.AddUserEventSource(Context.ConnectionId, events);
         var tcs = new TaskCompletionSource();
         if (Context.ConnectionAborted.IsCancellationRequested)
         {
@@ -34,7 +41,7 @@ sealed class UserInputHub(UpdateService UpdateService, ILogger<UserInputHub> Log
         await tcs.Task;
     }
 
-    public async IAsyncEnumerable<RenderState> RenderStates([EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<RenderScene> RenderStates([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         await foreach (var s in UpdateService.RenderStates.Reader.ReadAllAsync(cancellationToken).WithCancellation(cancellationToken))
         {
