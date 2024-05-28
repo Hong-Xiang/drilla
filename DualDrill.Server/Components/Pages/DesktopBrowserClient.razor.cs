@@ -82,7 +82,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     async Task SubscribeScale()
     {
-        await foreach (var s in UpdateService.CubeScaleChanges(CancellationToken.None))
+        await foreach (var s in UpdateService.CubeScaleChanges(1.0f ,CancellationToken.None))
         {
             Console.WriteLine("Scale Changed");
             await InvokeAsync(StateHasChanged);

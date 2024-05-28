@@ -64,7 +64,7 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
 
     async Task SubscribeScale()
     {
-        await foreach (var s in XRApplication.CubeScaleChanges(CancellationToken.None))
+        await foreach (var s in XRApplication.CubeScaleChanges(1.0f, CancellationToken.None))
         {
             await InvokeAsync(StateHasChanged);
         }
