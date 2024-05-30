@@ -42,8 +42,8 @@ public static class WindowWebGPUNativeExtension
 public unsafe sealed class WebGPUNativeWindowService : BackgroundService
 {
 
-    WGPUInstanceImpl* Instance { get; set; }
-    WGPUAdapterImpl* Adapter { get; set; }
+    GPUInstanceW Instance { get; set; }
+    GPUAdapter Adapter { get; set; }
     WGPUDeviceImpl* Device { get; set; }
 
     //Graphics.ShaderModule Shader { get; set; }
@@ -183,15 +183,16 @@ fn fs_main() -> @location(0) vec4<f32> {
         //    Instance = wgpu.CreateInstance(ref desc);
         //}
         {
-            WGPUInstanceDescriptor desc = new WGPUInstanceDescriptor();
-            Instance = WGPU.wgpuCreateInstance(&desc);
-            if (Instance is null)
-            {
-                throw new Exception("Failed to create instance");
-            }
+            //WGPUInstanceDescriptor desc = new WGPUInstanceDescriptor();
+            //WGPU.wgpuCreateInstance(&desc);
+            Instance = new GPUInstanceW();
+            //if (Instance is null)
+            //{
+            //    throw new Exception("Failed to create instance");
+            //}
         }
 
-        Surface = Window.CreateWebGPUSurface(Instance);
+        Surface = Window.CreateWebGPUSurface(Instance.NativePointer);
 
 
         { //Get adapter
@@ -215,16 +216,17 @@ fn fs_main() -> @location(0) vec4<f32> {
             //    }),
             //    null
             //);
-            delegate* unmanaged[Cdecl]<WGPURequestAdapterStatus, WGPUAdapterImpl*, sbyte*, void*, void> fptr = &RequestAdaptorCallback;
+            Adapter = Instance.RequestAdapter(null);
+            //delegate* unmanaged[Cdecl]<WGPURequestAdapterStatus, WGPUAdapterImpl*, sbyte*, void*, void> fptr = &RequestAdaptorCallback;
 
-            //)(Marshal.GetFunctionPointerForDelegate(RequestAdaptorCallback));
-            RequestResult result = new();
-            WGPU.wgpuInstanceRequestAdapter(
-               Instance,
-               &requestAdapterOptions,
-               fptr, &result);
-            Adapter = (WGPUAdapterImpl*)(result.Data);
-            Console.WriteLine($"Adapter {(nint)Adapter:X}");
+            ////)(Marshal.GetFunctionPointerForDelegate(RequestAdaptorCallback));
+            //RequestResult result = new();
+            //WGPU.wgpuInstanceRequestAdapter(
+            //   Instance.NativePointer,
+            //   &requestAdapterOptions,
+            //   fptr, &result);
+            //Adapter = (WGPUAdapterImpl*)(result.Data);
+            Console.WriteLine($"{nameof(Adapter)}{Adapter}");
             //Adapter.PrintInfo();
         } //Get adapter
 
