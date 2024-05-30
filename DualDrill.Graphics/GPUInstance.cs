@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using DualDrill.Graphics.Native;
+using DualDrill.Graphics.WebGPU.Native;
 using Silk.NET.Core;
-using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.EXT;
 using static DualDrill.Graphics.VulkanApi;
@@ -27,6 +24,54 @@ public record struct GPUInstanceDescriptor(
         true,
         []
     );
+}
+
+
+public sealed class GPUInstanceW : IDisposable
+{
+    public unsafe WGPUInstanceImpl* NativePointer => Handle;
+    NativeHandle<WGPUDisposer, WGPUInstanceImpl> Handle { get; }
+    public unsafe GPUInstanceW()
+    {
+        WGPUInstanceDescriptor descriptor = new();
+        var pointer = WGPU.wgpuCreateInstance(&descriptor);
+        Handle = new(pointer);
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    static unsafe void RequestAdaptorCallback(WGPURequestAdapterStatus status, WGPUAdapterImpl* adapter, sbyte* message, void* data)
+    {
+        RequestCallback<WGPUDisposer, WGPUAdapterImpl, WGPURequestAdapterStatus>.Callback(status, adapter, message, data);
+    }
+
+    public unsafe GPUAdapter RequestAdapter(GPUSurface? surface)
+    {
+        var options = new WGPURequestAdapterOptions
+        {
+            powerPreference = WGPUPowerPreference.WGPUPowerPreference_HighPerformance
+        };
+        if (surface is not null)
+        {
+            options.compatibleSurface = surface.Handle;
+        }
+        var result = new RequestCallbackResult<WGPUAdapterImpl, WGPURequestAdapterStatus>();
+        WGPU.wgpuInstanceRequestAdapter(
+            Handle,
+            &options,
+            &RequestAdaptorCallback,
+            &result
+        );
+        if (result.Handle is null)
+        {
+            throw new GraphicsApiException($"Request {nameof(GPUAdapter)} failed, status {result.Status}, message {Marshal.PtrToStringUTF8((nint)result.Message)}");
+        }
+        return new GPUAdapter(result.Handle);
+    }
+
+    public void Dispose()
+    {
+        Handle.Dispose();
+    }
 }
 
 public sealed class GPUInstance
