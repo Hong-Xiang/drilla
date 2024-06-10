@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
-public unsafe ref struct NativeStringRef(byte* Handle)
+public unsafe readonly struct NativeStringRef(byte* Handle) : IDisposable
 {
     public byte* Handle { get; } = Handle;
 
@@ -20,7 +20,10 @@ public unsafe ref struct NativeStringRef(byte* Handle)
 
     public void Dispose()
     {
-        SilkMarshal.Free((nint)Handle);
+        if ((nint)Handle != 0)
+        {
+            SilkMarshal.Free((nint)Handle);
+        }
     }
 }
 public unsafe ref struct NativeStringArrayRef(byte** Handle)

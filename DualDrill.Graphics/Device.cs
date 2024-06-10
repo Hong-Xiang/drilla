@@ -1,4 +1,6 @@
-﻿using Silk.NET.Core.Native;
+﻿using DualDrill.Graphics.Native;
+using DualDrill.Graphics.WebGPU.Native;
+using Silk.NET.Core.Native;
 using Silk.NET.WebGPU;
 using System;
 using System.Collections.Generic;
@@ -7,6 +9,32 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
+
+public sealed partial class GPUDevice
+{
+    public unsafe GPUCommandEncoder CreateCommandEncoder(GPUCommandEncoderDescriptor descriptor)
+    {
+        if (descriptor.Label is not null)
+        {
+            throw new NotImplementedException();
+        }
+        WGPUCommandEncoderDescriptor nativeDescriptor = new()
+        {
+        };
+        return new(WGPU.wgpuDeviceCreateCommandEncoder(Handle, &nativeDescriptor));
+    }
+
+    public unsafe GPUQueue GetQueue()
+    {
+        return new(WGPU.wgpuDeviceGetQueue(Handle));
+    }
+
+    public unsafe GPUPipelineLayout CreatePipelineLayout(GPUPipelineLayoutDescriptor descriptor)
+    {
+        WGPUPipelineLayoutDescriptor native = default;
+        return new GPUPipelineLayout(WGPU.wgpuDeviceCreatePipelineLayout(Handle, &native));
+    }
+}
 
 public unsafe sealed class Device(
     Silk.NET.WebGPU.WebGPU Api,

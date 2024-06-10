@@ -7,6 +7,7 @@ using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Engine;
 using DualDrill.Server.WebApi;
+using DualDrill.Graphics;
 
 namespace DualDrill.Server;
 
@@ -34,6 +35,7 @@ public class Program
 
         //builder.Services.AddHostedService<DistributeXRApplicationService>();
         builder.Services.AddClients();
+        builder.Services.AddControllers();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()
@@ -60,6 +62,7 @@ public class Program
 
         app.UseStaticFiles();
         app.UseAntiforgery();
+        app.MapControllers();
         app.MapClients();
         app.MapRenderControls();
 
