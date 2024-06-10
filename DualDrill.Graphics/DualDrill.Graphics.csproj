@@ -6,10 +6,6 @@
 	<Import Project="..\Silk.NET.Packages.props" />
 
 	<ItemGroup>
-		<PackageReference Include="DotNext.Unsafe" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <None Update="Native\wgpu_native.dll">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>

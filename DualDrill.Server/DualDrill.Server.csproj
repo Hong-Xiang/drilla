@@ -10,6 +10,8 @@
 	<Import Project="..\Silk.NET.Packages.props" />
 
 	<ItemGroup>
+		<ProjectReference Include="..\DualDrill.ApiGen\DualDrill.ApiGen.csproj" />
+		<ProjectReference Include="..\DualDrill.ApiGen\DualDrill.ApiGen.csproj" />
 		<ProjectReference Include="..\DualDrill.Client\DualDrill.Client.csproj" />
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 		<ProjectReference Include="..\DualDrill.Engine\DualDrill.Engine.csproj" />

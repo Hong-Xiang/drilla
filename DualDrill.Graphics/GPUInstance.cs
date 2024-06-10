@@ -27,10 +27,8 @@ public record struct GPUInstanceDescriptor(
 }
 
 
-public sealed class GPUInstanceW : IDisposable
+public sealed partial class GPUInstanceW : IDisposable
 {
-    public unsafe WGPUInstanceImpl* NativePointer => Handle;
-    NativeHandle<WGPUDisposer, WGPUInstanceImpl> Handle { get; }
     public unsafe GPUInstanceW()
     {
         WGPUInstanceDescriptor descriptor = new();
@@ -41,7 +39,7 @@ public sealed class GPUInstanceW : IDisposable
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     static unsafe void RequestAdaptorCallback(WGPURequestAdapterStatus status, WGPUAdapterImpl* adapter, sbyte* message, void* data)
     {
-        RequestCallback<WGPUDisposer, WGPUAdapterImpl, WGPURequestAdapterStatus>.Callback(status, adapter, message, data);
+        RequestCallback<WGPUApiWrapper, WGPUAdapterImpl, WGPURequestAdapterStatus>.Callback(status, adapter, message, data);
     }
 
     public unsafe GPUAdapter RequestAdapter(GPUSurface? surface)
@@ -68,13 +66,9 @@ public sealed class GPUInstanceW : IDisposable
         return new GPUAdapter(result.Handle);
     }
 
-    public void Dispose()
-    {
-        Handle.Dispose();
-    }
 }
 
-public sealed class GPUInstance
+public sealed partial class GPUInstance
     : IDisposable
 {
     static readonly string[] ValidationLayerNames = ["VK_LAYER_KHRONOS_validation"];

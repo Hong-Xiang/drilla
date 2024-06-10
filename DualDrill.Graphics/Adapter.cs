@@ -7,24 +7,46 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
-public sealed class GPUAdapter : IDisposable
+public sealed partial class GPUAdapter : IDisposable
 {
-    NativeHandle<WGPUDisposer, WGPUAdapterImpl> Handle { get; }
-    public unsafe GPUAdapter(WGPUAdapterImpl* handle)
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    static unsafe void RequestDeviceCallback(WGPURequestDeviceStatus status, WGPUDeviceImpl* device, sbyte* message, void* data)
     {
-        Handle = new(handle);
+        RequestCallback<WGPUApiWrapper, WGPUDeviceImpl, WGPURequestDeviceStatus>.Callback(status, device, message, data);
+    }
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    static unsafe void DeviceUncapturedErrorCallback(WGPUErrorType errorType, sbyte* message, void* data)
+    {
+        Console.Error.WriteLine($"Device uncaptured error type = {Enum.GetName(errorType)}, message {Marshal.PtrToStringUTF8((nint)message)}");
     }
 
-    public void Dispose()
+
+    public unsafe GPUDevice RequestDevice()
     {
-        Handle.Dispose();
+        WGPUDeviceDescriptor descriptor = new();
+        var result = new RequestCallbackResult<WGPUDeviceImpl, WGPURequestDeviceStatus>();
+        WGPU.wgpuAdapterRequestDevice(
+            Handle,
+            &descriptor,
+            &RequestDeviceCallback,
+            &result
+        );
+        if (result.Handle is null)
+        {
+            throw new GraphicsApiException($"Request {nameof(GPUDevice)} failed, status {result.Status}, message {Marshal.PtrToStringUTF8((nint)result.Message)}");
+        }
+        WGPU.wgpuDeviceSetUncapturedErrorCallback(result.Handle, &DeviceUncapturedErrorCallback, null);
+        return new GPUDevice(result.Handle);
     }
+
     public override string? ToString()
     {
         return $"{nameof(GPUAdapter)}{Handle}";
@@ -34,6 +56,8 @@ public sealed class GPUAdapter : IDisposable
 public unsafe sealed class Adapter(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.Adapter* Handle)
 {
     public Silk.NET.WebGPU.Adapter* Handle { get; } = Handle;
+
+
 
     public void PrintInfo()
     {
