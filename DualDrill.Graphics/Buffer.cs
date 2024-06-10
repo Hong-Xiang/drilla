@@ -1,4 +1,5 @@
-﻿using Silk.NET.WebGPU;
+﻿using DualDrill.Graphics.WebGPU.Native;
+using Silk.NET.WebGPU;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,7 @@ public sealed class Buffer(
     Silk.NET.WebGPU.WebGPU Api,
     NativeHandle<Silk.NET.WebGPU.Buffer> Handle)
 {
+
     public unsafe Silk.NET.WebGPU.Buffer* Ptr { get; } = Handle.Value;
 
     public unsafe void Unmap()

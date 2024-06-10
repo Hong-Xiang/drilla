@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DualDrill.Graphics.Native;
+using DualDrill.Graphics.WebGPU.Native;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,4 +15,28 @@ public unsafe sealed class ShaderModule(
 {
     public Silk.NET.WebGPU.ShaderModule* Handle { get; } = Handle;
 
+}
+
+public sealed partial class GPUShaderModule
+{
+    internal unsafe static GPUShaderModule Create(GPUDevice device, string code)
+    {
+        using var nativeCode = NativeStringRef.Create(code);
+        var wgslDescriptor = new WGPUShaderModuleWGSLDescriptor
+        {
+            code = (sbyte*)nativeCode.Handle,
+            chain = new WGPUChainedStruct
+            {
+                sType = WGPUSType.WGPUSType_ShaderModuleWGSLDescriptor
+            }
+        };
+
+        var shaderModuleDescriptor = new WGPUShaderModuleDescriptor
+        {
+            nextInChain = &wgslDescriptor.chain,
+        };
+
+        var handle = WGPU.wgpuDeviceCreateShaderModule(device.NativePointer, &shaderModuleDescriptor);
+        return new GPUShaderModule(handle);
+    }
 }

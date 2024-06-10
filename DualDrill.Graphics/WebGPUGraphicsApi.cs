@@ -3,6 +3,12 @@ using System.Runtime.InteropServices;
 
 namespace DualDrill.Graphics;
 
+public static class WebGPUApiExtension
+{
+    public static GPUShaderModule CreateShaderModule(this GPUDevice device, string code) => GPUShaderModule.Create(device, code);
+    public static GPUBuffer CreateBuffer(this GPUDevice device, GPUBufferDescriptor descriptor) => GPUBuffer.Create(device, descriptor);
+}
+
 //public unsafe sealed class WebGPUGraphicsApi : IGraphicsApi<WebGPUGraphicsApi, nint>, IDisposable
 //{
 //    internal readonly static Silk.NET.WebGPU.WebGPU Api = Silk.NET.WebGPU.WebGPU.GetApi();
