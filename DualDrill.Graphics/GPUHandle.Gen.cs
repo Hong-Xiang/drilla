@@ -32,7 +32,8 @@ public sealed partial class GPUDevice : IDisposable
         Handle = new(handle);
     }
 
-    public unsafe WGPUDeviceImpl* NativePointer => Handle; public void Dispose()
+    public unsafe WGPUDeviceImpl* NativePointer => Handle;
+    public void Dispose()
     {
         Handle.Dispose();
     }
@@ -253,7 +254,8 @@ public sealed partial class GPUQueue : IDisposable
         Handle = new(handle);
     }
 
-    public unsafe WGPUQueueImpl* NativePointer => Handle; public void Dispose()
+    public unsafe WGPUQueueImpl* NativePointer => Handle;
+    public void Dispose()
     {
         Handle.Dispose();
     }
