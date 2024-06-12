@@ -30,9 +30,10 @@ public class Program
 
         //builder.Services.AddSingleton<WebGPUHeadlessService>();
         //builder.Services.AddSingleton<VulkanHeadlessService>();
-        builder.Services.AddSingleton<DeviceProviderService>();
+        builder.Services.AddSingleton<WGPUProviderService>();
+        builder.Services.AddSingleton<WGPUHeadlessService>();
         builder.Services.AddHostedService<DevicePollService>();
-        builder.Services.AddHostedService<WebGPUNativeWindowService>();
+        //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
 
         //builder.Services.AddHostedService<DistributeXRApplicationService>();

@@ -61,7 +61,6 @@ public sealed partial class GPUQueue
     {
         var tcs = new TaskCompletionSource<WGPUQueueWorkDoneStatus>();
         var handle = GCHandle.ToIntPtr(GCHandle.Alloc(tcs));
-        Console.WriteLine($"Handle {handle:X}");
         WGPU.wgpuQueueOnSubmittedWorkDone(Handle, &QueueWorkDoneAsync, (void*)handle);
         return tcs.Task;
     }

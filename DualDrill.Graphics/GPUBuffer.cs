@@ -46,12 +46,21 @@ public sealed partial class GPUBuffer
         WGPU.wgpuBufferMapAsync(Handle, (uint)mode, (uint)offset, (uint)size, &BufferMapped, (void*)GCHandle.ToIntPtr(tcsHandle));
     }
 
-    public async ValueTask MapAsync(GPUMapMode mode, int offset, int size)
+    public readonly record struct MappedBufferHandle(GPUBuffer Buffer) : IDisposable
+    {
+        public void Dispose()
+        {
+            Buffer.Unmap();
+        }
+    }
+
+    public async ValueTask<MappedBufferHandle> MapAsync(GPUMapMode mode, int offset, int size)
     {
         var data = new TaskCompletionSource();
         using var handle = new GCHandleDisposeWrapper(GCHandle.Alloc(data));
         MapBufferAsyncImpl(handle.Handle, mode, offset, size);
         await data.Task;
+        return new MappedBufferHandle(this);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
