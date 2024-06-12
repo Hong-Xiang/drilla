@@ -34,12 +34,25 @@ public static class RenderControlApi
         return Results.File(stream, "image/jpeg");
     }
 
+    public static async Task<IResult> WGPUHeadless(
+        [FromServices] WGPUHeadlessService wGPUHeadless,
+        [FromQuery(Name = "time")] int time
+    )
+    {
+        var image = await wGPUHeadless.Render((double)time / 1000);
+        using var ms = new MemoryStream();
+        await image.SaveAsPngAsync(ms);
+        var bytes = ms.ToArray();
+        return Results.File(bytes, "image/png");
+    }
+
     public static void MapRenderControls(this WebApplication app)
     {
         app.MapPost("/api/render", StartRender);
         app.MapDelete("/api/render", StartRender);
         app.MapGet("/api/doRender", DoRender);
         app.MapGet("/api/vulkan/render", VulkanRender);
+        app.MapGet("/api/wgpu/render", WGPUHeadless);
     }
 }
 

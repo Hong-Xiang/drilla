@@ -3,7 +3,7 @@ using DualDrill.Graphics;
 
 namespace DualDrill.Server;
 
-public sealed class DevicePollService(DeviceProviderService DeviceProviderService) : BackgroundService
+public sealed class DevicePollService(WGPUProviderService DeviceProviderService) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -22,25 +22,28 @@ public sealed class DevicePollService(DeviceProviderService DeviceProviderServic
 }
 
 
-public sealed class DeviceProviderService : IAsyncDisposable
+public sealed class WGPUProviderService : IAsyncDisposable
 {
     public GPUInstanceW Instance { get; }
     public GPUAdapter Adapter { get; }
     public GPUDevice Device { get; }
+    public GPUQueue Queue { get; }
 
     public TaskCompletionSource? Disposing { get; private set; }
 
-    public DeviceProviderService()
+    public WGPUProviderService()
     {
         Instance = new GPUInstanceW();
         Adapter = Instance.RequestAdapter(null);
         Device = Adapter.RequestDevice();
+        Queue = Device.GetQueue();
     }
 
     public async ValueTask DisposeAsync()
     {
         Disposing = new TaskCompletionSource();
         await Disposing.Task;
+        Queue.Dispose();
         Device.Dispose();
         Adapter.Dispose();
         Instance.Dispose();

@@ -40,12 +40,13 @@ public static class WindowWebGPUNativeExtension
     }
 }
 
-public sealed class WebGPUNativeWindowService(DeviceProviderService DeviceProviderService) : BackgroundService
+public sealed class WebGPUNativeWindowService(WGPUProviderService DeviceProviderService) : BackgroundService
 {
 
     //GPUInstanceW Instance { get; set; }
     //GPUAdapter Adapter { get; set; }
     GPUDevice Device { get; } = DeviceProviderService.Device;
+    GPUQueue Queue { get; } = DeviceProviderService.Queue;
 
     //Graphics.ShaderModule Shader { get; set; }
     GPUShaderModule ShaderModule { get; set; }
@@ -55,7 +56,6 @@ public sealed class WebGPUNativeWindowService(DeviceProviderService DeviceProvid
     GPUBuffer PixelBuffer { get; set; }
     GPUTexture RenderTarget { get; set; }
     GPUTextureView RenderTargetView { get; set; }
-    GPUQueue Queue { get; set; }
 
     readonly int Width = 512;
     readonly int Height = 512;
@@ -264,8 +264,6 @@ fn fs_main() -> @location(0) vec4<f32> {
             //Console.WriteLine($"{nameof(Device)}{Device}");
             //Console.WriteLine($"Got device {(nuint)Device:X}");
         } //Get device
-
-        Queue = Device.GetQueue();
 
 
         { //Load shader
