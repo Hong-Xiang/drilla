@@ -29,8 +29,16 @@ public sealed partial class GPUBuffer
     unsafe static void BufferMapped(WGPUBufferMapAsyncStatus status, void* ptr)
     {
         var gcHandle = GCHandle.FromIntPtr((nint)ptr);
-        var data = (TaskCompletionSource<WGPUBufferMapAsyncStatus>)gcHandle.Target;
-        data.SetResult(status);
+        var data = (TaskCompletionSource)gcHandle.Target;
+        gcHandle.Free();
+        if (status == WGPUBufferMapAsyncStatus.WGPUBufferMapAsyncStatus_Success)
+        {
+            data.SetResult();
+        }
+        else
+        {
+            data.SetException(new GraphicsApiException($"Failed to map buffer, status {Enum.GetName(status)}"));
+        }
     }
 
     unsafe void MapBufferAsyncImpl(GCHandle tcsHandle, GPUMapMode mode, int offset, int size)
@@ -40,13 +48,30 @@ public sealed partial class GPUBuffer
 
     public async ValueTask MapAsync(GPUMapMode mode, int offset, int size)
     {
-        var data = new TaskCompletionSource<WGPUBufferMapAsyncStatus>();
+        var data = new TaskCompletionSource();
         using var handle = new GCHandleDisposeWrapper(GCHandle.Alloc(data));
         MapBufferAsyncImpl(handle.Handle, mode, offset, size);
-        var status = await data.Task;
-        if (status != WGPUBufferMapAsyncStatus.WGPUBufferMapAsyncStatus_Success)
-        {
-            throw new GraphicsApiException($"Failed to map buffer, status {Enum.GetName(status)}");
-        }
+        await data.Task;
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    unsafe static void BufferMappedLog(WGPUBufferMapAsyncStatus status, void* ptr)
+    {
+        Console.WriteLine($"Buffer Mapped {status}");
+    }
+
+
+    public unsafe void MapAsync2(GPUMapMode mode, int offset, int size)
+    {
+        WGPU.wgpuBufferMapAsync(Handle, (uint)mode, (uint)offset, (uint)size, &BufferMappedLog, null);
+    }
+    unsafe public Span<byte> GetConstMappedRange(int offset, int size)
+    {
+        return new Span<byte>(WGPU.wgpuBufferGetConstMappedRange(Handle, (nuint)offset, (nuint)size), size);
+    }
+
+    unsafe public void Unmap()
+    {
+        WGPU.wgpuBufferUnmap(Handle);
     }
 }

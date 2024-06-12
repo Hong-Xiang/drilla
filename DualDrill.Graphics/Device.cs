@@ -24,9 +24,52 @@ public sealed partial class GPUDevice
         return new(WGPU.wgpuDeviceCreateCommandEncoder(Handle, &nativeDescriptor));
     }
 
+    public unsafe void Poll()
+    {
+        _ = WGPU.wgpuDevicePoll(Handle, 0, null);
+    }
+
+    internal async Task PollAndWaitOnTaskAsync(Task target)
+    {
+        unsafe void DoPoll()
+        {
+            _ = WGPU.wgpuDevicePoll(Handle, 0, null);
+        }
+        while (!target.IsCompleted)
+        {
+            DoPoll();
+            await Task.Yield();
+        }
+    }
+
+
     public unsafe GPUQueue GetQueue()
     {
         return new(WGPU.wgpuDeviceGetQueue(Handle));
+    }
+
+    public unsafe GPUTexture CreateTexture(GPUTextureDescriptor descriptor)
+    {
+
+        using var label = NativeStringRef.Create(descriptor.Label);
+        var viewFormats = stackalloc WGPUTextureFormat[descriptor.ViewFormats.Length];
+        for (var i = 0; i < descriptor.ViewFormats.Length; i++)
+        {
+            viewFormats[i] = (WGPUTextureFormat)descriptor.ViewFormats.Span[i];
+        }
+        WGPUTextureDescriptor native = new()
+        {
+            label = (sbyte*)label.Handle,
+            usage = (uint)descriptor.Usage,
+            dimension = (WGPUTextureDimension)descriptor.Dimension,
+            size = descriptor.Size,
+            format = (WGPUTextureFormat)descriptor.Format,
+            mipLevelCount = (uint)descriptor.MipLevelCount,
+            sampleCount = (uint)descriptor.SampleCount,
+            viewFormatCount = (nuint)descriptor.ViewFormats.Length,
+            viewFormats = descriptor.ViewFormats.Length > 0 ? viewFormats : null,
+        };
+        return new GPUTexture(WGPU.wgpuDeviceCreateTexture(Handle, &native));
     }
 
     public unsafe GPUPipelineLayout CreatePipelineLayout(GPUPipelineLayoutDescriptor descriptor)

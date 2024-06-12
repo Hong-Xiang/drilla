@@ -13,8 +13,12 @@ public unsafe readonly struct NativeStringRef(byte* Handle) : IDisposable
 
     public static implicit operator byte*(NativeStringRef self) => self.Handle;
 
-    public static NativeStringRef Create(string data)
+    public static NativeStringRef Create(string? data)
     {
+        if (data is null)
+        {
+            return new NativeStringRef(null);
+        }
         return new NativeStringRef((byte*)SilkMarshal.StringToPtr(data));
     }
 
