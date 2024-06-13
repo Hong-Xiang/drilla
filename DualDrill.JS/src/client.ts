@@ -11,6 +11,7 @@ export { getProperty, setProperty } from "./lib/dotnet-server-interop";
 // export { createWebGPURenderService } from "../render/RenderService";
 export { createWebGPURenderService } from "./webgpu/rotateCube";
 export { createServerRenderPresentService } from "./render/DistributeRenderService";
+export { createHeadlessServerRenderService } from "./render/headlessRenderService";
 export { getDotnetWasmExports } from "./lib/jsexport-client";
 import { getDotnetWasmExports } from "./lib/jsexport-client";
 

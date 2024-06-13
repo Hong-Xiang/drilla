@@ -16,7 +16,8 @@ public sealed class DevicePollService(WGPUProviderService DeviceProviderService)
                 break;
             }
             DeviceProviderService.Device.Poll();
-            await Task.Delay(1, stoppingToken).ConfigureAwait(false);
+            //await Task.Delay(1, stoppingToken).ConfigureAwait(false);
+            await Task.Yield();
         }
     }
 }

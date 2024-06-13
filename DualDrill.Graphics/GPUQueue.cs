@@ -51,7 +51,7 @@ public sealed partial class GPUQueue
         var target = (TaskCompletionSource<WGPUQueueWorkDoneStatus>)handle.Target;
         if (target is null)
         {
-            Console.WriteLine("GCHandle failed to recover target");
+            throw new GraphicsApiException($"GCHandle({(nint)data:X}) failed to recover target");
         }
         target.SetResult(status);
         handle.Free();

@@ -4,11 +4,15 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
 namespace DualDrill.Server;
 
-sealed class DrillHub(FrameSimulationService UpdateService, ILogger<DrillHub> Logger) : Hub
+sealed class DrillHub(
+    FrameSimulationService UpdateService,
+    ILogger<DrillHub> Logger,
+    WGPUHeadlessService wGPUHeadlessService) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -22,6 +26,26 @@ sealed class DrillHub(FrameSimulationService UpdateService, ILogger<DrillHub> Lo
             Console.WriteLine(e);
             yield return e;
         }
+    }
+
+    public async IAsyncEnumerable<RenderState> SwapchainPush(ChannelReader<int> swapChainIndex)
+    {
+        var frame = 0;
+        await foreach (var s in swapChainIndex.ReadAllAsync().WithCancellation(Context.ConnectionAborted).ConfigureAwait(false))
+        {
+            // TODO: read until next frame
+            var image = await wGPUHeadlessService.Render(frame);
+            var handle = GCHandle.Alloc(image);
+            var state = new RenderState(
+                s,
+                GCHandle.ToIntPtr(handle)
+            );
+            yield return state;
+        }
+    }
+
+    public sealed record class RenderState(int SwapchainIndex, nint ImageHandle)
+    {
     }
 
     public async Task MouseEvent(ChannelReader<MouseEvent> events, [FromServices] FrameInputService inputService)

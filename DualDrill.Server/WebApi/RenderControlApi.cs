@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.JSInterop;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using System.Runtime.InteropServices;
 
 namespace DualDrill.Server.WebApi;
 
@@ -40,10 +42,21 @@ public static class RenderControlApi
     )
     {
         var image = await wGPUHeadless.Render((double)time / 1000);
-        using var ms = new MemoryStream();
-        await image.SaveAsPngAsync(ms);
-        var bytes = ms.ToArray();
-        return Results.File(bytes, "image/png");
+        var ms = new MemoryStream();
+        await image.SaveAsPngAsync(ms).ConfigureAwait(false);
+        ms.Position = 0;
+        return Results.File(ms, "image/png");
+    }
+
+    public static async Task<IResult> GetImage([FromQuery(Name = "handle")] nint HandlePtr)
+    {
+        var handle = GCHandle.FromIntPtr(HandlePtr);
+        var image = (SixLabors.ImageSharp.Image<Bgra32>)handle.Target;
+        handle.Free();
+        var ms = new MemoryStream();
+        await image.SaveAsPngAsync(ms).ConfigureAwait(false);
+        ms.Position = 0;
+        return Results.File(ms, "image/png");
     }
 
     public static void MapRenderControls(this WebApplication app)
@@ -53,6 +66,7 @@ public static class RenderControlApi
         app.MapGet("/api/doRender", DoRender);
         app.MapGet("/api/vulkan/render", VulkanRender);
         app.MapGet("/api/wgpu/render", WGPUHeadless);
+        app.MapGet("/api/render-result", WGPUHeadless);
     }
 }
 
