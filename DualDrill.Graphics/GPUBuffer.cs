@@ -30,7 +30,10 @@ public sealed partial class GPUBuffer
     {
         var gcHandle = GCHandle.FromIntPtr((nint)ptr);
         var data = (TaskCompletionSource)gcHandle.Target;
-        gcHandle.Free();
+        if (data is null)
+        {
+            throw new GraphicsApiException($"GCHandle({(nint)ptr:X}) failed to recover target");
+        }
         if (status == WGPUBufferMapAsyncStatus.WGPUBufferMapAsyncStatus_Success)
         {
             data.SetResult();
@@ -39,6 +42,7 @@ public sealed partial class GPUBuffer
         {
             data.SetException(new GraphicsApiException($"Failed to map buffer, status {Enum.GetName(status)}"));
         }
+        //gcHandle.Free();
     }
 
     unsafe void MapBufferAsyncImpl(GCHandle tcsHandle, GPUMapMode mode, int offset, int size)

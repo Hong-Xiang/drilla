@@ -82,7 +82,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     async Task SubscribeScale()
     {
-        await foreach (var s in UpdateService.CubeScaleChanges(1.0f ,CancellationToken.None))
+        await foreach (var s in UpdateService.CubeScaleChanges(1.0f, CancellationToken.None))
         {
             Console.WriteLine("Scale Changed");
             await InvokeAsync(StateHasChanged);
@@ -165,14 +165,16 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         {
             await Module.Initialization().ConfigureAwait(false);
             await using var el = await Module.CreateJSObjectReferenceAsync(RenderRootElement);
-            RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
+            //RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
+            RenderService = new(await Client.Module.CreateHeadlessServerRenderService());
             //RenderService = new(await Client.Module.CreateServerRenderPresentService());
+            Logger.LogInformation("Blazor render first render called");
         }
         if (RenderService is not null)
         {
             await RenderService.AttachToElementAsync(RenderRootElement);
+            Logger.LogInformation("Blazor render attach to element called");
         }
-        Console.WriteLine("Render called");
     }
 
     public async ValueTask ShowPeerVideo(IMediaStream stream)

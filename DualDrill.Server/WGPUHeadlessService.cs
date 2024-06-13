@@ -1,6 +1,7 @@
 ﻿using DualDrill.Graphics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Threading.Channels;
 
 namespace DualDrill.Server;
 
@@ -25,6 +26,15 @@ public sealed class WGPUHeadlessService : IDisposable
     uint BufferSize => (uint)(Width * Height * 4);
 
     readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
+
+    readonly record struct RenderRequest(
+        double Time,
+        TaskCompletionSource<Image<Bgra32>> ResultCompletionSource
+    )
+    {
+    }
+
+    readonly Channel<int> Ready = Channel.CreateBounded<int>(1);
 
     private const string SHADER = @"@vertex
 fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4<f32> {
@@ -101,9 +111,17 @@ fn fs_main() -> @location(0) vec4<f32> {
             Size = 4ul * (ulong)Width * (ulong)Height,
         });
 
+        Ready.Writer.TryWrite(0);
     }
 
     public async Task<Image<Bgra32>> Render(double time)
+    {
+        await Ready.Reader.ReadAsync().ConfigureAwait(false);
+        var image = await RenderInternal(time).ConfigureAwait(false);
+        await Ready.Writer.WriteAsync(0).ConfigureAwait(false);
+        return image;
+    }
+    async Task<Image<Bgra32>> RenderInternal(double time)
     {
         var texture = RenderTarget;
         var view = RenderTargetView;
