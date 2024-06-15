@@ -20,8 +20,8 @@ public sealed class WGPUHeadlessService : IDisposable
     GPUTexture RenderTarget { get; set; }
     GPUTextureView RenderTargetView { get; set; }
 
-    readonly int Width = 512;
-    readonly int Height = 512;
+    readonly int Width = 1024;
+    readonly int Height = 1024;
 
     uint BufferSize => (uint)(Width * Height * 4);
 

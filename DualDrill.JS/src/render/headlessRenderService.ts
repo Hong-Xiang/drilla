@@ -17,8 +17,8 @@ async function fetchAndDrawImage(
 
 export async function createHeadlessServerRenderService(): Promise<RenderServiceLegacy> {
   const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 512;
+  canvas.width = 1024;
+  canvas.height = 1024;
 
   const context = canvas.getContext("2d");
   if (!context) {

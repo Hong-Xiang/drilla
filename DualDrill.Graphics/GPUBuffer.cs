@@ -19,38 +19,22 @@ public sealed partial class GPUBuffer
         return new(handle);
     }
 
-    unsafe record struct BufferMapData(
-        NativeHandle<WGPUApiWrapper, WGPUBufferImpl> Handle,
-        TaskCompletionSource<Memory<byte>> TaskCompletionSource)
-    {
-    }
-
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     unsafe static void BufferMapped(WGPUBufferMapAsyncStatus status, void* ptr)
     {
-        var gcHandle = GCHandle.FromIntPtr((nint)ptr);
-        var data = (TaskCompletionSource)gcHandle.Target;
-        if (data is null)
-        {
-            throw new GraphicsApiException($"GCHandle({(nint)ptr:X}) failed to recover target");
-        }
+        var handle = GCHandle.FromIntPtr((nint)ptr);
+        var target = (TaskCompletionSource?)handle.Target ?? throw new GraphicsApiException($"GCHandle({(nint)ptr:X}) failed to recover target, target {handle.Target}");
         if (status == WGPUBufferMapAsyncStatus.WGPUBufferMapAsyncStatus_Success)
         {
-            data.SetResult();
+            target.SetResult();
         }
         else
         {
-            data.SetException(new GraphicsApiException($"Failed to map buffer, status {Enum.GetName(status)}"));
+            target.SetException(new GraphicsApiException($"Failed to map buffer, status {Enum.GetName(status)}"));
         }
-        //gcHandle.Free();
     }
 
-    unsafe void MapBufferAsyncImpl(GCHandle tcsHandle, GPUMapMode mode, int offset, int size)
-    {
-        WGPU.wgpuBufferMapAsync(Handle, (uint)mode, (uint)offset, (uint)size, &BufferMapped, (void*)GCHandle.ToIntPtr(tcsHandle));
-    }
-
-    public readonly record struct MappedBufferHandle(GPUBuffer Buffer) : IDisposable
+    public readonly record struct BufferMapping(GPUBuffer Buffer) : IDisposable
     {
         public void Dispose()
         {
@@ -58,29 +42,22 @@ public sealed partial class GPUBuffer
         }
     }
 
-    public async ValueTask<MappedBufferHandle> MapAsync(GPUMapMode mode, int offset, int size)
+    public async ValueTask<BufferMapping> MapAsync(GPUMapMode mode, int offset, int size, CancellationToken cancellation = default)
     {
-        var data = new TaskCompletionSource();
-        using var handle = new GCHandleDisposeWrapper(GCHandle.Alloc(data));
-        MapBufferAsyncImpl(handle.Handle, mode, offset, size);
-        await data.Task;
-        return new MappedBufferHandle(this);
+        var data = new TaskCompletionSource(cancellation);
+        using var handle = new DisposableGCHandle(GCHandle.Alloc(data));
+        unsafe void goUnsafe(GCHandle tcsHandle, GPUMapMode mode, int offset, int size)
+        {
+            WGPU.wgpuBufferMapAsync(Handle, (uint)mode, (uint)offset, (uint)size, &BufferMapped, (void*)GCHandle.ToIntPtr(tcsHandle));
+        }
+        goUnsafe(handle.Handle, mode, offset, size);
+        await data.Task.ConfigureAwait(false);
+        return new BufferMapping(this);
     }
 
-    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    unsafe static void BufferMappedLog(WGPUBufferMapAsyncStatus status, void* ptr)
+    unsafe public ReadOnlySpan<byte> GetConstMappedRange(int offset, int size)
     {
-        Console.WriteLine($"Buffer Mapped {status}");
-    }
-
-
-    public unsafe void MapAsync2(GPUMapMode mode, int offset, int size)
-    {
-        WGPU.wgpuBufferMapAsync(Handle, (uint)mode, (uint)offset, (uint)size, &BufferMappedLog, null);
-    }
-    unsafe public Span<byte> GetConstMappedRange(int offset, int size)
-    {
-        return new Span<byte>(WGPU.wgpuBufferGetConstMappedRange(Handle, (nuint)offset, (nuint)size), size);
+        return new ReadOnlySpan<byte>(WGPU.wgpuBufferGetConstMappedRange(Handle, (nuint)offset, (nuint)size), size);
     }
 
     unsafe public void Unmap()
