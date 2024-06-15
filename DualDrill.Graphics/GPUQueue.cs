@@ -57,9 +57,9 @@ public sealed partial class GPUQueue
         handle.Free();
     }
 
-    public unsafe Task WaitSubmittedWorkDoneAsync()
+    public unsafe Task WaitSubmittedWorkDoneAsync(CancellationToken cancellation = default)
     {
-        var tcs = new TaskCompletionSource<WGPUQueueWorkDoneStatus>();
+        var tcs = new TaskCompletionSource<WGPUQueueWorkDoneStatus>(cancellation);
         var handle = GCHandle.ToIntPtr(GCHandle.Alloc(tcs));
         WGPU.wgpuQueueOnSubmittedWorkDone(Handle, &QueueWorkDoneAsync, (void*)handle);
         return tcs.Task;

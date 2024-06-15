@@ -7,11 +7,14 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
-public readonly struct GCHandleDisposeWrapper(GCHandle Handle) : IDisposable
+public readonly struct DisposableGCHandle(GCHandle Handle) : IDisposable
 {
     public GCHandle Handle { get; } = Handle;
     public void Dispose()
     {
-        Handle.Free();
+        if (Handle.IsAllocated)
+        {
+            Handle.Free();
+        }
     }
 }
