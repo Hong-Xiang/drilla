@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.JSInterop;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace DualDrill.Server.WebApi;
@@ -38,14 +39,30 @@ public static class RenderControlApi
 
     public static async Task<IResult> WGPUHeadless(
         [FromServices] WGPUHeadlessService wGPUHeadless,
+        [FromServices] HeadlessRenderTargetPool targetsPool,
         [FromQuery(Name = "time")] int time
     )
     {
-        var image = await wGPUHeadless.Render((double)time / 1000);
-        var ms = new MemoryStream();
-        await image.SaveAsPngAsync(ms).ConfigureAwait(false);
-        ms.Position = 0;
-        return Results.File(ms, "image/png");
+        var sw = Stopwatch.StartNew();
+        var target = targetsPool.Rent();
+        await wGPUHeadless.Render((double)time / 1000, target.Texture).ConfigureAwait(false);
+        var renderTime = sw.Elapsed.TotalMilliseconds;
+        var imageData = await target.ReadResultAsync(default).ConfigureAwait(false);
+        var readBackTime = sw.Elapsed.TotalMilliseconds - renderTime;
+        var result = targetsPool.RentResultBuffer();
+        //var result = imageData.ToArray();
+        imageData.CopyTo(result);
+        targetsPool.Return(target);
+        var dataPrepareTime = sw.Elapsed.TotalMilliseconds - renderTime - readBackTime;
+        //var ms = new MemoryStream();
+        //await ms.WriteAsync(image);
+        //ms.Position = 0;
+        //wGPUHeadless.ResultBufferPool.Return(image);
+        //await image.SaveAsPngAsync(ms).ConfigureAwait(false);
+        //ms.Position = 0;
+        //return Results.File(ms, "image/png");
+        Console.WriteLine($"RenderTime {renderTime:0.00}ms, readbackTime {readBackTime:0.00}ms dataPrepareTime {dataPrepareTime:0.00}ms, total: {sw.Elapsed.TotalMilliseconds:0.00}");
+        return Results.File(result, "application/x-frame-content");
     }
 
     public static async Task<IResult> GetImage([FromQuery(Name = "handle")] nint HandlePtr)

@@ -30,18 +30,20 @@ sealed class DrillHub(
 
     public async IAsyncEnumerable<RenderState> SwapchainPush(ChannelReader<int> swapChainIndex)
     {
-        var frame = 0;
-        await foreach (var s in swapChainIndex.ReadAllAsync().WithCancellation(Context.ConnectionAborted).ConfigureAwait(false))
-        {
-            // TODO: read until next frame
-            var image = await wGPUHeadlessService.Render(frame);
-            var handle = GCHandle.Alloc(image);
-            var state = new RenderState(
-                s,
-                GCHandle.ToIntPtr(handle)
-            );
-            yield return state;
-        }
+        //var frame = 0;
+        //await foreach (var s in swapChainIndex.ReadAllAsync().WithCancellation(Context.ConnectionAborted).ConfigureAwait(false))
+        //{
+        //    // TODO: read until next frame
+        //    var image = await wGPUHeadlessService.Render(frame, null);
+        //    var handle = GCHandle.Alloc(image);
+        //    var state = new RenderState(
+        //        s,
+        //        GCHandle.ToIntPtr(handle)
+        //    );
+        //    yield return state;
+        //}
+        yield break;
+        throw new NotImplementedException();
     }
 
     public sealed record class RenderState(int SwapchainIndex, nint ImageHandle)
