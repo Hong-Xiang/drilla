@@ -8,6 +8,7 @@ using DualDrill.Server.Browser;
 using DualDrill.Engine;
 using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
+using Microsoft.AspNetCore.ResponseCompression;
 
 namespace DualDrill.Server;
 
@@ -21,6 +22,14 @@ public class Program
             WebRootPath = "../DualDrill.JS/dist"
         });
 
+        builder.Services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.MimeTypes =
+  ResponseCompressionDefaults.MimeTypes.Concat(
+      new[] { "application/x-frame-content" });
+        });
+
         builder.Services.AddSingleton<FrameSchedulerService>();
         builder.Services.AddSingleton<FrameInputService>();
         builder.Services.AddSingleton<FrameSimulationService>();
@@ -32,6 +41,7 @@ public class Program
         //builder.Services.AddSingleton<VulkanHeadlessService>();
         builder.Services.AddSingleton<WGPUProviderService>();
         builder.Services.AddSingleton<WGPUHeadlessService>();
+        builder.Services.AddSingleton<HeadlessRenderTargetPool>();
         builder.Services.AddHostedService<DevicePollService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
@@ -62,6 +72,7 @@ public class Program
         app.MapHub<DrillHub>("/hub/user-input");
 
         app.UseHttpsRedirection();
+        app.UseResponseCompression();
 
         app.UseStaticFiles();
         app.UseAntiforgery();

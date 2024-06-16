@@ -17,8 +17,10 @@ async function fetchAndDrawImage(
 
 export async function createHeadlessServerRenderService(): Promise<RenderServiceLegacy> {
   const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 1024;
+  const width = 1472;
+  const height = 936 * 2;
+  canvas.width = width;
+  canvas.height = height;
 
   const context = canvas.getContext("2d");
   if (!context) {
@@ -29,7 +31,23 @@ export async function createHeadlessServerRenderService(): Promise<RenderService
 
   let frame = 0;
   let h: number = 0;
-  const buffer: (HTMLImageElement | "fetching" | "idle")[] = [
+  const buffer: (ImageData | "fetching" | "idle")[] = [
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
+    "idle",
     "idle",
     "idle",
     "idle",
@@ -51,7 +69,7 @@ export async function createHeadlessServerRenderService(): Promise<RenderService
     consumeBufferIndex: number
   ) {
     const time = (frame * 1000) % 200000;
-    const fetched = buffer[consumeBufferIndex] instanceof HTMLImageElement;
+    const fetched = buffer[consumeBufferIndex] instanceof ImageData;
     if (!fetched) {
       frameDrop += 1;
     }
@@ -63,12 +81,17 @@ export async function createHeadlessServerRenderService(): Promise<RenderService
       buffer[fetchBufferIndex] = "fetching";
       fetch(`api/wgpu/render?time=${time}`).then(async (image) => {
         const blob = await image.blob();
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.src = url;
-        img.onload = () => {
-          buffer[fetchBufferIndex] = img;
-        };
+        const dataArray = await blob.arrayBuffer();
+        const data = new Uint8ClampedArray(dataArray);
+        console.log(data.length, data.length / 1472);
+        const imageData = new ImageData(data, width, height);
+        buffer[fetchBufferIndex] = imageData;
+        // const url = URL.createObjectURL(blob);
+        // const img = new Image();
+        // img.src = url;
+        // img.onload = () => {
+        //   buffer[fetchBufferIndex] = img;
+        // };
       });
     }
     if (fetched) {
@@ -81,7 +104,7 @@ export async function createHeadlessServerRenderService(): Promise<RenderService
       }
       rendered++;
       const image = buffer[consumeBufferIndex]!;
-      context?.drawImage(image as HTMLImageElement, 0, 0);
+      context?.putImageData(image as ImageData, 0, 0);
       buffer[consumeBufferIndex] = "idle";
     }
     // await new Promise<number>((resolve, reject) => {
