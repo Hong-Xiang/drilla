@@ -1,6 +1,8 @@
 ﻿using DualDrill.Graphics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Buffers;
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 
 namespace DualDrill.Server;
@@ -20,12 +22,14 @@ public sealed class WGPUHeadlessService : IDisposable
     GPUTexture RenderTarget { get; set; }
     GPUTextureView RenderTargetView { get; set; }
 
-    readonly int Width = 1024;
-    readonly int Height = 1024;
+    public ArrayPool<byte> ResultBufferPool { get; }
+
+    public readonly int Width = 1472;
+    public readonly int Height = 936 * 2;
 
     uint BufferSize => (uint)(Width * Height * 4);
 
-    readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
+    public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
     readonly record struct RenderRequest(
         double Time,
@@ -112,19 +116,20 @@ fn fs_main() -> @location(0) vec4<f32> {
         });
 
         Ready.Writer.TryWrite(0);
+
+        ResultBufferPool = ArrayPool<byte>.Shared;
     }
 
-    public async Task<Image<Bgra32>> Render(double time)
+    public async ValueTask Render(double time, GPUTexture renderTarget)
     {
-        await Ready.Reader.ReadAsync().ConfigureAwait(false);
-        var image = await RenderInternal(time).ConfigureAwait(false);
-        await Ready.Writer.WriteAsync(0).ConfigureAwait(false);
-        return image;
+        //await Ready.Reader.ReadAsync().ConfigureAwait(false);
+        await RenderInternal(time, renderTarget).ConfigureAwait(false);
+        //await Ready.Writer.WriteAsync(0).ConfigureAwait(false);
     }
-    async Task<Image<Bgra32>> RenderInternal(double time)
+    async ValueTask RenderInternal(double time, GPUTexture renderTarget)
     {
-        var texture = RenderTarget;
-        var view = RenderTargetView;
+        //var texture = RenderTarget;
+        using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());
 
         using var rp = encoder.BeginRenderPass(new()
@@ -155,42 +160,61 @@ fn fs_main() -> @location(0) vec4<f32> {
 
 
 
-        {
-            using var e = Device.CreateCommandEncoder(new());
-            e.CopyTextureToBuffer(new GPUImageCopyTexture
-            {
-                Texture = texture
-            }, new GPUImageCopyBuffer
-            {
-                Buffer = PixelBuffer,
-                Layout = new GPUTextureDataLayout
-                {
-                    BytesPerRow = 4 * Width,
-                    Offset = 0,
-                    RowsPerImage = Height
-                }
-            }, new GPUExtent3D
-            {
-                Width = Width,
-                Height = Height,
-                DepthOrArrayLayers = 1
-            });
+        //{
+        //    using var e = Device.CreateCommandEncoder(new());
+        //    e.CopyTextureToBuffer(new GPUImageCopyTexture
+        //    {
+        //        Texture = renderTarget
+        //    }, new GPUImageCopyBuffer
+        //    {
+        //        Buffer = PixelBuffer,
+        //        Layout = new GPUTextureDataLayout
+        //        {
+        //            BytesPerRow = 4 * Width,
+        //            Offset = 0,
+        //            RowsPerImage = Height
+        //        }
+        //    }, new GPUExtent3D
+        //    {
+        //        Width = Width,
+        //        Height = Height,
+        //        DepthOrArrayLayers = 1
+        //    });
 
-            using var cb = e.Finish(new());
-            Queue.Submit([cb]);
-        }
+        //    using var cb = e.Finish(new());
+        //    Queue.Submit([cb]);
+        //}
+        //await Queue.WaitSubmittedWorkDoneAsync().ConfigureAwait(false);
+
+        //{
+        //    using var _ = await PixelBuffer.MapAsync(GPUMapMode.Read, 0, (int)BufferSize).ConfigureAwait(true);
+        //    //Image<Bgra32> ReadImage()
+        //    //{
+        //    //    var byteData = PixelBuffer.GetConstMappedRange(0, (int)BufferSize);
+        //    //    return Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(byteData, Width, Height);
+        //    //}
+        //    //return ReadImage();
+        //    byte[] ReadToBuffer()
+        //    {
+        //        //var buffer = new byte[BufferSize];
+        //        //byte[] buffer = null;
+        //        //if (BufferQueue.TryDequeue(out var res))
+        //        //{
+        //        //    buffer = res;
+        //        //}
+        //        //buffer ??= new byte[(int)BufferSize];
+        //        //var buffer = ResultBufferPool.Rent((int)BufferSize);
+        //        var buffer = new byte[BufferSize];
+        //        var byteData = PixelBuffer.GetConstMappedRange(0, (int)BufferSize);
+        //        byteData.CopyTo(buffer);
+        //        return buffer;
+        //    }
+        //    return ReadToBuffer();
+        //}
         await Queue.WaitSubmittedWorkDoneAsync().ConfigureAwait(false);
-
-        {
-            using var _ = await PixelBuffer.MapAsync(GPUMapMode.Read, 0, (int)BufferSize).ConfigureAwait(true);
-            Image<Bgra32> ReadImage()
-            {
-                var byteData = PixelBuffer.GetConstMappedRange(0, (int)BufferSize);
-                return Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(byteData, Width, Height);
-            }
-            return ReadImage();
-        }
     }
+
+
 
     public void Dispose()
     {
