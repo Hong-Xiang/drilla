@@ -4,20 +4,6 @@ using System.Threading.Channels;
 
 namespace DualDrill.Graphics.Headless;
 
-enum RenderTargetState
-{
-    UndefinedData,
-    RenderFinished,
-    PresentFinished
-}
-
-sealed class RenderTargetWithState
-{
-    public required HeadlessRenderTarget RenderTarget { get; init; }
-    public required RenderTargetState State { get; set; }
-    public required int SlotIndex { get; init; }
-}
-
 public sealed class HeadlessSurface : IGPUSurface
 {
     public sealed class Option
@@ -27,10 +13,9 @@ public sealed class HeadlessSurface : IGPUSurface
         public int SlotCount { get; set; } = 3;
         public GPUTextureFormat Format { get; set; } = GPUTextureFormat.BGRA8UnormSrgb;
     }
-
+    private readonly Channel<HeadlessRenderTarget> RenderTargetChannel;
+    private readonly Channel<(HeadlessRenderTarget, ReadOnlyMemory<byte>)> PresentedTargetChannel;
     GPUDevice Device;
-    Channel<HeadlessRenderTarget> RenderTargetChannel;
-    Channel<(HeadlessRenderTarget, ReadOnlyMemory<byte>)> PresentedTargetChannel;
     readonly int Width;
     readonly int Height;
     HeadlessRenderTarget? CurrentTarget = null;
@@ -46,7 +31,7 @@ public sealed class HeadlessSurface : IGPUSurface
             RenderTargetChannel.Writer.TryWrite(new HeadlessRenderTarget(Device, Width, Height, option.Format));
         }
     }
-    public HeadlessRenderTarget? TryAcquireImage()
+    public HeadlessRenderTarget? TryAcquireImage(int frameIndex)
     {
         if (RenderTargetChannel.Reader.TryRead(out var target))
         {

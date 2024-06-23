@@ -1,12 +1,11 @@
 ﻿using DualDrill.Graphics.Headless;
 using Microsoft.Extensions.Options;
 using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.Wpf;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using System.Windows;
 
-namespace DualDrill.Server.WevView2;
+namespace DualDrill.Server.WebView;
 
 public readonly record struct SharedBufferMessage(int SlotIndex, int Offset, int Length)
 {
@@ -22,7 +21,7 @@ public readonly record struct SharedBufferMemory(nint Ptr, int SlotIndex, int Of
 public sealed class WebViewService
 {
     private System.Windows.Application? App;
-    private WebView2? WebView;
+    private Microsoft.Web.WebView2.Wpf.WebView2? WebView;
     private readonly TaskCompletionSource<System.Windows.Application> AppCreatedCompletionSource = new();
     private readonly TaskCompletionSource<int> UIThreadResult = new();
 
@@ -66,10 +65,9 @@ public sealed class WebViewService
     public async ValueTask SetReadyToWrite(SharedBufferMessage sharedBufferMemory)
     {
         await DispatchAsync(() =>
-          {
-
-              WriteBufferChannel.Writer.TryWrite(new SharedBufferMemory(SharedBuffer.Buffer, sharedBufferMemory.SlotIndex, sharedBufferMemory.Offset, sharedBufferMemory.Length));
-          }, default);
+        {
+            WriteBufferChannel.Writer.TryWrite(new SharedBufferMemory(SharedBuffer.Buffer, sharedBufferMemory.SlotIndex, sharedBufferMemory.Offset, sharedBufferMemory.Length));
+        }, default);
     }
 
     public void SetReadyToRead(SharedBufferMemory sharedBufferMemory)
@@ -82,19 +80,17 @@ public sealed class WebViewService
         return UIThreadResult.Task;
     }
 
-    public void Start(Uri webViewSourceUri)
+    public async ValueTask StartAsync(Uri webViewSourceUri)
     {
         UIThread.Start(webViewSourceUri);
+        await WebViewInitializedTaskCompletionSource.Task.ConfigureAwait(false);
     }
 
     TaskCompletionSource WebViewInitializedTaskCompletionSource = new();
-
-    public Task WebViewInitialized => WebViewInitializedTaskCompletionSource.Task;
-
     void MainUI(object? data)
     {
         App = new System.Windows.Application();
-        WebView = new WebView2()
+        WebView = new()
         {
             Name = "DrillWebView2",
             Source = (Uri)data
@@ -106,11 +102,11 @@ public sealed class WebViewService
             Height = 1080,
             Content = WebView
         };
-        AppCreatedCompletionSource.SetResult(App);
         WebView.CoreWebView2InitializationCompleted += (sender, e) =>
         {
             WebViewInitializedTaskCompletionSource.SetResult();
         };
+        AppCreatedCompletionSource.SetResult(App);
 
         var result = App.Run(mainWindow);
         UIThreadResult.SetResult(result);
@@ -134,9 +130,10 @@ public sealed class WebViewService
         }, cancellation);
     }
 
-    ValueTask DispatchAsync(Action action, CancellationToken cancellation)
+    async ValueTask DispatchAsync(Action action, CancellationToken cancellation)
     {
-        return new ValueTask(App.Dispatcher.InvokeAsync(action, System.Windows.Threading.DispatcherPriority.Normal, cancellation).Task);
+        var app = await GetApplicationAsync().ConfigureAwait(false);
+        await app.Dispatcher.InvokeAsync(action, System.Windows.Threading.DispatcherPriority.Normal, cancellation).Task.ConfigureAwait(false);
     }
 
     public ValueTask PostSharedBufferAsync(CancellationToken cancellation)
