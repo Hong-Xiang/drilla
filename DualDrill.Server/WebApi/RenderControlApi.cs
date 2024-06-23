@@ -24,18 +24,6 @@ public static class RenderControlApi
         renderService.Render();
         return Results.Ok();
     }
-    public static async Task<IResult> VulkanRender([FromServices] VulkanHeadlessService renderService)
-    {
-        var data = renderService.Render();
-        var image = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Bgra32>(data,
-            VulkanHeadlessService.WIDTH,
-            VulkanHeadlessService.HEIGHT);
-        var stream = new MemoryStream();
-        await image.SaveAsJpegAsync(stream);
-        stream.Position = 0;
-        return Results.File(stream, "image/jpeg");
-    }
-
     public static async Task<IResult> RenderToImage(
         [FromServices] DualDrill.Engine.Renderer.TriangleRenderer renderer,
         [FromServices] GPUDevice device,
@@ -71,7 +59,6 @@ public static class RenderControlApi
         app.MapPost("/api/render", StartRender);
         app.MapDelete("/api/render", StartRender);
         app.MapGet("/api/doRender", DoRender);
-        app.MapGet("/api/vulkan/render", VulkanRender);
         app.MapGet("/api/render-headless", RenderToImage);
     }
 }

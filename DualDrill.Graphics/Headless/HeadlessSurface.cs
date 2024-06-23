@@ -45,7 +45,7 @@ public sealed class HeadlessSurface : IGPUSurface
     }
 
     /// <summary>
-    /// Copy Texture data into CPU buffer
+    /// Present of headless surface is simply copy GPU texture data into CPU buffer
     /// </summary>
     /// <returns></returns>
     public async ValueTask PresentAsync(CancellationToken cancellation)

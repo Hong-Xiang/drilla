@@ -7,11 +7,6 @@ public sealed class DevicePollHostedService(WGPUProviderService DeviceProviderSe
         await Task.Yield();
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (DeviceProviderService.Disposing is TaskCompletionSource s)
-            {
-                s.SetResult();
-                break;
-            }
             DeviceProviderService.Device.Poll();
             //await Task.Delay(1, stoppingToken).ConfigureAwait(false);
             await Task.Yield();

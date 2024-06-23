@@ -41,12 +41,14 @@ public sealed class WebViewService
     int Height => Option.Height;
     ulong TextureBufferSize => (ulong)(4 * Width * Height);
 
+    public IHostApplicationLifetime ApplicationLifetime { get; }
 
-    public WebViewService(IOptions<HeadlessSurface.Option> canvasOption)
+    public WebViewService(IOptions<HeadlessSurface.Option> canvasOption, IHostApplicationLifetime applicationLifetime)
     {
         Option = canvasOption.Value;
         UIThread = new Thread(MainUI);
         UIThread.SetApartmentState(ApartmentState.STA);
+        ApplicationLifetime = applicationLifetime;
     }
 
 
@@ -62,12 +64,12 @@ public sealed class WebViewService
         }
     }
 
-    public async ValueTask SetReadyToWrite(SharedBufferMessage sharedBufferMemory)
+    public async ValueTask SetReadyToWriteAsync(SharedBufferMessage sharedBufferMemory, CancellationToken cancellation)
     {
         await DispatchAsync(() =>
         {
             WriteBufferChannel.Writer.TryWrite(new SharedBufferMemory(SharedBuffer.Buffer, sharedBufferMemory.SlotIndex, sharedBufferMemory.Offset, sharedBufferMemory.Length));
-        }, default);
+        }, cancellation);
     }
 
     public void SetReadyToRead(SharedBufferMemory sharedBufferMemory)
@@ -107,6 +109,11 @@ public sealed class WebViewService
             WebViewInitializedTaskCompletionSource.SetResult();
         };
         AppCreatedCompletionSource.SetResult(App);
+
+        App.Exit += (sender, e) =>
+        {
+            ApplicationLifetime.StopApplication();
+        };
 
         var result = App.Run(mainWindow);
         UIThreadResult.SetResult(result);

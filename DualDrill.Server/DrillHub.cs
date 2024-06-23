@@ -39,9 +39,9 @@ sealed class DrillHub(
 
     public async Task SharedBufferServerRenderingWriteable(ChannelReader<SharedBufferMessage> writeable)
     {
-        await foreach (var m in writeable.ReadAllAsync().ConfigureAwait(false))
+        await foreach (var m in writeable.ReadAllAsync(Context.ConnectionAborted).ConfigureAwait(false))
         {
-            await WebView.SetReadyToWrite(m);
+            await WebView.SetReadyToWriteAsync(m, Context.ConnectionAborted);
         }
     }
 

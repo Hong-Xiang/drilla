@@ -10,8 +10,6 @@ public sealed class WGPUProviderService : IAsyncDisposable
     public GPUDevice Device { get; }
     public GPUQueue Queue { get; }
 
-    public TaskCompletionSource? Disposing { get; private set; }
-
     public WGPUProviderService()
     {
         Instance = new GPUInstanceW();
@@ -22,8 +20,6 @@ public sealed class WGPUProviderService : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        Disposing = new TaskCompletionSource();
-        await Disposing.Task;
         Queue.Dispose();
         Device.Dispose();
         Adapter.Dispose();
