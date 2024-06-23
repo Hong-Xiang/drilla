@@ -6,7 +6,7 @@ using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Server.CustomEvents;
 using DualDrill.Server.Services;
-using DualDrill.Server.WevView2;
+using DualDrill.Server.WebView;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -23,7 +23,6 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] CircuitService BrowserClientService { get; set; } = default!;
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
-
     [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
     [Inject] FrameSimulationService UpdateService { get; set; } = default!;
     [Inject] BrowserClient Client { get; set; }

@@ -23,8 +23,6 @@ public sealed class HeadlessRenderTarget(
         Format = Format,
     });
 
-    int BufferSizeCPU => 4 * Width * Height;
-
     static int PaddedBytesPerRow(int width)
     {
         return 4 * width;
@@ -69,7 +67,6 @@ public sealed class HeadlessRenderTarget(
 
         using var cb = e.Finish(new());
         queue.Submit([cb]);
-        //await queue.WaitSubmittedWorkDoneAsync(cancellation).ConfigureAwait(false);
         var bufferSizeGPU = (int)PaddedBufferSize(Width, Height);
         using var _ = await _bufferGPU.MapAsync(GPUMapMode.Read, 0, bufferSizeGPU, cancellation).ConfigureAwait(false);
         void ReadBytes()

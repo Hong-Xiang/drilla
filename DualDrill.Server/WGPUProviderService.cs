@@ -3,26 +3,6 @@ using DualDrill.Graphics;
 
 namespace DualDrill.Server;
 
-public sealed class DevicePollService(WGPUProviderService DeviceProviderService) : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        await Task.Yield();
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            if (DeviceProviderService.Disposing is TaskCompletionSource s)
-            {
-                s.SetResult();
-                break;
-            }
-            DeviceProviderService.Device.Poll();
-            //await Task.Delay(1, stoppingToken).ConfigureAwait(false);
-            await Task.Yield();
-        }
-    }
-}
-
-
 public sealed class WGPUProviderService : IAsyncDisposable
 {
     public GPUInstanceW Instance { get; }
