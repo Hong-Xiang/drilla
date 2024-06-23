@@ -99,7 +99,7 @@ fn fs_main() -> @location(0) vec4<f32> {
         });
 
         rp.SetPipeline(Pipeline);
-        //rp.Draw(3, 1, 0, 0);
+        rp.Draw(3, 1, 0, 0);
         rp.End();
 
         using var drawCommands = encoder.Finish(new());

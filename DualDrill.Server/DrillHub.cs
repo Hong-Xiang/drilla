@@ -1,5 +1,5 @@
 ﻿using DualDrill.Engine;
-using DualDrill.Server.WevView2;
+using DualDrill.Server.WebView;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
@@ -13,7 +13,6 @@ namespace DualDrill.Server;
 sealed class DrillHub(
     FrameSimulationService UpdateService,
     ILogger<DrillHub> Logger,
-    TriangleRenderer wGPUHeadlessService,
     WebViewService WebView) : Hub
 {
     public override async Task OnConnectedAsync()
@@ -25,7 +24,7 @@ sealed class DrillHub(
     {
         await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
         {
-            Console.WriteLine(e);
+            Logger.LogInformation("Ping-Pong Stream {Data}", e);
             yield return e;
         }
     }
@@ -44,28 +43,6 @@ sealed class DrillHub(
         {
             await WebView.SetReadyToWrite(m);
         }
-    }
-
-    public async IAsyncEnumerable<RenderState> SwapchainPush(ChannelReader<int> swapChainIndex)
-    {
-        //var frame = 0;
-        //await foreach (var s in swapChainIndex.ReadAllAsync().WithCancellation(Context.ConnectionAborted).ConfigureAwait(false))
-        //{
-        //    // TODO: read until next frame
-        //    var image = await wGPUHeadlessService.Render(frame, null);
-        //    var handle = GCHandle.Alloc(image);
-        //    var state = new RenderState(
-        //        s,
-        //        GCHandle.ToIntPtr(handle)
-        //    );
-        //    yield return state;
-        //}
-        yield break;
-        throw new NotImplementedException();
-    }
-
-    public sealed record class RenderState(int SwapchainIndex, nint ImageHandle)
-    {
     }
 
     public async Task MouseEvent(ChannelReader<MouseEvent> events, [FromServices] FrameInputService inputService)

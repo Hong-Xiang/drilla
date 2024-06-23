@@ -1,16 +1,11 @@
-using DualDrill.Client.Pages;
-using DualDrill.Server.Components;
-using Microsoft.AspNetCore.Components.Server.Circuits;
-using System.Collections.Concurrent;
-using DualDrill.Engine.Connection;
 using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Engine;
 using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
 using Microsoft.AspNetCore.ResponseCompression;
-using DualDrill.Server.WevView2;
 using DualDrill.Graphics.Headless;
+using DualDrill.Server.WebView;
 
 namespace DualDrill.Server;
 
@@ -38,17 +33,11 @@ public class Program
         });
 
 
-        builder.Services.AddSingleton<FrameInputService>();
-        builder.Services.AddSingleton<FrameSimulationService>();
-
         builder.Services.AddSingleton<DistributeXRConnectionService>();
-
 
         //builder.Services.AddSingleton<WebGPUHeadlessService>();
         //builder.Services.AddSingleton<VulkanHeadlessService>();
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.TriangleRenderer>();
-        builder.Services.AddSingleton<TriangleRenderer>();
-        builder.Services.AddSingleton<HeadlessRenderTargetPool>();
         builder.Services.AddSingleton<HeadlessSurface>(sp =>
         {
             var option = builder.Configuration.Get<HeadlessSurface.Option>();
@@ -56,12 +45,15 @@ public class Program
             return new HeadlessSurface(wgpu.Device, option);
         });
         builder.Services.AddSingleton<IGPUSurface>(sp => sp.GetRequiredService<HeadlessSurface>());
-        builder.Services.AddSingleton<GPUDevice>(sp => sp.GetRequiredService<WGPUProviderService>().Device);
-        builder.Services.AddSingleton<IFrameService, FrameService>();
 
         builder.Services.AddSingleton<WGPUProviderService>();
+        builder.Services.AddSingleton<GPUDevice>(sp => sp.GetRequiredService<WGPUProviderService>().Device);
+
+        builder.Services.AddSingleton<FrameInputService>();
+        builder.Services.AddSingleton<FrameSimulationService>();
+        builder.Services.AddSingleton<IFrameService, FrameService>();
+        builder.Services.AddHostedService<DevicePollHostedService>();
         builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
-        builder.Services.AddHostedService<DevicePollService>();
 
         builder.Services.AddSingleton<WebViewService>();
         builder.Services.AddHostedService<WebViewWindowHostedService>();

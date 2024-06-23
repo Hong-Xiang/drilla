@@ -1,5 +1,5 @@
 ﻿using DualDrill.Graphics.Headless;
-using DualDrill.Server.WevView2;
+using DualDrill.Server.WebView;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 
@@ -15,27 +15,10 @@ public sealed class WebViewWindowHostedService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var uri = await GetHostedSourceUriAsync(stoppingToken).ConfigureAwait(false);
-        WebViewService.Start(uri);
-        await WebViewService.WebViewInitialized.ConfigureAwait(false);
+        Logger.LogInformation("Starting WebView2 window to url {SourceUrl}", uri);
+        await WebViewService.StartAsync(uri).ConfigureAwait(false);
 
-        await WebViewService.CreateSharedBufferAsync(stoppingToken);
-
-        //await foreach (var slot in WebViewService.GetAllWriteableSlotsAsync(stoppingToken))
-        //{
-        //    Logger.LogInformation($"Writeable shared buffer slot {slot}");
-        //}
-
-        //await foreach (var data in Surface.ReadAllPresentedDataAsync(stoppingToken))
-        //{
-        //    var min = byte.MaxValue;
-        //    var max = byte.MinValue;
-        //    for (var i = 0; i < data.Length; i++)
-        //    {
-        //        min = Math.Min(min, data.Span[i]);
-        //        max = Math.Max(max, data.Span[i]);
-        //    }
-        //    Logger.LogInformation($"Rendered data size {data.Length}, min: {min}, max: {max}");
-        //}
+        await WebViewService.CreateSharedBufferAsync(stoppingToken).ConfigureAwait(false);
 
         var datas = Surface.ReadAllPresentedDataAsync(stoppingToken).GetAsyncEnumerator(stoppingToken);
         var slots = WebViewService.GetAllWriteableSlotsAsync(stoppingToken).GetAsyncEnumerator(stoppingToken);
@@ -46,16 +29,6 @@ public sealed class WebViewWindowHostedService(
             {
                 var slot = slots.Current;
                 datas.Current.Span.CopyTo(slot.Span);
-                //Logger.LogInformation($"ColorBuffer {string.Join(", ", slot.Span[..8].ToArray())}");
-                //slot.Span.Fill(128);
-                //void TestDumpValues(Span<byte> span)
-                //{
-                //    for (var i = 3; i < span.Length; i += 4)
-                //    {
-                //        span[i] = byte.MaxValue;
-                //    }
-                //}
-                //TestDumpValues(slot.Span);
                 WebViewService.SetReadyToRead(slot);
             }
         }
@@ -64,12 +37,12 @@ public sealed class WebViewWindowHostedService(
 
     async ValueTask<Uri> GetHostedSourceUriAsync(CancellationToken cancellation)
     {
-        var tcs = new TaskCompletionSource();
+        var tcs = new TaskCompletionSource(cancellation);
         HostApplicationLifetime.ApplicationStarted.Register(() =>
         {
             tcs.SetResult();
         });
-        await tcs.Task;
+        await tcs.Task.ConfigureAwait(false);
         var address = WebServer.Features.Get<IServerAddressesFeature>();
         var uri = (address?.Addresses.FirstOrDefault(x => new Uri(x).Scheme == "https")) ?? throw new ArgumentNullException("WebView2 Source Uri");
         return new Uri(uri);

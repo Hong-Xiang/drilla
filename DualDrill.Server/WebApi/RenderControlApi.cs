@@ -1,8 +1,8 @@
 ﻿using DualDrill.Engine;
+using DualDrill.Graphics;
 using Microsoft.AspNetCore.Mvc;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -36,32 +36,23 @@ public static class RenderControlApi
         return Results.File(stream, "image/jpeg");
     }
 
-    public static async Task<IResult> WGPUHeadless(
-        [FromServices] TriangleRenderer wGPUHeadless,
-        [FromServices] HeadlessRenderTargetPool targetsPool,
-        [FromQuery(Name = "time")] int time
+    public static async Task<IResult> RenderToImage(
+        [FromServices] DualDrill.Engine.Renderer.TriangleRenderer renderer,
+        [FromServices] GPUDevice device,
+        [FromQuery(Name = "time")] int time,
+        [FromQuery(Name = "width")] int width = 512,
+        [FromQuery(Name = "height")] int height = 512
     )
     {
-        var sw = Stopwatch.StartNew();
-        var target = targetsPool.Rent();
-        await wGPUHeadless.Render((double)time / 1000, target.Texture).ConfigureAwait(false);
-        var renderTime = sw.Elapsed.TotalMilliseconds;
-        var imageData = await target.ReadResultAsync(default).ConfigureAwait(false);
-        var readBackTime = sw.Elapsed.TotalMilliseconds - renderTime;
-        var result = targetsPool.RentResultBuffer();
-        //var result = imageData.ToArray();
-        imageData.CopyTo(result);
-        targetsPool.Return(target);
-        var dataPrepareTime = sw.Elapsed.TotalMilliseconds - renderTime - readBackTime;
-        //var ms = new MemoryStream();
-        //await ms.WriteAsync(image);
-        //ms.Position = 0;
-        //wGPUHeadless.ResultBufferPool.Return(image);
-        //await image.SaveAsPngAsync(ms).ConfigureAwait(false);
-        //ms.Position = 0;
-        //return Results.File(ms, "image/png");
-        Console.WriteLine($"RenderTime {renderTime:0.00}ms, readbackTime {readBackTime:0.00}ms dataPrepareTime {dataPrepareTime:0.00}ms, total: {sw.Elapsed.TotalMilliseconds:0.00}");
-        return Results.File(result, "application/x-frame-content");
+        using var target = new Graphics.Headless.HeadlessRenderTarget(device, width, height, GPUTextureFormat.BGRA8UnormSrgb);
+        using var queue = device.GetQueue();
+        await renderer.RenderAsync(time, queue, target.Texture).ConfigureAwait(false);
+        var data = await target.ReadResultAsync(default).ConfigureAwait(false);
+        var image = Image.LoadPixelData<Bgra32>(data.Span, width, height);
+        var stream = new MemoryStream();
+        await image.SaveAsPngAsync(stream).ConfigureAwait(false);
+        stream.Position = 0;
+        return Results.File(stream, "image/png");
     }
 
     public static async Task<IResult> GetImage([FromQuery(Name = "handle")] nint HandlePtr)
@@ -81,8 +72,7 @@ public static class RenderControlApi
         app.MapDelete("/api/render", StartRender);
         app.MapGet("/api/doRender", DoRender);
         app.MapGet("/api/vulkan/render", VulkanRender);
-        app.MapGet("/api/wgpu/render", WGPUHeadless);
-        app.MapGet("/api/render-result", WGPUHeadless);
+        app.MapGet("/api/render-headless", RenderToImage);
     }
 }
 
