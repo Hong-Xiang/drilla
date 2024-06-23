@@ -1,6 +1,6 @@
 ﻿using System.Buffers;
 
-namespace DualDrill.Graphics.Distribute;
+namespace DualDrill.Graphics.Headless;
 
 public sealed class HeadlessRenderTarget(
     GPUDevice Device,
@@ -69,7 +69,7 @@ public sealed class HeadlessRenderTarget(
 
         using var cb = e.Finish(new());
         queue.Submit([cb]);
-        await queue.WaitSubmittedWorkDoneAsync(cancellation).ConfigureAwait(false);
+        //await queue.WaitSubmittedWorkDoneAsync(cancellation).ConfigureAwait(false);
         var bufferSizeGPU = (int)PaddedBufferSize(Width, Height);
         using var _ = await _bufferGPU.MapAsync(GPUMapMode.Read, 0, bufferSizeGPU, cancellation).ConfigureAwait(false);
         void ReadBytes()

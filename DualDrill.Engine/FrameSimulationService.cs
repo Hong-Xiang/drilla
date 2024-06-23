@@ -20,19 +20,11 @@ public readonly record struct MouseEvent(
 {
 }
 
-
 public sealed class FrameSimulationService(
-    FrameSchedulerService FrameSchedulerService,
     FrameInputService InputService,
-    ILogger<FrameSimulationService> Logger) : BackgroundService
+    ILogger<FrameSimulationService> Logger)
 {
     public int FrameCount { get; private set; }
-
-    public override void Dispose()
-    {
-        FrameSchedulerService.Dispose();
-        base.Dispose();
-    }
 
     public readonly Channel<MouseEvent> MouseEvents = Channel.CreateUnbounded<MouseEvent>(new UnboundedChannelOptions
     {
@@ -85,69 +77,63 @@ public sealed class FrameSimulationService(
 
     ConcurrentDictionary<CancellationToken, Channel<float>> ScaleChangeSubscriptions = [];
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected async ValueTask CubeSimulation(FrameContext context)
     {
-
-        await foreach (var (frame, events) in InputService.FrameEvents(stoppingToken))
+        var events = context.MouseEvent;
+        var eventCount = events.Length;
+        if (eventCount > 0)
         {
+            Logger.LogInformation("MouseEvent Count {count}", eventCount);
+        }
 
 
-            var eventCount = events.Length;
-            if (eventCount > 0)
+        var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
+            MathF.PI * 2.0f / 5.0f,
+            8.0f / 6.0f,
+            1.0f,
+            100.0f
+        );
+        var viewMatrix = Matrix4x4.CreateLookAt(
+              new Vector3(0, 0, -4),
+              Vector3.Zero,
+              Vector3.UnitY);
+        var rotateValue = context.FrameIndex / 60.0f;
+        var rotate = Matrix4x4.CreateFromYawPitchRoll(
+            MathF.Sin(rotateValue),
+            MathF.Cos(rotateValue),
+            0
+        );
+        var mvpMatrix = rotate * viewMatrix * projMatrix;
+        //var mvpMatrix = projMatrix * viewMatrix * rotate;
+
+        var buffer = CopyToBuffer(mvpMatrix);
+        var scene = new RenderScene()
+        {
+            Frame = context.FrameIndex,
+            Camera = new Camera()
             {
-                Logger.LogInformation("MouseEvent Count {count}", eventCount);
-            }
-
-
-            var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
-                MathF.PI * 2.0f / 5.0f,
-                8.0f / 6.0f,
-                1.0f,
-                100.0f
-            );
-            var viewMatrix = Matrix4x4.CreateLookAt(
-                  new Vector3(0, 0, -4),
-                  Vector3.Zero,
-                  Vector3.UnitY);
-            var rotateValue = frame / 60.0f;
-            var rotate = Matrix4x4.CreateFromYawPitchRoll(
-                MathF.Sin(rotateValue),
-                MathF.Cos(rotateValue),
-                0
-            );
-            var mvpMatrix = rotate * viewMatrix * projMatrix;
-            //var mvpMatrix = projMatrix * viewMatrix * rotate;
-
-            var buffer = CopyToBuffer(mvpMatrix);
-            var scene = new RenderScene()
+                NearPlaneWidth = 8,
+                NearPlaneHeight = 6,
+                NearPlaneDistance = 1,
+                FarPlaneDistance = 100,
+                Position = new Vector3(0, 0, -4),
+                Target = Vector3.Zero,
+                Up = Vector3.UnitY
+            },
+            Cube = new Cube()
             {
-                Frame = frame,
-                Camera = new Camera()
+                Scale = 1.0f,
+                Rotation = new()
                 {
-                    NearPlaneWidth = 8,
-                    NearPlaneHeight = 6,
-                    NearPlaneDistance = 1,
-                    FarPlaneDistance = 100,
-                    Position = new Vector3(0, 0, -4),
-                    Target = Vector3.Zero,
-                    Up = Vector3.UnitY
-                },
-                Cube = new Cube()
-                {
-                    Scale = 1.0f,
-                    Rotation = new()
-                    {
-                        X = MathF.Sin(rotateValue),
-                        Y = MathF.Cos(rotateValue),
-                        Z = 0
-                    }
+                    X = MathF.Sin(rotateValue),
+                    Y = MathF.Cos(rotateValue),
+                    Z = 0
                 }
-            };
-            foreach (var (_, c) in ScaleChangeSubscriptions)
-            {
-                //c.Writer.TryWrite()
             }
-            await FrameSchedulerService.AddFrameRenderSceneAsync(scene, stoppingToken).ConfigureAwait(false);
+        };
+        foreach (var (_, c) in ScaleChangeSubscriptions)
+        {
+            //c.Writer.TryWrite()
         }
     }
 

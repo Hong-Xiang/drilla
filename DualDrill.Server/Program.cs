@@ -9,6 +9,8 @@ using DualDrill.Engine;
 using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
 using Microsoft.AspNetCore.ResponseCompression;
+using DualDrill.Server.WevView2;
+using DualDrill.Graphics.Headless;
 
 namespace DualDrill.Server;
 
@@ -22,6 +24,7 @@ public class Program
             WebRootPath = "../DualDrill.JS/dist"
         });
 
+
         builder.Services.AddResponseCompression(options =>
         {
             options.EnableForHttps = true;
@@ -30,19 +33,39 @@ public class Program
       new[] { "application/x-frame-content" });
         });
 
-        builder.Services.AddSingleton<FrameSchedulerService>();
+        builder.Services.Configure<HeadlessSurface.Option>(options =>
+        {
+        });
+
+
         builder.Services.AddSingleton<FrameInputService>();
         builder.Services.AddSingleton<FrameSimulationService>();
+
         builder.Services.AddSingleton<DistributeXRConnectionService>();
-        builder.Services.AddHostedService(sp => sp.GetRequiredService<FrameSimulationService>());
 
 
         //builder.Services.AddSingleton<WebGPUHeadlessService>();
         //builder.Services.AddSingleton<VulkanHeadlessService>();
-        builder.Services.AddSingleton<WGPUProviderService>();
-        builder.Services.AddSingleton<WGPUHeadlessService>();
+        builder.Services.AddSingleton<DualDrill.Engine.Renderer.TriangleRenderer>();
+        builder.Services.AddSingleton<TriangleRenderer>();
         builder.Services.AddSingleton<HeadlessRenderTargetPool>();
+        builder.Services.AddSingleton<HeadlessSurface>(sp =>
+        {
+            var option = builder.Configuration.Get<HeadlessSurface.Option>();
+            var wgpu = sp.GetRequiredService<WGPUProviderService>();
+            return new HeadlessSurface(wgpu.Device, option);
+        });
+        builder.Services.AddSingleton<IGPUSurface>(sp => sp.GetRequiredService<HeadlessSurface>());
+        builder.Services.AddSingleton<GPUDevice>(sp => sp.GetRequiredService<WGPUProviderService>().Device);
+        builder.Services.AddSingleton<IFrameService, FrameService>();
+
+        builder.Services.AddSingleton<WGPUProviderService>();
+        builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
         builder.Services.AddHostedService<DevicePollService>();
+
+        builder.Services.AddSingleton<WebViewService>();
+        builder.Services.AddHostedService<WebViewWindowHostedService>();
+        //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
 
@@ -56,6 +79,7 @@ public class Program
             .AddInteractiveWebAssemblyComponents();
 
         var app = builder.Build();
+
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -80,7 +104,7 @@ public class Program
         app.MapClients();
         app.MapRenderControls();
 
-        app.MapRazorComponents<App>()
+        app.MapRazorComponents<DualDrill.Server.Components.App>()
             .AddInteractiveServerRenderMode()
             .AddInteractiveWebAssemblyRenderMode()
             .AddAdditionalAssemblies(typeof(Client._Imports).Assembly);

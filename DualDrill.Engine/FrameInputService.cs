@@ -4,10 +4,9 @@ using System.Threading.Channels;
 
 namespace DualDrill.Engine;
 
-public sealed class FrameInputService(FrameSchedulerService FrameScheduler) : IDisposable
+public sealed class FrameInputService : IDisposable
 {
     readonly ConcurrentDictionary<string, ChannelReader<MouseEvent>> MouseEvents = [];
-    readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
 
     public void AddUserEventSource(string clientId, ChannelReader<MouseEvent> reader)
     {
@@ -17,34 +16,20 @@ public sealed class FrameInputService(FrameSchedulerService FrameScheduler) : ID
         }
     }
 
-    public async IAsyncEnumerable<FrameContext> FrameEvents([EnumeratorCancellation] CancellationToken cancellation)
+    public async ValueTask<List<MouseEvent>> ReadUserInputsAsync(CancellationToken cancellation)
     {
-        while (true)
+        var result = new List<MouseEvent>();
+        foreach (var channel in MouseEvents)
         {
-            var frame = await FrameScheduler.RequestNextFrame(nameof(FrameInputService), cancellation).ConfigureAwait(false);
-            // TODO: better implementation to reduce allocation, maybe use a ring buffer
-            var result = new List<MouseEvent>();
-            foreach (var channel in MouseEvents)
+            while (channel.Value.TryRead(out var e))
             {
-                while (channel.Value.TryRead(out var e))
-                {
-                    if (cancellation.IsCancellationRequested || CancellationTokenSource.Token.IsCancellationRequested)
-                    {
-                        yield break;
-                    }
-                    result.Add(e);
-                }
+                result.Add(e);
             }
-            yield return new FrameContext
-            {
-                FrameIndex = frame,
-                MouseEvent = result.ToArray()
-            };
         }
+        return result;
     }
 
     public void Dispose()
     {
-        CancellationTokenSource.Cancel();
     }
 }

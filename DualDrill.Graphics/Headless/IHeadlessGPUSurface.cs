@@ -2,7 +2,7 @@
 using SixLabors.ImageSharp.PixelFormats;
 using System.Threading.Channels;
 
-namespace DualDrill.Graphics.Distribute;
+namespace DualDrill.Graphics.Headless;
 
 public interface IHeadlessGPUSurface
 {
@@ -27,7 +27,7 @@ public readonly record struct ImagePush(
 {
 }
 
-public sealed class HeadlessSurface(GPUDevice Device, int Width, int Height, int SlotCount) : IHeadlessGPUSurface
+public sealed class HeadlessSurfaceLegacy(GPUDevice Device, int Width, int Height, int SlotCount) : IHeadlessGPUSurface
 {
     sealed record class CacheResource(
         GPUTexture Texture,
