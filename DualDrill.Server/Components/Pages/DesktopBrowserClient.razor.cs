@@ -6,6 +6,7 @@ using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Server.CustomEvents;
 using DualDrill.Server.Services;
+using DualDrill.Server.WevView2;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -27,6 +28,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] FrameSimulationService UpdateService { get; set; } = default!;
     [Inject] BrowserClient Client { get; set; }
     [Inject] JSClientModule Module { get; set; } = default!;
+    [Inject] WebViewService WebViewService { get; set; } = default!;
 
     private ImmutableArray<Uri> PeerUris { get; set; } = [];
 
@@ -166,7 +168,8 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
             await Module.Initialization().ConfigureAwait(false);
             await using var el = await Module.CreateJSObjectReferenceAsync(RenderRootElement);
             //RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
-            RenderService = new(await Client.Module.CreateHeadlessServerRenderService());
+            //RenderService = new(await Client.Module.CreateHeadlessServerRenderService());
+            RenderService = new(await Client.Module.CreateHeadlessSharedBufferServerRenderService());
             //RenderService = new(await Client.Module.CreateServerRenderPresentService());
             Logger.LogInformation("Blazor render first render called");
         }
@@ -176,6 +179,12 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
             Logger.LogInformation("Blazor render attach to element called");
         }
     }
+
+    public async Task TriggerPushSharedBuffer()
+    {
+        await WebViewService.PostSharedBufferAsync(default);
+    }
+
 
     public async ValueTask ShowPeerVideo(IMediaStream stream)
     {

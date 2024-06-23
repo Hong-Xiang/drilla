@@ -7,7 +7,7 @@ using System.Threading.Channels;
 
 namespace DualDrill.Server;
 
-public sealed class WGPUHeadlessService : IDisposable
+public sealed class TriangleRenderer : IDisposable
 {
     WGPUProviderService WGPUProviderService { get; }
     GPUDevice Device => WGPUProviderService.Device;
@@ -18,16 +18,8 @@ public sealed class WGPUHeadlessService : IDisposable
     GPUPipelineLayout PipelineLayout { get; set; }
     GPURenderPipeline Pipeline { get; set; }
 
-    GPUBuffer PixelBuffer { get; set; }
-    GPUTexture RenderTarget { get; set; }
-    GPUTextureView RenderTargetView { get; set; }
-
-    public ArrayPool<byte> ResultBufferPool { get; }
-
     public readonly int Width = 1472;
     public readonly int Height = 936 * 2;
-
-    uint BufferSize => (uint)(Width * Height * 4);
 
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
@@ -37,8 +29,6 @@ public sealed class WGPUHeadlessService : IDisposable
     )
     {
     }
-
-    readonly Channel<int> Ready = Channel.CreateBounded<int>(1);
 
     private const string SHADER = @"@vertex
 fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4<f32> {
@@ -53,7 +43,7 @@ fn fs_main() -> @location(0) vec4<f32> {
 }";
 
 
-    public WGPUHeadlessService(WGPUProviderService wgpuProvider)
+    public TriangleRenderer(WGPUProviderService wgpuProvider)
     {
         WGPUProviderService = wgpuProvider;
         ShaderModule = Device.CreateShaderModule(SHADER);
@@ -85,50 +75,11 @@ fn fs_main() -> @location(0) vec4<f32> {
             },
             Layout = PipelineLayout
         });
-        RenderTarget = Device.CreateTexture(new()
-        {
-            Usage = GPUTextureUsage.RenderAttachment | GPUTextureUsage.CopySrc,
-            Dimension = GPUTextureDimension.Dimension2D,
-            Size = new GPUExtent3D()
-            {
-                Width = Width,
-                Height = Height,
-                DepthOrArrayLayers = 1
-            },
-            Format = TextureFormat,
-            MipLevelCount = 1,
-            SampleCount = 1
-        });
-
-        RenderTargetView = RenderTarget.CreateView(new GPUTextureViewDescriptor()
-        {
-            BaseArrayLayer = 0,
-            ArrayLayerCount = 1,
-            BaseMipLevel = 0,
-            MipLevelCount = 1,
-            Aspect = GPUTextureAspect.All
-        });
-
-        PixelBuffer = Device.CreateBuffer(new()
-        {
-            Usage = GPUBufferUsage.MapRead | GPUBufferUsage.CopyDst,
-            Size = 4ul * (ulong)Width * (ulong)Height,
-        });
-
-        Ready.Writer.TryWrite(0);
-
-        ResultBufferPool = ArrayPool<byte>.Shared;
     }
 
     public async ValueTask Render(double time, GPUTexture renderTarget)
     {
-        //await Ready.Reader.ReadAsync().ConfigureAwait(false);
-        await RenderInternal(time, renderTarget).ConfigureAwait(false);
-        //await Ready.Writer.WriteAsync(0).ConfigureAwait(false);
-    }
-    async ValueTask RenderInternal(double time, GPUTexture renderTarget)
-    {
-        //var texture = RenderTarget;
+        using var queue = Device.GetQueue();
         using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());
 
@@ -155,7 +106,7 @@ fn fs_main() -> @location(0) vec4<f32> {
         rp.End();
 
         using var drawCommands = encoder.Finish(new());
-        Queue.Submit([drawCommands]);
+        queue.Submit([drawCommands]);
 
 
 
@@ -211,15 +162,13 @@ fn fs_main() -> @location(0) vec4<f32> {
         //    }
         //    return ReadToBuffer();
         //}
-        await Queue.WaitSubmittedWorkDoneAsync().ConfigureAwait(false);
+        //await Queue.WaitSubmittedWorkDoneAsync().ConfigureAwait(false);
     }
 
 
 
     public void Dispose()
     {
-        RenderTargetView.Dispose();
-        RenderTarget.Dispose();
         Pipeline.Dispose();
         PipelineLayout.Dispose();
         ShaderModule.Dispose();
