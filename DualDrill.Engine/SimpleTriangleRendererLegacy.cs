@@ -10,9 +10,8 @@ using Silk.NET.Core.Native;
 
 namespace DualDrill.Engine;
 
-public unsafe sealed class WebGPUHeadlessService
+public unsafe sealed class SimpleTriangleRendererLegacy
 {
-
     Graphics.Instance Instance { get; }
     Graphics.Adapter Adapter { get; }
     Graphics.Device Device { get; }
@@ -46,7 +45,7 @@ fn fs_main() -> @location(0) vec4<f32> {
     }
 
     public WebGPU WebGPU { get; } = WebGPU.GetApi();
-    public WebGPUHeadlessService()
+    public SimpleTriangleRendererLegacy()
     {
         Instance = Graphics.Instance.Create(new());
         Adapter = Instance.RequestAdapter(new()

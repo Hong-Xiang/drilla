@@ -1,4 +1,5 @@
 ﻿using DualDrill.Engine;
+using DualDrill.Server.WevView2;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
@@ -12,7 +13,8 @@ namespace DualDrill.Server;
 sealed class DrillHub(
     FrameSimulationService UpdateService,
     ILogger<DrillHub> Logger,
-    WGPUHeadlessService wGPUHeadlessService) : Hub
+    TriangleRenderer wGPUHeadlessService,
+    WebViewService WebView) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -25,6 +27,22 @@ sealed class DrillHub(
         {
             Console.WriteLine(e);
             yield return e;
+        }
+    }
+    public async IAsyncEnumerable<SharedBufferMessage> SharedBufferServerRenderingReadable(CancellationToken cancellation)
+    {
+        await foreach (var b in WebView.GetAllReadableSlotsAsync(cancellation).ConfigureAwait(false))
+        {
+            yield return b.Message;
+        }
+    }
+
+
+    public async Task SharedBufferServerRenderingWriteable(ChannelReader<SharedBufferMessage> writeable)
+    {
+        await foreach (var m in writeable.ReadAllAsync().ConfigureAwait(false))
+        {
+            await WebView.SetReadyToWrite(m);
         }
     }
 

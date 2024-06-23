@@ -1,0 +1,2035 @@
+{
+    "enums": [
+        {
+            "name": "GPUAdapterType",
+            "nativeName": "WGPUAdapterType",
+            "values": [
+                {
+                    "name": "DiscreteGPU",
+                    "nativeName": "WGPUAdapterType_DiscreteGPU"
+                },
+                {
+                    "name": "IntegratedGPU",
+                    "nativeName": "WGPUAdapterType_IntegratedGPU"
+                },
+                {
+                    "name": "CPU",
+                    "nativeName": "WGPUAdapterType_CPU"
+                },
+                {
+                    "name": "Unknown",
+                    "nativeName": "WGPUAdapterType_Unknown"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUAddressMode",
+            "nativeName": "WGPUAddressMode",
+            "values": [
+                {
+                    "name": "Repeat",
+                    "nativeName": "WGPUAddressMode_Repeat"
+                },
+                {
+                    "name": "MirrorRepeat",
+                    "nativeName": "WGPUAddressMode_MirrorRepeat"
+                },
+                {
+                    "name": "ClampToEdge",
+                    "nativeName": "WGPUAddressMode_ClampToEdge"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUBackendType",
+            "nativeName": "WGPUBackendType",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUBackendType_Undefined"
+                },
+                {
+                    "name": "Null",
+                    "nativeName": "WGPUBackendType_Null"
+                },
+                {
+                    "name": "WebGPU",
+                    "nativeName": "WGPUBackendType_WebGPU"
+                },
+                {
+                    "name": "D3D11",
+                    "nativeName": "WGPUBackendType_D3D11"
+                },
+                {
+                    "name": "D3D12",
+                    "nativeName": "WGPUBackendType_D3D12"
+                },
+                {
+                    "name": "Metal",
+                    "nativeName": "WGPUBackendType_Metal"
+                },
+                {
+                    "name": "Vulkan",
+                    "nativeName": "WGPUBackendType_Vulkan"
+                },
+                {
+                    "name": "OpenGL",
+                    "nativeName": "WGPUBackendType_OpenGL"
+                },
+                {
+                    "name": "OpenGLES",
+                    "nativeName": "WGPUBackendType_OpenGLES"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUBlendFactor",
+            "nativeName": "WGPUBlendFactor",
+            "values": [
+                {
+                    "name": "Zero",
+                    "nativeName": "WGPUBlendFactor_Zero"
+                },
+                {
+                    "name": "One",
+                    "nativeName": "WGPUBlendFactor_One"
+                },
+                {
+                    "name": "Src",
+                    "nativeName": "WGPUBlendFactor_Src"
+                },
+                {
+                    "name": "OneMinusSrc",
+                    "nativeName": "WGPUBlendFactor_OneMinusSrc"
+                },
+                {
+                    "name": "SrcAlpha",
+                    "nativeName": "WGPUBlendFactor_SrcAlpha"
+                },
+                {
+                    "name": "OneMinusSrcAlpha",
+                    "nativeName": "WGPUBlendFactor_OneMinusSrcAlpha"
+                },
+                {
+                    "name": "Dst",
+                    "nativeName": "WGPUBlendFactor_Dst"
+                },
+                {
+                    "name": "OneMinusDst",
+                    "nativeName": "WGPUBlendFactor_OneMinusDst"
+                },
+                {
+                    "name": "DstAlpha",
+                    "nativeName": "WGPUBlendFactor_DstAlpha"
+                },
+                {
+                    "name": "OneMinusDstAlpha",
+                    "nativeName": "WGPUBlendFactor_OneMinusDstAlpha"
+                },
+                {
+                    "name": "SrcAlphaSaturated",
+                    "nativeName": "WGPUBlendFactor_SrcAlphaSaturated"
+                },
+                {
+                    "name": "Constant",
+                    "nativeName": "WGPUBlendFactor_Constant"
+                },
+                {
+                    "name": "OneMinusConstant",
+                    "nativeName": "WGPUBlendFactor_OneMinusConstant"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUBlendOperation",
+            "nativeName": "WGPUBlendOperation",
+            "values": [
+                {
+                    "name": "Add",
+                    "nativeName": "WGPUBlendOperation_Add"
+                },
+                {
+                    "name": "Subtract",
+                    "nativeName": "WGPUBlendOperation_Subtract"
+                },
+                {
+                    "name": "ReverseSubtract",
+                    "nativeName": "WGPUBlendOperation_ReverseSubtract"
+                },
+                {
+                    "name": "Min",
+                    "nativeName": "WGPUBlendOperation_Min"
+                },
+                {
+                    "name": "Max",
+                    "nativeName": "WGPUBlendOperation_Max"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUBufferBindingType",
+            "nativeName": "WGPUBufferBindingType",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUBufferBindingType_Undefined"
+                },
+                {
+                    "name": "Uniform",
+                    "nativeName": "WGPUBufferBindingType_Uniform"
+                },
+                {
+                    "name": "Storage",
+                    "nativeName": "WGPUBufferBindingType_Storage"
+                },
+                {
+                    "name": "ReadOnlyStorage",
+                    "nativeName": "WGPUBufferBindingType_ReadOnlyStorage"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUBufferMapAsyncStatus",
+            "nativeName": "WGPUBufferMapAsyncStatus",
+            "values": [
+                {
+                    "name": "Success",
+                    "nativeName": "WGPUBufferMapAsyncStatus_Success"
+                },
+                {
+                    "name": "ValidationError",
+                    "nativeName": "WGPUBufferMapAsyncStatus_ValidationError"
+                },
+                {
+                    "name": "Unknown",
+                    "nativeName": "WGPUBufferMapAsyncStatus_Unknown"
+                },
+                {
+                    "name": "DeviceLost",
+                    "nativeName": "WGPUBufferMapAsyncStatus_DeviceLost"
+                },
+                {
+                    "name": "DestroyedBeforeCallback",
+                    "nativeName": "WGPUBufferMapAsyncStatus_DestroyedBeforeCallback"
+                },
+                {
+                    "name": "UnmappedBeforeCallback",
+                    "nativeName": "WGPUBufferMapAsyncStatus_UnmappedBeforeCallback"
+                },
+                {
+                    "name": "MappingAlreadyPending",
+                    "nativeName": "WGPUBufferMapAsyncStatus_MappingAlreadyPending"
+                },
+                {
+                    "name": "OffsetOutOfRange",
+                    "nativeName": "WGPUBufferMapAsyncStatus_OffsetOutOfRange"
+                },
+                {
+                    "name": "SizeOutOfRange",
+                    "nativeName": "WGPUBufferMapAsyncStatus_SizeOutOfRange"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUBufferMapState",
+            "nativeName": "WGPUBufferMapState",
+            "values": [
+                {
+                    "name": "Unmapped",
+                    "nativeName": "WGPUBufferMapState_Unmapped"
+                },
+                {
+                    "name": "Pending",
+                    "nativeName": "WGPUBufferMapState_Pending"
+                },
+                {
+                    "name": "Mapped",
+                    "nativeName": "WGPUBufferMapState_Mapped"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUCompareFunction",
+            "nativeName": "WGPUCompareFunction",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUCompareFunction_Undefined"
+                },
+                {
+                    "name": "Never",
+                    "nativeName": "WGPUCompareFunction_Never"
+                },
+                {
+                    "name": "Less",
+                    "nativeName": "WGPUCompareFunction_Less"
+                },
+                {
+                    "name": "LessEqual",
+                    "nativeName": "WGPUCompareFunction_LessEqual"
+                },
+                {
+                    "name": "Greater",
+                    "nativeName": "WGPUCompareFunction_Greater"
+                },
+                {
+                    "name": "GreaterEqual",
+                    "nativeName": "WGPUCompareFunction_GreaterEqual"
+                },
+                {
+                    "name": "Equal",
+                    "nativeName": "WGPUCompareFunction_Equal"
+                },
+                {
+                    "name": "NotEqual",
+                    "nativeName": "WGPUCompareFunction_NotEqual"
+                },
+                {
+                    "name": "Always",
+                    "nativeName": "WGPUCompareFunction_Always"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUCompilationInfoRequestStatus",
+            "nativeName": "WGPUCompilationInfoRequestStatus",
+            "values": [
+                {
+                    "name": "Success",
+                    "nativeName": "WGPUCompilationInfoRequestStatus_Success"
+                },
+                {
+                    "name": "Error",
+                    "nativeName": "WGPUCompilationInfoRequestStatus_Error"
+                },
+                {
+                    "name": "DeviceLost",
+                    "nativeName": "WGPUCompilationInfoRequestStatus_DeviceLost"
+                },
+                {
+                    "name": "Unknown",
+                    "nativeName": "WGPUCompilationInfoRequestStatus_Unknown"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUCompilationMessageType",
+            "nativeName": "WGPUCompilationMessageType",
+            "values": [
+                {
+                    "name": "Error",
+                    "nativeName": "WGPUCompilationMessageType_Error"
+                },
+                {
+                    "name": "Warning",
+                    "nativeName": "WGPUCompilationMessageType_Warning"
+                },
+                {
+                    "name": "Info",
+                    "nativeName": "WGPUCompilationMessageType_Info"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUCompositeAlphaMode",
+            "nativeName": "WGPUCompositeAlphaMode",
+            "values": [
+                {
+                    "name": "Auto",
+                    "nativeName": "WGPUCompositeAlphaMode_Auto"
+                },
+                {
+                    "name": "Opaque",
+                    "nativeName": "WGPUCompositeAlphaMode_Opaque"
+                },
+                {
+                    "name": "Premultiplied",
+                    "nativeName": "WGPUCompositeAlphaMode_Premultiplied"
+                },
+                {
+                    "name": "Unpremultiplied",
+                    "nativeName": "WGPUCompositeAlphaMode_Unpremultiplied"
+                },
+                {
+                    "name": "Inherit",
+                    "nativeName": "WGPUCompositeAlphaMode_Inherit"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUCreatePipelineAsyncStatus",
+            "nativeName": "WGPUCreatePipelineAsyncStatus",
+            "values": [
+                {
+                    "name": "Success",
+                    "nativeName": "WGPUCreatePipelineAsyncStatus_Success"
+                },
+                {
+                    "name": "ValidationError",
+                    "nativeName": "WGPUCreatePipelineAsyncStatus_ValidationError"
+                },
+                {
+                    "name": "InternalError",
+                    "nativeName": "WGPUCreatePipelineAsyncStatus_InternalError"
+                },
+                {
+                    "name": "DeviceLost",
+                    "nativeName": "WGPUCreatePipelineAsyncStatus_DeviceLost"
+                },
+                {
+                    "name": "DeviceDestroyed",
+                    "nativeName": "WGPUCreatePipelineAsyncStatus_DeviceDestroyed"
+                },
+                {
+                    "name": "Unknown",
+                    "nativeName": "WGPUCreatePipelineAsyncStatus_Unknown"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUCullMode",
+            "nativeName": "WGPUCullMode",
+            "values": [
+                {
+                    "name": "None",
+                    "nativeName": "WGPUCullMode_None"
+                },
+                {
+                    "name": "Front",
+                    "nativeName": "WGPUCullMode_Front"
+                },
+                {
+                    "name": "Back",
+                    "nativeName": "WGPUCullMode_Back"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUDeviceLostReason",
+            "nativeName": "WGPUDeviceLostReason",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUDeviceLostReason_Undefined"
+                },
+                {
+                    "name": "Destroyed",
+                    "nativeName": "WGPUDeviceLostReason_Destroyed"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUErrorFilter",
+            "nativeName": "WGPUErrorFilter",
+            "values": [
+                {
+                    "name": "Validation",
+                    "nativeName": "WGPUErrorFilter_Validation"
+                },
+                {
+                    "name": "OutOfMemory",
+                    "nativeName": "WGPUErrorFilter_OutOfMemory"
+                },
+                {
+                    "name": "Internal",
+                    "nativeName": "WGPUErrorFilter_Internal"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUErrorType",
+            "nativeName": "WGPUErrorType",
+            "values": [
+                {
+                    "name": "NoError",
+                    "nativeName": "WGPUErrorType_NoError"
+                },
+                {
+                    "name": "Validation",
+                    "nativeName": "WGPUErrorType_Validation"
+                },
+                {
+                    "name": "OutOfMemory",
+                    "nativeName": "WGPUErrorType_OutOfMemory"
+                },
+                {
+                    "name": "Internal",
+                    "nativeName": "WGPUErrorType_Internal"
+                },
+                {
+                    "name": "Unknown",
+                    "nativeName": "WGPUErrorType_Unknown"
+                },
+                {
+                    "name": "DeviceLost",
+                    "nativeName": "WGPUErrorType_DeviceLost"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUFeatureName",
+            "nativeName": "WGPUFeatureName",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUFeatureName_Undefined"
+                },
+                {
+                    "name": "DepthClipControl",
+                    "nativeName": "WGPUFeatureName_DepthClipControl"
+                },
+                {
+                    "name": "Depth32FloatStencil8",
+                    "nativeName": "WGPUFeatureName_Depth32FloatStencil8"
+                },
+                {
+                    "name": "TimestampQuery",
+                    "nativeName": "WGPUFeatureName_TimestampQuery"
+                },
+                {
+                    "name": "TextureCompressionBC",
+                    "nativeName": "WGPUFeatureName_TextureCompressionBC"
+                },
+                {
+                    "name": "TextureCompressionETC2",
+                    "nativeName": "WGPUFeatureName_TextureCompressionETC2"
+                },
+                {
+                    "name": "TextureCompressionASTC",
+                    "nativeName": "WGPUFeatureName_TextureCompressionASTC"
+                },
+                {
+                    "name": "IndirectFirstInstance",
+                    "nativeName": "WGPUFeatureName_IndirectFirstInstance"
+                },
+                {
+                    "name": "ShaderF16",
+                    "nativeName": "WGPUFeatureName_ShaderF16"
+                },
+                {
+                    "name": "RG11B10UfloatRenderable",
+                    "nativeName": "WGPUFeatureName_RG11B10UfloatRenderable"
+                },
+                {
+                    "name": "BGRA8UnormStorage",
+                    "nativeName": "WGPUFeatureName_BGRA8UnormStorage"
+                },
+                {
+                    "name": "Float32Filterable",
+                    "nativeName": "WGPUFeatureName_Float32Filterable"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUFilterMode",
+            "nativeName": "WGPUFilterMode",
+            "values": [
+                {
+                    "name": "Nearest",
+                    "nativeName": "WGPUFilterMode_Nearest"
+                },
+                {
+                    "name": "Linear",
+                    "nativeName": "WGPUFilterMode_Linear"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUFrontFace",
+            "nativeName": "WGPUFrontFace",
+            "values": [
+                {
+                    "name": "CCW",
+                    "nativeName": "WGPUFrontFace_CCW"
+                },
+                {
+                    "name": "CW",
+                    "nativeName": "WGPUFrontFace_CW"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUIndexFormat",
+            "nativeName": "WGPUIndexFormat",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUIndexFormat_Undefined"
+                },
+                {
+                    "name": "Uint16",
+                    "nativeName": "WGPUIndexFormat_Uint16"
+                },
+                {
+                    "name": "Uint32",
+                    "nativeName": "WGPUIndexFormat_Uint32"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPULoadOp",
+            "nativeName": "WGPULoadOp",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPULoadOp_Undefined"
+                },
+                {
+                    "name": "Clear",
+                    "nativeName": "WGPULoadOp_Clear"
+                },
+                {
+                    "name": "Load",
+                    "nativeName": "WGPULoadOp_Load"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUMipmapFilterMode",
+            "nativeName": "WGPUMipmapFilterMode",
+            "values": [
+                {
+                    "name": "Nearest",
+                    "nativeName": "WGPUMipmapFilterMode_Nearest"
+                },
+                {
+                    "name": "Linear",
+                    "nativeName": "WGPUMipmapFilterMode_Linear"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUPowerPreference",
+            "nativeName": "WGPUPowerPreference",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUPowerPreference_Undefined"
+                },
+                {
+                    "name": "LowPower",
+                    "nativeName": "WGPUPowerPreference_LowPower"
+                },
+                {
+                    "name": "HighPerformance",
+                    "nativeName": "WGPUPowerPreference_HighPerformance"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUPresentMode",
+            "nativeName": "WGPUPresentMode",
+            "values": [
+                {
+                    "name": "Fifo",
+                    "nativeName": "WGPUPresentMode_Fifo"
+                },
+                {
+                    "name": "FifoRelaxed",
+                    "nativeName": "WGPUPresentMode_FifoRelaxed"
+                },
+                {
+                    "name": "Immediate",
+                    "nativeName": "WGPUPresentMode_Immediate"
+                },
+                {
+                    "name": "Mailbox",
+                    "nativeName": "WGPUPresentMode_Mailbox"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUPrimitiveTopology",
+            "nativeName": "WGPUPrimitiveTopology",
+            "values": [
+                {
+                    "name": "PointList",
+                    "nativeName": "WGPUPrimitiveTopology_PointList"
+                },
+                {
+                    "name": "LineList",
+                    "nativeName": "WGPUPrimitiveTopology_LineList"
+                },
+                {
+                    "name": "LineStrip",
+                    "nativeName": "WGPUPrimitiveTopology_LineStrip"
+                },
+                {
+                    "name": "TriangleList",
+                    "nativeName": "WGPUPrimitiveTopology_TriangleList"
+                },
+                {
+                    "name": "TriangleStrip",
+                    "nativeName": "WGPUPrimitiveTopology_TriangleStrip"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUQueryType",
+            "nativeName": "WGPUQueryType",
+            "values": [
+                {
+                    "name": "Occlusion",
+                    "nativeName": "WGPUQueryType_Occlusion"
+                },
+                {
+                    "name": "Timestamp",
+                    "nativeName": "WGPUQueryType_Timestamp"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUQueueWorkDoneStatus",
+            "nativeName": "WGPUQueueWorkDoneStatus",
+            "values": [
+                {
+                    "name": "Success",
+                    "nativeName": "WGPUQueueWorkDoneStatus_Success"
+                },
+                {
+                    "name": "Error",
+                    "nativeName": "WGPUQueueWorkDoneStatus_Error"
+                },
+                {
+                    "name": "Unknown",
+                    "nativeName": "WGPUQueueWorkDoneStatus_Unknown"
+                },
+                {
+                    "name": "DeviceLost",
+                    "nativeName": "WGPUQueueWorkDoneStatus_DeviceLost"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPURequestAdapterStatus",
+            "nativeName": "WGPURequestAdapterStatus",
+            "values": [
+                {
+                    "name": "Success",
+                    "nativeName": "WGPURequestAdapterStatus_Success"
+                },
+                {
+                    "name": "Unavailable",
+                    "nativeName": "WGPURequestAdapterStatus_Unavailable"
+                },
+                {
+                    "name": "Error",
+                    "nativeName": "WGPURequestAdapterStatus_Error"
+                },
+                {
+                    "name": "Unknown",
+                    "nativeName": "WGPURequestAdapterStatus_Unknown"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPURequestDeviceStatus",
+            "nativeName": "WGPURequestDeviceStatus",
+            "values": [
+                {
+                    "name": "Success",
+                    "nativeName": "WGPURequestDeviceStatus_Success"
+                },
+                {
+                    "name": "Error",
+                    "nativeName": "WGPURequestDeviceStatus_Error"
+                },
+                {
+                    "name": "Unknown",
+                    "nativeName": "WGPURequestDeviceStatus_Unknown"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUSType",
+            "nativeName": "WGPUSType",
+            "values": [
+                {
+                    "name": "Invalid",
+                    "nativeName": "WGPUSType_Invalid"
+                },
+                {
+                    "name": "SurfaceDescriptorFromMetalLayer",
+                    "nativeName": "WGPUSType_SurfaceDescriptorFromMetalLayer"
+                },
+                {
+                    "name": "SurfaceDescriptorFromWindowsHWND",
+                    "nativeName": "WGPUSType_SurfaceDescriptorFromWindowsHWND"
+                },
+                {
+                    "name": "SurfaceDescriptorFromXlibWindow",
+                    "nativeName": "WGPUSType_SurfaceDescriptorFromXlibWindow"
+                },
+                {
+                    "name": "SurfaceDescriptorFromCanvasHTMLSelector",
+                    "nativeName": "WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector"
+                },
+                {
+                    "name": "ShaderModuleSPIRVDescriptor",
+                    "nativeName": "WGPUSType_ShaderModuleSPIRVDescriptor"
+                },
+                {
+                    "name": "ShaderModuleWGSLDescriptor",
+                    "nativeName": "WGPUSType_ShaderModuleWGSLDescriptor"
+                },
+                {
+                    "name": "PrimitiveDepthClipControl",
+                    "nativeName": "WGPUSType_PrimitiveDepthClipControl"
+                },
+                {
+                    "name": "SurfaceDescriptorFromWaylandSurface",
+                    "nativeName": "WGPUSType_SurfaceDescriptorFromWaylandSurface"
+                },
+                {
+                    "name": "SurfaceDescriptorFromAndroidNativeWindow",
+                    "nativeName": "WGPUSType_SurfaceDescriptorFromAndroidNativeWindow"
+                },
+                {
+                    "name": "SurfaceDescriptorFromXcbWindow",
+                    "nativeName": "WGPUSType_SurfaceDescriptorFromXcbWindow"
+                },
+                {
+                    "name": "RenderPassDescriptorMaxDrawCount",
+                    "nativeName": "WGPUSType_RenderPassDescriptorMaxDrawCount"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUSamplerBindingType",
+            "nativeName": "WGPUSamplerBindingType",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUSamplerBindingType_Undefined"
+                },
+                {
+                    "name": "Filtering",
+                    "nativeName": "WGPUSamplerBindingType_Filtering"
+                },
+                {
+                    "name": "NonFiltering",
+                    "nativeName": "WGPUSamplerBindingType_NonFiltering"
+                },
+                {
+                    "name": "Comparison",
+                    "nativeName": "WGPUSamplerBindingType_Comparison"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUStencilOperation",
+            "nativeName": "WGPUStencilOperation",
+            "values": [
+                {
+                    "name": "Keep",
+                    "nativeName": "WGPUStencilOperation_Keep"
+                },
+                {
+                    "name": "Zero",
+                    "nativeName": "WGPUStencilOperation_Zero"
+                },
+                {
+                    "name": "Replace",
+                    "nativeName": "WGPUStencilOperation_Replace"
+                },
+                {
+                    "name": "Invert",
+                    "nativeName": "WGPUStencilOperation_Invert"
+                },
+                {
+                    "name": "IncrementClamp",
+                    "nativeName": "WGPUStencilOperation_IncrementClamp"
+                },
+                {
+                    "name": "DecrementClamp",
+                    "nativeName": "WGPUStencilOperation_DecrementClamp"
+                },
+                {
+                    "name": "IncrementWrap",
+                    "nativeName": "WGPUStencilOperation_IncrementWrap"
+                },
+                {
+                    "name": "DecrementWrap",
+                    "nativeName": "WGPUStencilOperation_DecrementWrap"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUStorageTextureAccess",
+            "nativeName": "WGPUStorageTextureAccess",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUStorageTextureAccess_Undefined"
+                },
+                {
+                    "name": "WriteOnly",
+                    "nativeName": "WGPUStorageTextureAccess_WriteOnly"
+                },
+                {
+                    "name": "ReadOnly",
+                    "nativeName": "WGPUStorageTextureAccess_ReadOnly"
+                },
+                {
+                    "name": "ReadWrite",
+                    "nativeName": "WGPUStorageTextureAccess_ReadWrite"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUStoreOp",
+            "nativeName": "WGPUStoreOp",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUStoreOp_Undefined"
+                },
+                {
+                    "name": "Store",
+                    "nativeName": "WGPUStoreOp_Store"
+                },
+                {
+                    "name": "Discard",
+                    "nativeName": "WGPUStoreOp_Discard"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUSurfaceGetCurrentTextureStatus",
+            "nativeName": "WGPUSurfaceGetCurrentTextureStatus",
+            "values": [
+                {
+                    "name": "Success",
+                    "nativeName": "WGPUSurfaceGetCurrentTextureStatus_Success"
+                },
+                {
+                    "name": "Timeout",
+                    "nativeName": "WGPUSurfaceGetCurrentTextureStatus_Timeout"
+                },
+                {
+                    "name": "Outdated",
+                    "nativeName": "WGPUSurfaceGetCurrentTextureStatus_Outdated"
+                },
+                {
+                    "name": "Lost",
+                    "nativeName": "WGPUSurfaceGetCurrentTextureStatus_Lost"
+                },
+                {
+                    "name": "OutOfMemory",
+                    "nativeName": "WGPUSurfaceGetCurrentTextureStatus_OutOfMemory"
+                },
+                {
+                    "name": "DeviceLost",
+                    "nativeName": "WGPUSurfaceGetCurrentTextureStatus_DeviceLost"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUTextureAspect",
+            "nativeName": "WGPUTextureAspect",
+            "values": [
+                {
+                    "name": "All",
+                    "nativeName": "WGPUTextureAspect_All"
+                },
+                {
+                    "name": "StencilOnly",
+                    "nativeName": "WGPUTextureAspect_StencilOnly"
+                },
+                {
+                    "name": "DepthOnly",
+                    "nativeName": "WGPUTextureAspect_DepthOnly"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUTextureDimension",
+            "nativeName": "WGPUTextureDimension",
+            "values": [
+                {
+                    "name": "Dimension1D",
+                    "nativeName": "WGPUTextureDimension_1D"
+                },
+                {
+                    "name": "Dimension2D",
+                    "nativeName": "WGPUTextureDimension_2D"
+                },
+                {
+                    "name": "Dimension3D",
+                    "nativeName": "WGPUTextureDimension_3D"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUTextureFormat",
+            "nativeName": "WGPUTextureFormat",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUTextureFormat_Undefined"
+                },
+                {
+                    "name": "R8Unorm",
+                    "nativeName": "WGPUTextureFormat_R8Unorm"
+                },
+                {
+                    "name": "R8Snorm",
+                    "nativeName": "WGPUTextureFormat_R8Snorm"
+                },
+                {
+                    "name": "R8Uint",
+                    "nativeName": "WGPUTextureFormat_R8Uint"
+                },
+                {
+                    "name": "R8Sint",
+                    "nativeName": "WGPUTextureFormat_R8Sint"
+                },
+                {
+                    "name": "R16Uint",
+                    "nativeName": "WGPUTextureFormat_R16Uint"
+                },
+                {
+                    "name": "R16Sint",
+                    "nativeName": "WGPUTextureFormat_R16Sint"
+                },
+                {
+                    "name": "R16Float",
+                    "nativeName": "WGPUTextureFormat_R16Float"
+                },
+                {
+                    "name": "RG8Unorm",
+                    "nativeName": "WGPUTextureFormat_RG8Unorm"
+                },
+                {
+                    "name": "RG8Snorm",
+                    "nativeName": "WGPUTextureFormat_RG8Snorm"
+                },
+                {
+                    "name": "RG8Uint",
+                    "nativeName": "WGPUTextureFormat_RG8Uint"
+                },
+                {
+                    "name": "RG8Sint",
+                    "nativeName": "WGPUTextureFormat_RG8Sint"
+                },
+                {
+                    "name": "R32Float",
+                    "nativeName": "WGPUTextureFormat_R32Float"
+                },
+                {
+                    "name": "R32Uint",
+                    "nativeName": "WGPUTextureFormat_R32Uint"
+                },
+                {
+                    "name": "R32Sint",
+                    "nativeName": "WGPUTextureFormat_R32Sint"
+                },
+                {
+                    "name": "RG16Uint",
+                    "nativeName": "WGPUTextureFormat_RG16Uint"
+                },
+                {
+                    "name": "RG16Sint",
+                    "nativeName": "WGPUTextureFormat_RG16Sint"
+                },
+                {
+                    "name": "RG16Float",
+                    "nativeName": "WGPUTextureFormat_RG16Float"
+                },
+                {
+                    "name": "RGBA8Unorm",
+                    "nativeName": "WGPUTextureFormat_RGBA8Unorm"
+                },
+                {
+                    "name": "RGBA8UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_RGBA8UnormSrgb"
+                },
+                {
+                    "name": "RGBA8Snorm",
+                    "nativeName": "WGPUTextureFormat_RGBA8Snorm"
+                },
+                {
+                    "name": "RGBA8Uint",
+                    "nativeName": "WGPUTextureFormat_RGBA8Uint"
+                },
+                {
+                    "name": "RGBA8Sint",
+                    "nativeName": "WGPUTextureFormat_RGBA8Sint"
+                },
+                {
+                    "name": "BGRA8Unorm",
+                    "nativeName": "WGPUTextureFormat_BGRA8Unorm"
+                },
+                {
+                    "name": "BGRA8UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_BGRA8UnormSrgb"
+                },
+                {
+                    "name": "RGB10A2Uint",
+                    "nativeName": "WGPUTextureFormat_RGB10A2Uint"
+                },
+                {
+                    "name": "RGB10A2Unorm",
+                    "nativeName": "WGPUTextureFormat_RGB10A2Unorm"
+                },
+                {
+                    "name": "RG11B10Ufloat",
+                    "nativeName": "WGPUTextureFormat_RG11B10Ufloat"
+                },
+                {
+                    "name": "RGB9E5Ufloat",
+                    "nativeName": "WGPUTextureFormat_RGB9E5Ufloat"
+                },
+                {
+                    "name": "RG32Float",
+                    "nativeName": "WGPUTextureFormat_RG32Float"
+                },
+                {
+                    "name": "RG32Uint",
+                    "nativeName": "WGPUTextureFormat_RG32Uint"
+                },
+                {
+                    "name": "RG32Sint",
+                    "nativeName": "WGPUTextureFormat_RG32Sint"
+                },
+                {
+                    "name": "RGBA16Uint",
+                    "nativeName": "WGPUTextureFormat_RGBA16Uint"
+                },
+                {
+                    "name": "RGBA16Sint",
+                    "nativeName": "WGPUTextureFormat_RGBA16Sint"
+                },
+                {
+                    "name": "RGBA16Float",
+                    "nativeName": "WGPUTextureFormat_RGBA16Float"
+                },
+                {
+                    "name": "RGBA32Float",
+                    "nativeName": "WGPUTextureFormat_RGBA32Float"
+                },
+                {
+                    "name": "RGBA32Uint",
+                    "nativeName": "WGPUTextureFormat_RGBA32Uint"
+                },
+                {
+                    "name": "RGBA32Sint",
+                    "nativeName": "WGPUTextureFormat_RGBA32Sint"
+                },
+                {
+                    "name": "Stencil8",
+                    "nativeName": "WGPUTextureFormat_Stencil8"
+                },
+                {
+                    "name": "Depth16Unorm",
+                    "nativeName": "WGPUTextureFormat_Depth16Unorm"
+                },
+                {
+                    "name": "Depth24Plus",
+                    "nativeName": "WGPUTextureFormat_Depth24Plus"
+                },
+                {
+                    "name": "Depth24PlusStencil8",
+                    "nativeName": "WGPUTextureFormat_Depth24PlusStencil8"
+                },
+                {
+                    "name": "Depth32Float",
+                    "nativeName": "WGPUTextureFormat_Depth32Float"
+                },
+                {
+                    "name": "Depth32FloatStencil8",
+                    "nativeName": "WGPUTextureFormat_Depth32FloatStencil8"
+                },
+                {
+                    "name": "BC1RGBAUnorm",
+                    "nativeName": "WGPUTextureFormat_BC1RGBAUnorm"
+                },
+                {
+                    "name": "BC1RGBAUnormSrgb",
+                    "nativeName": "WGPUTextureFormat_BC1RGBAUnormSrgb"
+                },
+                {
+                    "name": "BC2RGBAUnorm",
+                    "nativeName": "WGPUTextureFormat_BC2RGBAUnorm"
+                },
+                {
+                    "name": "BC2RGBAUnormSrgb",
+                    "nativeName": "WGPUTextureFormat_BC2RGBAUnormSrgb"
+                },
+                {
+                    "name": "BC3RGBAUnorm",
+                    "nativeName": "WGPUTextureFormat_BC3RGBAUnorm"
+                },
+                {
+                    "name": "BC3RGBAUnormSrgb",
+                    "nativeName": "WGPUTextureFormat_BC3RGBAUnormSrgb"
+                },
+                {
+                    "name": "BC4RUnorm",
+                    "nativeName": "WGPUTextureFormat_BC4RUnorm"
+                },
+                {
+                    "name": "BC4RSnorm",
+                    "nativeName": "WGPUTextureFormat_BC4RSnorm"
+                },
+                {
+                    "name": "BC5RGUnorm",
+                    "nativeName": "WGPUTextureFormat_BC5RGUnorm"
+                },
+                {
+                    "name": "BC5RGSnorm",
+                    "nativeName": "WGPUTextureFormat_BC5RGSnorm"
+                },
+                {
+                    "name": "BC6HRGBUfloat",
+                    "nativeName": "WGPUTextureFormat_BC6HRGBUfloat"
+                },
+                {
+                    "name": "BC6HRGBFloat",
+                    "nativeName": "WGPUTextureFormat_BC6HRGBFloat"
+                },
+                {
+                    "name": "BC7RGBAUnorm",
+                    "nativeName": "WGPUTextureFormat_BC7RGBAUnorm"
+                },
+                {
+                    "name": "BC7RGBAUnormSrgb",
+                    "nativeName": "WGPUTextureFormat_BC7RGBAUnormSrgb"
+                },
+                {
+                    "name": "ETC2RGB8Unorm",
+                    "nativeName": "WGPUTextureFormat_ETC2RGB8Unorm"
+                },
+                {
+                    "name": "ETC2RGB8UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ETC2RGB8UnormSrgb"
+                },
+                {
+                    "name": "ETC2RGB8A1Unorm",
+                    "nativeName": "WGPUTextureFormat_ETC2RGB8A1Unorm"
+                },
+                {
+                    "name": "ETC2RGB8A1UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ETC2RGB8A1UnormSrgb"
+                },
+                {
+                    "name": "ETC2RGBA8Unorm",
+                    "nativeName": "WGPUTextureFormat_ETC2RGBA8Unorm"
+                },
+                {
+                    "name": "ETC2RGBA8UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ETC2RGBA8UnormSrgb"
+                },
+                {
+                    "name": "EACR11Unorm",
+                    "nativeName": "WGPUTextureFormat_EACR11Unorm"
+                },
+                {
+                    "name": "EACR11Snorm",
+                    "nativeName": "WGPUTextureFormat_EACR11Snorm"
+                },
+                {
+                    "name": "EACRG11Unorm",
+                    "nativeName": "WGPUTextureFormat_EACRG11Unorm"
+                },
+                {
+                    "name": "EACRG11Snorm",
+                    "nativeName": "WGPUTextureFormat_EACRG11Snorm"
+                },
+                {
+                    "name": "ASTC4x4Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC4x4Unorm"
+                },
+                {
+                    "name": "ASTC4x4UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC4x4UnormSrgb"
+                },
+                {
+                    "name": "ASTC5x4Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC5x4Unorm"
+                },
+                {
+                    "name": "ASTC5x4UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC5x4UnormSrgb"
+                },
+                {
+                    "name": "ASTC5x5Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC5x5Unorm"
+                },
+                {
+                    "name": "ASTC5x5UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC5x5UnormSrgb"
+                },
+                {
+                    "name": "ASTC6x5Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC6x5Unorm"
+                },
+                {
+                    "name": "ASTC6x5UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC6x5UnormSrgb"
+                },
+                {
+                    "name": "ASTC6x6Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC6x6Unorm"
+                },
+                {
+                    "name": "ASTC6x6UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC6x6UnormSrgb"
+                },
+                {
+                    "name": "ASTC8x5Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC8x5Unorm"
+                },
+                {
+                    "name": "ASTC8x5UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC8x5UnormSrgb"
+                },
+                {
+                    "name": "ASTC8x6Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC8x6Unorm"
+                },
+                {
+                    "name": "ASTC8x6UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC8x6UnormSrgb"
+                },
+                {
+                    "name": "ASTC8x8Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC8x8Unorm"
+                },
+                {
+                    "name": "ASTC8x8UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC8x8UnormSrgb"
+                },
+                {
+                    "name": "ASTC10x5Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC10x5Unorm"
+                },
+                {
+                    "name": "ASTC10x5UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC10x5UnormSrgb"
+                },
+                {
+                    "name": "ASTC10x6Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC10x6Unorm"
+                },
+                {
+                    "name": "ASTC10x6UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC10x6UnormSrgb"
+                },
+                {
+                    "name": "ASTC10x8Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC10x8Unorm"
+                },
+                {
+                    "name": "ASTC10x8UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC10x8UnormSrgb"
+                },
+                {
+                    "name": "ASTC10x10Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC10x10Unorm"
+                },
+                {
+                    "name": "ASTC10x10UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC10x10UnormSrgb"
+                },
+                {
+                    "name": "ASTC12x10Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC12x10Unorm"
+                },
+                {
+                    "name": "ASTC12x10UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC12x10UnormSrgb"
+                },
+                {
+                    "name": "ASTC12x12Unorm",
+                    "nativeName": "WGPUTextureFormat_ASTC12x12Unorm"
+                },
+                {
+                    "name": "ASTC12x12UnormSrgb",
+                    "nativeName": "WGPUTextureFormat_ASTC12x12UnormSrgb"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUTextureSampleType",
+            "nativeName": "WGPUTextureSampleType",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUTextureSampleType_Undefined"
+                },
+                {
+                    "name": "Float",
+                    "nativeName": "WGPUTextureSampleType_Float"
+                },
+                {
+                    "name": "UnfilterableFloat",
+                    "nativeName": "WGPUTextureSampleType_UnfilterableFloat"
+                },
+                {
+                    "name": "Depth",
+                    "nativeName": "WGPUTextureSampleType_Depth"
+                },
+                {
+                    "name": "Sint",
+                    "nativeName": "WGPUTextureSampleType_Sint"
+                },
+                {
+                    "name": "Uint",
+                    "nativeName": "WGPUTextureSampleType_Uint"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUTextureViewDimension",
+            "nativeName": "WGPUTextureViewDimension",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUTextureViewDimension_Undefined"
+                },
+                {
+                    "name": "Dimension1D",
+                    "nativeName": "WGPUTextureViewDimension_1D"
+                },
+                {
+                    "name": "Dimension2D",
+                    "nativeName": "WGPUTextureViewDimension_2D"
+                },
+                {
+                    "name": "Dimension2DArray",
+                    "nativeName": "WGPUTextureViewDimension_2DArray"
+                },
+                {
+                    "name": "Cube",
+                    "nativeName": "WGPUTextureViewDimension_Cube"
+                },
+                {
+                    "name": "CubeArray",
+                    "nativeName": "WGPUTextureViewDimension_CubeArray"
+                },
+                {
+                    "name": "Dimension3D",
+                    "nativeName": "WGPUTextureViewDimension_3D"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUVertexFormat",
+            "nativeName": "WGPUVertexFormat",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUVertexFormat_Undefined"
+                },
+                {
+                    "name": "Uint8x2",
+                    "nativeName": "WGPUVertexFormat_Uint8x2"
+                },
+                {
+                    "name": "Uint8x4",
+                    "nativeName": "WGPUVertexFormat_Uint8x4"
+                },
+                {
+                    "name": "Sint8x2",
+                    "nativeName": "WGPUVertexFormat_Sint8x2"
+                },
+                {
+                    "name": "Sint8x4",
+                    "nativeName": "WGPUVertexFormat_Sint8x4"
+                },
+                {
+                    "name": "Unorm8x2",
+                    "nativeName": "WGPUVertexFormat_Unorm8x2"
+                },
+                {
+                    "name": "Unorm8x4",
+                    "nativeName": "WGPUVertexFormat_Unorm8x4"
+                },
+                {
+                    "name": "Snorm8x2",
+                    "nativeName": "WGPUVertexFormat_Snorm8x2"
+                },
+                {
+                    "name": "Snorm8x4",
+                    "nativeName": "WGPUVertexFormat_Snorm8x4"
+                },
+                {
+                    "name": "Uint16x2",
+                    "nativeName": "WGPUVertexFormat_Uint16x2"
+                },
+                {
+                    "name": "Uint16x4",
+                    "nativeName": "WGPUVertexFormat_Uint16x4"
+                },
+                {
+                    "name": "Sint16x2",
+                    "nativeName": "WGPUVertexFormat_Sint16x2"
+                },
+                {
+                    "name": "Sint16x4",
+                    "nativeName": "WGPUVertexFormat_Sint16x4"
+                },
+                {
+                    "name": "Unorm16x2",
+                    "nativeName": "WGPUVertexFormat_Unorm16x2"
+                },
+                {
+                    "name": "Unorm16x4",
+                    "nativeName": "WGPUVertexFormat_Unorm16x4"
+                },
+                {
+                    "name": "Snorm16x2",
+                    "nativeName": "WGPUVertexFormat_Snorm16x2"
+                },
+                {
+                    "name": "Snorm16x4",
+                    "nativeName": "WGPUVertexFormat_Snorm16x4"
+                },
+                {
+                    "name": "Float16x2",
+                    "nativeName": "WGPUVertexFormat_Float16x2"
+                },
+                {
+                    "name": "Float16x4",
+                    "nativeName": "WGPUVertexFormat_Float16x4"
+                },
+                {
+                    "name": "Float32",
+                    "nativeName": "WGPUVertexFormat_Float32"
+                },
+                {
+                    "name": "Float32x2",
+                    "nativeName": "WGPUVertexFormat_Float32x2"
+                },
+                {
+                    "name": "Float32x3",
+                    "nativeName": "WGPUVertexFormat_Float32x3"
+                },
+                {
+                    "name": "Float32x4",
+                    "nativeName": "WGPUVertexFormat_Float32x4"
+                },
+                {
+                    "name": "Uint32",
+                    "nativeName": "WGPUVertexFormat_Uint32"
+                },
+                {
+                    "name": "Uint32x2",
+                    "nativeName": "WGPUVertexFormat_Uint32x2"
+                },
+                {
+                    "name": "Uint32x3",
+                    "nativeName": "WGPUVertexFormat_Uint32x3"
+                },
+                {
+                    "name": "Uint32x4",
+                    "nativeName": "WGPUVertexFormat_Uint32x4"
+                },
+                {
+                    "name": "Sint32",
+                    "nativeName": "WGPUVertexFormat_Sint32"
+                },
+                {
+                    "name": "Sint32x2",
+                    "nativeName": "WGPUVertexFormat_Sint32x2"
+                },
+                {
+                    "name": "Sint32x3",
+                    "nativeName": "WGPUVertexFormat_Sint32x3"
+                },
+                {
+                    "name": "Sint32x4",
+                    "nativeName": "WGPUVertexFormat_Sint32x4"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUVertexStepMode",
+            "nativeName": "WGPUVertexStepMode",
+            "values": [
+                {
+                    "name": "Vertex",
+                    "nativeName": "WGPUVertexStepMode_Vertex"
+                },
+                {
+                    "name": "Instance",
+                    "nativeName": "WGPUVertexStepMode_Instance"
+                },
+                {
+                    "name": "VertexBufferNotUsed",
+                    "nativeName": "WGPUVertexStepMode_VertexBufferNotUsed"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUBufferUsage",
+            "nativeName": "WGPUBufferUsage",
+            "values": [
+                {
+                    "name": "None",
+                    "nativeName": "WGPUBufferUsage_None"
+                },
+                {
+                    "name": "MapRead",
+                    "nativeName": "WGPUBufferUsage_MapRead"
+                },
+                {
+                    "name": "MapWrite",
+                    "nativeName": "WGPUBufferUsage_MapWrite"
+                },
+                {
+                    "name": "CopySrc",
+                    "nativeName": "WGPUBufferUsage_CopySrc"
+                },
+                {
+                    "name": "CopyDst",
+                    "nativeName": "WGPUBufferUsage_CopyDst"
+                },
+                {
+                    "name": "Index",
+                    "nativeName": "WGPUBufferUsage_Index"
+                },
+                {
+                    "name": "Vertex",
+                    "nativeName": "WGPUBufferUsage_Vertex"
+                },
+                {
+                    "name": "Uniform",
+                    "nativeName": "WGPUBufferUsage_Uniform"
+                },
+                {
+                    "name": "Storage",
+                    "nativeName": "WGPUBufferUsage_Storage"
+                },
+                {
+                    "name": "Indirect",
+                    "nativeName": "WGPUBufferUsage_Indirect"
+                },
+                {
+                    "name": "QueryResolve",
+                    "nativeName": "WGPUBufferUsage_QueryResolve"
+                }
+            ],
+            "isFlag": true
+        },
+        {
+            "name": "GPUColorWriteMask",
+            "nativeName": "WGPUColorWriteMask",
+            "values": [
+                {
+                    "name": "None",
+                    "nativeName": "WGPUColorWriteMask_None"
+                },
+                {
+                    "name": "Red",
+                    "nativeName": "WGPUColorWriteMask_Red"
+                },
+                {
+                    "name": "Green",
+                    "nativeName": "WGPUColorWriteMask_Green"
+                },
+                {
+                    "name": "Blue",
+                    "nativeName": "WGPUColorWriteMask_Blue"
+                },
+                {
+                    "name": "Alpha",
+                    "nativeName": "WGPUColorWriteMask_Alpha"
+                },
+                {
+                    "name": "All",
+                    "nativeName": "WGPUColorWriteMask_All"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUMapMode",
+            "nativeName": "WGPUMapMode",
+            "values": [
+                {
+                    "name": "None",
+                    "nativeName": "WGPUMapMode_None"
+                },
+                {
+                    "name": "Read",
+                    "nativeName": "WGPUMapMode_Read"
+                },
+                {
+                    "name": "Write",
+                    "nativeName": "WGPUMapMode_Write"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUShaderStage",
+            "nativeName": "WGPUShaderStage",
+            "values": [
+                {
+                    "name": "None",
+                    "nativeName": "WGPUShaderStage_None"
+                },
+                {
+                    "name": "Vertex",
+                    "nativeName": "WGPUShaderStage_Vertex"
+                },
+                {
+                    "name": "Fragment",
+                    "nativeName": "WGPUShaderStage_Fragment"
+                },
+                {
+                    "name": "Compute",
+                    "nativeName": "WGPUShaderStage_Compute"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUTextureUsage",
+            "nativeName": "WGPUTextureUsage",
+            "values": [
+                {
+                    "name": "None",
+                    "nativeName": "WGPUTextureUsage_None"
+                },
+                {
+                    "name": "CopySrc",
+                    "nativeName": "WGPUTextureUsage_CopySrc"
+                },
+                {
+                    "name": "CopyDst",
+                    "nativeName": "WGPUTextureUsage_CopyDst"
+                },
+                {
+                    "name": "TextureBinding",
+                    "nativeName": "WGPUTextureUsage_TextureBinding"
+                },
+                {
+                    "name": "StorageBinding",
+                    "nativeName": "WGPUTextureUsage_StorageBinding"
+                },
+                {
+                    "name": "RenderAttachment",
+                    "nativeName": "WGPUTextureUsage_RenderAttachment"
+                }
+            ],
+            "isFlag": true
+        },
+        {
+            "name": "GPUNativeSType",
+            "nativeName": "WGPUNativeSType",
+            "values": [
+                {
+                    "name": "Extras",
+                    "nativeName": "WGPUSType_DeviceExtras"
+                },
+                {
+                    "name": "edLimitsExtras",
+                    "nativeName": "WGPUSType_RequiredLimitsExtras"
+                },
+                {
+                    "name": "neLayoutExtras",
+                    "nativeName": "WGPUSType_PipelineLayoutExtras"
+                },
+                {
+                    "name": "ModuleGLSLDescriptor",
+                    "nativeName": "WGPUSType_ShaderModuleGLSLDescriptor"
+                },
+                {
+                    "name": "tedLimitsExtras",
+                    "nativeName": "WGPUSType_SupportedLimitsExtras"
+                },
+                {
+                    "name": "ceExtras",
+                    "nativeName": "WGPUSType_InstanceExtras"
+                },
+                {
+                    "name": "oupEntryExtras",
+                    "nativeName": "WGPUSType_BindGroupEntryExtras"
+                },
+                {
+                    "name": "oupLayoutEntryExtras",
+                    "nativeName": "WGPUSType_BindGroupLayoutEntryExtras"
+                },
+                {
+                    "name": "etDescriptorExtras",
+                    "nativeName": "WGPUSType_QuerySetDescriptorExtras"
+                },
+                {
+                    "name": "eConfigurationExtras",
+                    "nativeName": "WGPUSType_SurfaceConfigurationExtras"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUNativeFeature",
+            "nativeName": "WGPUNativeFeature",
+            "values": [
+                {
+                    "name": "PushConstants",
+                    "nativeName": "WGPUNativeFeature_PushConstants"
+                },
+                {
+                    "name": "TextureAdapterSpecificFormatFeatures",
+                    "nativeName": "WGPUNativeFeature_TextureAdapterSpecificFormatFeatures"
+                },
+                {
+                    "name": "MultiDrawIndirect",
+                    "nativeName": "WGPUNativeFeature_MultiDrawIndirect"
+                },
+                {
+                    "name": "MultiDrawIndirectCount",
+                    "nativeName": "WGPUNativeFeature_MultiDrawIndirectCount"
+                },
+                {
+                    "name": "VertexWritableStorage",
+                    "nativeName": "WGPUNativeFeature_VertexWritableStorage"
+                },
+                {
+                    "name": "TextureBindingArray",
+                    "nativeName": "WGPUNativeFeature_TextureBindingArray"
+                },
+                {
+                    "name": "SampledTextureAndStorageBufferArrayNonUniformIndexing",
+                    "nativeName": "WGPUNativeFeature_SampledTextureAndStorageBufferArrayNonUniformIndexing"
+                },
+                {
+                    "name": "PipelineStatisticsQuery",
+                    "nativeName": "WGPUNativeFeature_PipelineStatisticsQuery"
+                },
+                {
+                    "name": "StorageResourceBindingArray",
+                    "nativeName": "WGPUNativeFeature_StorageResourceBindingArray"
+                },
+                {
+                    "name": "PartiallyBoundBindingArray",
+                    "nativeName": "WGPUNativeFeature_PartiallyBoundBindingArray"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPULogLevel",
+            "nativeName": "WGPULogLevel",
+            "values": [
+                {
+                    "name": "Off",
+                    "nativeName": "WGPULogLevel_Off"
+                },
+                {
+                    "name": "Error",
+                    "nativeName": "WGPULogLevel_Error"
+                },
+                {
+                    "name": "Warn",
+                    "nativeName": "WGPULogLevel_Warn"
+                },
+                {
+                    "name": "Info",
+                    "nativeName": "WGPULogLevel_Info"
+                },
+                {
+                    "name": "Debug",
+                    "nativeName": "WGPULogLevel_Debug"
+                },
+                {
+                    "name": "Trace",
+                    "nativeName": "WGPULogLevel_Trace"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUInstanceBackend",
+            "nativeName": "WGPUInstanceBackend",
+            "values": [
+                {
+                    "name": "All",
+                    "nativeName": "WGPUInstanceBackend_All"
+                },
+                {
+                    "name": "Vulkan",
+                    "nativeName": "WGPUInstanceBackend_Vulkan"
+                },
+                {
+                    "name": "GL",
+                    "nativeName": "WGPUInstanceBackend_GL"
+                },
+                {
+                    "name": "Metal",
+                    "nativeName": "WGPUInstanceBackend_Metal"
+                },
+                {
+                    "name": "DX12",
+                    "nativeName": "WGPUInstanceBackend_DX12"
+                },
+                {
+                    "name": "DX11",
+                    "nativeName": "WGPUInstanceBackend_DX11"
+                },
+                {
+                    "name": "BrowserWebGPU",
+                    "nativeName": "WGPUInstanceBackend_BrowserWebGPU"
+                },
+                {
+                    "name": "Primary",
+                    "nativeName": "WGPUInstanceBackend_Primary"
+                },
+                {
+                    "name": "Secondary",
+                    "nativeName": "WGPUInstanceBackend_Secondary"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUInstanceFlag",
+            "nativeName": "WGPUInstanceFlag",
+            "values": [
+                {
+                    "name": "Default",
+                    "nativeName": "WGPUInstanceFlag_Default"
+                },
+                {
+                    "name": "Debug",
+                    "nativeName": "WGPUInstanceFlag_Debug"
+                },
+                {
+                    "name": "Validation",
+                    "nativeName": "WGPUInstanceFlag_Validation"
+                },
+                {
+                    "name": "DiscardHalLabels",
+                    "nativeName": "WGPUInstanceFlag_DiscardHalLabels"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUDx12Compiler",
+            "nativeName": "WGPUDx12Compiler",
+            "values": [
+                {
+                    "name": "Undefined",
+                    "nativeName": "WGPUDx12Compiler_Undefined"
+                },
+                {
+                    "name": "Fxc",
+                    "nativeName": "WGPUDx12Compiler_Fxc"
+                },
+                {
+                    "name": "Dxc",
+                    "nativeName": "WGPUDx12Compiler_Dxc"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUGles3MinorVersion",
+            "nativeName": "WGPUGles3MinorVersion",
+            "values": [
+                {
+                    "name": "Automatic",
+                    "nativeName": "WGPUGles3MinorVersion_Automatic"
+                },
+                {
+                    "name": "Version0",
+                    "nativeName": "WGPUGles3MinorVersion_Version0"
+                },
+                {
+                    "name": "Version1",
+                    "nativeName": "WGPUGles3MinorVersion_Version1"
+                },
+                {
+                    "name": "Version2",
+                    "nativeName": "WGPUGles3MinorVersion_Version2"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUPipelineStatisticName",
+            "nativeName": "WGPUPipelineStatisticName",
+            "values": [
+                {
+                    "name": "VertexShaderInvocations",
+                    "nativeName": "WGPUPipelineStatisticName_VertexShaderInvocations"
+                },
+                {
+                    "name": "ClipperInvocations",
+                    "nativeName": "WGPUPipelineStatisticName_ClipperInvocations"
+                },
+                {
+                    "name": "ClipperPrimitivesOut",
+                    "nativeName": "WGPUPipelineStatisticName_ClipperPrimitivesOut"
+                },
+                {
+                    "name": "FragmentShaderInvocations",
+                    "nativeName": "WGPUPipelineStatisticName_FragmentShaderInvocations"
+                },
+                {
+                    "name": "ComputeShaderInvocations",
+                    "nativeName": "WGPUPipelineStatisticName_ComputeShaderInvocations"
+                }
+            ],
+            "isFlag": false
+        },
+        {
+            "name": "GPUNativeQueryType",
+            "nativeName": "WGPUNativeQueryType",
+            "values": [
+                {
+                    "name": "PipelineStatistics",
+                    "nativeName": "WGPUNativeQueryType_PipelineStatistics"
+                }
+            ],
+            "isFlag": false
+        }
+    ]
+}

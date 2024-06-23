@@ -89,6 +89,12 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
         var module = await Module.ConfigureAwait(false);
         return await module.InvokeAsync<IJSObjectReference>("createHeadlessServerRenderService");
     }
+    public async ValueTask<IJSObjectReference> CreateHeadlessSharedBufferServerRenderService()
+    {
+        var module = await Module.ConfigureAwait(false);
+        return await module.InvokeAsync<IJSObjectReference>("createHeadlessSharedBufferServerRenderService");
+    }
+
 
     public async ValueTask<IJSObjectReference> CreateServerRenderPresentService()
     {

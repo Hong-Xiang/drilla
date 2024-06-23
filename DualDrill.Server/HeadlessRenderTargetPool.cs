@@ -1,4 +1,4 @@
-﻿using DualDrill.Graphics.Distribute;
+﻿using DualDrill.Graphics.Headless;
 using System.Buffers;
 using System.Threading.Channels;
 
@@ -6,7 +6,7 @@ namespace DualDrill.Server;
 
 public sealed class HeadlessRenderTargetPool
 {
-    public HeadlessRenderTargetPool(WGPUProviderService graphicsProvider, WGPUHeadlessService renderService)
+    public HeadlessRenderTargetPool(WGPUProviderService graphicsProvider, TriangleRenderer renderService)
     {
         GraphicsProvider = graphicsProvider;
         RenderService = renderService;
@@ -23,7 +23,7 @@ public sealed class HeadlessRenderTargetPool
     List<byte[]> Buffers;
 
     public WGPUProviderService GraphicsProvider { get; }
-    public WGPUHeadlessService RenderService { get; }
+    public TriangleRenderer RenderService { get; }
 
     public HeadlessRenderTarget Rent()
     {

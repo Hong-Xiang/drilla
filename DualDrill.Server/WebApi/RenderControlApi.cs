@@ -1,10 +1,9 @@
 ﻿using DualDrill.Engine;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.JSInterop;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace DualDrill.Server.WebApi;
@@ -20,7 +19,7 @@ public static class RenderControlApi
     {
         throw new NotImplementedException();
     }
-    public static async Task<IResult> DoRender([FromServices] WebGPUHeadlessService renderService)
+    public static async Task<IResult> DoRender([FromServices] SimpleTriangleRendererLegacy renderService)
     {
         renderService.Render();
         return Results.Ok();
@@ -38,7 +37,7 @@ public static class RenderControlApi
     }
 
     public static async Task<IResult> WGPUHeadless(
-        [FromServices] WGPUHeadlessService wGPUHeadless,
+        [FromServices] TriangleRenderer wGPUHeadless,
         [FromServices] HeadlessRenderTargetPool targetsPool,
         [FromQuery(Name = "time")] int time
     )

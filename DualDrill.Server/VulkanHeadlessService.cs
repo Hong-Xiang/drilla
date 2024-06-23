@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 using SixLabors.ImageSharp;
+using System.IO;
 
 namespace DualDrill.Server;
 

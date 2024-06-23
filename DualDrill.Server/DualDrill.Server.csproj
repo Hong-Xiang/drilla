@@ -1,15 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
-		<!-- <TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net8.0-windows</TargetFramework>
 		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings> -->
+		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<UseWPF>true</UseWPF>
 	</PropertyGroup>
 
 	<Import Project="..\Silk.NET.Packages.props" />
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2535.41" />
 		<ProjectReference Include="..\DualDrill.ApiGen\DualDrill.ApiGen.csproj" />
 		<ProjectReference Include="..\DualDrill.ApiGen\DualDrill.ApiGen.csproj" />
 		<ProjectReference Include="..\DualDrill.Client\DualDrill.Client.csproj" />

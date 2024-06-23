@@ -8,6 +8,7 @@ using Silk.NET.Windowing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
+using System.IO;
 
 namespace DualDrill.Server;
 
