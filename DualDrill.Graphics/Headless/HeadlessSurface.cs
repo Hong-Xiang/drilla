@@ -60,7 +60,7 @@ public sealed class HeadlessSurface : IGPUSurface
         await PresentedTargetChannel.Writer.WriteAsync((target, data), cancellation).ConfigureAwait(false);
     }
 
-    public async IAsyncEnumerable<ReadOnlyMemory<byte>> ReadAllPresentedDataAsync([EnumeratorCancellation] CancellationToken cancellation)
+    public async IAsyncEnumerable<ReadOnlyMemory<byte>> GetAllPresentedDataAsync([EnumeratorCancellation] CancellationToken cancellation)
     {
         await foreach (var presented in PresentedTargetChannel.Reader.ReadAllAsync(cancellation).ConfigureAwait(false))
         {

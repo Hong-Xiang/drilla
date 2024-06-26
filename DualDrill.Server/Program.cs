@@ -2,10 +2,12 @@ using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Engine;
 using DualDrill.Server.WebApi;
+using Autofac;
 using DualDrill.Graphics;
 using Microsoft.AspNetCore.ResponseCompression;
 using DualDrill.Graphics.Headless;
 using DualDrill.Server.WebView;
+using Autofac.Extensions.DependencyInjection;
 
 namespace DualDrill.Server;
 
@@ -18,20 +20,11 @@ public class Program
             Args = args,
             WebRootPath = "../DualDrill.JS/dist"
         });
-
-
-        builder.Services.AddResponseCompression(options =>
-        {
-            options.EnableForHttps = true;
-            options.MimeTypes =
-  ResponseCompressionDefaults.MimeTypes.Concat(
-      new[] { "application/x-frame-content" });
-        });
+        //builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
 
         builder.Services.Configure<HeadlessSurface.Option>(options =>
         {
         });
-
 
         builder.Services.AddSingleton<DistributeXRConnectionService>();
 
@@ -88,7 +81,6 @@ public class Program
         app.MapHub<DrillHub>("/hub/user-input");
 
         app.UseHttpsRedirection();
-        app.UseResponseCompression();
 
         app.UseStaticFiles();
         app.UseAntiforgery();

@@ -61,12 +61,13 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
         var module = await Module.ConfigureAwait(false);
         return await module.InvokeAsync<IJSObjectReference>("createRTCPeerConnection").ConfigureAwait(false);
     }
+
     //public async ValueTask<IJSObjectReference> CreateCanvasElementAsync(DotNetObjectReference<ICanvasElementObserver> observer)
     //{
     //    var module = await Module.ConfigureAwait(false);
     //    var result = await module.InvokeAsync<IJSObjectReference>("createCanvasElement", observer);
-
     //}
+
     public async ValueTask<IJSObjectReference> CreateJSObjectReferenceAsync(object value)
     {
         var module = await Module.ConfigureAwait(false);
