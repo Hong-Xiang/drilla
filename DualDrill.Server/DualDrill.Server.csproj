@@ -11,6 +11,8 @@
 	<Import Project="..\Silk.NET.Packages.props" />
 
 	<ItemGroup>
+		<PackageReference Include="Autofac" Version="8.0.0" />
+		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2535.41" />
 		<ProjectReference Include="..\DualDrill.Client\DualDrill.Client.csproj" />
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />

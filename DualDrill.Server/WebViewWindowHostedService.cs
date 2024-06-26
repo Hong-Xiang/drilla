@@ -20,7 +20,7 @@ public sealed class WebViewWindowHostedService(
 
         await WebViewService.CreateSharedBufferAsync(stoppingToken).ConfigureAwait(false);
 
-        var datas = Surface.ReadAllPresentedDataAsync(stoppingToken).GetAsyncEnumerator(stoppingToken);
+        var datas = Surface.GetAllPresentedDataAsync(stoppingToken).GetAsyncEnumerator(stoppingToken);
         var slots = WebViewService.GetAllWriteableSlotsAsync(stoppingToken).GetAsyncEnumerator(stoppingToken);
         while (!stoppingToken.IsCancellationRequested)
         {
