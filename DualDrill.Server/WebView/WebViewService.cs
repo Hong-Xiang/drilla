@@ -51,7 +51,6 @@ public sealed class WebViewService
         ApplicationLifetime = applicationLifetime;
     }
 
-
     public ValueTask<System.Windows.Application> GetApplicationAsync()
     {
         if (AppCreatedCompletionSource.Task.IsCompleted && App is not null)
