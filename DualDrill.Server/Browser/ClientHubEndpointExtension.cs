@@ -1,9 +1,11 @@
 ﻿using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
+using DualDrill.Engine.Disposable;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.JSInterop;
 using System.Collections.Concurrent;
 
 namespace DualDrill.Server.Browser;
@@ -18,6 +20,24 @@ public static class ClientHubEndpointExtension
     public static void AddClients(this IServiceCollection services)
     {
         services.AddSingleton<ClientStore>();
+
+        services.AddScoped<ContextDisposableCollection>();
+        services.AddScoped<ContextAsyncDisposableCollection>();
+        services.AddScoped<InitializedClientContext>();
+
+        services.AddScoped(async sp =>
+        {
+            var disposables = sp.GetRequiredService<ContextAsyncDisposableCollection>();
+            var client = await JSClientModule.CreateAsync(sp.GetRequiredService<IJSRuntime>());
+            disposables.Add(client);
+            return client;
+        });
+
+        services.AddKeyedScoped(typeof(InitializedClientContext), (sp, level) =>
+        {
+            var context = sp.GetRequiredService<InitializedClientContext>();
+            return context.ClientModule ?? throw new NullReferenceException(nameof(context.ClientModule));
+        });
 
         services.AddScoped<MediaDevices>();
         services.AddScoped<JSClientModule>();

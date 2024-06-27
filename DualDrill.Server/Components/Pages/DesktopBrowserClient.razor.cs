@@ -26,7 +26,8 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
     [Inject] FrameSimulationService UpdateService { get; set; } = default!;
     [Inject] BrowserClient Client { get; set; }
-    [Inject] JSClientModule Module { get; set; } = default!;
+    JSClientModule Module { get; set; } = default!;
+    [Inject] Task<JSClientModule> ModuleAsync { get; set; } = default!;
     [Inject] WebViewService WebViewService { get; set; } = default!;
 
     private ImmutableArray<Uri> PeerUris { get; set; } = [];
@@ -164,7 +165,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
-            await Module.Initialization().ConfigureAwait(false);
+            Module = await ModuleAsync;
             await using var el = await Module.CreateJSObjectReferenceAsync(RenderRootElement);
             //RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
             //RenderService = new(await Client.Module.CreateHeadlessServerRenderService());
