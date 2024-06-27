@@ -1,4 +1,5 @@
 ﻿using DualDrill.Engine.Connection;
+using DualDrill.Engine.Disposable;
 using DualDrill.Engine.UI;
 using DualDrill.Engine.WebRTC;
 using Microsoft.JSInterop;
@@ -31,15 +32,20 @@ public sealed record class ElementSize(int OffsetWidth, int OffsetHeight)
 {
 }
 
-public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
+
+
+public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Module) : IAsyncDisposable
 {
     public IJSRuntime JSRuntime { get; } = jsRuntime;
-    Task<IJSObjectReference> Module { get; } = jsRuntime.InvokeAsync<IJSObjectReference>("import", $"/client.js?t={Guid.NewGuid()}").AsTask();
+    public static async ValueTask<JSClientModule> CreateAsync(IJSRuntime runtime)
+    {
+        var module = await runtime.InvokeAsync<IJSObjectReference>("import", $"/client.js?t={Guid.NewGuid()}").ConfigureAwait(false);
+        return new JSClientModule(runtime, module);
+    }
 
     public async ValueTask Initialization()
     {
-        var module = await Module.ConfigureAwait(false);
-        await module.InvokeVoidAsync("Initialization").ConfigureAwait(false);
+        await Module.InvokeVoidAsync("Initialization").ConfigureAwait(false);
     }
 
     public async ValueTask<ElementSize> GetElementSize(IJSObjectReference element)
@@ -49,8 +55,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
 
     public async ValueTask<JSMediaStreamProxy> CaptureStream(IClient client, IJSObjectReference canvasElement)
     {
-        var module = await Module;
-        var mediaStream = await module.InvokeAsync<IJSObjectReference>("captureStream", canvasElement);
+        var mediaStream = await Module.InvokeAsync<IJSObjectReference>("captureStream", canvasElement);
         var id = await GetProperty<string>(mediaStream, "id").ConfigureAwait(false);
         return new(client, this, mediaStream, id);
 
@@ -58,8 +63,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
 
     public async ValueTask<IJSObjectReference> CreateRtcPeerConnectionAsync()
     {
-        var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("createRTCPeerConnection").ConfigureAwait(false);
+        return await Module.InvokeAsync<IJSObjectReference>("createRTCPeerConnection").ConfigureAwait(false);
     }
 
     //public async ValueTask<IJSObjectReference> CreateCanvasElementAsync(DotNetObjectReference<ICanvasElementObserver> observer)
@@ -70,8 +74,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
 
     public async ValueTask<IJSObjectReference> CreateJSObjectReferenceAsync(object value)
     {
-        var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("asObjectReference", value).ConfigureAwait(false);
+        return await Module.InvokeAsync<IJSObjectReference>("asObjectReference", value).ConfigureAwait(false);
     }
 
 
@@ -81,48 +84,40 @@ public sealed class JSClientModule(IJSRuntime jsRuntime) : IAsyncDisposable
     }
     public async ValueTask<IJSObjectReference> CreateWebGPURenderServiceAsync()
     {
-        var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("createWebGPURenderService");
+        return await Module.InvokeAsync<IJSObjectReference>("createWebGPURenderService");
     }
 
     public async ValueTask<IJSObjectReference> CreateHeadlessServerRenderService()
     {
-        var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("createHeadlessServerRenderService");
+        return await Module.InvokeAsync<IJSObjectReference>("createHeadlessServerRenderService");
     }
     public async ValueTask<IJSObjectReference> CreateHeadlessSharedBufferServerRenderService()
     {
-        var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("createHeadlessSharedBufferServerRenderService");
+        return await Module.InvokeAsync<IJSObjectReference>("createHeadlessSharedBufferServerRenderService");
     }
 
 
     public async ValueTask<IJSObjectReference> CreateServerRenderPresentService()
     {
-        var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("createServerRenderPresentService");
+        return await Module.InvokeAsync<IJSObjectReference>("createServerRenderPresentService");
     }
     public async ValueTask<IJSObjectReference> CreateWebGLRenderServiceAsync(IJSObjectReference canvasElement)
     {
-        var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<IJSObjectReference>("createWebGPURenderService", canvasElement);
+        return await Module.InvokeAsync<IJSObjectReference>("createWebGPURenderService", canvasElement);
     }
     public async ValueTask<T> GetProperty<T>(IJSObjectReference target, params PropertyKey[] path)
     {
-        var module = await Module.ConfigureAwait(false);
-        return await module.InvokeAsync<T>("getProperty", target, (object[])[.. path.Select(static x => x.Value)]);
+        return await Module.InvokeAsync<T>("getProperty", target, (object[])[.. path.Select(static x => x.Value)]);
     }
 
     public async ValueTask SetProperty<T>(IJSObjectReference target, T? value, params PropertyKey[] path)
     {
-        var module = await Module.ConfigureAwait(false);
-        await module.InvokeVoidAsync("setProperty", target, value, (object[])[.. path.Select(static x => x.Value)]);
+        await Module.InvokeVoidAsync("setProperty", target, value, (object[])[.. path.Select(static x => x.Value)]);
     }
 
     public async ValueTask DisposeAsync()
     {
-        var module = await Module.ConfigureAwait(false);
-        await module.DisposeAsync().ConfigureAwait(false);
+        await Module.DisposeAsync().ConfigureAwait(false);
     }
 }
 
