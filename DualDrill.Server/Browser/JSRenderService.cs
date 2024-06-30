@@ -13,6 +13,8 @@ public sealed class JSRenderService(IJSObjectReference JSRenderContext) : IAsync
         await JSRenderContext.DisposeAsync().ConfigureAwait(false);
     }
 
+    public IJSObjectReference JSRenderContext { get; } = JSRenderContext;
+
     public async ValueTask AttachToElementAsync(ElementReference element)
     {
         await JSRenderContext.InvokeVoidAsync("attachToElement", element);

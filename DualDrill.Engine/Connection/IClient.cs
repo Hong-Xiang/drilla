@@ -13,7 +13,6 @@ public interface IClient
     public ValueTask<IRTCPeerConnection> CreatePeerConnection();
     public ValueTask SendDataStream<T>(Uri uri, IAsyncEnumerable<T> dataStream);
     public ValueTask<IAsyncEnumerable<T>> SubscribeDataStream<T>(Uri uri);
-    public IServiceProvider Services { get; }
 }
 
 public interface IClientAsyncCommand<in TClient, T>

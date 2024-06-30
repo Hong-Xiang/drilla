@@ -1,0 +1,35 @@
+﻿@using DualDrill.Engine.BrowserProxy
+@using DualDrill.Server.Browser
+@using System.Linq;
+<h3>InitializedClient @(Client.Uri)</h3>
+<div>
+    <p>
+        <h4>Peer Ids</h4>
+        <button @onclick=RefreshPeerIds>refresh</button>
+        <ul>
+            @foreach (var peerClient in PeerClientCandidates)
+            {
+                <PeerClientConnection PeerClient="peerClient" SelfClient="Client" SetPeerStream="SetPeerStream"></PeerClientConnection>
+            }
+        </ul>
+    </p>
+    <div>
+        <h4>Self Video</h4>
+        @if (SelfMediaStream is null)
+        {
+            <button @onclick="CaptureCamera">Capture Camera</button>
+        }
+        else
+        {
+            <button @onclick="RemoveStream">Remove Stream</button>
+        }
+        <VideoViewer MediaStream="SelfMediaStream"></VideoViewer>
+        <VideoViewer MediaStream="SelectedPeerMediaStream"></VideoViewer>
+    </div>
+    <div>
+        <span>Render Service</span>
+        <div @ref="RenderRootElement"> </div>
+        @* <button @onclick="StartRender" disabled="@(RenderService is null)">Start Render</button> *@
+        @* <button @onclick="StopRender" disabled="@(RenderService is null)">Stop Render</button> *@
+    </div>
+</div>

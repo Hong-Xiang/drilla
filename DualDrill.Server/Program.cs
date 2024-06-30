@@ -8,25 +8,29 @@ using Microsoft.AspNetCore.ResponseCompression;
 using DualDrill.Graphics.Headless;
 using DualDrill.Server.WebView;
 using Autofac.Extensions.DependencyInjection;
+using DualDrill.Engine.BrowserProxy;
+using Microsoft.JSInterop;
+using DualDrill.Server.Services;
 
 namespace DualDrill.Server;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             Args = args,
             WebRootPath = "../DualDrill.JS/dist"
         });
-        //builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+
+
 
         builder.Services.Configure<HeadlessSurface.Option>(options =>
         {
         });
 
-        builder.Services.AddSingleton<DistributeXRConnectionService>();
+        builder.Services.AddSingleton<PeerClientConnectionService>();
 
         //builder.Services.AddSingleton<WebGPUHeadlessService>();
         //builder.Services.AddSingleton<VulkanHeadlessService>();
@@ -49,7 +53,7 @@ public class Program
         builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
 
         builder.Services.AddSingleton<WebViewService>();
-        builder.Services.AddHostedService<WebViewWindowHostedService>();
+        //builder.Services.AddHostedService<WebViewWindowHostedService>();
         //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
@@ -63,8 +67,19 @@ public class Program
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
 
-        var app = builder.Build();
+        //builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+        //builder.Host.ConfigureContainer<ContainerBuilder>((container) =>
+        //     {
+        //         container.Register(async (c) =>
+        //         {
+        //             return await JSClientModule.CreateAsync(c.Resolve<IJSRuntime>());
+        //         }).OnRelease(async (client) => { await (await client).DisposeAsync(); });
 
+        //         container.RegisterType<InitializedClientContext>().InstancePerMatchingLifetimeScope(InitializedClientContext.ScopeName);
+        //     });
+
+
+        var app = builder.Build();
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -77,6 +92,8 @@ public class Program
             // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
             app.UseHsts();
         }
+
+        app.MapGet("/api/hello", () => "Hello");
 
         app.MapHub<DrillHub>("/hub/user-input");
 
@@ -96,6 +113,6 @@ public class Program
         app.MapGet("/webroot", () => app.Environment.WebRootPath);
 
 
-        app.Run();
+        await app.RunAsync();
     }
 }

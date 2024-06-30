@@ -21,7 +21,7 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
 
-    [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
+    [Inject] PeerClientConnectionService ConnectionService { get; set; } = default!;
     [Inject] FrameSimulationService XRApplication { get; set; } = default!;
     [Inject] BrowserClient Client { get; set; }
     [Inject] JSClientModule Module { get; set; } = default!;
@@ -45,14 +45,14 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     protected override async Task OnInitializedAsync()
     {
         var circuit = await BrowserClientService.GetCircuitAsync().ConfigureAwait(false);
-        Subscription.Add(
-            ClientHub.Clients.Subscribe(async (clients) =>
-            {
-                Logger.LogInformation("[uri = {ClientUri}] clients update, clients = {Clients}", Client.Uri, string.Join(',', clients.Select(c => c.Uri.ToString())));
-                RefreshPeerIds();
-                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-            })
-        );
+        //Subscription.Add(
+        //    ClientHub.Clients.Subscribe(async (clients) =>
+        //    {
+        //        Logger.LogInformation("[uri = {ClientUri}] clients update, clients = {Clients}", Client.Uri, string.Join(',', clients.Select(c => c.Uri.ToString())));
+        //        RefreshPeerIds();
+        //        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+        //    })
+        //);
         if (Client is BrowserClient bc)
         {
             bc.UserInterface = this;

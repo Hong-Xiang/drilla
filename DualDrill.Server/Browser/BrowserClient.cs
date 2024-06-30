@@ -6,26 +6,30 @@ using Microsoft.JSInterop;
 
 namespace DualDrill.Server.Browser;
 
-class BrowserClient(
-   IServiceProvider Services,
-   IJSRuntime JSRuntime,
-   JSClientModule Module)
+class BrowserClient(IJSRuntime JSRuntime, JSClientModule ModuleValue)
    : IClient
 {
     public Uri Uri { get; } = new Uri($"uuid:{Guid.NewGuid()}");
     public IJSRuntime JSRuntime { get; } = JSRuntime;
-    public JSClientModule Module { get; } = Module;
-    public IServiceProvider Services { get; } = Services;
+    public JSMediaStreamProxy? MediaStream { get; set; }
+
+    public ValueTask<JSClientModule> Module
+    {
+        get
+        {
+            return ValueTask.FromResult(ModuleValue);
+        }
+    }
 
     public IDesktopBrowserUI? UserInterface { get; set; } = default;
 
     public async ValueTask<IRTCPeerConnection> CreatePeerConnection()
     {
-        return await RTCPeerConnectionProxy.CreateAsync(this, Module);
+        return await RTCPeerConnectionProxy.CreateAsync(this, await Module);
     }
     public async ValueTask<JSMediaStreamProxy> GetCameraStreamAsync()
     {
-        return await Services.GetRequiredService<MediaDevices>().GetUserMedia(audio: false, video: true);
+        return await new MediaDevices(this, JSRuntime).GetUserMedia(await Module, audio: false, video: true);
     }
 
     //public async Task<IPeerToPeerClientPair> CreatePairAsync(IClient target)

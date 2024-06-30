@@ -10,6 +10,7 @@ using DualDrill.Server.WebView;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Microsoft.JSInterop.Implementation;
 using SIPSorcery.Net;
 using System.Collections.Immutable;
 using System.Numerics;
@@ -20,21 +21,18 @@ namespace DualDrill.Server.Components.Pages;
 
 public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 {
-    [Inject] CircuitService BrowserClientService { get; set; } = default!;
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
-    [Inject] DistributeXRConnectionService ConnectionService { get; set; } = default!;
+    [Inject] PeerClientConnectionService ConnectionService { get; set; } = default!;
     [Inject] FrameSimulationService UpdateService { get; set; } = default!;
-    [Inject] BrowserClient Client { get; set; }
+    BrowserClient? Client { get; set; }
     JSClientModule Module { get; set; } = default!;
-    [Inject] Task<JSClientModule> ModuleAsync { get; set; } = default!;
-    [Inject] WebViewService WebViewService { get; set; } = default!;
+    [Inject] IJSRuntime jsRuntime { get; set; }
 
     private ImmutableArray<Uri> PeerUris { get; set; } = [];
 
     private readonly CompositeDisposable Subscription = [];
 
-    public string Id => Client.Uri.AbsolutePath;
     public IClient? PeerClient { get; set; } = null;
 
 
@@ -66,17 +64,16 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     protected override async Task OnInitializedAsync()
     {
-        var circuit = await BrowserClientService.GetCircuitAsync().ConfigureAwait(false);
-        Subscription.Add(ClientHub.Clients.Subscribe(async (clients) =>
-        {
-            Logger.LogInformation("[uri = {ClientUri}] clients update, clients = {Clients}", Client.Uri, string.Join(',', clients.Select(c => c.Uri.ToString())));
-            RefreshPeerIds();
-            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-        }));
-        if (Client is BrowserClient bc)
-        {
-            bc.UserInterface = this;
-        }
+        //Subscription.Add(ClientHub.Clients.Subscribe(async (clients) =>
+        //{
+        //    Logger.LogInformation("[uri = {ClientUri}] clients update, clients = {Clients}", Client.Uri, string.Join(',', clients.Select(c => c.Uri.ToString())));
+        //    RefreshPeerIds();
+        //    await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+        //}));
+        //if (Client is BrowserClient bc)
+        //{
+        //    bc.UserInterface = this;
+        //}
         await base.OnInitializedAsync().ConfigureAwait(false);
 
         ScaleSubscribe = SubscribeScale();
@@ -131,6 +128,11 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
 
     public async ValueTask DisposeAsync()
     {
+        if (Client is not null)
+        {
+            ClientHub.RemoveClient(Client);
+        }
+        await Module.DisposeAsync();
         Subscription.Dispose();
     }
 
@@ -165,26 +167,17 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
-            Module = await ModuleAsync;
-            await using var el = await Module.CreateJSObjectReferenceAsync(RenderRootElement);
-            //RenderService = new(await Client.Module.CreateWebGPURenderServiceAsync());
+            Module = await JSClientModule.CreateAsync(jsRuntime);
+            Client = new BrowserClient(jsRuntime, Module);
+            ClientHub.AddClient(Client);
+            RenderService = new(await (await Client.Module).CreateWebGPURenderServiceAsync());
             //RenderService = new(await Client.Module.CreateHeadlessServerRenderService());
-            RenderService = new(await Client.Module.CreateHeadlessSharedBufferServerRenderService());
+            //RenderService = new(await (await Client.Module).CreateHeadlessSharedBufferServerRenderService());
             //RenderService = new(await Client.Module.CreateServerRenderPresentService());
             Logger.LogInformation("Blazor render first render called");
-        }
-        if (RenderService is not null)
-        {
-            await RenderService.AttachToElementAsync(RenderRootElement);
-            Logger.LogInformation("Blazor render attach to element called");
+            StateHasChanged();
         }
     }
-
-    public async Task TriggerPushSharedBuffer()
-    {
-        await WebViewService.PostSharedBufferAsync(default);
-    }
-
 
     public async ValueTask ShowPeerVideo(IMediaStream stream)
     {

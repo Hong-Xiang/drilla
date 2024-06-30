@@ -5,3 +5,7 @@ declare global {
 }
 
 export type DotNetObject = DotNet.DotNetObject;
+
+export function createJSObjectReference(x: unknown) {
+  return DotNet.createJSObjectReference(x);
+}
