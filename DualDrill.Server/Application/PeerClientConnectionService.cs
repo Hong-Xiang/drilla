@@ -1,6 +1,7 @@
 ﻿using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
+using DualDrill.Server.Browser;
 using DualDrill.Server.Command;
 using Microsoft.JSInterop;
 using System.Reactive.Linq;
@@ -9,7 +10,7 @@ using System.Threading.Channels;
 
 namespace DualDrill.Server.Application;
 
-sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService> Logger)
+sealed class PeerClientConnectionService(ILogger<PeerClientConnectionService> Logger)
 {
     IClient? SourceClient { get; set; } = null;
     IClient? TargetClient { get; set; } = null;
@@ -32,9 +33,9 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
         }
         if (renderClient is Browser.BrowserClient tui)
         {
-            //var stream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
-            var canvas = await tui.ExecuteCommandAsync(new GetRenderCanvas());
-            var stream = await tui.Module.CaptureStream(tui, canvas);
+            var stream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
+            //var canvas = await tui.ExecuteCommandAsync(new GetRenderCanvas());
+            //var stream = await (await tui.Module).CaptureCanvasToStream(tui, canvas);
 
             await SendVideo(stream, displayClient);
         }
@@ -68,7 +69,7 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
                 await CloseVideo(SourceClient);
                 await SourceClient.ExecuteCommandAsync(new RemovePeerClientCommand());
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Logger.LogError(e.Message);
             }
@@ -117,23 +118,23 @@ sealed class DistributeXRConnectionService(ILogger<DistributeXRConnectionService
             throw new NotPartitionClientException(target);
         }
         var sendClient = video.Client;
-        var receiveClient = target;
+        var recvClient = target;
         var sendPeer = BrowserRTCPeerConnectionPair.GetSelf(sendClient);
-        var receivePeer = BrowserRTCPeerConnectionPair.GetSelf(receiveClient);
+        var recvPeer = BrowserRTCPeerConnectionPair.GetSelf(recvClient);
 
-        using var tcs = new TaskCompletionSourceReferenceWrapper<IJSObjectReference>();
-        await using var sub = await receivePeer.WaitVideoStream(video.Id, tcs);
+        using var tcs = new TaskCompletionSourceDotnetObjectReference<IJSObjectReference>();
+        await using var sub = await recvPeer.WaitVideoStream(video.Id, tcs);
         Logger.LogTrace("Wait called");
 
         await sendPeer.AddVideoStream(video.Reference).ConfigureAwait(false);
         Logger.LogTrace("JS Add video stream called");
         var targetVideoJS = await tcs.Task.ConfigureAwait(false);
-        var targetModule = receiveClient.Services.GetRequiredService<JSClientModule>();
+        var targetModule = await (recvClient as BrowserClient).Module;
         var targetVideoId = await targetModule.GetProperty<string>(targetVideoJS, "id");
-        var targetVideo = new JSMediaStreamProxy(receiveClient, targetModule, targetVideoJS, targetVideoId);
+        var targetVideo = new JSMediaStreamProxy(recvClient, targetModule, targetVideoJS, targetVideoId);
         Logger.LogTrace("Target Video Received");
         await sendClient.ExecuteCommandAsync(new ShowSelfVideoCommand(video));
-        await receiveClient.ExecuteCommandAsync(new ShowPeerVideoElementCommand(targetVideo));
+        await recvClient.ExecuteCommandAsync(new ShowPeerVideoElementCommand(targetVideo));
     }
 
     public async ValueTask CloseVideo<TClient>(TClient client)

@@ -45,6 +45,7 @@ public sealed class WebViewWindowHostedService(
         await tcs.Task.ConfigureAwait(false);
         var address = WebServer.Features.Get<IServerAddressesFeature>();
         var uri = (address?.Addresses.FirstOrDefault(x => new Uri(x).Scheme == "https")) ?? throw new ArgumentNullException("WebView2 Source Uri");
-        return new Uri(uri);
+        return new Uri(uri + "/webview2");
+        //return new Uri(uri);
     }
 }

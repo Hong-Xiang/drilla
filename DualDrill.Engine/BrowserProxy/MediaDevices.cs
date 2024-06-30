@@ -4,16 +4,16 @@ using Microsoft.JSInterop;
 
 namespace DualDrill.Engine.BrowserProxy;
 
-public sealed class MediaDevices(IClient Client, IJSRuntime JSRuntime, JSClientModule Module)
+public sealed class MediaDevices(IClient Client, IJSRuntime JSRuntime)
 {
-    public async ValueTask<JSMediaStreamProxy> GetUserMedia(bool audio, bool video)
+    public async ValueTask<JSMediaStreamProxy> GetUserMedia(JSClientModule client, bool audio, bool video)
     {
         var mediaStream = await JSRuntime.InvokeAsync<IJSObjectReference>("navigator.mediaDevices.getUserMedia", new
         {
             audio,
             video
         }).ConfigureAwait(false);
-        var id = await Module.GetProperty<string>(mediaStream, "id").ConfigureAwait(false);
-        return new(Client, Module, mediaStream, id);
+        var id = await client.GetProperty<string>(mediaStream, "id").ConfigureAwait(false);
+        return new(Client, client, mediaStream, id);
     }
 }

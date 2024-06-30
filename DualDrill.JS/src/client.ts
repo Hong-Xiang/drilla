@@ -40,8 +40,14 @@ export function getGlobalThis() {
   return globalThis;
 }
 
-export async function Initialization() {
+export let BlazorServerService: DotNetObject | null = null;
+
+export async function Initialization(blazorServerService?: DotNetObject) {
   await SignalRConnection.start();
+  if (blazorServerService) {
+    BlazorServerService = blazorServerService;
+  }
+
   const subject = new signalR.Subject<number>();
   let count = 0;
   const h = setInterval(() => {

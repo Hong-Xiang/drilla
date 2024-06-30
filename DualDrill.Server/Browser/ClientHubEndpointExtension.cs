@@ -23,26 +23,26 @@ public static class ClientHubEndpointExtension
 
         services.AddScoped<ContextDisposableCollection>();
         services.AddScoped<ContextAsyncDisposableCollection>();
-        services.AddScoped<InitializedClientContext>();
+        //services.AddScoped<InitializedClientContext>();
 
-        services.AddScoped(async sp =>
-        {
-            var disposables = sp.GetRequiredService<ContextAsyncDisposableCollection>();
-            var client = await JSClientModule.CreateAsync(sp.GetRequiredService<IJSRuntime>());
-            disposables.Add(client);
-            return client;
-        });
+        //services.AddScoped(async sp =>
+        //{
+        //    var disposables = sp.GetRequiredService<ContextAsyncDisposableCollection>();
+        //    var client = await JSClientModule.CreateAsync(sp.GetRequiredService<IJSRuntime>());
+        //    disposables.Add(client);
+        //    return client;
+        //});
 
-        services.AddKeyedScoped(typeof(InitializedClientContext), (sp, level) =>
-        {
-            var context = sp.GetRequiredService<InitializedClientContext>();
-            return context.ClientModule ?? throw new NullReferenceException(nameof(context.ClientModule));
-        });
+        //services.AddKeyedScoped(typeof(InitializedClientContext), (sp, level) =>
+        //{
+        //    var context = sp.GetRequiredService<InitializedClientContext>();
+        //    return context.ClientModule ?? throw new NullReferenceException(nameof(context.ClientModule));
+        //});
 
-        services.AddScoped<MediaDevices>();
-        services.AddScoped<JSClientModule>();
-        services.AddScoped<BrowserClient>();
-        services.AddScoped<IClient>(sp => sp.GetRequiredService<BrowserClient>());
+        //services.AddScoped<MediaDevices>();
+        //services.AddScoped<JSClientModule>();
+        //services.AddScoped<BrowserClient>();
+        //services.AddScoped<IClient>(sp => sp.GetRequiredService<BrowserClient>());
         services.AddScoped<CircuitService>();
         services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<CircuitService>());
     }
