@@ -1,0 +1,18 @@
+﻿<h5>PeerClient @(PeerClient?.Uri)</h5>
+<button @onclick="StateHasChanged">Force Update</button>
+@if (!IsConnected)
+{
+    <button @onclick="Connect">Connect</button>
+}
+else
+{
+    <span>Connected</span>
+}
+@if (SelfMediaStream is not null)
+{
+    <button @onclick="SendStream">Send</button>
+}
+@if (PeerMediaStream is not null)
+{
+    <button @onclick="SelectAsShownPeerStream"></button>
+}

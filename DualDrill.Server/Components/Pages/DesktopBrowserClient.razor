@@ -1,49 +1,22 @@
 ﻿@page "/desktop"
+@using Shared;
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <h3>Desktop Client</h3>
 <span>Scale</span> <InputNumber @bind-Value="Scale"></InputNumber>
-<div>
-    <div>
-        <span>Render Service</span>
-        @if (RenderService is null)
-        {
-            <button @onclick="CreateRenderContext">Create Render Context</button>
-        }
-        <button @onclick="StartRender" disabled="@(RenderService is null)">Start Render</button>
-        <button @onclick="StopRender" disabled="@(RenderService is null)">Stop Render</button>
-    </div>
-    <div @ref="RenderRootElement"> </div>
-</div>
-<div>
-    <button @onclick="TriggerPushSharedBuffer">Trigger Post Shared Buffer</button>
-</div>
-<p>
-    id = @Client?.Uri
-</p>
-<p>
-    peer id = @PeerClient?.Uri
-</p>
-
-@if (!Connected)
+@if (Module is null)
 {
-    <p>
-        <h4>Peer Ids</h4>
-        <button @onclick=RefreshPeerIds>refresh</button>
-
-        <ul>
-            @foreach (var pid in PeerUris)
-            {
-                <li>@pid</li>
-                <button @onclick=@(() => Connect(pid))>connect</button>
-            }
-        </ul>
-    </p>
+    <div>Initializing Client ...</div>
 }
 else
 {
-    <button @onclick="SendVideo">Send Video</button>
-    <button @onclick=@(Disconnect)>disconnect</button>
+    <CascadingValue Value="Module">
+        <DualDrill.Server.Components.Shared.InitializedClient Client="Client"
+                                                              RenderService="RenderService">
+        </DualDrill.Server.Components.Shared.InitializedClient>
+    </CascadingValue>
 }
+
 <video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video>
 <video id="peerVideo" @ref="PeerVideoElement" autoplay playsinline></video>
+

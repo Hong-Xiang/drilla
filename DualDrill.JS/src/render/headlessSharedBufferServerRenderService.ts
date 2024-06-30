@@ -1,3 +1,4 @@
+import { BlazorServerService } from "../client";
 import { SignalRConnection } from "../lib/signalr-client";
 import { RenderServiceLegacy } from "./RenderService";
 import * as signalR from "@microsoft/signalr";
@@ -25,8 +26,17 @@ export async function createHeadlessSharedBufferServerRenderService(): Promise<R
     throw new Error("Failed to create 2d context");
   }
   const sharedBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
-    const h = (e: WebviewSharedBufferMessage) => {
-      resolve(e.getBuffer());
+    const h = async (e: WebviewSharedBufferMessage) => {
+      const buf = e.getBuffer();
+      console.log(buf);
+      if (BlazorServerService !== null) {
+        console.log(BlazorServerService);
+        await BlazorServerService.invokeMethodAsync(
+          "OnBuffer",
+          DotNet.createJSObjectReference(buf)
+        );
+      }
+      resolve(buf);
       (window as any).chrome.webview.removeEventListener(
         "sharedbufferreceived",
         h

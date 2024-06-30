@@ -1,4 +1,6 @@
-﻿using DualDrill.Engine.BrowserProxy;
+﻿using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Server.Components;
 using Microsoft.AspNetCore.Components.Server.Circuits;
@@ -9,45 +11,54 @@ using System.Reactive.Subjects;
 
 namespace DualDrill.Server.Services;
 
+
 sealed class InitializedClientContext
 {
-    public JSClientModule? ClientModule { get; set; }
+    public static readonly string ScopeName = nameof(InitializedClientContext);
+    public JSClientModule? ClientModule { get; private set; }
+
+    public static async ValueTask<ILifetimeScope> CreateAsync(IServiceProvider serviceProvider)
+    {
+        var root = serviceProvider.GetAutofacRoot();
+        var scope = root.BeginLifetimeScope(ScopeName);
+        var context = scope.Resolve<InitializedClientContext>();
+        context.ClientModule = await serviceProvider.GetRequiredService<Task<JSClientModule>>();
+        //await context.ClientModule.Initialization();
+        return scope;
+    }
 }
 
 
+
 sealed class CircuitService(
-    Browser.BrowserClient Client,
+    //Browser.BrowserClient Client,
     ClientStore ClientStore,
-    Task<JSClientModule> ClientModule,
     IServiceProvider ServiceProvider) : CircuitHandler
 {
     private readonly TaskCompletionSource<Circuit> CircuitSource = new();
     public Task<Circuit> GetCircuitAsync() => CircuitSource.Task;
 
-    AsyncServiceScope? ServiceScope = null;
+    ILifetimeScope? InitializedClientScope;
 
 
     public override async Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
         await base.OnCircuitOpenedAsync(circuit, cancellationToken).ConfigureAwait(false);
 
-        var serviceScope = ServiceProvider.CreateAsyncScope();
-        ServiceScope = serviceScope;
-        var context = serviceScope.ServiceProvider.GetRequiredService<InitializedClientContext>();
-        context.ClientModule = await ClientModule;
+        //InitializedClientScope = await InitializedClientContext.CreateAsync(ServiceProvider);
 
         CircuitSource.SetResult(circuit);
-        ClientStore.AddClient(Client);
+        //ClientStore.AddClient(Client);
     }
 
     public override async Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
-        if (ServiceScope.HasValue)
-        {
-            await ServiceScope.Value.DisposeAsync();
-        }
+        //if (InitializedClientScope is not null)
+        //{
+        //    await InitializedClientScope.DisposeAsync();
+        //}
 
-        ClientStore.RemoveClient(Client);
+        //ClientStore.RemoveClient(Client);
         await base.OnCircuitClosedAsync(circuit, cancellationToken);
     }
 }

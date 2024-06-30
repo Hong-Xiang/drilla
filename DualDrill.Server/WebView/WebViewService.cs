@@ -1,5 +1,7 @@
-﻿using DualDrill.Graphics.Headless;
+﻿using DualDrill.Engine.BrowserProxy;
+using DualDrill.Graphics.Headless;
 using Microsoft.Extensions.Options;
+using Microsoft.JSInterop;
 using Microsoft.Web.WebView2.Core;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
@@ -142,9 +144,10 @@ public sealed class WebViewService
         await app.Dispatcher.InvokeAsync(action, System.Windows.Threading.DispatcherPriority.Normal, cancellation).Task.ConfigureAwait(false);
     }
 
-    public ValueTask PostSharedBufferAsync(CancellationToken cancellation)
+    public async ValueTask PostSharedBufferAsync(CancellationToken cancellation)
     {
-        return DispatchAsync(() =>
+        using var tcs = new TaskCompletionSourceDotnetObjectReference<IJSObjectReference>();
+        await DispatchAsync(() =>
         {
             WebView.CoreWebView2.PostSharedBufferToScript(SharedBuffer, CoreWebView2SharedBufferAccess.ReadOnly, null);
         }, cancellation);

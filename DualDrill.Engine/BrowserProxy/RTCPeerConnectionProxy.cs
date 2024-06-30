@@ -113,21 +113,21 @@ public sealed class RTCPeerConnectionProxy(
         await Reference.InvokeAsync<string>("setRemoteDescription", RTCSessionDescriptionString(type), sdp).ConfigureAwait(false);
     }
 
-    public async ValueTask<(JSDisposableProxy, Task<IMediaStream>)> WaitVideoStream(string id)
-    {
-        static async Task<IMediaStream> GetMediaStreamProxy(Task<IJSObjectReference> response, IClient client, string id)
-        {
-            var module = client.Services.GetRequiredService<JSClientModule>();
-            var stream = await response.ConfigureAwait(false);
-            return new JSMediaStreamProxy(client, module, stream, id);
-        }
-        var tcs = new TaskCompletionSourceReferenceWrapper<IJSObjectReference>();
-        var stream = GetMediaStreamProxy(tcs.Task, Client, id);
-        var sub = await Reference.InvokeAsync<IJSObjectReference>("waitVideoStream", id, tcs.Reference).ConfigureAwait(false);
-        return (new(Client, sub), stream);
-    }
+    //public async ValueTask<(JSDisposableProxy, Task<IMediaStream>)> WaitVideoStream(string id)
+    //{
+    //    static async Task<IMediaStream> GetMediaStreamProxy(Task<IJSObjectReference> response, IClient client, string id)
+    //    {
+    //        var module = client.Services.GetRequiredService<JSClientModule>();
+    //        var stream = await response.ConfigureAwait(false);
+    //        return new JSMediaStreamProxy(client, module, stream, id);
+    //    }
+    //    var tcs = new TaskCompletionSourceDotnetObjectReference<IJSObjectReference>();
+    //    var stream = GetMediaStreamProxy(tcs.Task, Client, id);
+    //    var sub = await Reference.InvokeAsync<IJSObjectReference>("waitVideoStream", id, tcs.Reference).ConfigureAwait(false);
+    //    return (new(Client, sub), stream);
+    //}
 
-    public async ValueTask<JSDisposableProxy> WaitVideoStream(string id, TaskCompletionSourceReferenceWrapper<IJSObjectReference> tcs)
+    public async ValueTask<JSDisposableProxy> WaitVideoStream(string id, TaskCompletionSourceDotnetObjectReference<IJSObjectReference> tcs)
     {
         var sub = await Reference.InvokeAsync<IJSObjectReference>("waitVideoStream", id, tcs.Reference).ConfigureAwait(false);
         return new(Client, sub);

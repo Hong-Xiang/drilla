@@ -28,7 +28,7 @@ public sealed class ClientStore(ILogger<ClientStore> Logger) : IDisposable
         {
             Logger.LogError("Failed to add client with id {ClientUri}", client.Uri);
         }
-        ClientsSubject.OnNext([.. ClientsStore.Values]);
+        OnClientChanges?.Invoke(Clients);
     }
 
     public void RemoveClient(IClient client)
@@ -37,12 +37,15 @@ public sealed class ClientStore(ILogger<ClientStore> Logger) : IDisposable
         {
             Logger.LogError("Failed to remove client with uri {ClientUri}", client.Uri);
         }
-        ClientsSubject.OnNext([.. ClientsStore.Values]);
+        OnClientChanges?.Invoke(Clients);
     }
 
     public Uri[] ClientUris => [.. ClientsStore.Keys];
 
-    public IObservable<ImmutableArray<IClient>> Clients => ClientsSubject;
+    public delegate void ClientsChanges(ImmutableArray<IClient> clients);
+    public event ClientsChanges OnClientChanges;
+
+    public ImmutableArray<IClient> Clients => [.. ClientsStore.Values];
 
     //public Task<IPeerToPeerClientPair> CreatePeerPairAsync(IClient source, IClient target)
     //{

@@ -3,6 +3,7 @@ using DualDrill.Engine.Disposable;
 using DualDrill.Engine.UI;
 using DualDrill.Engine.WebRTC;
 using Microsoft.JSInterop;
+using System.Runtime.InteropServices;
 
 namespace DualDrill.Engine.BrowserProxy;
 
@@ -32,7 +33,15 @@ public sealed record class ElementSize(int OffsetWidth, int OffsetHeight)
 {
 }
 
-
+sealed class QuickOnBuffer(IJSRuntime JSRuntime)
+{
+    [JSInvokable]
+    public async Task OnBuffer(IJSObjectReference jsObjectReference)
+    {
+        await JSRuntime.InvokeVoidAsync("console.log", jsObjectReference);
+        await jsObjectReference.DisposeAsync();
+    }
+}
 
 public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Module) : IAsyncDisposable
 {
@@ -40,12 +49,8 @@ public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Modu
     public static async ValueTask<JSClientModule> CreateAsync(IJSRuntime runtime)
     {
         var module = await runtime.InvokeAsync<IJSObjectReference>("import", $"/client.js?t={Guid.NewGuid()}").ConfigureAwait(false);
+        await module.InvokeVoidAsync("Initialization", DotNetObjectReference.Create(new QuickOnBuffer(runtime))).ConfigureAwait(false);
         return new JSClientModule(runtime, module);
-    }
-
-    public async ValueTask Initialization()
-    {
-        await Module.InvokeVoidAsync("Initialization").ConfigureAwait(false);
     }
 
     public async ValueTask<ElementSize> GetElementSize(IJSObjectReference element)
@@ -53,7 +58,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Modu
         return await JSRuntime.InvokeAsync<ElementSize>("getElementSize", element);
     }
 
-    public async ValueTask<JSMediaStreamProxy> CaptureStream(IClient client, IJSObjectReference canvasElement)
+    public async ValueTask<JSMediaStreamProxy> CaptureCanvasToStream(IClient client, IJSObjectReference canvasElement)
     {
         var mediaStream = await Module.InvokeAsync<IJSObjectReference>("captureStream", canvasElement);
         var id = await GetProperty<string>(mediaStream, "id").ConfigureAwait(false);
@@ -123,7 +128,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Modu
 
 public static class JSClientModuleExtension
 {
-    public static async ValueTask SetVideoElementStreamAsync(this JSClientModule client, IJSObjectReference videoElement, IJSObjectReference mediaStream)
+    public static async ValueTask SetVideoElementStreamAsync(this JSClientModule client, IJSObjectReference videoElement, IJSObjectReference? mediaStream)
     {
         await client.SetProperty(videoElement, mediaStream, "srcObject");
     }

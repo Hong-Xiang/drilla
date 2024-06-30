@@ -6,15 +6,14 @@ sealed class JSTaskRejectException(string Message) : Exception(Message)
 {
 }
 
-public sealed class TaskCompletionSourceReferenceWrapper<T> : IDisposable
+public sealed class TaskCompletionSourceDotnetObjectReference<T> : IDisposable
 {
-
     public TaskCompletionSource<T> TaskCompletionSource { get; } = new();
     public Task<T> Task => TaskCompletionSource.Task;
 
-    public DotNetObjectReference<TaskCompletionSourceReferenceWrapper<T>> Reference { get; }
+    public DotNetObjectReference<TaskCompletionSourceDotnetObjectReference<T>> Reference { get; }
 
-    public TaskCompletionSourceReferenceWrapper()
+    public TaskCompletionSourceDotnetObjectReference()
     {
         Reference = DotNetObjectReference.Create(this);
     }
