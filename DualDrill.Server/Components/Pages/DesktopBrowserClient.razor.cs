@@ -9,6 +9,7 @@ using DualDrill.Server.Services;
 using DualDrill.Server.WebView;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
 using Microsoft.JSInterop.Implementation;
 using SIPSorcery.Net;
@@ -25,6 +26,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
     [Inject] PeerClientConnectionService ConnectionService { get; set; } = default!;
     [Inject] FrameSimulationService UpdateService { get; set; } = default!;
+    [Inject] IHubContext<DrillHub, IDrillHubClient> HubContext { get; set; } = default!;
     BrowserClient? Client { get; set; }
     JSClientModule Module { get; set; } = default!;
     [Inject] IJSRuntime jsRuntime { get; set; }
@@ -168,7 +170,15 @@ public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
         if (firstRender)
         {
             Module = await JSClientModule.CreateAsync(jsRuntime);
-            Client = new BrowserClient(jsRuntime, Module);
+            var connectionId = await Module.GetSignalRConnectionIdAsync();
+            Client = new BrowserClient(jsRuntime, Module, HubContext, connectionId);
+            await Client.HubInvokeAsync(async (hub) =>
+            {
+                if (hub is DrillHub dhub)
+                {
+                    Console.WriteLine($"HubInvoke get : {dhub.Context.ConnectionId}");
+                }
+            });
             ClientHub.AddClient(Client);
             RenderService = new(await (await Client.Module).CreateWebGPURenderServiceAsync());
             //RenderService = new(await Client.Module.CreateHeadlessServerRenderService());
