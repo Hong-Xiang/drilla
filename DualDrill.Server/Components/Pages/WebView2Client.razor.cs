@@ -20,7 +20,6 @@ namespace DualDrill.Server.Components.Pages;
 
 public partial class WebView2Client : IAsyncDisposable, IDesktopBrowserUI
 {
-    [Inject] CircuitService BrowserClientService { get; set; } = default!;
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
     [Inject] PeerClientConnectionService ConnectionService { get; set; } = default!;
@@ -67,7 +66,6 @@ public partial class WebView2Client : IAsyncDisposable, IDesktopBrowserUI
 
     protected override async Task OnInitializedAsync()
     {
-        var circuit = await BrowserClientService.GetCircuitAsync().ConfigureAwait(false);
         //Subscription.Add(ClientHub.Clients.Subscribe(async (clients) =>
         //{
         //    Logger.LogInformation("[uri = {ClientUri}] clients update, clients = {Clients}", Client.Uri, string.Join(',', clients.Select(c => c.Uri.ToString())));

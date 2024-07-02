@@ -53,6 +53,11 @@ public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Modu
         return new JSClientModule(runtime, module);
     }
 
+    public async ValueTask<string> GetSignalRConnectionIdAsync()
+    {
+        return await Module.InvokeAsync<string>("SignalRConnectionId").ConfigureAwait(false);
+    }
+
     public async ValueTask<ElementSize> GetElementSize(IJSObjectReference element)
     {
         return await JSRuntime.InvokeAsync<ElementSize>("getElementSize", element);

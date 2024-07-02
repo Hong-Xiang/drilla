@@ -9,7 +9,7 @@ using Microsoft.JSInterop;
 
 namespace DualDrill.Server.Components.Shared;
 
-public partial class PeerClientConnection : IDesktopBrowserUI
+public partial class PeerClientConnection : IDesktopBrowserUI, IAsyncDisposable
 {
     [Inject] DualDrill.Server.Application.PeerClientConnectionService ConnectionService { get; set; }
     [Inject] DualDrill.Engine.Connection.ClientStore ClientHub { get; set; }
@@ -22,8 +22,6 @@ public partial class PeerClientConnection : IDesktopBrowserUI
     public IClient SelfClient { get; set; }
 
     public JSMediaStreamProxy? SelfMediaStream => SelfClient is BrowserClient bc ? bc.MediaStream : null;
-
-    JSMediaStreamProxy? SentMediaStream { get; set; }
 
     [Parameter]
     public Action<JSMediaStreamProxy>? SetPeerStream { get; set; }
@@ -61,6 +59,10 @@ public partial class PeerClientConnection : IDesktopBrowserUI
         if (PeerClient is null || SelfClient is null)
         {
             Logger.LogError("Failed to get client for connection");
+            return;
+        }
+        if (BrowserRTCPeerConnectionPair is not null)
+        {
             return;
         }
         BrowserRTCPeerConnectionPair = await RTCPeerConnectionPair.CreateAsync(SelfClient, PeerClient);
@@ -115,5 +117,13 @@ public partial class PeerClientConnection : IDesktopBrowserUI
     public ValueTask CloseSelfVideo()
     {
         throw new NotImplementedException();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (BrowserRTCPeerConnectionPair is not null)
+        {
+            await BrowserRTCPeerConnectionPair.DisposeAsync();
+        }
     }
 }
