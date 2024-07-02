@@ -17,7 +17,6 @@ namespace DualDrill.Server.Components.Pages;
 
 public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
 {
-    [Inject] CircuitService BrowserClientService { get; set; } = default!;
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
 
@@ -44,7 +43,6 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
 
     protected override async Task OnInitializedAsync()
     {
-        var circuit = await BrowserClientService.GetCircuitAsync().ConfigureAwait(false);
         //Subscription.Add(
         //    ClientHub.Clients.Subscribe(async (clients) =>
         //    {

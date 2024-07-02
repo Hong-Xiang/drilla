@@ -42,7 +42,12 @@ export function getGlobalThis() {
 
 export let BlazorServerService: DotNetObject | null = null;
 
+export function SignalRConnectionId() {
+  return SignalRConnection.connectionId;
+}
+
 export async function Initialization(blazorServerService?: DotNetObject) {
+  console.log('initialization called');
   await SignalRConnection.start();
   if (blazorServerService) {
     BlazorServerService = blazorServerService;

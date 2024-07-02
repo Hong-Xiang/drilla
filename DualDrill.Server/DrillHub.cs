@@ -10,14 +10,30 @@ using System.Threading.Channels;
 
 namespace DualDrill.Server;
 
+public interface IDrillHubClient
+{
+    Task<string> HubInvoke(string funcHandle);
+}
+
 sealed class DrillHub(
     FrameSimulationService UpdateService,
     ILogger<DrillHub> Logger,
-    WebViewService WebView) : Hub
+    WebViewService WebView) : Hub<IDrillHubClient>
 {
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
+    }
+
+    public async Task<string> DoHubInvokeAsync(string funcHandle)
+    {
+        var action = nint.Parse(funcHandle);
+        var handle = GCHandle.FromIntPtr(action);
+        if (handle.Target is Func<object, ValueTask> go)
+        {
+            await go(this);
+        }
+        return "done-from-server";
     }
 
     public async IAsyncEnumerable<int> PingPongStream(ChannelReader<int> events)
@@ -52,6 +68,7 @@ sealed class DrillHub(
         //{
         //    await writer.WriteAsync(e).ConfigureAwait(false);
         //}
+
         inputService.AddUserEventSource(Context.ConnectionId, events);
         var tcs = new TaskCompletionSource();
         if (Context.ConnectionAborted.IsCancellationRequested)

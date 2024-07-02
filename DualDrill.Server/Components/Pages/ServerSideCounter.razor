@@ -1,5 +1,4 @@
 ﻿@rendermode @(new InteractiveServerRenderMode(prerender: false))
-@inject Services.CircuitService CircuitService
 
 <h3>ServerSideCounter</h3>
 
@@ -26,6 +25,5 @@
 
     async Task RefreshClientId()
     {
-        ClientId = (await CircuitService.GetCircuitAsync().ConfigureAwait(false)).Id;
     }
 }

@@ -5,6 +5,7 @@ using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
 using System.Collections.Concurrent;
 
@@ -43,12 +44,16 @@ public static class ClientHubEndpointExtension
         //services.AddScoped<JSClientModule>();
         //services.AddScoped<BrowserClient>();
         //services.AddScoped<IClient>(sp => sp.GetRequiredService<BrowserClient>());
-        services.AddScoped<CircuitService>();
-        services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<CircuitService>());
+        //services.AddScoped<CircuitService>();
+        //services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<CircuitService>());
     }
 
     public static void MapClients(this WebApplication app)
     {
         app.MapGet("/api/clients", GetConnectedClients);
+        app.MapGet("/api/injecthub/", ([FromServices] IHubContext<DrillHub, IDrillHubClient> x) =>
+        {
+            return "ok";
+        });
     }
 }

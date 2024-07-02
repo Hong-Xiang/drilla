@@ -7,12 +7,14 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Engine.Connection;
 
+
 public interface IClient
 {
     public Uri Uri { get; }
     public ValueTask<IRTCPeerConnection> CreatePeerConnection();
     public ValueTask SendDataStream<T>(Uri uri, IAsyncEnumerable<T> dataStream);
     public ValueTask<IAsyncEnumerable<T>> SubscribeDataStream<T>(Uri uri);
+    public ValueTask HubInvokeAsync(Func<object, ValueTask> func);
 }
 
 public interface IClientAsyncCommand<in TClient, T>

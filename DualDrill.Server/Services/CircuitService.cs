@@ -46,7 +46,6 @@ sealed class CircuitService(
         await base.OnCircuitOpenedAsync(circuit, cancellationToken).ConfigureAwait(false);
 
         //InitializedClientScope = await InitializedClientContext.CreateAsync(ServiceProvider);
-
         CircuitSource.SetResult(circuit);
         //ClientStore.AddClient(Client);
     }
