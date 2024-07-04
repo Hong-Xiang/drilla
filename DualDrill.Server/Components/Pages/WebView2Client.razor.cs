@@ -228,4 +228,9 @@ public partial class WebView2Client : IAsyncDisposable, IDesktopBrowserUI
     {
         return await Module.GetProperty<IJSObjectReference>(RenderService.JSRenderContext, "canvas");
     }
+
+    public ValueTask SetPeerClient(IClient client, RTCPeerConnectionPair pair)
+    {
+        throw new NotImplementedException();
+    }
 }

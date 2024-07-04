@@ -8,11 +8,11 @@ else
 {
     <span>Connected</span>
 }
-@if (SelfMediaStream is not null)
+@if (SelfMediaStream is not null && BrowserRTCPeerConnectionPair is not null)
 {
-    <button @onclick="SendStream">Send</button>
+    <button disabled="@Sending" @onclick="SendStream">Send</button>
 }
 @if (PeerMediaStream is not null)
 {
-    <button @onclick="SelectAsShownPeerStream"></button>
+    <button @onclick="SelectAsShownPeerStream">Select Peer Video</button>
 }

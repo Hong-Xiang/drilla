@@ -7,7 +7,7 @@ namespace DualDrill.Server.Application;
 internal interface IDesktopBrowserUI
 {
     ValueTask<IJSObjectReference> GetCanvasElement();
-    ValueTask SetPeerClient(IClient client);
+    ValueTask SetPeerClient(IClient client, RTCPeerConnectionPair pair);
     ValueTask RemovePeerClient();
 
     ValueTask ShowPeerVideo(IMediaStream stream);

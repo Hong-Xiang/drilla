@@ -40,7 +40,7 @@ sealed class DrillHub(
     {
         await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
         {
-            Logger.LogInformation("Ping-Pong Stream {Data}", e);
+            //Logger.LogInformation("Ping-Pong Stream {Data}", e);
             yield return e;
         }
     }

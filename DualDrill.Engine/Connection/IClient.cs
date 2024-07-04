@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace DualDrill.Engine.Connection;
@@ -10,11 +11,14 @@ namespace DualDrill.Engine.Connection;
 
 public interface IClient
 {
+    public Guid Id { get; }
     public Uri Uri { get; }
+    public ValueTask<string> GetConnectionId();
     public ValueTask<IRTCPeerConnection> CreatePeerConnection();
     public ValueTask SendDataStream<T>(Uri uri, IAsyncEnumerable<T> dataStream);
     public ValueTask<IAsyncEnumerable<T>> SubscribeDataStream<T>(Uri uri);
     public ValueTask HubInvokeAsync(Func<object, ValueTask> func);
+    public Channel<object> GetOrAddEventChannel(Uri uri);
 }
 
 public interface IClientAsyncCommand<in TClient, T>
