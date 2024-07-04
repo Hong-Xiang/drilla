@@ -1,5 +1,6 @@
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
+using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using Microsoft.AspNetCore.Components;
@@ -9,7 +10,7 @@ using System.Windows.Input;
 
 namespace DualDrill.Server.Components.Shared;
 
-public partial class InitializedClient : IAsyncDisposable
+public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
 {
     [Inject]
     IJSRuntime JSRuntime { get; set; }
@@ -46,6 +47,9 @@ public partial class InitializedClient : IAsyncDisposable
     JSMediaStreamProxy? SelectedPeerMediaStream { get; set; }
 
     private ImmutableArray<IClient> PeerClientCandidates { get; set; } = [];
+    private Dictionary<IClient, RTCPeerConnectionPair> PeerConnectionPair = [];
+
+
     void RefreshPeerIds()
     {
         UpdatePeerClients(ClientHub.Clients);
@@ -90,10 +94,46 @@ public partial class InitializedClient : IAsyncDisposable
     void SetPeerStream(JSMediaStreamProxy peerStream)
     {
         SelectedPeerMediaStream = peerStream;
+        _ = InvokeAsync(StateHasChanged);
     }
 
     public async ValueTask DisposeAsync()
     {
         ClientHub.OnClientChanges -= UpdatePeerClients;
+    }
+
+    public ValueTask<IJSObjectReference> GetCanvasElement()
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask SetPeerClient(IClient client, RTCPeerConnectionPair pair)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask RemovePeerClient()
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask ShowPeerVideo(IMediaStream stream)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask ShowSelfVideo(IMediaStream stream)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask ClosePeerVideo()
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask CloseSelfVideo()
+    {
+        throw new NotImplementedException();
     }
 }

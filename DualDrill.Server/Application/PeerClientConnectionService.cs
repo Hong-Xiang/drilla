@@ -22,8 +22,8 @@ sealed class PeerClientConnectionService(ILogger<PeerClientConnectionService> Lo
         SourceClient = displayClient;
         TargetClient = renderClient;
         BrowserRTCPeerConnectionPair = await RTCPeerConnectionPair.CreateAsync(displayClient, renderClient);
-        await displayClient.ExecuteCommandAsync(new ShowPeerClientCommand(renderClient));
-        await renderClient.ExecuteCommandAsync(new ShowPeerClientCommand(displayClient));
+        await displayClient.ExecuteCommandAsync(new ShowPeerClientCommand(renderClient, null));
+        await renderClient.ExecuteCommandAsync(new ShowPeerClientCommand(displayClient, null));
         if (displayClient is Browser.BrowserClient sui)
         {
             var stream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
@@ -108,6 +108,7 @@ sealed class PeerClientConnectionService(ILogger<PeerClientConnectionService> Lo
         TargetClient = null;
         BrowserRTCPeerConnectionPair = null;
     }
+
 
     public async ValueTask SendVideo<TVideo, TClient>(TVideo video, TClient target)
         where TClient : IClient

@@ -20,7 +20,7 @@ using System.Reactive.Linq;
 
 namespace DualDrill.Server.Components.Pages;
 
-public partial class DesktopBrowserClient : IAsyncDisposable, IDesktopBrowserUI
+public partial class DesktopBrowserClient : IAsyncDisposable
 {
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;

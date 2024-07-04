@@ -172,5 +172,10 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
 
         await Module.RemoveVideoElementStreamAsync(videoElementRef);
     }
+
+    public ValueTask SetPeerClient(IClient client, RTCPeerConnectionPair pair)
+    {
+        throw new NotImplementedException();
+    }
 }
 
