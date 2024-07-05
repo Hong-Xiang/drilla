@@ -1,10 +1,22 @@
 ﻿@page "/webview2"
+@using Shared
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <h3>WebView2Client</h3>
-
-<h3>Desktop Client</h3>
-<span>Scale</span> <InputNumber @bind-Value="Scale"></InputNumber>
+@if (Module is null)
+{
+    <div>Initializing Client ...</div>
+}
+else
+{
+    <CascadingValue Value="Module">
+        <DualDrill.Server.Components.Shared.InitializedClient Client="Client"
+                                                              RenderService="RenderService">
+        </DualDrill.Server.Components.Shared.InitializedClient>
+    </CascadingValue>
+}
+<button @onclick="TriggerPushSharedBuffer">Trigger Post Shared Buffer</button>
+@*
 <div>
     <div>
         <span>Render Service</span>
@@ -15,10 +27,8 @@
         <button @onclick="StartRender" disabled="@(RenderService is null)">Start Render</button>
         <button @onclick="StopRender" disabled="@(RenderService is null)">Stop Render</button>
     </div>
-    <div @ref="RenderRootElement"> </div>
 </div>
 <div>
-    <button @onclick="TriggerPushSharedBuffer">Trigger Post Shared Buffer</button>
 </div>
 
 <p>
@@ -48,4 +58,4 @@ else
     <button @onclick="SendVideo">Send Video</button>
     <button @onclick=@(Disconnect)>disconnect</button>
 }
-<video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video>
+<video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video> *@

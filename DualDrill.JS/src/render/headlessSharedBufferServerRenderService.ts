@@ -15,8 +15,12 @@ interface WebviewSharedBufferMessage {
 
 export async function createHeadlessSharedBufferServerRenderService(): Promise<RenderServiceLegacy> {
   const canvas = document.createElement("canvas");
-  const width = 1472;
-  const height = 936 * 2;
+  // const width = 1472;
+  // const height = 936 * 2;
+  const width = 512;
+  const height = 512;
+
+
 
   canvas.width = width;
   canvas.height = height;
@@ -104,8 +108,8 @@ export async function createHeadlessSharedBufferServerRenderService(): Promise<R
   return {
     canvas,
     attachToElement(el) {
-      el.appendChild(fpsDiv);
       el.appendChild(canvas);
+      el.appendChild(fpsDiv);
     },
     dispose() {
       cancelAnimationFrame(requestAnimationFrameHandle);

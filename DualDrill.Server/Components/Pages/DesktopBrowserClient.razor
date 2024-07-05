@@ -3,7 +3,6 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <h3>Desktop Client</h3>
-<span>Scale</span> <InputNumber @bind-Value="Scale"></InputNumber>
 @if (Module is null)
 {
     <div>Initializing Client ...</div>
@@ -16,7 +15,4 @@ else
         </DualDrill.Server.Components.Shared.InitializedClient>
     </CascadingValue>
 }
-
-<video id="selfVideo" @ref="SelfVideoElement" autoplay playsinline></video>
-<video id="peerVideo" @ref="PeerVideoElement" autoplay playsinline></video>
 

@@ -2,15 +2,9 @@ using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using DualDrill.Engine;
 using DualDrill.Server.WebApi;
-using Autofac;
 using DualDrill.Graphics;
-using Microsoft.AspNetCore.ResponseCompression;
 using DualDrill.Graphics.Headless;
 using DualDrill.Server.WebView;
-using Autofac.Extensions.DependencyInjection;
-using DualDrill.Engine.BrowserProxy;
-using Microsoft.JSInterop;
-using DualDrill.Server.Services;
 
 namespace DualDrill.Server;
 
@@ -23,8 +17,6 @@ public class Program
             Args = args,
             WebRootPath = "../DualDrill.JS/dist"
         });
-
-
 
         builder.Services.Configure<HeadlessSurface.Option>(options =>
         {
@@ -53,7 +45,7 @@ public class Program
         builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
 
         builder.Services.AddSingleton<WebViewService>();
-        //builder.Services.AddHostedService<WebViewWindowHostedService>();
+        builder.Services.AddHostedService<WebViewWindowHostedService>();
         //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
@@ -108,7 +100,7 @@ public class Program
         app.MapRazorComponents<DualDrill.Server.Components.App>()
             .AddInteractiveServerRenderMode()
             .AddInteractiveWebAssemblyRenderMode()
-            .AddAdditionalAssemblies(typeof(Client._Imports).Assembly);
+            .AddAdditionalAssemblies(typeof(DualDrill.Client.SignalRService).Assembly);
 
         app.MapGet("/webroot", () => app.Environment.WebRootPath);
 

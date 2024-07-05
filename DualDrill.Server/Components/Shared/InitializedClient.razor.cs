@@ -6,7 +6,6 @@ using DualDrill.Server.Browser;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Collections.Immutable;
-using System.Windows.Input;
 
 namespace DualDrill.Server.Components.Shared;
 
@@ -33,14 +32,17 @@ public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
     ElementReference RenderRootElement;
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
             UpdatePeerClients(ClientHub.Clients);
             ClientHub.OnClientChanges += UpdatePeerClients;
         }
-        await base.OnAfterRenderAsync(firstRender);
-        await RenderService.AttachToElementAsync(RenderRootElement);
-        Logger.LogInformation("Blazor render attach to element called");
+        if (RenderService is not null)
+        {
+            await RenderService.AttachToElementAsync(RenderRootElement);
+            Logger.LogInformation("Blazor render attach to element called");
+        }
     }
 
     JSMediaStreamProxy? SelfMediaStream { get; set; }
@@ -72,6 +74,20 @@ public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
             await SelfMediaStream.DisposeAsync();
         }
         SelfMediaStream = await new MediaDevices(Client, JSRuntime).GetUserMedia(ClientModule, false, true);
+        if (Client is BrowserClient bc)
+        {
+            bc.MediaStream = SelfMediaStream;
+        }
+    }
+
+    async Task CaptureCanvas()
+    {
+        if (SelfMediaStream is not null)
+        {
+            await SelfMediaStream.DisposeAsync();
+        }
+        await using var canvas = await ClientModule.GetProperty<IJSObjectReference>(RenderService.JSRenderContext, "canvas");
+        SelfMediaStream = await ClientModule.CaptureCanvasToStream(Client, canvas);
         if (Client is BrowserClient bc)
         {
             bc.MediaStream = SelfMediaStream;
