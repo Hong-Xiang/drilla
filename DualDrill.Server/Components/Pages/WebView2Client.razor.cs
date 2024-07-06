@@ -29,7 +29,6 @@ public partial class WebView2Client : IAsyncDisposable
     JSClientModule Module { get; set; } = default;
     [Inject] WebViewService WebViewService { get; set; } = default!;
     JSRenderService? RenderService { get; set; } = null;
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);

@@ -1,6 +1,15 @@
 import { Observable } from "rxjs";
 import { DotNetObject } from "../blazor-dotnet";
 
+interface DrillJSObjectHandle<T> {
+  value: T;
+  dispose(): Promise<void>;
+}
+
+interface DrillServerJSInteropService {
+  allocObjectHandle(): Promise<string>;
+}
+
 export interface JSDisposable {
   dispose(): void;
 }
