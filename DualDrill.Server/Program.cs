@@ -24,8 +24,6 @@ public class Program
 
         builder.Services.AddSingleton<PeerClientConnectionService>();
 
-        //builder.Services.AddSingleton<WebGPUHeadlessService>();
-        //builder.Services.AddSingleton<VulkanHeadlessService>();
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.TriangleRenderer>();
         builder.Services.AddSingleton<HeadlessSurface>(sp =>
         {
@@ -58,18 +56,6 @@ public class Program
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
-
-        //builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-        //builder.Host.ConfigureContainer<ContainerBuilder>((container) =>
-        //     {
-        //         container.Register(async (c) =>
-        //         {
-        //             return await JSClientModule.CreateAsync(c.Resolve<IJSRuntime>());
-        //         }).OnRelease(async (client) => { await (await client).DisposeAsync(); });
-
-        //         container.RegisterType<InitializedClientContext>().InstancePerMatchingLifetimeScope(InitializedClientContext.ScopeName);
-        //     });
-
 
         var app = builder.Build();
 

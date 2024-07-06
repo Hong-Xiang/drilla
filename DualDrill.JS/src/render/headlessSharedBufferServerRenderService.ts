@@ -17,8 +17,8 @@ export async function createHeadlessSharedBufferServerRenderService(): Promise<R
   const canvas = document.createElement("canvas");
   // const width = 1472;
   // const height = 936 * 2;
-  const width = 512;
-  const height = 512;
+  const width = 800;
+  const height = 600;
 
 
 
