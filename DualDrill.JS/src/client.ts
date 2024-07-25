@@ -47,7 +47,7 @@ export function SignalRConnectionId() {
 }
 
 export async function Initialization(blazorServerService?: DotNetObject) {
-  console.log('initialization called');
+  console.log("initialization called");
   await SignalRConnection.start();
   if (blazorServerService) {
     BlazorServerService = blazorServerService;
@@ -296,4 +296,61 @@ export function addDataChannelLogMessageListener(channel: RTCDataChannel) {
       channel.removeEventListener("message", h);
     },
   };
+}
+
+export async function CreateSimpleRTCClient(divE: HTMLDivElement) {
+  const video = document.createElement("video");
+  video.autoplay = true;
+  video.playsInline = true;
+  divE.appendChild(video);
+
+  const pc = new RTCPeerConnection({ iceServers: [] });
+
+  //pc.ontrack = evt => document.querySelector('#videoCtl').srcObject = evt.streams[0];
+  pc.onicecandidate = (evt) => {
+    // if (evt.candidate) {
+    //   fetch("api/rtcclient/candidate", {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "text/plain",
+    //     },
+    //     body: JSON.stringify(evt.candidate),
+    //   });
+    // }
+  };
+
+  pc.ontrack = (t) => {
+    console.log("received track");
+    video.srcObject = t.streams[0];
+  };
+
+  // Diagnostics.
+  pc.onicegatheringstatechange = () =>
+    console.log("onicegatheringstatechange: " + pc.iceGatheringState);
+  pc.oniceconnectionstatechange = () =>
+    console.log("oniceconnectionstatechange: " + pc.iceConnectionState);
+  pc.onsignalingstatechange = () =>
+    console.log("onsignalingstatechange: " + pc.signalingState);
+  pc.onconnectionstatechange = () =>
+    console.log("onconnectionstatechange: " + pc.connectionState);
+
+  const offer = await pc.createOffer({
+    offerToReceiveVideo: true,
+  });
+  await pc.setLocalDescription(offer);
+  const answer = await fetch(`api/rtcclient`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain",
+    },
+    body: offer.sdp,
+  });
+  const answerSdp = await answer.text();
+  console.log("got answer", answerSdp);
+  await pc.setRemoteDescription({
+    type: "answer",
+
+    sdp: answerSdp,
+  });
+  return video;
 }

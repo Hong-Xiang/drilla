@@ -3,6 +3,7 @@ using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Graphics;
 using DualDrill.Server.Application;
+using MessagePipe;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
 using System.Collections.Concurrent;
@@ -11,12 +12,22 @@ using System.Threading.Channels;
 
 namespace DualDrill.Server.Browser;
 
-class BrowserClient(IJSRuntime JSRuntime,
-                    JSClientModule ModuleValue,
-                    IHubContext<DrillHub, IDrillHubClient> SignalRHub,
-                    string SignalRConnectionId)
+class BrowserClient
    : IClient
 {
+    public BrowserClient(IJSRuntime jsRuntime,
+                         JSClientModule moduleValue,
+                         IHubContext<DrillHub, IDrillHubClient> signalRHub,
+                         string signalRConnectionId,
+                         ISubscriber<IClient> onPeerConnected)
+    {
+        JSRuntime = jsRuntime;
+        ModuleValue = moduleValue;
+        SignalRHub = signalRHub;
+        SignalRConnectionId = signalRConnectionId;
+        OnPeerConnected = onPeerConnected;
+    }
+
     public Guid Id { get; } = Guid.NewGuid();
     private Uri? uri;
     public Uri Uri
@@ -27,10 +38,21 @@ class BrowserClient(IJSRuntime JSRuntime,
             return uri;
         }
     }
-    public IJSRuntime JSRuntime { get; } = JSRuntime;
+    public IJSRuntime JSRuntime { get; }
+    public JSClientModule ModuleValue { get; }
+    public IHubContext<DrillHub, IDrillHubClient> SignalRHub { get; }
+    public string SignalRConnectionId { get; }
     public JSMediaStreamProxy? MediaStream { get; set; }
 
     public ConcurrentDictionary<Uri, Channel<object>> EventChannels = [];
+    public ISubscriber<IClient> OnPeerConnected { get; }
+    private IDisposablePublisher<IClient> connected { get; }
+
+
+    public void Connected(IClient client)
+    {
+        connected.Publish(client);
+    }
 
     public ValueTask<JSClientModule> Module
     {
@@ -52,6 +74,8 @@ class BrowserClient(IJSRuntime JSRuntime,
     }
 
     private string? ConnectionId { get; set; }
+
+
     public async ValueTask<string> GetConnectionId()
     {
         if (ConnectionId is null)

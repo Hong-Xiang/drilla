@@ -5,6 +5,7 @@ using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Headless;
 using DualDrill.Server.WebView;
+using DualDrill.Server.Services;
 
 namespace DualDrill.Server;
 
@@ -22,6 +23,8 @@ public class Program
         {
         });
 
+        builder.Services.AddMessagePipe();
+
         builder.Services.AddSingleton<PeerClientConnectionService>();
 
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.TriangleRenderer>();
@@ -38,12 +41,14 @@ public class Program
 
         builder.Services.AddSingleton<FrameInputService>();
         builder.Services.AddSingleton<FrameSimulationService>();
+        builder.Services.AddSingleton<RTCDemoVideoSource>();
         builder.Services.AddSingleton<IFrameService, FrameService>();
         builder.Services.AddHostedService<DevicePollHostedService>();
         builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
 
         builder.Services.AddSingleton<WebViewService>();
-        builder.Services.AddHostedService<WebViewWindowHostedService>();
+        //builder.Services.AddHostedService<WebViewWindowHostedService>();
+        builder.Services.AddHostedService<VideoPushHostedService>();
         //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();

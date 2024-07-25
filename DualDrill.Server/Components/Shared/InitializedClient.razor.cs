@@ -3,6 +3,7 @@ using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
+using MessagePipe;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Collections.Immutable;
@@ -28,7 +29,9 @@ public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
 
     [Parameter]
     public JSRenderService RenderService { get; set; } = default!;
+    [Inject] ISubscriber<ImmutableArray<IClient>> ClientConnectionChanged { get; set; }
 
+    readonly SingleAssignmentDisposable Subscription = new();
     ElementReference RenderRootElement;
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -36,6 +39,7 @@ public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
         if (firstRender)
         {
             UpdatePeerClients(ClientHub.Clients);
+            Subscription.Disposable = ClientConnectionChanged.Subscribe(UpdatePeerClients);
             ClientHub.OnClientChanges += UpdatePeerClients;
         }
         if (RenderService is not null)
@@ -56,6 +60,15 @@ public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
     {
         UpdatePeerClients(ClientHub.Clients);
     }
+    async ValueTask UpdatePeerClientsAsync(ImmutableArray<IClient> peerClients, CancellationToken cancellation = default)
+    {
+        await InvokeAsync(() =>
+        {
+            PeerClientCandidates = [.. peerClients.Where(c => c.Uri != Client.Uri)];
+            StateHasChanged();
+        });
+    }
+
 
     void UpdatePeerClients(ImmutableArray<IClient> peerClients)
     {

@@ -1,12 +1,16 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MessagePipe;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 
 namespace DualDrill.Engine.Connection;
 
-public sealed class ClientStore(ILogger<ClientStore> Logger) : IDisposable
+public sealed class ClientStore(
+    ILogger<ClientStore> Logger,
+    IPublisher<ImmutableArray<IClient>> ClientConnectionChanged) : IDisposable
 {
+
     readonly ConcurrentDictionary<Uri, IClient> ClientsStore = new();
 
     readonly BehaviorSubject<ImmutableArray<IClient>> ClientsSubject = new([]);
@@ -28,6 +32,7 @@ public sealed class ClientStore(ILogger<ClientStore> Logger) : IDisposable
         {
             Logger.LogError("Failed to add client with id {ClientUri}", client.Uri);
         }
+        ClientConnectionChanged.Publish(Clients);
         OnClientChanges?.Invoke(Clients);
     }
 
@@ -37,6 +42,7 @@ public sealed class ClientStore(ILogger<ClientStore> Logger) : IDisposable
         {
             Logger.LogError("Failed to remove client with uri {ClientUri}", client.Uri);
         }
+        ClientConnectionChanged.Publish(Clients);
         OnClientChanges?.Invoke(Clients);
     }
 

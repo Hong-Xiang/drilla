@@ -1,7 +1,6 @@
 ﻿using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Disposable;
-using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;

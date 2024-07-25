@@ -8,18 +8,18 @@ public sealed class HeadlessSurface : IGPUSurface
 {
     public sealed class Option
     {
-        //public int Width { get; set; } = 1472;
-        //public int Height { get; set; } = 936 * 2;
-        public int Width { get; set; } = 800;
-        public int Height { get; set; } = 600;
+        public int Width { get; set; } = 1472;
+        public int Height { get; set; } = 936 * 2;
+        //public int Width { get; set; } = 800;
+        //public int Height { get; set; } = 600;
         public int SlotCount { get; set; } = 3;
         public GPUTextureFormat Format { get; set; } = GPUTextureFormat.BGRA8UnormSrgb;
     }
     private readonly Channel<HeadlessRenderTarget> RenderTargetChannel;
     private readonly Channel<(HeadlessRenderTarget, ReadOnlyMemory<byte>)> PresentedTargetChannel;
     GPUDevice Device;
-    readonly int Width;
-    readonly int Height;
+    public readonly int Width;
+    public readonly int Height;
     HeadlessRenderTarget? CurrentTarget = null;
     public HeadlessSurface(GPUDevice device, Option option)
     {

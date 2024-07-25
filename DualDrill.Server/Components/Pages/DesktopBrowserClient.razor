@@ -3,6 +3,8 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <h3>Desktop Client</h3>
+<button @onclick="StartRTC">Start RTC</button>
+<div @ref="SimpleRTCRef"></div> 
 @if (Module is null)
 {
     <div>Initializing Client ...</div>

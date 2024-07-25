@@ -1,4 +1,5 @@
 ﻿using DualDrill.Engine.WebRTC;
+using MessagePipe;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,10 @@ public interface IClient
     public ValueTask<IAsyncEnumerable<T>> SubscribeDataStream<T>(Uri uri);
     public ValueTask HubInvokeAsync(Func<object, ValueTask> func);
     public Channel<object> GetOrAddEventChannel(Uri uri);
+    ISubscriber<IClient> OnPeerConnected { get; }
 }
+
+
 
 public interface IClientAsyncCommand<in TClient, T>
     where TClient : IClient

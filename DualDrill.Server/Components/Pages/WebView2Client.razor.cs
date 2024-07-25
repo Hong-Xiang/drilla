@@ -1,21 +1,11 @@
-using DualDrill.Engine;
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
-using DualDrill.Engine.WebRTC;
-using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
-using DualDrill.Server.CustomEvents;
-using DualDrill.Server.Services;
 using DualDrill.Server.WebView;
+using MessagePipe;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
-using SIPSorcery.Net;
-using System.Collections.Immutable;
-using System.Numerics;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
 
 namespace DualDrill.Server.Components.Pages;
 
@@ -25,6 +15,7 @@ public partial class WebView2Client : IAsyncDisposable
     [Inject] ILogger<WebView2Client> Logger { get; set; } = default!;
     [Inject] IHubContext<DrillHub, IDrillHubClient> HubContext { get; set; } = default!;
     [Inject] IJSRuntime jsRuntime { get; set; }
+    [Inject] ISubscriber<IClient> OnPeerConnected { get; set; }
     BrowserClient? Client { get; set; }
     JSClientModule Module { get; set; } = default;
     [Inject] WebViewService WebViewService { get; set; } = default!;
@@ -36,7 +27,7 @@ public partial class WebView2Client : IAsyncDisposable
         {
             Module = await JSClientModule.CreateAsync(jsRuntime);
             var connectionId = await Module.GetSignalRConnectionIdAsync();
-            Client = new BrowserClient(jsRuntime, Module, HubContext, connectionId);
+            Client = new BrowserClient(jsRuntime, Module, HubContext, connectionId, OnPeerConnected);
             ClientHub.AddClient(Client);
             RenderService = new(await Module.CreateHeadlessSharedBufferServerRenderService());
             //RenderService = new(await Client.Module.CreateHeadlessServerRenderService());
