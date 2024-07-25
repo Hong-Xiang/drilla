@@ -39,35 +39,3 @@ public sealed class ContextDisposableCollection : IDisposable
         GC.SuppressFinalize(this);
     }
 }
-
-public sealed class ContextAsyncDisposableCollection : IAsyncDisposable
-{
-    private readonly ConcurrentStack<IAsyncDisposable> Disposables = [];
-
-    public void Add(IAsyncDisposable disposable)
-    {
-        Disposables.Push(disposable);
-    }
-
-    public void Add(IDisposable disposable)
-    {
-        Disposables.Push(new DisposableAsyncWrapper(disposable));
-    }
-
-    sealed record class DisposableAsyncWrapper(IDisposable Disposable) : IAsyncDisposable
-    {
-        public ValueTask DisposeAsync()
-        {
-            Disposable.Dispose();
-            return ValueTask.CompletedTask;
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        foreach (var disposable in Disposables)
-        {
-            await disposable.DisposeAsync().ConfigureAwait(false);
-        }
-    }
-}

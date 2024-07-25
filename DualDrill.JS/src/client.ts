@@ -311,7 +311,7 @@ export async function CreateSimpleRTCClient(divE: HTMLDivElement) {
     console.log(evt.candidate);
     if (evt.candidate) {
       SignalRConnection.invoke(
-        "IceCandidateFromClient",
+        "AddIceCandidate",
         JSON.stringify(evt.candidate)
       );
     }

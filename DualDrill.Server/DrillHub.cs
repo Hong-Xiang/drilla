@@ -1,12 +1,8 @@
 ﻿using DualDrill.Engine;
 using DualDrill.Server.Services;
-using DualDrill.Server.WebView;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.JSInterop;
 using SIPSorcery.Net;
-using SIPSorceryMedia.Abstractions;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -25,17 +21,17 @@ sealed class DrillHub(
     RTCDemoVideoSource VideoSource,
     FrameSimulationService UpdateService,
     ILogger<DrillHub> Logger,
-    IHubContext<DrillHub, IDrillHubClient> HubContext,
-    WebViewService WebView) : Hub<IDrillHubClient>
+    IHubContext<DrillHub, IDrillHubClient> HubContext) : Hub<IDrillHubClient>
 {
     static readonly string RTCConnectionKey = "RTCConnection";
 
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
+        Logger.LogInformation("{ConnectionId} Connected", Context.ConnectionId);
     }
 
-    public async Task IceCandidateFromClient(string data)
+    public async Task AddIceCandidate(string data)
     {
         var c = JsonSerializer.Deserialize<RTCIceCandidateInit>(data);
         if (c is not null)
@@ -46,10 +42,6 @@ sealed class DrillHub(
 
     public async ValueTask<string> CreatePeerConnection(string offer)
     {
-        if (RTCPeerConnection is not null)
-        {
-
-        }
         var connectionId = Context.ConnectionId;
         var pc = new RTCPeerConnection(new RTCConfiguration
         {
@@ -128,9 +120,16 @@ sealed class DrillHub(
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        Logger.LogWarning($"{Context.ConnectionId} SignalR Disconnected");
         RTCPeerConnection?.Dispose();
         await base.OnDisconnectedAsync(exception);
+        if (exception is not null)
+        {
+            Logger.LogError(exception, "{ConnectionId} Disconnected With Expcetion", Context.ConnectionId);
+        }
+        else
+        {
+            Logger.LogInformation("{ConnectionId} Disconnected", Context.ConnectionId);
+        }
     }
 
     public async Task<string> DoHubInvokeAsync(string funcHandle)
@@ -152,31 +151,9 @@ sealed class DrillHub(
             yield return e;
         }
     }
-    public async IAsyncEnumerable<SharedBufferMessage> SharedBufferServerRenderingReadable(CancellationToken cancellation)
-    {
-        await foreach (var b in WebView.GetAllReadableSlotsAsync(cancellation).ConfigureAwait(false))
-        {
-            yield return b.Message;
-        }
-    }
-
-
-    public async Task SharedBufferServerRenderingWriteable(ChannelReader<SharedBufferMessage> writeable)
-    {
-        await foreach (var m in writeable.ReadAllAsync(Context.ConnectionAborted).ConfigureAwait(false))
-        {
-            await WebView.SetReadyToWriteAsync(m, Context.ConnectionAborted);
-        }
-    }
 
     public async Task MouseEvent(ChannelReader<MouseEvent> events, [FromServices] FrameInputService inputService)
     {
-        //var writer = UpdateService.MouseEvents.Writer;
-        //await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
-        //{
-        //    await writer.WriteAsync(e).ConfigureAwait(false);
-        //}
-
         inputService.AddUserEventSource(Context.ConnectionId, events);
         var tcs = new TaskCompletionSource();
         if (Context.ConnectionAborted.IsCancellationRequested)

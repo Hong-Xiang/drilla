@@ -1,9 +1,4 @@
 ﻿using DualDrill.Graphics;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using System.Buffers;
-using System.Collections.Concurrent;
-using System.Threading.Channels;
 
 namespace DualDrill.Engine.Renderer;
 
@@ -16,17 +11,7 @@ public sealed class TriangleRenderer : IDisposable
     GPUPipelineLayout PipelineLayout { get; set; }
     GPURenderPipeline Pipeline { get; set; }
 
-    public readonly int Width = 1472;
-    public readonly int Height = 936 * 2;
-
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
-
-    readonly record struct RenderRequest(
-        double Time,
-        TaskCompletionSource<Image<Bgra32>> ResultCompletionSource
-    )
-    {
-    }
 
     private const string SHADER = @"@vertex
 fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4<f32> {
@@ -93,7 +78,6 @@ fn fs_main() -> @location(0) vec4<f32> {
                         B = 0,
                         A = 1
                     }
-
                 }
             ]
         });
@@ -105,8 +89,6 @@ fn fs_main() -> @location(0) vec4<f32> {
         using var drawCommands = encoder.Finish(new());
         queue.Submit([drawCommands]);
     }
-
-
 
     public void Dispose()
     {

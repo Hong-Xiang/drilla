@@ -1,12 +1,5 @@
 ﻿using FFmpeg.AutoGen;
 using SIPSorceryMedia.Abstractions;
-using System.Runtime.InteropServices;
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using FFmpeg.AutoGen;
-using Microsoft.Extensions.Logging;
-using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.FFmpeg;
 using System.Buffers;
 

@@ -72,6 +72,35 @@ public sealed partial class GPUDevice
         return new GPUTexture(WGPU.wgpuDeviceCreateTexture(Handle, &native));
     }
 
+    public unsafe GPUBindGroup CreateBindGroup(GPUBindGroupDescriptor descriptor)
+    {
+        var entries = stackalloc WGPUBindGroupEntry[descriptor.Entries.Length];
+        var entryIndex = 0;
+        using var label = NativeStringRef.Create(descriptor.Label);
+        foreach (var entry in descriptor.Entries.Span)
+        {
+            entries[entryIndex] = new WGPUBindGroupEntry()
+            {
+                binding = (uint)entry.Binding,
+                buffer = entry.Buffer is GPUBuffer b ? b.NativePointer : null,
+                offset = entry.Offset,
+                size = entry.Size,
+                sampler = entry.Sampler is GPUSampler s ? s.NativePointer : null,
+                textureView = entry.TextureView is GPUTextureView v ? v.NativePointer : null
+            };
+            entryIndex++;
+        }
+        
+
+        WGPUBindGroupDescriptor nativeDescriptor = new()
+        {
+            label = (sbyte*)label.Handle,
+            layout = descriptor.Layout.Handle,
+            entries = entries
+        };
+        return new GPUBindGroup(WGPU.wgpuDeviceCreateBindGroup(Handle, &nativeDescriptor));
+    }
+
     public unsafe GPUPipelineLayout CreatePipelineLayout(GPUPipelineLayoutDescriptor descriptor)
     {
         WGPUPipelineLayoutDescriptor native = default;

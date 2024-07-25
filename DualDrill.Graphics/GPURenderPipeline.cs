@@ -12,6 +12,12 @@ namespace DualDrill.Graphics;
 
 public sealed partial class GPURenderPipeline
 {
+
+    public unsafe GPUBindGroupLayout GetBindGroupLayout(int index)
+    {
+        return new GPUBindGroupLayout(WGPU.wgpuRenderPipelineGetBindGroupLayout(Handle, (uint)index));
+    }
+
     public static unsafe GPURenderPipeline Create(GPUDevice device, GPURenderPipelineDescriptor descriptor)
     {
         WGPURenderPipelineDescriptor nativeDescriptor = default;
@@ -65,6 +71,7 @@ public sealed partial class GPURenderPipeline
                     module = descriptor.Vertex.Module.Handle,
                     entryPoint = (sbyte*)vertexEntryPoint.Handle,
                     constantCount = (nuint) descriptor.Vertex.Constants.Length,
+                    bufferCount = (nuint)descriptor.Vertex.Buffers.Length,
                 },
                 primitive =
                 {
@@ -83,6 +90,16 @@ public sealed partial class GPURenderPipeline
                 //DepthStencil = null,
                 //layout = PipelineLayout
             };
+
+            if(descriptor.Vertex.Buffers.Length > 0)
+            {
+                var vertexBuffer = stackalloc WGPUVertexState[descriptor.Vertex.Buffers.Length];
+                var index = 0;
+                foreach(var buffer in descriptor.Vertex.Buffers)
+                {
+                    index++;
+                }
+            }
 
             var handle = WGPU.wgpuDeviceCreateRenderPipeline(device.Handle, &renderPipelineDescriptor);
             return new(handle);

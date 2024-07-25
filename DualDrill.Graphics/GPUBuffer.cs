@@ -59,7 +59,10 @@ public sealed partial class GPUBuffer
     {
         return new ReadOnlySpan<byte>(WGPU.wgpuBufferGetConstMappedRange(Handle, (nuint)offset, (nuint)size), size);
     }
-
+    unsafe public Span<byte> GetMappedRange(int offset, int size)
+    {
+        return new Span<byte>(WGPU.wgpuBufferGetMappedRange(Handle, (nuint)offset, (nuint)size), size);
+    }
     unsafe public void Unmap()
     {
         WGPU.wgpuBufferUnmap(Handle);

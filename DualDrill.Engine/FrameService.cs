@@ -11,15 +11,19 @@ public sealed class FrameService : IFrameService, IDisposable
 {
     public ILogger<FrameService> Logger { get; }
     readonly TriangleRenderer Renderer;
+    readonly RotateCubeRenderer CubeRenderer;
     readonly GPUDevice Device;
     public FrameService(
         ILogger<FrameService> logger,
         GPUDevice device,
-        TriangleRenderer renderer)
+        TriangleRenderer renderer,
+        RotateCubeRenderer cubeRenderer
+        )
     {
         Logger = logger;
         Device = device;
         Renderer = renderer;
+        CubeRenderer = cubeRenderer;
     }
     public async ValueTask OnFrameAsync(FrameContext frameContext, CancellationToken cancellation)
     {
@@ -27,7 +31,7 @@ public sealed class FrameService : IFrameService, IDisposable
         var texture = frameContext.Surface.GetCurrentTexture();
         if (texture is not null)
         {
-            await Renderer.RenderAsync(frameContext.FrameIndex, queue, texture);
+            await CubeRenderer.RenderAsync(frameContext.FrameIndex, queue, texture);
         }
     }
 

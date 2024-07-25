@@ -20,6 +20,15 @@ public sealed partial class GPURenderPassEncoder
     {
         WGPU.wgpuRenderPassEncoderDraw(Handle, (uint)vertexCount, (uint)instanceCount, (uint)firstVertex, (uint)firstInstance);
     }
+    public unsafe void SetBindGroup(int index, GPUBindGroup group)
+    {
+        WGPU.wgpuRenderPassEncoderSetBindGroup(Handle, (uint)index, group.Handle, 0, null);
+    }
+
+    public unsafe void SetVertexBuffer(int index, GPUBuffer buffer, ulong offset, ulong size)
+    {
+        WGPU.wgpuRenderPassEncoderSetVertexBuffer(Handle, (uint)index, buffer.Handle, offset, size);
+    }
 
     public unsafe void End()
     {

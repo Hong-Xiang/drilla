@@ -4,7 +4,6 @@ using DualDrill.Engine;
 using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Headless;
-using DualDrill.Server.WebView;
 using DualDrill.Server.Services;
 using Serilog.Extensions.Logging;
 using Serilog;
@@ -43,6 +42,7 @@ public class Program
         builder.Services.AddSingleton<PeerClientConnectionService>();
 
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.TriangleRenderer>();
+        builder.Services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
         builder.Services.AddSingleton<HeadlessSurface>(sp =>
         {
             var option = builder.Configuration.Get<HeadlessSurface.Option>();
@@ -61,8 +61,6 @@ public class Program
         builder.Services.AddHostedService<DevicePollHostedService>();
         builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
 
-        builder.Services.AddSingleton<WebViewService>();
-        //builder.Services.AddHostedService<WebViewWindowHostedService>();
         builder.Services.AddHostedService<VideoPushHostedService>();
         //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
