@@ -6,6 +6,7 @@ using SIPSorcery.SIP.App;
 using SIPSorceryMedia.Abstractions;
 using System.IO;
 using System.Text;
+using static DualDrill.Server.Services.RTCDemoVideoSource;
 
 namespace DualDrill.Server.WebApi;
 
@@ -20,21 +21,31 @@ public class RTCClientController(RTCDemoVideoSource VideoSource) : ControllerBas
         return "";
     }
 
+
+
     [HttpPost]
     public async Task<string> CreatePeerAsync()
     {
+        throw new NotSupportedException();
         string offerSdp = null;
         using (var reader = new StreamReader(Request.Body, Encoding.UTF8))
         {
             offerSdp = await reader.ReadToEndAsync();
         }
         var pc = new RTCPeerConnection();
-        pc.addTrack(VideoSource.VideoTrack);
+        //pc.addTrack(VideoSource.VideoTrack);
 
-        VideoSource.OnVideoSourceEncodedSample += (duration, buffer) =>
+        void sendVideo(uint duration, VideoFrameBuffer buffer)
         {
-            pc.SendVideo(duration, buffer.Memory.ToArray());
-        };
+            Task.Run(() =>
+            {
+                if (pc.connectionState == RTCPeerConnectionState.connected)
+                {
+                    //pc.SendVideo(duration, buffer.Memory.ToArray());
+                }
+            });
+        }
+
 
         pc.OnVideoFormatsNegotiated += (formats) => VideoSource.SetVideoSourceFormat(formats.First());
 
@@ -46,12 +57,14 @@ public class RTCClientController(RTCDemoVideoSource VideoSource) : ControllerBas
                     {
                         case RTCPeerConnectionState.connected:
                             await VideoSource.StartVideo();
+                            VideoSource.OnVideoSourceEncodedSample += sendVideo;
                             Console.WriteLine("RTC Connected");
                             break;
                         case RTCPeerConnectionState.failed:
                             pc.Close("ice disconnection");
                             break;
                         case RTCPeerConnectionState.closed:
+                            VideoSource.OnVideoSourceEncodedSample -= sendVideo;
                             await VideoSource.CloseVideo();
                             Console.WriteLine("RTC Disconnected");
                             break;

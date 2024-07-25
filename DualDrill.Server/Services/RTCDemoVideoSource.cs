@@ -18,15 +18,16 @@ public sealed class RTCDemoVideoSource
     public RTCDemoVideoSource(ILogger<RTCDemoVideoSource> logger)
     {
         var ffmpegLibFullPath = "C:\\Users\\Xiang\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg.Shared_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-6.1.1-full_build-shared\\bin";
+        //string? ffmpegLibFullPath = null;
         SIPSorceryMedia.FFmpeg.FFmpegInit.Initialise(SIPSorceryMedia.FFmpeg.FfmpegLogLevelEnum.AV_LOG_VERBOSE, ffmpegLibFullPath, logger);
         Console.WriteLine(ffmpeg.RootPath);
         VideoEncoder = new();
         long bitrate = 1024L * 1024 * 1024;
         VideoEncoder.SetBitrate(bitrate, 512 * 1024 * 1024, bitrate, bitrate);
-        VideoTrack = new(VideoEncoder.SupportedFormats, MediaStreamStatusEnum.SendOnly);
+        //VideoTrack = new(VideoEncoder.SupportedFormats, MediaStreamStatusEnum.SendOnly);
     }
     public DrillFFmpegVideoEncoder VideoEncoder { get; }
-    public MediaStreamTrack VideoTrack { get; }
+    //public MediaStreamTrack VideoTrack { get; }
 
     public event EncodedFrameBufferSampleDelegate OnVideoSourceEncodedSample;
     public event RawVideoSampleDelegate OnVideoSourceRawSample;

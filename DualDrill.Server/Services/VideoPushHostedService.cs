@@ -9,15 +9,21 @@ public sealed class VideoPushHostedService(
     ILogger<VideoPushHostedService> Logger
 ) : BackgroundService
 {
+    private int count = 0;
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var datas = Surface.GetAllPresentedDataAsync(stoppingToken);
         await foreach (var data in datas)
         {
-            VideoSource.EncodeVideo(
-                Surface.Width,
-                Surface.Height,
-                data.ToArray());
+            if (count % 3 == 0)
+            {
+                VideoSource.EncodeVideo(
+                    Surface.Width,
+                    Surface.Height,
+                    data.Span);
+            }
+            count++;
+
         }
     }
 }

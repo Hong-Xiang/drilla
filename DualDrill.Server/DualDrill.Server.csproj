@@ -14,6 +14,10 @@
 		<PackageReference Include="Autofac" Version="8.0.0" />
 		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2535.41" />
+		<PackageReference Include="pythonnet" Version="3.0.3" />
+		<PackageReference Include="Serilog" Version="4.0.1" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="SIPSorceryMedia.FFmpeg" Version="1.4.1" />
 		<ProjectReference Include="..\DualDrill.Client\DualDrill.Client.csproj" />
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />

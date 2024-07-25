@@ -308,6 +308,14 @@ export async function CreateSimpleRTCClient(divE: HTMLDivElement) {
 
   //pc.ontrack = evt => document.querySelector('#videoCtl').srcObject = evt.streams[0];
   pc.onicecandidate = (evt) => {
+    console.log(evt.candidate);
+    if (evt.candidate) {
+      SignalRConnection.invoke(
+        "IceCandidateFromClient",
+        JSON.stringify(evt.candidate)
+      );
+    }
+    // console.log("onicecandidate", evt);
     // if (evt.candidate) {
     //   fetch("api/rtcclient/candidate", {
     //     method: "POST",
@@ -317,6 +325,9 @@ export async function CreateSimpleRTCClient(divE: HTMLDivElement) {
     //     body: JSON.stringify(evt.candidate),
     //   });
     // }
+  };
+  pc.onnegotiationneeded = (e) => {
+    console.log("onnegotiationneeded", e);
   };
 
   pc.ontrack = (t) => {
@@ -338,19 +349,25 @@ export async function CreateSimpleRTCClient(divE: HTMLDivElement) {
     offerToReceiveVideo: true,
   });
   await pc.setLocalDescription(offer);
-  const answer = await fetch(`api/rtcclient`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain",
-    },
-    body: offer.sdp,
+  SignalRConnection.on("IceCandidate", (candidate) => {
+    console.log(candidate);
   });
-  const answerSdp = await answer.text();
-  console.log("got answer", answerSdp);
+  // const answer = await fetch(`api/rtcclient`, {
+  //   method: "POST",
+  //   headers: {
+  //     "Content-Type": "text/plain",
+  //   },
+  //   body: offer.sdp,
+  // });
+  const answer = await SignalRConnection.invoke(
+    "CreatePeerConnection",
+    offer.sdp
+  );
+  // const answerSdp = await answer.text();
+  console.log("got answer", answer);
   await pc.setRemoteDescription({
     type: "answer",
-
-    sdp: answerSdp,
+    sdp: answer,
   });
   return video;
 }
