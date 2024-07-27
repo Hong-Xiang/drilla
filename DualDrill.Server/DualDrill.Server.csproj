@@ -18,6 +18,10 @@
 		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="SIPSorceryMedia.FFmpeg" Version="1.4.1" />
+		<PackageReference Include="Veldrid" Version="4.9.0" />
+		<PackageReference Include="Veldrid.SPIRV" Version="1.0.15" />
+		<PackageReference Include="Veldrid.Utilities" Version="4.9.0" />
+		<PackageReference Include="Vortice.Vulkan" Version="1.9.4" />
 		<ProjectReference Include="..\DualDrill.Client\DualDrill.Client.csproj" />
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 		<ProjectReference Include="..\DualDrill.Engine\DualDrill.Engine.csproj" />

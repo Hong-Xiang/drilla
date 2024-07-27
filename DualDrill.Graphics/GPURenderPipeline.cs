@@ -64,6 +64,7 @@ public sealed partial class GPURenderPipeline
                 fragment.targets = targets;
             }
 
+
             var renderPipelineDescriptor = new WGPURenderPipelineDescriptor
             {
                 vertex =
@@ -88,18 +89,49 @@ public sealed partial class GPURenderPipeline
                 },
                 fragment = descriptor.Fragment.HasValue ? &fragment : null,
                 //DepthStencil = null,
-                //layout = PipelineLayout
+                //layout = descriptor.Layout.Handle,
+                layout = null
             };
 
-            if(descriptor.Vertex.Buffers.Length > 0)
+            var vertexBuffer = stackalloc WGPUVertexBufferLayout[descriptor.Vertex.Buffers.Length];
+            var attributesTotalCount = 0;
             {
-                var vertexBuffer = stackalloc WGPUVertexState[descriptor.Vertex.Buffers.Length];
                 var index = 0;
-                foreach(var buffer in descriptor.Vertex.Buffers)
+                foreach (var buffer in descriptor.Vertex.Buffers.Span)
                 {
+                    vertexBuffer[index] = new WGPUVertexBufferLayout
+                    {
+                        arrayStride = buffer.ArrayStride,
+                        attributeCount = (nuint)buffer.Attributes.Length,
+                    };
+                    attributesTotalCount += buffer.Attributes.Length;
                     index++;
                 }
             }
+            var attributes = stackalloc WGPUVertexAttribute[attributesTotalCount];
+            {
+                var bufferIndex = 0;
+                var attributeIndex = 0;
+                foreach (var buffer in descriptor.Vertex.Buffers.Span)
+                {
+                    vertexBuffer[bufferIndex].attributes = &attributes[attributeIndex];
+                    foreach (var attribute in buffer.Attributes.Span)
+                    {
+                        attributes[attributeIndex] = new WGPUVertexAttribute
+                        {
+                            format = (WGPUVertexFormat)attribute.Format,
+                            offset = attribute.Offset,
+                            shaderLocation = (uint)attribute.ShaderLocation
+                        };
+                        Console.WriteLine(attributes[attributeIndex].format);
+                        Console.WriteLine(attribute.Format);
+                        attributeIndex++;
+                    }
+
+                    bufferIndex++;
+                }
+            }
+            renderPipelineDescriptor.vertex.buffers = descriptor.Vertex.Buffers.Length > 0 ? vertexBuffer : null;
 
             var handle = WGPU.wgpuDeviceCreateRenderPipeline(device.Handle, &renderPipelineDescriptor);
             return new(handle);

@@ -90,7 +90,7 @@ public sealed partial class GPUDevice
             };
             entryIndex++;
         }
-        
+
 
         WGPUBindGroupDescriptor nativeDescriptor = new()
         {
@@ -99,6 +99,28 @@ public sealed partial class GPUDevice
             entries = entries
         };
         return new GPUBindGroup(WGPU.wgpuDeviceCreateBindGroup(Handle, &nativeDescriptor));
+    }
+
+    public unsafe GPUBindGroupLayout CreateBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor)
+    {
+        var entries = stackalloc WGPUBindGroupLayoutEntry[descriptor.Entries.Length];
+        var index = 0;
+        foreach (var entry in descriptor.Entries.Span)
+        {
+            entries[index] = new WGPUBindGroupLayoutEntry
+            {
+                binding = (uint)entry.Binding,
+                visibility = entry.Visibility,
+                buffer = entry.Buffer
+            };
+            index++;
+        }
+        var nativeDescriptor = new WGPUBindGroupLayoutDescriptor
+        {
+            entryCount = (uint)descriptor.Entries.Length,
+            entries = entries
+        };
+        return new(WGPU.wgpuDeviceCreateBindGroupLayout(Handle, &nativeDescriptor));
     }
 
     public unsafe GPUPipelineLayout CreatePipelineLayout(GPUPipelineLayoutDescriptor descriptor)

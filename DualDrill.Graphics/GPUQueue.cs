@@ -20,18 +20,12 @@ public sealed partial class GPUQueue
         }
         WGPU.wgpuQueueSubmit(Handle, (uint)buffers.Length, native);
     }
-    public Task SubmitAsync(ReadOnlySpan<GPUCommandBuffer> buffers)
+
+    public unsafe void WriteBuffer(GPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<byte> data)
     {
-        var tcs = new TaskCompletionSource();
-        OnSubmittedWorkDone(() =>
-        {
-            tcs.SetResult();
-        });
-        Submit(buffers);
-        return tcs.Task;
+        var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(data));
+        WGPU.wgpuQueueWriteBuffer(Handle, buffer.Handle, bufferOffset, ptr, (nuint)data.Length);
     }
-
-
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     unsafe static void QueueWorkDone(WGPUQueueWorkDoneStatus status, void* data)

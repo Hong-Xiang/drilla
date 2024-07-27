@@ -17,6 +17,7 @@ public sealed class RotateCubeRenderer
     GPUPipelineLayout PipelineLayout { get; }
     GPURenderPipeline Pipeline { get; }
     GPUBuffer VertexBuffer { get; }
+    GPUBindGroupLayout BindGroupLayout { get; }
     GPUBindGroup BindGroup { get; }
 
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
@@ -104,7 +105,26 @@ fn fs_main(
     {
         Device = device;
         ShaderModule = Device.CreateShaderModule(SHADER);
-        PipelineLayout = Device.CreatePipelineLayout(new GPUPipelineLayoutDescriptor());
+        //BindGroupLayout = Device.CreateBindGroupLayout(new GPUBindGroupLayoutDescriptor
+        //{
+        //    Entries = new[]
+        //    {
+        //        new GPUBindGroupLayoutEntry ()
+        //        {
+        //            Binding = 0,
+        //            Buffer = new GPUBufferBindingLayout()
+        //            {
+        //            }
+        //        }
+        //    }
+        //});
+        //PipelineLayout = Device.CreatePipelineLayout(new GPUPipelineLayoutDescriptor()
+        //{
+        //    BindGroupLayouts = new GPUBindGroupLayout[]
+        //    {
+        //        BindGroupLayout
+        //    }
+        //});
         Pipeline = GPURenderPipeline.Create(Device, new GPURenderPipelineDescriptor()
         {
             Vertex = new GPUVertexState
@@ -169,20 +189,22 @@ fn fs_main(
         var cpuByteData = MemoryMarshal.Cast<float, byte>(cpuData);
         cpuByteData.CopyTo(gpuBuffer);
 
-        BindGroup = Device.CreateBindGroup(new GPUBindGroupDescriptor
-        {
-            Layout = Pipeline.GetBindGroupLayout(0),
-            Entries = new GPUBindGroupEntry[]
-            {
-                new() {
-                Binding = 0,
-                Buffer = VertexBuffer
-                }
-            }
-        });
+        //BindGroup = Device.CreateBindGroup(new GPUBindGroupDescriptor
+        //{
+        //    Layout = Pipeline.GetBindGroupLayout(0),
+        //    Entries = new GPUBindGroupEntry[]
+        //    {
+        //        new() {
+        //        Binding = 0,
+        //        Buffer = VertexBuffer
+        //        }
+        //    }
+        //});
     }
 
     static readonly ulong VertexBufferByteSize = (ulong)(CubeVertexArray.Length * sizeof(float));
+
+    static readonly ReadOnlyMemory<byte> Name = "abc"u8.ToArray();
 
     public async ValueTask RenderAsync(double time, GPUQueue queue, GPUTexture renderTarget)
     {
@@ -207,7 +229,7 @@ fn fs_main(
         });
 
         rp.SetPipeline(Pipeline);
-        rp.SetBindGroup(0, BindGroup);
+        //rp.SetBindGroup(0, BindGroup);
         rp.SetVertexBuffer(0, VertexBuffer, 0, VertexBufferByteSize);
         rp.Draw(3, 1, 0, 0);
         rp.End();

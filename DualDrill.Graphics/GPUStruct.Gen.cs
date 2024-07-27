@@ -354,7 +354,6 @@ public partial struct GPUSamplerDescriptor
 }
 public partial struct GPUBindGroupLayoutDescriptor
 {
-    public nuint EntryCount { get; set; }
     public ReadOnlyMemory<GPUBindGroupLayoutEntry> Entries { get; set; }
     public string? Label { get; set; }
 }
@@ -397,6 +396,16 @@ public partial struct GPUBufferBindingLayout
     public ulong MinBindingSize { get; set; }
     public bool HasDynamicOffset { get; set; }
     public GPUBufferBindingType Type { get; set; }
+
+    public static implicit operator WGPUBufferBindingLayout(GPUBufferBindingLayout layout)
+    {
+        return new WGPUBufferBindingLayout
+        {
+            type = (WGPUBufferBindingType)layout.Type,
+            minBindingSize = layout.MinBindingSize,
+            hasDynamicOffset = layout.HasDynamicOffset ? 1u : 0
+        };
+    }
 }
 public partial struct GPUSamplerBindingLayout { public GPUSamplerBindingType Type { get; set; } }
 public partial struct GPUTextureBindingLayout
