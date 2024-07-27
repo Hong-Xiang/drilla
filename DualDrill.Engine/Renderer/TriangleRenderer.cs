@@ -12,20 +12,14 @@ public sealed class TriangleRenderer : IDisposable
     GPUPipelineLayout PipelineLayout { get; set; }
     GPURenderPipeline Pipeline { get; set; }
     private GPUBuffer VertexBuffer { get; }
+    private GPUBuffer IndexBuffer { get; }
     private float[] VertexData = [
-         // x0, y0
-    -0.5f, -0.5f,
-
-    // x1, y1
-    +0.5f, -0.5f,
-
-    // x2, y2
-    +0.0f, +0.5f,
-       // Add a second triangle:
-    -0.55f, -0.5f,
-    -0.05f, +0.5f,
-    -0.55f, +0.5f
+    -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
+    +0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+    +0.5f, +0.5f, 0.0f, 0.0f, 1.0f,
+    -0.5f, +0.5f, 1.0f, 1.0f, 0.0f
     ];
+    private UInt16[] IndexData = [0, 1, 2, 0, 2, 3];
 
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
@@ -40,14 +34,26 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) ve
 fn fs_main() -> @location(0) vec4<f32> {
     return vec4<f32>(1.0, 1.0, 0.0, 1.0);
 }";
-    private const string SHADER = @"@vertex
-fn vs_main(@location(0) in_vertex_position: vec2f) -> @builtin(position) vec4<f32> {
-    return vec4<f32>(in_vertex_position, 0.0, 1.0);
+    private const string SHADER = @"
+
+struct VertexOutput {
+    @builtin(position) position: vec4f,
+    @location(0)       color: vec3f,
+}
+
+@vertex
+fn vs_main(@location(0) position: vec2f,
+           @location(1) color: vec3f) 
+-> VertexOutput {
+    var out : VertexOutput;
+    out.position =  vec4<f32>(position, 0.0, 1.0);
+    out.color = color;
+    return out;
 }
 
 @fragment
-fn fs_main() -> @location(0) vec4<f32> {
-    return vec4<f32>(1.0, 1.0, 0.0, 1.0);
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    return vec4<f32>(in.color, 1.0);
 }";
 
 
@@ -66,7 +72,7 @@ fn fs_main() -> @location(0) vec4<f32> {
                 Buffers = new[] {
                     new GPUVertexBufferLayout
                     {
-                        ArrayStride = 2 * sizeof(float),
+                        ArrayStride = 5 * sizeof(float),
                         StepMode = GPUVertexStepMode.Vertex,
                         Attributes = new []
                         {
@@ -75,7 +81,13 @@ fn fs_main() -> @location(0) vec4<f32> {
                                 ShaderLocation = 0,
                                 Format = GPUVertexFormat.Float32x2,
                                 Offset = 0
-                            }
+                            },
+                            new GPUVertexAttribute
+                            {
+                                ShaderLocation = 1,
+                                Format = GPUVertexFormat.Float32x3,
+                                Offset = 2 * sizeof(float),
+                            },
                         }
                     }
                 }
@@ -105,7 +117,14 @@ fn fs_main() -> @location(0) vec4<f32> {
             Size = (ulong)VertexData.Length * sizeof(float),
             Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.Vertex
         });
-        Device.GetQueue().WriteBuffer(VertexBuffer, 0, MemoryMarshal.Cast<float, byte>(VertexData));
+        IndexBuffer = Device.CreateBuffer(new GPUBufferDescriptor
+        {
+            Size = (ulong)IndexData.Length * sizeof(UInt16),
+            Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.Index
+        });
+        var queue = Device.GetQueue();
+        queue.WriteBuffer<float>(VertexBuffer, 0, VertexData);
+        queue.WriteBuffer<ushort>(IndexBuffer, 0, IndexData);
     }
 
     public async ValueTask RenderAsync(double time, GPUQueue queue, GPUTexture renderTarget)
@@ -132,7 +151,9 @@ fn fs_main() -> @location(0) vec4<f32> {
 
         rp.SetPipeline(Pipeline);
         rp.SetVertexBuffer(0, VertexBuffer, 0, (ulong)VertexData.Length * sizeof(float));
-        rp.Draw(6, 1, 0, 0);
+        rp.SetIndexBuffer(IndexBuffer, GPUIndexFormat.Uint16, 0, (ulong)IndexData.Length * sizeof(UInt16));
+        //rp.Draw(6, 1, 0, 0);
+        rp.DrawIndexed((uint)IndexData.Length);
         rp.End();
 
         using var drawCommands = encoder.Finish(new());

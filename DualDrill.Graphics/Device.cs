@@ -4,6 +4,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.WebGPU;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -70,6 +71,20 @@ public sealed partial class GPUDevice
             viewFormats = descriptor.ViewFormats.Length > 0 ? viewFormats : null,
         };
         return new GPUTexture(WGPU.wgpuDeviceCreateTexture(Handle, &native));
+    }
+
+    public unsafe GPUBuffer CreateBuffer(GPUBufferDescriptor descriptor)
+    {
+        var alignedSize = (descriptor.Size + 3UL) & ~3UL;
+        Debug.Assert(descriptor.Size == alignedSize, "Buffer byte size should be multiple of 4");
+        WGPUBufferDescriptor nativeDescriptor = new()
+        {
+            mappedAtCreation = descriptor.MappedAtCreation.Value,
+            size = alignedSize,
+            usage = (uint)descriptor.Usage,
+        };
+        var handle = WGPU.wgpuDeviceCreateBuffer(Handle, &nativeDescriptor);
+        return new(handle);
     }
 
     public unsafe GPUBindGroup CreateBindGroup(GPUBindGroupDescriptor descriptor)

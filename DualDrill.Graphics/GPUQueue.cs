@@ -21,10 +21,12 @@ public sealed partial class GPUQueue
         WGPU.wgpuQueueSubmit(Handle, (uint)buffers.Length, native);
     }
 
-    public unsafe void WriteBuffer(GPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<byte> data)
+    public unsafe void WriteBuffer<T>(GPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<T> data)
+        where T : unmanaged
     {
-        var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(data));
-        WGPU.wgpuQueueWriteBuffer(Handle, buffer.Handle, bufferOffset, ptr, (nuint)data.Length);
+        var byteSpan = MemoryMarshal.Cast<T, byte>(data);
+        var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(byteSpan));
+        WGPU.wgpuQueueWriteBuffer(Handle, buffer.Handle, bufferOffset, ptr, (nuint)byteSpan.Length);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]

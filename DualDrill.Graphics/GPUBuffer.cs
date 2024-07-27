@@ -7,18 +7,7 @@ namespace DualDrill.Graphics;
 
 public sealed partial class GPUBuffer
 {
-    public unsafe static GPUBuffer Create(GPUDevice device, in GPUBufferDescriptor descriptor)
-    {
-        WGPUBufferDescriptor nativeDescriptor = new()
-        {
-            mappedAtCreation = descriptor.MappedAtCreation ? 1u : 0u,
-            size = (ulong)descriptor.Size,
-            usage = (uint)descriptor.Usage,
-        };
-        var handle = WGPU.wgpuDeviceCreateBuffer(device.NativePointer, &nativeDescriptor);
-        return new(handle);
-    }
-
+   
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     unsafe static void BufferMapped(WGPUBufferMapAsyncStatus status, void* ptr)
     {

@@ -313,7 +313,7 @@ public partial struct GPUBufferDescriptor
 {
     public GPUBufferUsage Usage { get; set; }
     public ulong Size { get; set; }
-    public bool MappedAtCreation { get; set; }
+    public GPUBool MappedAtCreation { get; set; }
     public string? Label { get; set; }
 }
 public partial struct GPUTextureDescriptor

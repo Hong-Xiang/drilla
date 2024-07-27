@@ -29,7 +29,15 @@ public sealed partial class GPURenderPassEncoder
     {
         WGPU.wgpuRenderPassEncoderSetVertexBuffer(Handle, (uint)index, buffer.Handle, offset, size);
     }
+    public unsafe void SetIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, ulong offset, ulong size)
+    {
+        WGPU.wgpuRenderPassEncoderSetIndexBuffer(Handle, buffer.Handle, (WGPUIndexFormat)indexFormat, offset, size);
+    }
 
+    public unsafe void DrawIndexed(uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int baseVertex = 0, uint firstInstance = 0)
+    {
+        WGPU.wgpuRenderPassEncoderDrawIndexed(Handle, indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
+    }
     public unsafe void End()
     {
         WGPU.wgpuRenderPassEncoderEnd(Handle);
