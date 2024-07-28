@@ -7,13 +7,13 @@ namespace DualDrill.Graphics;
 
 public sealed partial class GPUBuffer
 {
-   
+
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    unsafe static void BufferMapped(WGPUBufferMapAsyncStatus status, void* ptr)
+    unsafe static void BufferMapped(GPUBufferMapAsyncStatus status, void* ptr)
     {
         var handle = GCHandle.FromIntPtr((nint)ptr);
         var target = (TaskCompletionSource?)handle.Target ?? throw new GraphicsApiException($"GCHandle({(nint)ptr:X}) failed to recover target, target {handle.Target}");
-        if (status == WGPUBufferMapAsyncStatus.WGPUBufferMapAsyncStatus_Success)
+        if (status == GPUBufferMapAsyncStatus.Success)
         {
             target.SetResult();
         }
@@ -37,7 +37,7 @@ public sealed partial class GPUBuffer
         using var handle = new DisposableGCHandle(GCHandle.Alloc(data));
         unsafe void goUnsafe(GCHandle tcsHandle, GPUMapMode mode, int offset, int size)
         {
-            WGPU.wgpuBufferMapAsync(Handle, (uint)mode, (uint)offset, (uint)size, &BufferMapped, (void*)GCHandle.ToIntPtr(tcsHandle));
+            WGPU.BufferMapAsync(Handle, (uint)mode, (uint)offset, (uint)size, &BufferMapped, (void*)GCHandle.ToIntPtr(tcsHandle));
         }
         goUnsafe(handle.Handle, mode, offset, size);
         await data.Task.ConfigureAwait(false);
@@ -46,14 +46,14 @@ public sealed partial class GPUBuffer
 
     unsafe public ReadOnlySpan<byte> GetConstMappedRange(int offset, int size)
     {
-        return new ReadOnlySpan<byte>(WGPU.wgpuBufferGetConstMappedRange(Handle, (nuint)offset, (nuint)size), size);
+        return new ReadOnlySpan<byte>(WGPU.BufferGetConstMappedRange(Handle, (nuint)offset, (nuint)size), size);
     }
     unsafe public Span<byte> GetMappedRange(int offset, int size)
     {
-        return new Span<byte>(WGPU.wgpuBufferGetMappedRange(Handle, (nuint)offset, (nuint)size), size);
+        return new Span<byte>(WGPU.BufferGetMappedRange(Handle, (nuint)offset, (nuint)size), size);
     }
     unsafe public void Unmap()
     {
-        WGPU.wgpuBufferUnmap(Handle);
+        WGPU.BufferUnmap(Handle);
     }
 }

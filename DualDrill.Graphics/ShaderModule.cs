@@ -27,7 +27,7 @@ public sealed partial class GPUShaderModule
             code = (sbyte*)nativeCode.Handle,
             chain = new WGPUChainedStruct
             {
-                sType = WGPUSType.WGPUSType_ShaderModuleWGSLDescriptor
+                sType = GPUSType.ShaderModuleWGSLDescriptor
             }
         };
 
@@ -36,7 +36,7 @@ public sealed partial class GPUShaderModule
             nextInChain = &wgslDescriptor.chain,
         };
 
-        var handle = WGPU.wgpuDeviceCreateShaderModule(device.NativePointer, &shaderModuleDescriptor);
+        var handle = WGPU.DeviceCreateShaderModule(device.NativePointer, &shaderModuleDescriptor);
         return new GPUShaderModule(handle);
     }
 }

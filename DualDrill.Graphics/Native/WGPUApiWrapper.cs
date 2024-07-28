@@ -30,126 +30,126 @@ sealed class WGPUApiWrapper
     , INativeDisposer<WGPURenderBundleImpl>
     , INativeDisposer<WGPURenderBundleEncoderImpl>
     , INativeDisposer<WGPUQuerySetImpl>
-    , IStatusIsSuccessApi<WGPURequestAdapterStatus>
-    , IStatusIsSuccessApi<WGPURequestDeviceStatus>
+    , IStatusIsSuccessApi<GPURequestAdapterStatus>
+    , IStatusIsSuccessApi<GPURequestDeviceStatus>
 {
-    public static bool IsSuccess(WGPURequestAdapterStatus status)
+    public static bool IsSuccess(GPURequestAdapterStatus status)
     {
-        return status == WGPURequestAdapterStatus.WGPURequestAdapterStatus_Success;
+        return status == GPURequestAdapterStatus.Success;
     }
 
-    public static bool IsSuccess(WGPURequestDeviceStatus status)
+    public static bool IsSuccess(GPURequestDeviceStatus status)
     {
-        return status == WGPURequestDeviceStatus.WGPURequestDeviceStatus_Success;
+        return status == GPURequestDeviceStatus.Success;
     }
 
     public static unsafe void NativeDispose(WGPUInstanceImpl* handle)
     {
-        WGPU.wgpuInstanceRelease(handle);
+        WGPU.InstanceRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUAdapterImpl* handle)
     {
-        WGPU.wgpuAdapterRelease(handle);
+        WGPU.AdapterRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUSurfaceImpl* handle)
     {
-        WGPU.wgpuSurfaceRelease(handle);
+        WGPU.SurfaceRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUDeviceImpl* handle)
     {
-        WGPU.wgpuDeviceRelease(handle);
+        WGPU.DeviceRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUShaderModuleImpl* handle)
     {
-        WGPU.wgpuShaderModuleRelease(handle);
+        WGPU.ShaderModuleRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUBufferImpl* handle)
     {
-        WGPU.wgpuBufferRelease(handle);
+        WGPU.BufferRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUTextureImpl* handle)
     {
-        WGPU.wgpuTextureRelease(handle);
+        WGPU.TextureRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUSamplerImpl* handle)
     {
-        WGPU.wgpuSamplerRelease(handle);
+        WGPU.SamplerRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUBindGroupImpl* handle)
     {
-        WGPU.wgpuBindGroupRelease(handle);
+        WGPU.BindGroupRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUBindGroupLayoutImpl* handle)
     {
-        WGPU.wgpuBindGroupLayoutRelease(handle);
+        WGPU.BindGroupLayoutRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUPipelineLayoutImpl* handle)
     {
-        WGPU.wgpuPipelineLayoutRelease(handle);
+        WGPU.PipelineLayoutRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPURenderPipelineImpl* handle)
     {
-        WGPU.wgpuRenderPipelineRelease(handle);
+        WGPU.RenderPipelineRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUComputePipelineImpl* handle)
     {
-        WGPU.wgpuComputePipelineRelease(handle);
+        WGPU.ComputePipelineRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUCommandBufferImpl* handle)
     {
-        WGPU.wgpuCommandBufferRelease(handle);
+        WGPU.CommandBufferRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUQueueImpl* handle)
     {
-        WGPU.wgpuQueueRelease(handle);
+        WGPU.QueueRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUTextureViewImpl* handle)
     {
-        WGPU.wgpuTextureViewRelease(handle);
+        WGPU.TextureViewRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUCommandEncoderImpl* handle)
     {
-        WGPU.wgpuCommandEncoderRelease(handle);
+        WGPU.CommandEncoderRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUComputePassEncoderImpl* handle)
     {
-        WGPU.wgpuComputePassEncoderRelease(handle);
+        WGPU.ComputePassEncoderRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPURenderPassEncoderImpl* handle)
     {
-        WGPU.wgpuRenderPassEncoderRelease(handle);
+        WGPU.RenderPassEncoderRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPURenderBundleImpl* handle)
     {
-        WGPU.wgpuRenderBundleRelease(handle);
+        WGPU.RenderBundleRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPURenderBundleEncoderImpl* handle)
     {
-        WGPU.wgpuRenderBundleEncoderRelease(handle);
+        WGPU.RenderBundleEncoderRelease(handle);
     }
 
     public static unsafe void NativeDispose(WGPUQuerySetImpl* handle)
     {
-        WGPU.wgpuQuerySetRelease(handle);
+        WGPU.QuerySetRelease(handle);
     }
 }

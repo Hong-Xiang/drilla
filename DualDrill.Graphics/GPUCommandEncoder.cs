@@ -23,8 +23,8 @@ public sealed partial class GPUCommandEncoder
             colorAttachments[i] = new WGPURenderPassColorAttachment
             {
                 view = c.View.Handle,
-                loadOp = (WGPULoadOp)c.LoadOp,
-                storeOp = (WGPUStoreOp)c.StoreOp,
+                loadOp = (GPULoadOp)c.LoadOp,
+                storeOp = (GPUStoreOp)c.StoreOp,
                 clearValue =
                 {
                     r = c.ClearValue.R,
@@ -44,13 +44,13 @@ public sealed partial class GPUCommandEncoder
             colorAttachments = colorAttachments,
             depthStencilAttachment = descriptor.DepthStencilAttachment.HasValue ? &depthStencilAttachment : null
         };
-        return new(WGPU.wgpuCommandEncoderBeginRenderPass(Handle, &nativeDescriptor));
+        return new(WGPU.CommandEncoderBeginRenderPass(Handle, &nativeDescriptor));
     }
 
     public unsafe GPUCommandBuffer Finish(GPUCommandBufferDescriptor descriptor)
     {
         WGPUCommandBufferDescriptor native = default;
-        return new(WGPU.wgpuCommandEncoderFinish(Handle, &native));
+        return new(WGPU.CommandEncoderFinish(Handle, &native));
     }
 
     public unsafe void CopyTextureToBuffer(
@@ -62,7 +62,7 @@ public sealed partial class GPUCommandEncoder
         WGPUImageCopyTexture nativeSource = new()
         {
             texture = source.Texture.Handle,
-            aspect = (WGPUTextureAspect)source.Aspect,
+            aspect = (GPUTextureAspect)source.Aspect,
             mipLevel = (uint)source.MipLevel
         };
         WGPUImageCopyBuffer nativeDestination = new()
@@ -81,6 +81,6 @@ public sealed partial class GPUCommandEncoder
             height = (uint)copySize.Height,
             depthOrArrayLayers = (uint)copySize.DepthOrArrayLayers,
         };
-        WGPU.wgpuCommandEncoderCopyTextureToBuffer(Handle, &nativeSource, &nativeDestination, &nativeCopySize);
+        WGPU.CommandEncoderCopyTextureToBuffer(Handle, &nativeSource, &nativeDestination, &nativeCopySize);
     }
 }

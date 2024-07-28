@@ -16,6 +16,7 @@ public sealed class RotateCubeRenderer
     GPUShaderModule ShaderModule { get; }
     GPUPipelineLayout PipelineLayout { get; }
     GPURenderPipeline Pipeline { get; }
+    GPUBuffer UniformBuffer { get; }
     GPUBuffer VertexBuffer { get; }
     GPUBindGroupLayout BindGroupLayout { get; }
     GPUBindGroup BindGroup { get; }
@@ -181,7 +182,14 @@ fn fs_main(
         {
             MappedAtCreation = true,
             Size = VertexBufferByteSize,
-            Usage = GPUBufferUsage.Uniform
+            Usage = GPUBufferUsage.Vertex
+        });
+
+        UniformBuffer = Device.CreateBuffer(new GPUBufferDescriptor
+        {
+            MappedAtCreation = true,
+            Size = VertexBufferByteSize,
+            Usage = GPUBufferUsage.Uniform | GPUBufferUsage.CopyDst
         });
 
         var cpuData = CubeVertexArray.AsSpan();

@@ -69,6 +69,7 @@ public class Program
         //builder.Services.AddHostedService<DistributeXRApplicationService>();
         builder.Services.AddClients();
         builder.Services.AddControllers();
+        builder.Services.AddHealthChecks();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()
@@ -76,6 +77,7 @@ public class Program
             .AddInteractiveWebAssemblyComponents();
 
         var app = builder.Build();
+        app.MapHealthChecks("health");
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -100,6 +102,7 @@ public class Program
         app.MapControllers();
         app.MapClients();
         app.MapRenderControls();
+        
 
         app.MapRazorComponents<DualDrill.Server.Components.App>()
             .AddInteractiveServerRenderMode()

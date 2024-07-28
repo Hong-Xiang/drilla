@@ -301,13 +301,13 @@ public sealed partial class GPUSurface : IDisposable
 
     public unsafe GPUTextureFormat PreferredFormat(GPUAdapter adapter)
     {
-        var result = WGPU.wgpuSurfaceGetPreferredFormat(Handle, adapter.Handle);
+        var result = WGPU.SurfaceGetPreferredFormat(Handle, adapter.Handle);
         return (GPUTextureFormat)result;
     }
 
     public unsafe void Present()
     {
-        WGPU.wgpuSurfacePresent(Handle);
+        WGPU.SurfacePresent(Handle);
     }
 
     public static unsafe GPUSurface Create(INativeWindowSource view, GPUInstanceW instance)
@@ -317,13 +317,13 @@ public sealed partial class GPUSurface : IDisposable
         surfaceDescriptorFromWindowsHWND.chain = new WGPUChainedStruct
         {
             next = null,
-            sType = WGPUSType.WGPUSType_SurfaceDescriptorFromWindowsHWND
+            sType = GPUSType.SurfaceDescriptorFromWindowsHWND
         };
         surfaceDescriptorFromWindowsHWND.hwnd = (void*)(((IntPtr, IntPtr, IntPtr)?)view.Native.Win32).Value.Item1;
         surfaceDescriptorFromWindowsHWND.hinstance = (void*)(((IntPtr, IntPtr, IntPtr)?)view.Native.Win32).Value.Item3;
         WGPUSurfaceDescriptorFromWindowsHWND surfaceDescriptorFromWindowsHWND2 = surfaceDescriptorFromWindowsHWND;
         descriptor.nextInChain = (WGPUChainedStruct*)(&surfaceDescriptorFromWindowsHWND2);
-        WGPUSurfaceImpl* result = WGPU.wgpuInstanceCreateSurface(instance.Handle, &descriptor);
+        WGPUSurfaceImpl* result = WGPU.InstanceCreateSurface(instance.Handle, &descriptor);
         if (result is null)
         {
             throw new GraphicsApiException("Failed to create surface");

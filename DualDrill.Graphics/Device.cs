@@ -22,19 +22,19 @@ public sealed partial class GPUDevice
         WGPUCommandEncoderDescriptor nativeDescriptor = new()
         {
         };
-        return new(WGPU.wgpuDeviceCreateCommandEncoder(Handle, &nativeDescriptor));
+        return new(WGPU.DeviceCreateCommandEncoder(Handle, &nativeDescriptor));
     }
 
     public unsafe void Poll()
     {
-        _ = WGPU.wgpuDevicePoll(Handle, 0, null);
+        _ = WGPU.DevicePoll(Handle, 0, null);
     }
 
     internal async Task PollAndWaitOnTaskAsync(Task target)
     {
         unsafe void DoPoll()
         {
-            _ = WGPU.wgpuDevicePoll(Handle, 0, null);
+            _ = WGPU.DevicePoll(Handle, 0, null);
         }
         while (!target.IsCompleted)
         {
@@ -46,31 +46,31 @@ public sealed partial class GPUDevice
 
     public unsafe GPUQueue GetQueue()
     {
-        return new(WGPU.wgpuDeviceGetQueue(Handle));
+        return new(WGPU.DeviceGetQueue(Handle));
     }
 
     public unsafe GPUTexture CreateTexture(GPUTextureDescriptor descriptor)
     {
 
         using var label = NativeStringRef.Create(descriptor.Label);
-        var viewFormats = stackalloc WGPUTextureFormat[descriptor.ViewFormats.Length];
+        var viewFormats = stackalloc GPUTextureFormat[descriptor.ViewFormats.Length];
         for (var i = 0; i < descriptor.ViewFormats.Length; i++)
         {
-            viewFormats[i] = (WGPUTextureFormat)descriptor.ViewFormats.Span[i];
+            viewFormats[i] = (GPUTextureFormat)descriptor.ViewFormats.Span[i];
         }
         WGPUTextureDescriptor native = new()
         {
             label = (sbyte*)label.Handle,
             usage = (uint)descriptor.Usage,
-            dimension = (WGPUTextureDimension)descriptor.Dimension,
+            dimension = (GPUTextureDimension)descriptor.Dimension,
             size = descriptor.Size,
-            format = (WGPUTextureFormat)descriptor.Format,
+            format = (GPUTextureFormat)descriptor.Format,
             mipLevelCount = (uint)descriptor.MipLevelCount,
             sampleCount = (uint)descriptor.SampleCount,
             viewFormatCount = (nuint)descriptor.ViewFormats.Length,
             viewFormats = descriptor.ViewFormats.Length > 0 ? viewFormats : null,
         };
-        return new GPUTexture(WGPU.wgpuDeviceCreateTexture(Handle, &native));
+        return new GPUTexture(WGPU.DeviceCreateTexture(Handle, &native));
     }
 
     public unsafe GPUBuffer CreateBuffer(GPUBufferDescriptor descriptor)
@@ -83,7 +83,7 @@ public sealed partial class GPUDevice
             size = alignedSize,
             usage = (uint)descriptor.Usage,
         };
-        var handle = WGPU.wgpuDeviceCreateBuffer(Handle, &nativeDescriptor);
+        var handle = WGPU.DeviceCreateBuffer(Handle, &nativeDescriptor);
         return new(handle);
     }
 
@@ -113,7 +113,7 @@ public sealed partial class GPUDevice
             layout = descriptor.Layout.Handle,
             entries = entries
         };
-        return new GPUBindGroup(WGPU.wgpuDeviceCreateBindGroup(Handle, &nativeDescriptor));
+        return new GPUBindGroup(WGPU.DeviceCreateBindGroup(Handle, &nativeDescriptor));
     }
 
     public unsafe GPUBindGroupLayout CreateBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor)
@@ -135,13 +135,13 @@ public sealed partial class GPUDevice
             entryCount = (uint)descriptor.Entries.Length,
             entries = entries
         };
-        return new(WGPU.wgpuDeviceCreateBindGroupLayout(Handle, &nativeDescriptor));
+        return new(WGPU.DeviceCreateBindGroupLayout(Handle, &nativeDescriptor));
     }
 
     public unsafe GPUPipelineLayout CreatePipelineLayout(GPUPipelineLayoutDescriptor descriptor)
     {
         WGPUPipelineLayoutDescriptor native = default;
-        return new GPUPipelineLayout(WGPU.wgpuDeviceCreatePipelineLayout(Handle, &native));
+        return new GPUPipelineLayout(WGPU.DeviceCreatePipelineLayout(Handle, &native));
     }
 }
 

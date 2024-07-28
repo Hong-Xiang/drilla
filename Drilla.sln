@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Common", "DualDri
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Graphics", "DualDrill.Graphics\DualDrill.Graphics.csproj", "{02F0E2DB-383C-42EA-BE63-2CC582CB672E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VeldridConsoleTest", "VeldridConsoleTest\VeldridConsoleTest.csproj", "{C218C7CB-5BF8-456B-A082-9ED534FEB953}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VeldridConsoleTest", "VeldridConsoleTest\VeldridConsoleTest.csproj", "{C218C7CB-5BF8-456B-A082-9ED534FEB953}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

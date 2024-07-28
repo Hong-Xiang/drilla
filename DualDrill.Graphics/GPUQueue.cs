@@ -18,7 +18,7 @@ public sealed partial class GPUQueue
         {
             native[i] = buffers[i].Handle;
         }
-        WGPU.wgpuQueueSubmit(Handle, (uint)buffers.Length, native);
+        WGPU.QueueSubmit(Handle, (uint)buffers.Length, native);
     }
 
     public unsafe void WriteBuffer<T>(GPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<T> data)
@@ -26,11 +26,11 @@ public sealed partial class GPUQueue
     {
         var byteSpan = MemoryMarshal.Cast<T, byte>(data);
         var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(byteSpan));
-        WGPU.wgpuQueueWriteBuffer(Handle, buffer.Handle, bufferOffset, ptr, (nuint)byteSpan.Length);
+        WGPU.QueueWriteBuffer(Handle, buffer.Handle, bufferOffset, ptr, (nuint)byteSpan.Length);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    unsafe static void QueueWorkDone(WGPUQueueWorkDoneStatus status, void* data)
+    unsafe static void QueueWorkDone(GPUQueueWorkDoneStatus status, void* data)
     {
         var handle = GCHandle.FromIntPtr((nint)data);
         //var target = (TaskCompletionSource<WGPUQueueWorkDoneStatus>)handle.Target;
@@ -41,10 +41,10 @@ public sealed partial class GPUQueue
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    unsafe static void QueueWorkDoneAsync(WGPUQueueWorkDoneStatus status, void* data)
+    unsafe static void QueueWorkDoneAsync(GPUQueueWorkDoneStatus status, void* data)
     {
         var handle = GCHandle.FromIntPtr((nint)data);
-        var target = (TaskCompletionSource<WGPUQueueWorkDoneStatus>)handle.Target;
+        var target = (TaskCompletionSource<GPUQueueWorkDoneStatus>)handle.Target;
         if (target is null)
         {
             throw new GraphicsApiException($"GCHandle({(nint)data:X}) failed to recover target");
@@ -55,9 +55,9 @@ public sealed partial class GPUQueue
 
     public unsafe Task WaitSubmittedWorkDoneAsync(CancellationToken cancellation = default)
     {
-        var tcs = new TaskCompletionSource<WGPUQueueWorkDoneStatus>(cancellation);
+        var tcs = new TaskCompletionSource<GPUQueueWorkDoneStatus>(cancellation);
         var handle = GCHandle.ToIntPtr(GCHandle.Alloc(tcs));
-        WGPU.wgpuQueueOnSubmittedWorkDone(Handle, &QueueWorkDoneAsync, (void*)handle);
+        WGPU.QueueOnSubmittedWorkDone(Handle, &QueueWorkDoneAsync, (void*)handle);
         return tcs.Task;
     }
 
@@ -68,7 +68,7 @@ public sealed partial class GPUQueue
         //var tcs = new TaskCompletionSource<WGPUQueueWorkDoneStatus>();
         //var handle = GCHandle.ToIntPtr(GCHandle.Alloc(tcs));
         var handle = GCHandle.ToIntPtr(GCHandle.Alloc(next));
-        WGPU.wgpuQueueOnSubmittedWorkDone(Handle, &QueueWorkDone, (void*)handle);
+        WGPU.QueueOnSubmittedWorkDone(Handle, &QueueWorkDone, (void*)handle);
         //return tcs.Task;
     }
 }

@@ -15,7 +15,7 @@ public sealed partial class GPURenderPipeline
 
     public unsafe GPUBindGroupLayout GetBindGroupLayout(int index)
     {
-        return new GPUBindGroupLayout(WGPU.wgpuRenderPipelineGetBindGroupLayout(Handle, (uint)index));
+        return new GPUBindGroupLayout(WGPU.RenderPipelineGetBindGroupLayout(Handle, (uint)index));
     }
 
     public static unsafe GPURenderPipeline Create(GPUDevice device, GPURenderPipelineDescriptor descriptor)
@@ -58,7 +58,7 @@ public sealed partial class GPURenderPipeline
                     {
                         blend = null,
                         writeMask = c.WriteMask,
-                        format = (WGPUTextureFormat)c.Format
+                        format = (GPUTextureFormat)c.Format
                     };
                 }
                 fragment.targets = targets;
@@ -76,7 +76,7 @@ public sealed partial class GPURenderPipeline
                 },
                 primitive =
                 {
-                    topology = (WGPUPrimitiveTopology)descriptor.Primitive.Topology,
+                    topology = descriptor.Primitive.Topology,
                     //StripIndexFormat = IndexFormat.Undefined,
                     //FrontFace = FrontFace.Ccw,
                     //CullMode = CullMode.None
@@ -119,7 +119,7 @@ public sealed partial class GPURenderPipeline
                     {
                         attributes[attributeIndex] = new WGPUVertexAttribute
                         {
-                            format = (WGPUVertexFormat)attribute.Format,
+                            format = attribute.Format,
                             offset = attribute.Offset,
                             shaderLocation = (uint)attribute.ShaderLocation
                         };
@@ -133,7 +133,7 @@ public sealed partial class GPURenderPipeline
             }
             renderPipelineDescriptor.vertex.buffers = descriptor.Vertex.Buffers.Length > 0 ? vertexBuffer : null;
 
-            var handle = WGPU.wgpuDeviceCreateRenderPipeline(device.Handle, &renderPipelineDescriptor);
+            var handle = WGPU.DeviceCreateRenderPipeline(device.Handle, &renderPipelineDescriptor);
             return new(handle);
         }
         finally

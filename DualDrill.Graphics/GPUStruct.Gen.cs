@@ -191,8 +191,8 @@ public partial struct GPUInstanceExtras
     public string DxilPath { get; set; }
     public string DxcPath { get; set; }
     public GPUChainedStruct Chain { get; set; }
-    public GPUDx12Compiler Dx12ShaderCompiler { get; set; }
-    public GPUGles3MinorVersion Gles3MinorVersion { get; set; }
+    public WGPUDx12Compiler Dx12ShaderCompiler { get; set; }
+    public WGPUGles3MinorVersion Gles3MinorVersion { get; set; }
 }
 public partial struct GPUDeviceExtras
 {
@@ -294,7 +294,7 @@ public partial struct GPUBindGroupLayoutEntryExtras
 }
 public partial struct GPUQuerySetDescriptorExtras
 {
-    public ReadOnlyMemory<GPUPipelineStatisticName> PipelineStatistics { get; set; }
+    public ReadOnlyMemory<WGPUPipelineStatisticName> PipelineStatistics { get; set; }
     public GPUChainedStruct Chain { get; set; }
 }
 public partial struct GPUSurfaceConfigurationExtras
@@ -360,7 +360,7 @@ public partial struct GPUBindGroupLayoutDescriptor
 public unsafe partial struct GPUDeviceDescriptor
 {
     public ReadOnlyMemory<GPUFeatureName> RequiredFeatures { get; set; }
-    public delegate* unmanaged[Cdecl]<WGPUDeviceLostReason, sbyte*, void*, void> DeviceLostCallback { get; set; }
+    public delegate* unmanaged[Cdecl]<GPUDeviceLostReason, sbyte*, void*, void> DeviceLostCallback { get; set; }
     public nint DeviceLostUserdata { get; set; }
     public ReadOnlyMemory<GPURequiredLimits> RequiredLimits { get; set; }
     public string? Label { get; set; }
@@ -401,7 +401,7 @@ public partial struct GPUBufferBindingLayout
     {
         return new WGPUBufferBindingLayout
         {
-            type = (WGPUBufferBindingType)layout.Type,
+            type = layout.Type,
             minBindingSize = layout.MinBindingSize,
             hasDynamicOffset = layout.HasDynamicOffset ? 1u : 0
         };

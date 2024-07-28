@@ -14,7 +14,7 @@ public sealed partial class GPUSurface
     public unsafe GPUSurfaceTexture GetCurrentTexture()
     {
         WGPUSurfaceTexture texture;
-        WGPU.wgpuSurfaceGetCurrentTexture(Handle, &texture);
+        WGPU.SurfaceGetCurrentTexture(Handle, &texture);
         var result = new GPUSurfaceTexture
         {
             Texture = new GPUTexture(texture.texture),
@@ -30,28 +30,28 @@ public sealed partial class GPUSurface
 
     public unsafe void Configure(GPUSurfaceConfiguration configuration)
     {
-        var viewFormatsPtr = stackalloc WGPUTextureFormat[configuration.ViewFormats.Length];
+        var viewFormatsPtr = stackalloc GPUTextureFormat[configuration.ViewFormats.Length];
         for (var i = 0; i < configuration.ViewFormats.Length; i++)
         {
-            viewFormatsPtr[i] = (WGPUTextureFormat)configuration.ViewFormats.Span[i];
+            viewFormatsPtr[i] = (GPUTextureFormat)configuration.ViewFormats.Span[i];
         }
         var nativeConfig = new WGPUSurfaceConfiguration
         {
             device = configuration.Device.Handle,
-            format = (WGPUTextureFormat)configuration.Format,
+            format = configuration.Format,
             usage = (uint)configuration.Usage,
             viewFormatCount = (nuint)configuration.ViewFormats.Length,
             viewFormats = configuration.ViewFormats.Length == 0 ? null : viewFormatsPtr,
-            alphaMode = (WGPUCompositeAlphaMode)configuration.AlphaMode,
+            alphaMode = configuration.AlphaMode,
             width = (uint)configuration.Width,
             height = (uint)configuration.Height,
-            presentMode = (WGPUPresentMode)configuration.PresentMode
+            presentMode = configuration.PresentMode
         };
-        WGPU.wgpuSurfaceConfigure(Handle, &nativeConfig);
+        WGPU.SurfaceConfigure(Handle, &nativeConfig);
     }
 
     public unsafe void Unconfigure()
     {
-        WGPU.wgpuSurfaceUnconfigure(Handle);
+        WGPU.SurfaceUnconfigure(Handle);
     }
 }

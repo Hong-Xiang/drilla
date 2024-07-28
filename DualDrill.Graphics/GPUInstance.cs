@@ -32,28 +32,28 @@ public sealed partial class GPUInstanceW : IDisposable
     public unsafe GPUInstanceW()
     {
         WGPUInstanceDescriptor descriptor = new();
-        var pointer = WGPU.wgpuCreateInstance(&descriptor);
+        var pointer = WGPU.CreateInstance(&descriptor);
         Handle = new(pointer);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    static unsafe void RequestAdaptorCallback(WGPURequestAdapterStatus status, WGPUAdapterImpl* adapter, sbyte* message, void* data)
+    static unsafe void RequestAdaptorCallback(GPURequestAdapterStatus status, WGPUAdapterImpl* adapter, sbyte* message, void* data)
     {
-        RequestCallback<WGPUApiWrapper, WGPUAdapterImpl, WGPURequestAdapterStatus>.Callback(status, adapter, message, data);
+        RequestCallback<WGPUApiWrapper, WGPUAdapterImpl, GPURequestAdapterStatus>.Callback(status, adapter, message, data);
     }
 
     public unsafe GPUAdapter RequestAdapter(GPUSurface? surface)
     {
         var options = new WGPURequestAdapterOptions
         {
-            powerPreference = WGPUPowerPreference.WGPUPowerPreference_HighPerformance
+            powerPreference = GPUPowerPreference.HighPerformance
         };
         if (surface is not null)
         {
             options.compatibleSurface = surface.Handle;
         }
-        var result = new RequestCallbackResult<WGPUAdapterImpl, WGPURequestAdapterStatus>();
-        WGPU.wgpuInstanceRequestAdapter(
+        var result = new RequestCallbackResult<WGPUAdapterImpl, GPURequestAdapterStatus>();
+        WGPU.InstanceRequestAdapter(
             Handle,
             &options,
             &RequestAdaptorCallback,
