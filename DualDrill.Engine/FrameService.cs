@@ -10,13 +10,13 @@ namespace DualDrill.Engine;
 public sealed class FrameService : IFrameService, IDisposable
 {
     public ILogger<FrameService> Logger { get; }
-    readonly TriangleRenderer Renderer;
+    readonly SimpleColorRenderer Renderer;
     readonly RotateCubeRenderer CubeRenderer;
     readonly GPUDevice Device;
     public FrameService(
         ILogger<FrameService> logger,
         GPUDevice device,
-        TriangleRenderer renderer,
+        SimpleColorRenderer renderer,
         RotateCubeRenderer cubeRenderer
         )
     {

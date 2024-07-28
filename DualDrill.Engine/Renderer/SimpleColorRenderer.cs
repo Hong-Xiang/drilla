@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace DualDrill.Engine.Renderer;
 
-public sealed class TriangleRenderer : IDisposable
+public sealed class SimpleColorRenderer : IDisposable
 {
     readonly GPUDevice Device;
 
@@ -13,13 +13,8 @@ public sealed class TriangleRenderer : IDisposable
     GPURenderPipeline Pipeline { get; set; }
     private GPUBuffer VertexBuffer { get; }
     private GPUBuffer IndexBuffer { get; }
-    private float[] VertexData = [
-    -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
-    +0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-    +0.5f, +0.5f, 0.0f, 0.0f, 1.0f,
-    -0.5f, +0.5f, 1.0f, 1.0f, 0.0f
-    ];
-    private UInt16[] IndexData = [0, 1, 2, 0, 2, 3];
+
+    private readonly WebGPULogo Model = new();
 
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
@@ -45,8 +40,10 @@ struct VertexOutput {
 fn vs_main(@location(0) position: vec2f,
            @location(1) color: vec3f) 
 -> VertexOutput {
+    let offset = vec2f(-0.6875, -0.463);
+    let p = position + offset;
     var out : VertexOutput;
-    out.position =  vec4<f32>(position, 0.0, 1.0);
+    out.position =  vec4<f32>(p, 0.0, 1.0);
     out.color = color;
     return out;
 }
@@ -57,7 +54,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 }";
 
 
-    public TriangleRenderer(GPUDevice device)
+    public SimpleColorRenderer(GPUDevice device)
     {
         Device = device;
         ShaderModule = Device.CreateShaderModule(SHADER);
@@ -72,23 +69,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 Buffers = new[] {
                     new GPUVertexBufferLayout
                     {
-                        ArrayStride = 5 * sizeof(float),
+                        ArrayStride = Model.ArrayStride,
                         StepMode = GPUVertexStepMode.Vertex,
-                        Attributes = new []
-                        {
-                            new GPUVertexAttribute
-                            {
-                                ShaderLocation = 0,
-                                Format = GPUVertexFormat.Float32x2,
-                                Offset = 0
-                            },
-                            new GPUVertexAttribute
-                            {
-                                ShaderLocation = 1,
-                                Format = GPUVertexFormat.Float32x3,
-                                Offset = 2 * sizeof(float),
-                            },
-                        }
+                        Attributes = (GPUVertexAttribute[])[..Model.Attributes]
                     }
                 }
             },
@@ -114,17 +97,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         });
         VertexBuffer = Device.CreateBuffer(new GPUBufferDescriptor
         {
-            Size = (ulong)VertexData.Length * sizeof(float),
+            Size = Model.VertexBufferByteLength,
             Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.Vertex
         });
         IndexBuffer = Device.CreateBuffer(new GPUBufferDescriptor
         {
-            Size = (ulong)IndexData.Length * sizeof(UInt16),
+            Size = Model.IndexBufferByteLength,
             Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.Index
         });
         var queue = Device.GetQueue();
-        queue.WriteBuffer<float>(VertexBuffer, 0, VertexData);
-        queue.WriteBuffer<ushort>(IndexBuffer, 0, IndexData);
+        queue.WriteBuffer(VertexBuffer, 0, Model.VertexData);
+        queue.WriteBuffer(IndexBuffer, 0, Model.IndexData);
     }
 
     public async ValueTask RenderAsync(double time, GPUQueue queue, GPUTexture renderTarget)
@@ -150,10 +133,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         });
 
         rp.SetPipeline(Pipeline);
-        rp.SetVertexBuffer(0, VertexBuffer, 0, (ulong)VertexData.Length * sizeof(float));
-        rp.SetIndexBuffer(IndexBuffer, GPUIndexFormat.Uint16, 0, (ulong)IndexData.Length * sizeof(UInt16));
+        rp.SetVertexBuffer(0, VertexBuffer, 0, Model.VertexBufferByteLength);
+        rp.SetIndexBuffer(IndexBuffer, GPUIndexFormat.Uint16, 0, Model.IndexBufferByteLength);
         //rp.Draw(6, 1, 0, 0);
-        rp.DrawIndexed((uint)IndexData.Length);
+        rp.DrawIndexed((uint)Model.IndexCount);
         rp.End();
 
         using var drawCommands = encoder.Finish(new());

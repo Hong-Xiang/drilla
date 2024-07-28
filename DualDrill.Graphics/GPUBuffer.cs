@@ -1,5 +1,4 @@
-﻿using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
+﻿using DualDrill.Graphics.Interop;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 

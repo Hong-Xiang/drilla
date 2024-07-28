@@ -25,7 +25,7 @@ public static class RenderControlApi
         return Results.Ok();
     }
     public static async Task<IResult> RenderToImage(
-        [FromServices] DualDrill.Engine.Renderer.TriangleRenderer renderer,
+        [FromServices] DualDrill.Engine.Renderer.SimpleColorRenderer renderer,
         [FromServices] GPUDevice device,
         [FromQuery(Name = "time")] int time,
         [FromQuery(Name = "width")] int width = 512,

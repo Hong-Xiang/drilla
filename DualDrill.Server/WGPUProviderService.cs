@@ -5,14 +5,14 @@ namespace DualDrill.Server;
 
 public sealed class WGPUProviderService : IAsyncDisposable
 {
-    public GPUInstanceW Instance { get; }
+    public GPUInstance Instance { get; }
     public GPUAdapter Adapter { get; }
     public GPUDevice Device { get; }
     public GPUQueue Queue { get; }
 
     public WGPUProviderService()
     {
-        Instance = new GPUInstanceW();
+        Instance = new GPUInstance();
         Adapter = Instance.RequestAdapter(null);
         Device = Adapter.RequestDevice();
         Queue = Device.GetQueue();

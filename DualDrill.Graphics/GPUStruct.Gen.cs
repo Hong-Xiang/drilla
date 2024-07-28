@@ -1,10 +1,12 @@
-﻿using DualDrill.Graphics.WebGPU.Native;
-using DualDrill.Graphics;
+﻿using DualDrill.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DualDrill.Graphics.Interop;
+using System.Collections.Immutable;
+using DualDrill.Interop;
 
 
 namespace DualDrill.Graphics;
@@ -112,7 +114,7 @@ public partial struct GPUSurfaceCapabilities
     public ReadOnlyMemory<GPUPresentMode> PresentModes { get; set; }
     public ReadOnlyMemory<GPUCompositeAlphaMode> AlphaModes { get; set; }
 }
-public partial struct GPUSurfaceConfiguration
+public ref struct GPUSurfaceConfiguration
 {
     public GPUDevice Device { get; set; }
     public GPUTextureUsage Usage { get; set; }
@@ -121,7 +123,7 @@ public partial struct GPUSurfaceConfiguration
     public GPUTextureFormat Format { get; set; }
     public GPUCompositeAlphaMode AlphaMode { get; set; }
     public GPUPresentMode PresentMode { get; set; }
-    public ReadOnlyMemory<GPUTextureFormat> ViewFormats { get; set; }
+    public ReadOnlySpan<GPUTextureFormat> ViewFormats { get; set; }
 }
 public partial struct GPUSurfaceDescriptor { public string? Label { get; set; } }
 public partial struct GPUSurfaceDescriptorFromAndroidNativeWindow
@@ -375,12 +377,12 @@ public unsafe partial struct GPUShaderModuleSPIRVDescriptor
 public unsafe partial struct GPUChainedStruct
 {
     public GPUChainedStruct* Next { get; set; }
-    public GPUSType SType { get; set; }
+    public WGPUSType SType { get; set; }
 }
 public unsafe partial struct GPUChainedStructOut
 {
     public GPUChainedStructOut* Next { get; set; }
-    public GPUSType SType { get; set; }
+    public WGPUSType SType { get; set; }
 }
 public partial struct GPUBindGroupLayoutEntry
 {
@@ -526,7 +528,7 @@ public partial struct GPUStencilFaceState
 }
 public partial struct GPUVertexState
 {
-    public string EntryPoint { get; set; }
+    public Utf8String EntryPoint { get; set; }
     public GPUShaderModule Module { get; set; }
     public ReadOnlyMemory<GPUConstantEntry> Constants { get; set; }
     public ReadOnlyMemory<GPUVertexBufferLayout> Buffers { get; set; }
@@ -536,12 +538,6 @@ public partial struct GPUVertexBufferLayout
     public ulong ArrayStride { get; set; }
     public GPUVertexStepMode StepMode { get; set; }
     public ReadOnlyMemory<GPUVertexAttribute> Attributes { get; set; }
-}
-public partial struct GPUVertexAttribute
-{
-    public ulong Offset { get; set; }
-    public GPUVertexFormat Format { get; set; }
-    public int ShaderLocation { get; set; }
 }
 public partial struct GPUImageCopyBuffer
 {

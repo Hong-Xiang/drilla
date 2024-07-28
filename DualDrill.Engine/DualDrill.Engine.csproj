@@ -12,7 +12,7 @@
 		<PackageReference Include="Microsoft.JSInterop" Version="8.0.4" />
 		<PackageReference Include="R3" Version="1.1.13" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
-		<PackageReference Include="System.Reactive" Version="6.0.1-preview.1" />
+		<PackageReference Include="System.Reactive" Version="6.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,13 +1,6 @@
-﻿using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
-using Silk.NET.Core.Native;
+﻿using DualDrill.Graphics.Interop;
 using Silk.NET.WebGPU;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
@@ -56,15 +49,15 @@ public sealed partial class GPUDevice
         var viewFormats = stackalloc GPUTextureFormat[descriptor.ViewFormats.Length];
         for (var i = 0; i < descriptor.ViewFormats.Length; i++)
         {
-            viewFormats[i] = (GPUTextureFormat)descriptor.ViewFormats.Span[i];
+            viewFormats[i] = descriptor.ViewFormats.Span[i];
         }
         WGPUTextureDescriptor native = new()
         {
             label = (sbyte*)label.Handle,
             usage = (uint)descriptor.Usage,
-            dimension = (GPUTextureDimension)descriptor.Dimension,
+            dimension = descriptor.Dimension,
             size = descriptor.Size,
-            format = (GPUTextureFormat)descriptor.Format,
+            format = descriptor.Format,
             mipLevelCount = (uint)descriptor.MipLevelCount,
             sampleCount = (uint)descriptor.SampleCount,
             viewFormatCount = (nuint)descriptor.ViewFormats.Length,
@@ -76,7 +69,7 @@ public sealed partial class GPUDevice
     public unsafe GPUBuffer CreateBuffer(GPUBufferDescriptor descriptor)
     {
         var alignedSize = (descriptor.Size + 3UL) & ~3UL;
-        Debug.Assert(descriptor.Size == alignedSize, "Buffer byte size should be multiple of 4");
+        //Debug.Assert(descriptor.Size == alignedSize, "Buffer byte size should be multiple of 4");
         WGPUBufferDescriptor nativeDescriptor = new()
         {
             mappedAtCreation = descriptor.MappedAtCreation.Value,

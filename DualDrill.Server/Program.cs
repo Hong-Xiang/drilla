@@ -41,7 +41,7 @@ public class Program
 
         builder.Services.AddSingleton<PeerClientConnectionService>();
 
-        builder.Services.AddSingleton<DualDrill.Engine.Renderer.TriangleRenderer>();
+        builder.Services.AddSingleton<DualDrill.Engine.Renderer.SimpleColorRenderer>();
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
         builder.Services.AddSingleton<HeadlessSurface>(sp =>
         {

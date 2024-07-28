@@ -1,6 +1,5 @@
 ﻿using DotNext;
-using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
+using DualDrill.Graphics.Interop;
 using Silk.NET.Core.Native;
 using Silk.NET.WebGPU;
 using System;

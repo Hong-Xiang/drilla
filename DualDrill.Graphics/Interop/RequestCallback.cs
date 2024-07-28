@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DualDrill.Graphics.Native;
+namespace DualDrill.Graphics.Interop;
 
 interface IStatusIsSuccessApi<TStatus>
 {

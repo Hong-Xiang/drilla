@@ -1,4 +1,4 @@
-﻿using DualDrill.Graphics.WebGPU.Native;
+﻿using DualDrill.Graphics.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;

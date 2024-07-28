@@ -1,5 +1,4 @@
-﻿using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
+﻿using DualDrill.Graphics.Interop;
 using Silk.NET.Core.Contexts;
 using Silk.NET.Windowing;
 using System;
@@ -273,10 +272,10 @@ public sealed partial class GPUQuerySet : IDisposable
         Handle.Dispose();
     }
 }
-public sealed partial class GPUInstanceW : IDisposable
+public sealed partial class GPUInstance : IDisposable
 {
     internal NativeHandle<WGPUApiWrapper, WGPUInstanceImpl> Handle { get; }
-    internal unsafe GPUInstanceW(WGPUInstanceImpl* handle)
+    internal unsafe GPUInstance(WGPUInstanceImpl* handle)
     {
         Handle = new(handle);
     }
@@ -284,50 +283,5 @@ public sealed partial class GPUInstanceW : IDisposable
     public unsafe WGPUInstanceImpl* NativePointer => Handle; public void Dispose()
     {
         Handle.Dispose();
-    }
-}
-public sealed partial class GPUSurface : IDisposable
-{
-    internal NativeHandle<WGPUApiWrapper, WGPUSurfaceImpl> Handle { get; }
-    internal unsafe GPUSurface(WGPUSurfaceImpl* handle)
-    {
-        Handle = new(handle);
-    }
-
-    public unsafe WGPUSurfaceImpl* NativePointer => Handle; public void Dispose()
-    {
-        Handle.Dispose();
-    }
-
-    public unsafe GPUTextureFormat PreferredFormat(GPUAdapter adapter)
-    {
-        var result = WGPU.SurfaceGetPreferredFormat(Handle, adapter.Handle);
-        return (GPUTextureFormat)result;
-    }
-
-    public unsafe void Present()
-    {
-        WGPU.SurfacePresent(Handle);
-    }
-
-    public static unsafe GPUSurface Create(INativeWindowSource view, GPUInstanceW instance)
-    {
-        WGPUSurfaceDescriptor descriptor = new();
-        WGPUSurfaceDescriptorFromWindowsHWND surfaceDescriptorFromWindowsHWND = new();
-        surfaceDescriptorFromWindowsHWND.chain = new WGPUChainedStruct
-        {
-            next = null,
-            sType = GPUSType.SurfaceDescriptorFromWindowsHWND
-        };
-        surfaceDescriptorFromWindowsHWND.hwnd = (void*)(((IntPtr, IntPtr, IntPtr)?)view.Native.Win32).Value.Item1;
-        surfaceDescriptorFromWindowsHWND.hinstance = (void*)(((IntPtr, IntPtr, IntPtr)?)view.Native.Win32).Value.Item3;
-        WGPUSurfaceDescriptorFromWindowsHWND surfaceDescriptorFromWindowsHWND2 = surfaceDescriptorFromWindowsHWND;
-        descriptor.nextInChain = (WGPUChainedStruct*)(&surfaceDescriptorFromWindowsHWND2);
-        WGPUSurfaceImpl* result = WGPU.InstanceCreateSurface(instance.Handle, &descriptor);
-        if (result is null)
-        {
-            throw new GraphicsApiException("Failed to create surface");
-        }
-        return new(result);
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace DualDrill.Graphics.WebGPU.Native;
+namespace DualDrill.Graphics.Interop;
 
 
 /// <summary>Defines the type of a member as it was used in the native signature.</summary>

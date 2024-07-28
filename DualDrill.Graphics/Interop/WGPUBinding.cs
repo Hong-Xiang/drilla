@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace DualDrill.Graphics.WebGPU.Native
+namespace DualDrill.Graphics.Interop
 {
     public partial struct WGPUAdapterImpl
     {
@@ -95,7 +95,7 @@ namespace DualDrill.Graphics.WebGPU.Native
         [NativeTypeName("const struct WGPUChainedStruct *")]
         public WGPUChainedStruct* next;
 
-        public GPUSType sType;
+        public WGPUSType sType;
     }
 
     public unsafe partial struct WGPUChainedStructOut
@@ -103,7 +103,7 @@ namespace DualDrill.Graphics.WebGPU.Native
         [NativeTypeName("struct WGPUChainedStructOut *")]
         public WGPUChainedStructOut* next;
 
-        public GPUSType sType;
+        public WGPUSType sType;
     }
 
     public unsafe partial struct WGPUAdapterProperties
@@ -859,17 +859,6 @@ namespace DualDrill.Graphics.WebGPU.Native
         public GPUTextureAspect aspect;
     }
 
-    public partial struct WGPUVertexAttribute
-    {
-        public GPUVertexFormat format;
-
-        [NativeTypeName("uint64_t")]
-        public ulong offset;
-
-        [NativeTypeName("uint32_t")]
-        public uint shaderLocation;
-    }
-
     public unsafe partial struct WGPUBindGroupDescriptor
     {
         [NativeTypeName("const WGPUChainedStruct *")]
@@ -1103,7 +1092,7 @@ namespace DualDrill.Graphics.WebGPU.Native
         public nuint attributeCount;
 
         [NativeTypeName("const WGPUVertexAttribute *")]
-        public WGPUVertexAttribute* attributes;
+        public GPUVertexAttribute* attributes;
     }
 
     public unsafe partial struct WGPUBindGroupLayoutDescriptor

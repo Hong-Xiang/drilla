@@ -1,7 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
+using DualDrill.Graphics.Interop;
 using Silk.NET.Core;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.EXT;
@@ -9,27 +8,10 @@ using static DualDrill.Graphics.VulkanApi;
 
 namespace DualDrill.Graphics;
 
-public record struct GPUInstanceDescriptor(
-    string ApplicationName,
-    string EngineName,
-    Version32 EngineVersion,
-    bool EnableValidationLayers,
-    IReadOnlyList<string> RequiredExtensionNames
-)
-{
-    public readonly static GPUInstanceDescriptor Default = new(
-        "Unknown Application",
-        "Drill Engine",
-        new Version32(0, 0, 1),
-        true,
-        []
-    );
-}
 
-
-public sealed partial class GPUInstanceW : IDisposable
+public sealed partial class GPUInstance : IDisposable
 {
-    public unsafe GPUInstanceW()
+    public unsafe GPUInstance()
     {
         WGPUInstanceDescriptor descriptor = new();
         var pointer = WGPU.CreateInstance(&descriptor);
@@ -65,14 +47,30 @@ public sealed partial class GPUInstanceW : IDisposable
         }
         return new GPUAdapter(result.Handle);
     }
-
+}
+public record struct GPUInstanceDescriptorV(
+    string ApplicationName,
+    string EngineName,
+    Version32 EngineVersion,
+    bool EnableValidationLayers,
+    IReadOnlyList<string> RequiredExtensionNames
+)
+{
+    public readonly static GPUInstanceDescriptorV Default = new(
+        "Unknown Application",
+        "Drill Engine",
+        new Version32(0, 0, 1),
+        true,
+        []
+    );
 }
 
-public sealed partial class GPUInstance
+
+public sealed partial class GPUInstanceV
     : IDisposable
 {
     static readonly string[] ValidationLayerNames = ["VK_LAYER_KHRONOS_validation"];
-    public unsafe GPUInstance(GPUInstanceDescriptor descriptor)
+    public unsafe GPUInstanceV(GPUInstanceDescriptorV descriptor)
     {
         using var applicationName = NativeStringRef.Create(descriptor.ApplicationName);
         using var engineName = NativeStringRef.Create(descriptor.EngineName);

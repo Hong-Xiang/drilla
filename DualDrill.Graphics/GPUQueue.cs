@@ -1,6 +1,7 @@
-﻿using DualDrill.Graphics.WebGPU.Native;
+﻿using DualDrill.Graphics.Interop;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -25,6 +26,10 @@ public sealed partial class GPUQueue
         where T : unmanaged
     {
         var byteSpan = MemoryMarshal.Cast<T, byte>(data);
+        if (byteSpan.Length % 4 != 0)
+        {
+            throw new InvalidOperationException($"WriteBuffer data length must be a multiple of 4 bytes, got {byteSpan.Length}");
+        }
         var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(byteSpan));
         WGPU.QueueWriteBuffer(Handle, buffer.Handle, bufferOffset, ptr, (nuint)byteSpan.Length);
     }

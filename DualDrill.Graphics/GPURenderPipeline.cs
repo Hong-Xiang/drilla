@@ -1,9 +1,9 @@
-﻿using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
+﻿using DualDrill.Graphics.Interop;
 using Silk.NET.Core.Native;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,17 +20,17 @@ public sealed partial class GPURenderPipeline
 
     public static unsafe GPURenderPipeline Create(GPUDevice device, GPURenderPipelineDescriptor descriptor)
     {
+        using var vertexEntryPoint = descriptor.Vertex.EntryPoint.Pin();
         WGPURenderPipelineDescriptor nativeDescriptor = default;
         try
         {
             nativeDescriptor.vertex.module = descriptor.Vertex.Module.Handle;
-            nativeDescriptor.vertex.entryPoint = (sbyte*)SilkMarshal.StringToPtr(descriptor.Vertex.EntryPoint);
+            nativeDescriptor.vertex.entryPoint = vertexEntryPoint.Pointer;
             if (descriptor.Vertex.Constants.Length > 0)
             {
                 throw new NotImplementedException("Constant Entry is not support yet");
             }
 
-            using var vertexEntryPoint = NativeStringRef.Create(descriptor.Vertex.EntryPoint);
             using var fragmentEntryPoint =
                 descriptor.Fragment.HasValue ? NativeStringRef.Create(descriptor.Fragment.Value.EntryPoint) : default;
 
@@ -58,7 +58,7 @@ public sealed partial class GPURenderPipeline
                     {
                         blend = null,
                         writeMask = c.WriteMask,
-                        format = (GPUTextureFormat)c.Format
+                        format = c.Format
                     };
                 }
                 fragment.targets = targets;
@@ -70,7 +70,7 @@ public sealed partial class GPURenderPipeline
                 vertex =
                 {
                     module = descriptor.Vertex.Module.Handle,
-                    entryPoint = (sbyte*)vertexEntryPoint.Handle,
+                    entryPoint = vertexEntryPoint.Pointer,
                     constantCount = (nuint) descriptor.Vertex.Constants.Length,
                     bufferCount = (nuint)descriptor.Vertex.Buffers.Length,
                 },
@@ -108,25 +108,24 @@ public sealed partial class GPURenderPipeline
                     index++;
                 }
             }
-            var attributes = stackalloc WGPUVertexAttribute[attributesTotalCount];
+            using var disposables = new CompositeDisposable();
+            //var attributes = stackalloc GPUVertexAttribute[attributesTotalCount];
             {
                 var bufferIndex = 0;
-                var attributeIndex = 0;
+                //var attributeIndex = 0;
                 foreach (var buffer in descriptor.Vertex.Buffers.Span)
                 {
-                    vertexBuffer[bufferIndex].attributes = &attributes[attributeIndex];
-                    foreach (var attribute in buffer.Attributes.Span)
-                    {
-                        attributes[attributeIndex] = new WGPUVertexAttribute
-                        {
-                            format = attribute.Format,
-                            offset = attribute.Offset,
-                            shaderLocation = (uint)attribute.ShaderLocation
-                        };
-                        Console.WriteLine(attributes[attributeIndex].format);
-                        Console.WriteLine(attribute.Format);
-                        attributeIndex++;
-                    }
+                    var pin = buffer.Attributes.Pin();
+                    disposables.Add(pin);
+                    vertexBuffer[bufferIndex].attributes = (GPUVertexAttribute*)pin.Pointer;
+
+                    //foreach (var attribute in buffer.Attributes.Span)
+                    //{
+                    //    attributes[attributeIndex] = attribute;
+                    //    Console.WriteLine(attributes[attributeIndex].Format);
+                    //    Console.WriteLine(attribute.Format);
+                    //    attributeIndex++;
+                    //}
 
                     bufferIndex++;
                 }

@@ -1,18 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace DualDrill.Graphics;
 
-namespace DualDrill.Graphics;
 public enum GPUAdapterType : uint
 {
     DiscreteGPU = 0x00000000,
     IntegratedGPU = 0x00000001,
     CPU = 0x00000002,
     Unknown = 0x00000003,
-
-
 }
 
 public enum GPUAddressMode : uint
@@ -20,8 +13,6 @@ public enum GPUAddressMode : uint
     Repeat = 0x00000000,
     MirrorRepeat = 0x00000001,
     ClampToEdge = 0x00000002,
-
-
 }
 
 public enum GPUBackendType : uint
@@ -35,8 +26,6 @@ public enum GPUBackendType : uint
     Vulkan = 0x00000006,
     OpenGL = 0x00000007,
     OpenGLES = 0x00000008,
-
-
 }
 
 public enum GPUBlendFactor : uint
@@ -54,8 +43,6 @@ public enum GPUBlendFactor : uint
     SrcAlphaSaturated = 0x0000000A,
     Constant = 0x0000000B,
     OneMinusConstant = 0x0000000C,
-
-
 }
 
 public enum GPUBlendOperation : uint
@@ -65,8 +52,6 @@ public enum GPUBlendOperation : uint
     ReverseSubtract = 0x00000002,
     Min = 0x00000003,
     Max = 0x00000004,
-
-
 }
 
 public enum GPUBufferBindingType : uint
@@ -88,8 +73,6 @@ public enum GPUBufferMapAsyncStatus : uint
     MappingAlreadyPending = 0x00000006,
     OffsetOutOfRange = 0x00000007,
     SizeOutOfRange = 0x00000008,
-
-
 }
 
 public enum GPUBufferMapState : uint
@@ -118,8 +101,6 @@ public enum GPUCompilationInfoRequestStatus : uint
     Error = 0x00000001,
     DeviceLost = 0x00000002,
     Unknown = 0x00000003,
-
-
 }
 
 public enum GPUCompilationMessageType : uint
@@ -127,8 +108,6 @@ public enum GPUCompilationMessageType : uint
     Error = 0x00000000,
     Warning = 0x00000001,
     Info = 0x00000002,
-
-
 }
 
 public enum GPUCompositeAlphaMode : uint
@@ -138,8 +117,6 @@ public enum GPUCompositeAlphaMode : uint
     Premultiplied = 0x00000002,
     Unpremultiplied = 0x00000003,
     Inherit = 0x00000004,
-
-
 }
 
 public enum GPUCreatePipelineAsyncStatus : uint
@@ -150,8 +127,6 @@ public enum GPUCreatePipelineAsyncStatus : uint
     DeviceLost = 0x00000003,
     DeviceDestroyed = 0x00000004,
     Unknown = 0x00000005,
-
-
 }
 
 public enum GPUCullMode : uint
@@ -159,8 +134,6 @@ public enum GPUCullMode : uint
     None = 0x00000000,
     Front = 0x00000001,
     Back = 0x00000002,
-
-
 }
 
 public enum GPUDeviceLostReason : uint
@@ -174,8 +147,6 @@ public enum GPUErrorFilter : uint
     Validation = 0x00000000,
     OutOfMemory = 0x00000001,
     Internal = 0x00000002,
-
-
 }
 
 public enum GPUErrorType : uint
@@ -186,8 +157,6 @@ public enum GPUErrorType : uint
     Internal = 0x00000003,
     Unknown = 0x00000004,
     DeviceLost = 0x00000005,
-
-
 }
 
 public enum GPUFeatureName : uint
@@ -204,24 +173,18 @@ public enum GPUFeatureName : uint
     RG11B10UfloatRenderable = 0x00000009,
     BGRA8UnormStorage = 0x0000000A,
     Float32Filterable = 0x0000000B,
-
-
 }
 
 public enum GPUFilterMode : uint
 {
     Nearest = 0x00000000,
     Linear = 0x00000001,
-
-
 }
 
 public enum GPUFrontFace : uint
 {
     CCW = 0x00000000,
     CW = 0x00000001,
-
-
 }
 
 public enum GPUIndexFormat : uint
@@ -229,8 +192,6 @@ public enum GPUIndexFormat : uint
     Undefined = 0x00000000,
     Uint16 = 0x00000001,
     Uint32 = 0x00000002,
-
-
 }
 
 public enum GPULoadOp : uint
@@ -238,16 +199,12 @@ public enum GPULoadOp : uint
     Undefined = 0x00000000,
     Clear = 0x00000001,
     Load = 0x00000002,
-
-
 }
 
 public enum GPUMipmapFilterMode : uint
 {
     Nearest = 0x00000000,
     Linear = 0x00000001,
-
-
 }
 
 public enum GPUPowerPreference : uint
@@ -255,8 +212,6 @@ public enum GPUPowerPreference : uint
     Undefined = 0x00000000,
     LowPower = 0x00000001,
     HighPerformance = 0x00000002,
-
-
 }
 
 public enum GPUPresentMode : uint
@@ -265,8 +220,6 @@ public enum GPUPresentMode : uint
     FifoRelaxed = 0x00000001,
     Immediate = 0x00000002,
     Mailbox = 0x00000003,
-
-
 }
 
 public enum GPUPrimitiveTopology : uint
@@ -276,16 +229,12 @@ public enum GPUPrimitiveTopology : uint
     LineStrip = 0x00000002,
     TriangleList = 0x00000003,
     TriangleStrip = 0x00000004,
-
-
 }
 
 public enum GPUQueryType : uint
 {
     Occlusion = 0x00000000,
     Timestamp = 0x00000001,
-
-
 }
 
 public enum GPUQueueWorkDoneStatus : uint
@@ -294,8 +243,6 @@ public enum GPUQueueWorkDoneStatus : uint
     Error = 0x00000001,
     Unknown = 0x00000002,
     DeviceLost = 0x00000003,
-
-
 }
 
 public enum GPURequestAdapterStatus : uint
@@ -304,8 +251,6 @@ public enum GPURequestAdapterStatus : uint
     Unavailable = 0x00000001,
     Error = 0x00000002,
     Unknown = 0x00000003,
-
-
 }
 
 public enum GPURequestDeviceStatus : uint
@@ -313,11 +258,9 @@ public enum GPURequestDeviceStatus : uint
     Success = 0x00000000,
     Error = 0x00000001,
     Unknown = 0x00000002,
-
-
 }
 
-public enum GPUSType : uint
+public enum WGPUSType : uint
 {
     Invalid = 0x00000000,
     SurfaceDescriptorFromMetalLayer = 0x00000001,
@@ -331,8 +274,6 @@ public enum GPUSType : uint
     SurfaceDescriptorFromAndroidNativeWindow = 0x00000009,
     SurfaceDescriptorFromXcbWindow = 0x0000000A,
     RenderPassDescriptorMaxDrawCount = 0x0000000F,
-
-
 }
 
 public enum GPUSamplerBindingType : uint
@@ -341,8 +282,6 @@ public enum GPUSamplerBindingType : uint
     Filtering = 0x00000001,
     NonFiltering = 0x00000002,
     Comparison = 0x00000003,
-
-
 }
 
 public enum GPUStencilOperation : uint
@@ -355,8 +294,6 @@ public enum GPUStencilOperation : uint
     DecrementClamp = 0x00000005,
     IncrementWrap = 0x00000006,
     DecrementWrap = 0x00000007,
-
-
 }
 
 public enum GPUStorageTextureAccess : uint
@@ -365,8 +302,6 @@ public enum GPUStorageTextureAccess : uint
     WriteOnly = 0x00000001,
     ReadOnly = 0x00000002,
     ReadWrite = 0x00000003,
-
-
 }
 
 public enum GPUStoreOp : uint
@@ -374,8 +309,6 @@ public enum GPUStoreOp : uint
     Undefined = 0x00000000,
     Store = 0x00000001,
     Discard = 0x00000002,
-
-
 }
 
 public enum GPUSurfaceGetCurrentTextureStatus : uint
@@ -386,8 +319,6 @@ public enum GPUSurfaceGetCurrentTextureStatus : uint
     Lost = 0x00000003,
     OutOfMemory = 0x00000004,
     DeviceLost = 0x00000005,
-
-
 }
 
 public enum GPUTextureAspect : uint
@@ -399,9 +330,9 @@ public enum GPUTextureAspect : uint
 
 public enum GPUTextureDimension : uint
 {
-    Dimension1D = 0x00000000,
-    Dimension2D = 0x00000001,
-    Dimension3D = 0x00000002,
+    _1D = 0x00000000,
+    _2D = 0x00000001,
+    _3D = 0x00000002,
 }
 
 public enum GPUTextureFormat : uint
@@ -502,8 +433,6 @@ public enum GPUTextureFormat : uint
     ASTC12x10UnormSrgb = 0x0000005D,
     ASTC12x12Unorm = 0x0000005E,
     ASTC12x12UnormSrgb = 0x0000005F,
-
-
 }
 
 public enum GPUTextureSampleType : uint
@@ -514,8 +443,6 @@ public enum GPUTextureSampleType : uint
     Depth = 0x00000003,
     Sint = 0x00000004,
     Uint = 0x00000005,
-
-
 }
 
 public enum GPUTextureViewDimension : uint
@@ -527,8 +454,6 @@ public enum GPUTextureViewDimension : uint
     Cube = 0x00000004,
     CubeArray = 0x00000005,
     _3D = 0x00000006,
-
-
 }
 
 public enum GPUVertexFormat : uint
@@ -564,8 +489,6 @@ public enum GPUVertexFormat : uint
     Sint32x2 = 0x0000001C,
     Sint32x3 = 0x0000001D,
     Sint32x4 = 0x0000001E,
-
-
 }
 
 public enum GPUVertexStepMode : uint
@@ -573,8 +496,6 @@ public enum GPUVertexStepMode : uint
     Vertex = 0x00000000,
     Instance = 0x00000001,
     VertexBufferNotUsed = 0x00000002,
-
-
 }
 
 [Flags]
@@ -591,8 +512,6 @@ public enum GPUBufferUsage : uint
     Storage = 0x00000080,
     Indirect = 0x00000100,
     QueryResolve = 0x00000200,
-
-
 }
 
 public enum GPUColorWriteMask : uint
@@ -603,8 +522,6 @@ public enum GPUColorWriteMask : uint
     Blue = 0x00000004,
     Alpha = 0x00000008,
     All = 0x0000000F,
-
-
 }
 
 [Flags]
@@ -613,8 +530,6 @@ public enum GPUMapMode : uint
     None = 0x00000000,
     Read = 0x00000001,
     Write = 0x00000002,
-
-
 }
 
 public enum GPUShaderStage : uint
@@ -623,8 +538,6 @@ public enum GPUShaderStage : uint
     Vertex = 0x00000001,
     Fragment = 0x00000002,
     Compute = 0x00000004,
-
-
 }
 
 [Flags]
@@ -636,8 +549,4 @@ public enum GPUTextureUsage : uint
     TextureBinding = 0x00000004,
     StorageBinding = 0x00000008,
     RenderAttachment = 0x00000010,
-
-
 }
-
-

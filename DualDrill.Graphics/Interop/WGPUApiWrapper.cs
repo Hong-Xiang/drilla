@@ -1,11 +1,10 @@
-﻿using DualDrill.Graphics.WebGPU.Native;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DualDrill.Graphics.Native;
+namespace DualDrill.Graphics.Interop;
 
 sealed class WGPUApiWrapper
     : INativeDisposer<WGPUInstanceImpl>
