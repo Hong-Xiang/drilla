@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Graphics.Interop;
 
-internal interface INativeDisposer<T>
+internal interface INativeApiDisposer<T>
     where T : unmanaged
 {
     unsafe abstract static void NativeDispose(T* handle);
@@ -15,7 +15,7 @@ internal interface INativeDisposer<T>
 
 internal unsafe sealed class NativeHandle<TNativeDisposer, T> : SafeHandleZeroOrMinusOneIsInvalid
     where T : unmanaged
-    where TNativeDisposer : INativeDisposer<T>
+    where TNativeDisposer : INativeApiDisposer<T>
 {
     public NativeHandle(T* pointer) : base(true)
     {

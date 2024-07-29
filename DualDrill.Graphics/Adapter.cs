@@ -19,7 +19,7 @@ public sealed partial class GPUAdapter : IDisposable
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     static unsafe void RequestDeviceCallback(GPURequestDeviceStatus status, WGPUDeviceImpl* device, sbyte* message, void* data)
     {
-        RequestCallback<WGPUApiWrapper, WGPUDeviceImpl, GPURequestDeviceStatus>.Callback(status, device, message, data);
+        RequestCallback<WGPUNativeApiInterop, WGPUDeviceImpl, GPURequestDeviceStatus>.Callback(status, device, message, data);
     }
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     static unsafe void DeviceUncapturedErrorCallback(GPUErrorType errorType, sbyte* message, void* data)

@@ -10,6 +10,8 @@ namespace DualDrill.Engine;
 public sealed class FrameService : IFrameService, IDisposable
 {
     public ILogger<FrameService> Logger { get; }
+    public FrameSimulationService Simulation { get; }
+
     readonly SimpleColorRenderer Renderer;
     readonly RotateCubeRenderer CubeRenderer;
     readonly GPUDevice Device;
@@ -17,21 +19,24 @@ public sealed class FrameService : IFrameService, IDisposable
         ILogger<FrameService> logger,
         GPUDevice device,
         SimpleColorRenderer renderer,
-        RotateCubeRenderer cubeRenderer
+        RotateCubeRenderer cubeRenderer,
+        FrameSimulationService simulation
         )
     {
         Logger = logger;
         Device = device;
         Renderer = renderer;
         CubeRenderer = cubeRenderer;
+        Simulation = simulation;
     }
     public async ValueTask OnFrameAsync(FrameContext frameContext, CancellationToken cancellation)
     {
         using var queue = Device.GetQueue();
         var texture = frameContext.Surface.GetCurrentTexture();
+        var mvp = await Simulation.CubeSimulation(frameContext);
         if (texture is not null)
         {
-            await CubeRenderer.RenderAsync(frameContext.FrameIndex, queue, texture);
+            await CubeRenderer.RenderAsync(frameContext.FrameIndex, queue, texture, mvp);
         }
     }
 

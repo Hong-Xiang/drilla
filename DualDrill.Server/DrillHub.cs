@@ -144,11 +144,10 @@ sealed class DrillHub(
         return "done-from-server";
     }
 
-    public async IAsyncEnumerable<int> PingPongStream(ChannelReader<int> events)
+    public async IAsyncEnumerable<int> PingPongStream(ChannelReader<int> events, [EnumeratorCancellation] CancellationToken cancellation)
     {
-        await foreach (var e in events.ReadAllAsync().ConfigureAwait(false))
+        await foreach (var e in events.ReadAllAsync(cancellation))
         {
-            //Logger.LogInformation("Ping-Pong Stream {Data}", e);
             yield return e;
         }
     }
@@ -167,7 +166,7 @@ sealed class DrillHub(
 
     public async IAsyncEnumerable<RenderScene> RenderStates([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var s in UpdateService.RenderStates.Reader.ReadAllAsync(cancellationToken).WithCancellation(cancellationToken))
+        await foreach (var s in UpdateService.RenderStates.Reader.ReadAllAsync(cancellationToken))
         {
             yield return s;
         }

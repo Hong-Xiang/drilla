@@ -1,12 +1,8 @@
 ﻿using DualDrill.Server.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SIPSorcery.Net;
 using SIPSorcery.SIP.App;
-using SIPSorceryMedia.Abstractions;
-using System.IO;
 using System.Text;
-using static DualDrill.Server.Services.RTCDemoVideoSource;
 
 namespace DualDrill.Server.WebApi;
 

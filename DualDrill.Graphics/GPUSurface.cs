@@ -9,7 +9,7 @@ namespace DualDrill.Graphics;
 
 public sealed partial class GPUSurface : IDisposable
 {
-    internal NativeHandle<WGPUApiWrapper, WGPUSurfaceImpl> Handle { get; }
+    internal NativeHandle<WGPUNativeApiInterop, WGPUSurfaceImpl> Handle { get; }
 
     internal unsafe GPUSurface(WGPUSurfaceImpl* handle)
     {
@@ -44,7 +44,7 @@ public sealed partial class GPUSurface : IDisposable
         surfaceDescriptorFromWindowsHWND.hwnd = (void*)(((IntPtr, IntPtr, IntPtr)?)view.Native.Win32).Value.Item1;
         surfaceDescriptorFromWindowsHWND.hinstance = (void*)(((IntPtr, IntPtr, IntPtr)?)view.Native.Win32).Value.Item3;
         WGPUSurfaceDescriptorFromWindowsHWND surfaceDescriptorFromWindowsHWND2 = surfaceDescriptorFromWindowsHWND;
-        descriptor.nextInChain = (Interop.WGPUChainedStruct*)(&surfaceDescriptorFromWindowsHWND2);
+        descriptor.nextInChain = (Interop.WGPUChainedStruct*)(&surfaceDescriptorFromWindowsHWND);
         WGPUSurfaceImpl* result = WGPU.InstanceCreateSurface(instance.Handle, &descriptor);
         if (result is null)
         {

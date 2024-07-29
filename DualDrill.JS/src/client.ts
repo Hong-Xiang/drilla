@@ -298,11 +298,10 @@ export function addDataChannelLogMessageListener(channel: RTCDataChannel) {
   };
 }
 
-export async function CreateSimpleRTCClient(divE: HTMLDivElement) {
+export async function CreateSimpleRTCClient() {
   const video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
-  divE.appendChild(video);
 
   const pc = new RTCPeerConnection({ iceServers: [] });
 
@@ -370,4 +369,8 @@ export async function CreateSimpleRTCClient(divE: HTMLDivElement) {
     sdp: answer,
   });
   return video;
+}
+
+export function appendChild(el: HTMLElement, child: HTMLElement) {
+  el.appendChild(child);
 }

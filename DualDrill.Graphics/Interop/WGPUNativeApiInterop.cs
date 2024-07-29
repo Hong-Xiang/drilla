@@ -6,29 +6,29 @@ using System.Threading.Tasks;
 
 namespace DualDrill.Graphics.Interop;
 
-sealed class WGPUApiWrapper
-    : INativeDisposer<WGPUInstanceImpl>
-    , INativeDisposer<WGPUAdapterImpl>
-    , INativeDisposer<WGPUDeviceImpl>
-    , INativeDisposer<WGPUSurfaceImpl>
-    , INativeDisposer<WGPUShaderModuleImpl>
-    , INativeDisposer<WGPUBufferImpl>
-    , INativeDisposer<WGPUTextureImpl>
-    , INativeDisposer<WGPUSamplerImpl>
-    , INativeDisposer<WGPUBindGroupImpl>
-    , INativeDisposer<WGPUBindGroupLayoutImpl>
-    , INativeDisposer<WGPUPipelineLayoutImpl>
-    , INativeDisposer<WGPURenderPipelineImpl>
-    , INativeDisposer<WGPUComputePipelineImpl>
-    , INativeDisposer<WGPUCommandBufferImpl>
-    , INativeDisposer<WGPUQueueImpl>
-    , INativeDisposer<WGPUTextureViewImpl>
-    , INativeDisposer<WGPUCommandEncoderImpl>
-    , INativeDisposer<WGPUComputePassEncoderImpl>
-    , INativeDisposer<WGPURenderPassEncoderImpl>
-    , INativeDisposer<WGPURenderBundleImpl>
-    , INativeDisposer<WGPURenderBundleEncoderImpl>
-    , INativeDisposer<WGPUQuerySetImpl>
+sealed class WGPUNativeApiInterop
+    : INativeApiDisposer<WGPUInstanceImpl>
+    , INativeApiDisposer<WGPUAdapterImpl>
+    , INativeApiDisposer<WGPUDeviceImpl>
+    , INativeApiDisposer<WGPUSurfaceImpl>
+    , INativeApiDisposer<WGPUShaderModuleImpl>
+    , INativeApiDisposer<WGPUBufferImpl>
+    , INativeApiDisposer<WGPUTextureImpl>
+    , INativeApiDisposer<WGPUSamplerImpl>
+    , INativeApiDisposer<WGPUBindGroupImpl>
+    , INativeApiDisposer<WGPUBindGroupLayoutImpl>
+    , INativeApiDisposer<WGPUPipelineLayoutImpl>
+    , INativeApiDisposer<WGPURenderPipelineImpl>
+    , INativeApiDisposer<WGPUComputePipelineImpl>
+    , INativeApiDisposer<WGPUCommandBufferImpl>
+    , INativeApiDisposer<WGPUQueueImpl>
+    , INativeApiDisposer<WGPUTextureViewImpl>
+    , INativeApiDisposer<WGPUCommandEncoderImpl>
+    , INativeApiDisposer<WGPUComputePassEncoderImpl>
+    , INativeApiDisposer<WGPURenderPassEncoderImpl>
+    , INativeApiDisposer<WGPURenderBundleImpl>
+    , INativeApiDisposer<WGPURenderBundleEncoderImpl>
+    , INativeApiDisposer<WGPUQuerySetImpl>
     , IStatusIsSuccessApi<GPURequestAdapterStatus>
     , IStatusIsSuccessApi<GPURequestDeviceStatus>
 {
