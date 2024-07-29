@@ -532,6 +532,7 @@ public enum GPUMapMode : uint
     Write = 0x00000002,
 }
 
+[Flags]
 public enum GPUShaderStage : uint
 {
     None = 0x00000000,

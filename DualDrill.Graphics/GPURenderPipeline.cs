@@ -21,11 +21,11 @@ public sealed partial class GPURenderPipeline
     public static unsafe GPURenderPipeline Create(GPUDevice device, GPURenderPipelineDescriptor descriptor)
     {
         using var vertexEntryPoint = descriptor.Vertex.EntryPoint.Pin();
-        WGPURenderPipelineDescriptor nativeDescriptor = default;
+        WGPURenderPipelineDescriptor desc = default;
         try
         {
-            nativeDescriptor.vertex.module = descriptor.Vertex.Module.Handle;
-            nativeDescriptor.vertex.entryPoint = vertexEntryPoint.Pointer;
+            desc.vertex.module = descriptor.Vertex.Module.Handle;
+            desc.vertex.entryPoint = vertexEntryPoint.Pointer;
             if (descriptor.Vertex.Constants.Length > 0)
             {
                 throw new NotImplementedException("Constant Entry is not support yet");
@@ -77,20 +77,19 @@ public sealed partial class GPURenderPipeline
                 primitive =
                 {
                     topology = descriptor.Primitive.Topology,
-                    //StripIndexFormat = IndexFormat.Undefined,
-                    //FrontFace = FrontFace.Ccw,
-                    //CullMode = CullMode.None
+                    stripIndexFormat = descriptor.Primitive.StripIndexFormat,
+                    frontFace = descriptor.Primitive.FrontFace,
+                    cullMode = descriptor.Primitive.CullMode
                 },
                 multisample = new WGPUMultisampleState
                 {
                     count = 1,
                     mask = ~0u,
-                    //AlphaToCoverageEnabled = false
+                    alphaToCoverageEnabled = (GPUBool)descriptor.Multisample.AlphaToCoverageEnabled
                 },
                 fragment = descriptor.Fragment.HasValue ? &fragment : null,
                 //DepthStencil = null,
-                //layout = descriptor.Layout.Handle,
-                layout = null
+                layout = descriptor.Layout.Handle
             };
 
             var vertexBuffer = stackalloc WGPUVertexBufferLayout[descriptor.Vertex.Buffers.Length];
@@ -137,14 +136,9 @@ public sealed partial class GPURenderPipeline
         }
         finally
         {
-            if (nativeDescriptor.vertex.entryPoint != null)
+            if (desc.fragment != null && desc.fragment->entryPoint != null)
             {
-                SilkMarshal.Free((nint)nativeDescriptor.vertex.entryPoint);
-            }
-
-            if (nativeDescriptor.fragment != null && nativeDescriptor.fragment->entryPoint != null)
-            {
-                SilkMarshal.Free((nint)nativeDescriptor.fragment->entryPoint);
+                SilkMarshal.Free((nint)desc.fragment->entryPoint);
             }
         }
     }

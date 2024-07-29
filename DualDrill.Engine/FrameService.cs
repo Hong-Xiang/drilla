@@ -31,7 +31,7 @@ public sealed class FrameService : IFrameService, IDisposable
         var texture = frameContext.Surface.GetCurrentTexture();
         if (texture is not null)
         {
-            await Renderer.RenderAsync(frameContext.FrameIndex, queue, texture);
+            await CubeRenderer.RenderAsync(frameContext.FrameIndex, queue, texture);
         }
     }
 

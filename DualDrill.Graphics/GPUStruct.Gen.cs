@@ -386,7 +386,7 @@ public unsafe partial struct GPUChainedStructOut
 }
 public partial struct GPUBindGroupLayoutEntry
 {
-    public uint Visibility { get; set; }
+    public GPUShaderStage Visibility { get; set; }
     public int Binding { get; set; }
     public GPUBufferBindingLayout Buffer { get; set; }
     public GPUSamplerBindingLayout Sampler { get; set; }
@@ -424,9 +424,8 @@ public partial struct GPUStorageTextureBindingLayout
 }
 public partial struct GPUBindGroupDescriptor
 {
-    public nuint EntryCount { get; set; }
-    public GPUBindGroupLayout Layout { get; set; }
     public string? Label { get; set; }
+    public GPUBindGroupLayout Layout { get; set; }
     public ReadOnlyMemory<GPUBindGroupEntry> Entries { get; set; }
 }
 public partial struct GPUBindGroupEntry

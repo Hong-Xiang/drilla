@@ -109,6 +109,7 @@ public sealed class Quad : IVertexBufferLayout
         -0.5f, +0.5f, 1.0f, 1.0f, 0.0f
     ];
     private readonly ImmutableArray<UInt16> _IndexData = [0, 1, 2, 0, 2, 3];
+    public int IndexCount => 6;
 
     public ReadOnlySpan<float> VertexData => _VertexData.AsSpan();
     public ReadOnlySpan<UInt16> IndexData => _IndexData.AsSpan();

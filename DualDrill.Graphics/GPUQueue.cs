@@ -49,11 +49,7 @@ public sealed partial class GPUQueue
     unsafe static void QueueWorkDoneAsync(GPUQueueWorkDoneStatus status, void* data)
     {
         var handle = GCHandle.FromIntPtr((nint)data);
-        var target = (TaskCompletionSource<GPUQueueWorkDoneStatus>)handle.Target;
-        if (target is null)
-        {
-            throw new GraphicsApiException($"GCHandle({(nint)data:X}) failed to recover target");
-        }
+        var target = (TaskCompletionSource<GPUQueueWorkDoneStatus>)handle.Target ?? throw new GraphicsApiException($"GCHandle({(nint)data:X}) failed to recover target");
         target.SetResult(status);
         handle.Free();
     }
@@ -65,9 +61,6 @@ public sealed partial class GPUQueue
         WGPU.QueueOnSubmittedWorkDone(Handle, &QueueWorkDoneAsync, (void*)handle);
         return tcs.Task;
     }
-
-
-
     public unsafe void OnSubmittedWorkDone(Action next)
     {
         //var tcs = new TaskCompletionSource<WGPUQueueWorkDoneStatus>();

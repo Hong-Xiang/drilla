@@ -104,6 +104,7 @@ public sealed partial class GPUDevice
         {
             label = (sbyte*)label.Handle,
             layout = descriptor.Layout.Handle,
+            entryCount = (nuint)descriptor.Entries.Length,
             entries = entries
         };
         return new GPUBindGroup(WGPU.DeviceCreateBindGroup(Handle, &nativeDescriptor));
@@ -118,7 +119,7 @@ public sealed partial class GPUDevice
             entries[index] = new WGPUBindGroupLayoutEntry
             {
                 binding = (uint)entry.Binding,
-                visibility = entry.Visibility,
+                visibility = (uint)entry.Visibility,
                 buffer = entry.Buffer
             };
             index++;
@@ -133,7 +134,20 @@ public sealed partial class GPUDevice
 
     public unsafe GPUPipelineLayout CreatePipelineLayout(GPUPipelineLayoutDescriptor descriptor)
     {
-        WGPUPipelineLayoutDescriptor native = default;
+        var bindGroupLayouts = stackalloc IntPtr[descriptor.BindGroupLayouts.Length];
+        var native = new WGPUPipelineLayoutDescriptor
+        {
+            bindGroupLayoutCount = (nuint)descriptor.BindGroupLayouts.Length,
+            bindGroupLayouts = (WGPUBindGroupLayoutImpl**)bindGroupLayouts
+        };
+        var index = 0;
+        foreach (var bindGroupLayout in descriptor.BindGroupLayouts.Span)
+        {
+            bindGroupLayouts[index] = (nint)(WGPUBindGroupLayoutImpl*)bindGroupLayout.Handle;
+            index++;
+        }
+
+
         return new GPUPipelineLayout(WGPU.DeviceCreatePipelineLayout(Handle, &native));
     }
 }
