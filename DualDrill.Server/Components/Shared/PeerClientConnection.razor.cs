@@ -13,8 +13,6 @@ namespace DualDrill.Server.Components.Shared;
 
 public partial class PeerClientConnection : IDesktopBrowserUI, IAsyncDisposable
 {
-    [Inject] DualDrill.Server.Application.PeerClientConnectionService ConnectionService { get; set; }
-    [Inject] DualDrill.Engine.Connection.ClientStore ClientHub { get; set; }
     [Inject] ILogger<PeerClientConnection> Logger { get; set; }
 
     [Parameter]

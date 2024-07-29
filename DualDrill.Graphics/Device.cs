@@ -1,12 +1,6 @@
-﻿using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
-using Silk.NET.Core.Native;
+﻿using DualDrill.Graphics.Interop;
 using Silk.NET.WebGPU;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace DualDrill.Graphics;
 
@@ -21,19 +15,19 @@ public sealed partial class GPUDevice
         WGPUCommandEncoderDescriptor nativeDescriptor = new()
         {
         };
-        return new(WGPU.wgpuDeviceCreateCommandEncoder(Handle, &nativeDescriptor));
+        return new(WGPU.DeviceCreateCommandEncoder(Handle, &nativeDescriptor));
     }
 
     public unsafe void Poll()
     {
-        _ = WGPU.wgpuDevicePoll(Handle, 0, null);
+        _ = WGPU.DevicePoll(Handle, 0, null);
     }
 
     internal async Task PollAndWaitOnTaskAsync(Task target)
     {
         unsafe void DoPoll()
         {
-            _ = WGPU.wgpuDevicePoll(Handle, 0, null);
+            _ = WGPU.DevicePoll(Handle, 0, null);
         }
         while (!target.IsCompleted)
         {
@@ -45,37 +39,116 @@ public sealed partial class GPUDevice
 
     public unsafe GPUQueue GetQueue()
     {
-        return new(WGPU.wgpuDeviceGetQueue(Handle));
+        return new(WGPU.DeviceGetQueue(Handle));
     }
 
     public unsafe GPUTexture CreateTexture(GPUTextureDescriptor descriptor)
     {
 
         using var label = NativeStringRef.Create(descriptor.Label);
-        var viewFormats = stackalloc WGPUTextureFormat[descriptor.ViewFormats.Length];
+        var viewFormats = stackalloc GPUTextureFormat[descriptor.ViewFormats.Length];
         for (var i = 0; i < descriptor.ViewFormats.Length; i++)
         {
-            viewFormats[i] = (WGPUTextureFormat)descriptor.ViewFormats.Span[i];
+            viewFormats[i] = descriptor.ViewFormats.Span[i];
         }
         WGPUTextureDescriptor native = new()
         {
             label = (sbyte*)label.Handle,
             usage = (uint)descriptor.Usage,
-            dimension = (WGPUTextureDimension)descriptor.Dimension,
+            dimension = descriptor.Dimension,
             size = descriptor.Size,
-            format = (WGPUTextureFormat)descriptor.Format,
+            format = descriptor.Format,
             mipLevelCount = (uint)descriptor.MipLevelCount,
             sampleCount = (uint)descriptor.SampleCount,
             viewFormatCount = (nuint)descriptor.ViewFormats.Length,
             viewFormats = descriptor.ViewFormats.Length > 0 ? viewFormats : null,
         };
-        return new GPUTexture(WGPU.wgpuDeviceCreateTexture(Handle, &native));
+        return new GPUTexture(WGPU.DeviceCreateTexture(Handle, &native));
+    }
+
+    public unsafe GPUBuffer CreateBuffer(GPUBufferDescriptor descriptor)
+    {
+        var alignedSize = (descriptor.Size + 3UL) & ~3UL;
+        //Debug.Assert(descriptor.Size == alignedSize, "Buffer byte size should be multiple of 4");
+        WGPUBufferDescriptor nativeDescriptor = new()
+        {
+            mappedAtCreation = descriptor.MappedAtCreation.Value,
+            size = alignedSize,
+            usage = (uint)descriptor.Usage,
+        };
+        var handle = WGPU.DeviceCreateBuffer(Handle, &nativeDescriptor);
+        return new(handle);
+    }
+
+    public unsafe GPUBindGroup CreateBindGroup(GPUBindGroupDescriptor descriptor)
+    {
+        var entries = stackalloc WGPUBindGroupEntry[descriptor.Entries.Length];
+        var entryIndex = 0;
+        using var label = NativeStringRef.Create(descriptor.Label);
+        foreach (var entry in descriptor.Entries.Span)
+        {
+            entries[entryIndex] = new WGPUBindGroupEntry()
+            {
+                binding = (uint)entry.Binding,
+                buffer = entry.Buffer is GPUBuffer b ? b.NativePointer : null,
+                offset = entry.Offset,
+                size = entry.Size,
+                sampler = entry.Sampler is GPUSampler s ? s.NativePointer : null,
+                textureView = entry.TextureView is GPUTextureView v ? v.NativePointer : null
+            };
+            entryIndex++;
+        }
+
+
+        WGPUBindGroupDescriptor nativeDescriptor = new()
+        {
+            label = (sbyte*)label.Handle,
+            layout = descriptor.Layout.Handle,
+            entryCount = (nuint)descriptor.Entries.Length,
+            entries = entries
+        };
+        return new GPUBindGroup(WGPU.DeviceCreateBindGroup(Handle, &nativeDescriptor));
+    }
+
+    public unsafe GPUBindGroupLayout CreateBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor)
+    {
+        var entries = stackalloc WGPUBindGroupLayoutEntry[descriptor.Entries.Length];
+        var index = 0;
+        foreach (var entry in descriptor.Entries.Span)
+        {
+            entries[index] = new WGPUBindGroupLayoutEntry
+            {
+                binding = (uint)entry.Binding,
+                visibility = (uint)entry.Visibility,
+                buffer = entry.Buffer
+            };
+            index++;
+        }
+        var nativeDescriptor = new WGPUBindGroupLayoutDescriptor
+        {
+            entryCount = (uint)descriptor.Entries.Length,
+            entries = entries
+        };
+        return new(WGPU.DeviceCreateBindGroupLayout(Handle, &nativeDescriptor));
     }
 
     public unsafe GPUPipelineLayout CreatePipelineLayout(GPUPipelineLayoutDescriptor descriptor)
     {
-        WGPUPipelineLayoutDescriptor native = default;
-        return new GPUPipelineLayout(WGPU.wgpuDeviceCreatePipelineLayout(Handle, &native));
+        var bindGroupLayouts = stackalloc IntPtr[descriptor.BindGroupLayouts.Length];
+        var native = new WGPUPipelineLayoutDescriptor
+        {
+            bindGroupLayoutCount = (nuint)descriptor.BindGroupLayouts.Length,
+            bindGroupLayouts = (WGPUBindGroupLayoutImpl**)bindGroupLayouts
+        };
+        var index = 0;
+        foreach (var bindGroupLayout in descriptor.BindGroupLayouts.Span)
+        {
+            bindGroupLayouts[index] = (nint)(WGPUBindGroupLayoutImpl*)bindGroupLayout.Handle;
+            index++;
+        }
+
+
+        return new GPUPipelineLayout(WGPU.DeviceCreatePipelineLayout(Handle, &native));
     }
 }
 

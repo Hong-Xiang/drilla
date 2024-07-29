@@ -1,10 +1,12 @@
-﻿using DualDrill.Graphics.WebGPU.Native;
-using DualDrill.Graphics;
+﻿using DualDrill.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DualDrill.Graphics.Interop;
+using System.Collections.Immutable;
+using DualDrill.Interop;
 
 
 namespace DualDrill.Graphics;
@@ -112,7 +114,7 @@ public partial struct GPUSurfaceCapabilities
     public ReadOnlyMemory<GPUPresentMode> PresentModes { get; set; }
     public ReadOnlyMemory<GPUCompositeAlphaMode> AlphaModes { get; set; }
 }
-public partial struct GPUSurfaceConfiguration
+public ref struct GPUSurfaceConfiguration
 {
     public GPUDevice Device { get; set; }
     public GPUTextureUsage Usage { get; set; }
@@ -121,7 +123,7 @@ public partial struct GPUSurfaceConfiguration
     public GPUTextureFormat Format { get; set; }
     public GPUCompositeAlphaMode AlphaMode { get; set; }
     public GPUPresentMode PresentMode { get; set; }
-    public ReadOnlyMemory<GPUTextureFormat> ViewFormats { get; set; }
+    public ReadOnlySpan<GPUTextureFormat> ViewFormats { get; set; }
 }
 public partial struct GPUSurfaceDescriptor { public string? Label { get; set; } }
 public partial struct GPUSurfaceDescriptorFromAndroidNativeWindow
@@ -191,8 +193,8 @@ public partial struct GPUInstanceExtras
     public string DxilPath { get; set; }
     public string DxcPath { get; set; }
     public GPUChainedStruct Chain { get; set; }
-    public GPUDx12Compiler Dx12ShaderCompiler { get; set; }
-    public GPUGles3MinorVersion Gles3MinorVersion { get; set; }
+    public WGPUDx12Compiler Dx12ShaderCompiler { get; set; }
+    public WGPUGles3MinorVersion Gles3MinorVersion { get; set; }
 }
 public partial struct GPUDeviceExtras
 {
@@ -294,7 +296,7 @@ public partial struct GPUBindGroupLayoutEntryExtras
 }
 public partial struct GPUQuerySetDescriptorExtras
 {
-    public ReadOnlyMemory<GPUPipelineStatisticName> PipelineStatistics { get; set; }
+    public ReadOnlyMemory<WGPUPipelineStatisticName> PipelineStatistics { get; set; }
     public GPUChainedStruct Chain { get; set; }
 }
 public partial struct GPUSurfaceConfigurationExtras
@@ -313,7 +315,7 @@ public partial struct GPUBufferDescriptor
 {
     public GPUBufferUsage Usage { get; set; }
     public ulong Size { get; set; }
-    public bool MappedAtCreation { get; set; }
+    public GPUBool MappedAtCreation { get; set; }
     public string? Label { get; set; }
 }
 public partial struct GPUTextureDescriptor
@@ -354,14 +356,13 @@ public partial struct GPUSamplerDescriptor
 }
 public partial struct GPUBindGroupLayoutDescriptor
 {
-    public nuint EntryCount { get; set; }
     public ReadOnlyMemory<GPUBindGroupLayoutEntry> Entries { get; set; }
     public string? Label { get; set; }
 }
 public unsafe partial struct GPUDeviceDescriptor
 {
     public ReadOnlyMemory<GPUFeatureName> RequiredFeatures { get; set; }
-    public delegate* unmanaged[Cdecl]<WGPUDeviceLostReason, sbyte*, void*, void> DeviceLostCallback { get; set; }
+    public delegate* unmanaged[Cdecl]<GPUDeviceLostReason, sbyte*, void*, void> DeviceLostCallback { get; set; }
     public nint DeviceLostUserdata { get; set; }
     public ReadOnlyMemory<GPURequiredLimits> RequiredLimits { get; set; }
     public string? Label { get; set; }
@@ -376,16 +377,16 @@ public unsafe partial struct GPUShaderModuleSPIRVDescriptor
 public unsafe partial struct GPUChainedStruct
 {
     public GPUChainedStruct* Next { get; set; }
-    public GPUSType SType { get; set; }
+    public WGPUSType SType { get; set; }
 }
 public unsafe partial struct GPUChainedStructOut
 {
     public GPUChainedStructOut* Next { get; set; }
-    public GPUSType SType { get; set; }
+    public WGPUSType SType { get; set; }
 }
 public partial struct GPUBindGroupLayoutEntry
 {
-    public uint Visibility { get; set; }
+    public GPUShaderStage Visibility { get; set; }
     public int Binding { get; set; }
     public GPUBufferBindingLayout Buffer { get; set; }
     public GPUSamplerBindingLayout Sampler { get; set; }
@@ -397,6 +398,16 @@ public partial struct GPUBufferBindingLayout
     public ulong MinBindingSize { get; set; }
     public bool HasDynamicOffset { get; set; }
     public GPUBufferBindingType Type { get; set; }
+
+    public static implicit operator WGPUBufferBindingLayout(GPUBufferBindingLayout layout)
+    {
+        return new WGPUBufferBindingLayout
+        {
+            type = layout.Type,
+            minBindingSize = layout.MinBindingSize,
+            hasDynamicOffset = layout.HasDynamicOffset ? 1u : 0
+        };
+    }
 }
 public partial struct GPUSamplerBindingLayout { public GPUSamplerBindingType Type { get; set; } }
 public partial struct GPUTextureBindingLayout
@@ -413,9 +424,8 @@ public partial struct GPUStorageTextureBindingLayout
 }
 public partial struct GPUBindGroupDescriptor
 {
-    public nuint EntryCount { get; set; }
-    public GPUBindGroupLayout Layout { get; set; }
     public string? Label { get; set; }
+    public GPUBindGroupLayout Layout { get; set; }
     public ReadOnlyMemory<GPUBindGroupEntry> Entries { get; set; }
 }
 public partial struct GPUBindGroupEntry
@@ -517,7 +527,7 @@ public partial struct GPUStencilFaceState
 }
 public partial struct GPUVertexState
 {
-    public string EntryPoint { get; set; }
+    public Utf8String EntryPoint { get; set; }
     public GPUShaderModule Module { get; set; }
     public ReadOnlyMemory<GPUConstantEntry> Constants { get; set; }
     public ReadOnlyMemory<GPUVertexBufferLayout> Buffers { get; set; }
@@ -527,12 +537,6 @@ public partial struct GPUVertexBufferLayout
     public ulong ArrayStride { get; set; }
     public GPUVertexStepMode StepMode { get; set; }
     public ReadOnlyMemory<GPUVertexAttribute> Attributes { get; set; }
-}
-public partial struct GPUVertexAttribute
-{
-    public ulong Offset { get; set; }
-    public GPUVertexFormat Format { get; set; }
-    public int ShaderLocation { get; set; }
 }
 public partial struct GPUImageCopyBuffer
 {

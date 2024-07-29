@@ -47,7 +47,7 @@ export function SignalRConnectionId() {
 }
 
 export async function Initialization(blazorServerService?: DotNetObject) {
-  console.log('initialization called');
+  console.log("initialization called");
   await SignalRConnection.start();
   if (blazorServerService) {
     BlazorServerService = blazorServerService;
@@ -296,4 +296,81 @@ export function addDataChannelLogMessageListener(channel: RTCDataChannel) {
       channel.removeEventListener("message", h);
     },
   };
+}
+
+export async function CreateSimpleRTCClient() {
+  const video = document.createElement("video");
+  video.autoplay = true;
+  video.playsInline = true;
+
+  const pc = new RTCPeerConnection({ iceServers: [] });
+
+  //pc.ontrack = evt => document.querySelector('#videoCtl').srcObject = evt.streams[0];
+  pc.onicecandidate = (evt) => {
+    console.log(evt.candidate);
+    if (evt.candidate) {
+      SignalRConnection.invoke(
+        "AddIceCandidate",
+        JSON.stringify(evt.candidate)
+      );
+    }
+    // console.log("onicecandidate", evt);
+    // if (evt.candidate) {
+    //   fetch("api/rtcclient/candidate", {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "text/plain",
+    //     },
+    //     body: JSON.stringify(evt.candidate),
+    //   });
+    // }
+  };
+  pc.onnegotiationneeded = (e) => {
+    console.log("onnegotiationneeded", e);
+  };
+
+  pc.ontrack = (t) => {
+    console.log("received track");
+    video.srcObject = t.streams[0];
+  };
+
+  // Diagnostics.
+  pc.onicegatheringstatechange = () =>
+    console.log("onicegatheringstatechange: " + pc.iceGatheringState);
+  pc.oniceconnectionstatechange = () =>
+    console.log("oniceconnectionstatechange: " + pc.iceConnectionState);
+  pc.onsignalingstatechange = () =>
+    console.log("onsignalingstatechange: " + pc.signalingState);
+  pc.onconnectionstatechange = () =>
+    console.log("onconnectionstatechange: " + pc.connectionState);
+
+  const offer = await pc.createOffer({
+    offerToReceiveVideo: true,
+  });
+  await pc.setLocalDescription(offer);
+  SignalRConnection.on("IceCandidate", (candidate) => {
+    console.log(candidate);
+  });
+  // const answer = await fetch(`api/rtcclient`, {
+  //   method: "POST",
+  //   headers: {
+  //     "Content-Type": "text/plain",
+  //   },
+  //   body: offer.sdp,
+  // });
+  const answer = await SignalRConnection.invoke(
+    "CreatePeerConnection",
+    offer.sdp
+  );
+  // const answerSdp = await answer.text();
+  console.log("got answer", answer);
+  await pc.setRemoteDescription({
+    type: "answer",
+    sdp: answer,
+  });
+  return video;
+}
+
+export function appendChild(el: HTMLElement, child: HTMLElement) {
+  el.appendChild(child);
 }

@@ -6,11 +6,13 @@
 	<Import Project="..\Silk.NET.Packages.props" />
 
 	<ItemGroup>
+		<PackageReference Include="MessagePipe" Version="1.8.1" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
 		<PackageReference Include="Microsoft.JSInterop" Version="8.0.4" />
+		<PackageReference Include="R3" Version="1.1.13" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
-		<PackageReference Include="System.Reactive" Version="6.0.1-preview.1" />
+		<PackageReference Include="System.Reactive" Version="6.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

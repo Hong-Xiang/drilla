@@ -1,13 +1,8 @@
-﻿using DualDrill.Engine.BrowserProxy;
-using DualDrill.Engine.Connection;
+﻿using DualDrill.Engine.Connection;
 using DualDrill.Engine.Disposable;
-using DualDrill.Server.Services;
-using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.JSInterop;
-using System.Collections.Concurrent;
 
 namespace DualDrill.Server.Browser;
 
@@ -23,7 +18,6 @@ public static class ClientHubEndpointExtension
         services.AddSingleton<ClientStore>();
 
         services.AddScoped<ContextDisposableCollection>();
-        services.AddScoped<ContextAsyncDisposableCollection>();
         //services.AddScoped<InitializedClientContext>();
 
         //services.AddScoped(async sp =>

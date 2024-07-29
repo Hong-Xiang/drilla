@@ -3,7 +3,24 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <h3>Desktop Client</h3>
-@if (Module is null)
+@if (Connecting)
+{
+    <span>Connecting ... </span>
+}
+<button @onclick="StartRTC">Start RTC</button>
+<div>
+    <span> scale </span>
+    <input type="range" min="0.1" max="2.0" step="0.1" @bind-value="Scale" @bind-value:event="oninput" />
+    <span> @Scale </span>
+</div>
+
+<div @ref="SimpleRTCRef" 
+    style="width : @(Surface.Width)px; height:@(Surface.Height)px"
+    @onmousedown="OnMouseDown"
+    @onmouseup="OnMouseUp"
+    @onmousemove="OnMouseMove"
+></div>
+@if (Module is null || RenderService is null)
 {
     <div>Initializing Client ...</div>
 }

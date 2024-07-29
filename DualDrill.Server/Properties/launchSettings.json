@@ -13,11 +13,12 @@
     "https": {
       "commandName": "Project",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "RUST_BACKTRACE": "full"
       },
       "dotnetRunMessages": true,
       "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}",
-      "applicationUrl": "https://localhost:7117;http://localhost:5268"
+      "applicationUrl": "https://*:7117;http://localhost:5268"
     },
     "IIS Express": {
       "commandName": "IISExpress",

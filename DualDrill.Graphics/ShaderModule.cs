@@ -1,5 +1,5 @@
-﻿using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
+﻿using DualDrill.Graphics.Interop;
+using DualDrill.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,22 +21,23 @@ public sealed partial class GPUShaderModule
 {
     internal unsafe static GPUShaderModule Create(GPUDevice device, string code)
     {
-        using var nativeCode = NativeStringRef.Create(code);
-        var wgslDescriptor = new WGPUShaderModuleWGSLDescriptor
+        var codeUtf8 = Utf8String.Create(code);
+        using var nativeCode = codeUtf8.Memory.Pin();
+        var descriptor = new WGPUShaderModuleWGSLDescriptor
         {
-            code = (sbyte*)nativeCode.Handle,
+            code = (sbyte*)nativeCode.Pointer,
             chain = new WGPUChainedStruct
             {
-                sType = WGPUSType.WGPUSType_ShaderModuleWGSLDescriptor
+                sType = WGPUSType.ShaderModuleWGSLDescriptor
             }
         };
 
         var shaderModuleDescriptor = new WGPUShaderModuleDescriptor
         {
-            nextInChain = &wgslDescriptor.chain,
+            nextInChain = &descriptor.chain,
         };
 
-        var handle = WGPU.wgpuDeviceCreateShaderModule(device.NativePointer, &shaderModuleDescriptor);
+        var handle = WGPU.DeviceCreateShaderModule(device.NativePointer, &shaderModuleDescriptor);
         return new GPUShaderModule(handle);
     }
 }

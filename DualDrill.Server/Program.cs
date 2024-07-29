@@ -4,7 +4,13 @@ using DualDrill.Engine;
 using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Headless;
-using DualDrill.Server.WebView;
+using DualDrill.Server.Services;
+using Serilog.Extensions.Logging;
+using Serilog;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Serilog;
+using Serilog.Extensions.Logging;
 
 namespace DualDrill.Server;
 
@@ -12,6 +18,15 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
+
+        var seriLogger = new LoggerConfiguration()
+              .Enrich.FromLogContext()
+              .MinimumLevel.Is(Serilog.Events.LogEventLevel.Debug)
+              .WriteTo.Console()
+              .CreateLogger();
+        var factory = new SerilogLoggerFactory(seriLogger);
+        SIPSorcery.LogFactory.Set(factory);
+
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             Args = args,
@@ -22,9 +37,12 @@ public class Program
         {
         });
 
+        builder.Services.AddMessagePipe();
+
         builder.Services.AddSingleton<PeerClientConnectionService>();
 
-        builder.Services.AddSingleton<DualDrill.Engine.Renderer.TriangleRenderer>();
+        builder.Services.AddSingleton<DualDrill.Engine.Renderer.SimpleColorRenderer>();
+        builder.Services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
         builder.Services.AddSingleton<HeadlessSurface>(sp =>
         {
             var option = builder.Configuration.Get<HeadlessSurface.Option>();
@@ -38,12 +56,12 @@ public class Program
 
         builder.Services.AddSingleton<FrameInputService>();
         builder.Services.AddSingleton<FrameSimulationService>();
+        builder.Services.AddSingleton<RTCDemoVideoSource>();
         builder.Services.AddSingleton<IFrameService, FrameService>();
         builder.Services.AddHostedService<DevicePollHostedService>();
         builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
 
-        builder.Services.AddSingleton<WebViewService>();
-        builder.Services.AddHostedService<WebViewWindowHostedService>();
+        builder.Services.AddHostedService<VideoPushHostedService>();
         //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
@@ -51,6 +69,7 @@ public class Program
         //builder.Services.AddHostedService<DistributeXRApplicationService>();
         builder.Services.AddClients();
         builder.Services.AddControllers();
+        builder.Services.AddHealthChecks();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()
@@ -58,6 +77,7 @@ public class Program
             .AddInteractiveWebAssemblyComponents();
 
         var app = builder.Build();
+        app.MapHealthChecks("health");
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -82,6 +102,7 @@ public class Program
         app.MapControllers();
         app.MapClients();
         app.MapRenderControls();
+        
 
         app.MapRazorComponents<DualDrill.Server.Components.App>()
             .AddInteractiveServerRenderMode()

@@ -1,9 +1,9 @@
-﻿using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
+﻿using DualDrill.Graphics.Interop;
 using Silk.NET.Core.Native;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,19 +12,25 @@ namespace DualDrill.Graphics;
 
 public sealed partial class GPURenderPipeline
 {
+
+    public unsafe GPUBindGroupLayout GetBindGroupLayout(int index)
+    {
+        return new GPUBindGroupLayout(WGPU.RenderPipelineGetBindGroupLayout(Handle, (uint)index));
+    }
+
     public static unsafe GPURenderPipeline Create(GPUDevice device, GPURenderPipelineDescriptor descriptor)
     {
-        WGPURenderPipelineDescriptor nativeDescriptor = default;
+        using var vertexEntryPoint = descriptor.Vertex.EntryPoint.Pin();
+        WGPURenderPipelineDescriptor desc = default;
         try
         {
-            nativeDescriptor.vertex.module = descriptor.Vertex.Module.Handle;
-            nativeDescriptor.vertex.entryPoint = (sbyte*)SilkMarshal.StringToPtr(descriptor.Vertex.EntryPoint);
+            desc.vertex.module = descriptor.Vertex.Module.Handle;
+            desc.vertex.entryPoint = vertexEntryPoint.Pointer;
             if (descriptor.Vertex.Constants.Length > 0)
             {
                 throw new NotImplementedException("Constant Entry is not support yet");
             }
 
-            using var vertexEntryPoint = NativeStringRef.Create(descriptor.Vertex.EntryPoint);
             using var fragmentEntryPoint =
                 descriptor.Fragment.HasValue ? NativeStringRef.Create(descriptor.Fragment.Value.EntryPoint) : default;
 
@@ -52,51 +58,87 @@ public sealed partial class GPURenderPipeline
                     {
                         blend = null,
                         writeMask = c.WriteMask,
-                        format = (WGPUTextureFormat)c.Format
+                        format = c.Format
                     };
                 }
                 fragment.targets = targets;
             }
+
 
             var renderPipelineDescriptor = new WGPURenderPipelineDescriptor
             {
                 vertex =
                 {
                     module = descriptor.Vertex.Module.Handle,
-                    entryPoint = (sbyte*)vertexEntryPoint.Handle,
+                    entryPoint = vertexEntryPoint.Pointer,
                     constantCount = (nuint) descriptor.Vertex.Constants.Length,
+                    bufferCount = (nuint)descriptor.Vertex.Buffers.Length,
                 },
                 primitive =
                 {
-                    topology = (WGPUPrimitiveTopology)descriptor.Primitive.Topology,
-                    //StripIndexFormat = IndexFormat.Undefined,
-                    //FrontFace = FrontFace.Ccw,
-                    //CullMode = CullMode.None
+                    topology = descriptor.Primitive.Topology,
+                    stripIndexFormat = descriptor.Primitive.StripIndexFormat,
+                    frontFace = descriptor.Primitive.FrontFace,
+                    cullMode = descriptor.Primitive.CullMode
                 },
                 multisample = new WGPUMultisampleState
                 {
                     count = 1,
                     mask = ~0u,
-                    //AlphaToCoverageEnabled = false
+                    alphaToCoverageEnabled = (GPUBool)descriptor.Multisample.AlphaToCoverageEnabled
                 },
                 fragment = descriptor.Fragment.HasValue ? &fragment : null,
                 //DepthStencil = null,
-                //layout = PipelineLayout
+                layout = descriptor.Layout.Handle
             };
 
-            var handle = WGPU.wgpuDeviceCreateRenderPipeline(device.Handle, &renderPipelineDescriptor);
+            var vertexBuffer = stackalloc WGPUVertexBufferLayout[descriptor.Vertex.Buffers.Length];
+            var attributesTotalCount = 0;
+            {
+                var index = 0;
+                foreach (var buffer in descriptor.Vertex.Buffers.Span)
+                {
+                    vertexBuffer[index] = new WGPUVertexBufferLayout
+                    {
+                        arrayStride = buffer.ArrayStride,
+                        attributeCount = (nuint)buffer.Attributes.Length,
+                    };
+                    attributesTotalCount += buffer.Attributes.Length;
+                    index++;
+                }
+            }
+            using var disposables = new CompositeDisposable();
+            //var attributes = stackalloc GPUVertexAttribute[attributesTotalCount];
+            {
+                var bufferIndex = 0;
+                //var attributeIndex = 0;
+                foreach (var buffer in descriptor.Vertex.Buffers.Span)
+                {
+                    var pin = buffer.Attributes.Pin();
+                    disposables.Add(pin);
+                    vertexBuffer[bufferIndex].attributes = (GPUVertexAttribute*)pin.Pointer;
+
+                    //foreach (var attribute in buffer.Attributes.Span)
+                    //{
+                    //    attributes[attributeIndex] = attribute;
+                    //    Console.WriteLine(attributes[attributeIndex].Format);
+                    //    Console.WriteLine(attribute.Format);
+                    //    attributeIndex++;
+                    //}
+
+                    bufferIndex++;
+                }
+            }
+            renderPipelineDescriptor.vertex.buffers = descriptor.Vertex.Buffers.Length > 0 ? vertexBuffer : null;
+
+            var handle = WGPU.DeviceCreateRenderPipeline(device.Handle, &renderPipelineDescriptor);
             return new(handle);
         }
         finally
         {
-            if (nativeDescriptor.vertex.entryPoint != null)
+            if (desc.fragment != null && desc.fragment->entryPoint != null)
             {
-                SilkMarshal.Free((nint)nativeDescriptor.vertex.entryPoint);
-            }
-
-            if (nativeDescriptor.fragment != null && nativeDescriptor.fragment->entryPoint != null)
-            {
-                SilkMarshal.Free((nint)nativeDescriptor.fragment->entryPoint);
+                SilkMarshal.Free((nint)desc.fragment->entryPoint);
             }
         }
     }

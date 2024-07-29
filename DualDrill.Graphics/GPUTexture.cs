@@ -1,4 +1,4 @@
-﻿using DualDrill.Graphics.WebGPU.Native;
+﻿using DualDrill.Graphics.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,18 +13,18 @@ public sealed partial class GPUTexture
     {
         if (!descriptor.HasValue)
         {
-            return new(WGPU.wgpuTextureCreateView(Handle, null));
+            return new(WGPU.TextureCreateView(Handle, null));
         }
         WGPUTextureViewDescriptor native = new()
         {
-            format = (WGPUTextureFormat)descriptor.Value.Format,
-            dimension = (WGPUTextureViewDimension)descriptor.Value.Dimension,
+            format = descriptor.Value.Format,
+            dimension = descriptor.Value.Dimension,
             baseMipLevel = (uint)descriptor.Value.BaseMipLevel,
             mipLevelCount = (uint)descriptor.Value.MipLevelCount,
             baseArrayLayer = (uint)descriptor.Value.BaseArrayLayer,
             arrayLayerCount = (uint)descriptor.Value.ArrayLayerCount,
-            aspect = (WGPUTextureAspect)descriptor.Value.Aspect
+            aspect = descriptor.Value.Aspect
         };
-        return new(WGPU.wgpuTextureCreateView(Handle, &native));
+        return new(WGPU.TextureCreateView(Handle, &native));
     }
 }

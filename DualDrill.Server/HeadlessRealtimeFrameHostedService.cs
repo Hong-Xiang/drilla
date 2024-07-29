@@ -42,7 +42,7 @@ public sealed class HeadlessRealtimeFrameHostedService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = TimeProvider.CreateTimer(TimerFrameCallback, this, TimeSpan.Zero, SampleRate);
-        await foreach (var frameIndex in FrameChannel.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
+        await foreach (var frameIndex in FrameChannel.Reader.ReadAllAsync(stoppingToken))
         {
             _ = Surface.TryAcquireImage(frameIndex);
             await FrameService.OnFrameAsync(new FrameContext
@@ -50,8 +50,8 @@ public sealed class HeadlessRealtimeFrameHostedService : BackgroundService
                 FrameIndex = frameIndex,
                 MouseEvent = (MouseEvent[])[],
                 Surface = Surface,
-            }, stoppingToken).ConfigureAwait(false);
-            await Surface.PresentAsync(stoppingToken).ConfigureAwait(false);
+            }, stoppingToken);
+            await Surface.PresentAsync(stoppingToken);
         }
     }
 }

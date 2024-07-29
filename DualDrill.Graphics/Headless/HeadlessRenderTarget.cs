@@ -15,7 +15,7 @@ public sealed class HeadlessRenderTarget : IDisposable
             Usage = GPUTextureUsage.RenderAttachment | GPUTextureUsage.CopySrc,
             MipLevelCount = 1,
             SampleCount = 1,
-            Dimension = GPUTextureDimension.Dimension2D,
+            Dimension = GPUTextureDimension._2D,
             Size = new()
             {
                 Width = Width,
@@ -24,18 +24,19 @@ public sealed class HeadlessRenderTarget : IDisposable
             },
             Format = Format,
         });
-        BufferGPU = Device.CreateBuffer(new GPUBufferDescriptor
+        GPUBuffer = Device.CreateBuffer(new GPUBufferDescriptor
         {
             Usage = GPUBufferUsage.MapRead | GPUBufferUsage.CopyDst,
             Size = (ulong)GPUBufferByteSize
         });
-        BufferCPU = DotNext.Buffers.UnmanagedMemoryPool<byte>.Shared.Rent(CPUBufferByteSize);
+        BufferCPUMemoryOwner = DotNext.Buffers.UnmanagedMemoryPool<byte>.Shared.Rent(CPUBufferByteSize);
     }
-    public GPUDevice Device { get; }
+    private GPUDevice Device { get; }
     public int Width { get; }
     public int Height { get; }
     public GPUTextureFormat Format { get; }
     public GPUTexture Texture { get; }
+    public ReadOnlyMemory<byte> Memory => BufferCPUMemoryOwner.Memory[..CPUBufferByteSize];
 
     static int PaddedBytesPerRow(int byteSize) => (byteSize + 255) & ~255;
     int PixelByteSize { get; } = 4;
@@ -43,21 +44,19 @@ public sealed class HeadlessRenderTarget : IDisposable
     int GPUBytesPerRow => PaddedBytesPerRow(CPUBytesPerRow);
     int CPUBufferByteSize => Height * CPUBytesPerRow;
     int GPUBufferByteSize => Height * GPUBytesPerRow;
-
-    GPUBuffer BufferGPU { get; }
-
-    IMemoryOwner<byte> BufferCPU { get; }
+    private GPUBuffer GPUBuffer { get; }
+    private IMemoryOwner<byte> BufferCPUMemoryOwner { get; }
 
     public async ValueTask<ReadOnlyMemory<byte>> ReadResultAsync(CancellationToken cancellation)
     {
         using var queue = Device.GetQueue();
-        using var e = Device.CreateCommandEncoder(new());
-        e.CopyTextureToBuffer(new GPUImageCopyTexture
+        using var encoder = Device.CreateCommandEncoder(new());
+        encoder.CopyTextureToBuffer(new GPUImageCopyTexture
         {
             Texture = Texture
         }, new GPUImageCopyBuffer
         {
-            Buffer = BufferGPU,
+            Buffer = GPUBuffer,
             Layout = new GPUTextureDataLayout
             {
                 BytesPerRow = GPUBytesPerRow,
@@ -70,30 +69,29 @@ public sealed class HeadlessRenderTarget : IDisposable
             Height = Height,
             DepthOrArrayLayers = 1
         });
-
-
-        using var cb = e.Finish(new());
+        using var cb = encoder.Finish(new());
         queue.Submit([cb]);
-        using var _ = await BufferGPU.MapAsync(GPUMapMode.Read, 0, GPUBufferByteSize, cancellation).ConfigureAwait(false);
-        void ReadBytes()
+
+        using var _ = await GPUBuffer.MapAsync(GPUMapMode.Read, 0, GPUBufferByteSize, cancellation).ConfigureAwait(false);
+
+        var gpuData = GPUBuffer.GetConstMappedRange(0, GPUBufferByteSize);
+        for (var i = 0; i < Height; i++)
         {
-            var gpuData = BufferGPU.GetConstMappedRange(0, GPUBufferByteSize);
-            for (var i = 0; i < Height; i++)
-            {
-                var offsetGPU = i * GPUBytesPerRow;
-                var offsetCPU = i * CPUBytesPerRow;
-                var size = CPUBytesPerRow;
-                gpuData[offsetGPU..(offsetGPU + size)].CopyTo(BufferCPU.Memory.Span[offsetCPU..(offsetCPU + size)]);
-            }
+            var offsetGPU = i * GPUBytesPerRow;
+            var offsetCPU = i * CPUBytesPerRow;
+            var size = CPUBytesPerRow;
+            var cpuSpan = BufferCPUMemoryOwner.Memory.Span[offsetCPU..(offsetCPU + size)];
+            var gpuSpan = gpuData[offsetGPU..(offsetGPU + size)];
+            gpuSpan.CopyTo(cpuSpan);
         }
-        ReadBytes();
-        return BufferCPU.Memory[..CPUBufferByteSize];
+
+        return Memory;
     }
 
     public void Dispose()
     {
-        BufferCPU.Dispose();
-        BufferGPU.Dispose();
+        BufferCPUMemoryOwner.Dispose();
+        GPUBuffer.Dispose();
         Texture.Dispose();
     }
 }

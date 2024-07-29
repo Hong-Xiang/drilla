@@ -1,6 +1,5 @@
 ﻿using DotNext;
-using DualDrill.Graphics.Native;
-using DualDrill.Graphics.WebGPU.Native;
+using DualDrill.Graphics.Interop;
 using Silk.NET.Core.Native;
 using Silk.NET.WebGPU;
 using System;
@@ -18,12 +17,12 @@ public sealed partial class GPUAdapter : IDisposable
 {
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    static unsafe void RequestDeviceCallback(WGPURequestDeviceStatus status, WGPUDeviceImpl* device, sbyte* message, void* data)
+    static unsafe void RequestDeviceCallback(GPURequestDeviceStatus status, WGPUDeviceImpl* device, sbyte* message, void* data)
     {
-        RequestCallback<WGPUApiWrapper, WGPUDeviceImpl, WGPURequestDeviceStatus>.Callback(status, device, message, data);
+        RequestCallback<WGPUNativeApiInterop, WGPUDeviceImpl, GPURequestDeviceStatus>.Callback(status, device, message, data);
     }
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    static unsafe void DeviceUncapturedErrorCallback(WGPUErrorType errorType, sbyte* message, void* data)
+    static unsafe void DeviceUncapturedErrorCallback(GPUErrorType errorType, sbyte* message, void* data)
     {
         Console.Error.WriteLine($"Device uncaptured error type = {Enum.GetName(errorType)}, message {Marshal.PtrToStringUTF8((nint)message)}");
     }
@@ -32,8 +31,8 @@ public sealed partial class GPUAdapter : IDisposable
     public unsafe GPUDevice RequestDevice()
     {
         WGPUDeviceDescriptor descriptor = new();
-        var result = new RequestCallbackResult<WGPUDeviceImpl, WGPURequestDeviceStatus>();
-        WGPU.wgpuAdapterRequestDevice(
+        var result = new RequestCallbackResult<WGPUDeviceImpl, GPURequestDeviceStatus>();
+        WGPU.AdapterRequestDevice(
             Handle,
             &descriptor,
             &RequestDeviceCallback,
@@ -43,7 +42,7 @@ public sealed partial class GPUAdapter : IDisposable
         {
             throw new GraphicsApiException($"Request {nameof(GPUDevice)} failed, status {result.Status}, message {Marshal.PtrToStringUTF8((nint)result.Message)}");
         }
-        WGPU.wgpuDeviceSetUncapturedErrorCallback(result.Handle, &DeviceUncapturedErrorCallback, null);
+        WGPU.DeviceSetUncapturedErrorCallback(result.Handle, &DeviceUncapturedErrorCallback, null);
         return new GPUDevice(result.Handle);
     }
 

@@ -4,7 +4,6 @@ using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
-using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -117,7 +116,6 @@ public partial class HeadsetClient : IAsyncDisposable, IDesktopBrowserUI
     {
         PeerClient = client;
         await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

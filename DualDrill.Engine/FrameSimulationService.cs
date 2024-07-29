@@ -49,7 +49,7 @@ public sealed class FrameSimulationService(
         set
         {
             m_Scale = value;
-            StateChangeEvent(value);
+            StateChangeEvent?.Invoke(value);
         }
     }
 
@@ -77,7 +77,7 @@ public sealed class FrameSimulationService(
 
     ConcurrentDictionary<CancellationToken, Channel<float>> ScaleChangeSubscriptions = [];
 
-    protected async ValueTask CubeSimulation(FrameContext context)
+    public async ValueTask<float[]> CubeSimulation(FrameContext context)
     {
         var events = context.MouseEvent;
         var eventCount = events.Length;
@@ -85,56 +85,72 @@ public sealed class FrameSimulationService(
         {
             Logger.LogInformation("MouseEvent Count {count}", eventCount);
         }
-
-
-        var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
-            MathF.PI * 2.0f / 5.0f,
-            8.0f / 6.0f,
-            1.0f,
-            100.0f
-        );
-        var viewMatrix = Matrix4x4.CreateLookAt(
-              new Vector3(0, 0, -4),
-              Vector3.Zero,
-              Vector3.UnitY);
-        var rotateValue = context.FrameIndex / 60.0f;
-        var rotate = Matrix4x4.CreateFromYawPitchRoll(
-            MathF.Sin(rotateValue),
-            MathF.Cos(rotateValue),
-            0
-        );
-        var mvpMatrix = rotate * viewMatrix * projMatrix;
-        //var mvpMatrix = projMatrix * viewMatrix * rotate;
-
-        var buffer = CopyToBuffer(mvpMatrix);
-        var scene = new RenderScene()
+        var p = Matrix4x4.CreatePerspective(
+                      6.4f * 0.1f,
+                      4.8f * 0.1f,
+                      0.1f,
+                      20
+                  );
+        var c = Matrix4x4.CreateLookAt(new Vector3
         {
-            Frame = context.FrameIndex,
-            Camera = new Camera()
-            {
-                NearPlaneWidth = 8,
-                NearPlaneHeight = 6,
-                NearPlaneDistance = 1,
-                FarPlaneDistance = 100,
-                Position = new Vector3(0, 0, -4),
-                Target = Vector3.Zero,
-                Up = Vector3.UnitY
-            },
-            Cube = new Cube()
-            {
-                Scale = 1.0f,
-                Rotation = new()
-                {
-                    X = MathF.Sin(rotateValue),
-                    Y = MathF.Cos(rotateValue),
-                    Z = 0
-                }
-            }
-        };
-        foreach (var (_, c) in ScaleChangeSubscriptions)
-        {
-            //c.Writer.TryWrite()
-        }
+            X = 1,
+            Y = 0.8f,
+            Z = 1
+        }, Vector3.Zero, Vector3.UnitY);
+        var t = context.FrameIndex / 60.0f;
+        var m = Matrix4x4.CreateFromYawPitchRoll(MathF.Sin(t), MathF.Cos(t), 0);
+        var s = Matrix4x4.CreateScale(Scale);
+        var mvp = s * m * c * p;
+
+        //var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
+        //    MathF.PI * 2.0f / 5.0f,
+        //    8.0f / 6.0f,
+        //    1.0f,
+        //    100.0f
+        //);
+        //var viewMatrix = Matrix4x4.CreateLookAt(
+        //      new Vector3(0, 0, -4),
+        //      Vector3.Zero,
+        //      Vector3.UnitY);
+        //var rotateValue = context.FrameIndex / 60.0f;
+        //var rotate = Matrix4x4.CreateFromYawPitchRoll(
+        //    MathF.Sin(rotateValue),
+        //    MathF.Cos(rotateValue),
+        //    0
+        //);
+        //var mvpMatrix = rotate * viewMatrix * projMatrix;
+        ////var mvpMatrix = projMatrix * viewMatrix * rotate;
+
+        var buffer = CopyToBuffer(mvp);
+        return buffer;
+        //var scene = new RenderScene()
+        //{
+        //    Frame = context.FrameIndex,
+        //    Camera = new Camera()
+        //    {
+        //        NearPlaneWidth = 8,
+        //        NearPlaneHeight = 6,
+        //        NearPlaneDistance = 1,
+        //        FarPlaneDistance = 100,
+        //        Position = new Vector3(0, 0, -4),
+        //        Target = Vector3.Zero,
+        //        Up = Vector3.UnitY
+        //    },
+        //    Cube = new Cube()
+        //    {
+        //        Scale = 1.0f,
+        //        Rotation = new()
+        //        {
+        //            X = MathF.Sin(rotateValue),
+        //            Y = MathF.Cos(rotateValue),
+        //            Z = 0
+        //        }
+        //    }
+        //};
+        //foreach (var (_, c) in ScaleChangeSubscriptions)
+        //{
+        //    //c.Writer.TryWrite()
+        //}
     }
 
     private unsafe float[] CopyToBuffer(Matrix4x4 m)
