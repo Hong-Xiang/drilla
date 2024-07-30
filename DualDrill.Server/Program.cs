@@ -94,6 +94,7 @@ public class Program
         app.MapGet("/api/hello", () => "Hello");
 
         app.MapHub<DrillHub>("/hub/user-input");
+        app.MapHub<DualDrillBrowserClientHub>("/hub/browser-client");
 
         app.UseHttpsRedirection();
 
@@ -102,12 +103,12 @@ public class Program
         app.MapControllers();
         app.MapClients();
         app.MapRenderControls();
-        
+
 
         app.MapRazorComponents<DualDrill.Server.Components.App>()
             .AddInteractiveServerRenderMode()
             .AddInteractiveWebAssemblyRenderMode()
-            .AddAdditionalAssemblies(typeof(DualDrill.Client.SignalRService).Assembly);
+            .AddAdditionalAssemblies(typeof(DualDrill.Client._Imports).Assembly);
 
         app.MapGet("/webroot", () => app.Environment.WebRootPath);
 

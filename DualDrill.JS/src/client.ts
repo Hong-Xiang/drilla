@@ -46,6 +46,10 @@ export function SignalRConnectionId() {
   return SignalRConnection.connectionId;
 }
 
+export async function StartSignalR() {
+  await SignalRConnection.start();
+}
+
 export async function Initialization(blazorServerService?: DotNetObject) {
   console.log("initialization called");
   await SignalRConnection.start();
@@ -60,17 +64,17 @@ export async function Initialization(blazorServerService?: DotNetObject) {
     count++;
   }, 1000);
 
-  SignalRConnection.stream("PingPongStream", subject).subscribe({
-    next: (value) => {
-      console.log(`pong ${value}`);
-    },
-    error: (e) => {
-      console.error(e);
-    },
-    complete: () => {
-      console.log("ping pong channel complete");
-    },
-  });
+  // SignalRConnection.stream("PingPongStream", subject).subscribe({
+  //   next: (value) => {
+  //     console.log(`pong ${value}`);
+  //   },
+  //   error: (e) => {
+  //     console.error(e);
+  //   },
+  //   complete: () => {
+  //     console.log("ping pong channel complete");
+  //   },
+  // });
 
   // async function testFetchRenderResult() {
   //   const res = await fetch("/api/vulkan/render");
@@ -302,6 +306,7 @@ export async function CreateSimpleRTCClient() {
   const video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
+  video.muted = true;
 
   const pc = new RTCPeerConnection({ iceServers: [] });
 
@@ -331,6 +336,8 @@ export async function CreateSimpleRTCClient() {
 
   pc.ontrack = (t) => {
     console.log("received track");
+    console.log(t.streams[0].id);
+    console.log(t);
     video.srcObject = t.streams[0];
   };
 
@@ -373,4 +380,8 @@ export async function CreateSimpleRTCClient() {
 
 export function appendChild(el: HTMLElement, child: HTMLElement) {
   el.appendChild(child);
+}
+
+export function appendToVideoTarget(el: HTMLElement) {
+  document.getElementById("video-target")?.appendChild(el);
 }

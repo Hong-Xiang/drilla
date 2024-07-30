@@ -2,21 +2,20 @@ using DualDrill.Engine;
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Graphics.Headless;
-using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using MessagePipe;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
-using System.Collections.Immutable;
-using System.Reactive.Disposables;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace DualDrill.Server.Components.Pages;
 
 public partial class DesktopBrowserClient : IAsyncDisposable
 {
+    [Inject] IJSRuntime? JSRuntime { get; set; }
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
     [Inject] IHubContext<DrillHub, IDrillHubClient> HubContext { get; set; } = default!;
@@ -36,7 +35,6 @@ public partial class DesktopBrowserClient : IAsyncDisposable
         }
         try
         {
-
             await Module.DisposeAsync();
         }
         catch (JSDisconnectedException e)
@@ -64,11 +62,24 @@ public partial class DesktopBrowserClient : IAsyncDisposable
 
     IJSObjectReference? VideoRef = null;
 
+    string? InteropMessage = null;
+
+    GCHandle SelfHandle = default;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
+            if (JSRuntime is not null)
+            {
+                var clientInterop = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/client-interop.js");
+                SelfHandle = GCHandle.Alloc(this);
+                var handle = GCHandle.ToIntPtr(SelfHandle).ToString();
+                InteropMessage = await clientInterop.InvokeAsync<string>("getInteropMessage");
+                await clientInterop.InvokeVoidAsync("setInteractiveServerHandle", handle);
+                InteropMessage += $"SetDone {handle}";
+            }
             Module = await JSClientModule.CreateAsync(jsRuntime);
             var connectionId = await Module.GetSignalRConnectionIdAsync();
             Client = new BrowserClient(jsRuntime, Module, HubContext, connectionId, OnPeerConnected);
@@ -79,6 +90,7 @@ public partial class DesktopBrowserClient : IAsyncDisposable
             //RenderService = new(await Client.Module.CreateServerRenderPresentService());
             Logger.LogInformation("Blazor render first render called");
             StateHasChanged();
+            await StartRTC();
             //await Task.Delay(1000);
             Connecting = false;
             StateHasChanged();

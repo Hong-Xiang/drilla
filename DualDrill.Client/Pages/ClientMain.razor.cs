@@ -1,26 +1,23 @@
-﻿@using Microsoft.JSInterop
-@using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Web
-@using System.Runtime.InteropServices.JavaScript
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Versioning;
 
-@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+namespace DualDrill.Client.Pages;
 
-@inject IJSRuntime JSRuntime
-@inject SignalRService SignalRService
-@inject NavigationManager NavigationManager
+[SupportedOSPlatform("browser")]
+public partial class ClientMain
+{
+    [Inject] IJSRuntime JSRuntime { get; set; }
+    [Inject] NavigationManager NavigationManager { get; set; }
+    [Inject] DualDrillBrowserSignalRClientService SignalRService { get; set; }
 
-
-<h1>Counter</h1>
-
-<p role="status">Current count: @currentCount</p>
-
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
-
-@code {
     private int currentCount = 0;
+    private string ServerHandle = "";
 
-
-    class ASimpleObject
+    ElementReference SimpleRTCRef { get; set; }
+    JSObject? VideoRef = null;
+    private class ASimpleObject
     {
         public bool Audio { get; set; }
         public bool Video { get; set; }
@@ -29,9 +26,14 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await base.OnAfterRenderAsync(firstRender).ConfigureAwait(false);
+        await base.OnAfterRenderAsync(firstRender);
+        Console.WriteLine("After base after render");
         if (firstRender)
         {
+            var interactiveServer = await InteractiveServerHandle.GetInteractiveServerHandleAsync();
+            ServerHandle = interactiveServer.Handle;
+            Console.WriteLine($"Server Handle {ServerHandle}");
+            StateHasChanged();
             await using var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/client.js");
             await using var globalThis = await module.InvokeAsync<IJSObjectReference>("getGlobalThis");
             Console.WriteLine("Before get globalThis.Dotnet");
@@ -43,10 +45,10 @@
             SimpleJSInterop.Log(RTCPeerConnectionCls);
             using var conn = SimpleJSInterop.NewOperator(RTCPeerConnectionCls);
             SimpleJSInterop.LogObject(new ASimpleObject
-                {
-                    Audio = true,
-                    Video = false
-                });
+            {
+                Audio = true,
+                Video = false
+            });
             SimpleJSInterop.Log(conn);
             SimpleJSInterop.Log(DotNet);
             await SimpleJSInterop.TestDotnetExport();
@@ -55,8 +57,15 @@
             await JSRuntime.InvokeVoidAsync("console.log", dotnetRuntime);
 
             Console.WriteLine(NavigationManager.BaseUri);
-
-            await SignalRService.Initialization();
+            await SimpleJSInterop.StartSignalRAsync();
+            //VideoRef = await SimpleJSInterop.CreateSimpleRTCClientAsync();
+            StateHasChanged();
+        }
+        if (VideoRef is not null)
+        {
+            //await using var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/client.js");
+            //await module.InvokeVoidAsync("appendChild", SimpleRTCRef, VideoRef);
+            SimpleJSInterop.AppendToVideoTarget(VideoRef);
         }
     }
 
@@ -65,4 +74,9 @@
         Console.WriteLine("increment");
         currentCount++;
     }
+
+    async Task StartRTC()
+    {
+    }
+
 }

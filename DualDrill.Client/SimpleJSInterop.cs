@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using Microsoft.AspNetCore.Components;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
 
@@ -23,16 +24,31 @@ partial class SimpleJSInterop
     [JSImport("newOperator", "client")]
     internal static partial JSObject NewOperator(JSObject f);
 
+    [JSImport("CreateSimpleRTCClient", "client")]
+    internal static partial Task<JSObject> CreateSimpleRTCClientAsync();
+
     [JSImport("getDotnetWasmExports", "client")]
     internal static partial Task<JSObject> GetDotnetWasmExports(string assemblyName);
     [JSImport("testDotnetExport", "client")]
     internal static partial Task TestDotnetExport();
+  
+    [JSImport("StartSignalR", "client")]
+    internal static partial Task StartSignalRAsync();
+
+    [JSImport("appendToVideoTarget", "client")]
+    internal static partial void AppendToVideoTarget(JSObject el);
 
     [JSExport]
     internal static string TestJSExport()
     {
         Console.WriteLine($"Calling {nameof(TestJSExport)}");
-        return "Hello from DotNet";
+        return "Hello from DotNet Blazor WASM";
+    }
+
+    [JSExport]
+    internal static void SetInteractiveServerHandle(string handle)
+    {
+        InteractiveServerHandle.SetHandle(handle);
     }
 
     [JSExport]
