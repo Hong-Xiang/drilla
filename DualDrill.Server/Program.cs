@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
 using Serilog.Extensions.Logging;
+using Microsoft.Extensions.FileProviders;
 
 namespace DualDrill.Server;
 
@@ -30,7 +31,6 @@ public class Program
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             Args = args,
-            WebRootPath = "../DualDrill.JS/dist"
         });
 
         builder.Services.Configure<HeadlessSurface.Option>(options =>

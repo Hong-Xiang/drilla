@@ -31,34 +31,19 @@ public partial class ClientMain
         if (firstRender)
         {
             var interactiveServer = await InteractiveServerHandle.GetInteractiveServerHandleAsync();
-            ServerHandle = interactiveServer.Handle;
+            //ServerHandle = interactiveServer.Handle;
             Console.WriteLine($"Server Handle {ServerHandle}");
             StateHasChanged();
-            await using var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/client.js");
-            await using var globalThis = await module.InvokeAsync<IJSObjectReference>("getGlobalThis");
-            Console.WriteLine("Before get globalThis.Dotnet");
             using var DotNet = JSHost.GlobalThis.GetPropertyAsJSObject("DotNet");
-            Console.WriteLine("After get globalThis.Dotnet");
-            // await using var DotNet = await module.InvokeAsync<IJSObjectReference>("getProperty", globalThis, new[] { "DotNet" });
-            // await JSRuntime.InvokeVoidAsync("console.log", DotNet);
             using var RTCPeerConnectionCls = JSHost.GlobalThis.GetPropertyAsJSObject("RTCPeerConnection");
-            SimpleJSInterop.Log(RTCPeerConnectionCls);
-            using var conn = SimpleJSInterop.NewOperator(RTCPeerConnectionCls);
-            SimpleJSInterop.LogObject(new ASimpleObject
-            {
-                Audio = true,
-                Video = false
-            });
-            SimpleJSInterop.Log(conn);
-            SimpleJSInterop.Log(DotNet);
-            await SimpleJSInterop.TestDotnetExport();
-            Console.WriteLine("After console.log(DotNet)");
             await using var dotnetRuntime = await JSRuntime.InvokeAsync<IJSObjectReference>("getDotnetRuntime", 0);
             await JSRuntime.InvokeVoidAsync("console.log", dotnetRuntime);
 
             Console.WriteLine(NavigationManager.BaseUri);
             await SimpleJSInterop.StartSignalRAsync();
             //VideoRef = await SimpleJSInterop.CreateSimpleRTCClientAsync();
+            StateHasChanged();
+            ServerHandle = await BrowserClientJSInterop.GetInteractiveServerHandle();
             StateHasChanged();
         }
         if (VideoRef is not null)

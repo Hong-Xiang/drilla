@@ -41,6 +41,10 @@ public partial class DesktopBrowserClient : IAsyncDisposable
         {
             Logger.LogWarning("disposing while disconnected");
         }
+        if (SelfHandle.HasValue)
+        {
+            SelfHandle.Value.Free();
+        }
     }
 
     float Scale
@@ -64,22 +68,14 @@ public partial class DesktopBrowserClient : IAsyncDisposable
 
     string? InteropMessage = null;
 
-    GCHandle SelfHandle = default;
+    GCHandle? SelfHandle = default;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
-            if (JSRuntime is not null)
-            {
-                var clientInterop = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/client-interop.js");
-                SelfHandle = GCHandle.Alloc(this);
-                var handle = GCHandle.ToIntPtr(SelfHandle).ToString();
-                InteropMessage = await clientInterop.InvokeAsync<string>("getInteropMessage");
-                await clientInterop.InvokeVoidAsync("setInteractiveServerHandle", handle);
-                InteropMessage += $"SetDone {handle}";
-            }
+
             Module = await JSClientModule.CreateAsync(jsRuntime);
             var connectionId = await Module.GetSignalRConnectionIdAsync();
             Client = new BrowserClient(jsRuntime, Module, HubContext, connectionId, OnPeerConnected);
@@ -118,5 +114,19 @@ public partial class DesktopBrowserClient : IAsyncDisposable
     async Task OnMouseMove(MouseEventArgs e)
     {
         Console.WriteLine(JsonSerializer.Serialize(e));
+    }
+
+    private async ValueTask SetInteractiveServerHandle()
+    {
+        if (JSRuntime is not null && !SelfHandle.HasValue)
+        {
+            SelfHandle = GCHandle.Alloc(this);
+            var handle = GCHandle.ToIntPtr(SelfHandle.Value).ToString();
+            await JSRuntime.InvokeVoidAsync("DualDrillSetInteractiveServerHandle", "HelloFromServer");
+        }
+        else
+        {
+            Logger.LogWarning("Skip SetInteractiveServerHandle, JSRuntime is null or SelfHandle already set");
+        }
     }
 }

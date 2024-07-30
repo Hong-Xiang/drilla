@@ -12,7 +12,8 @@ internal class Program
         var builder = WebAssemblyHostBuilder.CreateDefault(args);
         builder.Services.AddSingleton<DualDrillBrowserSignalRClientService>();
         var app = builder.Build();
-        using var clientModule = await JSHost.ImportAsync("client", "/client.js");
+        using var clientModule = await JSHost.ImportAsync("client", "/js/dist/client.js");
+        using var _interop = await JSHost.ImportAsync("client-interop", "/js/client-interop.js");
         await app.RunAsync();
     }
 }
