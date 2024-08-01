@@ -3,6 +3,7 @@ using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Graphics.Headless;
 using DualDrill.Server.Browser;
+using DualDrill.Server.CustomEvents;
 using MessagePipe;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -70,6 +71,8 @@ public partial class DesktopBrowserClient : IAsyncDisposable
 
     GCHandle? SelfHandle = default;
 
+    ElementReference? Attached { get; set; } = null;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
@@ -93,9 +96,17 @@ public partial class DesktopBrowserClient : IAsyncDisposable
         }
         if (VideoRef is not null)
         {
-            await Module.AppendChildAsync(SimpleRTCRef, VideoRef);
+            var changed = !Attached.Equals(SimpleRTCRef);
+            if (changed)
+            {
+                await Module.AppendChildAsync(SimpleRTCRef, VideoRef);
+                Logger.LogInformation($"call attach");
+            }
+            Attached = SimpleRTCRef;
         }
     }
+
+    bool IsPointerDown { get; set; }
 
     async Task StartRTC()
     {
@@ -103,17 +114,20 @@ public partial class DesktopBrowserClient : IAsyncDisposable
         StateHasChanged();
     }
 
-    async Task OnMouseDown(MouseEventArgs e)
+    void OnNormalizedPointerDown(NormalizedPointerEventArgs e)
     {
-        Console.WriteLine(JsonSerializer.Serialize(e));
+        IsPointerDown = true;
     }
-    async Task OnMouseUp(MouseEventArgs e)
+    void OnNormalizedPointerUp(NormalizedPointerEventArgs e)
     {
-        Console.WriteLine(JsonSerializer.Serialize(e));
+        IsPointerDown = false;
     }
-    async Task OnMouseMove(MouseEventArgs e)
+    void OnNormalizedPointerMove(NormalizedPointerEventArgs e)
     {
-        Console.WriteLine(JsonSerializer.Serialize(e));
+        if (IsPointerDown)
+        {
+            Logger.LogInformation("Draggin ({X}, {Y})", e.OffsetX / e.BoundingRect.Width, e.OffsetY / e.BoundingRect.Height);
+        }
     }
 
     private async ValueTask SetInteractiveServerHandle()

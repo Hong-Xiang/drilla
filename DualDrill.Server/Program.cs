@@ -39,6 +39,7 @@ public class Program
 
         builder.Services.AddMessagePipe();
 
+        builder.Services.AddSingleton<RTCPeerConnectionProviderService>();
         builder.Services.AddSingleton<PeerClientConnectionService>();
 
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.SimpleColorRenderer>();
