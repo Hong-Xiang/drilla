@@ -6,9 +6,8 @@ Drilla engine for HPC and visualization
 
 requirements:
 
-- [Caddy](https://caddyserver.com/docs/) for reverse proxy to combine React SPA and ASP .NET Core server.
 - [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
-- [dotnet 8.0+](https://dotnet.microsoft.com/en-us/download)
+- [dotnet 9.0+](https://dotnet.microsoft.com/en-us/download)
 - certificate files to serve https server, which is required for WebXR. You can use `mkcert` to generate it.
 
 
@@ -16,23 +15,13 @@ requirements:
 
 #### onetime
 
-* Add `DRILLA_SITE_ADDRESS` environment variable, this will be read in caddy file
-
-* Use `mkcert` to generate self-assigned certificates `cert.pem` and `key.pem`, put them into `src/caddy/.cert` directory
+* Add `DUALDRILLFFMPEGPATH` environment variable, value should be `bin` folder of ffmpeg (with shared libraries) directory.
+  On windows, it could be installed using `winget install "FFmpeg (Shared)" --version "6.1.1"`
 
 #### dev loop
 
-* Open `projects/Drilla.sln`, run `server` project to start a backend server
+* Enter `DualDrill.JS` directory, run `pnpm install` and `node .\esbuild.mjs` to build js code.
 
-* Enter `src/client` directory, run `pnpm run dev` to start a dev server to provide frontend code
+* Open `Drilla.sln`, run `DualDrill.Server` project to start a backend server
 
-* Enter `src/caddy` directory, run `caddy run` to start a reverse proxy to combine the above services
-
-* Make modifications, both server and client supports hot module reload,
-simply save may work in many cases,
-when hot module reload does not work,
-restart corresponding service.
-
-## Bi-directional camera stream
-
-Start all services, open pages in 
+* Open browser, visit `https://localhost:7117/desktop` to see the result. 

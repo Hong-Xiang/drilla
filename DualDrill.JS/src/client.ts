@@ -304,9 +304,9 @@ export function addDataChannelLogMessageListener(channel: RTCDataChannel) {
   };
 }
 
-function normalizedPointerEvent(e: PointerEvent) {
+function normalizedPointerEvent(e: PointerEvent, t: HTMLElement) {
   console.log(e);
-  const rect = (e.target as HTMLElement | undefined)?.getBoundingClientRect();
+  const rect = t.getBoundingClientRect();
   const result = {
     detail: e.detail,
     screenX: e.screenX,
@@ -352,12 +352,6 @@ export async function CreateSimpleRTCClient() {
     createSignalServerConnectionFromSignalRHubConnection(SignalRConnection);
   const connection = createServerConnection(signalServer);
 
-  // const channel = connection.createDataChannel("pointerdown");
-
-  // video.addEventListener("pointerdown", (e) => {
-  //   channel.send(JSON.stringify(normalizedPointerEvent(e)));
-  // });
-
   // const pc = new RTCPeerConnection({ iceServers: [] });
 
   // //pc.ontrack = evt => document.querySelector('#videoCtl').srcObject = evt.streams[0];
@@ -391,6 +385,20 @@ export async function CreateSimpleRTCClient() {
     video.srcObject = t.streams[0];
   });
 
+  const channel = connection.createDataChannel("pointermove");
+
+  video.addEventListener("pointerdown", (e) => {
+    console.log("simple client pointer event", e);
+    const h = (e: PointerEvent) => {
+      channel.send(JSON.stringify(normalizedPointerEvent(e, video)));
+    };
+    video.addEventListener("pointermove", h);
+    window.addEventListener("pointerup", () => {
+      video.removeEventListener("pointermove", h);
+    });
+  });
+
+  await connection.start();
   // const offer = await pc.createOffer({
   //   offerToReceiveVideo: true,
   // });

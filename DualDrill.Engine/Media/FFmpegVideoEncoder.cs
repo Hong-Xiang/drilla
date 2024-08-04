@@ -1,9 +1,10 @@
 ﻿using FFmpeg.AutoGen;
+using Microsoft.Extensions.Logging;
 using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.FFmpeg;
 using System.Buffers;
 
-namespace DualDrill.Server.Services;
+namespace DualDrill.Engine.Media;
 
 public sealed class VideoFrameBuffer(
     byte[] Data,
@@ -52,8 +53,8 @@ public sealed unsafe class DrillFFmpegVideoEncoder : IDisposable
     private VideoFrameConverter? _i420ToRgb;
     private bool _isEncoderInitialised = false;
     private bool _isDecoderInitialised = false;
-    private Object _encoderLock = new object();
-    private Object _decoderLock = new object();
+    private object _encoderLock = new object();
+    private object _decoderLock = new object();
 
     private long? _bit_rate = null;
     private int? _bit_rate_tolerance = null;
@@ -203,7 +204,7 @@ public sealed unsafe class DrillFFmpegVideoEncoder : IDisposable
 
                 ffmpeg.av_opt_set(_encoderContext->priv_data, "tune", "zerolatency", 0).ThrowExceptionIfError();
             }
-            else if ((_codecID == AVCodecID.AV_CODEC_ID_VP8) || (_codecID == AVCodecID.AV_CODEC_ID_VP9))
+            else if (_codecID == AVCodecID.AV_CODEC_ID_VP8 || _codecID == AVCodecID.AV_CODEC_ID_VP9)
             {
                 ffmpeg.av_opt_set(_encoderContext->priv_data, "quality", "realtime", 0).ThrowExceptionIfError();
             }
@@ -440,7 +441,7 @@ public sealed unsafe class DrillFFmpegVideoEncoder : IDisposable
 
     public List<RawImage>? DecodeFaster(AVCodecID codecID, byte[] buffer, out int width, out int height)
     {
-        if ((!_isDisposed) && (buffer != null))
+        if (!_isDisposed && buffer != null)
         {
             lock (_decoderLock)
             {
@@ -459,7 +460,7 @@ public sealed unsafe class DrillFFmpegVideoEncoder : IDisposable
                 }
                 finally
                 {
-                    ffmpeg.av_packet_from_data(packet, (byte*)IntPtr.Zero, 0);
+                    ffmpeg.av_packet_from_data(packet, (byte*)nint.Zero, 0);
                     ffmpeg.av_packet_free(&packet);
                 }
             }
@@ -536,14 +537,14 @@ public sealed unsafe class DrillFFmpegVideoEncoder : IDisposable
                 //    );
 
                 var frameI420 = _i420ToRgb.Convert(*decodedFrame);
-                if ((frameI420.width != 0) && (frameI420.height != 0))
+                if (frameI420.width != 0 && frameI420.height != 0)
                 {
                     RawImage imageRawSample = new RawImage
                     {
                         Width = width,
                         Height = height,
                         Stride = frameI420.linesize[0],
-                        Sample = (IntPtr)frameI420.data[0],
+                        Sample = (nint)frameI420.data[0],
                         PixelFormat = VideoPixelFormatsEnum.Rgb
                     };
                     rgbFrames.Add(imageRawSample);

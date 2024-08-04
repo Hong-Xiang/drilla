@@ -1,4 +1,4 @@
-﻿using DualDrill.Server.Services;
+﻿using DualDrill.Engine.Media;
 using Microsoft.AspNetCore.Mvc;
 using SIPSorcery.Net;
 using SIPSorcery.SIP.App;
@@ -8,7 +8,7 @@ namespace DualDrill.Server.WebApi;
 
 [Route("api/[controller]")]
 [ApiController]
-public class RTCClientController(RTCDemoVideoSource VideoSource) : ControllerBase
+public class RTCClientController(HeadlessSurfaceCaptureVideoSource VideoSource) : ControllerBase
 {
 
     [HttpPost("candidate")]

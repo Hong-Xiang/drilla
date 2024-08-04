@@ -3,15 +3,11 @@ using DualDrill.Server.Browser;
 using DualDrill.Engine;
 using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
-using DualDrill.Graphics.Headless;
 using DualDrill.Server.Services;
 using Serilog.Extensions.Logging;
 using Serilog;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Serilog;
-using Serilog.Extensions.Logging;
-using Microsoft.Extensions.FileProviders;
+using DualDrill.Engine.Headless;
+using DualDrill.Engine.Media;
 
 namespace DualDrill.Server;
 
@@ -57,12 +53,12 @@ public class Program
 
         builder.Services.AddSingleton<FrameInputService>();
         builder.Services.AddSingleton<FrameSimulationService>();
-        builder.Services.AddSingleton<RTCDemoVideoSource>();
+        builder.Services.AddSingleton<HeadlessSurfaceCaptureVideoSource>();
         builder.Services.AddSingleton<IFrameService, FrameService>();
         builder.Services.AddHostedService<DevicePollHostedService>();
-        builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
+        builder.Services.AddHostedService<RealtimeFrameHostedService>();
 
-        builder.Services.AddHostedService<VideoPushHostedService>();
+        //builder.Services.AddHostedService<VideoPushHostedService>();
         //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();

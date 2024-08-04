@@ -1,32 +1,32 @@
-﻿using FFmpeg.AutoGen;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using SIPSorcery.Media;
-using SIPSorcery.Net;
+﻿using DualDrill.Common.Abstraction.Signal;
+using DualDrill.Engine.Headless;
+using FFmpeg.AutoGen;
+using Microsoft.Extensions.Logging;
 using SIPSorceryMedia.Abstractions;
-using SIPSorceryMedia.Encoders;
-using SIPSorceryMedia.Encoders.Codecs;
-using SIPSorceryMedia.FFmpeg;
-using System.Collections.Concurrent;
-using System.Net;
 
-namespace DualDrill.Server.Services;
+namespace DualDrill.Engine.Media;
 
-public sealed class RTCDemoVideoSource
+public sealed class HeadlessSurfaceCaptureVideoSource
 {
     object encoderLock = new();
-    public RTCDemoVideoSource(ILogger<RTCDemoVideoSource> logger)
+    public HeadlessSurfaceCaptureVideoSource(ILogger<HeadlessSurfaceCaptureVideoSource> logger, HeadlessSurface surface)
     {
-        var ffmpegLibFullPath = "C:\\Users\\Xiang\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg.Shared_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-6.1.1-full_build-shared\\bin";
+        var ffmpegLibFullPath = Environment.GetEnvironmentVariable("DUALDRILLFFMPEGPATH");
+        //var ffmpegLibFullPath = "C:\\Users\\Xiang\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg.Shared_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-6.1.1-full_build-shared\\bin";
         //string? ffmpegLibFullPath = null;
         SIPSorceryMedia.FFmpeg.FFmpegInit.Initialise(SIPSorceryMedia.FFmpeg.FfmpegLogLevelEnum.AV_LOG_VERBOSE, ffmpegLibFullPath, logger);
         Console.WriteLine(ffmpeg.RootPath);
         VideoEncoder = new();
         long bitrate = 1024L * 1024 * 1024;
         VideoEncoder.SetBitrate(bitrate, 512 * 1024 * 1024, bitrate, bitrate);
+        Logger = logger;
+        Surface = surface;
         //VideoTrack = new(VideoEncoder.SupportedFormats, MediaStreamStatusEnum.SendOnly);
     }
     public DrillFFmpegVideoEncoder VideoEncoder { get; }
+    public ILogger<HeadlessSurfaceCaptureVideoSource> Logger { get; }
+    private HeadlessSurface Surface { get; }
+
     //public MediaStreamTrack VideoTrack { get; }
 
     public event EncodedFrameBufferSampleDelegate OnVideoSourceEncodedSample;
@@ -37,19 +37,37 @@ public sealed class RTCDemoVideoSource
     public delegate void EncodedFrameBufferSampleDelegate(uint durationRtpUnits, VideoFrameBuffer sample);
     public async Task CloseVideo()
     {
-        Console.WriteLine("Close Video Called");
+        if (Enabled)
+        {
+            Surface.OnFrame -= EncodeVideoFromFrame;
+            Enabled = false;
+        }
     }
+
+    private bool Enabled = false;
 
     public VideoFrameBuffer EncodeVideo(int width, int height, ReadOnlySpan<byte> data)
     {
         lock (encoderLock)
         {
-            var result = VideoEncoder.EncodeVideo(width, height, data, SIPSorceryMedia.Abstractions.VideoPixelFormatsEnum.Bgra, SIPSorceryMedia.Abstractions.VideoCodecsEnum.VP8);
+            var result = VideoEncoder.EncodeVideo(width, height, data, VideoPixelFormatsEnum.Bgra, VideoCodecsEnum.VP8);
+            if (result is not null)
+            {
+                OnVideoSourceEncodedSample?.Invoke((uint)Frequency.TimeUnit<Frequency.RealtimeFrame>(), result);
+            }
+            return result;
+        }
+    }
+
+    private void EncodeVideoFromFrame(object? sender, HeadlessSurfaceFrame frame)
+    {
+        lock (encoderLock)
+        {
+            var result = VideoEncoder.EncodeVideo(frame.Size.Width, frame.Size.Height, frame.Data.ToArray(), VideoPixelFormatsEnum.Bgra, VideoCodecsEnum.VP8);
             if (result is not null)
             {
                 OnVideoSourceEncodedSample?.Invoke(90000 / 60, result);
             }
-            return result;
         }
     }
 
@@ -80,12 +98,16 @@ public sealed class RTCDemoVideoSource
 
     public bool IsVideoSourcePaused()
     {
-        throw new NotImplementedException();
+        return !Enabled;
     }
 
-    public Task PauseVideo()
+    public async Task PauseVideo()
     {
-        throw new NotImplementedException();
+        if (Enabled)
+        {
+            Surface.OnFrame -= EncodeVideoFromFrame;
+            Enabled = false;
+        }
     }
 
     public void RestrictFormats(Func<VideoFormat, bool> filter)
@@ -93,9 +115,13 @@ public sealed class RTCDemoVideoSource
         throw new NotImplementedException();
     }
 
-    public Task ResumeVideo()
+    public async Task ResumeVideo()
     {
-        throw new NotImplementedException();
+        if (!Enabled)
+        {
+            Surface.OnFrame += EncodeVideoFromFrame;
+            Enabled = true;
+        }
     }
 
     public void SetVideoSourceFormat(VideoFormat videoFormat)
@@ -105,6 +131,10 @@ public sealed class RTCDemoVideoSource
 
     public async Task StartVideo()
     {
-        Console.WriteLine("Start Video Called");
+        if (!Enabled)
+        {
+            Surface.OnFrame += EncodeVideoFromFrame;
+            Enabled = true;
+        }
     }
 }

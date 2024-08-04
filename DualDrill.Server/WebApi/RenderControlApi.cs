@@ -3,7 +3,6 @@ using DualDrill.Graphics;
 using Microsoft.AspNetCore.Mvc;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System.IO;
 using System.Runtime.InteropServices;
 
 namespace DualDrill.Server.WebApi;
@@ -32,7 +31,7 @@ public static class RenderControlApi
         [FromQuery(Name = "height")] int height = 512
     )
     {
-        using var target = new Graphics.Headless.HeadlessRenderTarget(device, width, height, GPUTextureFormat.BGRA8UnormSrgb);
+        using var target = new DualDrill.Engine.Headless.HeadlessRenderTarget(device, width, height, GPUTextureFormat.BGRA8UnormSrgb);
         using var queue = device.GetQueue();
         await renderer.RenderAsync(time, queue, target.Texture).ConfigureAwait(false);
         var data = await target.ReadResultAsync(default).ConfigureAwait(false);

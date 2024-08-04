@@ -1,8 +1,10 @@
-﻿using System.Buffers;
+﻿using DualDrill.Graphics;
+using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using WebSocketSharp;
 
-namespace DualDrill.Graphics.Headless;
+namespace DualDrill.Engine.Headless;
 
 public sealed class HeadlessSurface : IGPUSurface
 {
@@ -15,8 +17,9 @@ public sealed class HeadlessSurface : IGPUSurface
         public int SlotCount { get; set; } = 3;
         public GPUTextureFormat Format { get; set; } = GPUTextureFormat.BGRA8UnormSrgb;
     }
+    public event EventHandler<HeadlessSurfaceFrame>? OnFrame;
+
     private readonly Channel<HeadlessRenderTarget> RenderTargetChannel;
-    private readonly Channel<(HeadlessRenderTarget, ReadOnlyMemory<byte>)> PresentedTargetChannel;
     GPUDevice Device;
     public readonly int Width;
     public readonly int Height;
@@ -27,13 +30,13 @@ public sealed class HeadlessSurface : IGPUSurface
         Width = option.Width;
         Height = option.Height;
         RenderTargetChannel = Channel.CreateBounded<HeadlessRenderTarget>(option.SlotCount);
-        PresentedTargetChannel = Channel.CreateBounded<(HeadlessRenderTarget, ReadOnlyMemory<byte>)>(option.SlotCount);
         for (var i = 0; i < option.SlotCount; i++)
         {
             RenderTargetChannel.Writer.TryWrite(new HeadlessRenderTarget(Device, Width, Height, option.Format));
         }
     }
-    public HeadlessRenderTarget? TryAcquireImage(int frameIndex)
+
+    public HeadlessRenderTarget? TryAcquireImage()
     {
         if (RenderTargetChannel.Reader.TryRead(out var target))
         {
@@ -45,33 +48,6 @@ public sealed class HeadlessSurface : IGPUSurface
         }
         return CurrentTarget;
     }
-
-    /// <summary>
-    /// Present of headless surface is simply copy GPU texture data into CPU buffer
-    /// </summary>
-    /// <returns></returns>
-    public async ValueTask PresentAsync(CancellationToken cancellation)
-    {
-        var target = CurrentTarget;
-        CurrentTarget = null;
-        if (target is null)
-        {
-            return;
-        }
-        var data = await target.ReadResultAsync(cancellation).ConfigureAwait(false);
-        await PresentedTargetChannel.Writer.WriteAsync((target, data), cancellation).ConfigureAwait(false);
-    }
-
-    public async IAsyncEnumerable<ReadOnlyMemory<byte>> GetAllPresentedDataAsync([EnumeratorCancellation] CancellationToken cancellation)
-    {
-        await foreach (var presented in PresentedTargetChannel.Reader.ReadAllAsync(cancellation).ConfigureAwait(false))
-        {
-            var (renderTarget, resultMemory) = presented;
-            yield return resultMemory;
-            RenderTargetChannel.Writer.TryWrite(renderTarget);
-        }
-    }
-
 
     public GPUTexture? GetCurrentTexture()
     {
@@ -89,5 +65,32 @@ public sealed class HeadlessSurface : IGPUSurface
 
     public void Unconfigure()
     {
+    }
+
+    public void Present()
+    {
+        var target = CurrentTarget;
+        CurrentTarget = null;
+        if (target is null)
+        {
+            return;
+        }
+
+        Task.Run(async () =>
+        {
+            var data = await target.ReadResultAsync(default).ConfigureAwait(false);
+            var frame = new HeadlessSurfaceFrame(
+                new GPUExtent3D
+                {
+                    Width = Width,
+                    Height = Height,
+                    DepthOrArrayLayers = 1
+                },
+                GPUTextureFormat.BGRA8Unorm,
+                data
+            );
+            OnFrame?.Invoke(this, frame);
+            await RenderTargetChannel.Writer.WriteAsync(target);
+        });
     }
 }

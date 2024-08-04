@@ -1,6 +1,7 @@
-﻿using System.Buffers;
+﻿using DualDrill.Graphics;
+using System.Buffers;
 
-namespace DualDrill.Graphics.Headless;
+namespace DualDrill.Engine.Headless;
 
 public sealed class HeadlessRenderTarget : IDisposable
 {
@@ -38,7 +39,7 @@ public sealed class HeadlessRenderTarget : IDisposable
     public GPUTexture Texture { get; }
     public ReadOnlyMemory<byte> Memory => BufferCPUMemoryOwner.Memory[..CPUBufferByteSize];
 
-    static int PaddedBytesPerRow(int byteSize) => (byteSize + 255) & ~255;
+    static int PaddedBytesPerRow(int byteSize) => byteSize + 255 & ~255;
     int PixelByteSize { get; } = 4;
     int CPUBytesPerRow => Width * PixelByteSize;
     int GPUBytesPerRow => PaddedBytesPerRow(CPUBytesPerRow);

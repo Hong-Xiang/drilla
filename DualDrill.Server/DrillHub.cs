@@ -1,4 +1,5 @@
 ﻿using DualDrill.Engine;
+using DualDrill.Engine.Media;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -18,7 +19,7 @@ public interface IDrillHubClient
 }
 
 sealed class DrillHub(
-    RTCDemoVideoSource VideoSource,
+    HeadlessSurfaceCaptureVideoSource VideoSource,
     FrameSimulationService UpdateService,
     ILogger<DrillHub> Logger,
     IHubContext<DrillHub, IDrillHubClient> HubContext,
@@ -30,6 +31,11 @@ sealed class DrillHub(
     {
         await base.OnConnectedAsync();
         Logger.LogInformation("{ConnectionId} Connected", Context.ConnectionId);
+        if (RTCPeerConnection is null)
+        {
+            var pc = RTCPeerConnectionProviderService.CreatePeerConnection(Context.ConnectionId);
+            RTCPeerConnection = pc;
+        }
     }
 
     public async Task AddIceCandidate(string data)
@@ -43,11 +49,7 @@ sealed class DrillHub(
 
     public async ValueTask<string> Negotiate(string offer)
     {
-        if (RTCPeerConnection is null)
-        {
-            var pc = RTCPeerConnectionProviderService.CreatePeerConnection();
-            RTCPeerConnection = pc;
-        }
+        Logger.LogInformation("Negotate called for {connectionId}", Context.ConnectionId);
         return await RTCPeerConnectionProviderService.negotiateAsync(Context.ConnectionId, RTCPeerConnection, offer);
     }
 

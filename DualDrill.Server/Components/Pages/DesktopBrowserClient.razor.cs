@@ -1,7 +1,7 @@
 using DualDrill.Engine;
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
-using DualDrill.Graphics.Headless;
+using DualDrill.Engine.Headless;
 using DualDrill.Server.Browser;
 using DualDrill.Server.CustomEvents;
 using MessagePipe;

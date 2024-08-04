@@ -1,9 +1,6 @@
 ﻿using DualDrill.Engine.Renderer;
 using DualDrill.Graphics;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
-using System.Threading.Channels;
 
 namespace DualDrill.Engine;
 
@@ -20,8 +17,7 @@ public sealed class FrameService : IFrameService, IDisposable
         GPUDevice device,
         SimpleColorRenderer renderer,
         RotateCubeRenderer cubeRenderer,
-        FrameSimulationService simulation
-        )
+        FrameSimulationService simulation)
     {
         Logger = logger;
         Device = device;

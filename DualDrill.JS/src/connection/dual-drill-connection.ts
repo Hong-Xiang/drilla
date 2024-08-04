@@ -11,6 +11,7 @@ export interface DualDrillConnection extends Disposable {
   onDataChannel: IAsyncPublisher<RTCDataChannelEvent>;
   addTrack: RTCPeerConnection["addTrack"];
   onTrack: IAsyncPublisher<RTCTrackEvent>;
+  start(): Promise<void>;
 }
 
 const RTCPeerConnectionPublisherFactory =
@@ -21,6 +22,7 @@ export function createServerConnection(
 ): DualDrillConnection {
   const pc = new RTCPeerConnection();
   async function negotiate() {
+    console.log('negotiate called')
     const offer = await pc.createOffer({
       offerToReceiveVideo: true,
     });
@@ -61,8 +63,6 @@ export function createServerConnection(
   pc.onconnectionstatechange = () =>
     console.log("onconnectionstatechange: " + pc.connectionState);
 
-  negotiate();
-
   return {
     createDataChannel: (label, dataChannelDict) =>
       pc.createDataChannel(label, dataChannelDict),
@@ -71,6 +71,17 @@ export function createServerConnection(
     onTrack: RTCPeerConnectionPublisherFactory(pc, "track"),
     [Symbol.dispose]: () => {
       pc.close();
+    },
+    start: async () => {
+      const p = new Promise<void>((resolve) => {
+        pc.onconnectionstatechange = () => {
+          if (pc.connectionState === "connected") {
+            resolve();
+          }
+        };
+      });
+      await negotiate();
+      await p;
     },
   };
 }
