@@ -1,21 +1,26 @@
 ﻿using DualDrill.Engine.Connection;
 using DualDrill.Engine.Disposable;
+using DualDrill.Graphics;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
-namespace DualDrill.Server.Browser;
+namespace DualDrill.Server;
 
-public static class ClientHubEndpointExtension
+public static class DualDrillServerExtension
 {
     static Ok<string[]> GetConnectedClients([FromServices] ClientStore clients)
     {
         return TypedResults.Ok(clients.ClientUris.Select(static s => s.ToString()).ToArray());
     }
 
-    public static void AddClients(this IServiceCollection services)
+    public static void AddDualDrillServerServices(this IServiceCollection services)
     {
         services.AddSingleton<ClientStore>();
+        services.AddSingleton<GPUInstance>();
+        services.AddSingleton(sp => sp.GetRequiredService<GPUInstance>().RequestAdapter(null));
+        services.AddSingleton(sp => sp.GetRequiredService<GPUAdapter>().RequestDevice());
+        services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
 
         services.AddScoped<ContextDisposableCollection>();
         //services.AddScoped<InitializedClientContext>();

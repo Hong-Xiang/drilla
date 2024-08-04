@@ -1,10 +1,9 @@
 ﻿using DualDrill.Engine;
 using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
-using Microsoft.Extensions.Options;
 using System.Threading.Channels;
 
-namespace DualDrill.Server;
+namespace DualDrill.Server.Services;
 
 public sealed class RealtimeFrameHostedService : BackgroundService
 {

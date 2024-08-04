@@ -25,6 +25,7 @@ export function createServerConnection(
     console.log('negotiate called')
     const offer = await pc.createOffer({
       offerToReceiveVideo: true,
+      iceRestart: true,
     });
     if (!offer.sdp) {
       throw new Error("No SDP in offer");

@@ -16,6 +16,7 @@ public interface IDrillHubClient
     Task<string> HubInvoke(string funcHandle);
     Task<string> CreateAnswer(string offer);
     Task<string> IceCandidate(string candidate);
+    Task RequestNegotiation();
 }
 
 sealed class DrillHub(
