@@ -1,11 +1,6 @@
 ﻿using DualDrill.Engine.WebRTC;
 using MessagePipe;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace DualDrill.Engine.Connection;
 
@@ -22,8 +17,6 @@ public interface IClient
     public Channel<object> GetOrAddEventChannel(Uri uri);
     ISubscriber<IClient> OnPeerConnected { get; }
 }
-
-
 
 public interface IClientAsyncCommand<in TClient, T>
     where TClient : IClient
