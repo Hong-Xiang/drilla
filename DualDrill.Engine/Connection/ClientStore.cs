@@ -33,7 +33,6 @@ public sealed class ClientStore(
             Logger.LogError("Failed to add client with id {ClientUri}", client.Uri);
         }
         ClientConnectionChanged.Publish(Clients);
-        OnClientChanges?.Invoke(Clients);
     }
 
     public void RemoveClient(IClient client)
@@ -43,20 +42,11 @@ public sealed class ClientStore(
             Logger.LogError("Failed to remove client with uri {ClientUri}", client.Uri);
         }
         ClientConnectionChanged.Publish(Clients);
-        OnClientChanges?.Invoke(Clients);
     }
 
     public Uri[] ClientUris => [.. ClientsStore.Keys];
 
-    public delegate void ClientsChanges(ImmutableArray<IClient> clients);
-    public event ClientsChanges OnClientChanges;
-
     public ImmutableArray<IClient> Clients => [.. ClientsStore.Values];
-
-    //public Task<IPeerToPeerClientPair> CreatePeerPairAsync(IClient source, IClient target)
-    //{
-    //    return source.CreatePairAsync(target);
-    //}
 
     public void Dispose()
     {

@@ -1,5 +1,3 @@
-using DualDrill.Server.Application;
-using DualDrill.Server.Browser;
 using DualDrill.Engine;
 using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
@@ -36,20 +34,18 @@ public class Program
         builder.Services.AddMessagePipe();
 
         builder.Services.AddSingleton<RTCPeerConnectionProviderService>();
-        builder.Services.AddSingleton<PeerClientConnectionService>();
 
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.SimpleColorRenderer>();
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
         builder.Services.AddSingleton<HeadlessSurface>(sp =>
         {
             var option = builder.Configuration.Get<HeadlessSurface.Option>();
-            var wgpu = sp.GetRequiredService<WGPUProviderService>();
-            return new HeadlessSurface(wgpu.Device, option);
+            return new HeadlessSurface(sp.GetRequiredService<GPUDevice>(), option);
         });
         builder.Services.AddSingleton<IGPUSurface>(sp => sp.GetRequiredService<HeadlessSurface>());
 
-        builder.Services.AddSingleton<WGPUProviderService>();
-        builder.Services.AddSingleton<GPUDevice>(sp => sp.GetRequiredService<WGPUProviderService>().Device);
+        //builder.Services.AddSingleton<WGPUProviderService>();
+        //builder.Services.AddSingleton<GPUDevice>(sp => sp.GetRequiredService<WGPUProviderService>().Device);
 
         builder.Services.AddSingleton<FrameInputService>();
         builder.Services.AddSingleton<FrameSimulationService>();
@@ -64,7 +60,7 @@ public class Program
         //builder.Services.AddHostedService<VulkanWindowService>();
 
         //builder.Services.AddHostedService<DistributeXRApplicationService>();
-        builder.Services.AddClients();
+        builder.Services.AddDualDrillServerServices();
         builder.Services.AddControllers();
         builder.Services.AddHealthChecks();
 

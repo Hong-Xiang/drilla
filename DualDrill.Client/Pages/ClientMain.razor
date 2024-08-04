@@ -4,13 +4,8 @@
 
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
-<h1>Counter</h1>
+<h3>Client WASM</h3>
 
-<p role="status">Current count: @currentCount</p>
-
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
-
-<span> Server Handle: @ServerHandle</span>
-
+<span>Server Handle: @ServerHandle</span>
 
 <div @ref="SimpleRTCRef"></div>

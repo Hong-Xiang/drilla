@@ -2,7 +2,6 @@
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Graphics;
-using DualDrill.Server.Application;
 using MessagePipe;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
@@ -12,20 +11,17 @@ using System.Threading.Channels;
 
 namespace DualDrill.Server.Browser;
 
-class BrowserClient
-   : IClient
+class BrowserClient : IClient
 {
     public BrowserClient(IJSRuntime jsRuntime,
                          JSClientModule moduleValue,
                          IHubContext<DrillHub, IDrillHubClient> signalRHub,
-                         string signalRConnectionId,
-                         ISubscriber<IClient> onPeerConnected)
+                         string signalRConnectionId)
     {
         JSRuntime = jsRuntime;
         ModuleValue = moduleValue;
         SignalRHub = signalRHub;
         SignalRConnectionId = signalRConnectionId;
-        OnPeerConnected = onPeerConnected;
     }
 
     public Guid Id { get; } = Guid.NewGuid();
@@ -61,8 +57,6 @@ class BrowserClient
             return ValueTask.FromResult(ModuleValue);
         }
     }
-
-    public IDesktopBrowserUI? UserInterface { get; set; } = default;
 
     public async ValueTask<IRTCPeerConnection> CreatePeerConnection()
     {

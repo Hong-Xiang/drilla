@@ -12,8 +12,6 @@ public sealed class HeadlessSurfaceCaptureVideoSource
     public HeadlessSurfaceCaptureVideoSource(ILogger<HeadlessSurfaceCaptureVideoSource> logger, HeadlessSurface surface)
     {
         var ffmpegLibFullPath = Environment.GetEnvironmentVariable("DUALDRILLFFMPEGPATH");
-        //var ffmpegLibFullPath = "C:\\Users\\Xiang\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg.Shared_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-6.1.1-full_build-shared\\bin";
-        //string? ffmpegLibFullPath = null;
         SIPSorceryMedia.FFmpeg.FFmpegInit.Initialise(SIPSorceryMedia.FFmpeg.FfmpegLogLevelEnum.AV_LOG_VERBOSE, ffmpegLibFullPath, logger);
         Console.WriteLine(ffmpeg.RootPath);
         VideoEncoder = new();

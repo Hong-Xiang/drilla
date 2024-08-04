@@ -31,7 +31,7 @@ partial class SimpleJSInterop
     internal static partial Task<JSObject> GetDotnetWasmExports(string assemblyName);
     [JSImport("testDotnetExport", "client")]
     internal static partial Task TestDotnetExport();
-  
+
     [JSImport("StartSignalR", "client")]
     internal static partial Task StartSignalRAsync();
 
@@ -49,19 +49,5 @@ partial class SimpleJSInterop
     internal static void SetInteractiveServerHandle(string handle)
     {
         InteractiveServerHandle.SetHandle(handle);
-    }
-
-    [JSExport]
-    internal static nint JSObjectAllocHandle(JSObject target)
-    {
-        var handle = GCHandle.Alloc(target, GCHandleType.Normal);
-        return GCHandle.ToIntPtr(handle);
-    }
-
-    [JSExport]
-    internal static JSObject GetJSObjectFromHandle(nint ptr)
-    {
-        var handle = GCHandle.FromIntPtr(ptr);
-        return (JSObject)handle.Target!;
     }
 }

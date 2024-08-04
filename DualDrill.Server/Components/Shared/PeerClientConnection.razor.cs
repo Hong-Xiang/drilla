@@ -3,15 +3,13 @@ using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Browser;
 using Microsoft.AspNetCore.Components;
-using DualDrill.Server.Application;
 using Microsoft.JSInterop;
-using DualDrill.Server.Command;
 using System.Threading.Channels;
 
 
 namespace DualDrill.Server.Components.Shared;
 
-public partial class PeerClientConnection : IDesktopBrowserUI, IAsyncDisposable
+public partial class PeerClientConnection : IAsyncDisposable
 {
     [Inject] ILogger<PeerClientConnection> Logger { get; set; }
 
@@ -44,10 +42,6 @@ public partial class PeerClientConnection : IDesktopBrowserUI, IAsyncDisposable
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
-        if (SelfClient is BrowserClient bc)
-        {
-            bc.UserInterface = this;
-        }
         if (PeerClient.Uri != PreviousPeerUri)
         {
             _ = Task.Run(async () =>
@@ -136,22 +130,6 @@ public partial class PeerClientConnection : IDesktopBrowserUI, IAsyncDisposable
         BrowserRTCPeerConnectionPair = await RTCPeerConnectionPair.CreateAsync(SelfClient, PeerClient);
         PeerChannel = PeerClient.GetOrAddEventChannel(peerUri);
         await PeerChannel.Writer.WriteAsync(BrowserRTCPeerConnectionPair);
-        // if (displayClient is Browser.BrowserClient sui)
-        // {
-        //     var stream = await sui.GetCameraStreamAsync().ConfigureAwait(false);
-        //     //var canvas = await sui.ExecuteCommandAsync(new GetRenderCanvas());
-        //     //var stream = await sui.Module.CaptureStream(sui, canvas);
-        //     await SendVideo(stream, renderClient);
-        // }
-        // if (renderClient is Browser.BrowserClient tui)
-        // {
-        //     var stream = await tui.GetCameraStreamAsync().ConfigureAwait(false);
-        //     //var canvas = await tui.ExecuteCommandAsync(new GetRenderCanvas());
-        //     //var stream = await (await tui.Module).CaptureCanvasToStream(tui, canvas);
-
-        //     await SendVideo(stream, displayClient);
-        // }
-        // AutoResetClientsWhenFailed(BrowserRTCPeerConnectionPair);
     }
 
     public ValueTask<IJSObjectReference> GetCanvasElement()

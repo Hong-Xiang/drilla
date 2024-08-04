@@ -18,11 +18,6 @@ public static class RenderControlApi
     {
         throw new NotImplementedException();
     }
-    public static async Task<IResult> DoRender([FromServices] SimpleTriangleRendererLegacy renderService)
-    {
-        renderService.Render();
-        return Results.Ok();
-    }
     public static async Task<IResult> RenderToImage(
         [FromServices] DualDrill.Engine.Renderer.SimpleColorRenderer renderer,
         [FromServices] GPUDevice device,
@@ -57,7 +52,6 @@ public static class RenderControlApi
     {
         app.MapPost("/api/render", StartRender);
         app.MapDelete("/api/render", StartRender);
-        app.MapGet("/api/doRender", DoRender);
         app.MapGet("/api/render-headless", RenderToImage);
     }
 }

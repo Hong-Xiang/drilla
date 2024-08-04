@@ -1,4 +1,6 @@
 ﻿using DualDrill.Engine.Media;
+using FFmpeg.AutoGen;
+using MessagePipe;
 using Microsoft.AspNetCore.SignalR;
 using SIPSorcery.Net;
 using System.Text;
@@ -8,43 +10,51 @@ namespace DualDrill.Server.Services;
 sealed class RTCPeerConnectionProviderService(
     HeadlessSurfaceCaptureVideoSource VideoSource,
     ILogger<RTCPeerConnectionProviderService> Logger,
-    IHubContext<DrillHub, IDrillHubClient> hubContext)
+    IHubContext<DrillHub, IDrillHubClient> hubContext,
+    EventFactory EventFactory)
 {
     public RTCPeerConnection CreatePeerConnection(string connectionId)
     {
+        var client = hubContext.Clients.Client(connectionId);
         var pc = new RTCPeerConnection(new RTCConfiguration
         {
             iceServers = new List<RTCIceServer>()
         });
+        var track = new MediaStreamTrack(VideoSource.VideoEncoder.SupportedFormats, MediaStreamStatusEnum.SendOnly);
+        pc.addTrack(track);
         pc.ondatachannel += (channel) =>
-                {
-                    if (channel.label == "pointermove")
-                    {
-                        channel.onmessage += (dc, protocol, data) =>
-                        {
-                            Logger.LogInformation(Encoding.UTF8.GetString(data));
-                        };
-                    }
-                };
+                 {
+                     if (channel.label == "pointermove")
+                     {
+                         channel.onmessage += (dc, protocol, data) =>
+                         {
+                             Logger.LogInformation(Encoding.UTF8.GetString(data));
+                         };
+                     }
+                 };
         pc.oniceconnectionstatechange += (state) =>
         {
             Logger.LogInformation("ice candidate state changed to {state}", Enum.GetName(state));
         };
+        var (negotiateNeededEmitter, onNegotiateNeeded) = EventFactory.CreateAsyncEvent<int>();
+        onNegotiateNeeded.Subscribe(async (_, cancel) =>
+        {
+            await client.RequestNegotiation();
+        });
         pc.onicecandidateerror += (err, msg) =>
         {
             Logger.LogError(msg + Environment.NewLine + JsonSerializer.Serialize(err));
         };
         pc.onnegotiationneeded += () =>
         {
+            negotiateNeededEmitter.Publish(0);
             Logger.LogWarning("Negotiation Needed");
         };
         pc.onicecandidate += (c) =>
         {
-            hubContext.Clients.Client(connectionId).IceCandidate(JsonSerializer.Serialize(c));
+            client.IceCandidate(JsonSerializer.Serialize(c));
         };
 
-        var track = new MediaStreamTrack(VideoSource.VideoEncoder.SupportedFormats, MediaStreamStatusEnum.SendOnly);
-        pc.addTrack(track);
         void sendVideo(uint duration, VideoFrameBuffer buffer)
         {
             if (pc.connectionState == RTCPeerConnectionState.connected)
@@ -61,14 +71,14 @@ sealed class RTCPeerConnectionProviderService(
             {
                 case RTCPeerConnectionState.connected:
                     VideoSource.OnVideoSourceEncodedSample += sendVideo;
-                    Logger.LogInformation($"{connectionId} RTC Connected");
+                    Logger.LogInformation("{ConnectionId} RTC Connected", connectionId);
                     break;
                 case RTCPeerConnectionState.failed:
                     pc.Close("ice disconnection");
                     break;
                 case RTCPeerConnectionState.closed:
                     VideoSource.OnVideoSourceEncodedSample -= sendVideo;
-                    Logger.LogInformation($"{connectionId} RTC Disconnected");
+                    Logger.LogInformation("{ConnectionId} RTC Disconnected", connectionId);
                     break;
             }
         };

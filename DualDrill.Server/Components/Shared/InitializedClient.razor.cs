@@ -1,7 +1,6 @@
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
-using DualDrill.Server.Application;
 using DualDrill.Server.Browser;
 using MessagePipe;
 using Microsoft.AspNetCore.Components;
@@ -10,7 +9,7 @@ using System.Collections.Immutable;
 
 namespace DualDrill.Server.Components.Shared;
 
-public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
+public partial class InitializedClient : IAsyncDisposable
 {
     [Inject]
     IJSRuntime JSRuntime { get; set; }
@@ -40,11 +39,10 @@ public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
         {
             UpdatePeerClients(ClientHub.Clients);
             Subscription.Disposable = ClientConnectionChanged.Subscribe(UpdatePeerClients);
-            ClientHub.OnClientChanges += UpdatePeerClients;
         }
         if (RenderService is not null)
         {
-            await RenderService.AttachToElementAsync(RenderRootElement);
+            //await RenderService.AttachToElementAsync(RenderRootElement);
             Logger.LogInformation("Blazor render attach to element called");
         }
     }
@@ -128,7 +126,6 @@ public partial class InitializedClient : IAsyncDisposable, IDesktopBrowserUI
 
     public async ValueTask DisposeAsync()
     {
-        ClientHub.OnClientChanges -= UpdatePeerClients;
     }
 
     public ValueTask<IJSObjectReference> GetCanvasElement()
