@@ -48,7 +48,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Modu
     public IJSRuntime JSRuntime { get; } = jsRuntime;
     public static async ValueTask<JSClientModule> CreateAsync(IJSRuntime runtime)
     {
-        var module = await runtime.InvokeAsync<IJSObjectReference>("import", $"/client.js?t={Guid.NewGuid()}").ConfigureAwait(false);
+        var module = await runtime.InvokeAsync<IJSObjectReference>("import", $"/js/dist/client.js?t={Guid.NewGuid()}").ConfigureAwait(false);
         await module.InvokeVoidAsync("Initialization", DotNetObjectReference.Create(new QuickOnBuffer(runtime))).ConfigureAwait(false);
         return new JSClientModule(runtime, module);
     }

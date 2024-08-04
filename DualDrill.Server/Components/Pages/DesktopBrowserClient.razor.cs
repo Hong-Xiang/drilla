@@ -1,22 +1,22 @@
 using DualDrill.Engine;
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
-using DualDrill.Graphics.Headless;
-using DualDrill.Server.Application;
+using DualDrill.Engine.Headless;
 using DualDrill.Server.Browser;
+using DualDrill.Server.CustomEvents;
 using MessagePipe;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
-using System.Collections.Immutable;
-using System.Reactive.Disposables;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace DualDrill.Server.Components.Pages;
 
 public partial class DesktopBrowserClient : IAsyncDisposable
 {
+    [Inject] IJSRuntime? JSRuntime { get; set; }
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
     [Inject] IHubContext<DrillHub, IDrillHubClient> HubContext { get; set; } = default!;
@@ -36,12 +36,15 @@ public partial class DesktopBrowserClient : IAsyncDisposable
         }
         try
         {
-
             await Module.DisposeAsync();
         }
         catch (JSDisconnectedException e)
         {
             Logger.LogWarning("disposing while disconnected");
+        }
+        if (SelfHandle.HasValue)
+        {
+            SelfHandle.Value.Free();
         }
     }
 
@@ -64,11 +67,18 @@ public partial class DesktopBrowserClient : IAsyncDisposable
 
     IJSObjectReference? VideoRef = null;
 
+    string? InteropMessage = null;
+
+    GCHandle? SelfHandle = default;
+
+    ElementReference? Attached { get; set; } = null;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
+
             Module = await JSClientModule.CreateAsync(jsRuntime);
             var connectionId = await Module.GetSignalRConnectionIdAsync();
             Client = new BrowserClient(jsRuntime, Module, HubContext, connectionId, OnPeerConnected);
@@ -79,15 +89,24 @@ public partial class DesktopBrowserClient : IAsyncDisposable
             //RenderService = new(await Client.Module.CreateServerRenderPresentService());
             Logger.LogInformation("Blazor render first render called");
             StateHasChanged();
+            await StartRTC();
             //await Task.Delay(1000);
             Connecting = false;
             StateHasChanged();
         }
         if (VideoRef is not null)
         {
-            await Module.AppendChildAsync(SimpleRTCRef, VideoRef);
+            var changed = !Attached.Equals(SimpleRTCRef);
+            if (changed)
+            {
+                await Module.AppendChildAsync(SimpleRTCRef, VideoRef);
+                Logger.LogInformation($"call attach");
+            }
+            Attached = SimpleRTCRef;
         }
     }
+
+    bool IsPointerDown { get; set; }
 
     async Task StartRTC()
     {
@@ -95,16 +114,33 @@ public partial class DesktopBrowserClient : IAsyncDisposable
         StateHasChanged();
     }
 
-    async Task OnMouseDown(MouseEventArgs e)
+    void OnNormalizedPointerDown(NormalizedPointerEventArgs e)
     {
-        Console.WriteLine(JsonSerializer.Serialize(e));
+        IsPointerDown = true;
     }
-    async Task OnMouseUp(MouseEventArgs e)
+    void OnNormalizedPointerUp(NormalizedPointerEventArgs e)
     {
-        Console.WriteLine(JsonSerializer.Serialize(e));
+        IsPointerDown = false;
     }
-    async Task OnMouseMove(MouseEventArgs e)
+    void OnNormalizedPointerMove(NormalizedPointerEventArgs e)
     {
-        Console.WriteLine(JsonSerializer.Serialize(e));
+        if (IsPointerDown)
+        {
+            Logger.LogInformation("Draggin ({X}, {Y})", e.OffsetX / e.BoundingRect.Width, e.OffsetY / e.BoundingRect.Height);
+        }
+    }
+
+    private async ValueTask SetInteractiveServerHandle()
+    {
+        if (JSRuntime is not null && !SelfHandle.HasValue)
+        {
+            SelfHandle = GCHandle.Alloc(this);
+            var handle = GCHandle.ToIntPtr(SelfHandle.Value).ToString();
+            await JSRuntime.InvokeVoidAsync("DualDrillSetInteractiveServerHandle", "HelloFromServer");
+        }
+        else
+        {
+            Logger.LogWarning("Skip SetInteractiveServerHandle, JSRuntime is null or SelfHandle already set");
+        }
     }
 }

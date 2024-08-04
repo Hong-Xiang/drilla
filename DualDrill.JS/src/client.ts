@@ -15,6 +15,8 @@ export { createHeadlessSharedBufferServerRenderService } from "./render/headless
 export { createHeadlessServerRenderService } from "./render/headlessRenderService";
 export { getDotnetWasmExports } from "./lib/jsexport-client";
 import { getDotnetWasmExports } from "./lib/jsexport-client";
+import { createSignalServerConnectionFromSignalRHubConnection } from "./connection/server-signal-connection";
+import { createServerConnection } from "./connection/dual-drill-connection";
 
 export async function testDotnetExport() {
   const exports = await getDotnetWasmExports("DualDrill.Client.dll");
@@ -46,6 +48,10 @@ export function SignalRConnectionId() {
   return SignalRConnection.connectionId;
 }
 
+export async function StartSignalR() {
+  await SignalRConnection.start();
+}
+
 export async function Initialization(blazorServerService?: DotNetObject) {
   console.log("initialization called");
   await SignalRConnection.start();
@@ -60,17 +66,17 @@ export async function Initialization(blazorServerService?: DotNetObject) {
     count++;
   }, 1000);
 
-  SignalRConnection.stream("PingPongStream", subject).subscribe({
-    next: (value) => {
-      console.log(`pong ${value}`);
-    },
-    error: (e) => {
-      console.error(e);
-    },
-    complete: () => {
-      console.log("ping pong channel complete");
-    },
-  });
+  // SignalRConnection.stream("PingPongStream", subject).subscribe({
+  //   next: (value) => {
+  //     console.log(`pong ${value}`);
+  //   },
+  //   error: (e) => {
+  //     console.error(e);
+  //   },
+  //   complete: () => {
+  //     console.log("ping pong channel complete");
+  //   },
+  // });
 
   // async function testFetchRenderResult() {
   //   const res = await fetch("/api/vulkan/render");
@@ -298,59 +304,108 @@ export function addDataChannelLogMessageListener(channel: RTCDataChannel) {
   };
 }
 
+function normalizedPointerEvent(e: PointerEvent, t: HTMLElement) {
+  console.log(e);
+  const rect = t.getBoundingClientRect();
+  const result = {
+    detail: e.detail,
+    screenX: e.screenX,
+    screenY: e.screenY,
+    clientX: e.clientX,
+    clientY: e.clientY,
+    offsetX: e.offsetX,
+    offsetY: e.offsetY,
+    pageX: e.pageX,
+    pageY: e.pageY,
+    movementX: e.movementX,
+    movementY: e.movementY,
+    button: e.button,
+    buttons: e.buttons,
+    ctrlKey: e.ctrlKey,
+    shiftKey: e.shiftKey,
+    altKey: e.altKey,
+    metaKey: e.metaKey,
+    type: e.type,
+    pointerId: e.pointerId,
+    width: e.width,
+    height: e.height,
+    pressure: e.pressure,
+    tiltX: e.tiltX,
+    tiltY: e.tiltY,
+    pointerType: e.pointerType,
+    isPrimary: e.isPrimary,
+    boundingRect: rect,
+  };
+  console.log(result);
+  return result;
+}
+
 export async function CreateSimpleRTCClient() {
   const video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
+  video.muted = true;
 
-  const pc = new RTCPeerConnection({ iceServers: [] });
+  console.log("create simple RTC client");
 
-  //pc.ontrack = evt => document.querySelector('#videoCtl').srcObject = evt.streams[0];
-  pc.onicecandidate = (evt) => {
-    console.log(evt.candidate);
-    if (evt.candidate) {
-      SignalRConnection.invoke(
-        "AddIceCandidate",
-        JSON.stringify(evt.candidate)
-      );
-    }
-    // console.log("onicecandidate", evt);
-    // if (evt.candidate) {
-    //   fetch("api/rtcclient/candidate", {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "text/plain",
-    //     },
-    //     body: JSON.stringify(evt.candidate),
-    //   });
-    // }
-  };
-  pc.onnegotiationneeded = (e) => {
-    console.log("onnegotiationneeded", e);
-  };
+  const signalServer =
+    createSignalServerConnectionFromSignalRHubConnection(SignalRConnection);
+  const connection = createServerConnection(signalServer);
 
-  pc.ontrack = (t) => {
+  // const pc = new RTCPeerConnection({ iceServers: [] });
+
+  // //pc.ontrack = evt => document.querySelector('#videoCtl').srcObject = evt.streams[0];
+  // pc.onicecandidate = (evt) => {
+  //   console.log(evt.candidate);
+  //   if (evt.candidate) {
+  //     SignalRConnection.invoke(
+  //       "AddIceCandidate",
+  //       JSON.stringify(evt.candidate)
+  //     );
+  //   }
+  //   // console.log("onicecandidate", evt);
+  //   // if (evt.candidate) {
+  //   //   fetch("api/rtcclient/candidate", {
+  //   //     method: "POST",
+  //   //     headers: {
+  //   //       "Content-Type": "text/plain",
+  //   //     },
+  //   //     body: JSON.stringify(evt.candidate),
+  //   //   });
+  //   // }
+  // };
+  // pc.onnegotiationneeded = (e) => {
+  //   console.log("onnegotiationneeded", e);
+  // };
+
+  connection.onTrack.subscribe(async (t) => {
     console.log("received track");
+    console.log(t.streams[0].id);
+    console.log(t);
     video.srcObject = t.streams[0];
-  };
-
-  // Diagnostics.
-  pc.onicegatheringstatechange = () =>
-    console.log("onicegatheringstatechange: " + pc.iceGatheringState);
-  pc.oniceconnectionstatechange = () =>
-    console.log("oniceconnectionstatechange: " + pc.iceConnectionState);
-  pc.onsignalingstatechange = () =>
-    console.log("onsignalingstatechange: " + pc.signalingState);
-  pc.onconnectionstatechange = () =>
-    console.log("onconnectionstatechange: " + pc.connectionState);
-
-  const offer = await pc.createOffer({
-    offerToReceiveVideo: true,
   });
-  await pc.setLocalDescription(offer);
-  SignalRConnection.on("IceCandidate", (candidate) => {
-    console.log(candidate);
+
+  const channel = connection.createDataChannel("pointermove");
+
+  video.addEventListener("pointerdown", (e) => {
+    console.log("simple client pointer event", e);
+    const h = (e: PointerEvent) => {
+      channel.send(JSON.stringify(normalizedPointerEvent(e, video)));
+    };
+    video.addEventListener("pointermove", h);
+    window.addEventListener("pointerup", () => {
+      video.removeEventListener("pointermove", h);
+    });
   });
+
+  await connection.start();
+  // const offer = await pc.createOffer({
+  //   offerToReceiveVideo: true,
+  // });
+  // await pc.setLocalDescription(offer);
+  // SignalRConnection.on("IceCandidate", (candidate) => {
+  //   console.log(candidate);
+  // });
   // const answer = await fetch(`api/rtcclient`, {
   //   method: "POST",
   //   headers: {
@@ -358,19 +413,23 @@ export async function CreateSimpleRTCClient() {
   //   },
   //   body: offer.sdp,
   // });
-  const answer = await SignalRConnection.invoke(
-    "CreatePeerConnection",
-    offer.sdp
-  );
+  // const answer = await SignalRConnection.invoke(
+  //   "CreatePeerConnection",
+  //   offer.sdp
+  // );
   // const answerSdp = await answer.text();
-  console.log("got answer", answer);
-  await pc.setRemoteDescription({
-    type: "answer",
-    sdp: answer,
-  });
+  // console.log("got answer", answer);
+  // await pc.setRemoteDescription({
+  //   type: "answer",
+  //   sdp: answer,
+  // });
   return video;
 }
 
 export function appendChild(el: HTMLElement, child: HTMLElement) {
   el.appendChild(child);
+}
+
+export function appendToVideoTarget(el: HTMLElement) {
+  document.getElementById("video-target")?.appendChild(el);
 }

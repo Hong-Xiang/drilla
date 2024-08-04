@@ -1,23 +1,34 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace DualDrill.Server.CustomEvents;
 
-[EventHandler("onnormalizedpointermove", typeof(NormalizedPointEventArgs), enableStopPropagation: true, enablePreventDefault: true)]
-[EventHandler("onnormalizedpointerdown", typeof(NormalizedPointEventArgs), enableStopPropagation: true, enablePreventDefault: true)]
-[EventHandler("onnormalizedpointerup", typeof(NormalizedPointEventArgs), enableStopPropagation: true, enablePreventDefault: true)]
+[EventHandler("onnormalizedpointermove", typeof(NormalizedPointerEventArgs), enableStopPropagation: true, enablePreventDefault: true)]
+[EventHandler("onnormalizedpointerdown", typeof(NormalizedPointerEventArgs), enableStopPropagation: true, enablePreventDefault: true)]
+[EventHandler("onnormalizedpointerup", typeof(NormalizedPointerEventArgs), enableStopPropagation: true, enablePreventDefault: true)]
 public static class EventHandlers
 {
 }
 
-public sealed class NormalizedPointEventArgs : EventArgs
+public sealed record class DOMRect(
+    float X,
+    float Y,
+    float Width,
+    float Height,
+    float Top,
+    float Right,
+    float Bottom,
+    float Left
+)
 {
-    public float OffsetX { get; set; }
-    public float OffsetY { get; set; }
-    public int OffsetWidth { get; set; }
-    public int OffsetHeight { get; set; }
+}
 
+
+public sealed class NormalizedPointerEventArgs : PointerEventArgs
+{
+    public required DOMRect BoundingRect { get; init; }
     public override string? ToString()
     {
-        return $"{nameof(NormalizedPointEventArgs)}(X: {OffsetX}, Y: {OffsetY}, Width: {OffsetWidth}, Height {OffsetHeight})";
+        return $"{nameof(NormalizedPointerEventArgs)}(OffsetX = {OffsetX}, OffsetY = {OffsetY}, BoundingRect = {BoundingRect})";
     }
 }

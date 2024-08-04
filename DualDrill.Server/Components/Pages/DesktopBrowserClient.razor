@@ -1,5 +1,4 @@
-﻿@page "/desktop"
-@using Shared;
+﻿@using Shared;
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <h3>Desktop Client</h3>
@@ -7,6 +6,7 @@
 {
     <span>Connecting ... </span>
 }
+<span>InteropMessage: @InteropMessage</span>
 <button @onclick="StartRTC">Start RTC</button>
 <div>
     <span> scale </span>
@@ -14,12 +14,13 @@
     <span> @Scale </span>
 </div>
 
-<div @ref="SimpleRTCRef" 
-    style="width : @(Surface.Width)px; height:@(Surface.Height)px"
-    @onmousedown="OnMouseDown"
-    @onmouseup="OnMouseUp"
-    @onmousemove="OnMouseMove"
-></div>
+<div @ref="SimpleRTCRef"
+     style="width:@(Surface.Width)px; height:@(Surface.Height)px">
+</div>
+
+<!-- onnormalizedpointerdown="OnNormalizedPointerDown"
+     onnormalizedpointerup="OnNormalizedPointerUp"
+     onnormalizedpointermove="OnNormalizedPointerMove"> -->
 @if (Module is null || RenderService is null)
 {
     <div>Initializing Client ...</div>
@@ -32,4 +33,5 @@ else
         </DualDrill.Server.Components.Shared.InitializedClient>
     </CascadingValue>
 }
+<script src="js/client-interop.js" type="module"></script>
 

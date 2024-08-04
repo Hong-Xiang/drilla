@@ -3,14 +3,11 @@ using DualDrill.Server.Browser;
 using DualDrill.Engine;
 using DualDrill.Server.WebApi;
 using DualDrill.Graphics;
-using DualDrill.Graphics.Headless;
 using DualDrill.Server.Services;
 using Serilog.Extensions.Logging;
 using Serilog;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Serilog;
-using Serilog.Extensions.Logging;
+using DualDrill.Engine.Headless;
+using DualDrill.Engine.Media;
 
 namespace DualDrill.Server;
 
@@ -30,7 +27,6 @@ public class Program
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             Args = args,
-            WebRootPath = "../DualDrill.JS/dist"
         });
 
         builder.Services.Configure<HeadlessSurface.Option>(options =>
@@ -39,6 +35,7 @@ public class Program
 
         builder.Services.AddMessagePipe();
 
+        builder.Services.AddSingleton<RTCPeerConnectionProviderService>();
         builder.Services.AddSingleton<PeerClientConnectionService>();
 
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.SimpleColorRenderer>();
@@ -56,12 +53,12 @@ public class Program
 
         builder.Services.AddSingleton<FrameInputService>();
         builder.Services.AddSingleton<FrameSimulationService>();
-        builder.Services.AddSingleton<RTCDemoVideoSource>();
+        builder.Services.AddSingleton<HeadlessSurfaceCaptureVideoSource>();
         builder.Services.AddSingleton<IFrameService, FrameService>();
         builder.Services.AddHostedService<DevicePollHostedService>();
-        builder.Services.AddHostedService<HeadlessRealtimeFrameHostedService>();
+        builder.Services.AddHostedService<RealtimeFrameHostedService>();
 
-        builder.Services.AddHostedService<VideoPushHostedService>();
+        //builder.Services.AddHostedService<VideoPushHostedService>();
         //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
         //builder.Services.AddHostedService<VulkanWindowService>();
@@ -94,6 +91,7 @@ public class Program
         app.MapGet("/api/hello", () => "Hello");
 
         app.MapHub<DrillHub>("/hub/user-input");
+        app.MapHub<DualDrillBrowserClientHub>("/hub/browser-client");
 
         app.UseHttpsRedirection();
 
@@ -102,12 +100,12 @@ public class Program
         app.MapControllers();
         app.MapClients();
         app.MapRenderControls();
-        
+
 
         app.MapRazorComponents<DualDrill.Server.Components.App>()
             .AddInteractiveServerRenderMode()
             .AddInteractiveWebAssemblyRenderMode()
-            .AddAdditionalAssemblies(typeof(DualDrill.Client.SignalRService).Assembly);
+            .AddAdditionalAssemblies(typeof(DualDrill.Client._Imports).Assembly);
 
         app.MapGet("/webroot", () => app.Environment.WebRootPath);
 
