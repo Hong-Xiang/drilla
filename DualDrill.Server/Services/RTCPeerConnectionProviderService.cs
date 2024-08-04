@@ -27,9 +27,9 @@ sealed class RTCPeerConnectionProviderService(
                     }
                 };
         pc.oniceconnectionstatechange += (state) =>
-                 {
-                     Logger.LogWarning($"ice candidate state changed to {Enum.GetName(state)}");
-                 };
+        {
+            Logger.LogInformation("ice candidate state changed to {state}", Enum.GetName(state));
+        };
         pc.onicecandidateerror += (err, msg) =>
         {
             Logger.LogError(msg + Environment.NewLine + JsonSerializer.Serialize(err));
