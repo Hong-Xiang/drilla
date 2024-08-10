@@ -14,14 +14,10 @@ namespace DualDrill.Server.Browser;
 class BrowserClient : IClient
 {
     public BrowserClient(IJSRuntime jsRuntime,
-                         JSClientModule moduleValue,
-                         IHubContext<DrillHub, IDrillHubClient> signalRHub,
-                         string signalRConnectionId)
+                         IHubContext<DrillHub, IDrillHubClient> signalRHub)
     {
         JSRuntime = jsRuntime;
-        ModuleValue = moduleValue;
         SignalRHub = signalRHub;
-        SignalRConnectionId = signalRConnectionId;
     }
 
     public Guid Id { get; } = Guid.NewGuid();
@@ -35,7 +31,6 @@ class BrowserClient : IClient
         }
     }
     public IJSRuntime JSRuntime { get; }
-    public JSClientModule ModuleValue { get; }
     public IHubContext<DrillHub, IDrillHubClient> SignalRHub { get; }
     public string SignalRConnectionId { get; }
     public JSMediaStreamProxy? MediaStream { get; set; }
@@ -54,7 +49,7 @@ class BrowserClient : IClient
     {
         get
         {
-            return ValueTask.FromResult(ModuleValue);
+            throw new NotImplementedException();
         }
     }
 
@@ -69,6 +64,7 @@ class BrowserClient : IClient
 
     private string? ConnectionId { get; set; }
 
+    public IPeerConnection PeerConnection => throw new NotImplementedException();
 
     public async ValueTask<string> GetConnectionId()
     {

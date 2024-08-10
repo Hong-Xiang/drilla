@@ -1,3 +1,4 @@
+using DualDrill.Engine.Connection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Runtime.InteropServices.JavaScript;
@@ -10,29 +11,35 @@ public partial class ClientMain
 {
     [Inject] IJSRuntime JSRuntime { get; set; }
     [Inject] NavigationManager NavigationManager { get; set; }
+    [Inject] ClientIdentity ClientIdentity { get; set; }
+    [Inject] HttpClient HttpClient { get; set; }
 
-    private string ServerHandle = "";
 
     ElementReference SimpleRTCRef { get; set; }
-    JSObject? VideoRef = null;
+    ElementReference? AttachedElement { get; set; }
+    JSObject? VideoRef { get; set; }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    Guid ViewerId { get; } = Guid.NewGuid();
+
+    protected override async Task OnInitializedAsync()
     {
-        await base.OnAfterRenderAsync(firstRender);
-        if (firstRender)
-        {
-            var interactiveServer = await InteractiveServerHandle.GetInteractiveServerHandleAsync();
+        await base.OnInitializedAsync();
+        await ClientJSInterop.StartSignalRHubConnection(ClientIdentity.Id.ToString());
+        await HttpClient.PostAsync(NavigationManager.BaseUri + $"api/peer-connection/server/{ClientIdentity.Id}", null);
+        VideoRef = await ClientJSInterop.CreateSimpleRTCClientAsync(ClientIdentity.Id.ToString());
+        StateHasChanged();
+    }
 
-            await SimpleJSInterop.StartSignalRAsync();
-
-            ServerHandle = await BrowserClientJSInterop.GetInteractiveServerHandle();
-            StateHasChanged();
-        }
-        if (VideoRef is not null)
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        Console.WriteLine("After render");
+        if (VideoRef is not null && !AttachedElement.Equals(SimpleRTCRef))
         {
-            //await using var module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/client.js");
-            //await module.InvokeVoidAsync("appendChild", SimpleRTCRef, VideoRef);
-            SimpleJSInterop.AppendToVideoTarget(VideoRef);
+            Console.WriteLine("entered logic");
+            using var divParent = ClientJSInterop.GetElementById(ViewerId.ToString());
+            ClientJSInterop.AppendChild(divParent, VideoRef);
+            AttachedElement = SimpleRTCRef;
         }
     }
 }

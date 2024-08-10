@@ -1,11 +1,10 @@
 using DualDrill.Engine;
-using DualDrill.Server.WebApi;
-using DualDrill.Graphics;
-using DualDrill.Server.Services;
-using Serilog.Extensions.Logging;
-using Serilog;
 using DualDrill.Engine.Headless;
-using DualDrill.Engine.Media;
+using DualDrill.Graphics;
+using DualDrill.Server.WebApi;
+using DualDrill.WebView;
+using Serilog;
+using Serilog.Extensions.Logging;
 
 namespace DualDrill.Server;
 
@@ -33,27 +32,16 @@ public class Program
 
         builder.Services.AddMessagePipe();
 
-        builder.Services.AddSingleton<RTCPeerConnectionProviderService>();
 
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.SimpleColorRenderer>();
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
-        builder.Services.AddSingleton<HeadlessSurface>(sp =>
-        {
-            var option = builder.Configuration.Get<HeadlessSurface.Option>();
-            return new HeadlessSurface(sp.GetRequiredService<GPUDevice>(), option);
-        });
+        builder.Services.AddSingleton<HeadlessSurface>();
         builder.Services.AddSingleton<IGPUSurface>(sp => sp.GetRequiredService<HeadlessSurface>());
 
         //builder.Services.AddSingleton<WGPUProviderService>();
         //builder.Services.AddSingleton<GPUDevice>(sp => sp.GetRequiredService<WGPUProviderService>().Device);
 
-        builder.Services.AddSingleton<FrameInputService>();
-        builder.Services.AddSingleton<FrameSimulationService>();
-        builder.Services.AddSingleton<HeadlessSurfaceCaptureVideoSource>();
-        builder.Services.AddSingleton<IFrameService, FrameService>();
-        builder.Services.AddHostedService<DevicePollHostedService>();
-        builder.Services.AddHostedService<RealtimeFrameHostedService>();
-
+        builder.Services.AddSingleton<IWebViewService, WebViewService>();
         //builder.Services.AddHostedService<VideoPushHostedService>();
         //builder.Services.AddHostedService<RenderResultReaderTestService>();
         //builder.Services.AddHostedService<WebGPUNativeWindowService>();
@@ -84,8 +72,6 @@ public class Program
             app.UseHsts();
         }
 
-        app.MapGet("/api/hello", () => "Hello");
-
         app.MapHub<DrillHub>("/hub/user-input");
         app.MapHub<DualDrillBrowserClientHub>("/hub/browser-client");
 
@@ -94,9 +80,8 @@ public class Program
         app.UseStaticFiles();
         app.UseAntiforgery();
         app.MapControllers();
-        app.MapClients();
+        app.MapDualDrillApi();
         app.MapRenderControls();
-
 
         app.MapRazorComponents<DualDrill.Server.Components.App>()
             .AddInteractiveServerRenderMode()

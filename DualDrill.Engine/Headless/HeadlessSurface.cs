@@ -1,8 +1,8 @@
 ﻿using DualDrill.Graphics;
-using System.Reactive.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using WebSocketSharp;
+using R3;
+using MessagePipe;
+using Microsoft.Extensions.Options;
 
 namespace DualDrill.Engine.Headless;
 
@@ -17,15 +17,17 @@ public sealed class HeadlessSurface : IGPUSurface
         public int SlotCount { get; set; } = 3;
         public GPUTextureFormat Format { get; set; } = GPUTextureFormat.BGRA8UnormSrgb;
     }
-    public event EventHandler<HeadlessSurfaceFrame>? OnFrame;
 
     private readonly Channel<HeadlessRenderTarget> RenderTargetChannel;
     GPUDevice Device;
     public readonly int Width;
     public readonly int Height;
     HeadlessRenderTarget? CurrentTarget = null;
-    public HeadlessSurface(GPUDevice device, Option option)
+    public IAsyncSubscriber<HeadlessSurfaceFrame> OnFrame { get; }
+    private IAsyncPublisher<HeadlessSurfaceFrame> EmitOnFrame { get; }
+    public HeadlessSurface(GPUDevice device, IOptions<Option> options, EventFactory eventFactory)
     {
+        var option = options.Value;
         Device = device;
         Width = option.Width;
         Height = option.Height;
@@ -34,6 +36,7 @@ public sealed class HeadlessSurface : IGPUSurface
         {
             RenderTargetChannel.Writer.TryWrite(new HeadlessRenderTarget(Device, Width, Height, option.Format));
         }
+        (EmitOnFrame, OnFrame) = eventFactory.CreateAsyncEvent<HeadlessSurfaceFrame>();
     }
 
     public HeadlessRenderTarget? TryAcquireImage()
@@ -89,7 +92,7 @@ public sealed class HeadlessSurface : IGPUSurface
                 GPUTextureFormat.BGRA8Unorm,
                 data
             );
-            OnFrame?.Invoke(this, frame);
+            await EmitOnFrame.PublishAsync(frame);
             await RenderTargetChannel.Writer.WriteAsync(target);
         });
     }

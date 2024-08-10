@@ -1,11 +1,15 @@
-import { Subject, filter, first, fromEvent, map } from "rxjs";
+import { filter, first, fromEvent, map } from "rxjs";
 import { DotNetObject } from "./blazor-dotnet";
 import {
   PromiseLikeResultMapper,
   subscribeByPromiseLike,
 } from "./lib/dotnet-server-interop";
-import { SignalRConnection } from "./lib/signalr-client";
-import * as signalR from "@microsoft/signalr";
+import { SignalRConnection } from "./connection/signar-hubconnection";
+export {
+  SignalRHubConnectionSubscribeEmitEvent,
+  StartSignalRHubConnection,
+  SignalRConnection,
+} from "./connection/signar-hubconnection";
 
 export { getProperty, setProperty } from "./lib/dotnet-server-interop";
 // export { createWebGPURenderService } from "../render/RenderService";
@@ -14,9 +18,10 @@ export { createServerRenderPresentService } from "./render/DistributeRenderServi
 export { createHeadlessSharedBufferServerRenderService } from "./render/headlessSharedBufferServerRenderService";
 export { createHeadlessServerRenderService } from "./render/headlessRenderService";
 export { getDotnetWasmExports } from "./lib/jsexport-client";
+export { createAsyncMessageEmitter } from "./asyncMessage";
 import { getDotnetWasmExports } from "./lib/jsexport-client";
-import { createSignalServerConnectionFromSignalRHubConnection } from "./connection/server-signal-connection";
-import { createServerConnection } from "./connection/dual-drill-connection";
+import { createSignalConnectionOverSignalRHubConnection } from "./connection/signalr-server-connection";
+import { createPeerConnection } from "./connection/dual-drill-connection";
 
 export async function testDotnetExport() {
   const exports = await getDotnetWasmExports("DualDrill.Client.dll");
@@ -46,47 +51,6 @@ export let BlazorServerService: DotNetObject | null = null;
 
 export function SignalRConnectionId() {
   return SignalRConnection.connectionId;
-}
-
-export async function StartSignalR() {
-  await SignalRConnection.start();
-}
-
-export async function Initialization(blazorServerService?: DotNetObject) {
-  console.log("initialization called");
-  await SignalRConnection.start();
-  if (blazorServerService) {
-    BlazorServerService = blazorServerService;
-  }
-
-  const subject = new signalR.Subject<number>();
-  let count = 0;
-  const h = setInterval(() => {
-    subject.next(count);
-    count++;
-  }, 1000);
-
-  // SignalRConnection.stream("PingPongStream", subject).subscribe({
-  //   next: (value) => {
-  //     console.log(`pong ${value}`);
-  //   },
-  //   error: (e) => {
-  //     console.error(e);
-  //   },
-  //   complete: () => {
-  //     console.log("ping pong channel complete");
-  //   },
-  // });
-
-  // async function testFetchRenderResult() {
-  //   const res = await fetch("/api/vulkan/render");
-  //   const b = await res.blob();
-  //   console.log(b.size);
-
-  //   requestAnimationFrame(testFetchRenderResult);
-  // }
-
-  // requestAnimationFrame(testFetchRenderResult);
 }
 
 export function createCanvas(
@@ -125,7 +89,6 @@ export function createCanvas(
       })
   );
 
-  const done = new Subject<null>();
   return {
     dispose: () => {
       subscription.unsubscribe();
@@ -141,7 +104,8 @@ export function getElementSize(element: HTMLElement) {
 }
 
 export function captureStream(canvas: HTMLCanvasElement): MediaStream {
-  return canvas.captureStream(30);
+  const stream = canvas.captureStream(30);
+  return stream;
 }
 
 export function createRTCPeerConnection() {
@@ -340,7 +304,7 @@ function normalizedPointerEvent(e: PointerEvent, t: HTMLElement) {
   return result;
 }
 
-export async function CreateSimpleRTCClient() {
+export async function CreateSimpleRTCClient(clientId: string) {
   const video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
@@ -348,10 +312,23 @@ export async function CreateSimpleRTCClient() {
 
   console.log("create simple RTC client");
 
-  const signalServer =
-    createSignalServerConnectionFromSignalRHubConnection(SignalRConnection);
-  const connection = createServerConnection(signalServer);
+  const serverId = "00000000-0000-0000-0000-000000000000";
 
+  const signalServer = createSignalConnectionOverSignalRHubConnection(
+    SignalRConnection,
+    serverId
+  );
+  // createSignalServerConnectionOverBlazorInterop()
+  const connection = createPeerConnection(signalServer);
+  console.log("created peer connection");
+
+  // SignalRConnection.on("Emit", (e) => {
+  //   console.log(e);
+  // });
+
+  // SignalRHubConnectionSubscribeEmitEvent((e) => {
+  //   console.log(e);
+  // });
   // const pc = new RTCPeerConnection({ iceServers: [] });
 
   // //pc.ontrack = evt => document.querySelector('#videoCtl').srcObject = evt.streams[0];
@@ -399,6 +376,7 @@ export async function CreateSimpleRTCClient() {
   });
 
   await connection.start();
+  console.log("connection started");
   // const offer = await pc.createOffer({
   //   offerToReceiveVideo: true,
   // });

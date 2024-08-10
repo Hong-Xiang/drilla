@@ -1,88 +1,83 @@
-﻿using DualDrill.Engine;
-using DualDrill.Engine.Media;
-using DualDrill.Server.Services;
-using Microsoft.AspNetCore.Mvc;
+﻿using DualDrill.Engine.Connection;
+using MessagePipe;
 using Microsoft.AspNetCore.SignalR;
-using SIPSorcery.Net;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text.Json;
-using System.Threading.Channels;
 
 namespace DualDrill.Server;
+
+public sealed record class ClientMessage<T>(
+    Guid Source,
+    T Payload
+)
+{
+}
 
 public interface IDrillHubClient
 {
     Task<string> HubInvoke(string funcHandle);
-    Task<string> CreateAnswer(string offer);
-    Task<string> IceCandidate(string candidate);
-    Task RequestNegotiation();
+    Task Offer(Guid source, string sdp);
+    Task Answer(Guid source, string sdp);
+    Task AddIceCandidate(Guid source, string? candidate);
+    Task Emit(string data);
 }
 
 sealed class DrillHub(
-    HeadlessSurfaceCaptureVideoSource VideoSource,
-    FrameSimulationService UpdateService,
     ILogger<DrillHub> Logger,
-    IHubContext<DrillHub, IDrillHubClient> HubContext,
-    RTCPeerConnectionProviderService RTCPeerConnectionProviderService) : Hub<IDrillHubClient>
+    IAsyncPublisher<PairIdentity, OfferPayload> OfferPublisher,
+    IAsyncPublisher<PairIdentity, AnswerPayload> AnswerPublisher,
+    IAsyncPublisher<PairIdentity, AddIceCandidatePayload> AddIceCandidatePublisher,
+    ClientStore ClientStore) : Hub<IDrillHubClient>
 {
-    static readonly string RTCConnectionKey = "RTCConnection";
+    static readonly string ClientIdKey = "ClientId";
 
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        Logger.LogInformation("{ConnectionId} Connected", Context.ConnectionId);
-        if (RTCPeerConnection is null)
-        {
-            var pc = RTCPeerConnectionProviderService.CreatePeerConnection(Context.ConnectionId);
-            RTCPeerConnection = pc;
-        }
     }
 
-    public async Task AddIceCandidate(string data)
-    {
-        var c = JsonSerializer.Deserialize<RTCIceCandidateInit>(data);
-        if (c is not null)
-        {
-            RTCPeerConnection?.addIceCandidate(c);
-        }
-    }
-
-    public async ValueTask<string> Negotiate(string offer)
-    {
-        Logger.LogInformation("Negotate called for {connectionId}", Context.ConnectionId);
-        return await RTCPeerConnectionProviderService.negotiateAsync(Context.ConnectionId, RTCPeerConnection, offer);
-    }
-
-    public RTCPeerConnection? RTCPeerConnection
+    private Guid? ClientId
     {
         get
         {
-            if (Context.Items.TryGetValue(RTCConnectionKey, out var pc))
+            return Context.Items[ClientIdKey] switch
             {
-                return pc as RTCPeerConnection;
-            }
-            else
-            {
-                return null;
-            }
+                Guid value => value,
+                _ => null
+            };
         }
         set
         {
-            if (Context.Items.TryGetValue(RTCConnectionKey, out _))
-            {
-                Context.Items[RTCConnectionKey] = value;
-            }
-            else
-            {
-                Context.Items.Add(RTCConnectionKey, value);
-            }
+            Context.Items[ClientIdKey] = value;
         }
+    }
+    public async Task SetClientId(Guid id)
+    {
+        ClientId = id;
+        ClientStore.UpdateConnectionId(id, Context.ConnectionId);
+    }
+    public async Task Offer(Guid target, string sdp)
+    {
+        Logger.LogInformation("Empty {id}", Guid.Empty);
+        Logger.LogInformation("offer called with {source} -> {target}", ClientId, target);
+        var clientId = ClientId ?? throw new InvalidOperationException("ClientId not set");
+        await OfferPublisher.PublishAsync(new(clientId, target), new(sdp));
+    }
+    public async Task Answer(Guid target, string sdp)
+    {
+        Logger.LogInformation("Answer called with {source} -> {target}", ClientId, target);
+        var clientId = ClientId ?? throw new InvalidOperationException("ClientId not set");
+        await AnswerPublisher.PublishAsync(new(clientId, target), new(sdp));
+    }
+
+    public async Task AddIceCandidate(Guid target, string data)
+    {
+        Logger.LogInformation("AddIceCandidate called with {source} -> {target}", ClientId, target);
+        var clientId = ClientId ?? throw new InvalidOperationException("ClientId not set");
+        await AddIceCandidatePublisher.PublishAsync(new(clientId, target), new(data));
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        RTCPeerConnection?.Dispose();
         await base.OnDisconnectedAsync(exception);
         if (exception is not null)
         {
@@ -94,7 +89,7 @@ sealed class DrillHub(
         }
     }
 
-    public async Task<string> DoHubInvokeAsync(string funcHandle)
+    public async Task<string> HubInvokeAsync(string funcHandle)
     {
         var action = nint.Parse(funcHandle);
         var handle = GCHandle.FromIntPtr(action);
@@ -104,38 +99,5 @@ sealed class DrillHub(
         }
         return "done-from-server";
     }
-
-    public async IAsyncEnumerable<int> PingPongStream(ChannelReader<int> events, [EnumeratorCancellation] CancellationToken cancellation)
-    {
-        await foreach (var e in events.ReadAllAsync(cancellation))
-        {
-            yield return e;
-        }
-    }
-
-    public async Task MouseEvent(ChannelReader<MouseEvent> events, [FromServices] FrameInputService inputService)
-    {
-        inputService.AddUserEventSource(Context.ConnectionId, events);
-        var tcs = new TaskCompletionSource();
-        if (Context.ConnectionAborted.IsCancellationRequested)
-        {
-            return;
-        }
-        await using var r = Context.ConnectionAborted.Register(() => tcs.SetResult());
-        await tcs.Task;
-    }
-
-    public async IAsyncEnumerable<RenderScene> RenderStates([EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        await foreach (var s in UpdateService.RenderStates.Reader.ReadAllAsync(cancellationToken))
-        {
-            yield return s;
-        }
-    }
-
-    public async Task<string> Echo(string data)
-    {
-        Console.WriteLine(data);
-        return data;
-    }
 }
+

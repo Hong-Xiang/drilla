@@ -1,9 +1,5 @@
 ﻿using DualDrill.Engine.Connection;
-using DualDrill.Engine.Disposable;
-using DualDrill.Engine.UI;
-using DualDrill.Engine.WebRTC;
 using Microsoft.JSInterop;
-using System.Runtime.InteropServices;
 
 namespace DualDrill.Engine.BrowserProxy;
 
@@ -48,8 +44,7 @@ public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Modu
     public IJSRuntime JSRuntime { get; } = jsRuntime;
     public static async ValueTask<JSClientModule> CreateAsync(IJSRuntime runtime)
     {
-        var module = await runtime.InvokeAsync<IJSObjectReference>("import", $"/js/dist/client.js?t={Guid.NewGuid()}").ConfigureAwait(false);
-        await module.InvokeVoidAsync("Initialization", DotNetObjectReference.Create(new QuickOnBuffer(runtime))).ConfigureAwait(false);
+        var module = await runtime.InvokeAsync<IJSObjectReference>("import", $"/js/dist/client.js");
         return new JSClientModule(runtime, module);
     }
 
@@ -58,13 +53,18 @@ public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Modu
         return await Module.InvokeAsync<string>("SignalRConnectionId").ConfigureAwait(false);
     }
 
+    public async ValueTask<IJSObjectReference> CreateAsyncMessageEmitter()
+    {
+        return await Module.InvokeAsync<IJSObjectReference>("createAsyncMessageEmitter");
+    }
+
     public async ValueTask AppendChildAsync(object root, IJSObjectReference child)
     {
         await Module.InvokeVoidAsync("appendChild", root, child).ConfigureAwait(false);
     }
-    public async ValueTask<IJSObjectReference> CreateSimpleRTCClient()
+    public async ValueTask<IJSObjectReference> CreateSimpleRTCClient(Guid clientId)
     {
-        return await Module.InvokeAsync<IJSObjectReference>("CreateSimpleRTCClient").ConfigureAwait(false);
+        return await Module.InvokeAsync<IJSObjectReference>("CreateSimpleRTCClient", clientId).ConfigureAwait(false);
     }
 
     public async ValueTask<ElementSize> GetElementSize(IJSObjectReference element)

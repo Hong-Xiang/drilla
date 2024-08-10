@@ -1,4 +1,4 @@
-﻿namespace DualDrill.Engine.WebRTC;
+﻿namespace DualDrill.Engine.Media;
 
 public interface IMediaStreamTrack
 {

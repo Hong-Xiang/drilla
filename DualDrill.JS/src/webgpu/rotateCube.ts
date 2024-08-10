@@ -11,7 +11,7 @@ import {
 import basicVertWGSL from "./shaders/basic.vert.wgsl";
 import vertexPositionColorWGSL from "./shaders/vertexPositionColor.frag.wgsl";
 import { Subject, animationFrameScheduler, observeOn } from "rxjs";
-import { SignalRConnection } from "../lib/signalr-client";
+import { SignalRConnection } from "../connection/signar-hubconnection";
 import { RenderServiceLegacy } from "../render/RenderService";
 import * as signalR from "@microsoft/signalr";
 

@@ -1,5 +1,5 @@
 ﻿using DualDrill.Engine.BrowserProxy;
-using DualDrill.Engine.WebRTC;
+using DualDrill.Engine.Media;
 
 namespace DualDrill.Engine.UI;
 
