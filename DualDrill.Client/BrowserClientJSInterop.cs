@@ -7,8 +7,11 @@ namespace DualDrill.Client;
 [SupportedOSPlatform("browser")]
 partial class BrowserClientJSInterop
 {
-    [JSImport("GetInteractiveServerHandle", "client-interop")]
-    internal static partial Task<string> GetInteractiveServerHandle();
+    public const string InteropJSModuleName = "browserclient-interop";
+    public const string JSUri = "/js/browserclient-interop.js";
+
+    [JSImport("GetClientId", InteropJSModuleName)]
+    internal static partial Task<string> GetClientIdAsync();
 
     [JSExport]
     internal static nint CreateJSObjectReference(JSObject target)

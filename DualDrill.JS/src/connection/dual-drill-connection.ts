@@ -1,28 +1,28 @@
-import { label } from "three/examples/jsm/nodes/Nodes.js";
 import { createCompositeDisposable } from "../disposable";
 import {
-  createAsyncPublisherFactoryFromEventMap,
-  IAsyncPublisher,
-} from "../pubsub";
-import { SignalServerConnection } from "./server-signal-connection";
+  createAsyncMessageSourceFactoryFromEventMap,
+  AsyncMessageSource,
+} from "../asyncMessage";
+import type { SignalConnection } from "./server-signal-connection";
 
 export interface DualDrillConnection extends Disposable {
   createDataChannel: RTCPeerConnection["createDataChannel"];
-  onDataChannel: IAsyncPublisher<RTCDataChannelEvent>;
+  onDataChannel: AsyncMessageSource<RTCDataChannelEvent>;
   addTrack: RTCPeerConnection["addTrack"];
-  onTrack: IAsyncPublisher<RTCTrackEvent>;
+  onTrack: AsyncMessageSource<RTCTrackEvent>;
   start(): Promise<void>;
 }
 
 const RTCPeerConnectionPublisherFactory =
-  createAsyncPublisherFactoryFromEventMap<RTCPeerConnectionEventMap>();
+  createAsyncMessageSourceFactoryFromEventMap<RTCPeerConnectionEventMap>();
 
-export function createServerConnection(
-  signalServerConnection: SignalServerConnection
+export function createPeerConnection(
+  signalConnection: SignalConnection
 ): DualDrillConnection {
   const pc = new RTCPeerConnection();
+  const subscriptions = createCompositeDisposable();
   async function negotiate() {
-    console.log('negotiate called')
+    console.log("negotiate called");
     const offer = await pc.createOffer({
       offerToReceiveVideo: true,
       iceRestart: true,
@@ -31,23 +31,39 @@ export function createServerConnection(
       throw new Error("No SDP in offer");
     }
     await pc.setLocalDescription(offer);
-    const answer = await signalServerConnection.negotiate(offer.sdp);
-    if (!answer) {
-      throw new Error("No SDP in answer");
-    }
-    await pc.setRemoteDescription({ type: "answer", sdp: answer });
+    await signalConnection.offer(offer.sdp);
   }
 
   pc.onnegotiationneeded = negotiate;
+
+  subscriptions.add(
+    signalConnection.onOffer.subscribe(async (sdp) => {
+      await pc.setRemoteDescription({
+        type: "offer",
+        sdp,
+      });
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await signalConnection.answer(answer.sdp!);
+    })
+  );
+
+  async function onAnswer(sdp: string) {
+    if (pc.localDescription) {
+      await pc.setRemoteDescription({ type: "answer", sdp });
+    }
+  }
+  subscriptions.add(signalConnection.onAnswer.subscribe(onAnswer));
+
   pc.onicecandidate = (e) => {
+    console.log(e);
     if (e && e.candidate) {
-      signalServerConnection.addIceCandidate(e.candidate);
+      signalConnection.addIceCandidate(e.candidate);
     }
   };
 
-  const subscriptions = createCompositeDisposable();
   subscriptions.add(
-    signalServerConnection.onicecandidate.subscribe(async (e) => {
+    signalConnection.onAddIceCandidate.subscribe(async (e) => {
       if (pc.remoteDescription) {
         await pc.addIceCandidate(e);
       }

@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Microsoft.AspNetCore.Hosting.Server.Abstractions" Version="2.2.0" />
+	  <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2535.41" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
+	  <ProjectReference Include="..\DualDrill.Engine\DualDrill.Engine.csproj" />
+	  <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -3,25 +3,27 @@ using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Headless;
 using DualDrill.Server.Browser;
-using MessagePipe;
+using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
+using SIPSorcery.Net;
 using System.Runtime.InteropServices;
 
 namespace DualDrill.Server.Components.Pages;
 
 public partial class DesktopBrowserClient : IAsyncDisposable
 {
-    [Inject] IJSRuntime? JSRuntime { get; set; }
+    [Inject] IJSRuntime JSRuntime { get; set; }
     [Inject] ClientStore ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
     [Inject] IHubContext<DrillHub, IDrillHubClient> HubContext { get; set; } = default!;
     BrowserClient? Client { get; set; }
     JSClientModule Module { get; set; } = default!;
-    [Inject] IJSRuntime jsRuntime { get; set; }
     [Inject] FrameSimulationService SimulationService { get; set; }
     [Inject] HeadlessSurface Surface { get; set; }
+    [Inject] ISignalConnectionProviderService SignalConnectionProviderService { get; set; } = default!;
+    [Inject] RTCPeerConnectionProviderService RTCPeerConnectionProviderService { get; set; } = default!;
     JSRenderService? RenderService { get; set; } = null;
 
     public async ValueTask DisposeAsync()
@@ -66,21 +68,33 @@ public partial class DesktopBrowserClient : IAsyncDisposable
 
     ElementReference? AttachedElement { get; set; } = null;
 
+    IJSObjectReference? OfferEmitter { get; set; }
+    IJSObjectReference? AnswerEmitter { get; set; }
+    IJSObjectReference? CandidateEmitter { get; set; }
+
+    async Task Emit()
+    {
+        await HubContext.Clients.Client(ClientHub.GetConnectionId(ClientId.Value)).Emit(RenderTargetId.ToString());
+    }
+
+    RTCPeerConnection? PeerConnection { get; set; }
+    Guid? ClientId { get; set; }
+
+    Guid RenderTargetId { get; set; } = Guid.NewGuid();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
         if (firstRender)
         {
-
-            Module = await JSClientModule.CreateAsync(jsRuntime);
-            var connectionId = await Module.GetSignalRConnectionIdAsync();
-            Client = new BrowserClient(jsRuntime, Module, HubContext, connectionId);
-            await SetInteractiveServerHandle();
-            VideoRef = await Module.CreateSimpleRTCClient();
-
+            Module = await JSClientModule.CreateAsync(JSRuntime);
+            //var connectionId = await Module.GetSignalRConnectionIdAsync();
+            Client = new BrowserClient(JSRuntime, HubContext);
             ClientHub.AddClient(Client);
-            Connecting = false;
+            ClientId = Client.Id;
             StateHasChanged();
+            await SetClientId(Client.Id);
+
         }
         if (VideoRef is not null)
         {
@@ -92,17 +106,17 @@ public partial class DesktopBrowserClient : IAsyncDisposable
         }
     }
 
-    private async ValueTask SetInteractiveServerHandle()
+    async Task StartConnectionAsync()
     {
-        if (JSRuntime is not null && !SelfHandle.HasValue)
-        {
-            SelfHandle = GCHandle.Alloc(this);
-            var handle = GCHandle.ToIntPtr(SelfHandle.Value).ToString();
-            await JSRuntime.InvokeVoidAsync("DualDrillSetInteractiveServerHandle", "HelloFromServer");
-        }
-        else
-        {
-            Logger.LogWarning("Skip SetInteractiveServerHandle, JSRuntime is null or SelfHandle already set");
-        }
+        //SignalConnectionProviderService.CreateConnection(ClientStore.ServerId, Client.Id, SignalConnectionProvider.SignalR);
+        //RTCPeerConnectionProviderService.CreatePeerConnection(Client.Id);
+        VideoRef = await Module.CreateSimpleRTCClient(Client.Id);
+        Connecting = false;
+    }
+
+    private async ValueTask SetClientId(Guid clientId)
+    {
+        await JSRuntime.InvokeVoidAsync("DualDrillSetClientId", clientId);
+        StateHasChanged();
     }
 }

@@ -1,6 +1,6 @@
 ﻿using DualDrill.Engine.Connection;
+using DualDrill.Engine.Media;
 using DualDrill.Engine.UI;
-using DualDrill.Engine.WebRTC;
 using Microsoft.JSInterop;
 
 namespace DualDrill.Engine.BrowserProxy

@@ -3,6 +3,9 @@ using DualDrill.Engine.Headless;
 using FFmpeg.AutoGen;
 using Microsoft.Extensions.Logging;
 using SIPSorceryMedia.Abstractions;
+using System.Collections.Concurrent;
+using System.Reactive.Disposables;
+using MessagePipe;
 
 namespace DualDrill.Engine.Media;
 
@@ -31,13 +34,14 @@ public sealed class HeadlessSurfaceCaptureVideoSource
     public event RawVideoSampleDelegate OnVideoSourceRawSample;
     public event RawVideoSampleFasterDelegate OnVideoSourceRawSampleFaster;
     public event SourceErrorDelegate OnVideoSourceError;
+    private SerialDisposable SurfaceFrameSubscriptions { get; } = new();
 
     public delegate void EncodedFrameBufferSampleDelegate(uint durationRtpUnits, VideoFrameBuffer sample);
     public async Task CloseVideo()
     {
         if (Enabled)
         {
-            Surface.OnFrame -= EncodeVideoFromFrame;
+            SurfaceFrameSubscriptions.Disposable = Disposable.Empty;
             Enabled = false;
         }
     }
@@ -57,7 +61,7 @@ public sealed class HeadlessSurfaceCaptureVideoSource
         }
     }
 
-    private void EncodeVideoFromFrame(object? sender, HeadlessSurfaceFrame frame)
+    private void EncodeVideoFromFrame(HeadlessSurfaceFrame frame)
     {
         lock (encoderLock)
         {
@@ -103,7 +107,7 @@ public sealed class HeadlessSurfaceCaptureVideoSource
     {
         if (Enabled)
         {
-            Surface.OnFrame -= EncodeVideoFromFrame;
+            SurfaceFrameSubscriptions.Disposable = Disposable.Empty;
             Enabled = false;
         }
     }
@@ -117,7 +121,10 @@ public sealed class HeadlessSurfaceCaptureVideoSource
     {
         if (!Enabled)
         {
-            Surface.OnFrame += EncodeVideoFromFrame;
+            SurfaceFrameSubscriptions.Disposable = Surface.OnFrame.Subscribe(async (frame, cancellation) =>
+            {
+                EncodeVideoFromFrame(frame);
+            });
             Enabled = true;
         }
     }
@@ -131,7 +138,10 @@ public sealed class HeadlessSurfaceCaptureVideoSource
     {
         if (!Enabled)
         {
-            Surface.OnFrame += EncodeVideoFromFrame;
+            SurfaceFrameSubscriptions.Disposable = Surface.OnFrame.Subscribe(async (frame, cancellation) =>
+            {
+                EncodeVideoFromFrame(frame);
+            });
             Enabled = true;
         }
     }

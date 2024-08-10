@@ -1,28 +1,63 @@
-﻿using DualDrill.Engine.Connection;
-using DualDrill.Engine.Disposable;
+﻿using DualDrill.Engine;
+using DualDrill.Engine.Connection;
+using DualDrill.Engine.Media;
 using DualDrill.Graphics;
+using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 
 namespace DualDrill.Server;
 
 public static class DualDrillServerExtension
 {
-    static Ok<string[]> GetConnectedClients([FromServices] ClientStore clients)
+    private static Ok<string[]> GetConnectedClients([FromServices] ClientStore clients)
     {
         return TypedResults.Ok(clients.ClientUris.Select(static s => s.ToString()).ToArray());
     }
 
-    public static void AddDualDrillServerServices(this IServiceCollection services)
+    private static IResult CreatePeerConnectionToServerAsync(
+        [FromRoute] Guid clientId,
+        [FromServices] ISignalConnectionProviderService signalConnectionService,
+        [FromServices] RTCPeerConnectionProviderService peerConnectionService
+        )
+    {
+        signalConnectionService.CreateConnection(ClientStore.ServerId, clientId, SignalConnectionProvider.SignalR);
+        peerConnectionService.CreatePeerConnection(clientId);
+        return Results.Ok(null);
+    }
+
+    private static void AddConnectionServices(IServiceCollection services)
     {
         services.AddSingleton<ClientStore>();
+        services.AddSingleton<ISignalConnectionProviderService, MessagePipeSignalConnectionProvider>();
+        services.AddSingleton<ISignalConnectionOverSignalRService, SignalRConnectionMessagePushProviderService>();
+        services.AddSingleton<RTCPeerConnectionProviderService>();
+    }
+
+    private static void AddGraphicsServices(IServiceCollection services)
+    {
         services.AddSingleton<GPUInstance>();
         services.AddSingleton(sp => sp.GetRequiredService<GPUInstance>().RequestAdapter(null));
         services.AddSingleton(sp => sp.GetRequiredService<GPUAdapter>().RequestDevice());
         services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
+    }
 
-        services.AddScoped<ContextDisposableCollection>();
+    private static void AddRealtimeSimulationServices(IServiceCollection services)
+    {
+        services.AddSingleton<FrameInputService>();
+        services.AddSingleton<FrameSimulationService>();
+        services.AddSingleton<HeadlessSurfaceCaptureVideoSource>();
+        services.AddSingleton<IFrameService, FrameService>();
+        services.AddHostedService<DevicePollHostedService>();
+        services.AddHostedService<RealtimeFrameHostedService>();
+    }
+
+    public static void AddDualDrillServerServices(this IServiceCollection services)
+    {
+        AddGraphicsServices(services);
+        AddConnectionServices(services);
+        AddRealtimeSimulationServices(services);
+
         //services.AddScoped<InitializedClientContext>();
 
         //services.AddScoped(async sp =>
@@ -47,12 +82,9 @@ public static class DualDrillServerExtension
         //services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<CircuitService>());
     }
 
-    public static void MapClients(this WebApplication app)
+    public static void MapDualDrillApi(this WebApplication app)
     {
         app.MapGet("/api/clients", GetConnectedClients);
-        app.MapGet("/api/injecthub/", ([FromServices] IHubContext<DrillHub, IDrillHubClient> x) =>
-        {
-            return "ok";
-        });
+        app.MapPost("/api/peer-connection/server/{clientId}", CreatePeerConnectionToServerAsync);
     }
 }

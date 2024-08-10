@@ -1,5 +1,6 @@
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
+using DualDrill.Engine.Media;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Browser;
 using Microsoft.AspNetCore.Components;
@@ -46,7 +47,7 @@ public partial class PeerClientConnection : IAsyncDisposable
         {
             _ = Task.Run(async () =>
                    {
-                       var peerUri = new Uri(SelfClient.Uri, new Uri($"peer/{PeerClient.Id}", UriKind.Relative));
+                       var peerUri = new Uri(SelfClient.Uri, $"peer/{PeerClient.Uri}");
                        Logger.LogInformation("Init listen peer {PeerUri}", peerUri);
                        await foreach (var e in SelfClient.GetOrAddEventChannel(peerUri)
                                                          .Reader.ReadAllAsync().ConfigureAwait(false))
@@ -76,6 +77,7 @@ public partial class PeerClientConnection : IAsyncDisposable
     bool Sending = false;
     async Task SendStream()
     {
+        throw new NotImplementedException();
         Sending = true;
         var sendClient = SelfMediaStream.Client;
         var recvClient = PeerClient;
@@ -89,16 +91,16 @@ public partial class PeerClientConnection : IAsyncDisposable
         await sendPeer.AddVideoStream(SelfMediaStream.Reference).ConfigureAwait(false);
         Logger.LogInformation("JS Add video stream called");
         var targetVideoJS = await tcs.Task.ConfigureAwait(false);
-        var targetModule = await (recvClient as BrowserClient).Module;
-        var targetVideoId = await targetModule.GetProperty<string>(targetVideoJS, "id");
-        var targetVideo = new JSMediaStreamProxy(recvClient, targetModule, targetVideoJS, targetVideoId);
+        //var targetModule = await (recvClient as BrowserClient).Module;
+        //var targetVideoId = await targetModule.GetProperty<string>(targetVideoJS, "id");
+        //var targetVideo = new JSMediaStreamProxy(recvClient, targetModule, targetVideoJS, targetVideoId);
         Logger.LogInformation("Target Video Received");
         if (PeerChannel is null)
         {
             var peerUri = new Uri(PeerClient.Uri, $"peer/{SelfClient.Id}");
             PeerChannel = PeerClient.GetOrAddEventChannel(peerUri);
         }
-        await PeerChannel.Writer.WriteAsync(targetVideo);
+        //await PeerChannel.Writer.WriteAsync(targetVideo);
         await InvokeAsync(() =>
         {
             Sending = false;

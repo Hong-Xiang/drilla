@@ -6,14 +6,34 @@ using System.Reactive.Subjects;
 
 namespace DualDrill.Engine.Connection;
 
-public sealed class ClientStore(
+public sealed partial class ClientStore(
     ILogger<ClientStore> Logger,
     IPublisher<ImmutableArray<IClient>> ClientConnectionChanged) : IDisposable
 {
+    public static Guid ServerId { get; } = Guid.Empty;
 
     readonly ConcurrentDictionary<Uri, IClient> ClientsStore = new();
+    readonly ConcurrentDictionary<Guid, string> ConnectionIds = new();
 
     readonly BehaviorSubject<ImmutableArray<IClient>> ClientsSubject = new([]);
+
+    public void UpdateConnectionId(Guid clientId, string connectionId)
+    {
+        if (!ConnectionIds.TryAdd(clientId, connectionId))
+        {
+            LogFailedToAddConnectionId(Logger, clientId, connectionId);
+        }
+    }
+
+    public string? GetConnectionId(Guid clientId)
+    {
+        if (ConnectionIds.TryGetValue(clientId, out var result))
+        {
+            return result;
+        }
+        LogConnectionIdNotFound(Logger, clientId);
+        return null;
+    }
 
     public IClient? GetClient(Uri id)
     {
@@ -52,4 +72,16 @@ public sealed class ClientStore(
     {
         ClientsSubject.Dispose();
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Failed to update connection id for {ClientId}, connection id {ConnectionId}"
+    )]
+    static partial void LogFailedToAddConnectionId(ILogger logger, Guid clientId, string connectionId);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Connection id for {ClientId} not found"
+    )]
+    static partial void LogConnectionIdNotFound(ILogger logger, Guid clientId);
 }

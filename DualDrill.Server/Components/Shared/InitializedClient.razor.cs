@@ -1,5 +1,6 @@
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
+using DualDrill.Engine.Media;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Server.Browser;
 using MessagePipe;

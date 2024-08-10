@@ -12,10 +12,13 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.0-preview.6.24328.4" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0-preview.6.24327.7" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DualDrill.Client.Abstraction\DualDrill.Client.Abstraction.csproj" />
+    <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
+    <ProjectReference Include="..\DualDrill.Engine\DualDrill.Engine.csproj" />
   </ItemGroup>
 
 </Project>
