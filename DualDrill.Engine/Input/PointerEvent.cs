@@ -11,10 +11,10 @@ public enum PointerEventType : int
 
 public sealed record class PointerEvent(
     PointerEventType EventType,
-    int X,
-    int Y,
-    int Width,
-    int Height
+    float X,
+    float Y,
+    float SurfaceWidth,
+    float SurfaceHeight
 )
 {
 }

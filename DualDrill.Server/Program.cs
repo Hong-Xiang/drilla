@@ -32,6 +32,7 @@ public class Program
 
         builder.Services.AddMessagePipe();
 
+        builder.Services.AddControllersWithViews();
 
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.SimpleColorRenderer>();
         builder.Services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
@@ -67,7 +68,7 @@ public class Program
         }
         else
         {
-            app.UseExceptionHandler("/Error");
+            app.UseExceptionHandler("/Home/Error");
             // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
             app.UseHsts();
         }
@@ -82,11 +83,15 @@ public class Program
         app.MapControllers();
         app.MapDualDrillApi();
         app.MapRenderControls();
+        app.MapControllerRoute(
+            name: "default",
+            pattern: "{controller=Home}/{action=Index}/{id?}")
+            .WithStaticAssets();
 
-        app.MapRazorComponents<DualDrill.Server.Components.App>()
-            .AddInteractiveServerRenderMode()
-            .AddInteractiveWebAssemblyRenderMode()
-            .AddAdditionalAssemblies(typeof(DualDrill.Client._Imports).Assembly);
+        //app.MapRazorComponents<DualDrill.Server.Components.App>()
+        //    .AddInteractiveServerRenderMode()
+        //    .AddInteractiveWebAssemblyRenderMode()
+        //    .AddAdditionalAssemblies(typeof(DualDrill.Client._Imports).Assembly);
 
         app.MapGet("/webroot", () => app.Environment.WebRootPath);
 

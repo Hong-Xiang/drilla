@@ -25,15 +25,16 @@ public sealed class FrameService : IFrameService, IDisposable
         CubeRenderer = cubeRenderer;
         Simulation = simulation;
     }
-    public async ValueTask OnFrameAsync(FrameContext frameContext, CancellationToken cancellation)
+    public async ValueTask<FrameContext> OnFrameAsync(FrameContext frameContext, CancellationToken cancellation)
     {
-        using var queue = Device.GetQueue();
         var texture = frameContext.Surface.GetCurrentTexture();
-        var mvp = await Simulation.CubeSimulation(frameContext);
+        var mvp = Simulation.CubeSimulation(frameContext, out var result);
         if (texture is not null)
         {
+            using var queue = Device.GetQueue();
             await CubeRenderer.RenderAsync(frameContext.FrameIndex, queue, texture, mvp);
         }
+        return result;
     }
 
     public void Dispose()

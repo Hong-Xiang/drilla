@@ -7,7 +7,7 @@ await esbuild.build({
   target: "es2020",
   outdir: "../DualDrill.Server/wwwroot/js/dist/",
   loader: {
-    ".wgsl": 'text'
-  }
+    ".wgsl": "text",
+  },
+  sourcemap: true,
 });
-

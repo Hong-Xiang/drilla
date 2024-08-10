@@ -1,35 +1,40 @@
-﻿using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
+﻿using DualDrill.Engine.Input;
+using MessagePipe;
+using System.Reactive.Disposables;
 using System.Threading.Channels;
 
 namespace DualDrill.Engine;
 
 public sealed class FrameInputService : IDisposable
 {
-    readonly ConcurrentDictionary<string, ChannelReader<MouseEvent>> MouseEvents = [];
-
-    public void AddUserEventSource(string clientId, ChannelReader<MouseEvent> reader)
+    CompositeDisposable Disposables = new();
+    readonly Channel<PointerEvent> PointerEventChannel = Channel.CreateUnbounded<PointerEvent>();
+    readonly List<PointerEvent> PointerEventBuffer = new(128);
+    public FrameInputService(
+        ISubscriber<ClientInput<PointerEvent>> PointerEventSubscriber
+    )
     {
-        if (!MouseEvents.TryAdd(clientId, reader))
-        {
-            throw new Exception("Failed to add user input listener service");
-        }
+        Disposables.Add(
+            PointerEventSubscriber.Subscribe(x =>
+            {
+                PointerEventChannel.Writer.TryWrite(x.Payload);
+            })
+        );
     }
 
-    public async ValueTask<List<MouseEvent>> ReadUserInputsAsync(CancellationToken cancellation)
+    public ReadOnlyMemory<PointerEvent> ReadUserInputs()
     {
-        var result = new List<MouseEvent>();
-        foreach (var channel in MouseEvents)
+        PointerEventBuffer.Clear();
+        var reader = PointerEventChannel.Reader;
+        while (reader.TryRead(out var e))
         {
-            while (channel.Value.TryRead(out var e))
-            {
-                result.Add(e);
-            }
+            PointerEventBuffer.Add(e);
         }
-        return result;
+        return PointerEventBuffer.ToArray();
     }
 
     public void Dispose()
     {
+        Disposables.Dispose();
     }
 }

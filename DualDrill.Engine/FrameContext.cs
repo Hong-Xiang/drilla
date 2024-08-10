@@ -1,15 +1,13 @@
-﻿using DualDrill.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DualDrill.Engine.Input;
+using DualDrill.Graphics;
+using System.Numerics;
 
 namespace DualDrill.Engine;
 
-public record struct FrameContext(
-    long FrameIndex, 
-    Memory<MouseEvent> MouseEvent, 
-    IGPUSurface Surface)
+public readonly record struct FrameContext(
+    long FrameIndex,
+    ReadOnlyMemory<PointerEvent> PointerEvent,
+    IGPUSurface Surface,
+    Vector3 Position)
 {
 }

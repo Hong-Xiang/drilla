@@ -4,7 +4,10 @@ import {
   PromiseLikeResultMapper,
   subscribeByPromiseLike,
 } from "./lib/dotnet-server-interop";
-import { SignalRConnection } from "./connection/signar-hubconnection";
+import {
+  SignalRConnection,
+  StartSignalRHubConnection,
+} from "./connection/signar-hubconnection";
 export {
   SignalRHubConnectionSubscribeEmitEvent,
   StartSignalRHubConnection,
@@ -21,7 +24,10 @@ export { getDotnetWasmExports } from "./lib/jsexport-client";
 export { createAsyncMessageEmitter } from "./asyncMessage";
 import { getDotnetWasmExports } from "./lib/jsexport-client";
 import { createSignalConnectionOverSignalRHubConnection } from "./connection/signalr-server-connection";
-import { createPeerConnection } from "./connection/dual-drill-connection";
+import {
+  createPeerConnection,
+  DualDrillConnection,
+} from "./connection/dual-drill-connection";
 
 export async function testDotnetExport() {
   const exports = await getDotnetWasmExports("DualDrill.Client.dll");
@@ -301,7 +307,13 @@ function normalizedPointerEvent(e: PointerEvent, t: HTMLElement) {
     boundingRect: rect,
   };
   console.log(result);
-  return result;
+  return {
+    x: e.offsetX,
+    y: e.offsetY,
+    surfaceWidth: rect.width,
+    surfaceHeight: rect.height,
+  }
+  // return result;
 }
 
 export async function CreateSimpleRTCClient(clientId: string) {
@@ -321,39 +333,6 @@ export async function CreateSimpleRTCClient(clientId: string) {
   // createSignalServerConnectionOverBlazorInterop()
   const connection = createPeerConnection(signalServer);
   console.log("created peer connection");
-
-  // SignalRConnection.on("Emit", (e) => {
-  //   console.log(e);
-  // });
-
-  // SignalRHubConnectionSubscribeEmitEvent((e) => {
-  //   console.log(e);
-  // });
-  // const pc = new RTCPeerConnection({ iceServers: [] });
-
-  // //pc.ontrack = evt => document.querySelector('#videoCtl').srcObject = evt.streams[0];
-  // pc.onicecandidate = (evt) => {
-  //   console.log(evt.candidate);
-  //   if (evt.candidate) {
-  //     SignalRConnection.invoke(
-  //       "AddIceCandidate",
-  //       JSON.stringify(evt.candidate)
-  //     );
-  //   }
-  //   // console.log("onicecandidate", evt);
-  //   // if (evt.candidate) {
-  //   //   fetch("api/rtcclient/candidate", {
-  //   //     method: "POST",
-  //   //     headers: {
-  //   //       "Content-Type": "text/plain",
-  //   //     },
-  //   //     body: JSON.stringify(evt.candidate),
-  //   //   });
-  //   // }
-  // };
-  // pc.onnegotiationneeded = (e) => {
-  //   console.log("onnegotiationneeded", e);
-  // };
 
   connection.onTrack.subscribe(async (t) => {
     console.log("received track");
@@ -377,31 +356,49 @@ export async function CreateSimpleRTCClient(clientId: string) {
 
   await connection.start();
   console.log("connection started");
-  // const offer = await pc.createOffer({
-  //   offerToReceiveVideo: true,
-  // });
-  // await pc.setLocalDescription(offer);
-  // SignalRConnection.on("IceCandidate", (candidate) => {
-  //   console.log(candidate);
-  // });
-  // const answer = await fetch(`api/rtcclient`, {
-  //   method: "POST",
-  //   headers: {
-  //     "Content-Type": "text/plain",
-  //   },
-  //   body: offer.sdp,
-  // });
-  // const answer = await SignalRConnection.invoke(
-  //   "CreatePeerConnection",
-  //   offer.sdp
-  // );
-  // const answerSdp = await answer.text();
-  // console.log("got answer", answer);
-  // await pc.setRemoteDescription({
-  //   type: "answer",
-  //   sdp: answer,
-  // });
+
   return video;
+}
+
+export function createVideoElement(connection: DualDrillConnection) {
+  const video = document.createElement("video");
+  video.autoplay = true;
+  video.playsInline = true;
+  video.muted = true;
+  connection.onTrack.subscribe(async (t) => {
+    console.log("received track");
+    console.log(t.streams[0].id);
+    console.log(t);
+    video.srcObject = t.streams[0];
+  });
+  const channel = connection.createDataChannel("pointermove");
+  video.addEventListener("pointerdown", (e) => {
+    console.log("simple client pointer event", e);
+    const h = (e: PointerEvent) => {
+      channel.send(JSON.stringify(normalizedPointerEvent(e, video)));
+    };
+    video.addEventListener("pointermove", h);
+    window.addEventListener("pointerup", () => {
+      video.removeEventListener("pointermove", h);
+    });
+  });
+  return video;
+}
+
+export function CreateRTCConnection(clientId: string) {
+  console.log("create simple RTC client");
+
+  const serverId = "00000000-0000-0000-0000-000000000000";
+
+  const signalServer = createSignalConnectionOverSignalRHubConnection(
+    SignalRConnection,
+    serverId
+  );
+  // createSignalServerConnectionOverBlazorInterop()
+  const connection = createPeerConnection(signalServer);
+  console.log("created peer connection");
+
+  return connection;
 }
 
 export function appendChild(el: HTMLElement, child: HTMLElement) {
@@ -410,4 +407,17 @@ export function appendChild(el: HTMLElement, child: HTMLElement) {
 
 export function appendToVideoTarget(el: HTMLElement) {
   document.getElementById("video-target")?.appendChild(el);
+}
+
+export async function main() {
+  const clientId = crypto.randomUUID();
+  await StartSignalRHubConnection(clientId);
+  await fetch(`/api/peer-connection/server/${clientId}`, {
+    method: "POST",
+  });
+  const connection = CreateRTCConnection(clientId);
+  const video = createVideoElement(connection);
+  const div = document.getElementById("video-render-root");
+  div?.appendChild(video);
+  await connection.start();
 }
