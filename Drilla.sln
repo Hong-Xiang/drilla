@@ -19,7 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Client.Abstractio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Common.Abstraction", "DualDrill.Common.Abstraction\DualDrill.Common.Abstraction.csproj", "{F1F1E10F-665F-4A84-8B4E-96B28170FD6A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DualDrill.WebView", "DualDrill.WebView\DualDrill.WebView.csproj", "{12053700-00C9-465B-8BC3-C8E3B7409064}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.WebView", "DualDrill.WebView\DualDrill.WebView.csproj", "{12053700-00C9-465B-8BC3-C8E3B7409064}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,9 +1,7 @@
 using DualDrill.Engine;
 using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
-using DualDrill.Engine.Headless;
 using DualDrill.Server.Browser;
-using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
@@ -21,10 +19,6 @@ public partial class DesktopBrowserClient : IAsyncDisposable
     BrowserClient? Client { get; set; }
     JSClientModule Module { get; set; } = default!;
     [Inject] FrameSimulationService SimulationService { get; set; }
-    [Inject] HeadlessSurface Surface { get; set; }
-    [Inject] ISignalConnectionProviderService SignalConnectionProviderService { get; set; } = default!;
-    [Inject] RTCPeerConnectionProviderService RTCPeerConnectionProviderService { get; set; } = default!;
-    JSRenderService? RenderService { get; set; } = null;
 
     public async ValueTask DisposeAsync()
     {
@@ -104,14 +98,6 @@ public partial class DesktopBrowserClient : IAsyncDisposable
             }
             AttachedElement = SimpleRTCRef;
         }
-    }
-
-    async Task StartConnectionAsync()
-    {
-        //SignalConnectionProviderService.CreateConnection(ClientStore.ServerId, Client.Id, SignalConnectionProvider.SignalR);
-        //RTCPeerConnectionProviderService.CreatePeerConnection(Client.Id);
-        VideoRef = await Module.CreateSimpleRTCClient(Client.Id);
-        Connecting = false;
     }
 
     private async ValueTask SetClientId(Guid clientId)

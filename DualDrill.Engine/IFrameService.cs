@@ -8,6 +8,6 @@ namespace DualDrill.Engine;
 
 public interface IFrameService
 {
-    ValueTask OnFrameAsync(FrameContext frameContext, CancellationToken cancellation);
+    ValueTask<FrameContext> OnFrameAsync(FrameContext frameContext, CancellationToken cancellation);
 }
 

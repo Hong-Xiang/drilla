@@ -3,6 +3,7 @@ using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using System.Numerics;
 using System.Threading.Channels;
 
 namespace DualDrill.Server.Services;
@@ -20,6 +21,7 @@ public sealed class RealtimeFrameHostedService : BackgroundService
 
     private readonly HeadlessSurface Surface;
 
+    public FrameInputService FrameInputService { get; }
     public IWebViewService WebViewService { get; }
     public HeadlessSurfaceCaptureVideoSource VideoSource { get; }
     private IHostApplicationLifetime HostApplicationLifetime { get; }
@@ -27,6 +29,7 @@ public sealed class RealtimeFrameHostedService : BackgroundService
 
     public RealtimeFrameHostedService(
         IFrameService frameService,
+        FrameInputService frameInputService,
         ILogger<RealtimeFrameHostedService> logger,
         HeadlessSurface surface,
         IWebViewService webViewService,
@@ -36,6 +39,7 @@ public sealed class RealtimeFrameHostedService : BackgroundService
     {
         Logger = logger;
         FrameService = frameService;
+        FrameInputService = frameInputService;
         FrameChannel = Channel.CreateBounded<int>(1);
         Surface = surface;
         VideoSource = videoSource;
@@ -61,20 +65,24 @@ public sealed class RealtimeFrameHostedService : BackgroundService
         //await WebViewService.StartAsync(hostUri, stoppingToken);
         await VideoSource.StartVideo();
         using var timer = TimeProvider.CreateTimer(TimerFrameCallback, this, TimeSpan.Zero, SampleRate);
+
+
+        var frameContext = new FrameContext
+        {
+            Position = Vector3.Zero,
+            PointerEvent = FrameInputService.ReadUserInputs(),
+            Surface = Surface,
+        };
+
         await foreach (var frameIndex in FrameChannel.Reader.ReadAllAsync(stoppingToken))
         {
+            frameContext = frameContext with { FrameIndex = frameIndex, PointerEvent = FrameInputService.ReadUserInputs() };
             var surfaceImage = Surface.TryAcquireImage();
             if (surfaceImage is null)
             {
                 Logger.LogWarning("Failed to get render target from headless surface");
             }
-            var frameContext = new FrameContext
-            {
-                FrameIndex = frameIndex,
-                MouseEvent = (MouseEvent[])[],
-                Surface = Surface,
-            };
-            await FrameService.OnFrameAsync(frameContext, stoppingToken);
+            frameContext = await FrameService.OnFrameAsync(frameContext, stoppingToken);
             Surface.Present();
         }
     }

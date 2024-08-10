@@ -1,0 +1,13 @@
+﻿<h3>Desktop Page</h3>
+<div id="video-render-root" style="width:@ViewData["Width"]px;height:@ViewData["Height"]px"></div>
+
+@section Scripts {
+    <!script src="/js/dist/client.js" type="module"></!script>
+    <!script src="/js/browserclient-interop.js" type="module"></!script>
+    <!script type="module">
+        import {main} from '/js/dist/client.js' 
+        main();
+    </!script>
+}
+
+

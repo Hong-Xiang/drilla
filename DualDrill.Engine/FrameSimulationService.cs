@@ -1,24 +1,10 @@
-﻿using DotNext.Collections.Generic;
-using DualDrill.Engine.Connection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
 namespace DualDrill.Engine;
-public readonly record struct MouseEvent(
-    string Type,
-    double ClientY,
-    double ClientX,
-    double ClientWidth,
-    double ClientHeight
-)
-{
-}
 
 public sealed class FrameSimulationService(
     FrameInputService InputService,
@@ -26,14 +12,6 @@ public sealed class FrameSimulationService(
 {
     public int FrameCount { get; private set; }
 
-    public readonly Channel<MouseEvent> MouseEvents = Channel.CreateUnbounded<MouseEvent>(new UnboundedChannelOptions
-    {
-        AllowSynchronousContinuations = true,
-        SingleReader = true,
-        SingleWriter = false
-    });
-
-    public ChannelReader<MouseEvent>? MouseEvent { get; set; }
 
     public Channel<RenderScene> RenderStates { get; }
         = Channel.CreateBounded<RenderScene>(new BoundedChannelOptions(3)
@@ -77,20 +55,26 @@ public sealed class FrameSimulationService(
 
     ConcurrentDictionary<CancellationToken, Channel<float>> ScaleChangeSubscriptions = [];
 
-    public async ValueTask<float[]> CubeSimulation(FrameContext context)
+    public float[] CubeSimulation(FrameContext context, out FrameContext updated)
     {
-        var events = context.MouseEvent;
+        var events = context.PointerEvent;
         var eventCount = events.Length;
         if (eventCount > 0)
         {
-            Logger.LogInformation("MouseEvent Count {count}", eventCount);
+
+            Logger.LogInformation("Event Count {Count}", eventCount);
         }
-        var p = Matrix4x4.CreatePerspective(
-                      6.4f * 0.1f,
-                      4.8f * 0.1f,
-                      0.1f,
-                      20
-                  );
+        //var p = Matrix4x4.CreatePerspective(
+        //              6.4f * 0.1f,
+        //              4.8f * 0.1f,
+        //              0.1f,
+        //              20
+        //          );
+        var p = Matrix4x4.CreateScale(
+               1.0f / 6.4f,
+               1.0f / 4.8f,
+               0.0f
+        );
         var c = Matrix4x4.CreateLookAt(new Vector3
         {
             X = 1,
@@ -98,9 +82,21 @@ public sealed class FrameSimulationService(
             Z = 1
         }, Vector3.Zero, Vector3.UnitY);
         var t = context.FrameIndex / 60.0f;
+        var trans = Matrix4x4.Identity;
+        updated = context;
+        if (eventCount > 0)
+        {
+            var lastE = events.Span[^1];
+            Vector3 pos = new(lastE.X / lastE.SurfaceWidth + 0.5f,
+               lastE.Y / lastE.SurfaceHeight + 0.5f,
+               0.0f);
+            trans = Matrix4x4.CreateTranslation(pos);
+            updated = updated with { Position = pos };
+            Logger.LogInformation("pos {}", pos);
+        }
         var m = Matrix4x4.CreateFromYawPitchRoll(MathF.Sin(t), MathF.Cos(t), 0);
         var s = Matrix4x4.CreateScale(Scale);
-        var mvp = s * m * c * p;
+        var mvp = s * m * trans * c * p;
 
         //var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
         //    MathF.PI * 2.0f / 5.0f,

@@ -1,4 +1,5 @@
 ﻿using DualDrill.Engine.Connection;
+using DualDrill.Engine.Input;
 using DualDrill.Engine.Media;
 using MessagePipe;
 using R3;
@@ -234,8 +235,8 @@ sealed partial class RTCPeerConnectionProviderService(
     ClientStore ClientStore,
     HeadlessSurfaceCaptureVideoSource VideoSource,
     IPublisher<PairIdentity> CreatePairPublisher,
-    ISignalConnectionProviderService SignalConnectionService
-    )
+    IPublisher<ClientInput<PointerEvent>> PointerEventPublisher,
+    ISignalConnectionProviderService SignalConnectionService)
 {
     ConcurrentDictionary<Guid, RTCPeerConnection> Connections = [];
     public RTCPeerConnection CreatePeerConnection(Guid clientId)
@@ -341,7 +342,15 @@ sealed partial class RTCPeerConnectionProviderService(
                 {
                     channel.onmessage += (dc, protocol, data) =>
                     {
-                        Logger.LogInformation(Encoding.UTF8.GetString(data));
+                        var e = JsonSerializer.Deserialize<PointerEvent>(data, JsonSerializerOptions.Web);
+                        if (e is not null)
+                        {
+                            PointerEventPublisher.Publish(new ClientInput<PointerEvent>(clientId, e));
+                        }
+                        else
+                        {
+                            Logger.LogWarning("Failed to deserialize pointer event {data}", Encoding.UTF8.GetString(data));
+                        }
                     };
                 }
             }));
@@ -366,6 +375,7 @@ sealed partial class RTCPeerConnectionProviderService(
                     case RTCPeerConnectionState.closed:
                         VideoSource.OnVideoSourceEncodedSample -= sendVideo;
                         Logger.LogInformation("{ClientId} RTC Disconnected", clientId);
+                        Connections.TryRemove(clientId, out _);
                         break;
                 }
             }));
@@ -378,25 +388,10 @@ sealed partial class RTCPeerConnectionProviderService(
         };
         return pc;
     }
-
-    public async ValueTask<string> negotiateAsync(string connectionId, RTCPeerConnection pc, string offer)
-    {
-        pc.setRemoteDescription(new RTCSessionDescriptionInit
-        {
-            type = RTCSdpType.offer,
-            sdp = offer,
-        });
-        var answer = pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        return answer.sdp;
-    }
 }
 
 static partial class LogExtension
 {
-    [LoggerMessage(
-        Level = LogLevel.Information,
-        Message = "ICE candidate state changed to {state}"
-    )]
+    [LoggerMessage(Level = LogLevel.Information, Message = "ICE candidate state changed to {state}")]
     public static partial void LogIceStateChanged(this ILogger<RTCPeerConnectionProviderService> logger, RTCIceConnectionState state);
 }
