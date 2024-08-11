@@ -5,12 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace DualDrill.Engine.Services;
 
-public sealed class FrameRenderService(
+public sealed record class FrameRenderService(
     ILogger<FrameRenderService> Logger,
     GPUDevice Device,
     WebGPULogoRenderer LogoRenderer,
     RotateCubeRenderer CubeRenderer,
-    FrameSimulationService Simulation,
     ClearColorRenderer ClearColorRenderer) : IFrameRenderService
 {
     public async ValueTask RenderAsync(long frame, RenderScene scene, GPUTexture renderTarget, CancellationToken cancellation)

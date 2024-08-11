@@ -11,16 +11,12 @@ public sealed class FrameSimulationService(
     FrameInputService InputService,
     ILogger<FrameSimulationService> Logger)
 {
-    public int FrameCount { get; private set; }
-
-
     public Channel<RenderScene> RenderStates { get; }
         = Channel.CreateBounded<RenderScene>(new BoundedChannelOptions(3)
         {
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
-    event Action<float> StateChangeEvent;
     float m_Scale = 1.0f;
     public float Scale
     {
@@ -28,7 +24,6 @@ public sealed class FrameSimulationService(
         set
         {
             m_Scale = value;
-            StateChangeEvent?.Invoke(value);
         }
     }
 
@@ -62,7 +57,7 @@ public sealed class FrameSimulationService(
         var events = frameInput.PointerEvents;
         var eventCount = events.Length;
         var r = new Vector3(MathF.Sin(t), MathF.Cos(t), 0);
-        scene = scene with { Cube = scene.Cube with { Rotation = r } };
+        scene = scene with { Cube = scene.Cube with { Rotation = r, Scale = frameInput.Scale ?? scene.Cube.Scale } };
         scene = scene with { ClearColor = new Vector3(0.2f) + 0.1f * new Vector3(MathF.Cos(t), MathF.Sin(t), 0.1f) };
         if (eventCount > 0)
         {

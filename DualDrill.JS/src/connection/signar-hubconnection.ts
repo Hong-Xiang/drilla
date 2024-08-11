@@ -1,7 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 
 export const SignalRConnection = new signalR.HubConnectionBuilder()
-  .withUrl("/hub/user-input")
+  .withUrl("/hub/signal-connection")
   .build();
 
 SignalRConnection.on("HubInvoke", async (funcHandle: string) => {
@@ -10,20 +10,7 @@ SignalRConnection.on("HubInvoke", async (funcHandle: string) => {
 });
 
 export async function StartSignalRHubConnection(clientId: string) {
-  console.log("starting signalr hub connection");
   await SignalRConnection.start();
+  console.log("starting signalr hub connection");
   await SignalRConnection.invoke("SetClientId", clientId);
-}
-
-export function SignalRHubConnectionSubscribeEmitEvent(
-  handler: (data: string) => void
-) {
-  console.log("subscribe signalr emit called");
-  SignalRConnection.on("Emit", (e) => {
-    console.log("emit sub 2");
-    console.log(handler(e));
-  });
-  return {
-    data: "test",
-  };
 }

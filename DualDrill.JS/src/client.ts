@@ -4,12 +4,8 @@ import {
   PromiseLikeResultMapper,
   subscribeByPromiseLike,
 } from "./lib/dotnet-server-interop";
-import {
-  SignalRConnection,
-  StartSignalRHubConnection,
-} from "./connection/signar-hubconnection";
+import { SignalRConnection } from "./connection/signar-hubconnection";
 export {
-  SignalRHubConnectionSubscribeEmitEvent,
   StartSignalRHubConnection,
   SignalRConnection,
 } from "./connection/signar-hubconnection";
@@ -313,7 +309,6 @@ export async function CreateSimpleRTCClient(clientId: string) {
   });
 
   const channel = connection.createDataChannel("pointermove");
-
   video.addEventListener("pointerdown", (e) => {
     console.log("simple client pointer event", e);
     const h = (e: PointerEvent) => {
@@ -368,6 +363,21 @@ export function CreateRTCConnection(clientId: string) {
   // createSignalServerConnectionOverBlazorInterop()
   const connection = createPeerConnection(signalServer);
   console.log("created peer connection");
+  const scaleChannel = connection.createDataChannel("scale");
+  const el = document.getElementById("scale-input");
+  if (el) {
+    console.log(`scale input element found`, el);
+    el.oninput = (e) => {
+      console.log(e);
+    };
+    el.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      console.log(`scale set to ${value} event`);
+      scaleChannel.send(JSON.stringify({ value: Number.parseFloat(value) }));
+    });
+  } else {
+    console.warn("#scale-input element not found");
+  }
 
   return connection;
 }
@@ -382,9 +392,12 @@ export function appendToVideoTarget(el: HTMLElement) {
 
 export async function main() {
   await SignalRConnection.start();
-  const r = await fetch(`/api/ServerConnection/client?connectionId=${SignalRConnection.connectionId}`, {
-    method: "POST",
-  });
+  const r = await fetch(
+    `/api/ServerConnection/client?connectionId=${SignalRConnection.connectionId}`,
+    {
+      method: "POST",
+    }
+  );
   const clientId: string = (await r.json()).id;
   await SignalRConnection.invoke("SetClientId", clientId);
   const connection = CreateRTCConnection(clientId);

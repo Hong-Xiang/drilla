@@ -15,6 +15,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
     HeadlessSurfaceCaptureVideoSource VideoSource,
     IPublisher<PairIdentity> CreatePairPublisher,
     IPublisher<ClientInput<PointerEvent>> PointerEventPublisher,
+    IPublisher<ClientInput<ScaleEvent>> ScaleEventPublisher,
     ISignalConnectionProviderService SignalConnectionService)
     : IPeerConnectionProviderService
 {
@@ -131,6 +132,17 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                         else
                         {
                             Logger.LogWarning("Failed to deserialize pointer event {data}", Encoding.UTF8.GetString(data));
+                        }
+                    };
+                }
+                if (channel.label == "scale")
+                {
+                    channel.onmessage += (dc, protocol, data) =>
+                    {
+                        var e = JsonSerializer.Deserialize<ScaleEvent>(data, JsonSerializerOptions.Web);
+                        if (e is not null)
+                        {
+                            ScaleEventPublisher.Publish(new ClientInput<ScaleEvent>(clientId, e));
                         }
                     };
                 }

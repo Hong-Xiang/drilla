@@ -9,15 +9,23 @@ public sealed class FrameInputService : IDisposable
 {
     CompositeDisposable Disposables = new();
     readonly Channel<PointerEvent> PointerEventChannel = Channel.CreateUnbounded<PointerEvent>();
+    readonly Channel<ScaleEvent> ScaleEventChannel = Channel.CreateUnbounded<ScaleEvent>();
     readonly List<PointerEvent> PointerEventBuffer = new(128);
     public FrameInputService(
-        ISubscriber<ClientInput<PointerEvent>> PointerEventSubscriber
+        ISubscriber<ClientInput<PointerEvent>> PointerEventSubscriber,
+        ISubscriber<ClientInput<ScaleEvent>> ScaleEvents
     )
     {
         Disposables.Add(
             PointerEventSubscriber.Subscribe(x =>
             {
                 PointerEventChannel.Writer.TryWrite(x.Payload);
+            })
+        );
+        Disposables.Add(
+            ScaleEvents.Subscribe(x =>
+            {
+                ScaleEventChannel.Writer.TryWrite(x.Payload);
             })
         );
     }
@@ -30,7 +38,12 @@ public sealed class FrameInputService : IDisposable
         {
             PointerEventBuffer.Add(e);
         }
-        return new(PointerEventBuffer.ToArray());
+        float? scaleValue = null;
+        while (ScaleEventChannel.Reader.TryRead(out var e))
+        {
+            scaleValue = e.Value;
+        }
+        return new(PointerEventBuffer.ToArray(), scaleValue);
     }
 
     public void Dispose()
@@ -40,7 +53,8 @@ public sealed class FrameInputService : IDisposable
 }
 
 public sealed record class FrameInput(
-    ReadOnlyMemory<PointerEvent> PointerEvents
+    ReadOnlyMemory<PointerEvent> PointerEvents,
+    float? Scale
 )
 {
 }
