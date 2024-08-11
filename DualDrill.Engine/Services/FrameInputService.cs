@@ -3,7 +3,7 @@ using MessagePipe;
 using System.Reactive.Disposables;
 using System.Threading.Channels;
 
-namespace DualDrill.Engine;
+namespace DualDrill.Engine.Services;
 
 public sealed class FrameInputService : IDisposable
 {
@@ -22,7 +22,7 @@ public sealed class FrameInputService : IDisposable
         );
     }
 
-    public ReadOnlyMemory<PointerEvent> ReadUserInputs()
+    public FrameInput ReadUserInputs()
     {
         PointerEventBuffer.Clear();
         var reader = PointerEventChannel.Reader;
@@ -30,11 +30,17 @@ public sealed class FrameInputService : IDisposable
         {
             PointerEventBuffer.Add(e);
         }
-        return PointerEventBuffer.ToArray();
+        return new(PointerEventBuffer.ToArray());
     }
 
     public void Dispose()
     {
         Disposables.Dispose();
     }
+}
+
+public sealed record class FrameInput(
+    ReadOnlyMemory<PointerEvent> PointerEvents
+)
+{
 }
