@@ -232,42 +232,12 @@ fn fs_main(
 
     static readonly ReadOnlyMemory<byte> Name = "abc"u8.ToArray();
 
-    public async ValueTask RenderAsync(double time, GPUQueue queue, GPUTexture renderTarget, ReadOnlyMemory<float> mvp)
+    public void Render(double time, GPUQueue queue, GPUTexture renderTarget, ReadOnlySpan<float> mvp)
     {
         using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());
 
-        var t = (float)time / 100;
-
-
-        //void UpdateUniformBuffer()
-        //{
-
-        //    var p = Matrix4x4.CreatePerspective(
-        //        6.4f * 0.1f,
-        //        4.8f * 0.1f,
-        //        0.1f,
-        //        20
-        //    );
-        //    var c = Matrix4x4.CreateLookAt(new Vector3
-        //    {
-        //        X = 1,
-        //        Y = 0.8f,
-        //        Z = 1
-        //    }, Vector3.Zero, Vector3.UnitY);
-        //    var m = Matrix4x4.CreateFromYawPitchRoll(MathF.Sin(t), MathF.Cos(t), 0);
-        //    var mvp = m * c * p;
-        //    //m = Matrix4x4.Transpose(m);
-        //    var m2 = Matrix4x4.Identity;
-        //    var m3 = Matrix4x4.CreateScale(0.8f);
-        //    unsafe
-        //    {
-        //        var uniformData = new ReadOnlySpan<float>(&mvp, sizeof(Matrix4x4));
-        //        queue.WriteBuffer(UniformBuffer, 0, uniformData);
-        //    }
-        //}
-        //UpdateUniformBuffer();
-        queue.WriteBuffer<float>(UniformBuffer, 0, mvp.Span);
+        queue.WriteBuffer<float>(UniformBuffer, 0, mvp);
 
         using var rp = encoder.BeginRenderPass(new()
         {

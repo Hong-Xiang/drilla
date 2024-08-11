@@ -1,6 +1,8 @@
 ﻿using DualDrill.Engine;
 using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
+using DualDrill.Engine.Scene;
+using DualDrill.Engine.Services;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using System.Numerics;
@@ -14,7 +16,7 @@ public sealed class RealtimeFrameHostedService : BackgroundService
     readonly TimeProvider TimeProvider = TimeProvider.System;
 
     private readonly ILogger<RealtimeFrameHostedService> Logger;
-    private readonly IFrameService FrameService;
+    private readonly IFrameRenderService FrameService;
     private readonly Channel<int> FrameChannel;
 
     private int FrameIndex = 0;
@@ -22,14 +24,16 @@ public sealed class RealtimeFrameHostedService : BackgroundService
     private readonly HeadlessSurface Surface;
 
     public FrameInputService FrameInputService { get; }
+    public FrameSimulationService SimulationService { get; }
     public IWebViewService WebViewService { get; }
     public HeadlessSurfaceCaptureVideoSource VideoSource { get; }
     private IHostApplicationLifetime HostApplicationLifetime { get; }
     private IServer WebServer { get; }
 
     public RealtimeFrameHostedService(
-        IFrameService frameService,
         FrameInputService frameInputService,
+        FrameSimulationService simulationService,
+        IFrameRenderService frameService,
         ILogger<RealtimeFrameHostedService> logger,
         HeadlessSurface surface,
         IWebViewService webViewService,
@@ -40,6 +44,7 @@ public sealed class RealtimeFrameHostedService : BackgroundService
         Logger = logger;
         FrameService = frameService;
         FrameInputService = frameInputService;
+        SimulationService = simulationService;
         FrameChannel = Channel.CreateBounded<int>(1);
         Surface = surface;
         VideoSource = videoSource;
@@ -67,22 +72,23 @@ public sealed class RealtimeFrameHostedService : BackgroundService
         using var timer = TimeProvider.CreateTimer(TimerFrameCallback, this, TimeSpan.Zero, SampleRate);
 
 
-        var frameContext = new FrameContext
+        var scene = new RenderScene
         {
-            Position = Vector3.Zero,
-            PointerEvent = FrameInputService.ReadUserInputs(),
-            Surface = Surface,
+            Cube = new Cube(Vector3.Zero, Vector3.Zero),
+            Camera = new Camera(),
         };
 
         await foreach (var frameIndex in FrameChannel.Reader.ReadAllAsync(stoppingToken))
         {
-            frameContext = frameContext with { FrameIndex = frameIndex, PointerEvent = FrameInputService.ReadUserInputs() };
-            var surfaceImage = Surface.TryAcquireImage();
-            if (surfaceImage is null)
+            var inputs = FrameInputService.ReadUserInputs();
+            scene = await SimulationService.SimulateAsync(frameIndex, inputs, scene);
+            var image = Surface.TryAcquireImage();
+            if (image is null)
             {
-                Logger.LogWarning("Failed to get render target from headless surface");
+                Logger.LogWarning("Failed to get surface texture for {frame}", frameIndex);
+                continue;
             }
-            frameContext = await FrameService.OnFrameAsync(frameContext, stoppingToken);
+            await FrameService.RenderAsync(frameIndex, scene, image.Texture, stoppingToken);
             Surface.Present();
         }
     }

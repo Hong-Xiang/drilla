@@ -1,9 +1,9 @@
 using DualDrill.Engine.Headless;
 using Microsoft.AspNetCore.Mvc;
-using MVCTestProject.Models;
+using DualDrill.Server.Models;
 using System.Diagnostics;
 
-namespace MVCTestProject.Controllers;
+namespace DualDrill.Server.Controllers;
 
 public class HomeController(
     ILogger<HomeController> Logger,
@@ -22,8 +22,8 @@ public class HomeController(
 
     public IActionResult Desktop()
     {
-        ViewData["Width"] = Surface.Width; 
-        ViewData["Height"] = Surface.Height; 
+        ViewData["Width"] = Surface.Width;
+        ViewData["Height"] = Surface.Height;
         Logger.LogInformation("Desktop Client Request Received");
         return View();
     }

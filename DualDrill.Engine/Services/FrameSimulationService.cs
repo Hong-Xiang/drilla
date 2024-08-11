@@ -1,10 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DualDrill.Engine.Input;
+using DualDrill.Engine.Scene;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
-namespace DualDrill.Engine;
+namespace DualDrill.Engine.Services;
 
 public sealed class FrameSimulationService(
     FrameInputService InputService,
@@ -55,48 +57,29 @@ public sealed class FrameSimulationService(
 
     ConcurrentDictionary<CancellationToken, Channel<float>> ScaleChangeSubscriptions = [];
 
-    public float[] CubeSimulation(FrameContext context, out FrameContext updated)
+    public async ValueTask<RenderScene> SimulateAsync(long frame, FrameInput frameInput, RenderScene scene)
     {
-        var events = context.PointerEvent;
+        var events = frameInput.PointerEvents;
         var eventCount = events.Length;
-        if (eventCount > 0)
+        if (eventCount == 0)
         {
-
-            Logger.LogInformation("Event Count {Count}", eventCount);
+            return scene;
         }
-        //var p = Matrix4x4.CreatePerspective(
-        //              6.4f * 0.1f,
-        //              4.8f * 0.1f,
-        //              0.1f,
-        //              20
-        //          );
-        var p = Matrix4x4.CreateScale(
-               1.0f / 6.4f,
-               1.0f / 4.8f,
-               0.0f
-        );
-        var c = Matrix4x4.CreateLookAt(new Vector3
-        {
-            X = 1,
-            Y = 0.8f,
-            Z = 1
-        }, Vector3.Zero, Vector3.UnitY);
-        var t = context.FrameIndex / 60.0f;
-        var trans = Matrix4x4.Identity;
-        updated = context;
-        if (eventCount > 0)
-        {
-            var lastE = events.Span[^1];
-            Vector3 pos = new(lastE.X / lastE.SurfaceWidth + 0.5f,
-               lastE.Y / lastE.SurfaceHeight + 0.5f,
-               0.0f);
-            trans = Matrix4x4.CreateTranslation(pos);
-            updated = updated with { Position = pos };
-            Logger.LogInformation("pos {}", pos);
-        }
-        var m = Matrix4x4.CreateFromYawPitchRoll(MathF.Sin(t), MathF.Cos(t), 0);
-        var s = Matrix4x4.CreateScale(Scale);
-        var mvp = s * m * trans * c * p;
+        Logger.LogInformation("Event Count {Count}", eventCount);
+        //var t = frame / 60.0f;
+        //var trans = Matrix4x4.Identity;
+        //updated = context;
+        var lastE = events.Span[^1];
+        Vector3 pos = new(lastE.X / lastE.SurfaceWidth + 0.5f,
+           lastE.Y / lastE.SurfaceHeight + 0.5f,
+           0.0f);
+        //trans = Matrix4x4.CreateTranslation(pos);
+        //updated = updated with { Position = pos };
+        Logger.LogInformation("pos {}", pos);
+        return scene with { Cube = scene.Cube with { Position = pos } };
+        //var m = Matrix4x4.CreateFromYawPitchRoll(MathF.Sin(t), MathF.Cos(t), 0);
+        //var s = Matrix4x4.CreateScale(Scale);
+        //var mvp = s * m * trans * c * p;
 
         //var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
         //    MathF.PI * 2.0f / 5.0f,
@@ -117,8 +100,8 @@ public sealed class FrameSimulationService(
         //var mvpMatrix = rotate * viewMatrix * projMatrix;
         ////var mvpMatrix = projMatrix * viewMatrix * rotate;
 
-        var buffer = CopyToBuffer(mvp);
-        return buffer;
+        //var buffer = CopyToBuffer(mvp);
+        //return buffer;
         //var scene = new RenderScene()
         //{
         //    Frame = context.FrameIndex,

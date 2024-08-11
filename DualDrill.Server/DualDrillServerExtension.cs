@@ -1,6 +1,6 @@
-﻿using DualDrill.Engine;
-using DualDrill.Engine.Connection;
+﻿using DualDrill.Engine.Connection;
 using DualDrill.Engine.Media;
+using DualDrill.Engine.Services;
 using DualDrill.Graphics;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -47,7 +47,7 @@ public static class DualDrillServerExtension
         services.AddSingleton<FrameInputService>();
         services.AddSingleton<FrameSimulationService>();
         services.AddSingleton<HeadlessSurfaceCaptureVideoSource>();
-        services.AddSingleton<IFrameService, FrameService>();
+        services.AddSingleton<IFrameRenderService, FrameRenderService>();
         services.AddHostedService<DevicePollHostedService>();
         services.AddHostedService<RealtimeFrameHostedService>();
     }
