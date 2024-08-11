@@ -8,8 +8,6 @@ public interface IVertexBufferLayout
     ulong ArrayStride { get; }
     GPUVertexStepMode StepMode { get; }
     ReadOnlySpan<GPUVertexAttribute> Attributes { get; }
-
-
 }
 
 public sealed class WebGPULogoMesh : IVertexBufferLayout

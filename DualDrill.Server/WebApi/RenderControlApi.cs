@@ -4,7 +4,6 @@ using DualDrill.Graphics;
 using Microsoft.AspNetCore.Mvc;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using System.Numerics;
 using Image = SixLabors.ImageSharp.Image;
 

@@ -12,7 +12,6 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-
         var seriLogger = new LoggerConfiguration()
               .Enrich.FromLogContext()
               .MinimumLevel.Is(Serilog.Events.LogEventLevel.Debug)
@@ -55,7 +54,7 @@ public class Program
             app.UseHsts();
         }
 
-        app.MapHub<DrillHub>("/hub/user-input");
+        app.MapHub<DrillHub>("/hub/signal-connection");
 
         app.UseHttpsRedirection();
 

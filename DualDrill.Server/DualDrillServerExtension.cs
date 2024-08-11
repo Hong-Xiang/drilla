@@ -31,8 +31,9 @@ public static class DualDrillServerExtension
         services.AddSingleton<FrameInputService>();
         services.AddSingleton<FrameSimulationService>();
         services.AddSingleton<IFrameRenderService, FrameRenderService>();
-        services.AddHostedService<DevicePollHostedService>();
-        services.AddHostedService<RealtimeFrameHostedService>();
+
+        services.AddSingletonHostedService<DevicePollHostedService>();
+        services.AddSingletonHostedService<RealtimeFrameHostedService>();
     }
 
     private static void AddHeadlessServices(IServiceCollection services)
@@ -47,6 +48,13 @@ public static class DualDrillServerExtension
         services.AddSingleton<DualDrill.Engine.Renderer.WebGPULogoRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.ClearColorRenderer>();
+    }
+
+    static void AddSingletonHostedService<T>(this IServiceCollection services)
+        where T : class, IHostableBackgroundService
+    {
+        services.AddSingleton<T>();
+        services.AddHostedService<SingletonHostedService<T>>();
     }
 
 
