@@ -2,6 +2,7 @@ using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Services;
 using DualDrill.Server.Browser;
+using DualDrill.Server.Connection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;
@@ -13,7 +14,7 @@ namespace DualDrill.Server.Components.Pages;
 public partial class DesktopBrowserClient : IAsyncDisposable
 {
     [Inject] IJSRuntime JSRuntime { get; set; }
-    [Inject] ClientStore ClientHub { get; set; } = default!;
+    [Inject] ClientConnectionManagerService ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
     [Inject] IHubContext<DrillHub, IDrillHubClient> HubContext { get; set; } = default!;
     BrowserClient? Client { get; set; }

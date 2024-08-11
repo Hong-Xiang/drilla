@@ -275,45 +275,16 @@ export function addDataChannelLogMessageListener(channel: RTCDataChannel) {
 }
 
 function normalizedPointerEvent(e: PointerEvent, t: HTMLElement) {
-  console.log(e);
   const rect = t.getBoundingClientRect();
+  const x = (e.offsetX / rect.width) * 2 - 1;
+  const y = -((e.offsetY / rect.height) * 2 - 1);
   const result = {
-    detail: e.detail,
-    screenX: e.screenX,
-    screenY: e.screenY,
-    clientX: e.clientX,
-    clientY: e.clientY,
-    offsetX: e.offsetX,
-    offsetY: e.offsetY,
-    pageX: e.pageX,
-    pageY: e.pageY,
-    movementX: e.movementX,
-    movementY: e.movementY,
-    button: e.button,
-    buttons: e.buttons,
-    ctrlKey: e.ctrlKey,
-    shiftKey: e.shiftKey,
-    altKey: e.altKey,
-    metaKey: e.metaKey,
-    type: e.type,
-    pointerId: e.pointerId,
-    width: e.width,
-    height: e.height,
-    pressure: e.pressure,
-    tiltX: e.tiltX,
-    tiltY: e.tiltY,
-    pointerType: e.pointerType,
-    isPrimary: e.isPrimary,
-    boundingRect: rect,
-  };
-  console.log(result);
-  return {
-    x: e.offsetX,
-    y: e.offsetY,
+    x,
+    y,
     surfaceWidth: rect.width,
     surfaceHeight: rect.height,
-  }
-  // return result;
+  };
+  return result;
 }
 
 export async function CreateSimpleRTCClient(clientId: string) {
@@ -410,11 +381,12 @@ export function appendToVideoTarget(el: HTMLElement) {
 }
 
 export async function main() {
-  const clientId = crypto.randomUUID();
-  await StartSignalRHubConnection(clientId);
-  await fetch(`/api/peer-connection/server/${clientId}`, {
+  await SignalRConnection.start();
+  const r = await fetch(`/api/ServerConnection/client?connectionId=${SignalRConnection.connectionId}`, {
     method: "POST",
   });
+  const clientId: string = (await r.json()).id;
+  await SignalRConnection.invoke("SetClientId", clientId);
   const connection = CreateRTCConnection(clientId);
   const video = createVideoElement(connection);
   const div = document.getElementById("video-render-root");

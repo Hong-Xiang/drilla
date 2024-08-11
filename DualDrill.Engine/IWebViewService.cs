@@ -7,13 +7,12 @@ namespace DualDrill.Engine;
 public interface IWebViewService
 {
     ValueTask<IPeerConnection> GetPeerConnectionAsync(Guid clientId);
-    ValueTask<IMediaStream> Capture(HeadlessSurface surface);
-    ValueTask StartAsync(Uri targetUri, CancellationToken cancellation);
+    ValueTask<IMediaStream> Capture(HeadlessSurface surface, int frameRate);
+    ValueTask StartAsync(CancellationToken cancellation);
     ValueTask CreateCanvas2D();
 }
 
 public interface ICanvas2D
 {
-    ValueTask ShowStream();
+    ValueTask ShowStream(string id);
 }
-

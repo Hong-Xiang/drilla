@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace DualDrill.Server.WebApi;
 

@@ -16,7 +16,7 @@ public partial class InitializedClient : IAsyncDisposable
     IJSRuntime JSRuntime { get; set; }
 
     [Inject]
-    ClientStore ClientHub { get; set; } = default!;
+    ClientConnectionManagerService ClientHub { get; set; } = default!;
 
     [Inject]
     ILogger<InitializedClient> Logger { get; set; } = default!;
