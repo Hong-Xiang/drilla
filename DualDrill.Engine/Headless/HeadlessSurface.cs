@@ -7,6 +7,7 @@ namespace DualDrill.Engine.Headless;
 
 public sealed class HeadlessSurface : IGPUSurface
 {
+    public Guid Id { get; } = Guid.NewGuid();
     public sealed class Option
     {
         //public int Width { get; set; } = 1472;
@@ -14,7 +15,7 @@ public sealed class HeadlessSurface : IGPUSurface
         public int Width { get; set; } = 640;
         public int Height { get; set; } = 480;
         public int SlotCount { get; set; } = 3;
-        public GPUTextureFormat Format { get; set; } = GPUTextureFormat.BGRA8UnormSrgb;
+        public GPUTextureFormat Format { get; set; } = GPUTextureFormat.RGBA8UnormSrgb;
     }
 
     private readonly Channel<HeadlessRenderTarget> RenderTargetChannel;
@@ -33,7 +34,7 @@ public sealed class HeadlessSurface : IGPUSurface
         RenderTargetChannel = Channel.CreateBounded<HeadlessRenderTarget>(option.SlotCount);
         for (var i = 0; i < option.SlotCount; i++)
         {
-            RenderTargetChannel.Writer.TryWrite(new HeadlessRenderTarget(Device, Width, Height, option.Format));
+            RenderTargetChannel.Writer.TryWrite(new HeadlessRenderTarget(Device, Width, Height, option.Format, i));
         }
         (EmitOnFrame, OnFrame) = eventFactory.CreateAsyncEvent<HeadlessSurfaceFrame>();
     }
@@ -89,7 +90,8 @@ public sealed class HeadlessSurface : IGPUSurface
                     DepthOrArrayLayers = 1
                 },
                 GPUTextureFormat.BGRA8Unorm,
-                data
+                data,
+                target.SlotIndex
             );
             await EmitOnFrame.PublishAsync(frame);
             await RenderTargetChannel.Writer.WriteAsync(target);

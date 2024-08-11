@@ -5,9 +5,13 @@ namespace DualDrill.Engine.Headless;
 
 public sealed class HeadlessRenderTarget : IDisposable
 {
-    public HeadlessRenderTarget(GPUDevice device, int width, int height, GPUTextureFormat format)
+    public HeadlessRenderTarget(
+        GPUDevice device,
+        int width, int height, GPUTextureFormat format,
+        int slotIndex = 0)
     {
         Device = device;
+        SlotIndex = slotIndex;
         Width = width;
         Height = height;
         Format = format;
@@ -33,6 +37,7 @@ public sealed class HeadlessRenderTarget : IDisposable
         BufferCPUMemoryOwner = DotNext.Buffers.UnmanagedMemoryPool<byte>.Shared.Rent(CPUBufferByteSize);
     }
     private GPUDevice Device { get; }
+    public int SlotIndex { get; }
     public int Width { get; }
     public int Height { get; }
     public GPUTextureFormat Format { get; }

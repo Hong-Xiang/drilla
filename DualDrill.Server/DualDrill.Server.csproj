@@ -19,6 +19,7 @@
 		<PackageReference Include="Veldrid.SPIRV" Version="1.0.15" />
 		<PackageReference Include="Veldrid.Utilities" Version="4.9.0" />
 		<PackageReference Include="Vortice.Vulkan" Version="1.9.4" />
+		<PackageReference Include="WebSocketPipe" Version="0.9.0" />
 		<ProjectReference Include="..\DualDrill.Client.Abstraction\DualDrill.Client.Abstraction.csproj" />
 		<ProjectReference Include="..\DualDrill.Client\DualDrill.Client.csproj" />
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />

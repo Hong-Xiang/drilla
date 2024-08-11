@@ -24,6 +24,7 @@ import {
   createPeerConnection,
   DualDrillConnection,
 } from "./connection/dual-drill-connection";
+import { TypedArray } from "three";
 
 export async function testDotnetExport() {
   const exports = await getDotnetWasmExports("DualDrill.Client.dll");
@@ -405,4 +406,64 @@ export async function main() {
   const div = document.getElementById("video-render-root");
   div?.appendChild(video);
   await connection.start();
+}
+
+interface SurfaceCaptureStream {
+  surfaceId: string;
+  canvas: HTMLCanvasElement;
+  stream: MediaStream;
+  context: CanvasRenderingContext2D;
+  buffer: ArrayBuffer;
+}
+
+const CapturedStreams = new Map<string, SurfaceCaptureStream>();
+
+export function WebViewMain() {
+  const interopUri = "/api/webviewInterop";
+  (window as any).chrome.webview.addEventListener(
+    "sharedbufferreceived",
+    async (e: any) => {
+      const surfaceId = e.additionalData.SurfaceId;
+      const div = document.getElementById("video-render-root");
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height = 480;
+      div?.appendChild(canvas);
+      const context = canvas.getContext("2d")!;
+      const stream = canvas.captureStream();
+
+      CapturedStreams.set(surfaceId, {
+        surfaceId,
+        canvas,
+        context,
+        stream,
+        buffer: e.getBuffer(),
+      });
+
+      await fetch(interopUri + `/capturedStream/${surfaceId}/${stream.id}`, {
+        method: "POST",
+      });
+    }
+  );
+
+  (window as any).chrome.webview.addEventListener("message", (e: any) => {
+    const data: string = e.data;
+    const msg = JSON.parse(data);
+    // const dataBuffer = new Uint8ClampedArray(dataArray);
+    // console.log(data.length, data.length / 1472);
+    // const imageData = new ImageData(data, width, height);
+    console.log(msg);
+    if (msg.MessageType === "BufferToPresent") {
+      const s = CapturedStreams.get(msg.SurfaceId);
+      if (s) {
+        const imageData = new ImageData(
+          new Uint8ClampedArray(s.buffer, msg.Offset, msg.Length),
+          msg.Width,
+          msg.Height
+        );
+        s.context.putImageData(imageData, 0, 0);
+      }
+    }
+  });
 }

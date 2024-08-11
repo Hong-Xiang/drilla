@@ -33,7 +33,7 @@ public static class DualDrillServerExtension
         services.AddSingleton<IFrameRenderService, FrameRenderService>();
 
         services.AddSingletonHostedService<DevicePollHostedService>();
-        services.AddSingletonHostedService<RealtimeFrameHostedService>();
+        services.AddSingletonHostedService<RealtimeFrameHostableBackgroundService>();
     }
 
     private static void AddHeadlessServices(IServiceCollection services)

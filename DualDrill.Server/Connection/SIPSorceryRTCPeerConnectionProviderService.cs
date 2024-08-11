@@ -43,9 +43,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                     await pc.setLocalDescription(offer);
                     await SignalConnectionService.OfferAsync(ClientConnectionManagerService.ServerId, clientId, offer.sdp);
                 }
-            )
-
-        );
+            ));
 
         disposables.Add(
             SignalConnectionService.SubscribeOfferAwait(clientId, ClientConnectionManagerService.ServerId, async (sdp, cancellation) =>

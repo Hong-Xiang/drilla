@@ -28,6 +28,13 @@ public class HomeController(
         return View();
     }
 
+    public IActionResult WebView2()
+    {
+        ViewData["Width"] = Surface.Width;
+        ViewData["Height"] = Surface.Height;
+        return View();
+    }
+
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

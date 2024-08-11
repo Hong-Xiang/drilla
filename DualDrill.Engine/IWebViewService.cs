@@ -10,6 +10,7 @@ public interface IWebViewService
     ValueTask<IMediaStream> Capture(HeadlessSurface surface, int frameRate);
     ValueTask StartAsync(CancellationToken cancellation);
     ValueTask CreateCanvas2D();
+    ValueTask SendMessage(string data, CancellationToken cancellation);
 }
 
 public interface ICanvas2D

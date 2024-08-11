@@ -58,6 +58,7 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        app.UseWebSockets();
         app.UseStaticFiles();
         app.UseAntiforgery();
         app.MapControllers();
