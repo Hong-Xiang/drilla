@@ -1,8 +1,7 @@
 ﻿using DualDrill.Graphics;
-using System.Threading.Channels;
-using R3;
 using MessagePipe;
 using Microsoft.Extensions.Options;
+using System.Threading.Channels;
 
 namespace DualDrill.Engine.Headless;
 

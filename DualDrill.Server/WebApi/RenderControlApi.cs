@@ -38,11 +38,15 @@ public static class RenderControlApi
         CancellationToken cancellation = default)
     {
         using var target = new DualDrill.Engine.Headless.HeadlessRenderTarget(device, width, height, GPUTextureFormat.BGRA8UnormSrgb);
-        var scene = new RenderScene
+        var scene = RenderScene.TestScene(width, height);
+        scene = scene with
         {
-            Cube = new(new(cubePositionX, cubePositionY, cubePositionZ),
-                       new(cubeRotationX, cubeRotationY, cubeRotationZ)),
-            Camera = new Camera
+            Cube = scene.Cube with
+            {
+                Position = new(cubePositionX, cubePositionY, cubePositionZ),
+                Rotation = new(cubeRotationX, cubeRotationY, cubeRotationZ)
+            },
+            Camera = scene.Camera with
             {
                 NearPlaneWidth = width / scale,
                 NearPlaneHeight = height / scale,
@@ -55,11 +59,6 @@ public static class RenderControlApi
         await renderService.RenderAsync(time, scene, target.Texture, cancellation);
         var data = await target.ReadResultAsync(cancellation);
         var image = Image.LoadPixelData<Bgra32>(data.Span, width, height);
-        image.Mutate(ctx =>
-        {
-            ctx.Flip(FlipMode.Horizontal);
-        });
-
         var stream = new MemoryStream();
         await image.SaveAsPngAsync(stream, cancellation);
         stream.Position = 0;

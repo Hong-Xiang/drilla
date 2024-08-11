@@ -1,5 +1,4 @@
-﻿using DualDrill.Engine.Input;
-using DualDrill.Engine.Scene;
+﻿using DualDrill.Engine.Scene;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Numerics;
@@ -59,85 +58,36 @@ public sealed class FrameSimulationService(
 
     public async ValueTask<RenderScene> SimulateAsync(long frame, FrameInput frameInput, RenderScene scene)
     {
+        var t = (float)frame / 60.0f;
         var events = frameInput.PointerEvents;
         var eventCount = events.Length;
-        if (eventCount == 0)
+        var r = new Vector3(MathF.Sin(t), MathF.Cos(t), 0);
+        scene = scene with { Cube = scene.Cube with { Rotation = r } };
+        scene = scene with { ClearColor = new Vector3(0.2f) + 0.1f * new Vector3(MathF.Cos(t), MathF.Sin(t), 0.1f) };
+        if (eventCount > 0)
         {
-            return scene;
+            var lastE = events.Span[^1];
+            Vector3 pos = new(lastE.X, lastE.Y, 0.0f);
+            scene = scene with
+            {
+                Cube = scene.Cube with { Position = pos },
+                LogoState = scene.LogoState with
+                {
+                    Position = new Vector2(pos.X, pos.Y)
+                }
+            };
         }
-        Logger.LogInformation("Event Count {Count}", eventCount);
-        //var t = frame / 60.0f;
-        //var trans = Matrix4x4.Identity;
-        //updated = context;
-        var lastE = events.Span[^1];
-        Vector3 pos = new(lastE.X / lastE.SurfaceWidth + 0.5f,
-           lastE.Y / lastE.SurfaceHeight + 0.5f,
-           0.0f);
-        //trans = Matrix4x4.CreateTranslation(pos);
-        //updated = updated with { Position = pos };
-        Logger.LogInformation("pos {}", pos);
-        return scene with { Cube = scene.Cube with { Position = pos } };
-        //var m = Matrix4x4.CreateFromYawPitchRoll(MathF.Sin(t), MathF.Cos(t), 0);
-        //var s = Matrix4x4.CreateScale(Scale);
-        //var mvp = s * m * trans * c * p;
-
-        //var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
-        //    MathF.PI * 2.0f / 5.0f,
-        //    8.0f / 6.0f,
-        //    1.0f,
-        //    100.0f
-        //);
-        //var viewMatrix = Matrix4x4.CreateLookAt(
-        //      new Vector3(0, 0, -4),
-        //      Vector3.Zero,
-        //      Vector3.UnitY);
-        //var rotateValue = context.FrameIndex / 60.0f;
-        //var rotate = Matrix4x4.CreateFromYawPitchRoll(
-        //    MathF.Sin(rotateValue),
-        //    MathF.Cos(rotateValue),
-        //    0
-        //);
-        //var mvpMatrix = rotate * viewMatrix * projMatrix;
-        ////var mvpMatrix = projMatrix * viewMatrix * rotate;
-
-        //var buffer = CopyToBuffer(mvp);
-        //return buffer;
-        //var scene = new RenderScene()
-        //{
-        //    Frame = context.FrameIndex,
-        //    Camera = new Camera()
-        //    {
-        //        NearPlaneWidth = 8,
-        //        NearPlaneHeight = 6,
-        //        NearPlaneDistance = 1,
-        //        FarPlaneDistance = 100,
-        //        Position = new Vector3(0, 0, -4),
-        //        Target = Vector3.Zero,
-        //        Up = Vector3.UnitY
-        //    },
-        //    Cube = new Cube()
-        //    {
-        //        Scale = 1.0f,
-        //        Rotation = new()
-        //        {
-        //            X = MathF.Sin(rotateValue),
-        //            Y = MathF.Cos(rotateValue),
-        //            Z = 0
-        //        }
-        //    }
-        //};
-        //foreach (var (_, c) in ScaleChangeSubscriptions)
-        //{
-        //    //c.Writer.TryWrite()
-        //}
-    }
-
-    private unsafe float[] CopyToBuffer(Matrix4x4 m)
-    {
-        var result = new float[16];
-        var sourceBuffer = new Span<float>(&m, 16);
-        sourceBuffer.CopyTo(result);
-        return result;
+        else
+        {
+            scene = scene with
+            {
+                LogoState = scene.LogoState with
+                {
+                    Position = scene.LogoState.Position + 0.005f * new Vector2(MathF.Cos((float)t), MathF.Sin((float)t)),
+                }
+            };
+        }
+        return scene;
     }
 }
 

@@ -2,6 +2,7 @@
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.WebRTC;
 using DualDrill.Graphics;
+using DualDrill.Server.Connection;
 using MessagePipe;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.JSInterop;

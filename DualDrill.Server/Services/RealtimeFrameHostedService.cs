@@ -3,9 +3,6 @@ using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
 using DualDrill.Engine.Scene;
 using DualDrill.Engine.Services;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-using System.Numerics;
 using System.Threading.Channels;
 
 namespace DualDrill.Server.Services;
@@ -27,8 +24,6 @@ public sealed class RealtimeFrameHostedService : BackgroundService
     public FrameSimulationService SimulationService { get; }
     public IWebViewService WebViewService { get; }
     public HeadlessSurfaceCaptureVideoSource VideoSource { get; }
-    private IHostApplicationLifetime HostApplicationLifetime { get; }
-    private IServer WebServer { get; }
 
     public RealtimeFrameHostedService(
         FrameInputService frameInputService,
@@ -37,9 +32,7 @@ public sealed class RealtimeFrameHostedService : BackgroundService
         ILogger<RealtimeFrameHostedService> logger,
         HeadlessSurface surface,
         IWebViewService webViewService,
-        HeadlessSurfaceCaptureVideoSource videoSource,
-        IHostApplicationLifetime hostApplicationLifetime,
-        IServer webServer)
+        HeadlessSurfaceCaptureVideoSource videoSource)
     {
         Logger = logger;
         FrameService = frameService;
@@ -49,8 +42,6 @@ public sealed class RealtimeFrameHostedService : BackgroundService
         Surface = surface;
         VideoSource = videoSource;
         WebViewService = webViewService;
-        HostApplicationLifetime = hostApplicationLifetime;
-        WebServer = webServer;
     }
 
     private static void TimerFrameCallback(object? data)
@@ -66,17 +57,12 @@ public sealed class RealtimeFrameHostedService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await Task.Yield();
-        var hostUri = await GetHostedSourceUriAsync(stoppingToken);
-        //await WebViewService.StartAsync(hostUri, stoppingToken);
+        //await WebViewService.StartAsync(stoppingToken);
         await VideoSource.StartVideo();
         using var timer = TimeProvider.CreateTimer(TimerFrameCallback, this, TimeSpan.Zero, SampleRate);
 
 
-        var scene = new RenderScene
-        {
-            Cube = new Cube(Vector3.Zero, Vector3.Zero),
-            Camera = new Camera(),
-        };
+        var scene = RenderScene.TestScene(Surface.Width, Surface.Height);
 
         await foreach (var frameIndex in FrameChannel.Reader.ReadAllAsync(stoppingToken))
         {
@@ -93,13 +79,4 @@ public sealed class RealtimeFrameHostedService : BackgroundService
         }
     }
 
-    async ValueTask<Uri> GetHostedSourceUriAsync(CancellationToken cancellation)
-    {
-        var tcs = new TaskCompletionSource(cancellation);
-        HostApplicationLifetime.ApplicationStarted.Register(tcs.SetResult);
-        await tcs.Task;
-        var address = WebServer.Features.Get<IServerAddressesFeature>();
-        var uri = (address?.Addresses.FirstOrDefault(x => new Uri(x).Scheme == "https")) ?? throw new ArgumentNullException("WebView2 Source Uri");
-        return new Uri(uri + "/webview2");
-    }
 }

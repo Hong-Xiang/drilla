@@ -3,14 +3,7 @@ using MessagePipe;
 using Microsoft.AspNetCore.SignalR;
 using System.Runtime.InteropServices;
 
-namespace DualDrill.Server;
-
-public sealed record class ClientMessage<T>(
-    Guid Source,
-    T Payload
-)
-{
-}
+namespace DualDrill.Server.Connection;
 
 public interface IDrillHubClient
 {
@@ -26,7 +19,7 @@ sealed class DrillHub(
     IAsyncPublisher<PairIdentity, OfferPayload> OfferPublisher,
     IAsyncPublisher<PairIdentity, AnswerPayload> AnswerPublisher,
     IAsyncPublisher<PairIdentity, AddIceCandidatePayload> AddIceCandidatePublisher,
-    ClientStore ClientStore) : Hub<IDrillHubClient>
+    ClientConnectionManagerService ClientStore) : Hub<IDrillHubClient>
 {
     static readonly string ClientIdKey = "ClientId";
 

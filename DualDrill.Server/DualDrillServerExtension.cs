@@ -1,37 +1,21 @@
 ﻿using DualDrill.Engine.Connection;
+using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
 using DualDrill.Engine.Services;
 using DualDrill.Graphics;
+using DualDrill.Server.Connection;
 using DualDrill.Server.Services;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 
 namespace DualDrill.Server;
 
 public static class DualDrillServerExtension
 {
-    private static Ok<string[]> GetConnectedClients([FromServices] ClientStore clients)
-    {
-        return TypedResults.Ok(clients.ClientUris.Select(static s => s.ToString()).ToArray());
-    }
-
-    private static IResult CreatePeerConnectionToServerAsync(
-        [FromRoute] Guid clientId,
-        [FromServices] ISignalConnectionProviderService signalConnectionService,
-        [FromServices] RTCPeerConnectionProviderService peerConnectionService
-        )
-    {
-        signalConnectionService.CreateConnection(ClientStore.ServerId, clientId, SignalConnectionProvider.SignalR);
-        peerConnectionService.CreatePeerConnection(clientId);
-        return Results.Ok(null);
-    }
-
     private static void AddConnectionServices(IServiceCollection services)
     {
-        services.AddSingleton<ClientStore>();
-        services.AddSingleton<ISignalConnectionProviderService, MessagePipeSignalConnectionProvider>();
-        services.AddSingleton<ISignalConnectionOverSignalRService, SignalRConnectionMessagePushProviderService>();
-        services.AddSingleton<RTCPeerConnectionProviderService>();
+        services.AddSingleton<ClientConnectionManagerService>();
+        services.AddSingleton<ISignalConnectionProviderService, SignalConnectionOverSignalRProvider>();
+        services.AddSingleton<IPeerConnectionProviderService, SIPSorceryRTCPeerConnectionProviderService>();
+        services.AddScoped<IClient>(sp => new ClientIdentity(Guid.NewGuid()));
     }
 
     private static void AddGraphicsServices(IServiceCollection services)
@@ -46,17 +30,33 @@ public static class DualDrillServerExtension
     {
         services.AddSingleton<FrameInputService>();
         services.AddSingleton<FrameSimulationService>();
-        services.AddSingleton<HeadlessSurfaceCaptureVideoSource>();
         services.AddSingleton<IFrameRenderService, FrameRenderService>();
         services.AddHostedService<DevicePollHostedService>();
         services.AddHostedService<RealtimeFrameHostedService>();
     }
+
+    private static void AddHeadlessServices(IServiceCollection services)
+    {
+        services.AddSingleton<HeadlessSurface>();
+        services.AddSingleton<HeadlessSurfaceCaptureVideoSource>();
+        services.AddSingleton<IGPUSurface>(sp => sp.GetRequiredService<HeadlessSurface>());
+    }
+
+    private static void AddRenderService(IServiceCollection services)
+    {
+        services.AddSingleton<DualDrill.Engine.Renderer.WebGPULogoRenderer>();
+        services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
+        services.AddSingleton<DualDrill.Engine.Renderer.ClearColorRenderer>();
+    }
+
 
     public static void AddDualDrillServerServices(this IServiceCollection services)
     {
         AddGraphicsServices(services);
         AddConnectionServices(services);
         AddRealtimeSimulationServices(services);
+        AddRenderService(services);
+        AddHeadlessServices(services);
 
         //services.AddScoped<InitializedClientContext>();
 
@@ -80,11 +80,5 @@ public static class DualDrillServerExtension
         //services.AddScoped<IClient>(sp => sp.GetRequiredService<BrowserClient>());
         //services.AddScoped<CircuitService>();
         //services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<CircuitService>());
-    }
-
-    public static void MapDualDrillApi(this WebApplication app)
-    {
-        app.MapGet("/api/clients", GetConnectedClients);
-        app.MapPost("/api/peer-connection/server/{clientId}", CreatePeerConnectionToServerAsync);
     }
 }

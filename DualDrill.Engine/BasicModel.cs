@@ -12,7 +12,7 @@ public interface IVertexBufferLayout
 
 }
 
-public sealed class WebGPULogo : IVertexBufferLayout
+public sealed class WebGPULogoMesh : IVertexBufferLayout
 {
     public ulong ArrayStride => 5UL * sizeof(float);
 

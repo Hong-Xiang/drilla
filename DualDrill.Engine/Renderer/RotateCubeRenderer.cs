@@ -1,10 +1,19 @@
-﻿using DualDrill.Graphics;
+﻿using DualDrill.Engine.Scene;
+using DualDrill.Graphics;
 using System.Runtime.InteropServices;
 
 namespace DualDrill.Engine.Renderer;
 
-public sealed class RotateCubeRenderer
+
+public sealed class RotateCubeRenderer : IRenderer<RotateCubeRenderer.State>
 {
+    public readonly record struct State(
+        Camera Camera,
+        Cube Cube
+    )
+    {
+    }
+
     readonly GPUDevice Device;
     GPUShaderModule ShaderModule { get; }
     GPUPipelineLayout PipelineLayout { get; }
@@ -99,9 +108,7 @@ fn fs_main(
     public int UniformBufferByteSize = 4 * 4 * 4;
 
 
-    public RotateCubeRenderer(
-        GPUDevice device
-    )
+    public RotateCubeRenderer(GPUDevice device)
     {
         Device = device;
         ShaderModule = Device.CreateShaderModule(SHADER);
@@ -232,26 +239,22 @@ fn fs_main(
 
     static readonly ReadOnlyMemory<byte> Name = "abc"u8.ToArray();
 
-    public void Render(double time, GPUQueue queue, GPUTexture renderTarget, ReadOnlySpan<float> mvp)
+    public unsafe void Render(double time, GPUQueue queue, GPUTexture renderTarget, State state)
     {
         using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());
 
-        queue.WriteBuffer<float>(UniformBuffer, 0, mvp);
+        var mvp = state.Cube.ModelMatrix * state.Camera.ViewProjectionMatrix;
+        var mvpBuffer = new Span<float>(&mvp, 16);
+        queue.WriteBuffer<float>(UniformBuffer, 0, mvpBuffer);
 
         using var rp = encoder.BeginRenderPass(new()
         {
             ColorAttachments = (GPURenderPassColorAttachment[])[
                 new GPURenderPassColorAttachment() {
                     View = view,
-                    LoadOp = GPULoadOp.Clear,
+                    LoadOp = GPULoadOp.Load,
                     StoreOp = GPUStoreOp.Store,
-                    ClearValue = new() {
-                        R = 0.5,
-                        G = 0.5,
-                        B = 0.5,
-                        A = 1
-                    }
                 }
             ]
         });

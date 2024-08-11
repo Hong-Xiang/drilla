@@ -1,4 +1,5 @@
 ﻿using MessagePipe;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
@@ -6,13 +7,15 @@ using System.Reactive.Subjects;
 
 namespace DualDrill.Engine.Connection;
 
-public sealed partial class ClientStore(
-    ILogger<ClientStore> Logger,
+public sealed partial class ClientConnectionManagerService(
+    ILogger<ClientConnectionManagerService> Logger,
     IPublisher<ImmutableArray<IClient>> ClientConnectionChanged) : IDisposable
 {
     public static Guid ServerId { get; } = Guid.Empty;
 
     readonly ConcurrentDictionary<Uri, IClient> ClientsStore = new();
+    readonly ConcurrentDictionary<Uri, AsyncServiceScope> Scopes = [];
+
     readonly ConcurrentDictionary<Guid, string> ConnectionIds = new();
 
     readonly BehaviorSubject<ImmutableArray<IClient>> ClientsSubject = new([]);

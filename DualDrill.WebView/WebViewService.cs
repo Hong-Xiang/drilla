@@ -3,6 +3,8 @@ using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
@@ -47,19 +49,33 @@ public sealed class WebViewService : IWebViewService
     ulong TextureBufferSize => (ulong)(4 * Width * Height);
 
     public HeadlessSurface Surface { get; }
+    public IServer WebServer { get; }
     public IHostApplicationLifetime ApplicationLifetime { get; }
 
     public WebViewService(
         HeadlessSurface surface,
         IOptions<HeadlessSurface.Option> canvasOption,
+        IServer webServer,
         IHostApplicationLifetime applicationLifetime)
     {
         Surface = surface;
+        WebServer = webServer;
         Option = canvasOption.Value;
         UIThread = new Thread(MainUI);
         UIThread.SetApartmentState(ApartmentState.STA);
         ApplicationLifetime = applicationLifetime;
     }
+
+    async ValueTask<Uri> GetHostedSourceUriAsync(CancellationToken cancellation)
+    {
+        var tcs = new TaskCompletionSource(cancellation);
+        ApplicationLifetime.ApplicationStarted.Register(tcs.SetResult);
+        await tcs.Task;
+        var address = WebServer.Features.Get<IServerAddressesFeature>();
+        var uri = (address?.Addresses.FirstOrDefault(x => new Uri(x).Scheme == "https")) ?? throw new ArgumentNullException("WebView2 Source Uri");
+        return new Uri(uri + "/webview2");
+    }
+
 
     public async ValueTask<Application> GetApplicationAsync()
     {
@@ -91,8 +107,9 @@ public sealed class WebViewService : IWebViewService
         return UIThreadResult.Task;
     }
 
-    public async ValueTask StartAsync(Uri uri, CancellationToken cancellation)
+    public async ValueTask StartAsync(CancellationToken cancellation)
     {
+        var uri = await GetHostedSourceUriAsync(cancellation);
         var targetUri = new Uri($"{uri.Scheme}://localhost:{uri.Port}{uri.PathAndQuery}");
         UIThread.Start(targetUri);
         await WebViewInitializedTaskCompletionSource.Task.ConfigureAwait(false);
@@ -167,7 +184,7 @@ public sealed class WebViewService : IWebViewService
         throw new NotImplementedException();
     }
 
-    public ValueTask<IMediaStream> Capture(HeadlessSurface surface)
+    public ValueTask<IMediaStream> Capture(HeadlessSurface surface, int frameRate)
     {
         throw new NotImplementedException();
     }

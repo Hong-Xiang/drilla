@@ -1,9 +1,5 @@
 ﻿namespace DualDrill.Engine.Connection;
 
-public readonly record struct CreatePairPayload()
-{
-}
-
 public readonly record struct OfferPayload(string Sdp)
 {
 }

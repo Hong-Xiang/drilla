@@ -1,11 +1,23 @@
 ﻿using DualDrill.Graphics;
-using Silk.NET.WebGPU;
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace DualDrill.Engine.Renderer;
 
-public sealed class SimpleColorRenderer : IDisposable
+
+
+public sealed class WebGPULogoRenderer :
+    IRenderer<WebGPULogoRenderer.State>,
+    IDisposable
 {
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly record struct State(
+        Vector2 Position,
+        Vector2 Scale
+    )
+    {
+    }
+
     readonly GPUDevice Device;
 
     //Graphics.ShaderModule Shader { get; set; }
@@ -18,7 +30,7 @@ public sealed class SimpleColorRenderer : IDisposable
     private GPUBindGroupLayout UniformBindGroupLayout { get; }
     private GPUBindGroup UniformBindGroup { get; }
 
-    private readonly WebGPULogo Model = new();
+    private readonly WebGPULogoMesh Model = new();
 
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
@@ -40,17 +52,22 @@ struct VertexOutput {
     @location(0)       color: vec3f,
 }
 
-@group(0) @binding(0) var<uniform> uTime: f32;
+struct UniformData {
+    position: vec2f,
+    scale: vec2f
+}
+
+@group(0) @binding(0) var<uniform> uData: UniformData;
 
 @vertex
 fn vs_main(@location(0) position: vec2f,
            @location(1) color: vec3f) 
 -> VertexOutput {
-    let ratio = 640.0 / 480.0; 
-    var offset = vec2f(-0.6875, -0.463);
-    offset += 0.3 * vec2f(cos(uTime), sin(uTime));
+    //let ratio = 640.0 / 480.0; 
+    //var offset = vec2f(-0.6875, -0.463);
+    //offset += 0.3 * vec2f(cos(uTime), sin(uTime));
     // let p = position + offset;
-    let p = vec2f(position.x, position.y * ratio) + offset;
+    let p = position * uData.scale  + uData.position;
     var out : VertexOutput;
     out.position =  vec4<f32>(p, 0.0, 1.0);
     out.color = color;
@@ -62,8 +79,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(in.color, 1.0);
 }";
 
-
-    public SimpleColorRenderer(GPUDevice device)
+    public WebGPULogoRenderer(GPUDevice device)
     {
         Device = device;
         ShaderModule = Device.CreateShaderModule(SHADER);
@@ -76,7 +92,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                 Visibility = GPUShaderStage.Vertex,
                                 Buffer = new(){
                                     Type = GPUBufferBindingType.Uniform,
-                                    MinBindingSize = sizeof(float)
+                                    MinBindingSize = 4 * sizeof(float)
                                 }
                             }
                         ]
@@ -136,7 +152,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         });
         UniformBuffer = Device.CreateBuffer(new()
         {
-            Size = sizeof(float),
+            Size = sizeof(float) * 4,
             Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.Uniform
         });
         UniformBindGroup = Device.CreateBindGroup(new()
@@ -148,7 +164,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     Binding = 0,
                     Buffer = UniformBuffer,
                     Offset = 0,
-                    Size = sizeof(float)
+                    Size = sizeof(float) * 4
                 }
             ]
         });
@@ -157,30 +173,33 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         var queue = Device.GetQueue();
         queue.WriteBuffer(VertexBuffer, 0, Model.VertexData);
         queue.WriteBuffer(IndexBuffer, 0, Model.IndexData);
-        ReadOnlySpan<float> time = [1.0f];
-        queue.WriteBuffer(UniformBuffer, 0, time);
+        //ReadOnlySpan<float> time = [1.0f];
+        queue.WriteBuffer(UniformBuffer, 0, [0.0f, 0.0f, 640f / 480f, 1.0f]);
     }
 
-    public async ValueTask RenderAsync(double time, GPUQueue queue, GPUTexture renderTarget)
+    public void Render(double time, GPUQueue queue, GPUTexture renderTarget, State state)
     {
         using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());
+        var offset = new Vector2(-0.6875f, -0.463f);
+        var position = state.Position + offset;
+        //var scale = new Vector2(480f / 640f, 1.0f);
+        //var offset = new Vector2(-0.6875f, -0.463f) + 0.3f * new Vector2(MathF.Cos((float)time), MathF.Sin((float)time));
 
-        queue.WriteBuffer(UniformBuffer, 0, [(float)time / 10]);
+        //let ratio = 640.0 / 480.0; 
+        //var offset = vec2f(-0.6875, -0.463);
+        //offset += 0.3 * vec2f(cos(uTime), sin(uTime));
+
+        //queue.WriteBuffer(UniformBuffer, 0, [(float)time / 10]);
+        queue.WriteBuffer(UniformBuffer, 0, [position.X, position.Y, state.Scale.X, state.Scale.Y]);
 
         using var rp = encoder.BeginRenderPass(new()
         {
             ColorAttachments = (GPURenderPassColorAttachment[])[
                 new GPURenderPassColorAttachment() {
                     View = view,
-                    LoadOp = GPULoadOp.Clear,
+                    LoadOp = GPULoadOp.Load,
                     StoreOp = GPUStoreOp.Store,
-                    ClearValue = new() {
-                        R = (Math.Cos(time / 10.0f) + 1.0f) / 2,
-                        G = (Math.Sin(time / 10.0f) + 1.0f) / 2,
-                        B = 0,
-                        A = 1
-                    }
                 }
             ]
         });
