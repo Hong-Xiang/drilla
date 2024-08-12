@@ -23,7 +23,7 @@ public sealed class RotateCubeRenderer : IRenderer<RotateCubeRenderer.State>
     GPUBindGroupLayout BindGroupLayout { get; }
     GPUBindGroup BindGroup { get; }
 
-    public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.RGBA8UnormSrgb;
+    public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
     private const string SHADER = @"
 struct Uniforms {

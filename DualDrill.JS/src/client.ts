@@ -25,6 +25,12 @@ import {
   DualDrillConnection,
 } from "./connection/dual-drill-connection";
 import { TypedArray } from "three";
+import {
+  onWebviewMessage,
+  onWebViewSharedBufferMessage,
+  WebViewSendMessageToHost,
+} from "./connection/webview2-connection";
+import { WebView2Service } from "./webview2service";
 
 export async function testDotnetExport() {
   const exports = await getDotnetWasmExports("DualDrill.Client.dll");
@@ -408,62 +414,66 @@ export async function main() {
   await connection.start();
 }
 
-interface SurfaceCaptureStream {
-  surfaceId: string;
-  canvas: HTMLCanvasElement;
-  stream: MediaStream;
-  context: CanvasRenderingContext2D;
-  buffer: ArrayBuffer;
-}
+export async function WebViewMain() {
+  // const interopUri = "/api/webviewInterop";
+  const service = new WebView2Service();
+  // (window as any).chrome.webview.addEventListener(
+  //   "sharedbufferreceived",
+  //   (e: any) => {
+  //     console.log(e);
+  //   }
+  // );
 
-const CapturedStreams = new Map<string, SurfaceCaptureStream>();
+  const { surfaceId, buffer, width, height } =
+    await service.getSurfaceSharedBuffer();
+  const div = document.getElementById("video-render-root");
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  div?.appendChild(canvas);
+  const context = canvas.getContext("2d")!;
+  service.drawSurface(surfaceId, context);
 
-export function WebViewMain() {
-  const interopUri = "/api/webviewInterop";
-  (window as any).chrome.webview.addEventListener(
-    "sharedbufferreceived",
-    async (e: any) => {
-      const surfaceId = e.additionalData.SurfaceId;
-      const div = document.getElementById("video-render-root");
+  // onWebViewSharedBufferMessage().subscribe({
+  //   next: async ({ surfaceId, buffer }) => {
+  //     const div = document.getElementById("video-render-root");
+  //     const canvas = document.createElement("canvas");
+  //     canvas.width = 640;
+  //     canvas.height = 480;
+  //     div?.appendChild(canvas);
+  //     const context = canvas.getContext("2d")!;
+  //     const stream = canvas.captureStream();
 
-      const canvas = document.createElement("canvas");
-      canvas.width = 640;
-      canvas.height = 480;
-      div?.appendChild(canvas);
-      const context = canvas.getContext("2d")!;
-      const stream = canvas.captureStream();
+  //     CapturedStreams.set(surfaceId, {
+  //       surfaceId,
+  //       canvas,
+  //       context,
+  //       stream,
+  //       buffer,
+  //     });
 
-      CapturedStreams.set(surfaceId, {
-        surfaceId,
-        canvas,
-        context,
-        stream,
-        buffer: e.getBuffer(),
-      });
+  //     await fetch(interopUri + `/capturedStream/${surfaceId}/${stream.id}`, {
+  //       method: "POST",
+  //     });
+  //   },
+  // });
 
-      await fetch(interopUri + `/capturedStream/${surfaceId}/${stream.id}`, {
-        method: "POST",
-      });
-    }
-  );
+  const btn = document.getElementById(
+    "post-mesasge-webview2-test"
+  ) as HTMLButtonElement;
+  let count = 0;
+  btn.onclick = () => {
+    WebViewSendMessageToHost(count);
+  };
 
-  (window as any).chrome.webview.addEventListener("message", (e: any) => {
-    const data: string = e.data;
-    const msg = JSON.parse(data);
-    // const dataBuffer = new Uint8ClampedArray(dataArray);
-    // console.log(data.length, data.length / 1472);
-    // const imageData = new ImageData(data, width, height);
-    console.log(msg);
-    if (msg.MessageType === "BufferToPresent") {
-      const s = CapturedStreams.get(msg.SurfaceId);
-      if (s) {
-        const imageData = new ImageData(
-          new Uint8ClampedArray(s.buffer, msg.Offset, msg.Length),
-          msg.Width,
-          msg.Height
-        );
-        s.context.putImageData(imageData, 0, 0);
-      }
-    }
+  canvas.addEventListener("pointerdown", (e) => {
+    console.log("simple client pointer event", e);
+    const h = (e: PointerEvent) => {
+      WebViewSendMessageToHost(normalizedPointerEvent(e, canvas));
+    };
+    canvas.addEventListener("pointermove", h);
+    window.addEventListener("pointerup", () => {
+      canvas.removeEventListener("pointermove", h);
+    });
   });
 }

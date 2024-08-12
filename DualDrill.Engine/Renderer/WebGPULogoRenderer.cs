@@ -32,7 +32,7 @@ public sealed class WebGPULogoRenderer :
 
     private readonly WebGPULogoMesh Model = new();
 
-    public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.RGBA8UnormSrgb;
+    public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
     private const string SHADER_OLD = @"@vertex
 fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4<f32> {

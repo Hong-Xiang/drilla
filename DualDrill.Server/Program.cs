@@ -36,6 +36,7 @@ public class Program
             .AddInteractiveWebAssemblyComponents();
 
         builder.Services.AddSingleton<IWebViewService, WebViewService>();
+        builder.Services.AddSingleton<IWebViewInteropService>(sp => sp.GetRequiredService<IWebViewService>() as IWebViewInteropService);
 
         builder.Services.AddDualDrillServerServices();
 

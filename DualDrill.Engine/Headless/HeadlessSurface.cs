@@ -5,9 +5,15 @@ using System.Threading.Channels;
 
 namespace DualDrill.Engine.Headless;
 
+
 public sealed class HeadlessSurface : IGPUSurface
 {
     public Guid Id { get; } = Guid.NewGuid();
+
+    public sealed record class EntityDescription(Guid Id, Option Option)
+    {
+    }
+
     public sealed class Option
     {
         //public int Width { get; set; } = 1472;
@@ -15,13 +21,24 @@ public sealed class HeadlessSurface : IGPUSurface
         public int Width { get; set; } = 640;
         public int Height { get; set; } = 480;
         public int SlotCount { get; set; } = 3;
-        public GPUTextureFormat Format { get; set; } = GPUTextureFormat.RGBA8UnormSrgb;
+        public GPUTextureFormat Format { get; set; } = GPUTextureFormat.BGRA8UnormSrgb;
     }
+
+    public EntityDescription Entity => new(Id, new Option()
+    {
+        Width = Width,
+        Height = Height,
+        SlotCount = SlotCount,
+        Format = Format
+    });
+
 
     private readonly Channel<HeadlessRenderTarget> RenderTargetChannel;
     GPUDevice Device;
     public readonly int Width;
     public readonly int Height;
+    public readonly GPUTextureFormat Format;
+    public readonly int SlotCount;
     HeadlessRenderTarget? CurrentTarget = null;
     public IAsyncSubscriber<HeadlessSurfaceFrame> OnFrame { get; }
     private IAsyncPublisher<HeadlessSurfaceFrame> EmitOnFrame { get; }
@@ -31,6 +48,8 @@ public sealed class HeadlessSurface : IGPUSurface
         Device = device;
         Width = option.Width;
         Height = option.Height;
+        Format = option.Format;
+        SlotCount = option.SlotCount;
         RenderTargetChannel = Channel.CreateBounded<HeadlessRenderTarget>(option.SlotCount);
         for (var i = 0; i < option.SlotCount; i++)
         {
@@ -89,7 +108,7 @@ public sealed class HeadlessSurface : IGPUSurface
                     Height = Height,
                     DepthOrArrayLayers = 1
                 },
-                GPUTextureFormat.BGRA8Unorm,
+                Format,
                 data,
                 target.SlotIndex
             );

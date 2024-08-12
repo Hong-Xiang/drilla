@@ -14,8 +14,8 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
     ILogger<SIPSorceryRTCPeerConnectionProviderService> Logger,
     HeadlessSurfaceCaptureVideoSource VideoSource,
     IPublisher<PairIdentity> CreatePairPublisher,
-    IPublisher<ClientInput<PointerEvent>> PointerEventPublisher,
-    IPublisher<ClientInput<ScaleEvent>> ScaleEventPublisher,
+    IPublisher<ClientEvent<PointerEvent>> PointerEventPublisher,
+    IPublisher<ClientEvent<ScaleEvent>> ScaleEventPublisher,
     ISignalConnectionProviderService SignalConnectionService)
     : IPeerConnectionProviderService
 {
@@ -125,7 +125,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                         var e = JsonSerializer.Deserialize<PointerEvent>(data, JsonSerializerOptions.Web);
                         if (e is not null)
                         {
-                            PointerEventPublisher.Publish(new ClientInput<PointerEvent>(clientId, e));
+                            PointerEventPublisher.Publish(new ClientEvent<PointerEvent>(clientId, e));
                         }
                         else
                         {
@@ -140,7 +140,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                         var e = JsonSerializer.Deserialize<ScaleEvent>(data, JsonSerializerOptions.Web);
                         if (e is not null)
                         {
-                            ScaleEventPublisher.Publish(new ClientInput<ScaleEvent>(clientId, e));
+                            ScaleEventPublisher.Publish(new ClientEvent<ScaleEvent>(clientId, e));
                         }
                     };
                 }
