@@ -1,4 +1,4 @@
-namespace DuralDrill.Engine.Input;
+namespace DualDrill.Engine.Message;
 
 public sealed record class DOMRect(
     float X,

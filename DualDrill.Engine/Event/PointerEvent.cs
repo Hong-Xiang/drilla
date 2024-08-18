@@ -1,4 +1,4 @@
-﻿namespace DualDrill.Engine.Input;
+﻿namespace DualDrill.Engine.Event;
 
 public enum PointerEventType : int
 {

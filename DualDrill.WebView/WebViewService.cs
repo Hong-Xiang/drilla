@@ -1,8 +1,8 @@
 ﻿using DnsClient.Internal;
 using DualDrill.Engine;
 using DualDrill.Engine.Connection;
+using DualDrill.Engine.Event;
 using DualDrill.Engine.Headless;
-using DualDrill.Engine.Input;
 using DualDrill.Engine.Media;
 using DualDrill.Graphics;
 using DualDrill.WebView.Event;
@@ -14,8 +14,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Web.WebView2.Core;
+using R3;
+using SIPSorcery.Net;
 using System.Collections.Concurrent;
-using System.Reactive.Disposables;
 using System.Text.Json;
 using System.Windows;
 
@@ -25,10 +26,11 @@ public sealed partial class WebViewService(
     IOptions<HeadlessSurface.Option> CanvasOption,
     IServer webServer,
     IHostApplicationLifetime applicationLifetime,
-    ILogger<WebViewService> logger,
+    ILogger<WebViewService> Logger,
     ISubscriber<SharedBufferReceivedEvent> sharedBufferReceived,
-    ISubscriber<Guid, CapturedStream> capturedStream,
-    IPublisher<ClientEvent<PointerEvent>> pointerEventPublisher) : IWebViewService, IWebViewInteropService
+    ISubscriber<Guid, CapturedStream> CapturedStream,
+    IPublisher<ClientEvent<PointerEvent>> PointerEventPublisher)
+    : IWebViewService, IWebViewInteropService
 {
     private System.Windows.Application? App;
     private Microsoft.Web.WebView2.Wpf.WebView2? WebView;
@@ -76,6 +78,7 @@ public sealed partial class WebViewService(
     }
 
     TaskCompletionSource WebViewInitializedTaskCompletionSource = new();
+
     void MainUI(object? data)
     {
         App = new System.Windows.Application();
@@ -94,12 +97,14 @@ public sealed partial class WebViewService(
         WebView.CoreWebView2InitializationCompleted += (sender, e) =>
         {
             WebViewInitializedTaskCompletionSource.SetResult();
+            WebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
+
             WebView.CoreWebView2.WebMessageReceived += (sender, e) =>
             {
                 var data = e.WebMessageAsJson;
-                pointerEventPublisher.Publish(new(Guid.Empty, JsonSerializer.Deserialize<PointerEvent>(data, JsonSerializerOptions.Web)));
+                PointerEventPublisher.Publish(new(ClientsManager.ServerId,
+                    JsonSerializer.Deserialize<TaggedEvent<PointerEvent>>(data, JsonSerializerOptions.Web).Data));
             };
-            WebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
         };
         AppCreatedCompletionSource.SetResult(App);
 
@@ -163,9 +168,10 @@ public sealed partial class WebViewService(
         {
             if (buffer is null)
             {
-                var rawbuffer = WebView.CoreWebView2.Environment.CreateSharedBuffer(BufferSize(
-                    surface.Entity.Option.Width, surface.Entity.Option.Width, surface.Entity.Option.Format
-                ) * (ulong)Option.SlotCount);
+                var bufferSize = BufferSize(
+                    surface.Entity.Option.Width, surface.Entity.Option.Height, surface.Entity.Option.Format
+                ) * (ulong)Option.SlotCount;
+                var rawbuffer = WebView.CoreWebView2.Environment.CreateSharedBuffer(bufferSize);
                 buffer = new(surface.Id, surface.Entity.Option, rawbuffer);
                 SharedBuffers.TryAdd(surface.Id, buffer);
                 SurfaceOnFrameSubscription.Disposable = SubscribeSurfaceOnFrame(surface);
@@ -190,21 +196,15 @@ public sealed partial class WebViewService(
                           {
                               frame.Data.Span.CopyTo(buffer.SlotSpan(frame.SlotIndex));
                           }, cancellation);
-                          await SendMessage(JsonSerializer.Serialize(new BufferToPresentEvent(
+                          await SendMessageAsync(new BufferToPresentEvent(
                                               surface.Id,
-                                              (int)(frame.SlotIndex * (int)TextureBufferSize),
-                                              (int)TextureBufferSize,
+                                              (int)(frame.SlotIndex * frame.Data.Length),
+                                              frame.Data.Length,
                                               0,
                                               surface.Width,
                                               surface.Height
-                                          )), cancellation);
+                                          ), cancellation);
                       });
-    }
-
-
-    public ValueTask<IPeerConnection> GetPeerConnectionAsync(Guid clientId)
-    {
-        throw new NotImplementedException();
     }
 
 
@@ -230,16 +230,53 @@ public sealed partial class WebViewService(
         throw new NotImplementedException();
     }
 
-    private async ValueTask SendMessage(string data, CancellationToken cancellation)
+    private async ValueTask SendMessageAsync(string data, CancellationToken cancellation)
     {
         await DispatchAsync(() =>
         {
             if (WebView?.CoreWebView2 is null)
             {
-                logger.LogWarning($"WebView is not initialized yet");
+                Logger.LogWarning($"WebView is not initialized yet");
                 return;
             }
             WebView.CoreWebView2.PostWebMessageAsString(data);
         }, cancellation);
+    }
+
+    public async ValueTask SendMessageAsync<T>(T data, CancellationToken cancellation)
+        where T : notnull
+    {
+        await SendMessageAsync(JsonSerializer.Serialize(new TaggedEvent<T>(data), JsonSerializerOptions.Web), cancellation);
+    }
+}
+
+
+sealed record class WebViewPeerConnectionProxy(Guid PeerId) : IPeerConnection
+{
+    public Guid SelfId => ClientsManager.ServerId;
+    public R3.Observable<IDataChannel> OnDataChannel => throw new NotImplementedException();
+
+    public R3.Observable<IMediaStreamTrack> OnTrack => throw new NotImplementedException();
+
+    public R3.Observable<RTCPeerConnectionState> OnConnectionStateChange => throw new NotImplementedException();
+
+    public ValueTask AddTrack(IMediaStreamTrack track)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask<IDataChannel> CreateDataChannel(string label)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask StartAsync(CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
     }
 }

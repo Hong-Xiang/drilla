@@ -16,10 +16,10 @@ public sealed class HeadlessSurface : IGPUSurface
 
     public sealed class Option
     {
-        //public int Width { get; set; } = 1472;
-        //public int Height { get; set; } = 936 * 2;
-        public int Width { get; set; } = 640;
-        public int Height { get; set; } = 480;
+        public int Width { get; set; } = 1472;
+        public int Height { get; set; } = 936 * 2;
+        //public int Width { get; set; } = 640;
+        //public int Height { get; set; } = 480;
         public int SlotCount { get; set; } = 3;
         public GPUTextureFormat Format { get; set; } = GPUTextureFormat.BGRA8UnormSrgb;
     }

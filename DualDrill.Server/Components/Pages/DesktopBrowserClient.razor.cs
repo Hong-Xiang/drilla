@@ -14,7 +14,7 @@ namespace DualDrill.Server.Components.Pages;
 public partial class DesktopBrowserClient : IAsyncDisposable
 {
     [Inject] IJSRuntime JSRuntime { get; set; }
-    [Inject] ClientConnectionManagerService ClientHub { get; set; } = default!;
+    [Inject] ClientsManager ClientHub { get; set; } = default!;
     [Inject] ILogger<DesktopBrowserClient> Logger { get; set; } = default!;
     [Inject] IHubContext<DrillHub, IDrillHubClient> HubContext { get; set; } = default!;
     BrowserClient? Client { get; set; }

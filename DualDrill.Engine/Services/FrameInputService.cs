@@ -1,5 +1,5 @@
 ﻿using DualDrill.Engine.Connection;
-using DualDrill.Engine.Input;
+using DualDrill.Engine.Event;
 using MessagePipe;
 using System.Reactive.Disposables;
 using System.Threading.Channels;

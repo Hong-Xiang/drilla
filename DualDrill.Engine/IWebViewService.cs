@@ -15,15 +15,15 @@ public interface IHostToWebViewEvent
 }
 public interface IWebViewService
 {
-    ValueTask<IPeerConnection> GetPeerConnectionAsync(Guid clientId);
     ValueTask<IMediaStream> CaptureAsync(HeadlessSurface surface, int frameRate);
     ValueTask StartAsync(CancellationToken cancellation);
-    void SendMessage<T>(T data) where T : IHostToWebViewEvent;
+    ValueTask SendMessageAsync<T>(T data, CancellationToken cancellation) where T : notnull;
 }
 
 public interface IWebViewInteropService
 {
     ValueTask<IWebViewSharedBuffer> CreateSurfaceSharedBufferAsync(HeadlessSurface surface, CancellationToken cancellation);
+
 }
 
 public interface ICanvas2D

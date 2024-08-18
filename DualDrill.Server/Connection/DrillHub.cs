@@ -16,10 +16,10 @@ public interface IDrillHubClient
 
 sealed class DrillHub(
     ILogger<DrillHub> Logger,
-    IAsyncPublisher<PairIdentity, OfferPayload> OfferPublisher,
-    IAsyncPublisher<PairIdentity, AnswerPayload> AnswerPublisher,
-    IAsyncPublisher<PairIdentity, AddIceCandidatePayload> AddIceCandidatePublisher,
-    ClientConnectionManagerService ClientStore) : Hub<IDrillHubClient>
+    IAsyncPublisher<PairIdentity, OfferEvent> OfferPublisher,
+    IAsyncPublisher<PairIdentity, AnswerEvent> AnswerPublisher,
+    IAsyncPublisher<PairIdentity, AddIceCandidateEvent> AddIceCandidatePublisher,
+    ClientsManager ClientStore) : Hub<IDrillHubClient>
 {
     static readonly string ClientIdKey = "ClientId";
 

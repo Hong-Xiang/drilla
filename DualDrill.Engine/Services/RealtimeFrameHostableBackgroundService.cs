@@ -14,8 +14,9 @@ public sealed class RealtimeFrameHostableBackgroundService(
     IFrameRenderService frameService,
     ILogger<RealtimeFrameHostableBackgroundService> logger,
     HeadlessSurface surface,
-    IWebViewService WebViewService,
-    HeadlessSurfaceCaptureVideoSource VideoSource) : IHostableBackgroundService
+    IWebViewService WebViewService
+    //HeadlessSurfaceCaptureVideoSource VideoSource
+    ) : IHostableBackgroundService
 {
     readonly TimeSpan SampleRate = TimeSpan.FromSeconds(1.0 / 60.0);
     readonly TimeProvider TimeProvider = TimeProvider.System;
@@ -40,7 +41,7 @@ public sealed class RealtimeFrameHostableBackgroundService(
         await Task.Yield();
         await WebViewService.StartAsync(stoppingToken);
         _ = WebViewService.CaptureAsync(surface, 30);
-        await VideoSource.StartVideo();
+        //await VideoSource.StartVideo();
         using var timer = TimeProvider.CreateTimer(TimerFrameCallback, this, TimeSpan.Zero, SampleRate);
 
         var scene = RenderScene.TestScene(surface.Width, surface.Height);

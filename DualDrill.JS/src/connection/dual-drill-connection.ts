@@ -1,4 +1,4 @@
-import { createCompositeDisposable } from "../disposable";
+import { Subscription } from "rxjs";
 import {
   createAsyncMessageSourceFactoryFromEventMap,
   AsyncMessageSource,
@@ -17,15 +17,16 @@ const RTCPeerConnectionPublisherFactory =
   createAsyncMessageSourceFactoryFromEventMap<RTCPeerConnectionEventMap>();
 
 export function createPeerConnection(
-  signalConnection: SignalConnection
+  signalConnection: SignalConnection,
+  subscribeNegotiationNeeded: boolean
 ): DualDrillConnection {
   const pc = new RTCPeerConnection();
-  const subscriptions = createCompositeDisposable();
+  const subscriptions = new Subscription();
   async function negotiate() {
-    console.log("negotiate called");
+    console.log(`negotiate called ${signalConnection.id}`);
     const offer = await pc.createOffer({
-      offerToReceiveVideo: true,
-      iceRestart: true,
+      // offerToReceiveVideo: true,
+      // iceRestart: true,
     });
     if (!offer.sdp) {
       throw new Error("No SDP in offer");
@@ -34,21 +35,37 @@ export function createPeerConnection(
     await signalConnection.offer(offer.sdp);
   }
 
-  pc.onnegotiationneeded = negotiate;
+  pc.onnegotiationneeded = () => {
+    console.warn("negotiation needed");
+    console.log(signalConnection.id);
+  };
 
   subscriptions.add(
     signalConnection.onOffer.subscribe(async (sdp) => {
+      console.log(`on offer called ${signalConnection.id}`);
+      var arr = sdp.split("\r\n");
+      arr.forEach((str, i) => {
+        if (/^a=fmtp:\d*/.test(str)) {
+          arr[i] =
+            str +
+            ";x-google-max-bitrate=28000;x-google-min-bitrate=0;x-google-start-bitrate=20000";
+        }
+      });
+      const modifiedSdp = arr.join("\r\n");
       await pc.setRemoteDescription({
         type: "offer",
-        sdp,
+        sdp: sdp,
       });
       const answer = await pc.createAnswer();
+      console.log("created answer");
+      console.log(answer);
       await pc.setLocalDescription(answer);
       await signalConnection.answer(answer.sdp!);
     })
   );
 
   async function onAnswer(sdp: string) {
+    console.log(`on answer ${signalConnection.id}`);
     if (pc.localDescription) {
       await pc.setRemoteDescription({ type: "answer", sdp });
     }
@@ -69,6 +86,10 @@ export function createPeerConnection(
       }
     })
   );
+
+  pc.addEventListener("connectionstatechange", (e) => {
+    console.log(pc.connectionState);
+  });
 
   // Diagnostics.
   pc.onicegatheringstatechange = () =>
@@ -91,11 +112,11 @@ export function createPeerConnection(
     },
     start: async () => {
       const p = new Promise<void>((resolve) => {
-        pc.onconnectionstatechange = () => {
+        pc.addEventListener("connectionstatechange", () => {
           if (pc.connectionState === "connected") {
             resolve();
           }
-        };
+        });
       });
       await negotiate();
       await p;

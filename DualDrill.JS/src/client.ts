@@ -25,12 +25,13 @@ import {
   DualDrillConnection,
 } from "./connection/dual-drill-connection";
 import { TypedArray } from "three";
+import { onWebviewMessage, WebView2Service } from "./webview2service";
 import {
-  onWebviewMessage,
-  onWebViewSharedBufferMessage,
-  WebViewSendMessageToHost,
-} from "./connection/webview2-connection";
-import { WebView2Service } from "./webview2service";
+  createSignalConnectionOverWebSocket,
+  startWebsocketConnection,
+} from "./connection/websocket";
+import { Tags } from "./taggedEvent";
+export { startWebsocketConnection } from "./connection/websocket";
 
 export async function testDotnetExport() {
   const exports = await getDotnetWasmExports("DualDrill.Client.dll");
@@ -310,8 +311,8 @@ export async function CreateSimpleRTCClient(clientId: string) {
 
   connection.onTrack.subscribe(async (t) => {
     console.log("received track");
-    console.log(t.streams[0].id);
     console.log(t);
+    console.log(t.streams[0].id);
     video.srcObject = t.streams[0];
   });
 
@@ -340,9 +341,12 @@ export function createVideoElement(connection: DualDrillConnection) {
   video.muted = true;
   connection.onTrack.subscribe(async (t) => {
     console.log("received track");
-    console.log(t.streams[0].id);
     console.log(t);
+    console.log(t.receiver.getParameters());
+    console.log(t.streams[0].id);
     video.srcObject = t.streams[0];
+    video.muted = true;
+    video.play();
   });
   const channel = connection.createDataChannel("pointermove");
   video.addEventListener("pointerdown", (e) => {
@@ -398,20 +402,39 @@ export function appendToVideoTarget(el: HTMLElement) {
 }
 
 export async function main() {
-  await SignalRConnection.start();
-  const r = await fetch(
-    `/api/ServerConnection/client?connectionId=${SignalRConnection.connectionId}`,
-    {
-      method: "POST",
-    }
+  // await SignalRConnection.start();
+  const SignalConnectionBaseUrl = "/api/SignalConnection";
+  const serverId: string = (
+    await (await fetch(`${SignalConnectionBaseUrl}/server`)).json()
+  ).id;
+  const clientId = crypto.randomUUID();
+  (document.getElementById("client-id-span") as HTMLSpanElement).innerText =
+    clientId;
+  // await fetch(`/api/ServerConnection/client/${clientId}`, {
+  //   method: "POST",
+  // });
+
+  // const r = await fetch(
+  //   `/api/ServerConnection/client?connectionId=${SignalRConnection.connectionId}`,
+  //   {
+  //     method: "POST",
+  //   }
+  // );
+  // const clientId: string = (await r.json()).id;
+  // await SignalRConnection.invoke("SetClientId", clientId);
+  // const connection = CreateRTCConnection(clientId);
+  const webSocket = startWebsocketConnection(clientId);
+  const signalConnection = createSignalConnectionOverWebSocket(
+    clientId,
+    serverId,
+    webSocket
   );
-  const clientId: string = (await r.json()).id;
-  await SignalRConnection.invoke("SetClientId", clientId);
-  const connection = CreateRTCConnection(clientId);
+  const connection = createPeerConnection(signalConnection, true);
+
   const video = createVideoElement(connection);
   const div = document.getElementById("video-render-root");
   div?.appendChild(video);
-  await connection.start();
+  // await connection.start();
 }
 
 export async function WebViewMain() {
@@ -427,12 +450,22 @@ export async function WebViewMain() {
   const { surfaceId, buffer, width, height } =
     await service.getSurfaceSharedBuffer();
   const div = document.getElementById("video-render-root");
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  const canvas = service.drawSurface(surfaceId);
   div?.appendChild(canvas);
-  const context = canvas.getContext("2d")!;
-  service.drawSurface(surfaceId, context);
+  const stream = canvas.captureStream(60);
+  service.MainStream = stream;
+  const videoEl = document.getElementById(
+    "video-capture-root"
+  ) as HTMLVideoElement;
+  console.log(videoEl);
+  videoEl.playsInline = true;
+  videoEl.autoplay = true;
+  videoEl.muted = true;
+  videoEl.srcObject = stream;
+  videoEl.play();
+  (document.getElementById("play-video") as HTMLButtonElement).onclick = () => {
+    videoEl.play();
+  };
 
   // onWebViewSharedBufferMessage().subscribe({
   //   next: async ({ surfaceId, buffer }) => {
@@ -457,23 +490,22 @@ export async function WebViewMain() {
   //     });
   //   },
   // });
-
-  const btn = document.getElementById(
-    "post-mesasge-webview2-test"
-  ) as HTMLButtonElement;
-  let count = 0;
-  btn.onclick = () => {
-    WebViewSendMessageToHost(count);
-  };
+  onWebviewMessage().subscribe((e) => {
+    if (e.type !== Tags.BufferToPresent) {
+      console.log(e);
+    }
+  });
 
   canvas.addEventListener("pointerdown", (e) => {
     console.log("simple client pointer event", e);
     const h = (e: PointerEvent) => {
-      WebViewSendMessageToHost(normalizedPointerEvent(e, canvas));
+      service.send(Tags.PointerEvent, normalizedPointerEvent(e, canvas));
     };
     canvas.addEventListener("pointermove", h);
     window.addEventListener("pointerup", () => {
       canvas.removeEventListener("pointermove", h);
     });
   });
+
+  // startWebsocketConnection(crypto.randomUUID());
 }

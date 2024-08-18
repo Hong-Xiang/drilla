@@ -1,5 +1,6 @@
 ﻿using DualDrill.Engine;
 using DualDrill.Engine.Headless;
+using DualDrill.WebView;
 using DualDrill.WebView.Interop;
 using MessagePipe;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,7 @@ public sealed class WebViewInteropController(
     IWebViewInteropService WebViewInteropService,
     IPublisher<SharedBufferReceivedEvent> SharedBufferReceivedPublisher,
     IPublisher<Guid, CapturedStream> CapturedStream,
+    IPublisher<Guid, PeerConnectionCreatedEvent> RTCPeerConnectionCreated,
     HeadlessSurface Surface
 ) : ControllerBase
 {
@@ -50,6 +52,14 @@ public sealed class WebViewInteropController(
     [Route("SurfaceSharedBuffer/{id}/OnFrameSubscription")]
     public async Task<IActionResult> SubscribeSurfaceOnFrameEventAsync(Guid id, CancellationToken cancellation)
     {
+        return Ok();
+    }
+
+    [HttpPut]
+    [Route("RTCPeerConnection/{clientId}")]
+    public async Task<IActionResult> RTCPeerConnectionCreatedAsync(Guid clientId)
+    {
+        RTCPeerConnectionCreated.Publish(clientId, new PeerConnectionCreatedEvent(clientId));
         return Ok();
     }
 }

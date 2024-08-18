@@ -28,17 +28,23 @@ public class Program
 
         builder.Services.AddMessagePipe();
 
-        builder.Services.AddControllersWithViews();
-        builder.Services.AddControllers();
+        builder.Services.AddControllersWithViews(options =>
+        {
+            options.InputFormatters.Add(new PlainTextFormatter());
+        });
+        //builder.Services.AddControllers();
         builder.Services.AddHealthChecks();
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
 
-        builder.Services.AddSingleton<IWebViewService, WebViewService>();
-        builder.Services.AddSingleton<IWebViewInteropService>(sp => sp.GetRequiredService<IWebViewService>() as IWebViewInteropService);
+        //builder.Services.AddOpenApi();
+
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
 
         builder.Services.AddDualDrillServerServices();
+
 
         var app = builder.Build();
         app.MapHealthChecks("health");
@@ -64,10 +70,15 @@ public class Program
         app.UseAntiforgery();
         app.MapControllers();
         app.MapRenderControls();
-        app.MapControllerRoute(
-            name: "default",
-            pattern: "{controller=Home}/{action=Index}/{id?}")
-            .WithStaticAssets();
+        //app.MapControllerRoute(
+        //    name: "default",
+        //    pattern: "{controller=Home}/{action=Index}/{id?}")
+        //    .WithStaticAssets();
+
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
+        //app.MapOpenApi();
 
         //app.MapRazorComponents<DualDrill.Server.Components.App>()
         //    .AddInteractiveServerRenderMode()
