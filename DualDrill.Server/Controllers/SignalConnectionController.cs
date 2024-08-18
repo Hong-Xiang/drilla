@@ -9,10 +9,6 @@ using System.Threading.Channels;
 
 namespace DualDrill.Server.Controllers;
 
-public sealed record class TriggerTest(int Data) { }
-
-
-
 [Route("api/[controller]")]
 [ApiController]
 public class SignalConnectionController(
@@ -66,7 +62,7 @@ public class SignalConnectionController(
                 using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
                 //Console.WriteLine($"Get Websocket Connection from client id {clientId}");
                 //await PeerConnectionProvider.CreatePeerConnectionAsync(clientId, cancellation);
-                //await Task.Delay(1000);
+                await Task.Delay(2000);
                 await PeerConnectionProvider.CreatePeerConnectionAsync(clientId, cancellation);
                 await SendAllMessageAsync(webSocket, clientId, cancellation);
             }

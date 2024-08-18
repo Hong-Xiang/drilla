@@ -138,11 +138,11 @@ export class WebView2Service {
         } else {
           console.warn("track is not ready yet");
         }
-        await new Promise<void>((resolve) => {
-          setTimeout(() => {
-            resolve();
-          }, 1500);
-        });
+        // await new Promise<void>((resolve) => {
+        //   setTimeout(() => {
+        //     resolve();
+        //   }, 1500);
+        // });
         console.log("start connection");
         await pc.start();
       },
