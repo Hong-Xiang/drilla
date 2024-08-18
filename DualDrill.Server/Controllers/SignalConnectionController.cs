@@ -60,8 +60,7 @@ public class SignalConnectionController(
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
                 using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                //Console.WriteLine($"Get Websocket Connection from client id {clientId}");
-                //await PeerConnectionProvider.CreatePeerConnectionAsync(clientId, cancellation);
+                // TODO: find proper way (e.g. await Ping/Pong) to ensure the event listener in client is added
                 await Task.Delay(2000);
                 await PeerConnectionProvider.CreatePeerConnectionAsync(clientId, cancellation);
                 await SendAllMessageAsync(webSocket, clientId, cancellation);
