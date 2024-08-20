@@ -45,7 +45,6 @@ function getWebView2(): WebView2API {
 }
 
 function onWebViewSharedBufferMessage() {
-  const webview = getWebView2();
   return fromEvent<WebView2SharedBufferMessage>(
     getWebView2(),
     "sharedbufferreceived"
@@ -98,6 +97,8 @@ export class WebView2Service {
   MainSurfaceId?: string;
   MainStream?: MediaStream;
 
+  ReceivedStream?: MediaStream;
+
   constructor(private readonly BaseUrl = "/api/webviewInterop") {
     this.onEvent(Tags.RequestPeerConnectionEvent).subscribe({
       next: async ({ sourceId, targetId }) => {
@@ -108,11 +109,36 @@ export class WebView2Service {
           throw new Error(`PeerConnection #${sourceId} already exists`);
         }
         const signalConnection = this.SignalConnection(sourceId);
-        const pc = createPeerConnection(signalConnection, false);
+        const pc = createPeerConnection(signalConnection, true);
+        pc.onTrack.subscribe(async (t) => {
+          // setInterval(() => {
+          //   console.log(t);
+          //   console.log(t.streams);
+          //   console.log(t.track);
+          //   if (t.streams[0] && !this.ReceivedStream) {
+          //     this.ReceivedStream = t.streams[0];
+          //   }
+          // }, 1000);
+          console.log(t);
+          console.log(t.streams);
+          console.log(t.track);
+
+          if (t.streams[0] && !this.ReceivedStream) {
+            this.ReceivedStream = t.streams[0];
+          } else {
+            this.ReceivedStream = new MediaStream([
+              t.transceiver.receiver.track,
+            ]);
+          }
+          // setTimeout(async () => {
+          //   console.log("replace track");
+          //   console.log(t.transceiver.receiver.track);
+          //   console.log(t.track);
+          //   console.log(await t.transceiver.receiver.getStats());
+          // }, 2000);
+        });
         this.PeerConnections.set(sourceId, pc);
         console.log(`Create Peer Connection for client id ${sourceId}`);
-        // await this.PeerConnectionCreated(sourceId);
-        // console.log("report created called");
         if (this.MainStream) {
           console.log(`adding track for stream ${this.MainStream.id}`);
           const track = this.MainStream.getVideoTracks()[0];
@@ -125,33 +151,14 @@ export class WebView2Service {
           parameters.encodings[0].maxFramerate = 30; // Set the maximum framerate to 30 fps
           parameters.encodings[0].priority = "high";
           parameters.encodings[0].networkPriority = "high";
-          // parameters.codecs = [
-          //   {
-          //     mimeType: "video/x-vp9", // Use VP9 codec for higher quality
-          //     sdpFmtpLine: "profile-id=2;",
-          //     clockRate: 90000,
-          //     payloadType: 100,
-          //   },
-          // ];
           console.log(parameters);
           await sender.setParameters(parameters);
         } else {
           console.warn("track is not ready yet");
         }
-        // await new Promise<void>((resolve) => {
-        //   setTimeout(() => {
-        //     resolve();
-        //   }, 1500);
-        // });
         console.log("start connection");
-        await pc.start();
+        // await pc.start();
       },
-    });
-  }
-
-  private async PeerConnectionCreated(clientId: string) {
-    await fetch(`/api/WebViewInterop/RTCPeerConnection/${clientId}`, {
-      method: "PUT",
     });
   }
 
@@ -163,17 +170,6 @@ export class WebView2Service {
       onWebViewSharedBufferMessage().pipe(map((e) => e.getBuffer()))
     );
 
-    // const bufferPromise = new Promise<ArrayBuffer>((resolve, reject) => {
-    //   const subscription = onWebViewSharedBufferMessage().subscribe((e) => {
-    //     //   console.log(e);
-    //     //   console.log(surfaceId);
-    //     //   console.log(e.surfaceId === surfaceId);
-    //     //   if (e.surfaceId === surfaceId) {
-    //     resolve(e.getBuffer());
-    //     subscription.unsubscribe();
-    //     //   }
-    //   });
-    // });
     let url = `${this.BaseUrl}/SurfaceSharedBuffer`;
     if (surfaceId) {
       url += `?surfaceId=${surfaceId}`;

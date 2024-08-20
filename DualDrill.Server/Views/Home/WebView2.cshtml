@@ -8,9 +8,12 @@
  *@
 <h1>WebSocket Sample Application</h1>
 <input type="range" min="0.1" max="2.0" step="0.1" id="scale-input" value="1.0" />
-<button id="play-video">Play Video</button>
-<video id="video-capture-root" autoplay style="width:@ViewData["Width"]px;height:@ViewData["Height"]px"></video>
-<div id="video-render-root" style="width:@ViewData["Width"]px;height:@ViewData["Height"]px"></div>
+<button id="renegotiate">Re Negotiate</button>
+<div class="row">
+    <div class="col" id="video-render-root" style="width:@ViewData["Width"]px;height:@ViewData["Height"]px"></div>
+    <video class="col" id="video-capture-root" autoplay></video>
+</div>
+
 
 <button id="post-mesasge-webview2-test">Test Send Mesasge</button>
 <p id="stateLabel">Ready to connect...</p>
@@ -56,7 +59,7 @@
         var port = document.location.port ? (":" + document.location.port) : "";
 
         var id = crypto.randomUUID();
-        connectionUrl.value = scheme + "://" + document.location.hostname + port + `/ws/signal-connection/${id}` ;
+        connectionUrl.value = scheme + "://" + document.location.hostname + port + `/ws/signal-connection/${id}`;
 
         function updateState() {
             function disable() {
@@ -122,20 +125,20 @@
                 '<td class="commslog-data">' + htmlEscape(data) + '</td></tr>';
         };
 
-        connectButton.onclick = function() {
+        connectButton.onclick = function () {
             stateLabel.innerHTML = "Connecting";
             socket = new WebSocket(connectionUrl.value);
             socket.onopen = function (event) {
                 updateState();
                 commsLog.innerHTML += '<tr>' +
                     '<td colspan="3" class="commslog-data">Connection opened</td>' +
-                '</tr>';
+                    '</tr>';
             };
             socket.onclose = function (event) {
                 updateState();
                 commsLog.innerHTML += '<tr>' +
                     '<td colspan="3" class="commslog-data">Connection closed. Code: ' + htmlEscape(event.code) + '. Reason: ' + htmlEscape(event.reason) + '</td>' +
-                '</tr>';
+                    '</tr>';
             };
             socket.onerror = updateState;
             socket.onmessage = function (event) {
@@ -155,11 +158,11 @@
                 .replace(/>/g, '&gt;');
         }
     </script>
-    <!script src="/js/dist/client.js" type="module"></!script>
-    <!script src="/js/browserclient-interop.js" type="module"></!script>
-    <!script type="module">
-        import {WebViewMain} from '/js/dist/client.js' 
-        WebViewMain();
-    </!script> 
+            <!script src="/js/dist/client.js" type="module"></!script>
+            <!script src="/js/browserclient-interop.js" type="module"></!script>
+            <!script type="module">
+                import {WebViewMain} from '/js/dist/client.js'
+                WebViewMain();
+            </!script>
 }
 

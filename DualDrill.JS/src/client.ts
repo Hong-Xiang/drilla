@@ -11,7 +11,6 @@ export {
 } from "./connection/signar-hubconnection";
 
 export { getProperty, setProperty } from "./lib/dotnet-server-interop";
-// export { createWebGPURenderService } from "../render/RenderService";
 export { createWebGPURenderService } from "./webgpu/rotateCube";
 export { createServerRenderPresentService } from "./render/DistributeRenderService";
 export { createHeadlessSharedBufferServerRenderService } from "./render/headlessSharedBufferServerRenderService";
@@ -24,7 +23,6 @@ import {
   createPeerConnection,
   DualDrillConnection,
 } from "./connection/dual-drill-connection";
-import { TypedArray } from "three";
 import { onWebviewMessage, WebView2Service } from "./webview2service";
 import {
   createSignalConnectionOverWebSocket,
@@ -305,8 +303,7 @@ export async function CreateSimpleRTCClient(clientId: string) {
     SignalRConnection,
     serverId
   );
-  // createSignalServerConnectionOverBlazorInterop()
-  const connection = createPeerConnection(signalServer);
+  const connection = createPeerConnection(signalServer, false);
   console.log("created peer connection");
 
   connection.onTrack.subscribe(async (t) => {
@@ -372,7 +369,7 @@ export function CreateRTCConnection(clientId: string) {
     serverId
   );
   // createSignalServerConnectionOverBlazorInterop()
-  const connection = createPeerConnection(signalServer);
+  const connection = createPeerConnection(signalServer, false);
   console.log("created peer connection");
   const scaleChannel = connection.createDataChannel("scale");
   const el = document.getElementById("scale-input");
@@ -402,7 +399,6 @@ export function appendToVideoTarget(el: HTMLElement) {
 }
 
 export async function main() {
-  // await SignalRConnection.start();
   const SignalConnectionBaseUrl = "/api/SignalConnection";
   const serverId: string = (
     await (await fetch(`${SignalConnectionBaseUrl}/server`)).json()
@@ -410,19 +406,7 @@ export async function main() {
   const clientId = crypto.randomUUID();
   (document.getElementById("client-id-span") as HTMLSpanElement).innerText =
     clientId;
-  // await fetch(`/api/ServerConnection/client/${clientId}`, {
-  //   method: "POST",
-  // });
 
-  // const r = await fetch(
-  //   `/api/ServerConnection/client?connectionId=${SignalRConnection.connectionId}`,
-  //   {
-  //     method: "POST",
-  //   }
-  // );
-  // const clientId: string = (await r.json()).id;
-  // await SignalRConnection.invoke("SetClientId", clientId);
-  // const connection = CreateRTCConnection(clientId);
   const webSocket = startWebsocketConnection(clientId);
   const signalConnection = createSignalConnectionOverWebSocket(
     clientId,
@@ -434,19 +418,16 @@ export async function main() {
   const video = createVideoElement(connection);
   const div = document.getElementById("video-render-root");
   div?.appendChild(video);
-  // await connection.start();
+
+  const camStream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: true,
+  });
+  connection.addTrack(camStream.getVideoTracks()[0], camStream);
 }
 
 export async function WebViewMain() {
-  // const interopUri = "/api/webviewInterop";
   const service = new WebView2Service();
-  // (window as any).chrome.webview.addEventListener(
-  //   "sharedbufferreceived",
-  //   (e: any) => {
-  //     console.log(e);
-  //   }
-  // );
-
   const { surfaceId, buffer, width, height } =
     await service.getSurfaceSharedBuffer();
   const div = document.getElementById("video-render-root");
@@ -461,35 +442,22 @@ export async function WebViewMain() {
   videoEl.playsInline = true;
   videoEl.autoplay = true;
   videoEl.muted = true;
-  videoEl.srcObject = stream;
-  videoEl.play();
-  (document.getElementById("play-video") as HTMLButtonElement).onclick = () => {
-    videoEl.play();
-  };
+  let setRemote = false;
+  setInterval(() => {
+    if (!setRemote && service.ReceivedStream) {
+      videoEl.srcObject = service.ReceivedStream;
+      videoEl.play();
+      setRemote = true;
+    }
+  }, 1000);
 
-  // onWebViewSharedBufferMessage().subscribe({
-  //   next: async ({ surfaceId, buffer }) => {
-  //     const div = document.getElementById("video-render-root");
-  //     const canvas = document.createElement("canvas");
-  //     canvas.width = 640;
-  //     canvas.height = 480;
-  //     div?.appendChild(canvas);
-  //     const context = canvas.getContext("2d")!;
-  //     const stream = canvas.captureStream();
+  (document.getElementById("renegotiate") as HTMLButtonElement).onclick =
+    () => {
+      for (const [id, pc] of service.PeerConnections) {
+        pc.negotiate();
+      }
+    };
 
-  //     CapturedStreams.set(surfaceId, {
-  //       surfaceId,
-  //       canvas,
-  //       context,
-  //       stream,
-  //       buffer,
-  //     });
-
-  //     await fetch(interopUri + `/capturedStream/${surfaceId}/${stream.id}`, {
-  //       method: "POST",
-  //     });
-  //   },
-  // });
   onWebviewMessage().subscribe((e) => {
     if (e.type !== Tags.BufferToPresent) {
       console.log(e);
@@ -506,6 +474,4 @@ export async function WebViewMain() {
       canvas.removeEventListener("pointermove", h);
     });
   });
-
-  // startWebsocketConnection(crypto.randomUUID());
 }

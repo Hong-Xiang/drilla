@@ -6,6 +6,8 @@ import {
 import type { SignalConnection } from "./server-signal-connection";
 
 export interface DualDrillConnection extends Disposable {
+  readonly peer: RTCPeerConnection;
+  negotiate(): Promise<void>;
   createDataChannel: RTCPeerConnection["createDataChannel"];
   onDataChannel: AsyncMessageSource<RTCDataChannelEvent>;
   addTrack: RTCPeerConnection["addTrack"];
@@ -20,12 +22,13 @@ export function createPeerConnection(
   signalConnection: SignalConnection,
   subscribeNegotiationNeeded: boolean
 ): DualDrillConnection {
-  const pc = new RTCPeerConnection();
+  const pc = new RTCPeerConnection({
+  });
   const subscriptions = new Subscription();
   async function negotiate() {
     console.log(`negotiate called ${signalConnection.id}`);
     const offer = await pc.createOffer({
-      // offerToReceiveVideo: true,
+      offerToReceiveVideo: true,
       // iceRestart: true,
     });
     if (!offer.sdp) {
@@ -38,6 +41,9 @@ export function createPeerConnection(
   pc.onnegotiationneeded = () => {
     console.warn("negotiation needed");
     console.log(signalConnection.id);
+    if (subscribeNegotiationNeeded) {
+      negotiate();
+    }
   };
 
   subscriptions.add(
@@ -52,11 +58,13 @@ export function createPeerConnection(
         }
       });
       const modifiedSdp = arr.join("\r\n");
+      console.log("got offer");
+      console.log(sdp);
       await pc.setRemoteDescription({
         type: "offer",
         sdp: sdp,
       });
-      const answer = await pc.createAnswer();
+      const answer = await pc.createAnswer({});
       console.log("created answer");
       console.log(answer);
       await pc.setLocalDescription(answer);
@@ -102,6 +110,8 @@ export function createPeerConnection(
     console.log("onconnectionstatechange: " + pc.connectionState);
 
   return {
+    peer: pc,
+    negotiate,
     createDataChannel: (label, dataChannelDict) =>
       pc.createDataChannel(label, dataChannelDict),
     onDataChannel: RTCPeerConnectionPublisherFactory(pc, "datachannel"),

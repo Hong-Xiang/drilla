@@ -31,7 +31,7 @@ public class SignalConnectionController(
     [Route("AddIceCandidate/{sourceId}/{targetId}")]
     public async Task AddIceCandidate(Guid sourceId, Guid targetId, [FromBody] string candidate, CancellationToken cancellation)
     {
-        Logger.LogInformation("AddIceCandidate from {sourceId} to {targetId}", sourceId, targetId);
+        Logger.LogInformation("AddIceCandidate from {sourceId} to {targetId}, content {Content}", sourceId, targetId, candidate);
         await SignalConnectionService.AddIceCandidateAsync(new(sourceId, targetId, new(candidate)), cancellation);
     }
 
@@ -111,36 +111,5 @@ public class SignalConnectionController(
         {
             await SendMessageAsync(webSocket, buffer, c, cancellation);
         }
-    }
-
-
-    async ValueTask EchoAsync(WebSocket webSocket, CancellationToken cancellation)
-    {
-
-
-        const int MinimumBufferSize = 1024 * 64;
-
-        var buffer = new byte[MinimumBufferSize];
-        var receiveResult = await webSocket.ReceiveAsync(
-            new ArraySegment<byte>(buffer), cancellation);
-
-        while (!receiveResult.CloseStatus.HasValue)
-        {
-            Console.WriteLine(Encoding.UTF8.GetString(buffer.AsSpan()[..receiveResult.Count]));
-            await webSocket.SendAsync(
-                new ArraySegment<byte>(buffer, 0, receiveResult.Count),
-                receiveResult.MessageType,
-                receiveResult.EndOfMessage,
-                cancellation);
-
-
-            receiveResult = await webSocket.ReceiveAsync(
-                new ArraySegment<byte>(buffer), cancellation);
-        }
-
-        await webSocket.CloseAsync(
-            receiveResult.CloseStatus.Value,
-            receiveResult.CloseStatusDescription,
-            cancellation);
     }
 }
