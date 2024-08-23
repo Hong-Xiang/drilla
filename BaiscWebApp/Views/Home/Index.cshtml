@@ -1,0 +1,20 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+<h2>Simple WebGPU Rendering</h2>
+<pre>@ViewData["AstJson"]</pre>
+<div class="p-2 w-100">
+    <h4>exepceted</h4>
+    <pre class="p-2">@ViewData["ExpectedCode"]</pre>
+    <h4>generated</h4>
+    <pre class="p-2">@ViewData["GeneratedCode"]</pre>
+</div>
+<textarea id="test-code-text"></textarea>
+<button id="test-code-compile">Test Compile</button>
+<div class="text-center">
+    <canvas width="800" height="600" id="main-canvas"></canvas>
+</div>
+<!script type="module">
+    import { main } from '/js/dist/main.js'
+    main();
+</!script>
