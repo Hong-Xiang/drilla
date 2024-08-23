@@ -112,7 +112,7 @@ export class WebView2Service {
         const pc = createPeerConnection(signalConnection, true);
         pc.onTrack.subscribe(async (t) => {
           console.log(`received track from ${sourceId} with id ${t.track.id}`);
-          if (t.streams[0] && !this.ReceivedStream) {
+          if (t.streams[0]) {
             this.ReceivedStream = t.streams[0];
           } else {
             this.ReceivedStream = new MediaStream([
