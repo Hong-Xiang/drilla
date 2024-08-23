@@ -1,0 +1,21 @@
+{
+  "name": "jssrc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild ./src/main.ts --format=esm --bundle --sourcemap --outdir=../wwwroot/js/dist",
+    "watch": "esbuild ./src/main.ts --watch --format=esm --bundle --sourcemap --outdir=../wwwroot/js/dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "@webgpu/types": "^0.1.44",
+    "esbuild": "^0.23.0"
+  }
+}
