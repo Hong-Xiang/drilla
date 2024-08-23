@@ -1,4 +1,5 @@
-﻿using DualDrill.Engine.Input;
+﻿using DualDrill.Engine.Connection;
+using DualDrill.Engine.Event;
 using MessagePipe;
 using System.Reactive.Disposables;
 using System.Threading.Channels;
@@ -12,8 +13,8 @@ public sealed class FrameInputService : IDisposable
     readonly Channel<ScaleEvent> ScaleEventChannel = Channel.CreateUnbounded<ScaleEvent>();
     readonly List<PointerEvent> PointerEventBuffer = new(128);
     public FrameInputService(
-        ISubscriber<ClientInput<PointerEvent>> PointerEventSubscriber,
-        ISubscriber<ClientInput<ScaleEvent>> ScaleEvents
+        ISubscriber<ClientEvent<PointerEvent>> PointerEventSubscriber,
+        ISubscriber<ClientEvent<ScaleEvent>> ScaleEvents
     )
     {
         Disposables.Add(

@@ -1,6 +1,5 @@
 ﻿using DualDrill.Engine.BrowserProxy;
 using DualDrill.Engine.Connection;
-using DualDrill.Engine.UI;
 using Microsoft.JSInterop;
 using System.Reactive;
 

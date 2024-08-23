@@ -1,8 +1,6 @@
-using DualDrill.Engine;
 using DualDrill.Engine.Headless;
 using DualDrill.Server.Connection;
 using DualDrill.Server.WebApi;
-using DualDrill.WebView;
 using Serilog;
 using Serilog.Extensions.Logging;
 
@@ -28,16 +26,23 @@ public class Program
 
         builder.Services.AddMessagePipe();
 
-        builder.Services.AddControllersWithViews();
-        builder.Services.AddControllers();
+        builder.Services.AddControllersWithViews(options =>
+        {
+            options.InputFormatters.Add(new PlainTextFormatter());
+        });
+        //builder.Services.AddControllers();
         builder.Services.AddHealthChecks();
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
 
-        builder.Services.AddSingleton<IWebViewService, WebViewService>();
+        //builder.Services.AddOpenApi();
+
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
 
         builder.Services.AddDualDrillServerServices();
+
 
         var app = builder.Build();
         app.MapHealthChecks("health");
@@ -58,14 +63,20 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        app.UseWebSockets();
         app.UseStaticFiles();
         app.UseAntiforgery();
         app.MapControllers();
         app.MapRenderControls();
-        app.MapControllerRoute(
-            name: "default",
-            pattern: "{controller=Home}/{action=Index}/{id?}")
-            .WithStaticAssets();
+        //app.MapControllerRoute(
+        //    name: "default",
+        //    pattern: "{controller=Home}/{action=Index}/{id?}")
+        //    .WithStaticAssets();
+
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
+        //app.MapOpenApi();
 
         //app.MapRazorComponents<DualDrill.Server.Components.App>()
         //    .AddInteractiveServerRenderMode()

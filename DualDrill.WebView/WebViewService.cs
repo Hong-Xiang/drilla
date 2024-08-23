@@ -1,79 +1,56 @@
-﻿using DualDrill.Engine;
-using DualDrill.Engine.BrowserProxy;
+﻿using DnsClient.Internal;
+using DualDrill.Engine;
 using DualDrill.Engine.Connection;
+using DualDrill.Engine.Event;
 using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
+using DualDrill.Graphics;
+using DualDrill.WebView.Event;
+using DualDrill.WebView.Interop;
+using MessagePipe;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.JSInterop;
 using Microsoft.Web.WebView2.Core;
-using System.Threading.Channels;
+using R3;
+using SIPSorcery.Net;
+using System.Collections.Concurrent;
+using System.Text.Json;
 using System.Windows;
 
 namespace DualDrill.WebView;
 
-public readonly record struct SharedBufferMessage(int SlotIndex, int Offset, int Length)
-{
-}
-
-public readonly record struct SharedBufferMemory(nint Ptr, int SlotIndex, int Offset, int Length)
-{
-    public unsafe Span<byte> Span => new Span<byte>((void*)(Ptr + Offset), Length);
-
-    public SharedBufferMessage Message => new SharedBufferMessage(SlotIndex, Offset, Length);
-}
-
-public sealed class WebViewService : IWebViewService
+public sealed partial class WebViewService(
+    IOptions<HeadlessSurface.Option> CanvasOption,
+    IServer webServer,
+    IHostApplicationLifetime applicationLifetime,
+    ILogger<WebViewService> Logger,
+    ISubscriber<SharedBufferReceivedEvent> sharedBufferReceived,
+    ISubscriber<Guid, CapturedStream> CapturedStream,
+    IPublisher<ClientEvent<PointerEvent>> PointerEventPublisher)
+    : IWebViewService, IWebViewInteropService
 {
     private System.Windows.Application? App;
     private Microsoft.Web.WebView2.Wpf.WebView2? WebView;
     private readonly TaskCompletionSource<System.Windows.Application> AppCreatedCompletionSource = new();
     private readonly TaskCompletionSource<int> UIThreadResult = new();
 
-    private readonly Thread UIThread;
-    private CoreWebView2SharedBuffer SharedBuffer;
 
-    Channel<SharedBufferMemory> WriteBufferChannel = Channel.CreateUnbounded<SharedBufferMemory>();
-    Channel<SharedBufferMemory> ReadBufferChannel = Channel.CreateUnbounded<SharedBufferMemory>();
-
-    public IAsyncEnumerable<SharedBufferMemory> GetAllReadableSlotsAsync(CancellationToken cancellation)
-        => ReadBufferChannel.Reader.ReadAllAsync(cancellation);
-    public IAsyncEnumerable<SharedBufferMemory> GetAllWriteableSlotsAsync(CancellationToken cancellation)
-        => WriteBufferChannel.Reader.ReadAllAsync(cancellation);
-
-    private readonly HeadlessSurface.Option Option;
+    private readonly HeadlessSurface.Option Option = CanvasOption.Value;
     int Width => Option.Width;
     int Height => Option.Height;
     ulong TextureBufferSize => (ulong)(4 * Width * Height);
 
-    public HeadlessSurface Surface { get; }
-    public IServer WebServer { get; }
-    public IHostApplicationLifetime ApplicationLifetime { get; }
-
-    public WebViewService(
-        HeadlessSurface surface,
-        IOptions<HeadlessSurface.Option> canvasOption,
-        IServer webServer,
-        IHostApplicationLifetime applicationLifetime)
-    {
-        Surface = surface;
-        WebServer = webServer;
-        Option = canvasOption.Value;
-        UIThread = new Thread(MainUI);
-        UIThread.SetApartmentState(ApartmentState.STA);
-        ApplicationLifetime = applicationLifetime;
-    }
-
     async ValueTask<Uri> GetHostedSourceUriAsync(CancellationToken cancellation)
     {
         var tcs = new TaskCompletionSource(cancellation);
-        ApplicationLifetime.ApplicationStarted.Register(tcs.SetResult);
+        applicationLifetime.ApplicationStarted.Register(tcs.SetResult);
         await tcs.Task;
-        var address = WebServer.Features.Get<IServerAddressesFeature>();
+        var address = webServer.Features.Get<IServerAddressesFeature>();
         var uri = (address?.Addresses.FirstOrDefault(x => new Uri(x).Scheme == "https")) ?? throw new ArgumentNullException("WebView2 Source Uri");
-        return new Uri(uri + "/webview2");
+        return new Uri(uri + "/home/webview2");
     }
 
 
@@ -89,40 +66,26 @@ public sealed class WebViewService : IWebViewService
         }
     }
 
-    public async ValueTask SetReadyToWriteAsync(SharedBufferMessage sharedBufferMemory, CancellationToken cancellation)
-    {
-        await DispatchAsync(() =>
-        {
-            WriteBufferChannel.Writer.TryWrite(new SharedBufferMemory(SharedBuffer.Buffer, sharedBufferMemory.SlotIndex, sharedBufferMemory.Offset, sharedBufferMemory.Length));
-        }, cancellation);
-    }
-
-    public void SetReadyToRead(SharedBufferMemory sharedBufferMemory)
-    {
-        ReadBufferChannel.Writer.TryWrite(sharedBufferMemory);
-    }
-
-    public Task<int> GetApplicationResultAsync()
-    {
-        return UIThreadResult.Task;
-    }
 
     public async ValueTask StartAsync(CancellationToken cancellation)
     {
         var uri = await GetHostedSourceUriAsync(cancellation);
         var targetUri = new Uri($"{uri.Scheme}://localhost:{uri.Port}{uri.PathAndQuery}");
-        UIThread.Start(targetUri);
+        var uiThread = new Thread(MainUI);
+        uiThread.SetApartmentState(ApartmentState.STA);
+        uiThread.Start(targetUri);
         await WebViewInitializedTaskCompletionSource.Task.ConfigureAwait(false);
     }
 
     TaskCompletionSource WebViewInitializedTaskCompletionSource = new();
+
     void MainUI(object? data)
     {
         App = new System.Windows.Application();
         WebView = new()
         {
             Name = "DualDrillWebView2",
-            Source = (Uri)data
+            Source = (Uri)data,
         };
         var mainWindow = new Window
         {
@@ -134,34 +97,25 @@ public sealed class WebViewService : IWebViewService
         WebView.CoreWebView2InitializationCompleted += (sender, e) =>
         {
             WebViewInitializedTaskCompletionSource.SetResult();
+            WebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
+
+            WebView.CoreWebView2.WebMessageReceived += (sender, e) =>
+            {
+                var data = e.WebMessageAsJson;
+                PointerEventPublisher.Publish(new(ClientsManager.ServerId,
+                    JsonSerializer.Deserialize<TaggedEvent<PointerEvent>>(data, JsonSerializerOptions.Web).Data));
+            };
         };
         AppCreatedCompletionSource.SetResult(App);
 
+
+
         App.Exit += (sender, e) =>
         {
-            ApplicationLifetime.StopApplication();
+            applicationLifetime.StopApplication();
         };
 
         var result = App.Run(mainWindow);
-        UIThreadResult.SetResult(result);
-    }
-
-    public ValueTask CreateSharedBufferAsync(CancellationToken cancellation)
-    {
-        return DispatchAsync(() =>
-        {
-            SharedBuffer = WebView.CoreWebView2.Environment.CreateSharedBuffer(TextureBufferSize * (ulong)Option.SlotCount);
-            for (var i = 0; i < Option.SlotCount; i++)
-            {
-                WriteBufferChannel.Writer.TryWrite(new SharedBufferMemory
-                {
-                    Ptr = SharedBuffer.Buffer,
-                    Length = (int)TextureBufferSize,
-                    Offset = i * (int)TextureBufferSize,
-                    SlotIndex = i,
-                });
-            }
-        }, cancellation);
     }
 
     async ValueTask DispatchAsync(Action action, CancellationToken cancellation)
@@ -170,26 +124,158 @@ public sealed class WebViewService : IWebViewService
         await app.Dispatcher.InvokeAsync(action, System.Windows.Threading.DispatcherPriority.Normal, cancellation).Task.ConfigureAwait(false);
     }
 
-    public async ValueTask PostSharedBufferAsync(CancellationToken cancellation)
+    private readonly ConcurrentDictionary<Guid, WebView2SharedBuffer> SharedBuffers = [];
+
+    sealed record class WebView2SharedBuffer(
+        Guid Id,
+        HeadlessSurface.Option Option,
+        CoreWebView2SharedBuffer Buffer
+    ) : IWebViewSharedBuffer
     {
-        using var tcs = new TaskCompletionSourceDotnetObjectReference<IJSObjectReference>();
+        unsafe public Span<byte> Span => new Span<byte>((byte*)Buffer.Buffer, (int)Buffer.Size);
+
+        public Span<byte> SlotSpan(int slotIndex)
+        {
+            var textureBufferSize = Option.Width * Option.Height * 4;
+            return Span.Slice(slotIndex * textureBufferSize, textureBufferSize);
+        }
+    }
+
+    private ulong BufferSize(int width, int height, GPUTextureFormat format)
+    {
+        var pixels = width * height;
+        var bytesPerPixel = format switch
+        {
+            GPUTextureFormat.BGRA8Unorm => 4,
+            GPUTextureFormat.BGRA8UnormSrgb => 4,
+            GPUTextureFormat.RGBA8UnormSrgb => 4,
+            _ => throw new NotImplementedException($"byte size for format {Enum.GetName(format)}")
+        };
+        return (ulong)(pixels * bytesPerPixel);
+    }
+
+    SerialDisposable SurfaceOnFrameSubscription = new();
+
+    public async ValueTask<IWebViewSharedBuffer> CreateSurfaceSharedBufferAsync(HeadlessSurface surface, CancellationToken cancellation)
+    {
+        WebView2SharedBuffer? buffer = null;
+        if (SharedBuffers.TryGetValue(surface.Id, out var existedBuffer))
+        {
+            buffer = existedBuffer;
+        }
+
         await DispatchAsync(() =>
         {
-            WebView.CoreWebView2.PostSharedBufferToScript(SharedBuffer, CoreWebView2SharedBufferAccess.ReadOnly, null);
+            if (buffer is null)
+            {
+                var bufferSize = BufferSize(
+                    surface.Entity.Option.Width, surface.Entity.Option.Height, surface.Entity.Option.Format
+                ) * (ulong)Option.SlotCount;
+                var rawbuffer = WebView.CoreWebView2.Environment.CreateSharedBuffer(bufferSize);
+                buffer = new(surface.Id, surface.Entity.Option, rawbuffer);
+                SharedBuffers.TryAdd(surface.Id, buffer);
+                SurfaceOnFrameSubscription.Disposable = SubscribeSurfaceOnFrame(surface);
+            }
+
+            WebView.CoreWebView2.PostSharedBufferToScript(buffer.Buffer, CoreWebView2SharedBufferAccess.ReadOnly,
+                JsonSerializer.Serialize(new { surfaceId = surface.Id }));
+
+        }, cancellation);
+
+        return buffer ?? throw new NullReferenceException("Failed to create shared buffer");
+    }
+
+    private IDisposable SubscribeSurfaceOnFrame(HeadlessSurface surface)
+    {
+        var buffer = SharedBuffers[surface.Id];
+        return surface.OnFrame.Subscribe(
+          async (frame, cancellation) =>
+                      {
+                          // TODO: use semaphoreslim to protect data
+                          await DispatchAsync(() =>
+                          {
+                              frame.Data.Span.CopyTo(buffer.SlotSpan(frame.SlotIndex));
+                          }, cancellation);
+                          await SendMessageAsync(new BufferToPresentEvent(
+                                              surface.Id,
+                                              (int)(frame.SlotIndex * frame.Data.Length),
+                                              frame.Data.Length,
+                                              0,
+                                              surface.Width,
+                                              surface.Height
+                                          ), cancellation);
+                      });
+    }
+
+
+    private async ValueTask<IMediaStream> CaptureImplAsync(HeadlessSurface surface, int frameRate, CancellationToken cancellation)
+    {
+        //var sharedBuffer = SharedBuffers[surface.Id];
+
+
+        //Logger.LogInformation($"Stream id {resultStream.Id}");
+        //return resultStream;
+        throw new NotImplementedException();
+    }
+
+    public async ValueTask<IMediaStream> CaptureAsync(HeadlessSurface surface, int frameRate)
+    {
+        //var result = new TaskCompletionSource<IMediaStream>();
+        //await DispatchAsync(async () =>
+        //{
+        //    await CaptureImplAsync(surface, frameRate, CancellationToken.None);
+        //    result.SetResult(null);
+        //}, CancellationToken.None);
+        //return await result.Task;
+        throw new NotImplementedException();
+    }
+
+    private async ValueTask SendMessageAsync(string data, CancellationToken cancellation)
+    {
+        await DispatchAsync(() =>
+        {
+            if (WebView?.CoreWebView2 is null)
+            {
+                Logger.LogWarning($"WebView is not initialized yet");
+                return;
+            }
+            WebView.CoreWebView2.PostWebMessageAsString(data);
         }, cancellation);
     }
 
-    public ValueTask<IPeerConnection> GetPeerConnectionAsync(Guid clientId)
+    public async ValueTask SendMessageAsync<T>(T data, CancellationToken cancellation)
+        where T : notnull
+    {
+        await SendMessageAsync(JsonSerializer.Serialize(new TaggedEvent<T>(data), JsonSerializerOptions.Web), cancellation);
+    }
+}
+
+
+sealed record class WebViewPeerConnectionProxy(Guid PeerId) : IPeerConnection
+{
+    public Guid SelfId => ClientsManager.ServerId;
+    public R3.Observable<IDataChannel> OnDataChannel => throw new NotImplementedException();
+
+    public R3.Observable<IMediaStreamTrack> OnTrack => throw new NotImplementedException();
+
+    public R3.Observable<RTCPeerConnectionState> OnConnectionStateChange => throw new NotImplementedException();
+
+    public ValueTask AddTrack(IMediaStreamTrack track)
     {
         throw new NotImplementedException();
     }
 
-    public ValueTask<IMediaStream> Capture(HeadlessSurface surface, int frameRate)
+    public ValueTask<IDataChannel> CreateDataChannel(string label)
     {
         throw new NotImplementedException();
     }
 
-    public ValueTask CreateCanvas2D()
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask StartAsync(CancellationToken cancellation)
     {
         throw new NotImplementedException();
     }

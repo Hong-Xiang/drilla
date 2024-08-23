@@ -1,10 +1,11 @@
-﻿using DualDrill.Engine.Connection;
+﻿using DualDrill.Engine;
+using DualDrill.Engine.Connection;
 using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
 using DualDrill.Engine.Services;
 using DualDrill.Graphics;
-using DualDrill.Server.Connection;
 using DualDrill.Server.Services;
+using DualDrill.WebView;
 
 namespace DualDrill.Server;
 
@@ -12,10 +13,11 @@ public static class DualDrillServerExtension
 {
     private static void AddConnectionServices(IServiceCollection services)
     {
-        services.AddSingleton<ClientConnectionManagerService>();
-        services.AddSingleton<ISignalConnectionProviderService, SignalConnectionOverSignalRProvider>();
-        services.AddSingleton<IPeerConnectionProviderService, SIPSorceryRTCPeerConnectionProviderService>();
+        services.AddSingleton<ClientsManager>();
+        //services.AddSingleton<ISignalConnectionProviderService, SignalConnectionOverSignalRProvider>();
+        services.AddSingleton<ISignalConnectionProviderService, SignalConnectionOverWebViewWithWebSocketService>();
         services.AddScoped<IClient>(sp => new ClientIdentity(Guid.NewGuid()));
+        services.AddWebViewConnectionServices();
     }
 
     private static void AddGraphicsServices(IServiceCollection services)
@@ -33,7 +35,7 @@ public static class DualDrillServerExtension
         services.AddSingleton<IFrameRenderService, FrameRenderService>();
 
         services.AddSingletonHostedService<DevicePollHostedService>();
-        services.AddSingletonHostedService<RealtimeFrameHostedService>();
+        services.AddSingletonHostedService<RealtimeFrameHostableBackgroundService>();
     }
 
     private static void AddHeadlessServices(IServiceCollection services)

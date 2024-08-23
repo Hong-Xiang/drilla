@@ -4,12 +4,26 @@ using DualDrill.Engine.Media;
 
 namespace DualDrill.Engine;
 
+public interface IWebViewSharedBuffer
+{
+    Guid Id { get; }
+    Span<byte> Span { get; }
+}
+public interface IHostToWebViewEvent
+{
+    string MessageType { get; }
+}
 public interface IWebViewService
 {
-    ValueTask<IPeerConnection> GetPeerConnectionAsync(Guid clientId);
-    ValueTask<IMediaStream> Capture(HeadlessSurface surface, int frameRate);
+    ValueTask<IMediaStream> CaptureAsync(HeadlessSurface surface, int frameRate);
     ValueTask StartAsync(CancellationToken cancellation);
-    ValueTask CreateCanvas2D();
+    ValueTask SendMessageAsync<T>(T data, CancellationToken cancellation) where T : notnull;
+}
+
+public interface IWebViewInteropService
+{
+    ValueTask<IWebViewSharedBuffer> CreateSurfaceSharedBufferAsync(HeadlessSurface surface, CancellationToken cancellation);
+
 }
 
 public interface ICanvas2D

@@ -1,5 +1,5 @@
 ﻿using DualDrill.Engine.Connection;
-using DualDrill.Engine.Input;
+using DualDrill.Engine.Event;
 using DualDrill.Engine.Media;
 using MessagePipe;
 using R3;
@@ -14,18 +14,19 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
     ILogger<SIPSorceryRTCPeerConnectionProviderService> Logger,
     HeadlessSurfaceCaptureVideoSource VideoSource,
     IPublisher<PairIdentity> CreatePairPublisher,
-    IPublisher<ClientInput<PointerEvent>> PointerEventPublisher,
-    IPublisher<ClientInput<ScaleEvent>> ScaleEventPublisher,
+    IPublisher<ClientEvent<PointerEvent>> PointerEventPublisher,
+    IPublisher<ClientEvent<ScaleEvent>> ScaleEventPublisher,
     ISignalConnectionProviderService SignalConnectionService)
     : IPeerConnectionProviderService
 {
+    Guid ServerId => ClientsManager.ServerId;
     ConcurrentDictionary<Guid, RTCPeerConnection> Connections = [];
-    public DualDrill.Engine.WebRTC.IRTCPeerConnection CreatePeerConnection(Guid clientId)
+    public async ValueTask<IPeerConnection> CreatePeerConnectionAsync(Guid clientId, CancellationToken cancellation)
     {
-        SignalConnectionService.CreateConnection(ClientConnectionManagerService.ServerId, clientId);
+        //SignalConnectionService.CreateConnection(ClientsManager.ServerId, clientId);
         var disposables = new CompositeDisposable();
-        var sendId = new PairIdentity(ClientConnectionManagerService.ServerId, clientId);
-        var recvId = new PairIdentity(clientId, ClientConnectionManagerService.ServerId);
+        var sendId = new PairIdentity(ClientsManager.ServerId, clientId);
+        var recvId = new PairIdentity(clientId, ClientsManager.ServerId);
 
         var pc = new RTCPeerConnection(new RTCConfiguration
         {
@@ -41,33 +42,39 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                 {
                     var offer = pc.createOffer();
                     await pc.setLocalDescription(offer);
-                    await SignalConnectionService.OfferAsync(ClientConnectionManagerService.ServerId, clientId, offer.sdp);
+                    await SignalConnectionService.OfferAsync(new(ServerId, clientId, new(offer.sdp)), cancellation);
                 }
-            )
-
-        );
+            ));
 
         disposables.Add(
-            SignalConnectionService.SubscribeOfferAwait(clientId, ClientConnectionManagerService.ServerId, async (sdp, cancellation) =>
+            SignalConnectionService.SubscribeOfferAwait(ServerId, async (e, cancellation) =>
             {
+                if (e.SourceId != clientId)
+                {
+                    return;
+                }
                 pc.setRemoteDescription(new RTCSessionDescriptionInit
                 {
                     type = RTCSdpType.offer,
-                    sdp = sdp
+                    sdp = e.Data.Sdp
                 });
                 var answer = pc.createAnswer();
                 await pc.setLocalDescription(answer);
-                await SignalConnectionService.AnswerAsync(ClientConnectionManagerService.ServerId, clientId, answer.sdp);
+                await SignalConnectionService.AnswerAsync(new(ServerId, clientId, new(answer.sdp)), cancellation);
             })
         );
 
         disposables.Add(
-            SignalConnectionService.SubscribeAnswerAwait(clientId, ClientConnectionManagerService.ServerId, async (sdp, cancellation) =>
+            SignalConnectionService.SubscribeAnswerAwait(ServerId, async (e, cancellation) =>
             {
+                if (e.SourceId != clientId)
+                {
+                    return;
+                }
                 pc.setRemoteDescription(new RTCSessionDescriptionInit
                 {
                     type = RTCSdpType.answer,
-                    sdp = sdp
+                    sdp = e.Data.Sdp
                 });
             })
         );
@@ -79,15 +86,21 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
             ).SubscribeAwait(
                 async (candidate, cancellation) =>
                 {
-                    await SignalConnectionService.AddIceCandidateAsync(ClientConnectionManagerService.ServerId, clientId, JsonSerializer.Serialize(candidate));
+                    await SignalConnectionService.AddIceCandidateAsync(
+                        new(ClientsManager.ServerId, clientId, new(JsonSerializer.Serialize(candidate))),
+                        cancellation);
                 })
         );
 
         disposables.Add(
-            SignalConnectionService.SubscribeAddIceCandidateAwait(clientId, ClientConnectionManagerService.ServerId,
-            async (data, cancellation) =>
+            SignalConnectionService.SubscribeAddIceCandidateAwait(ServerId,
+            async (e, cancellation) =>
             {
-                var candidate = JsonSerializer.Deserialize<RTCIceCandidateInit>(data);
+                if (e.SourceId != clientId)
+                {
+                    return;
+                }
+                var candidate = JsonSerializer.Deserialize<RTCIceCandidateInit>(e.Data.Candidate);
                 pc.addIceCandidate(candidate);
             })
         );
@@ -127,7 +140,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                         var e = JsonSerializer.Deserialize<PointerEvent>(data, JsonSerializerOptions.Web);
                         if (e is not null)
                         {
-                            PointerEventPublisher.Publish(new ClientInput<PointerEvent>(clientId, e));
+                            PointerEventPublisher.Publish(new ClientEvent<PointerEvent>(clientId, e));
                         }
                         else
                         {
@@ -142,7 +155,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                         var e = JsonSerializer.Deserialize<ScaleEvent>(data, JsonSerializerOptions.Web);
                         if (e is not null)
                         {
-                            ScaleEventPublisher.Publish(new ClientInput<ScaleEvent>(clientId, e));
+                            ScaleEventPublisher.Publish(new ClientEvent<ScaleEvent>(clientId, e));
                         }
                     };
                 }

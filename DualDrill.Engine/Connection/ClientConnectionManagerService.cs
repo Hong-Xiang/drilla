@@ -7,8 +7,8 @@ using System.Reactive.Subjects;
 
 namespace DualDrill.Engine.Connection;
 
-public sealed partial class ClientConnectionManagerService(
-    ILogger<ClientConnectionManagerService> Logger,
+public sealed partial class ClientsManager(
+    ILogger<ClientsManager> Logger,
     IPublisher<ImmutableArray<IClient>> ClientConnectionChanged) : IDisposable
 {
     public static Guid ServerId { get; } = Guid.Empty;

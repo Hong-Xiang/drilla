@@ -6,15 +6,15 @@ using System.Reactive.Disposables;
 namespace DualDrill.Server.Connection;
 
 sealed class SignalConnectionOverSignalRProvider(
-   ClientConnectionManagerService ClientStore,
-   IAsyncPublisher<PairIdentity, OfferPayload> OfferPublisher,
-   IAsyncPublisher<PairIdentity, AnswerPayload> AnswerPublisher,
-   IAsyncPublisher<PairIdentity, AddIceCandidatePayload> AddIceCandidatePublisher,
-   IAsyncSubscriber<PairIdentity, OfferPayload> OfferSubscriber,
-   IAsyncSubscriber<PairIdentity, AnswerPayload> AnswerSubscriber,
-   IAsyncSubscriber<PairIdentity, AddIceCandidatePayload> AddIceCandidateSubscriber,
+   ClientsManager ClientStore,
+   IAsyncPublisher<PairIdentity, OfferEvent> OfferPublisher,
+   IAsyncPublisher<PairIdentity, AnswerEvent> AnswerPublisher,
+   IAsyncPublisher<PairIdentity, AddIceCandidateEvent> AddIceCandidatePublisher,
+   IAsyncSubscriber<PairIdentity, OfferEvent> OfferSubscriber,
+   IAsyncSubscriber<PairIdentity, AnswerEvent> AnswerSubscriber,
+   IAsyncSubscriber<PairIdentity, AddIceCandidateEvent> AddIceCandidateSubscriber,
    IHubContext<DrillHub, IDrillHubClient> HubContext
-) : ISignalConnectionProviderService
+)
 {
     public async ValueTask AddIceCandidateAsync(Guid source, Guid target, string candidate)
     {
@@ -99,5 +99,20 @@ sealed class SignalConnectionOverSignalRProvider(
         {
             await handler(offer.Sdp, cancellation);
         });
+    }
+
+    public IDisposable SubscribeOfferAwait(Guid target, Func<Guid, string, CancellationToken, ValueTask> handler)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IDisposable SubscribeAnswerAwait(Guid target, Func<Guid, string, CancellationToken, ValueTask> handler)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IDisposable SubscribeAddIceCandidateAwait(Guid target, Func<Guid, string?, CancellationToken, ValueTask> handler)
+    {
+        throw new NotImplementedException();
     }
 }

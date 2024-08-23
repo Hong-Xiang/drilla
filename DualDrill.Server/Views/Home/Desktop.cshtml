@@ -1,6 +1,7 @@
 ﻿@{
     ViewData["Title"] = "Desktop";
 }
+<span id="client-id-span"></span>
 <h3>Desktop Page</h3>
 <input type="range" min="0.1" max="2.0" step="0.1" id="scale-input" value="1.0" />
 <div id="video-render-root" style="width:@ViewData["Width"]px;height:@ViewData["Height"]px"></div>
@@ -9,9 +10,8 @@
     <!script src="/js/dist/client.js" type="module"></!script>
     <!script src="/js/browserclient-interop.js" type="module"></!script>
     <!script type="module">
-        import {main} from '/js/dist/client.js' 
+            import {main, startWebsocketConnection} from '/js/dist/client.js'
         main();
+            startWebsocketConnection(crypto.randomUUID());
     </!script>
 }
-
-

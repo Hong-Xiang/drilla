@@ -7,27 +7,28 @@ using System.Threading.Channels;
 
 namespace DualDrill.Engine.Services;
 
-public sealed class RealtimeFrameHostedService(
+public sealed class RealtimeFrameHostableBackgroundService(
     GPUDevice Device,
     FrameInputService FrameInputService,
     FrameSimulationService SimulationService,
     IFrameRenderService frameService,
-    ILogger<RealtimeFrameHostedService> logger,
+    ILogger<RealtimeFrameHostableBackgroundService> logger,
     HeadlessSurface surface,
-    IWebViewService WebViewService,
-    HeadlessSurfaceCaptureVideoSource VideoSource) : IHostableBackgroundService
+    IWebViewService WebViewService
+    //HeadlessSurfaceCaptureVideoSource VideoSource
+    ) : IHostableBackgroundService
 {
     readonly TimeSpan SampleRate = TimeSpan.FromSeconds(1.0 / 60.0);
     readonly TimeProvider TimeProvider = TimeProvider.System;
 
-    private readonly ILogger<RealtimeFrameHostedService> Logger = logger;
+    private readonly ILogger<RealtimeFrameHostableBackgroundService> Logger = logger;
     private readonly Channel<int> FrameChannel = Channel.CreateBounded<int>(1);
 
     private int FrameIndex = 0;
 
     private static void TimerFrameCallback(object? data)
     {
-        var self = (RealtimeFrameHostedService)data!;
+        var self = (RealtimeFrameHostableBackgroundService)data!;
         if (!self.FrameChannel.Writer.TryWrite(self.FrameIndex))
         {
             self.Logger.LogWarning("Frame skipped {CurrentFrame}", self.FrameIndex);
@@ -38,8 +39,9 @@ public sealed class RealtimeFrameHostedService(
     public async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await Task.Yield();
-        //await WebViewService.StartAsync(stoppingToken);
-        await VideoSource.StartVideo();
+        await WebViewService.StartAsync(stoppingToken);
+        _ = WebViewService.CaptureAsync(surface, 30);
+        //await VideoSource.StartVideo();
         using var timer = TimeProvider.CreateTimer(TimerFrameCallback, this, TimeSpan.Zero, SampleRate);
 
         var scene = RenderScene.TestScene(surface.Width, surface.Height);

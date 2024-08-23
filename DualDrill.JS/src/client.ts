@@ -11,7 +11,6 @@ export {
 } from "./connection/signar-hubconnection";
 
 export { getProperty, setProperty } from "./lib/dotnet-server-interop";
-// export { createWebGPURenderService } from "../render/RenderService";
 export { createWebGPURenderService } from "./webgpu/rotateCube";
 export { createServerRenderPresentService } from "./render/DistributeRenderService";
 export { createHeadlessSharedBufferServerRenderService } from "./render/headlessSharedBufferServerRenderService";
@@ -24,6 +23,13 @@ import {
   createPeerConnection,
   DualDrillConnection,
 } from "./connection/dual-drill-connection";
+import { onWebviewMessage, WebView2Service } from "./webview2service";
+import {
+  createSignalConnectionOverWebSocket,
+  startWebsocketConnection,
+} from "./connection/websocket";
+import { Tags } from "./taggedEvent";
+export { startWebsocketConnection } from "./connection/websocket";
 
 export async function testDotnetExport() {
   const exports = await getDotnetWasmExports("DualDrill.Client.dll");
@@ -297,14 +303,13 @@ export async function CreateSimpleRTCClient(clientId: string) {
     SignalRConnection,
     serverId
   );
-  // createSignalServerConnectionOverBlazorInterop()
-  const connection = createPeerConnection(signalServer);
+  const connection = createPeerConnection(signalServer, false);
   console.log("created peer connection");
 
   connection.onTrack.subscribe(async (t) => {
     console.log("received track");
-    console.log(t.streams[0].id);
     console.log(t);
+    console.log(t.streams[0].id);
     video.srcObject = t.streams[0];
   });
 
@@ -333,9 +338,12 @@ export function createVideoElement(connection: DualDrillConnection) {
   video.muted = true;
   connection.onTrack.subscribe(async (t) => {
     console.log("received track");
-    console.log(t.streams[0].id);
     console.log(t);
+    console.log(t.receiver.getParameters());
+    console.log(t.streams[0].id);
     video.srcObject = t.streams[0];
+    video.muted = true;
+    video.play();
   });
   const channel = connection.createDataChannel("pointermove");
   video.addEventListener("pointerdown", (e) => {
@@ -361,7 +369,7 @@ export function CreateRTCConnection(clientId: string) {
     serverId
   );
   // createSignalServerConnectionOverBlazorInterop()
-  const connection = createPeerConnection(signalServer);
+  const connection = createPeerConnection(signalServer, false);
   console.log("created peer connection");
   const scaleChannel = connection.createDataChannel("scale");
   const el = document.getElementById("scale-input");
@@ -391,18 +399,79 @@ export function appendToVideoTarget(el: HTMLElement) {
 }
 
 export async function main() {
-  await SignalRConnection.start();
-  const r = await fetch(
-    `/api/ServerConnection/client?connectionId=${SignalRConnection.connectionId}`,
-    {
-      method: "POST",
-    }
+  const SignalConnectionBaseUrl = "/api/SignalConnection";
+  const serverId: string = (
+    await (await fetch(`${SignalConnectionBaseUrl}/server`)).json()
+  ).id;
+  const clientId = crypto.randomUUID();
+  (document.getElementById("client-id-span") as HTMLSpanElement).innerText =
+    clientId;
+
+  const webSocket = startWebsocketConnection(clientId);
+  const signalConnection = createSignalConnectionOverWebSocket(
+    clientId,
+    serverId,
+    webSocket
   );
-  const clientId: string = (await r.json()).id;
-  await SignalRConnection.invoke("SetClientId", clientId);
-  const connection = CreateRTCConnection(clientId);
+  const connection = createPeerConnection(signalConnection, false);
+
   const video = createVideoElement(connection);
   const div = document.getElementById("video-render-root");
   div?.appendChild(video);
-  await connection.start();
+
+  const camStream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: true,
+  });
+  connection.addTrack(camStream.getVideoTracks()[0], camStream);
+}
+
+export async function WebViewMain() {
+  const service = new WebView2Service();
+  const { surfaceId, buffer, width, height } =
+    await service.getSurfaceSharedBuffer();
+  const div = document.getElementById("video-render-root");
+  const canvas = service.drawSurface(surfaceId);
+  div?.appendChild(canvas);
+  const stream = canvas.captureStream(60);
+  service.MainStream = stream;
+  const videoEl = document.getElementById(
+    "video-capture-root"
+  ) as HTMLVideoElement;
+  console.log(videoEl);
+  videoEl.playsInline = true;
+  videoEl.autoplay = true;
+  videoEl.muted = true;
+  let setRemote = false;
+  setInterval(() => {
+    if (!setRemote && service.ReceivedStream) {
+      videoEl.srcObject = service.ReceivedStream;
+      videoEl.play();
+      setRemote = true;
+    }
+  }, 1000);
+
+  (document.getElementById("renegotiate") as HTMLButtonElement).onclick =
+    () => {
+      for (const [id, pc] of service.PeerConnections) {
+        pc.negotiate();
+      }
+    };
+
+  onWebviewMessage().subscribe((e) => {
+    if (e.type !== Tags.BufferToPresent) {
+      console.log(e);
+    }
+  });
+
+  canvas.addEventListener("pointerdown", (e) => {
+    console.log("simple client pointer event", e);
+    const h = (e: PointerEvent) => {
+      service.send(Tags.PointerEvent, normalizedPointerEvent(e, canvas));
+    };
+    canvas.addEventListener("pointermove", h);
+    window.addEventListener("pointerup", () => {
+      canvas.removeEventListener("pointermove", h);
+    });
+  });
 }
