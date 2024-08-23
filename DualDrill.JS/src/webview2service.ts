@@ -102,27 +102,16 @@ export class WebView2Service {
   constructor(private readonly BaseUrl = "/api/webviewInterop") {
     this.onEvent(Tags.RequestPeerConnectionEvent).subscribe({
       next: async ({ sourceId, targetId }) => {
-        console.log(
-          `create peer connection for ${sourceId} to ${targetId} start`
-        );
         if (this.PeerConnections.has(sourceId)) {
-          throw new Error(`PeerConnection #${sourceId} already exists`);
+          throw new Error(`PeerConnection ${sourceId} already exists`);
         }
+        console.log(
+          `start create peer connection for ${sourceId} to ${targetId}`
+        );
         const signalConnection = this.SignalConnection(sourceId);
         const pc = createPeerConnection(signalConnection, true);
         pc.onTrack.subscribe(async (t) => {
-          // setInterval(() => {
-          //   console.log(t);
-          //   console.log(t.streams);
-          //   console.log(t.track);
-          //   if (t.streams[0] && !this.ReceivedStream) {
-          //     this.ReceivedStream = t.streams[0];
-          //   }
-          // }, 1000);
-          console.log(t);
-          console.log(t.streams);
-          console.log(t.track);
-
+          console.log(`received track from ${sourceId} with id ${t.track.id}`);
           if (t.streams[0] && !this.ReceivedStream) {
             this.ReceivedStream = t.streams[0];
           } else {
@@ -130,12 +119,6 @@ export class WebView2Service {
               t.transceiver.receiver.track,
             ]);
           }
-          // setTimeout(async () => {
-          //   console.log("replace track");
-          //   console.log(t.transceiver.receiver.track);
-          //   console.log(t.track);
-          //   console.log(await t.transceiver.receiver.getStats());
-          // }, 2000);
         });
         this.PeerConnections.set(sourceId, pc);
         console.log(`Create Peer Connection for client id ${sourceId}`);
@@ -145,14 +128,14 @@ export class WebView2Service {
           track.contentHint = "detail";
           console.log(track);
           const sender = pc.addTrack(track, this.MainStream);
-          const parameters = sender.getParameters();
-          parameters.encodings[0].maxBitrate = 5000000; // Set the maximum bitrate to 5 Mbps
-          parameters.encodings[0].scaleResolutionDownBy = 1.0; // Do not scale down the resolution
-          parameters.encodings[0].maxFramerate = 30; // Set the maximum framerate to 30 fps
-          parameters.encodings[0].priority = "high";
-          parameters.encodings[0].networkPriority = "high";
-          console.log(parameters);
-          await sender.setParameters(parameters);
+          // const parameters = sender.getParameters();
+          // parameters.encodings[0].maxBitrate = 5000000; // Set the maximum bitrate to 5 Mbps
+          // parameters.encodings[0].scaleResolutionDownBy = 1.0; // Do not scale down the resolution
+          // parameters.encodings[0].maxFramerate = 30; // Set the maximum framerate to 30 fps
+          // parameters.encodings[0].priority = "high";
+          // parameters.encodings[0].networkPriority = "high";
+          // console.log(parameters);
+          // await sender.setParameters(parameters);
         } else {
           console.warn("track is not ready yet");
         }

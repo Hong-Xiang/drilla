@@ -22,8 +22,7 @@ export function createPeerConnection(
   signalConnection: SignalConnection,
   subscribeNegotiationNeeded: boolean
 ): DualDrillConnection {
-  const pc = new RTCPeerConnection({
-  });
+  const pc = new RTCPeerConnection({});
   const subscriptions = new Subscription();
   async function negotiate() {
     console.log(`negotiate called ${signalConnection.id}`);
@@ -49,15 +48,6 @@ export function createPeerConnection(
   subscriptions.add(
     signalConnection.onOffer.subscribe(async (sdp) => {
       console.log(`on offer called ${signalConnection.id}`);
-      var arr = sdp.split("\r\n");
-      arr.forEach((str, i) => {
-        if (/^a=fmtp:\d*/.test(str)) {
-          arr[i] =
-            str +
-            ";x-google-max-bitrate=28000;x-google-min-bitrate=0;x-google-start-bitrate=20000";
-        }
-      });
-      const modifiedSdp = arr.join("\r\n");
       console.log("got offer");
       console.log(sdp);
       await pc.setRemoteDescription({

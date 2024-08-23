@@ -413,7 +413,7 @@ export async function main() {
     serverId,
     webSocket
   );
-  const connection = createPeerConnection(signalConnection, true);
+  const connection = createPeerConnection(signalConnection, false);
 
   const video = createVideoElement(connection);
   const div = document.getElementById("video-render-root");
