@@ -1,5 +1,4 @@
 ﻿using R3;
-
 namespace DualDrill.Engine.Connection;
 
 public interface IDataChannel : IDisposable
