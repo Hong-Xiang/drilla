@@ -57,7 +57,6 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
     0.0
   );
   let p = fragUV.x * thetau +  fragUV.y * phiu + depthValue.z * ru;
-  // let p = vec3(fragUV.x, fragUV.y, depthValue.z) * vec3(1.0f, 1.0f, 1.0f);
   var value = 0.0f;
   var window = depthValue.w;
   for(var i = 0; i < steps; i++){
@@ -66,10 +65,5 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
   }
   value = value / steps;
 
-  // let value = (p + sqrt(3)) / 2;
-  // return vec4(value, 1.0);
-  // return vec4(fragUV, 0.0, 1.0);
-  // return vec4(0.5, 1, 0.5, 1);
-  // return vec4(uv.x, uv.x, uv.x, 1.0f);
   return vec4(vec3(value), 1.0f);
 }
