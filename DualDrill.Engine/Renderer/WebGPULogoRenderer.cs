@@ -1,10 +1,9 @@
-﻿using DualDrill.Graphics;
+﻿using DualDrill.Engine.Mesh;
+using DualDrill.Graphics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace DualDrill.Engine.Renderer;
-
-
 
 public sealed class WebGPULogoRenderer :
     IRenderer<WebGPULogoRenderer.State>,
@@ -30,7 +29,7 @@ public sealed class WebGPULogoRenderer :
     private GPUBindGroupLayout UniformBindGroupLayout { get; }
     private GPUBindGroup UniformBindGroup { get; }
 
-    private readonly WebGPULogoMesh Model = new();
+    private readonly IMesh Mesh = new WebGPULogo();
 
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
@@ -112,12 +111,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 Module = ShaderModule,
                 EntryPoint = "vs_main",
                 Buffers = new[] {
-                    new GPUVertexBufferLayout
-                    {
-                        ArrayStride = Model.ArrayStride,
-                        StepMode = GPUVertexStepMode.Vertex,
-                        Attributes = (GPUVertexAttribute[])[..Model.Attributes]
-                    }
+                    Mesh.BufferLayout
                 }
             },
             Primitive = new GPUPrimitiveState
@@ -142,12 +136,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         });
         VertexBuffer = Device.CreateBuffer(new GPUBufferDescriptor
         {
-            Size = Model.VertexBufferByteLength,
+            Size = (ulong)Mesh.VertexData.Length,
             Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.Vertex
         });
         IndexBuffer = Device.CreateBuffer(new GPUBufferDescriptor
         {
-            Size = Model.IndexBufferByteLength,
+            Size = (ulong)Mesh.IndexData.Length,
             Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.Index
         });
         UniformBuffer = Device.CreateBuffer(new()
@@ -171,8 +165,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 
         var queue = Device.GetQueue();
-        queue.WriteBuffer(VertexBuffer, 0, Model.VertexData);
-        queue.WriteBuffer(IndexBuffer, 0, Model.IndexData);
+        queue.WriteBuffer(VertexBuffer, 0, Mesh.VertexData);
+        queue.WriteBuffer(IndexBuffer, 0, Mesh.IndexData);
         //ReadOnlySpan<float> time = [1.0f];
         queue.WriteBuffer(UniformBuffer, 0, [0.0f, 0.0f, 640f / 480f, 1.0f]);
     }
@@ -205,11 +199,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         });
 
         rp.SetPipeline(Pipeline);
-        rp.SetVertexBuffer(0, VertexBuffer, 0, Model.VertexBufferByteLength);
-        rp.SetIndexBuffer(IndexBuffer, GPUIndexFormat.Uint16, 0, Model.IndexBufferByteLength);
+        rp.SetVertexBuffer(0, VertexBuffer, 0, (ulong)Mesh.VertexData.Length);
+        rp.SetIndexBuffer(IndexBuffer, Mesh.IndexFormat, 0, (ulong)Mesh.IndexData.Length);
         rp.SetBindGroup(0, UniformBindGroup);
         //rp.Draw(6, 1, 0, 0);
-        rp.DrawIndexed((uint)Model.IndexCount);
+        rp.DrawIndexed(Mesh.IndexCount);
         rp.End();
 
         using var drawCommands = encoder.Finish(new());

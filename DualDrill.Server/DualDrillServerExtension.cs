@@ -45,6 +45,7 @@ public static class DualDrillServerExtension
 
     private static void AddRenderService(IServiceCollection services)
     {
+        services.AddSingleton<MeshService>();
         services.AddSingleton<DualDrill.Engine.Renderer.WebGPULogoRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.ClearColorRenderer>();

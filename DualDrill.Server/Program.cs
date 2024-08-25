@@ -1,8 +1,10 @@
 using DualDrill.Engine.Headless;
+using DualDrill.Graphics;
 using DualDrill.Server.Connection;
 using DualDrill.Server.WebApi;
 using Serilog;
 using Serilog.Extensions.Logging;
+using System.Text.Json;
 
 namespace DualDrill.Server;
 
@@ -24,11 +26,25 @@ public class Program
         {
         });
 
+        builder.Services.ConfigureHttpJsonOptions(options =>
+        {
+            var converters = options.SerializerOptions.Converters;
+            converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUVertexFormat>(JsonNamingPolicy.SnakeCaseLower));
+            converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUVertexStepMode>(JsonNamingPolicy.SnakeCaseLower));
+            converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUIndexFormat>(JsonNamingPolicy.SnakeCaseLower));
+        });
+
         builder.Services.AddMessagePipe();
 
         builder.Services.AddControllersWithViews(options =>
         {
             options.InputFormatters.Add(new PlainTextFormatter());
+        }).AddJsonOptions(options =>
+        {
+            var converters = options.JsonSerializerOptions.Converters;
+            converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUVertexFormat>(JsonNamingPolicy.SnakeCaseLower));
+            converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUVertexStepMode>(JsonNamingPolicy.SnakeCaseLower));
+            converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUIndexFormat>(JsonNamingPolicy.SnakeCaseLower));
         });
         //builder.Services.AddControllers();
         builder.Services.AddHealthChecks();

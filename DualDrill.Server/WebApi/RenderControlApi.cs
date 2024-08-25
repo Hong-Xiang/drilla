@@ -38,6 +38,7 @@ public static class RenderControlApi
     {
         using var target = new DualDrill.Engine.Headless.HeadlessRenderTarget(device, width, height, GPUTextureFormat.BGRA8UnormSrgb);
         var scene = RenderScene.TestScene(width, height);
+        var pos = new Vector3(cameraX, cameraY, cameraZ);
         scene = scene with
         {
             Cube = scene.Cube with
@@ -49,8 +50,8 @@ public static class RenderControlApi
             {
                 NearPlaneWidth = width / scale,
                 NearPlaneHeight = height / scale,
-                Position = new Vector3(cameraX, cameraY, cameraZ),
-                LookAt = new Vector3(lookAtX, lookAtY, lookAtZ),
+                Position = pos,
+                Forward = new Vector3(lookAtX, lookAtY, lookAtZ) - pos,
                 Up = new Vector3(upX, upY, upZ)
             }
         };
