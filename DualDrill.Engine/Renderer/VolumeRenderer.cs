@@ -28,9 +28,9 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
        
 
         @vertex
-        fn vert_main(@builtin(vertex_index) VertexIndex : u32) -> VertexOutput {
+        fn vert_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
           let scale = sqrt(3.0);
-          vec2f p;
+          var p : vec2f;
           if(vertex_index == 0u){ 
             p = vec2(1.0,  1.0);
           }
@@ -41,10 +41,13 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
             p = vec2(-1.0, -1.0);
           }
           if(vertex_index == 3u){ 
+            p = vec2( 1.0,  1.0);
           }
           if(vertex_index == 4u){ 
+            p = vec2(-1.0, -1.0);
           }
           if(vertex_index == 5u){ 
+            p = vec2(-1.0,  1.0);
           }
 
           let pos = array(
@@ -57,8 +60,8 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
           );
 
           var output : VertexOutput;
-          output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
-          output.fragUV = vec2(pos[VertexIndex].x, - pos[VertexIndex].y) / 2 * scale;
+          output.Position = vec4(p, 0.0, 1.0);
+          output.fragUV = vec2(p.x, - p.y) / 2 * scale;
           return output;
         }
 
@@ -86,10 +89,10 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
           var value = 0.0f;
           var window = depthValue.w;
           for(var i = 0; i < steps; i++){
-            let uv = (p + scale / 2.0f) / scale + ru * window * (1.0f / steps) * f32(i - steps / 2);
+            let uv = (p + scale / 2.0f) / scale + ru * window * (1.0f / f32(steps)) * f32(i - steps / 2);
             value +=  textureSample(myTexture, mySampler, uv).r;
           }
-          value = value / steps;
+          value = value / f32(steps);
 
           return vec4(vec3(value), 1.0f);
         }
@@ -143,8 +146,10 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
             Size = 4 * sizeof(float),
             Usage = GPUBufferUsage.Uniform | GPUBufferUsage.CopyDst
         });
+        var textureView = DataTexture.GPUTexture.CreateView();
         BindGroup = Device.CreateBindGroup(new GPUBindGroupDescriptor()
         {
+            Label = "bind group 0 descriptor",
             Layout = BindGroupLayout,
             Entries = new GPUBindGroupEntry[]
             {
@@ -156,7 +161,7 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
                 new()
                 {
                     Binding = 1,
-                    TextureView = DataTexture.GPUTexture.CreateView()
+                    TextureView = textureView
                 },
                 new()
                 {

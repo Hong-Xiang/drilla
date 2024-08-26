@@ -83,8 +83,12 @@ public sealed partial class GPURenderPipeline
                 },
                 fragment = descriptor.Fragment.HasValue ? &fragment : null,
                 //DepthStencil = null,
-                layout = descriptor.Layout.Handle
             };
+            if (descriptor.Layout is not null)
+            {
+                renderPipelineDescriptor.layout = descriptor.Layout.Handle;
+            }
+
 
             var vertexBuffer = stackalloc WGPUVertexBufferLayout[descriptor.Vertex.Buffers.Length];
             var attributesTotalCount = 0;

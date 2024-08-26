@@ -37,7 +37,9 @@ public sealed class HeadVolumeTexture : ITexture, IDisposable
                 DepthOrArrayLayers = Depth
             },
             Format = GPUTextureFormat.R8Unorm,
-            Usage = GPUTextureUsage.TextureBinding | GPUTextureUsage.CopyDst
+            Usage = GPUTextureUsage.TextureBinding | GPUTextureUsage.CopyDst,
+            SampleCount = 1,
+            MipLevelCount = 1,
         });
         device.GetQueue().WriteTexture(new()
         {
