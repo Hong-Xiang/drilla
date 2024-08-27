@@ -1,15 +1,7 @@
-﻿using DotNext;
-using DualDrill.Graphics.Interop;
-using Silk.NET.Core.Native;
+﻿using DualDrill.Graphics.Interop;
 using Silk.NET.WebGPU;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
