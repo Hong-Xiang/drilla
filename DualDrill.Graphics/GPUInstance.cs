@@ -1,49 +1,22 @@
-﻿using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using DualDrill.Graphics.Interop;
-
-namespace DualDrill.Graphics;
+﻿namespace DualDrill.Graphics;
 
 public interface IGPUInstance
 {
 }
 
-public sealed partial class GPUInstance : IDisposable
+public sealed record class GPUInstance<TBackend>(GPUHandle<TBackend, GPUInstance<TBackend>> Handle)
+    : IDisposable, IGPUInstance
+    where TBackend : IBackend<TBackend>
 {
-    public unsafe GPUInstance()
+    public void Dispose()
     {
-        WGPUInstanceDescriptor descriptor = new();
-        var pointer = WGPU.CreateInstance(&descriptor);
-        Handle = new(pointer);
+        TBackend.Instance.DisposeHandle(Handle);
     }
 
-    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    static unsafe void RequestAdaptorCallback(GPURequestAdapterStatus status, WGPUAdapterImpl* adapter, sbyte* message, void* data)
+    public ValueTask<GPUAdapter<TBackend>> RequestAdapterAsync(
+        GPURequestAdapterOptions options,
+        CancellationToken cancellationToken)
     {
-        RequestCallback<WGPUNativeApiInterop, WGPUAdapterImpl, GPURequestAdapterStatus>.Callback(status, adapter, message, data);
-    }
-
-    public unsafe GPUAdapter RequestAdapter(GPUSurface? surface)
-    {
-        var options = new WGPURequestAdapterOptions
-        {
-            powerPreference = GPUPowerPreference.HighPerformance
-        };
-        if (surface is not null)
-        {
-            options.compatibleSurface = surface.Handle;
-        }
-        var result = new RequestCallbackResult<WGPUAdapterImpl, GPURequestAdapterStatus>();
-        WGPU.InstanceRequestAdapter(
-            Handle,
-            &options,
-            &RequestAdaptorCallback,
-            &result
-        );
-        if (result.Handle is null)
-        {
-            throw new GraphicsApiException($"Request {nameof(GPUAdapter)} failed, status {result.Status}, message {Marshal.PtrToStringUTF8((nint)result.Message)}");
-        }
-        return new GPUAdapter(result.Handle);
+        return TBackend.Instance.RequestAdapterAsync(this, options, cancellationToken);
     }
 }

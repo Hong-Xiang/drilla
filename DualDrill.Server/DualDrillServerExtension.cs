@@ -3,6 +3,7 @@ using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
 using DualDrill.Engine.Services;
 using DualDrill.Graphics;
+using DualDrill.Graphics.Backend;
 using DualDrill.WebView;
 
 namespace DualDrill.Server;
@@ -18,11 +19,18 @@ public static class DualDrillServerExtension
         services.AddWebViewConnectionServices();
     }
 
-    private static void AddGraphicsServices(IServiceCollection services)
+    private static async ValueTask AddGraphicsServices(this IServiceCollection services, CancellationToken cancellation)
     {
-        services.AddSingleton<GPUInstance>();
-        services.AddSingleton(sp => sp.GetRequiredService<GPUInstance>().RequestAdapter(null));
-        services.AddSingleton(sp => sp.GetRequiredService<GPUAdapter>().RequestDevice());
+        var instance = WGPUBackend.Instance.CreateGPUInstance();
+        services.AddSingleton<GPUInstance<WGPUBackend>>(instance);
+
+        var adapter = await instance.RequestAdapterAsync(new GPURequestAdapterOptions()
+        {
+            PowerPreference = GPUPowerPreference.HighPerformance
+        }, cancellation);
+        services.AddSingleton(adapter);
+        var device = await adapter.RequestDeviceAsync(new GPUDeviceDescriptor(), cancellation);
+        services.AddSingleton(device);
         services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
     }
 
@@ -61,9 +69,9 @@ public static class DualDrillServerExtension
     }
 
 
-    public static void AddDualDrillServerServices(this IServiceCollection services)
+    public static async ValueTask AddDualDrillServerServices(this IServiceCollection services, CancellationToken cancellation)
     {
-        AddGraphicsServices(services);
+        await AddGraphicsServices(services, cancellation);
         AddConnectionServices(services);
         AddRealtimeSimulationServices(services);
         AddRenderService(services);

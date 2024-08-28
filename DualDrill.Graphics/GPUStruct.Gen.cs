@@ -304,13 +304,6 @@ public partial struct GPUSurfaceConfigurationExtras
     public bool DesiredMaximumFrameLatency { get; set; }
     public GPUChainedStruct Chain { get; set; }
 }
-public partial struct GPURequestAdapterOptions
-{
-    public bool ForceFallbackAdapter { get; set; }
-    public GPUPowerPreference PowerPreference { get; set; }
-    public GPUBackendType BackendType { get; set; }
-    public GPUSurface CompatibleSurface { get; set; }
-}
 public partial struct GPUBufferDescriptor
 {
     public GPUBufferUsage Usage { get; set; }
@@ -358,15 +351,6 @@ public partial struct GPUBindGroupLayoutDescriptor
 {
     public ReadOnlyMemory<GPUBindGroupLayoutEntry> Entries { get; set; }
     public string? Label { get; set; }
-}
-public unsafe partial struct GPUDeviceDescriptor
-{
-    public ReadOnlyMemory<GPUFeatureName> RequiredFeatures { get; set; }
-    public delegate* unmanaged[Cdecl]<GPUDeviceLostReason, sbyte*, void*, void> DeviceLostCallback { get; set; }
-    public nint DeviceLostUserdata { get; set; }
-    public ReadOnlyMemory<GPURequiredLimits> RequiredLimits { get; set; }
-    public string? Label { get; set; }
-    public GPUQueueDescriptor DefaultQueue { get; set; }
 }
 public unsafe partial struct GPUShaderModuleSPIRVDescriptor
 {

@@ -5,45 +5,6 @@ using System.Runtime.InteropServices;
 
 namespace DualDrill.Graphics;
 
-public sealed partial class GPUAdapter : IDisposable
-{
-
-    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    static unsafe void RequestDeviceCallback(GPURequestDeviceStatus status, WGPUDeviceImpl* device, sbyte* message, void* data)
-    {
-        RequestCallback<WGPUNativeApiInterop, WGPUDeviceImpl, GPURequestDeviceStatus>.Callback(status, device, message, data);
-    }
-    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    static unsafe void DeviceUncapturedErrorCallback(GPUErrorType errorType, sbyte* message, void* data)
-    {
-        Console.Error.WriteLine($"Device uncaptured error type = {Enum.GetName(errorType)}, message {Marshal.PtrToStringUTF8((nint)message)}");
-    }
-
-
-    public unsafe GPUDevice RequestDevice()
-    {
-        WGPUDeviceDescriptor descriptor = new();
-        var result = new RequestCallbackResult<WGPUDeviceImpl, GPURequestDeviceStatus>();
-        WGPU.AdapterRequestDevice(
-            Handle,
-            &descriptor,
-            &RequestDeviceCallback,
-            &result
-        );
-        if (result.Handle is null)
-        {
-            throw new GraphicsApiException($"Request {nameof(GPUDevice)} failed, status {result.Status}, message {Marshal.PtrToStringUTF8((nint)result.Message)}");
-        }
-        WGPU.DeviceSetUncapturedErrorCallback(result.Handle, &DeviceUncapturedErrorCallback, null);
-        return new GPUDevice(result.Handle);
-    }
-
-    public override string? ToString()
-    {
-        return $"{nameof(GPUAdapter)}{Handle}";
-    }
-}
-
 public unsafe sealed class Adapter(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.Adapter* Handle)
 {
     public Silk.NET.WebGPU.Adapter* Handle { get; } = Handle;

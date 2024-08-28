@@ -57,7 +57,7 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        builder.Services.AddDualDrillServerServices();
+        await builder.Services.AddDualDrillServerServices(CancellationToken.None);
 
 
         var app = builder.Build();
