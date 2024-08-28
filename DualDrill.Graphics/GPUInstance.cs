@@ -4,6 +4,10 @@ using DualDrill.Graphics.Interop;
 
 namespace DualDrill.Graphics;
 
+public interface IGPUInstance
+{
+}
+
 public sealed partial class GPUInstance : IDisposable
 {
     public unsafe GPUInstance()

@@ -4,4 +4,11 @@ public sealed record class GPUInstance<TBackend>(IHandle<TBackend, GPUInstance<T
     where TBackend : IBackend<TBackend>
 {
     // TODO: add language features api
+
+    public ValueTask<GPUAdaptor<TBackend>> RequestAdapterAsync(
+        GPURequestAdapterOptions options,
+        CancellationToken cancellationToken)
+    {
+        
+    }
 }

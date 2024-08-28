@@ -21,13 +21,11 @@ internal sealed class VulkanApi
 }
 
 interface IGPUHandleDisposer<THandle>
-    where THandle : unmanaged
 {
     abstract static void DisposeGraphicsHandle(THandle handle);
 }
 
 unsafe sealed class GPUHandle<TManaged, THandle>(THandle Handle) : SafeHandleZeroOrMinusOneIsInvalid(true)
-    where THandle : unmanaged
     where TManaged : IGPUHandleDisposer<THandle>
 {
     public THandle Handle { get; } = Handle;

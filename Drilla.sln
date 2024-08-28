@@ -21,7 +21,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Common.Abstractio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.WebView", "DualDrill.WebView\DualDrill.WebView.csproj", "{12053700-00C9-465B-8BC3-C8E3B7409064}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DualDrill.ILSL", "DualDrill.ILSL\DualDrill.ILSL.csproj", "{0E1F375B-1EFC-49E8-A775-2657F4FF5B39}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.ILSL", "DualDrill.ILSL\DualDrill.ILSL.csproj", "{0E1F375B-1EFC-49E8-A775-2657F4FF5B39}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.GPU", "DualDrill.GPU\DualDrill.GPU.csproj", "{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -115,6 +117,14 @@ Global
 		{0E1F375B-1EFC-49E8-A775-2657F4FF5B39}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0E1F375B-1EFC-49E8-A775-2657F4FF5B39}.Release|x64.ActiveCfg = Release|Any CPU
 		{0E1F375B-1EFC-49E8-A775-2657F4FF5B39}.Release|x64.Build.0 = Release|Any CPU
+		{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}.Debug|x64.Build.0 = Debug|Any CPU
+		{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}.Release|x64.ActiveCfg = Release|Any CPU
+		{5203EBE5-4AB2-4F1D-9A43-6F459C74F024}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
