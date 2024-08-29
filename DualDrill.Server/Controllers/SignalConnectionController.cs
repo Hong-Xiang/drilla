@@ -1,5 +1,4 @@
-﻿using Devlooped.Net;
-using DualDrill.Common;
+﻿using DualDrill.Common;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Event;
 using Microsoft.AspNetCore.Mvc;
