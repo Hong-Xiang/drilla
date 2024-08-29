@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "compile": "tsc",
+    "compile": "tsc --noEmit",
     "build": "node esbuild.mjs",
     "preview": "vite preview"
   },
