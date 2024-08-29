@@ -1,8 +1,10 @@
-﻿using DualDrill.Common;
+﻿using Devlooped.Net;
+using DualDrill.Common;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Event;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -91,8 +93,9 @@ public class SignalConnectionController(
 
     async ValueTask SendAllMessageAsync(WebSocket webSocket, Guid clientId, CancellationToken cancellation)
     {
+        var pipe = new Pipe();
+
         const int BufferSize = 1024 * 64;
-        var buffer = new byte[BufferSize];
 
         Channel<string> channel = Channel.CreateUnbounded<string>();
         using var addSub = SignalConnectionService.SubscribeAddIceCandidateAwait(clientId, async (e, c) =>
@@ -108,9 +111,40 @@ public class SignalConnectionController(
                                      await channel.Writer.WriteAsync(JsonSerializer.Serialize(TaggedEvent.Create(e), CustomJsonOption.Web), c);
                                  });
 
+
         await foreach (var c in channel.Reader.ReadAllAsync(cancellation))
         {
-            await SendMessageAsync(webSocket, buffer, c, cancellation);
+            async Task WriteAllAsync()
+            {
+                var writer = pipe.Writer;
+                await pipe.Writer.WriteAsync(Encoding.UTF8.GetBytes(c), cancellation);
+            }
+            async Task SendAllAsync()
+            {
+                ReadOnlyMemory<byte>? last = null;
+                var reader = pipe.Reader;
+                var result = await reader.ReadAsync(cancellation);
+                try
+                {
+                    foreach (var r in result.Buffer)
+                    {
+                        if (last.HasValue)
+                        {
+                            await webSocket.SendAsync(last.Value, WebSocketMessageType.Text, false, cancellation);
+                        }
+                        last = r;
+                    }
+                    if (last.HasValue)
+                    {
+                        await webSocket.SendAsync(last.Value, WebSocketMessageType.Text, true, cancellation);
+                    }
+                }
+                finally
+                {
+                    reader.AdvanceTo(result.Buffer.End);
+                }
+            }
+            await Task.WhenAll(WriteAllAsync(), SendAllAsync());
         }
     }
 }
