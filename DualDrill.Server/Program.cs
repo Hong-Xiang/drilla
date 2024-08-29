@@ -28,6 +28,7 @@ public class Program
 
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
+            options.SerializerOptions.MaxDepth = 128;
             var converters = options.SerializerOptions.Converters;
             converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUVertexFormat>(JsonNamingPolicy.SnakeCaseLower));
             converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUVertexStepMode>(JsonNamingPolicy.SnakeCaseLower));
@@ -41,6 +42,7 @@ public class Program
             options.InputFormatters.Add(new PlainTextFormatter());
         }).AddJsonOptions(options =>
         {
+            options.JsonSerializerOptions.MaxDepth = 128;
             var converters = options.JsonSerializerOptions.Converters;
             converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUVertexFormat>(JsonNamingPolicy.SnakeCaseLower));
             converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter<GPUVertexStepMode>(JsonNamingPolicy.SnakeCaseLower));
@@ -49,8 +51,8 @@ public class Program
         //builder.Services.AddControllers();
         builder.Services.AddHealthChecks();
         builder.Services.AddRazorComponents()
-            .AddInteractiveServerComponents()
-            .AddInteractiveWebAssemblyComponents();
+            .AddInteractiveServerComponents();
+            //.AddInteractiveWebAssemblyComponents();
 
         //builder.Services.AddOpenApi();
 
@@ -67,7 +69,7 @@ public class Program
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
-            app.UseWebAssemblyDebugging();
+            //app.UseWebAssemblyDebugging();
         }
         else
         {

@@ -57,9 +57,8 @@ public struct ShaderModule : IShaderModule
 
     [Fragment]
     [return: Location(0)]
-    static Vector4 fs_main(VertexOutput vertexOutput)
+    static Vector4 fs_main(VertexOutput vout)
     {
         return new Vector4(0.3f, 0.2f, 0.1f, 1.0f);
     }
 }
-

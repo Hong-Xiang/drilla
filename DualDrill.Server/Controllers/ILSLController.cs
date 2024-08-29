@@ -9,13 +9,26 @@ public class ILSLController : Controller
     [HttpGet("")]
     public IActionResult Index()
     {
-        ViewData["ExpectedCode"] = DualDrill.Engine.Shader.ExpectedResult.Code;
-        ViewData["GeneratedCode"] = ILSL.ILSLCompiler.Compile<Engine.Shader.ShaderModule>();
-        ViewData["AstJson"] = JsonSerializer.Serialize(ILSL.ILSLCompiler.ASTToJson<Engine.Shader.ShaderModule>(),
-            new JsonSerializerOptions()
-            {
-                WriteIndented = true
-            });
         return View();
+    }
+
+    [HttpGet("expected")]
+    public IActionResult ExpectedCode()
+    {
+        return Ok(Engine.Shader.ExpectedResult.Code);
+    }
+
+
+    [HttpGet("generated")]
+    public IActionResult GeneratedCode()
+    {
+        var code = ILSL.ILSLCompiler.Compile<Engine.Shader.ShaderModule>();
+        return Ok(code);
+    }
+
+    [HttpGet("ast")]
+    public IActionResult GeneratedAst()
+    {
+        return Ok(ILSL.ILSLCompiler.ASTToJson<Engine.Shader.ShaderModule>());
     }
 }

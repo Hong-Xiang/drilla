@@ -1,13 +1,27 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
 }
-<h2>Simple WebGPU Rendering</h2>
-<pre>@ViewData["AstJson"]</pre>
-<div class="p-2 w-100">
-    <h4>exepceted</h4>
-    <pre class="p-2">@ViewData["ExpectedCode"]</pre>
-    <h4>generated</h4>
-    <pre class="p-2">@ViewData["GeneratedCode"]</pre>
+<h2>ILSL Development</h2>
+<div class="container mw-100 w-100">
+    <div class="row" style="height:800px">
+        <div class="col h-100" style="height:800px">
+            <div id="editor-expected" class="h-100"></div>
+        </div>
+        <div class="col h-100">
+            <div id="editor-generated" class="h-100"></div>
+        </div>
+    </div>
+    <div class="row" >
+        <div class="col" style="height:800px">
+            <div id="editor-ast" class="h-100"></div>
+        </div>
+    </div>
 </div>
-<textarea id="test-code-text"></textarea>
-<button id="test-code-compile">Test Compile</button>
+
+@section Scripts {
+        <!script src="/js/dist/client.js" type="module"></!script>
+        <!script type="module">
+        import { ILSLDevelopMain } from '/js/dist/client.js'
+                                        ILSLDevelopMain();
+       </!script>
+}

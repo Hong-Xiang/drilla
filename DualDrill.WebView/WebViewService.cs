@@ -103,7 +103,10 @@ public sealed partial class WebViewService(
             {
                 var data = e.WebMessageAsJson;
                 PointerEventPublisher.Publish(new(ClientsManager.ServerId,
-                    JsonSerializer.Deserialize<TaggedEvent<PointerEvent>>(data, JsonSerializerOptions.Web).Data));
+                    JsonSerializer.Deserialize<TaggedEvent<PointerEvent>>(data, new JsonSerializerOptions()
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    }).Data));
             };
         };
         AppCreatedCompletionSource.SetResult(App);
@@ -246,7 +249,10 @@ public sealed partial class WebViewService(
     public async ValueTask SendMessageAsync<T>(T data, CancellationToken cancellation)
         where T : notnull
     {
-        await SendMessageAsync(JsonSerializer.Serialize(new TaggedEvent<T>(data), JsonSerializerOptions.Web), cancellation);
+        await SendMessageAsync(JsonSerializer.Serialize(new TaggedEvent<T>(data), new JsonSerializerOptions()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        }), cancellation);
     }
 }
 

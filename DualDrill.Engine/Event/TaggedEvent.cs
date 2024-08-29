@@ -49,7 +49,8 @@ public static class TaggedEvent
     }
 
     readonly static ConcurrentDictionary<Type, string> TypeTages = [];
-    readonly static Lock Lock = new();
+    //readonly static Lock Lock = new();
+    readonly static object Lock = new();
 
     public static string GetTypeTag<T>()
     {

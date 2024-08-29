@@ -1,4 +1,5 @@
-﻿using DualDrill.Engine.Connection;
+﻿using DualDrill.Common;
+using DualDrill.Engine.Connection;
 using DualDrill.Engine.Event;
 using DualDrill.Engine.Media;
 using MessagePipe;
@@ -137,7 +138,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                 {
                     channel.onmessage += (dc, protocol, data) =>
                     {
-                        var e = JsonSerializer.Deserialize<PointerEvent>(data, JsonSerializerOptions.Web);
+                        var e = JsonSerializer.Deserialize<PointerEvent>(data, CustomJsonOption.Web);
                         if (e is not null)
                         {
                             PointerEventPublisher.Publish(new ClientEvent<PointerEvent>(clientId, e));
@@ -152,7 +153,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                 {
                     channel.onmessage += (dc, protocol, data) =>
                     {
-                        var e = JsonSerializer.Deserialize<ScaleEvent>(data, JsonSerializerOptions.Web);
+                        var e = JsonSerializer.Deserialize<ScaleEvent>(data, CustomJsonOption.Web);
                         if (e is not null)
                         {
                             ScaleEventPublisher.Publish(new ClientEvent<ScaleEvent>(clientId, e));
