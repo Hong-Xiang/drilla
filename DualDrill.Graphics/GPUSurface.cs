@@ -32,27 +32,7 @@ public sealed partial class GPUSurface : IDisposable
         WGPU.SurfacePresent(Handle);
     }
 
-    public static unsafe GPUSurface Create(Silk.NET.Windowing.IView view, GPUInstance instance)
-    {
-        WGPUSurfaceDescriptor descriptor = new();
-        WGPUSurfaceDescriptorFromWindowsHWND surfaceDescriptorFromWindowsHWND = new();
-        surfaceDescriptorFromWindowsHWND.chain = new Interop.WGPUChainedStruct
-        {
-            next = null,
-            sType = WGPUSType.SurfaceDescriptorFromWindowsHWND
-        };
-        surfaceDescriptorFromWindowsHWND.hwnd = (void*)(((IntPtr, IntPtr, IntPtr)?)view.Native.Win32).Value.Item1;
-        surfaceDescriptorFromWindowsHWND.hinstance = (void*)(((IntPtr, IntPtr, IntPtr)?)view.Native.Win32).Value.Item3;
-        WGPUSurfaceDescriptorFromWindowsHWND surfaceDescriptorFromWindowsHWND2 = surfaceDescriptorFromWindowsHWND;
-        descriptor.nextInChain = (Interop.WGPUChainedStruct*)(&surfaceDescriptorFromWindowsHWND);
-        WGPUSurfaceImpl* result = WGPU.InstanceCreateSurface(instance.Handle, &descriptor);
-        if (result is null)
-        {
-            throw new GraphicsApiException("Failed to create surface");
-        }
-        return new(result);
-    }
-
+   
     public unsafe GPUSurfaceTexture GetCurrentTexture()
     {
         WGPUSurfaceTexture texture;

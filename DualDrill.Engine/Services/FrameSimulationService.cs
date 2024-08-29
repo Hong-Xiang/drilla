@@ -1,4 +1,5 @@
-﻿using DualDrill.Engine.Scene;
+﻿using DualDrill.Engine.Event;
+using DualDrill.Engine.Scene;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Numerics;
@@ -57,6 +58,28 @@ public sealed class FrameSimulationService(
         var events = frameInput.PointerEvents;
         var eventCount = events.Length;
         var r = new Vector3(MathF.Sin(t), MathF.Cos(t), 0);
+        if (frameInput.CameraEvent is CameraEvent e)
+        {
+            scene = scene with
+            {
+                Camera = scene.Camera with
+                {
+                    Position = e.Position,
+                    Forward = e.Forward,
+                    Up = e.Up
+                }
+            };
+        }
+        var p = new Vector3(10.0f * MathF.Cos(t), 5.0f, 10.0f * MathF.Sin(t));
+        scene = scene with
+        {
+
+            Camera = scene.Camera with
+            {
+                Position = p,
+                Forward = Vector3.Zero - p
+            }
+        };
         scene = scene with { Cube = scene.Cube with { Rotation = r, Scale = frameInput.Scale ?? scene.Cube.Scale } };
         scene = scene with { ClearColor = new Vector3(0.2f) + 0.1f * new Vector3(MathF.Cos(t), MathF.Sin(t), 0.1f) };
         if (eventCount > 0)

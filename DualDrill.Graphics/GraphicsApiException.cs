@@ -23,7 +23,13 @@ namespace DualDrill.Graphics;
 //    internal THandle DeviceRequestQueue(THandle device);
 //}
 
-public sealed class GraphicsApiException(string Message) : Exception(Message)
+public class GraphicsApiException(string Message) : Exception(Message)
+{
+}
+
+public sealed class GraphicsApiException<TBackend>(string message)
+    : GraphicsApiException(message)
+    where TBackend : IBackend<TBackend>
 {
 }
 

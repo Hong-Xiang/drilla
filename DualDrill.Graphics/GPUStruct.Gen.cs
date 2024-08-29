@@ -304,13 +304,6 @@ public partial struct GPUSurfaceConfigurationExtras
     public bool DesiredMaximumFrameLatency { get; set; }
     public GPUChainedStruct Chain { get; set; }
 }
-public partial struct GPURequestAdapterOptions
-{
-    public bool ForceFallbackAdapter { get; set; }
-    public GPUPowerPreference PowerPreference { get; set; }
-    public GPUBackendType BackendType { get; set; }
-    public GPUSurface CompatibleSurface { get; set; }
-}
 public partial struct GPUBufferDescriptor
 {
     public GPUBufferUsage Usage { get; set; }
@@ -318,27 +311,27 @@ public partial struct GPUBufferDescriptor
     public GPUBool MappedAtCreation { get; set; }
     public string? Label { get; set; }
 }
-public partial struct GPUTextureDescriptor
+public partial struct GPUTextureDescriptor()
 {
     public GPUTextureUsage Usage { get; set; }
-    public int MipLevelCount { get; set; }
-    public int SampleCount { get; set; }
+    public int MipLevelCount { get; set; } = 1;
+    public int SampleCount { get; set; } = 1;
     public string? Label { get; set; }
-    public GPUTextureDimension Dimension { get; set; }
+    public GPUTextureDimension Dimension { get; set; } = GPUTextureDimension._2D;
     public GPUExtent3D Size { get; set; }
     public GPUTextureFormat Format { get; set; }
     public ReadOnlyMemory<GPUTextureFormat> ViewFormats { get; set; }
 }
-public partial struct GPUTextureViewDescriptor
+public partial struct GPUTextureViewDescriptor()
 {
-    public int BaseMipLevel { get; set; }
-    public int MipLevelCount { get; set; }
-    public int BaseArrayLayer { get; set; }
-    public int ArrayLayerCount { get; set; }
+    public int BaseMipLevel { get; set; } = 0;
+    public required int MipLevelCount { get; set; }
+    public required int BaseArrayLayer { get; set; }
+    public int ArrayLayerCount { get; set; } = 0;
     public string? Label { get; set; }
-    public GPUTextureFormat Format { get; set; }
-    public GPUTextureViewDimension Dimension { get; set; }
-    public GPUTextureAspect Aspect { get; set; }
+    public required GPUTextureFormat Format { get; set; }
+    public required GPUTextureViewDimension Dimension { get; set; }
+    public GPUTextureAspect Aspect { get; set; } = GPUTextureAspect.All;
 }
 public partial struct GPUSamplerDescriptor
 {
@@ -358,15 +351,6 @@ public partial struct GPUBindGroupLayoutDescriptor
 {
     public ReadOnlyMemory<GPUBindGroupLayoutEntry> Entries { get; set; }
     public string? Label { get; set; }
-}
-public unsafe partial struct GPUDeviceDescriptor
-{
-    public ReadOnlyMemory<GPUFeatureName> RequiredFeatures { get; set; }
-    public delegate* unmanaged[Cdecl]<GPUDeviceLostReason, sbyte*, void*, void> DeviceLostCallback { get; set; }
-    public nint DeviceLostUserdata { get; set; }
-    public ReadOnlyMemory<GPURequiredLimits> RequiredLimits { get; set; }
-    public string? Label { get; set; }
-    public GPUQueueDescriptor DefaultQueue { get; set; }
 }
 public unsafe partial struct GPUShaderModuleSPIRVDescriptor
 {
@@ -460,7 +444,7 @@ public partial struct GPUComputePipelineDescriptor
 }
 public partial struct GPURenderPipelineDescriptor
 {
-    public GPUPipelineLayout Layout { get; set; }
+    public GPUPipelineLayout? Layout { get; set; }
     public GPUVertexState Vertex { get; set; }
     public GPUPrimitiveState Primitive { get; set; }
     public string? Label { get; set; }

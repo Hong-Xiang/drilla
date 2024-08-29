@@ -42,6 +42,12 @@ public class HomeController(
         return View();
     }
 
+    [HttpGet("volume")]
+    public IActionResult VolumeRendering()
+    {
+        return View();
+    }
+
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     [HttpGet("error")]
     public IActionResult Error()

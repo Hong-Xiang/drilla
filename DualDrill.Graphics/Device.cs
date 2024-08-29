@@ -6,6 +6,11 @@ namespace DualDrill.Graphics;
 
 public sealed partial class GPUDevice
 {
+    public GPURenderPipeline CreateRenderPipeline(GPURenderPipelineDescriptor descriptor)
+    {
+        return GPURenderPipeline.Create(this, descriptor);
+    }
+
     public unsafe GPUCommandEncoder CreateCommandEncoder(GPUCommandEncoderDescriptor descriptor)
     {
         if (descriptor.Label is not null)
@@ -16,6 +21,24 @@ public sealed partial class GPUDevice
         {
         };
         return new(WGPU.DeviceCreateCommandEncoder(Handle, &nativeDescriptor));
+    }
+
+    public unsafe GPUSampler CreateSampler(GPUSamplerDescriptor descriptor)
+    {
+        WGPUSamplerDescriptor nativeDescriptor = new()
+        {
+            addressModeU = descriptor.AddressModeU,
+            addressModeV = descriptor.AddressModeV,
+            addressModeW = descriptor.AddressModeW,
+            magFilter = descriptor.MagFilter,
+            minFilter = descriptor.MinFilter,
+            mipmapFilter = descriptor.MipmapFilter,
+            lodMinClamp = descriptor.LodMinClamp,
+            lodMaxClamp = descriptor.LodMaxClamp,
+            compare = descriptor.Compare,
+            maxAnisotropy = descriptor.MaxAnisotropy
+        };
+        return new(WGPU.DeviceCreateSampler(Handle, &nativeDescriptor));
     }
 
     public unsafe void Poll()
