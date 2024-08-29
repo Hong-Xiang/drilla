@@ -49,8 +49,8 @@ public class Program
         //builder.Services.AddControllers();
         builder.Services.AddHealthChecks();
         builder.Services.AddRazorComponents()
-            .AddInteractiveServerComponents()
-            .AddInteractiveWebAssemblyComponents();
+            .AddInteractiveServerComponents();
+            //.AddInteractiveWebAssemblyComponents();
 
         //builder.Services.AddOpenApi();
 
@@ -67,7 +67,7 @@ public class Program
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
-            app.UseWebAssemblyDebugging();
+            //app.UseWebAssemblyDebugging();
         }
         else
         {

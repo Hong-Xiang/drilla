@@ -1,4 +1,5 @@
-﻿using DualDrill.Engine.Connection;
+﻿using DualDrill.Common;
+using DualDrill.Engine.Connection;
 using DualDrill.Engine.Event;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -96,15 +97,15 @@ public class SignalConnectionController(
         Channel<string> channel = Channel.CreateUnbounded<string>();
         using var addSub = SignalConnectionService.SubscribeAddIceCandidateAwait(clientId, async (e, c) =>
                                  {
-                                     await channel.Writer.WriteAsync(JsonSerializer.Serialize(TaggedEvent.Create(e), JsonSerializerOptions.Web), c);
+                                     await channel.Writer.WriteAsync(JsonSerializer.Serialize(TaggedEvent.Create(e), CustomJsonOption.Web), c);
                                  });
         using var offerSub = SignalConnectionService.SubscribeOfferAwait(clientId, async (e, c) =>
                                  {
-                                     await channel.Writer.WriteAsync(JsonSerializer.Serialize(TaggedEvent.Create(e), JsonSerializerOptions.Web), c);
+                                     await channel.Writer.WriteAsync(JsonSerializer.Serialize(TaggedEvent.Create(e), CustomJsonOption.Web), c);
                                  });
         using var answerSub = SignalConnectionService.SubscribeAnswerAwait(clientId, async (e, c) =>
                                  {
-                                     await channel.Writer.WriteAsync(JsonSerializer.Serialize(TaggedEvent.Create(e), JsonSerializerOptions.Web), c);
+                                     await channel.Writer.WriteAsync(JsonSerializer.Serialize(TaggedEvent.Create(e), CustomJsonOption.Web), c);
                                  });
 
         await foreach (var c in channel.Reader.ReadAllAsync(cancellation))
