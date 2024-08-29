@@ -272,16 +272,3 @@ public sealed partial class GPUQuerySet : IDisposable
         Handle.Dispose();
     }
 }
-public sealed partial class GPUInstance : IDisposable
-{
-    internal NativeHandle<WGPUNativeApiInterop, WGPUInstanceImpl> Handle { get; }
-    internal unsafe GPUInstance(WGPUInstanceImpl* handle)
-    {
-        Handle = new(handle);
-    }
-
-    public unsafe WGPUInstanceImpl* NativePointer => Handle; public void Dispose()
-    {
-        Handle.Dispose();
-    }
-}

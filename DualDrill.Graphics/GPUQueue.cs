@@ -1,12 +1,6 @@
 ﻿using DualDrill.Graphics.Interop;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
@@ -34,14 +28,58 @@ public sealed partial class GPUQueue
         WGPU.QueueWriteBuffer(Handle, buffer.Handle, bufferOffset, ptr, (nuint)byteSpan.Length);
     }
 
+    public unsafe void WriteTexture(
+        GPUImageCopyTexture destination,
+        ReadOnlySpan<byte> data,
+        GPUTextureDataLayout layout,
+        GPUExtent3D extent)
+    {
+        var nativeDestination = new WGPUImageCopyTexture
+        {
+            aspect = destination.Aspect,
+            mipLevel = (uint)destination.MipLevel,
+            origin = new()
+            {
+                x = (uint)destination.Origin.X,
+                y = (uint)destination.Origin.Y,
+                z = (uint)destination.Origin.Z,
+            },
+            texture = destination.Texture.Handle,
+        };
+        var nativeLayout = new WGPUTextureDataLayout
+        {
+            offset = layout.Offset,
+            bytesPerRow = (uint)layout.BytesPerRow,
+            rowsPerImage = (uint)layout.RowsPerImage,
+        };
+        var nativeExtend = new WGPUExtent3D
+        {
+            width = (uint)extent.Width,
+            height = (uint)extent.Height,
+            depthOrArrayLayers = (uint)extent.DepthOrArrayLayers
+        };
+        var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(data));
+        WGPU.QueueWriteTexture(
+            Handle,
+            &nativeDestination,
+            ptr,
+            (nuint)data.Length,
+            &nativeLayout,
+            &nativeExtend
+        );
+    }
+
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     unsafe static void QueueWorkDone(GPUQueueWorkDoneStatus status, void* data)
     {
         var handle = GCHandle.FromIntPtr((nint)data);
         //var target = (TaskCompletionSource<WGPUQueueWorkDoneStatus>)handle.Target;
         //target.SetResult(status);
-        var action = (Action)handle.Target;
-        action();
+        var action = (Action?)handle.Target;
+        if (action is not null)
+        {
+            action();
+        }
         handle.Free();
     }
 
@@ -49,7 +87,7 @@ public sealed partial class GPUQueue
     unsafe static void QueueWorkDoneAsync(GPUQueueWorkDoneStatus status, void* data)
     {
         var handle = GCHandle.FromIntPtr((nint)data);
-        var target = (TaskCompletionSource<GPUQueueWorkDoneStatus>)handle.Target ?? throw new GraphicsApiException($"GCHandle({(nint)data:X}) failed to recover target");
+        var target = handle.Target as TaskCompletionSource<GPUQueueWorkDoneStatus> ?? throw new GraphicsApiException($"GCHandle({(nint)data:X}) failed to recover target");
         target.SetResult(status);
         handle.Free();
     }

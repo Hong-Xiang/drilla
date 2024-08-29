@@ -16,7 +16,7 @@ public sealed partial class GPURenderPassEncoder
     {
         WGPU.RenderPassEncoderSetPipeline(Handle, pipeline.Handle);
     }
-    public unsafe void Draw(int vertexCount, int instanceCount, int firstVertex, int firstInstance)
+    public unsafe void Draw(int vertexCount, int instanceCount = 1, int firstVertex = 0, int firstInstance = 0)
     {
         WGPU.RenderPassEncoderDraw(Handle, (uint)vertexCount, (uint)instanceCount, (uint)firstVertex, (uint)firstInstance);
     }

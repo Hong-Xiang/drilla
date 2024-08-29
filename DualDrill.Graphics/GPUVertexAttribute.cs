@@ -3,11 +3,11 @@
 namespace DualDrill.Graphics;
 public struct GPUVertexAttribute
 {
-    public GPUVertexFormat Format;
+    public GPUVertexFormat Format { get; set; }
 
     [NativeTypeName("uint64_t")]
-    public ulong Offset;
+    public ulong Offset { get; set; }
 
     [NativeTypeName("uint32_t")]
-    public uint ShaderLocation;
+    public uint ShaderLocation { get; set; }
 }

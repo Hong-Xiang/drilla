@@ -1,12 +1,6 @@
 ﻿using DualDrill.Graphics.Interop;
 using Silk.NET.Core.Native;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reactive.Disposables;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
 
@@ -89,8 +83,12 @@ public sealed partial class GPURenderPipeline
                 },
                 fragment = descriptor.Fragment.HasValue ? &fragment : null,
                 //DepthStencil = null,
-                layout = descriptor.Layout.Handle
             };
+            if (descriptor.Layout is not null)
+            {
+                renderPipelineDescriptor.layout = descriptor.Layout.Handle;
+            }
+
 
             var vertexBuffer = stackalloc WGPUVertexBufferLayout[descriptor.Vertex.Buffers.Length];
             var attributesTotalCount = 0;
