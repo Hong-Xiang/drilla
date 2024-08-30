@@ -8,13 +8,18 @@ internal class ASTJsonVisitor : IAstVisitor<JsonNode>
 {
     private JsonNode VisitDefault(AstNode node)
     {
-        return new JsonObject(
+        var result =  new JsonObject(
             [
-                new("type", Enum.GetName(node.NodeType)),
+                new("nodeType", Enum.GetName(node.NodeType)),
+                new("netType", node.GetType().Name),
                 new("children", new JsonArray( node.Children.Select(c => c.AcceptVisitor(this)).ToArray()))
             ]
         );
-
+        if(node is Identifier identifier)
+        {
+            result.Add("name", JsonValue.Create(identifier.Name));
+        }
+        return result;
     }
 
     public JsonNode VisitAccessor(Accessor accessor)
