@@ -14,6 +14,7 @@ public static class ILSLCompiler
         var decompiler = new CSharpDecompiler(target.Assembly.Location, new DecompilerSettings()
         {
             AlwaysQualifyMemberReferences = true,
+            AlwaysUseGlobal = true,
             UsingDeclarations = false,
         });
         var name = new FullTypeName(target.FullName);

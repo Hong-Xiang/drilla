@@ -13,7 +13,7 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
         [typeof(FragmentAttribute).FullName] = "fragment",
         [typeof(LocationAttribute).FullName] = "location",
         [typeof(BuiltinAttribute).FullName] = "builtin",
-        [typeof(Vector4).FullName] = "vec4f",
+        [typeof(Vector4).FullName] = "vec4<f32>",
         [typeof(uint).FullName] = "u32",
     };
     public override void VisitAttribute(ICSharpCode.Decompiler.CSharp.Syntax.Attribute attribute)
@@ -32,16 +32,15 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
     {
         var variableInitializer = variableDeclarationStatement.Variables.Single();
 
-        WriteIdentifier(variableInitializer.Name);
-
-
-
-
+        WriteKeyword("var");
+        Space();
         StartNode(variableDeclarationStatement);
-        WriteModifiers(variableDeclarationStatement.GetChildrenByRole(VariableDeclarationStatement.ModifierRole));
+        WriteIdentifier(variableInitializer.Name);
+        WriteToken(Roles.Colon);
+        //WriteModifiers(variableDeclarationStatement.GetChildrenByRole(VariableDeclarationStatement.ModifierRole));
         variableDeclarationStatement.Type.AcceptVisitor(this);
         Space();
-        WriteCommaSeparatedList(variableDeclarationStatement.Variables);
+        variableInitializer.AcceptVisitor(this);
         Semicolon();
         EndNode(variableDeclarationStatement);
     }
@@ -49,7 +48,7 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
     public override void VisitVariableInitializer(VariableInitializer variableInitializer)
     {
         StartNode(variableInitializer);
-        WriteIdentifier(variableInitializer.NameToken);
+        //WriteIdentifier(variableInitializer.NameToken);
         if (!variableInitializer.Initializer.IsNull && !(variableInitializer.Initializer is DefaultValueExpression))
         {
             Space(policy.SpaceAroundAssignment);
@@ -59,6 +58,21 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
         }
         EndNode(variableInitializer);
     }
+
+    public override void VisitCastExpression(CastExpression castExpression)
+    {
+        StartNode(castExpression);
+
+        castExpression.Type.AcceptVisitor(this);
+        LPar();
+        Space(policy.SpacesWithinCastParentheses);
+        castExpression.Expression.AcceptVisitor(this);
+        Space(policy.SpacesWithinCastParentheses);
+        RPar();
+        Space(policy.SpaceAfterTypecast);
+        EndNode(castExpression);
+    }
+
     public override void VisitTypeDeclaration(TypeDeclaration typeDeclaration)
     {
         if (typeDeclaration.BaseTypes.Any(b => b.Annotation<TypeResolveResult>() is TypeResolveResult
