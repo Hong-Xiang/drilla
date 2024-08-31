@@ -32,6 +32,7 @@ import { Tags } from "./taggedEvent";
 export { startWebsocketConnection } from "./connection/websocket";
 export { VolumeRenderingMain } from "./volume-rendering";
 export { ILSLDevelopMain } from "./ilsl/develop";
+export { BatchRenderMain } from "./render/main";
 
 export async function testDotnetExport() {
   const exports = await getDotnetWasmExports("DualDrill.Client.dll");
