@@ -85,16 +85,7 @@ public unsafe sealed class Instance(Silk.NET.WebGPU.WebGPU Api, Silk.NET.WebGPU.
         });
 
 
-    public Adapter RequestAdapter(in RequestAdapterOptions options)
-    {
-        var result = new RequestResult();
-        Api.InstanceRequestAdapter(Handle, in options, Callback, ref result);
-        if (result.Adapter is null)
-        {
-            throw new NullReferenceException("Failed to get adapter");
-        }
-        return new Adapter(Api, result.Adapter);
-    }
+ 
 
 
     private void Dispose(bool disposing)

@@ -1,8 +1,14 @@
 ﻿using DualDrill.Graphics.Interop;
 using Silk.NET.WebGPU;
-using System.Diagnostics;
 
 namespace DualDrill.Graphics;
+
+public sealed record class GPUDevice<TBackend>(
+    GPUHandle<TBackend, GPUDevice<TBackend>> Handle
+)
+    where TBackend : IBackend<TBackend>
+{
+}
 
 public sealed partial class GPUDevice
 {

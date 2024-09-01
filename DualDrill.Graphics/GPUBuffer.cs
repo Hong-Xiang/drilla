@@ -4,6 +4,17 @@ using System.Runtime.InteropServices;
 
 namespace DualDrill.Graphics;
 
+public sealed partial record class GPUBuffer<TBackend>(GPUHandle<TBackend, GPUBuffer<TBackend>> Handle)
+    : IDisposable, IGPUInstance
+    where TBackend : IBackend<TBackend>
+{
+    public void Dispose()
+    {
+        TBackend.Instance.DisposeHandle(Handle);
+    }
+}
+
+
 public sealed partial class GPUBuffer
 {
 

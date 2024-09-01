@@ -90,7 +90,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
     }
 
 
-    unsafe ValueTask<GPUDevice> IBackend<WGPUBackend>.RequestDeviceAsync(
+    unsafe ValueTask<GPUDevice> IBackend<WGPUBackend>.RequestDeviceAsyncLegacy(
         GPUAdapter<WGPUBackend> adapter,
         GPUDeviceDescriptor descriptor,
         CancellationToken cancellation
@@ -123,6 +123,126 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         WGPU.InstanceRelease(ToNativePointer(handle));
     }
     private static unsafe WGPUAdapterImpl* ToNativePointer(GPUHandle<WGPUBackend, GPUAdapter<WGPUBackend>> handle) => (WGPUAdapterImpl*)handle.Pointer;
+
+    ValueTask<GPUDevice<WGPUBackend>> IBackend<WGPUBackend>.RequestDeviceAsync(GPUAdapter<WGPUBackend> adapter, GPUDeviceDescriptor descriptor, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBuffer<WGPUBackend> IBackend<WGPUBackend>.CreateBuffer(GPUDevice<WGPUBackend> device, GPUBufferDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUTextureView<WGPUBackend> IBackend<WGPUBackend>.CreateTextureView(GPUTexture<WGPUBackend> texture, GPUTextureViewDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUDevice<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUDevice<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUTexture<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUTexture<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUBuffer<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUBuffer<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUTextureView<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUTextureView<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUBindGroup<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUBindGroup<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUBindGroupLayout<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUBindGroupLayout<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUCommandBuffer<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUCommandBuffer<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUCommandEncoder<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUCommandEncoder<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUComputePassEncoder<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUComputePassEncoder<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUComputePipeline<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUComputePipeline<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUPipelineLayout<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUPipelineLayout<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUQuerySet<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUQuerySet<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUQueue<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUQueue<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPURenderBundle<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPURenderBundle<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPURenderBundleEncoder<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPURenderBundleEncoder<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPURenderPassEncoder<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPURenderPassEncoder<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPURenderPipeline<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPURenderPipeline<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUSampler<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUSampler<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUShaderModule<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUShaderModule<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IGPUHandleDisposer<WGPUBackend, GPUSurface<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUSurface<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 //public unsafe sealed class WebGPUGraphicsApi : IGraphicsApi<WebGPUGraphicsApi, nint>, IDisposable

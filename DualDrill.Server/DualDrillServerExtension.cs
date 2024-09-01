@@ -29,7 +29,7 @@ public static class DualDrillServerExtension
             PowerPreference = GPUPowerPreference.HighPerformance
         }, cancellation);
         services.AddSingleton(adapter);
-        var device = await adapter.RequestDeviceAsync(new GPUDeviceDescriptor(), cancellation);
+        var device = await adapter.RequestDeviceAsyncLegacy(new GPUDeviceDescriptor(), cancellation);
         services.AddSingleton(device);
         services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
     }
@@ -59,6 +59,7 @@ public static class DualDrillServerExtension
         services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.ClearColorRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.VolumeRenderer>();
+        services.AddSingleton<DualDrill.Engine.Renderer.StaticTriangleRenderer>();
     }
 
     static void AddSingletonHostedService<T>(this IServiceCollection services)

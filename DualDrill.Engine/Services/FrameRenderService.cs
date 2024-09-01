@@ -10,7 +10,8 @@ public sealed record class FrameRenderService(
     GPUDevice Device,
     WebGPULogoRenderer LogoRenderer,
     RotateCubeRenderer CubeRenderer,
-    ClearColorRenderer ClearColorRenderer
+    ClearColorRenderer ClearColorRenderer,
+    StaticTriangleRenderer StaticTriangleRenderer
     //VolumeRenderer VolumeRenderer
     ) : IFrameRenderService
 {
@@ -25,7 +26,8 @@ public sealed record class FrameRenderService(
         //    Z = 0,
         //    Window = 0.1f
         //});
-        LogoRenderer.Render(frame, queue, renderTarget, scene.LogoState);
-        CubeRenderer.Render(frame, queue, renderTarget, new(scene.Camera, scene.Cube));
+        StaticTriangleRenderer.Render(frame, queue, renderTarget, new());
+        //LogoRenderer.Render(frame, queue, renderTarget, scene.LogoState);
+        //CubeRenderer.Render(frame, queue, renderTarget, new(scene.Camera, scene.Cube));
     }
 }

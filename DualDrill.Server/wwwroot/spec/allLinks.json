@@ -1,0 +1,747 @@
+[
+    {
+        "name": "GPU",
+        "link": "https://webgpu.rocks/reference/interface/gpu/#idl-gpu",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUAdapter",
+        "link": "https://webgpu.rocks/reference/interface/gpuadapter/#idl-gpuadapter",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUAdapterInfo",
+        "link": "https://webgpu.rocks/reference/interface/gpuadapterinfo/#idl-gpuadapterinfo",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUBindGroup",
+        "link": "https://webgpu.rocks/reference/interface/gpubindgroup/#idl-gpubindgroup",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUBindGroupLayout",
+        "link": "https://webgpu.rocks/reference/interface/gpubindgrouplayout/#idl-gpubindgrouplayout",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUBuffer",
+        "link": "https://webgpu.rocks/reference/interface/gpubuffer/#idl-gpubuffer",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUCanvasContext",
+        "link": "https://webgpu.rocks/reference/interface/gpucanvascontext/#idl-gpucanvascontext",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUCommandBuffer",
+        "link": "https://webgpu.rocks/reference/interface/gpucommandbuffer/#idl-gpucommandbuffer",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUCommandEncoder",
+        "link": "https://webgpu.rocks/reference/interface/gpucommandencoder/#idl-gpucommandencoder",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUCompilationInfo",
+        "link": "https://webgpu.rocks/reference/interface/gpucompilationinfo/#idl-gpucompilationinfo",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUCompilationMessage",
+        "link": "https://webgpu.rocks/reference/interface/gpucompilationmessage/#idl-gpucompilationmessage",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUComputePassEncoder",
+        "link": "https://webgpu.rocks/reference/interface/gpucomputepassencoder/#idl-gpucomputepassencoder",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUComputePipeline",
+        "link": "https://webgpu.rocks/reference/interface/gpucomputepipeline/#idl-gpucomputepipeline",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUDevice",
+        "link": "https://webgpu.rocks/reference/interface/gpudevice/#idl-gpudevice",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUDeviceLostInfo",
+        "link": "https://webgpu.rocks/reference/interface/gpudevicelostinfo/#idl-gpudevicelostinfo",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUError",
+        "link": "https://webgpu.rocks/reference/interface/gpuerror/#idl-gpuerror",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUExternalTexture",
+        "link": "https://webgpu.rocks/reference/interface/gpuexternaltexture/#idl-gpuexternaltexture",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUInternalError",
+        "link": "https://webgpu.rocks/reference/interface/gpuinternalerror/#idl-gpuinternalerror",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUOutOfMemoryError",
+        "link": "https://webgpu.rocks/reference/interface/gpuoutofmemoryerror/#idl-gpuoutofmemoryerror",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUPipelineError",
+        "link": "https://webgpu.rocks/reference/interface/gpupipelineerror/#idl-gpupipelineerror",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUPipelineLayout",
+        "link": "https://webgpu.rocks/reference/interface/gpupipelinelayout/#idl-gpupipelinelayout",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUQuerySet",
+        "link": "https://webgpu.rocks/reference/interface/gpuqueryset/#idl-gpuqueryset",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUQueue",
+        "link": "https://webgpu.rocks/reference/interface/gpuqueue/#idl-gpuqueue",
+        "kind": "interface"
+    },
+    {
+        "name": "GPURenderBundle",
+        "link": "https://webgpu.rocks/reference/interface/gpurenderbundle/#idl-gpurenderbundle",
+        "kind": "interface"
+    },
+    {
+        "name": "GPURenderBundleEncoder",
+        "link": "https://webgpu.rocks/reference/interface/gpurenderbundleencoder/#idl-gpurenderbundleencoder",
+        "kind": "interface"
+    },
+    {
+        "name": "GPURenderPassEncoder",
+        "link": "https://webgpu.rocks/reference/interface/gpurenderpassencoder/#idl-gpurenderpassencoder",
+        "kind": "interface"
+    },
+    {
+        "name": "GPURenderPipeline",
+        "link": "https://webgpu.rocks/reference/interface/gpurenderpipeline/#idl-gpurenderpipeline",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUSampler",
+        "link": "https://webgpu.rocks/reference/interface/gpusampler/#idl-gpusampler",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUShaderModule",
+        "link": "https://webgpu.rocks/reference/interface/gpushadermodule/#idl-gpushadermodule",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUSupportedFeatures",
+        "link": "https://webgpu.rocks/reference/interface/gpusupportedfeatures/#idl-gpusupportedfeatures",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUSupportedLimits",
+        "link": "https://webgpu.rocks/reference/interface/gpusupportedlimits/#idl-gpusupportedlimits",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUTexture",
+        "link": "https://webgpu.rocks/reference/interface/gputexture/#idl-gputexture",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUTextureView",
+        "link": "https://webgpu.rocks/reference/interface/gputextureview/#idl-gputextureview",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUUncapturedErrorEvent",
+        "link": "https://webgpu.rocks/reference/interface/gpuuncapturederrorevent/#idl-gpuuncapturederrorevent",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUValidationError",
+        "link": "https://webgpu.rocks/reference/interface/gpuvalidationerror/#idl-gpuvalidationerror",
+        "kind": "interface"
+    },
+    {
+        "name": "WGSLLanguageFeatures",
+        "link": "https://webgpu.rocks/reference/interface/wgsllanguagefeatures/#idl-wgsllanguagefeatures",
+        "kind": "interface"
+    },
+    {
+        "name": "GPUBindGroupDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpubindgroupdescriptor/#idl-gpubindgroupdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUBindGroupEntry",
+        "link": "https://webgpu.rocks/reference/dictionary/gpubindgroupentry/#idl-gpubindgroupentry",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUBindGroupLayoutDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpubindgrouplayoutdescriptor/#idl-gpubindgrouplayoutdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUBindGroupLayoutEntry",
+        "link": "https://webgpu.rocks/reference/dictionary/gpubindgrouplayoutentry/#idl-gpubindgrouplayoutentry",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUBlendComponent",
+        "link": "https://webgpu.rocks/reference/dictionary/gpublendcomponent/#idl-gpublendcomponent",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUBlendState",
+        "link": "https://webgpu.rocks/reference/dictionary/gpublendstate/#idl-gpublendstate",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUBufferBinding",
+        "link": "https://webgpu.rocks/reference/dictionary/gpubufferbinding/#idl-gpubufferbinding",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUBufferBindingLayout",
+        "link": "https://webgpu.rocks/reference/dictionary/gpubufferbindinglayout/#idl-gpubufferbindinglayout",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUBufferDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpubufferdescriptor/#idl-gpubufferdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUCanvasConfiguration",
+        "link": "https://webgpu.rocks/reference/dictionary/gpucanvasconfiguration/#idl-gpucanvasconfiguration",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUColorDict",
+        "link": "https://webgpu.rocks/reference/dictionary/gpucolordict/#idl-gpucolordict",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUColorTargetState",
+        "link": "https://webgpu.rocks/reference/dictionary/gpucolortargetstate/#idl-gpucolortargetstate",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUCommandBufferDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpucommandbufferdescriptor/#idl-gpucommandbufferdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUCommandEncoderDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpucommandencoderdescriptor/#idl-gpucommandencoderdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUComputePassDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpucomputepassdescriptor/#idl-gpucomputepassdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUComputePassTimestampWrites",
+        "link": "https://webgpu.rocks/reference/dictionary/gpucomputepasstimestampwrites/#idl-gpucomputepasstimestampwrites",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUComputePipelineDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpucomputepipelinedescriptor/#idl-gpucomputepipelinedescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUDepthStencilState",
+        "link": "https://webgpu.rocks/reference/dictionary/gpudepthstencilstate/#idl-gpudepthstencilstate",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUDeviceDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpudevicedescriptor/#idl-gpudevicedescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUExtent3DDict",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuextent3ddict/#idl-gpuextent3ddict",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUExternalTextureBindingLayout",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuexternaltexturebindinglayout/#idl-gpuexternaltexturebindinglayout",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUExternalTextureDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuexternaltexturedescriptor/#idl-gpuexternaltexturedescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUFragmentState",
+        "link": "https://webgpu.rocks/reference/dictionary/gpufragmentstate/#idl-gpufragmentstate",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUMultisampleState",
+        "link": "https://webgpu.rocks/reference/dictionary/gpumultisamplestate/#idl-gpumultisamplestate",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUObjectDescriptorBase",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuobjectdescriptorbase/#idl-gpuobjectdescriptorbase",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUOrigin2DDict",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuorigin2ddict/#idl-gpuorigin2ddict",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUOrigin3DDict",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuorigin3ddict/#idl-gpuorigin3ddict",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUPipelineDescriptorBase",
+        "link": "https://webgpu.rocks/reference/dictionary/gpupipelinedescriptorbase/#idl-gpupipelinedescriptorbase",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUPipelineErrorInit",
+        "link": "https://webgpu.rocks/reference/dictionary/gpupipelineerrorinit/#idl-gpupipelineerrorinit",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUPipelineLayoutDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpupipelinelayoutdescriptor/#idl-gpupipelinelayoutdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUPrimitiveState",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuprimitivestate/#idl-gpuprimitivestate",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUProgrammableStage",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuprogrammablestage/#idl-gpuprogrammablestage",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUQuerySetDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuquerysetdescriptor/#idl-gpuquerysetdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUQueueDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuqueuedescriptor/#idl-gpuqueuedescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURenderBundleDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurenderbundledescriptor/#idl-gpurenderbundledescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURenderBundleEncoderDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurenderbundleencoderdescriptor/#idl-gpurenderbundleencoderdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURenderPassColorAttachment",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurenderpasscolorattachment/#idl-gpurenderpasscolorattachment",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURenderPassDepthStencilAttachment",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurenderpassdepthstencilattachment/#idl-gpurenderpassdepthstencilattachment",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURenderPassDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurenderpassdescriptor/#idl-gpurenderpassdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURenderPassLayout",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurenderpasslayout/#idl-gpurenderpasslayout",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURenderPassTimestampWrites",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurenderpasstimestampwrites/#idl-gpurenderpasstimestampwrites",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURenderPipelineDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurenderpipelinedescriptor/#idl-gpurenderpipelinedescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPURequestAdapterOptions",
+        "link": "https://webgpu.rocks/reference/dictionary/gpurequestadapteroptions/#idl-gpurequestadapteroptions",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUSamplerBindingLayout",
+        "link": "https://webgpu.rocks/reference/dictionary/gpusamplerbindinglayout/#idl-gpusamplerbindinglayout",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUSamplerDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpusamplerdescriptor/#idl-gpusamplerdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUShaderModuleCompilationHint",
+        "link": "https://webgpu.rocks/reference/dictionary/gpushadermodulecompilationhint/#idl-gpushadermodulecompilationhint",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUShaderModuleDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gpushadermoduledescriptor/#idl-gpushadermoduledescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUStencilFaceState",
+        "link": "https://webgpu.rocks/reference/dictionary/gpustencilfacestate/#idl-gpustencilfacestate",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUStorageTextureBindingLayout",
+        "link": "https://webgpu.rocks/reference/dictionary/gpustoragetexturebindinglayout/#idl-gpustoragetexturebindinglayout",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUTextureBindingLayout",
+        "link": "https://webgpu.rocks/reference/dictionary/gputexturebindinglayout/#idl-gputexturebindinglayout",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUTextureDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gputexturedescriptor/#idl-gputexturedescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUTextureViewDescriptor",
+        "link": "https://webgpu.rocks/reference/dictionary/gputextureviewdescriptor/#idl-gputextureviewdescriptor",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUUncapturedErrorEventInit",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuuncapturederroreventinit/#idl-gpuuncapturederroreventinit",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUVertexAttribute",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuvertexattribute/#idl-gpuvertexattribute",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUVertexBufferLayout",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuvertexbufferlayout/#idl-gpuvertexbufferlayout",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUVertexState",
+        "link": "https://webgpu.rocks/reference/dictionary/gpuvertexstate/#idl-gpuvertexstate",
+        "kind": "dictionary"
+    },
+    {
+        "name": "GPUAddressMode",
+        "link": "https://webgpu.rocks/reference/enum/gpuaddressmode/#idl-gpuaddressmode",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUAutoLayoutMode",
+        "link": "https://webgpu.rocks/reference/enum/gpuautolayoutmode/#idl-gpuautolayoutmode",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUBlendFactor",
+        "link": "https://webgpu.rocks/reference/enum/gpublendfactor/#idl-gpublendfactor",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUBlendOperation",
+        "link": "https://webgpu.rocks/reference/enum/gpublendoperation/#idl-gpublendoperation",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUBufferBindingType",
+        "link": "https://webgpu.rocks/reference/enum/gpubufferbindingtype/#idl-gpubufferbindingtype",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUBufferMapState",
+        "link": "https://webgpu.rocks/reference/enum/gpubuffermapstate/#idl-gpubuffermapstate",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUCanvasAlphaMode",
+        "link": "https://webgpu.rocks/reference/enum/gpucanvasalphamode/#idl-gpucanvasalphamode",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUCompareFunction",
+        "link": "https://webgpu.rocks/reference/enum/gpucomparefunction/#idl-gpucomparefunction",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUCompilationMessageType",
+        "link": "https://webgpu.rocks/reference/enum/gpucompilationmessagetype/#idl-gpucompilationmessagetype",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUCullMode",
+        "link": "https://webgpu.rocks/reference/enum/gpucullmode/#idl-gpucullmode",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUDeviceLostReason",
+        "link": "https://webgpu.rocks/reference/enum/gpudevicelostreason/#idl-gpudevicelostreason",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUErrorFilter",
+        "link": "https://webgpu.rocks/reference/enum/gpuerrorfilter/#idl-gpuerrorfilter",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUFeatureName",
+        "link": "https://webgpu.rocks/reference/enum/gpufeaturename/#idl-gpufeaturename",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUFilterMode",
+        "link": "https://webgpu.rocks/reference/enum/gpufiltermode/#idl-gpufiltermode",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUFrontFace",
+        "link": "https://webgpu.rocks/reference/enum/gpufrontface/#idl-gpufrontface",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUIndexFormat",
+        "link": "https://webgpu.rocks/reference/enum/gpuindexformat/#idl-gpuindexformat",
+        "kind": "enum"
+    },
+    {
+        "name": "GPULoadOp",
+        "link": "https://webgpu.rocks/reference/enum/gpuloadop/#idl-gpuloadop",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUMipmapFilterMode",
+        "link": "https://webgpu.rocks/reference/enum/gpumipmapfiltermode/#idl-gpumipmapfiltermode",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUPipelineErrorReason",
+        "link": "https://webgpu.rocks/reference/enum/gpupipelineerrorreason/#idl-gpupipelineerrorreason",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUPowerPreference",
+        "link": "https://webgpu.rocks/reference/enum/gpupowerpreference/#idl-gpupowerpreference",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUPrimitiveTopology",
+        "link": "https://webgpu.rocks/reference/enum/gpuprimitivetopology/#idl-gpuprimitivetopology",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUQueryType",
+        "link": "https://webgpu.rocks/reference/enum/gpuquerytype/#idl-gpuquerytype",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUSamplerBindingType",
+        "link": "https://webgpu.rocks/reference/enum/gpusamplerbindingtype/#idl-gpusamplerbindingtype",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUStencilOperation",
+        "link": "https://webgpu.rocks/reference/enum/gpustenciloperation/#idl-gpustenciloperation",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUStorageTextureAccess",
+        "link": "https://webgpu.rocks/reference/enum/gpustoragetextureaccess/#idl-gpustoragetextureaccess",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUStoreOp",
+        "link": "https://webgpu.rocks/reference/enum/gpustoreop/#idl-gpustoreop",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUTextureAspect",
+        "link": "https://webgpu.rocks/reference/enum/gputextureaspect/#idl-gputextureaspect",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUTextureDimension",
+        "link": "https://webgpu.rocks/reference/enum/gputexturedimension/#idl-gputexturedimension",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUTextureFormat",
+        "link": "https://webgpu.rocks/reference/enum/gputextureformat/#idl-gputextureformat",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUTextureSampleType",
+        "link": "https://webgpu.rocks/reference/enum/gputexturesampletype/#idl-gputexturesampletype",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUTextureViewDimension",
+        "link": "https://webgpu.rocks/reference/enum/gputextureviewdimension/#idl-gputextureviewdimension",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUVertexFormat",
+        "link": "https://webgpu.rocks/reference/enum/gpuvertexformat/#idl-gpuvertexformat",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUVertexStepMode",
+        "link": "https://webgpu.rocks/reference/enum/gpuvertexstepmode/#idl-gpuvertexstepmode",
+        "kind": "enum"
+    },
+    {
+        "name": "GPUBindingResource",
+        "link": "https://webgpu.rocks/reference/typedef/gpubindingresource/#idl-gpubindingresource",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUBufferDynamicOffset",
+        "link": "https://webgpu.rocks/reference/typedef/gpubufferdynamicoffset/#idl-gpubufferdynamicoffset",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUBufferUsageFlags",
+        "link": "https://webgpu.rocks/reference/typedef/gpubufferusageflags/#idl-gpubufferusageflags",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUColor",
+        "link": "https://webgpu.rocks/reference/typedef/gpucolor/#idl-gpucolor",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUColorWriteFlags",
+        "link": "https://webgpu.rocks/reference/typedef/gpucolorwriteflags/#idl-gpucolorwriteflags",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUDepthBias",
+        "link": "https://webgpu.rocks/reference/typedef/gpudepthbias/#idl-gpudepthbias",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUExtent3D",
+        "link": "https://webgpu.rocks/reference/typedef/gpuextent3d/#idl-gpuextent3d",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUFlagsConstant",
+        "link": "https://webgpu.rocks/reference/typedef/gpuflagsconstant/#idl-gpuflagsconstant",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUIndex32",
+        "link": "https://webgpu.rocks/reference/typedef/gpuindex32/#idl-gpuindex32",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUIntegerCoordinate",
+        "link": "https://webgpu.rocks/reference/typedef/gpuintegercoordinate/#idl-gpuintegercoordinate",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUIntegerCoordinateOut",
+        "link": "https://webgpu.rocks/reference/typedef/gpuintegercoordinateout/#idl-gpuintegercoordinateout",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUMapModeFlags",
+        "link": "https://webgpu.rocks/reference/typedef/gpumapmodeflags/#idl-gpumapmodeflags",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUOrigin2D",
+        "link": "https://webgpu.rocks/reference/typedef/gpuorigin2d/#idl-gpuorigin2d",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUOrigin3D",
+        "link": "https://webgpu.rocks/reference/typedef/gpuorigin3d/#idl-gpuorigin3d",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUPipelineConstantValue",
+        "link": "https://webgpu.rocks/reference/typedef/gpupipelineconstantvalue/#idl-gpupipelineconstantvalue",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUSampleMask",
+        "link": "https://webgpu.rocks/reference/typedef/gpusamplemask/#idl-gpusamplemask",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUShaderStageFlags",
+        "link": "https://webgpu.rocks/reference/typedef/gpushaderstageflags/#idl-gpushaderstageflags",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUSignedOffset32",
+        "link": "https://webgpu.rocks/reference/typedef/gpusignedoffset32/#idl-gpusignedoffset32",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUSize32",
+        "link": "https://webgpu.rocks/reference/typedef/gpusize32/#idl-gpusize32",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUSize32Out",
+        "link": "https://webgpu.rocks/reference/typedef/gpusize32out/#idl-gpusize32out",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUSize64",
+        "link": "https://webgpu.rocks/reference/typedef/gpusize64/#idl-gpusize64",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUSize64Out",
+        "link": "https://webgpu.rocks/reference/typedef/gpusize64out/#idl-gpusize64out",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUStencilValue",
+        "link": "https://webgpu.rocks/reference/typedef/gpustencilvalue/#idl-gpustencilvalue",
+        "kind": "typedef"
+    },
+    {
+        "name": "GPUTextureUsageFlags",
+        "link": "https://webgpu.rocks/reference/typedef/gputextureusageflags/#idl-gputextureusageflags",
+        "kind": "typedef"
+    }
+]

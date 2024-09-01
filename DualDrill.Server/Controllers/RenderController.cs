@@ -15,8 +15,8 @@ public class RenderController(
     IFrameRenderService RenderService
 ) : Controller
 {
-    [HttpGet("gapg")]
-    public IActionResult GAPG()
+    [HttpGet("repl")]
+    public IActionResult REPL()
     {
         return View();
     }

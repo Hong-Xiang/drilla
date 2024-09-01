@@ -1,11 +1,19 @@
 ﻿using DualDrill.Graphics.Interop;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
+
+
+
+public sealed partial record class GPUTexture<TBackend>(GPUHandle<TBackend, GPUTexture<TBackend>> Handle)
+    : IDisposable, IGPUInstance
+    where TBackend : IBackend<TBackend>
+{
+    public void Dispose()
+    {
+        TBackend.Instance.DisposeHandle(Handle);
+    }
+}
+
 
 public sealed partial class GPUTexture
 {
