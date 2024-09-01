@@ -1,5 +1,5 @@
 ﻿namespace DualDrill.ApiGen.Mini;
 
-public readonly record struct PlainTypeRef(string Name) : ITypeRef
+public readonly record struct PlainTypeRef(string Name) : ITypeReference
 {
 }

@@ -2,16 +2,6 @@
 
 namespace DualDrill.Graphics;
 
-public sealed partial record class GPUTextureView<TBackend>(GPUHandle<TBackend, GPUTextureView<TBackend>> Handle)
-    : IDisposable, IGPUInstance
-    where TBackend : IBackend<TBackend>
-{
-    public void Dispose()
-    {
-        TBackend.Instance.DisposeHandle(Handle);
-    }
-}
-
 
 public sealed partial class GPUTextureView : IDisposable
 {

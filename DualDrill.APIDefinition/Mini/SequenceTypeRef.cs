@@ -1,5 +1,5 @@
 ﻿namespace DualDrill.ApiGen.Mini;
 
-public readonly record struct SequenceTypeRef(ITypeRef Type) : ITypeRef
+public readonly record struct SequenceTypeRef(ITypeReference Type) : ITypeReference
 {
 }

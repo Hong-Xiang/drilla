@@ -108,7 +108,7 @@ public sealed class VulkanBackend
         return Vk.False;
     }
 
-    ValueTask<GPUAdapter<VulkanBackend>> IBackend<VulkanBackend>.RequestAdapterAsync(GPUInstance<VulkanBackend> instance, GPURequestAdapterOptions options, CancellationToken cancellationToken)
+    ValueTask<GPUAdapter<VulkanBackend>?> IBackend<VulkanBackend>.RequestAdapterAsync(GPUInstance<VulkanBackend> instance, GPURequestAdapterOptions options, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
@@ -259,6 +259,76 @@ public sealed class VulkanBackend
     }
 
     void IGPUHandleDisposer<VulkanBackend, GPUSurface<VulkanBackend>>.DisposeHandle(GPUHandle<VulkanBackend, GPUSurface<VulkanBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUTextureFormat IBackend<VulkanBackend>.GetPreferredCanvasFormat(GPUInstance<VulkanBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUTexture<VulkanBackend> IBackend<VulkanBackend>.CreateTexture(GPUDevice<VulkanBackend> handle, GPUTextureDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUSampler<VulkanBackend> IBackend<VulkanBackend>.CreateSampler(GPUDevice<VulkanBackend> handle, GPUSamplerDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBindGroupLayout<VulkanBackend> IBackend<VulkanBackend>.CreateBindGroupLayout(GPUDevice<VulkanBackend> handle, GPUBindGroupLayoutDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUPipelineLayout<VulkanBackend> IBackend<VulkanBackend>.CreatePipelineLayout(GPUDevice<VulkanBackend> handle, GPUPipelineLayoutDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBindGroup<VulkanBackend> IBackend<VulkanBackend>.CreateBindGroup(GPUDevice<VulkanBackend> handle, GPUBindGroupDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUShaderModule<VulkanBackend> IBackend<VulkanBackend>.CreateShaderModule(GPUDevice<VulkanBackend> handle, GPUShaderModuleDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUComputePipeline<VulkanBackend> IBackend<VulkanBackend>.CreateComputePipeline(GPUDevice<VulkanBackend> handle, GPUComputePipelineDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPURenderPipeline<VulkanBackend> IBackend<VulkanBackend>.CreateRenderPipeline(GPUDevice<VulkanBackend> handle, GPURenderPipelineDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPUComputePipeline<VulkanBackend>> IBackend<VulkanBackend>.CreateComputePipelineAsyncAsync(GPUDevice<VulkanBackend> handle, GPUComputePipelineDescriptor descriptor, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPURenderPipeline<VulkanBackend>> IBackend<VulkanBackend>.CreateRenderPipelineAsyncAsync(GPUDevice<VulkanBackend> handle, GPURenderPipelineDescriptor descriptor, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUCommandEncoder<VulkanBackend> IBackend<VulkanBackend>.CreateCommandEncoder(GPUDevice<VulkanBackend> handle, GPUCommandEncoderDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPURenderBundleEncoder<VulkanBackend> IBackend<VulkanBackend>.CreateRenderBundleEncoder(GPUDevice<VulkanBackend> handle, GPURenderBundleEncoderDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUQuerySet<VulkanBackend> IBackend<VulkanBackend>.CreateQuerySet(GPUDevice<VulkanBackend> handle, GPUQuerySetDescriptor descriptor)
     {
         throw new NotImplementedException();
     }

@@ -1,5 +1,6 @@
 ﻿using DualDrill.ApiGen.Mini;
 using DualDrill.ApiGen.WebIDL;
+using DualDrill.Common;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
@@ -8,7 +9,7 @@ using System.Text.Json;
 namespace DualDrill.ApiGen;
 
 public sealed record class GPUApi(
-    ImmutableArray<Handle> Handles
+    ImmutableArray<HandleDeclaration> Handles
 )
 {
     public void Validate()
@@ -55,7 +56,7 @@ public sealed record class GPUApi(
             };
         }
 
-        static Handle ParseHandle(string name, WebIDLSpec spec)
+        static HandleDeclaration ParseHandle(string name, WebIDLSpec spec)
         {
             var interfaces = spec.Declarations
                            .OfType<Interface>();
@@ -75,8 +76,8 @@ public sealed record class GPUApi(
                                  .Select(m =>
                                  {
                                      var parameters = m.Arguments.Select(p =>
-                                            new Parameter(p.Name, WebIDLSpec.ParseWebIDLTypeRef(p.IdlType), null));
-                                     return new Method(
+                                            new ParameterDeclaration(p.Name, WebIDLSpec.ParseWebIDLTypeRef(p.IdlType), null));
+                                     return new MethodDeclaration(
                                          m.Name,
                                          [.. parameters],
                                          WebIDLSpec.ParseWebIDLTypeRef(m.IdlType));
@@ -84,10 +85,10 @@ public sealed record class GPUApi(
                                  .ToImmutableArray();
             var properties = members.OfType<WebIDLAttribute>()
                                     .Select(p =>
-                                        new Property(p.Name,
+                                        new PropertyDeclaration(p.Name,
                                                               WebIDLSpec.ParseWebIDLTypeRef(p.IdlType)))
                                     .ToImmutableArray();
-            return new Handle(name, methods, properties);
+            return new HandleDeclaration(name, methods, properties);
 
             static IEnumerable<string> GetAllIncludes(string name, ImmutableArray<IncludeDecl> includes)
             {
@@ -98,9 +99,105 @@ public sealed record class GPUApi(
             }
         }
     }
-
 }
 
-public static class ApiGen
+internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVisitor<Mini.IDeclaration?>
 {
+    private ImmutableHashSet<string> RemoveTypes = [
+        "GPUError",
+        "GPUExternalTexture"
+    ];
+
+    private ImmutableHashSet<string> RemoveMethods = [
+        "destroy",
+        "requestAdapterInfo",
+        "pushErrorScope"
+    ];
+
+    private ImmutableHashSet<string> MemberSupportedHandles => [
+       "GPUAdapter",
+    //"GPUBindGroup",
+    //"GPUBindGroupLayout",
+    //"GPUBuffer",
+    //"GPUCommandBuffer",
+    //"GPUCommandEncoder",
+    //"GPUComputePassEncoder",
+    //"GPUComputePipeline",
+    "GPUDevice",
+    "GPUInstance",
+    //"GPUPipelineLayout",
+    //"GPUQuerySet",
+    //"GPUQueue",
+    //"GPURenderBundle",
+    //"GPURenderBundleEncoder",
+    //"GPURenderPassEncoder",
+    //"GPURenderPipeline",
+    //"GPUSampler",
+    //"GPUShaderModule",
+    //"GPUSurface",
+    //"GPUTexture",
+    //"GPUTextureView"
+    ];
+
+    public Mini.IDeclaration? VisitEnumDeclaration(EnumDeclaration decl)
+        => decl with
+        {
+            Values = decl.Values.Select(v => v.AcceptVisitor(this)).OfType<EnumValueDeclaration>().ToImmutableArray()
+        };
+
+    public Mini.IDeclaration? VisitEnumValueDeclaration(EnumValueDeclaration decl)
+        => decl with
+        {
+            Name = decl.Name.Capitalize()
+        };
+
+    public Mini.IDeclaration? VisitHandleDeclaration(HandleDeclaration decl)
+    {
+        if (!MemberSupportedHandles.Contains(decl.Name))
+        {
+            decl = decl with { Methods = [], Properties = [] };
+        }
+        return decl with
+        {
+            Name = decl.Name.Capitalize()
+        };
+    }
+
+    public Mini.IDeclaration? VisitMethodDeclaration(MethodDeclaration decl)
+    {
+        if (RemoveMethods.Contains(decl.Name))
+        {
+            return null;
+        }
+        return decl;
+    }
+
+    public Mini.IDeclaration? VisitParameterDeclaration(ParameterDeclaration decl)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Mini.IDeclaration? VisitPropertyDeclaration(PropertyDeclaration decl)
+         => decl with
+         {
+             Name = decl.Name.Capitalize()
+         };
+
+
+    public Mini.IDeclaration? VisitStructDeclaration(StructDeclaration decl)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Mini.IDeclaration? VisitTypeSystem(TypeSystem typeSystem)
+    {
+        var processed = typeSystem.TypeDeclarations
+            .Select(kv => KeyValuePair.Create(kv.Key, kv.Value.AcceptVisitor(this)))
+            .Where(kv => kv.Value is ITypeDeclaration)
+            .Select(kv => KeyValuePair.Create(kv.Key, (ITypeDeclaration)kv.Value!));
+        return typeSystem with
+        {
+            TypeDeclarations = processed.ToImmutableDictionary()
+        };
+    }
 }

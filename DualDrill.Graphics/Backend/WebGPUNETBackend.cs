@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using DualDrill.Interop;
 using Evergine.Bindings.WebGPU;
 namespace DualDrill.Graphics.Backend;
 using static Evergine.Bindings.WebGPU.WebGPUNative;
@@ -21,9 +22,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     {
     }
 
-    unsafe ValueTask<GPUAdapter<Backend>> IBackend<Backend>.RequestAdapterAsync(GPUInstance<Backend> instance, GPURequestAdapterOptions options, CancellationToken cancellationToken)
+    unsafe ValueTask<GPUAdapter<Backend>?> IBackend<Backend>.RequestAdapterAsync(GPUInstance<Backend> instance, GPURequestAdapterOptions options, CancellationToken cancellationToken)
     {
-        var tcs = new TaskCompletionSource<GPUAdapter<Backend>>(cancellationToken);
+        var tcs = new TaskCompletionSource<GPUAdapter<Backend>?>(cancellationToken);
         // TODO: static method implementation (passing tcs using user GCHandle/data pointer) for better performance
         Native.WGPURequestAdapterOptions options_ = new();
         unsafe void OnAdapterRequestEnded(WGPURequestAdapterStatus status, WGPUAdapter candidateAdapter, char* message, void* pUserData)
@@ -75,9 +76,26 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new(tcs.Task);
     }
 
-    GPUBuffer<Backend> IBackend<Backend>.CreateBuffer(GPUDevice<Backend> device, GPUBufferDescriptor descriptor)
+    unsafe GPUBuffer<Backend> IBackend<Backend>.CreateBuffer(GPUDevice<Backend> device, GPUBufferDescriptor descriptor)
     {
-        throw new NotImplementedException();
+        var alignedSize = (descriptor.Size + 3UL) & ~3UL;
+        //Debug.Assert(descriptor.Size == alignedSize, "Buffer byte size should be multiple of 4");
+        WGPUBufferDescriptor nativeDescriptor = new()
+        {
+            mappedAtCreation = descriptor.MappedAtCreation.Value,
+            size = alignedSize,
+            usage = ToNative(descriptor.Usage),
+        };
+        var handle = wgpuDeviceCreateBuffer(device.Handle.ToNative(), &nativeDescriptor);
+        return new(new(handle.Handle))
+        {
+            Length = alignedSize
+        };
+    }
+
+    private WGPUBufferUsage ToNative(GPUBufferUsage value)
+    {
+        return (WGPUBufferUsage)value;
     }
 
     GPUTextureView<Backend> IBackend<Backend>.CreateTextureView(GPUTexture<Backend> texture, GPUTextureViewDescriptor descriptor)
@@ -91,6 +109,76 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     }
 
     public void Dispose()
+    {
+    }
+
+    GPUTextureFormat IBackend<Backend>.GetPreferredCanvasFormat(GPUInstance<Backend> handle)
+    {
+        // TODO: consider how to implement this properly
+        return GPUTextureFormat.BGRA8Unorm;
+    }
+
+    GPUTexture<Backend> IBackend<Backend>.CreateTexture(GPUDevice<Backend> handle, GPUTextureDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUSampler<Backend> IBackend<Backend>.CreateSampler(GPUDevice<Backend> handle, GPUSamplerDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBindGroupLayout<Backend> IBackend<Backend>.CreateBindGroupLayout(GPUDevice<Backend> handle, GPUBindGroupLayoutDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUPipelineLayout<Backend> IBackend<Backend>.CreatePipelineLayout(GPUDevice<Backend> handle, GPUPipelineLayoutDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBindGroup<Backend> IBackend<Backend>.CreateBindGroup(GPUDevice<Backend> handle, GPUBindGroupDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUShaderModule<Backend> IBackend<Backend>.CreateShaderModule(GPUDevice<Backend> handle, GPUShaderModuleDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUComputePipeline<Backend> IBackend<Backend>.CreateComputePipeline(GPUDevice<Backend> handle, GPUComputePipelineDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPURenderPipeline<Backend> IBackend<Backend>.CreateRenderPipeline(GPUDevice<Backend> handle, GPURenderPipelineDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPUComputePipeline<Backend>> IBackend<Backend>.CreateComputePipelineAsyncAsync(GPUDevice<Backend> handle, GPUComputePipelineDescriptor descriptor, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPURenderPipeline<Backend>> IBackend<Backend>.CreateRenderPipelineAsyncAsync(GPUDevice<Backend> handle, GPURenderPipelineDescriptor descriptor, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUCommandEncoder<Backend> IBackend<Backend>.CreateCommandEncoder(GPUDevice<Backend> handle, GPUCommandEncoderDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPURenderBundleEncoder<Backend> IBackend<Backend>.CreateRenderBundleEncoder(GPUDevice<Backend> handle, GPURenderBundleEncoderDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUQuerySet<Backend> IBackend<Backend>.CreateQuerySet(GPUDevice<Backend> handle, GPUQuerySetDescriptor descriptor)
     {
         throw new NotImplementedException();
     }

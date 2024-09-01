@@ -2,6 +2,6 @@
 
 namespace DualDrill.ApiGen.Mini;
 
-public readonly record struct UnknownTypeRef(JsonElement Doc) : ITypeRef
+public readonly record struct UnknownTypeRef(JsonElement Doc) : ITypeReference
 {
 }

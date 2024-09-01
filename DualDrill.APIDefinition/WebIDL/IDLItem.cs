@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using DualDrill.ApiGen.Mini;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -180,7 +181,7 @@ public sealed record WebIDLSpec(
         return new(results.SelectMany(x => x.Value).ToImmutableArray());
     }
 
-    public static Mini.ITypeRef ParseWebIDLTypeRef(JsonElement doc)
+    public static Mini.ITypeReference ParseWebIDLTypeRef(JsonElement doc)
     {
         if (doc.ValueKind == JsonValueKind.String)
         {
@@ -201,6 +202,10 @@ public sealed record WebIDLSpec(
             if (!isGeneric && !meta.Nullable && !meta.Union)
             {
                 return t;
+            }
+            if (!isGeneric && meta.Nullable && !meta.Union)
+            {
+                return new NullableTypeRef(t);
             }
             if (isGeneric && !meta.Nullable && !meta.Union)
             {

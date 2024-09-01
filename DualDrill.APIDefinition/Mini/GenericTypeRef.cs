@@ -2,6 +2,6 @@
 
 namespace DualDrill.ApiGen.Mini;
 
-public readonly record struct GenericTypeRef(string Name, ImmutableArray<ITypeRef> TypeArguments) : ITypeRef
+public readonly record struct GenericTypeRef(string Name, ImmutableArray<ITypeReference> TypeArguments) : ITypeReference
 {
 }

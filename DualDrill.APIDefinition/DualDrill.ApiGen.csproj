@@ -14,5 +14,8 @@
 	<ItemGroup>
 		<PackageReference Include="Evergine.Bindings.WebGPU" Version="2024.8.10.11" />
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
+	</ItemGroup>
 
 </Project>

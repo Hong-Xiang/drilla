@@ -21,11 +21,11 @@ public sealed partial class GPUShaderModule
 {
     internal unsafe static GPUShaderModule Create(GPUDevice device, string code)
     {
-        var codeUtf8 = Utf8String.Create(code);
-        using var nativeCode = codeUtf8.Memory.Pin();
+        var codeUtf8 = InteropUtf8String.Create(code);
+        using var nativeCode = codeUtf8.Pin();
         var descriptor = new WGPUShaderModuleWGSLDescriptor
         {
-            code = (sbyte*)nativeCode.Pointer,
+            code = nativeCode.Pointer,
             chain = new WGPUChainedStruct
             {
                 sType = WGPUSType.ShaderModuleWGSLDescriptor

@@ -50,7 +50,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         RequestCallback<WGPUNativeApiInterop, WGPUAdapterImpl, GPURequestAdapterStatus>.Callback(status, adapter, message, data);
     }
 
-    unsafe ValueTask<GPUAdapter<WGPUBackend>> IBackend<WGPUBackend>.RequestAdapterAsync(
+    unsafe ValueTask<GPUAdapter<WGPUBackend>?> IBackend<WGPUBackend>.RequestAdapterAsync(
           GPUInstance<WGPUBackend> instance,
           GPURequestAdapterOptions options,
           CancellationToken cancellation)
@@ -240,6 +240,76 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
     }
 
     void IGPUHandleDisposer<WGPUBackend, GPUSurface<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUSurface<WGPUBackend>> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUTextureFormat IBackend<WGPUBackend>.GetPreferredCanvasFormat(GPUInstance<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUTexture<WGPUBackend> IBackend<WGPUBackend>.CreateTexture(GPUDevice<WGPUBackend> handle, GPUTextureDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUSampler<WGPUBackend> IBackend<WGPUBackend>.CreateSampler(GPUDevice<WGPUBackend> handle, GPUSamplerDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBindGroupLayout<WGPUBackend> IBackend<WGPUBackend>.CreateBindGroupLayout(GPUDevice<WGPUBackend> handle, GPUBindGroupLayoutDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUPipelineLayout<WGPUBackend> IBackend<WGPUBackend>.CreatePipelineLayout(GPUDevice<WGPUBackend> handle, GPUPipelineLayoutDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBindGroup<WGPUBackend> IBackend<WGPUBackend>.CreateBindGroup(GPUDevice<WGPUBackend> handle, GPUBindGroupDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUShaderModule<WGPUBackend> IBackend<WGPUBackend>.CreateShaderModule(GPUDevice<WGPUBackend> handle, GPUShaderModuleDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUComputePipeline<WGPUBackend> IBackend<WGPUBackend>.CreateComputePipeline(GPUDevice<WGPUBackend> handle, GPUComputePipelineDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPURenderPipeline<WGPUBackend> IBackend<WGPUBackend>.CreateRenderPipeline(GPUDevice<WGPUBackend> handle, GPURenderPipelineDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPUComputePipeline<WGPUBackend>> IBackend<WGPUBackend>.CreateComputePipelineAsyncAsync(GPUDevice<WGPUBackend> handle, GPUComputePipelineDescriptor descriptor, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPURenderPipeline<WGPUBackend>> IBackend<WGPUBackend>.CreateRenderPipelineAsyncAsync(GPUDevice<WGPUBackend> handle, GPURenderPipelineDescriptor descriptor, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUCommandEncoder<WGPUBackend> IBackend<WGPUBackend>.CreateCommandEncoder(GPUDevice<WGPUBackend> handle, GPUCommandEncoderDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPURenderBundleEncoder<WGPUBackend> IBackend<WGPUBackend>.CreateRenderBundleEncoder(GPUDevice<WGPUBackend> handle, GPURenderBundleEncoderDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUQuerySet<WGPUBackend> IBackend<WGPUBackend>.CreateQuerySet(GPUDevice<WGPUBackend> handle, GPUQuerySetDescriptor descriptor)
     {
         throw new NotImplementedException();
     }

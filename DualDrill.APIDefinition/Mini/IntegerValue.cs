@@ -1,5 +1,7 @@
 ﻿namespace DualDrill.ApiGen.Mini;
 
-public sealed record class IntegerValue(long Value, bool IsHexFormat = false) : IConstValue
+public readonly record struct IntegerValue(
+    int Value,
+    bool IsHexFormat = false) : IConstValue
 {
 }
