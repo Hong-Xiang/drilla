@@ -511,7 +511,7 @@ public partial struct GPUStencilFaceState
 }
 public partial struct GPUVertexState
 {
-    public Utf8String EntryPoint { get; set; }
+    public InteropUtf8String EntryPoint { get; set; }
     public GPUShaderModule Module { get; set; }
     public ReadOnlyMemory<GPUConstantEntry> Constants { get; set; }
     public ReadOnlyMemory<GPUVertexBufferLayout> Buffers { get; set; }

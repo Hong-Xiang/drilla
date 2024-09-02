@@ -1,0 +1,612 @@
+{
+  "handles": [
+    {
+      "name": "GPUAdapter",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUBindGroup",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUBindGroupLayout",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUBuffer",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUCommandBuffer",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUCommandEncoder",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUComputePassEncoder",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUComputePipeline",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUDevice",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUInstance",
+      "methods": [
+        {
+          "name": "requestAdapter",
+          "returnType": "GPUAdapter",
+          "parameters": [
+            {
+              "name": "options",
+              "type": [
+                "Promise",
+                "GPURequestAdapterOptions"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "getPreferredCanvasFormat",
+          "returnType": "GPUTextureFormat",
+          "parameters": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "wgslLanguageFeatures",
+          "type": [
+            "setlike",
+            "WGSLLanguageFeatures"
+          ],
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUPipelineLayout",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUQuerySet",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUQueue",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPURenderBundle",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPURenderBundleEncoder",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPURenderPassEncoder",
+      "methods": [
+        {
+          "name": "setPipeline",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "pipeline",
+              "type": "GPURenderPipeline"
+            }
+          ]
+        },
+        {
+          "name": "setIndexBuffer",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "buffer",
+              "type": "GPUBuffer"
+            },
+            {
+              "name": "indexFormat",
+              "type": "GPUIndexFormat"
+            },
+            {
+              "name": "offset",
+              "type": "GPUSize64"
+            },
+            {
+              "name": "size",
+              "type": "GPUSize64"
+            }
+          ]
+        },
+        {
+          "name": "setVertexBuffer",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "slot",
+              "type": "GPUIndex32"
+            },
+            {
+              "name": "buffer",
+              "type": "GPUBuffer"
+            },
+            {
+              "name": "offset",
+              "type": "GPUSize64"
+            },
+            {
+              "name": "size",
+              "type": "GPUSize64"
+            }
+          ]
+        },
+        {
+          "name": "draw",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "vertexCount",
+              "type": "GPUSize32"
+            },
+            {
+              "name": "instanceCount",
+              "type": "GPUSize32"
+            },
+            {
+              "name": "firstVertex",
+              "type": "GPUSize32"
+            },
+            {
+              "name": "firstInstance",
+              "type": "GPUSize32"
+            }
+          ]
+        },
+        {
+          "name": "drawIndexed",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "indexCount",
+              "type": "GPUSize32"
+            },
+            {
+              "name": "instanceCount",
+              "type": "GPUSize32"
+            },
+            {
+              "name": "firstIndex",
+              "type": "GPUSize32"
+            },
+            {
+              "name": "baseVertex",
+              "type": "GPUSignedOffset32"
+            },
+            {
+              "name": "firstInstance",
+              "type": "GPUSize32"
+            }
+          ]
+        },
+        {
+          "name": "drawIndirect",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "indirectBuffer",
+              "type": "GPUBuffer"
+            },
+            {
+              "name": "indirectOffset",
+              "type": "GPUSize64"
+            }
+          ]
+        },
+        {
+          "name": "drawIndexedIndirect",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "indirectBuffer",
+              "type": "GPUBuffer"
+            },
+            {
+              "name": "indirectOffset",
+              "type": "GPUSize64"
+            }
+          ]
+        },
+        {
+          "name": "setBindGroup",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "index",
+              "type": "GPUIndex32"
+            },
+            {
+              "name": "bindGroup",
+              "type": "GPUBindGroup"
+            },
+            {
+              "name": "dynamicOffsets",
+              "type": "sequence<GPUBufferDynamicOffset>"
+            }
+          ]
+        },
+        {
+          "name": "setBindGroup",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "index",
+              "type": "GPUIndex32"
+            },
+            {
+              "name": "bindGroup",
+              "type": "GPUBindGroup"
+            },
+            {
+              "name": "dynamicOffsetsData",
+              "type": "Uint32Array"
+            },
+            {
+              "name": "dynamicOffsetsDataStart",
+              "type": "GPUSize64"
+            },
+            {
+              "name": "dynamicOffsetsDataLength",
+              "type": "GPUSize32"
+            }
+          ]
+        },
+        {
+          "name": "pushDebugGroup",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "groupLabel",
+              "type": "USVString"
+            }
+          ]
+        },
+        {
+          "name": "popDebugGroup",
+          "returnType": "void",
+          "parameters": []
+        },
+        {
+          "name": "insertDebugMarker",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "markerLabel",
+              "type": "USVString"
+            }
+          ]
+        },
+        {
+          "name": "setViewport",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "x",
+              "type": "float"
+            },
+            {
+              "name": "y",
+              "type": "float"
+            },
+            {
+              "name": "width",
+              "type": "float"
+            },
+            {
+              "name": "height",
+              "type": "float"
+            },
+            {
+              "name": "minDepth",
+              "type": "float"
+            },
+            {
+              "name": "maxDepth",
+              "type": "float"
+            }
+          ]
+        },
+        {
+          "name": "setScissorRect",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "x",
+              "type": "GPUIntegerCoordinate"
+            },
+            {
+              "name": "y",
+              "type": "GPUIntegerCoordinate"
+            },
+            {
+              "name": "width",
+              "type": "GPUIntegerCoordinate"
+            },
+            {
+              "name": "height",
+              "type": "GPUIntegerCoordinate"
+            }
+          ]
+        },
+        {
+          "name": "setBlendConstant",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "color",
+              "type": "GPUColor"
+            }
+          ]
+        },
+        {
+          "name": "setStencilReference",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "reference",
+              "type": "GPUStencilValue"
+            }
+          ]
+        },
+        {
+          "name": "beginOcclusionQuery",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "queryIndex",
+              "type": "GPUSize32"
+            }
+          ]
+        },
+        {
+          "name": "endOcclusionQuery",
+          "returnType": "void",
+          "parameters": []
+        },
+        {
+          "name": "executeBundles",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "bundles",
+              "type": "sequence<GPURenderBundle>"
+            }
+          ]
+        },
+        {
+          "name": "end",
+          "returnType": "void",
+          "parameters": []
+        }
+      ],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPURenderPipeline",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUSampler",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUShaderModule",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUSurface",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUTexture",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    },
+    {
+      "name": "GPUTextureView",
+      "methods": [],
+      "properties": [
+        {
+          "name": "Handle",
+          "type": {
+            "name": "IntPtr"
+          },
+          "isMutable": false
+        }
+      ]
+    }
+  ]
+}

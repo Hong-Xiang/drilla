@@ -63,19 +63,6 @@ public sealed partial class GPUTexture : IDisposable
         Handle.Dispose();
     }
 }
-public sealed partial class GPUTextureView : IDisposable
-{
-    internal NativeHandle<WGPUNativeApiInterop, WGPUTextureViewImpl> Handle { get; }
-    internal unsafe GPUTextureView(WGPUTextureViewImpl* handle)
-    {
-        Handle = new(handle);
-    }
-
-    public unsafe WGPUTextureViewImpl* NativePointer => Handle; public void Dispose()
-    {
-        Handle.Dispose();
-    }
-}
 public sealed partial class GPUSampler : IDisposable
 {
     internal NativeHandle<WGPUNativeApiInterop, WGPUSamplerImpl> Handle { get; }

@@ -4,6 +4,12 @@ using System.Runtime.InteropServices;
 
 namespace DualDrill.Graphics;
 
+public sealed partial record class GPUBuffer<TBackend>
+{
+    public required ulong Length { get; init; }
+}
+
+
 public sealed partial class GPUBuffer
 {
 

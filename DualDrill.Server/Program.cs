@@ -22,6 +22,7 @@ public class Program
 
         var builder = WebApplication.CreateBuilder();
 
+        builder.Services.AddHttpClient();
         builder.Services.Configure<HeadlessSurface.Option>(options =>
         {
         });

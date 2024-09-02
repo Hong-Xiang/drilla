@@ -1,6 +1,5 @@
 ﻿using DualDrill.Graphics.Interop;
 using Silk.NET.WebGPU;
-using System.Diagnostics;
 
 namespace DualDrill.Graphics;
 

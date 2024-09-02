@@ -1,0 +1,22 @@
+﻿@{
+    ViewData["Title"] = "REPL Renderer";
+}
+<h2>REPL-Style Renderer Development</h2>
+<div class="container-fluid">
+    <div class="row">
+        <div id="ui-root" class="col-4"></div>
+        <div class="col d-flex align-items-center justify-content-center">
+            <canvas width="800" height="600" id="render-root"></canvas>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+        <!script src="/js/dist/client.js" type="module"></!script>
+        <!script type="module">
+            import { BatchRenderMain } from '/js/dist/client.js'
+            BatchRenderMain();
+       </!script>
+}
+
+
