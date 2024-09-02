@@ -63,9 +63,19 @@ public struct ShaderModule : IShaderModule
     }
 }
 
-public static class MinimumTriangleExpectedCode
+public interface IDevelopILSLExpectedCode
 {
-    public static readonly string Code = """
+    internal abstract static string __ILSLWGSLCode { get; }
+
+    public static string GetCode<T>()
+        where T : IDevelopILSLExpectedCode => T.__ILSLWGSLCode;
+}
+
+
+
+public struct MinimumTriangle : IShaderModule, IDevelopILSLExpectedCode
+{
+    static string IDevelopILSLExpectedCode.__ILSLWGSLCode => """
       @vertex fn vs(@builtin(vertex_index) vertex_index : u32) 
         -> @builtin(position) vec4f 
       {
@@ -75,14 +85,12 @@ public static class MinimumTriangleExpectedCode
       }
  
       @fragment fn fs() -> @location(0) vec4f {
-        return vec4f(1.0, 1.0, 0.5, 1.0);
+        return vec4f(0.5, 1.0, 0.5, 1.0);
       }
       """;
-}
 
-public struct MinimumTriangle : IShaderModule
-{
     [Vertex]
+    [return: Builtin(BuiltinBinding.Position)]
     static Vector4 vs(
         [Builtin(BuiltinBinding.VertexIndex)] uint vertexIndex
     )
@@ -96,6 +104,7 @@ public struct MinimumTriangle : IShaderModule
     [return: Location(0)]
     static Vector4 fs()
     {
-        return new Vector4(1.0f, 1.0f, 0.5f, 1.0f);
+        return new Vector4(0.5f, 1.0f, 0.5f, 1.0f);
     }
+
 }

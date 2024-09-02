@@ -16,6 +16,29 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
         [typeof(Vector4).FullName] = "vec4<f32>",
         [typeof(uint).FullName] = "u32",
     };
+    public override void VisitNamespaceDeclaration(NamespaceDeclaration namespaceDeclaration)
+    {
+        StartNode(namespaceDeclaration);
+
+        foreach (var member in namespaceDeclaration.Members)
+        {
+            member.AcceptVisitor(this);
+        }
+
+        EndNode(namespaceDeclaration);
+    }
+
+    public override void VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration)
+    {
+        if (propertyDeclaration.Name.StartsWith("__ILSL"))
+        {
+            return;
+        }
+        base.VisitPropertyDeclaration(propertyDeclaration);
+    }
+
+
+
     public override void VisitAttribute(ICSharpCode.Decompiler.CSharp.Syntax.Attribute attribute)
     {
         StartNode(attribute);
@@ -109,7 +132,8 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
 
                     WriteIdentifier(memberReferenceExpression.MemberNameToken switch
                     {
-                        { Name: "Position" } => "position",
+                        { Name: nameof(BuiltinBinding.Position) } => "position",
+                        { Name: nameof(BuiltinBinding.VertexIndex) } => "vertex_index",
                         _ => memberReferenceExpression.MemberNameToken.Name,
                     });
                     //WriteTypeArguments(memberReferenceExpression.TypeArguments);
