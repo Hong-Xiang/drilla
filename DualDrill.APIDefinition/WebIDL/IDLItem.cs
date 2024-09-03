@@ -1,4 +1,5 @@
-﻿using DualDrill.ApiGen.Mini;
+﻿using DualDrill.ApiGen.DrillLang;
+using DualDrill.ApiGen.DrillLang;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
@@ -181,11 +182,11 @@ public sealed record WebIDLSpec(
         return new(results.SelectMany(x => x.Value).ToImmutableArray());
     }
 
-    public static Mini.ITypeReference ParseWebIDLTypeRef(JsonElement doc)
+    public static ITypeReference ParseWebIDLTypeRef(JsonElement doc)
     {
         if (doc.ValueKind == JsonValueKind.String)
         {
-            return new Mini.PlainTypeRef(doc.GetString()!);
+            return new PlainTypeRef(doc.GetString()!);
         }
         if (doc.ValueKind == JsonValueKind.Array && doc.GetArrayLength() == 1)
         {
@@ -211,16 +212,16 @@ public sealed record WebIDLSpec(
             {
                 if (meta.Generic == "Promise")
                 {
-                    return new Mini.FutureTypeRef(t);
+                    return new FutureTypeRef(t);
                 }
                 if (meta.Generic == "sequence")
                 {
-                    return new Mini.SequenceTypeRef(t);
+                    return new SequenceTypeRef(t);
                 }
             }
         }
 
-        return new Mini.UnknownTypeRef(doc);
+        return new UnknownTypeRef(doc);
     }
 }
 

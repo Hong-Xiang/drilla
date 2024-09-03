@@ -1,5 +1,5 @@
 ﻿using DualDrill.ApiGen.CodeGen;
-using DualDrill.ApiGen.Mini;
+using DualDrill.ApiGen.DrillLang;
 using DualDrill.ApiGen.WebIDL;
 using DualDrill.Common;
 using System.Collections.Immutable;
@@ -10,9 +10,13 @@ using System.Text.Json;
 namespace DualDrill.ApiGen;
 
 public sealed record class GPUApi(
-    ImmutableArray<HandleDeclaration> Handles
+    ModuleDeclaration Module
 )
 {
+
+    public ImmutableArray<HandleDeclaration> Handles =>
+        [.. Module.TypeDeclarations.OfType<HandleDeclaration>().OrderBy(h => h.Name)];
+
     public void Validate()
     {
         Debug.Assert(Handles.Length == 22, $"GPU API should provide 22 handles, got {Handles.Length}");
@@ -37,6 +41,7 @@ public sealed record class GPUApi(
         }
     }
 
+
     public static GPUApi ParseIDLSpec(JsonDocument doc)
     {
         var idlSpec = WebIDLSpec.Parse(doc);
@@ -46,7 +51,7 @@ public sealed record class GPUApi(
                                  .Select(h => h.AcceptVisitor(postProcess) as HandleDeclaration)
                                  .OfType<HandleDeclaration>()
                                  .OrderBy(t => t.Name);
-        var result = new GPUApi([.. handles]);
+        var result = new GPUApi(new ModuleDeclaration([.. handles]));
         result.Validate();
         return result;
 
@@ -56,6 +61,7 @@ public sealed record class GPUApi(
             {
                 "GPU" => "GPUInstance",
                 "GPUCanvasContext" => "GPUSurface",
+                "GPUMapModeFlags" => "GPUMapMode",
                 _ => idlName
             };
         }
@@ -104,13 +110,18 @@ public sealed record class GPUApi(
         }
     }
 
-    public GPUApi ProcessForCodeGen()
+    public GPUApi ProcessForCodeGen(bool useGenericBackend)
     {
-        var visitor = new GPUApiPreCodeGenVisitor();
-        return this with
+        var visitor = new GPUApiPreCodeGenVisitor([
+            ..Module.TypeDeclarations
+                    .OfType<HandleDeclaration>()
+                    .Select(h => h.Name)
+        ], useGenericBackend);
+        var result = this with
         {
-            Handles = Handles.Select(h => (HandleDeclaration)h.AcceptVisitor(visitor)).ToImmutableArray()
+            Module = (ModuleDeclaration)Module.AcceptVisitor(visitor)
         };
+        return result;
     }
 }
 
@@ -147,6 +158,12 @@ internal sealed class ParseWebIDLResultToGPUApiTypeVisitor : ITypeReferenceVisit
             "USVString" => new StringTypeReference(),
             "GPUSize64" => new IntegerTypeReference(BitWidth.N64, false),
             "GPUSize32" => new IntegerTypeReference(BitWidth.N32, false),
+            "GPUIndex16" => new IntegerTypeReference(BitWidth.N16, true),
+            "GPUIndex32" => new IntegerTypeReference(BitWidth.N32, true),
+            "GPUIndex64" => new IntegerTypeReference(BitWidth.N64, true),
+            "GPUBufferDynamicOffset" => new IntegerTypeReference(BitWidth.N32, false),
+            "ArrayBuffer" => new SequenceTypeRef(new IntegerTypeReference(BitWidth.N8, false)),
+            "Uint32Array" => new SequenceTypeRef(new IntegerTypeReference(BitWidth.N32, false)),
             _ => type
         };
     }
@@ -170,7 +187,7 @@ internal sealed class ParseWebIDLResultToGPUApiTypeVisitor : ITypeReferenceVisit
 
 }
 
-internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVisitor<Mini.IDeclaration?>
+internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVisitor<DrillLang.IDeclaration?>
 {
     ParseWebIDLResultToGPUApiTypeVisitor TypePostProcessVisitor { get; } = new();
 
@@ -190,9 +207,9 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
     //"GPUBindGroup",
     //"GPUBindGroupLayout",
     "GPUBuffer",
-    //"GPUCommandBuffer",
+    "GPUCommandBuffer",
     "GPUCommandEncoder",
-    //"GPUComputePassEncoder",
+    "GPUComputePassEncoder",
     //"GPUComputePipeline",
     "GPUDevice",
     "GPUInstance",
@@ -210,20 +227,24 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
     //"GPUTextureView"
     ];
 
-    public Mini.IDeclaration? VisitEnumDeclaration(EnumDeclaration decl)
+    public DrillLang.IDeclaration? VisitEnum(EnumDeclaration decl)
         => decl with
         {
             Values = decl.Values.Select(v => v.AcceptVisitor(this)).OfType<EnumValueDeclaration>().ToImmutableArray()
         };
 
-    public Mini.IDeclaration? VisitEnumValueDeclaration(EnumValueDeclaration decl)
+    public DrillLang.IDeclaration? VisitEnumValue(EnumValueDeclaration decl)
         => decl with
         {
             Name = decl.Name.Capitalize(),
         };
 
-    public Mini.IDeclaration? VisitHandleDeclaration(HandleDeclaration decl)
+    public DrillLang.IDeclaration? VisitHandle(HandleDeclaration decl)
     {
+        if (RemoveTypes.Contains(decl.Name))
+        {
+            return null;
+        }
         if (!MemberSupportedHandles.Contains(decl.Name))
         {
             decl = decl with { Methods = [], Properties = [] };
@@ -236,8 +257,23 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
         };
     }
 
-    public Mini.IDeclaration? VisitMethodDeclaration(MethodDeclaration decl)
+    public DrillLang.IDeclaration? VisitMethod(MethodDeclaration decl)
     {
+        ImmutableArray<ITypeReference> referencedTypes = [decl.ReturnType, .. decl.Parameters.Select(p => p.Type)];
+        // TODO: recursive visitor
+        var shouldRemove = referencedTypes.Any(t => t switch
+        {
+            PlainTypeRef { Name: var name } when RemoveTypes.Contains(name) => true,
+            FutureTypeRef { Type: PlainTypeRef { Name: var name } } when RemoveTypes.Contains(name) => true,
+            FutureTypeRef { Type: NullableTypeRef { Type: PlainTypeRef { Name: var name } } } when RemoveTypes.Contains(name) => true,
+            NullableTypeRef { Type: PlainTypeRef { Name: var name } } when RemoveTypes.Contains(name) => true,
+            SequenceTypeRef { Type: PlainTypeRef { Name: var name } } when RemoveTypes.Contains(name) => true,
+            _ => false
+        });
+        if (shouldRemove)
+        {
+            return null;
+        }
         if (RemoveMethods.Contains(decl.Name))
         {
             return null;
@@ -251,13 +287,13 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
         };
     }
 
-    public Mini.IDeclaration? VisitParameterDeclaration(ParameterDeclaration decl)
+    public DrillLang.IDeclaration? VisitParameter(ParameterDeclaration decl)
         => decl with
         {
             Type = decl.Type.AcceptVisitor(TypePostProcessVisitor)
         };
 
-    public Mini.IDeclaration? VisitPropertyDeclaration(PropertyDeclaration decl)
+    public DrillLang.IDeclaration? VisitProperty(PropertyDeclaration decl)
         => decl with
         {
             Name = decl.Name.Capitalize(),
@@ -265,20 +301,18 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
         };
 
 
-    public Mini.IDeclaration? VisitStructDeclaration(StructDeclaration decl)
+    public DrillLang.IDeclaration? VisitStruct(StructDeclaration decl)
     {
         throw new NotImplementedException();
     }
 
-    public Mini.IDeclaration? VisitTypeSystem(TypeSystem typeSystem)
+    public DrillLang.IDeclaration? VisitModule(ModuleDeclaration module)
     {
-        var processed = typeSystem.TypeDeclarations
-            .Select(kv => KeyValuePair.Create(kv.Key, kv.Value.AcceptVisitor(this)))
-            .Where(kv => kv.Value is ITypeDeclaration)
-            .Select(kv => KeyValuePair.Create(kv.Key, (ITypeDeclaration)kv.Value!));
-        return typeSystem with
+        return module with
         {
-            TypeDeclarations = processed.ToImmutableDictionary()
+            TypeDeclarations = [.. module.TypeDeclarations
+                                        .Select(t => t.AcceptVisitor(this))
+                                        .OfType<ITypeDeclaration>()]
         };
     }
 }

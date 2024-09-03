@@ -4,7 +4,6 @@ using DualDrill.ApiGen.WebIDL;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using System.Text.Json;
-using Vortice.Direct3D11;
 
 namespace DualDrill.Server.Controllers;
 
@@ -28,12 +27,10 @@ public class ApiGenController(
         return Ok(api.Handles.Select(h => h.Name));
     }
 
-
-
     [HttpGet("webgpu/codegen/backend")]
     public async Task<IActionResult> GenerateBackendCodeAsync([FromQuery] string? part, CancellationToken cancellation)
     {
-        var spec = await GetGPUApiSpecAsync(cancellation);
+        var spec = await GetGPUApiForCodeGenAsync(cancellation);
         var generator = new GPUBackendCodeGen(spec);
         var sb = new StringBuilder();
         switch (part)
@@ -54,7 +51,7 @@ public class ApiGenController(
     [HttpGet("webgpu/codegen/handle")]
     public async Task<IActionResult> GenerateAllGPUHandleCodeAsync(CancellationToken cancellation)
     {
-        var spec = await GetGPUApiSpecAsync(cancellation);
+        var spec = await GetGPUApiForCodeGenAsync(cancellation);
         var generator = new GPUHandlesCodeGen(spec);
         var sb = new StringBuilder();
         foreach (var h in spec.Handles)
@@ -67,7 +64,7 @@ public class ApiGenController(
     [HttpGet("webgpu/codegen/handle/{name}")]
     public async Task<IActionResult> GenerateGPUHandleCodeAsync(string name, CancellationToken cancellation)
     {
-        var spec = await GetGPUApiSpecAsync(cancellation);
+        var spec = await GetGPUApiForCodeGenAsync(cancellation);
         var generator = new GPUHandlesCodeGen(spec);
         var sb = new StringBuilder();
         var h = spec.Handles.FirstOrDefault(h => string.Equals(h.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -93,6 +90,13 @@ public class ApiGenController(
         var uri = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host + "/spec/raw-nodes.json";
         var content = await HttpClient.GetStringAsync(uri, cancellation);
         return JsonDocument.Parse(content);
+    }
+
+    private async ValueTask<GPUApi> GetGPUApiForCodeGenAsync(CancellationToken cancellation)
+    {
+        var api = await GetGPUApiSpecAsync(cancellation);
+        var processed = api.ProcessForCodeGen(true);
+        return processed;
     }
     private async ValueTask<GPUApi> GetGPUApiSpecAsync(CancellationToken cancellation)
     {

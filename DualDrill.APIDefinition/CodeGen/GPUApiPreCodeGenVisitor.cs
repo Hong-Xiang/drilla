@@ -1,26 +1,74 @@
-﻿using DualDrill.ApiGen.Mini;
+﻿using DualDrill.ApiGen.DrillLang;
 using DualDrill.Common;
 using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-sealed record class GPUApiPreCodeGenVisitor() : IDeclarationVisitor<IDeclaration>
-{
-    public IDeclaration VisitEnumDeclaration(EnumDeclaration decl) => decl;
 
-    public IDeclaration VisitEnumValueDeclaration(EnumValueDeclaration decl) => decl with
+sealed record class GPUApiPreCodeGenVisitor(
+    ImmutableHashSet<string> HandleNames,
+    bool UseGenericBackend) : IDeclarationVisitor<IDeclaration>
+{
+    TypeVisitor TypeTransform { get; } = new TypeVisitor(HandleNames);
+    sealed class TypeVisitor(ImmutableHashSet<string> HandleNames) : ITypeReferenceTransformVisitor
+    {
+        public ITypeReference VisitFuture(FutureTypeRef type)
+            => type with
+            {
+                Type = type.Type.AcceptVisitor(this)
+            };
+
+        public ITypeReference VisitGeneric(GenericTypeRef type)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ITypeReference VisitNullable(NullableTypeRef type)
+            => type with
+            {
+                Type = type.Type.AcceptVisitor(this)
+            };
+
+        public ITypeReference VisitPlain(PlainTypeRef type)
+        {
+            if (HandleNames.Contains(type.Name))
+            {
+                return type with
+                {
+                    Name = type.Name + "<TBackend>"
+                };
+            }
+            else
+            {
+                return type;
+            }
+        }
+
+        public ITypeReference VisitSequence(SequenceTypeRef type)
+            => type with
+            {
+                Type = type.Type.AcceptVisitor(this)
+            };
+    }
+    public IDeclaration VisitEnum(EnumDeclaration decl) => decl;
+
+    public IDeclaration VisitEnumValue(EnumValueDeclaration decl) => decl with
     {
         Name = decl.Name.Capitalize()
     };
 
-    public IDeclaration VisitHandleDeclaration(HandleDeclaration decl)
-        => decl with
+    public IDeclaration VisitHandle(HandleDeclaration decl)
+    {
+        ImmutableArray<MethodDeclaration> methods = [.. decl.Methods.Select(m => (MethodDeclaration)m.AcceptVisitor(this))];
+        var result = decl with
         {
-            Methods = decl.Methods.Select(m => (MethodDeclaration)m.AcceptVisitor(this)).ToImmutableArray(),
-            Properties = decl.Properties.Select(m => (PropertyDeclaration)m.AcceptVisitor(this)).ToImmutableArray(),
+            Methods = methods,
+            Properties = [.. decl.Properties.Select(m => (PropertyDeclaration)m.AcceptVisitor(this))],
         };
+        return result;
+    }
 
-    public IDeclaration VisitMethodDeclaration(MethodDeclaration decl)
+    public IDeclaration VisitMethod(MethodDeclaration decl)
     {
         var ps = decl.Parameters.Select(p => p.AcceptVisitor(this)).OfType<ParameterDeclaration>();
         if (decl.IsAsync)
@@ -28,31 +76,38 @@ sealed record class GPUApiPreCodeGenVisitor() : IDeclarationVisitor<IDeclaration
             ps = ps.Concat([new ParameterDeclaration("cancellation", new PlainTypeRef("CancellationToken"), null)]);
         }
         var name = decl.Name.Capitalize();
-        return decl with
+        var result = decl with
         {
             Name = decl.IsAsync ? name + "Async" : name,
             Parameters = ps.ToImmutableArray(),
+            ReturnType = decl.ReturnType.AcceptVisitor(TypeTransform)
         };
+        return result;
     }
 
-    public IDeclaration VisitParameterDeclaration(ParameterDeclaration decl) => decl;
-
-    public IDeclaration VisitPropertyDeclaration(PropertyDeclaration decl) => decl with
+    public IDeclaration VisitParameter(ParameterDeclaration decl) => decl with
     {
-        Name = decl.Name.Capitalize()
+        Type = decl.Type.AcceptVisitor(TypeTransform)
     };
 
-    public IDeclaration VisitStructDeclaration(StructDeclaration decl)
+    public IDeclaration VisitProperty(PropertyDeclaration decl) => decl with
+    {
+        Name = decl.Name.Capitalize(),
+        Type = decl.Type.AcceptVisitor(TypeTransform)
+    };
+
+    public IDeclaration VisitStruct(StructDeclaration decl)
         => decl with
         {
-            Properties = decl.Properties.Select(p => (PropertyDeclaration)p.AcceptVisitor(this)).ToImmutableArray()
+            Properties = [.. decl.Properties.Select(p => (PropertyDeclaration)p.AcceptVisitor(this))]
         };
 
-    public IDeclaration VisitTypeSystem(TypeSystem typeSystem)
-        => typeSystem with
+    public IDeclaration VisitModule(ModuleDeclaration module)
+    {
+        var result = module with
         {
-            TypeDeclarations = typeSystem.TypeDeclarations
-                                    .Select(d => KeyValuePair.Create(d.Key, (ITypeDeclaration)d.Value.AcceptVisitor(this)))
-                                    .ToImmutableDictionary()
+            TypeDeclarations = [.. module.TypeDeclarations.Select(d => d.AcceptVisitor(this)).OfType<ITypeDeclaration>()]
         };
+        return result;
+    }
 }

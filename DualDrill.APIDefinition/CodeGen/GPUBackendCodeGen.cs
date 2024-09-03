@@ -1,4 +1,5 @@
-﻿using DualDrill.ApiGen.Mini;
+﻿using DualDrill.ApiGen.DrillLang;
+using DualDrill.ApiGen.DrillLang;
 using DualDrill.Common;
 using System.Collections.Immutable;
 using System.Security.Cryptography;
@@ -80,7 +81,6 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
 
             foreach (var m in h.Methods)
             {
-                var isAsync = m.ReturnType is FutureTypeRef;
                 sb.AppendLine($"    internal {RenameHandleType(m.ReturnType).GetCSharpName()} {m.Name}(");
                 sb.Append($"        {h.Name}<TBackend> handle");
 
@@ -90,15 +90,7 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
                     sb.AppendLine(",");
                     sb.Append($"        {RenameHandleType(p.Type).GetCSharpName()} {p.Name}");
                 }
-                if (isAsync)
-                {
-                    sb.AppendLine(",");
-                    sb.AppendLine("        CancellationToken cancellationToken);");
-                }
-                else
-                {
-                    sb.AppendLine(");");
-                }
+                sb.AppendLine(");");
                 sb.AppendLine();
             }
             sb.AppendLine("#endregion");

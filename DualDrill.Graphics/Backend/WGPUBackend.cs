@@ -1,4 +1,5 @@
 ﻿using DualDrill.Graphics.Interop;
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -310,6 +311,125 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
     }
 
     GPUQuerySet<WGPUBackend> IBackend<WGPUBackend>.CreateQuerySet(GPUDevice<WGPUBackend> handle, GPUQuerySetDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask IBackend<WGPUBackend>.MapAsyncAsync(GPUBuffer<WGPUBackend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
+
+    ReadOnlySpan<byte> IBackend<WGPUBackend>.GetMappedRange(GPUBuffer<WGPUBackend> handle, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.Unmap(GPUBuffer<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPURenderPassEncoder<WGPUBackend> IBackend<WGPUBackend>.BeginRenderPass(GPUCommandEncoder<WGPUBackend> handle, GPURenderPassDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUComputePassEncoder<WGPUBackend> IBackend<WGPUBackend>.BeginComputePass(GPUCommandEncoder<WGPUBackend> handle, GPUComputePassDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.CopyBufferToBuffer(GPUCommandEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> source, ulong sourceOffset, GPUBuffer<WGPUBackend> destination, ulong destinationOffset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.CopyBufferToTexture(GPUCommandEncoder<WGPUBackend> handle, GPUImageCopyBuffer source, GPUImageCopyTexture destination, GPUExtent3D copySize)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.CopyTextureToBuffer(GPUCommandEncoder<WGPUBackend> handle, GPUImageCopyTexture source, GPUImageCopyBuffer destination, GPUExtent3D copySize)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.CopyTextureToTexture(GPUCommandEncoder<WGPUBackend> handle, GPUImageCopyTexture source, GPUImageCopyTexture destination, GPUExtent3D copySize)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.ClearBuffer(GPUCommandEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> buffer, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.ResolveQuerySet(GPUCommandEncoder<WGPUBackend> handle, GPUQuerySet<WGPUBackend> querySet, uint firstQuery, uint queryCount, GPUBuffer<WGPUBackend> destination, ulong destinationOffset)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUCommandBuffer<WGPUBackend> IBackend<WGPUBackend>.Finish(GPUCommandEncoder<WGPUBackend> handle, GPUCommandBufferDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.PushDebugGroup(GPUCommandEncoder<WGPUBackend> handle, string groupLabel)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.PopDebugGroup(GPUCommandEncoder<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.InsertDebugMarker(GPUCommandEncoder<WGPUBackend> handle, string markerLabel)
+    {
+        throw new NotImplementedException();
+    }
+    void IBackend<WGPUBackend>.SetBindGroup(GPUComputePassEncoder<WGPUBackend> handle, int index, GPUBindGroup<WGPUBackend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.PushDebugGroup(GPUComputePassEncoder<WGPUBackend> handle, string groupLabel)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.PopDebugGroup(GPUComputePassEncoder<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.InsertDebugMarker(GPUComputePassEncoder<WGPUBackend> handle, string markerLabel)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetPipeline(GPUComputePassEncoder<WGPUBackend> handle, GPUComputePipeline<WGPUBackend> pipeline)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.DispatchWorkgroups(GPUComputePassEncoder<WGPUBackend> handle, uint workgroupCountX, uint workgroupCountY, uint workgroupCountZ)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.DispatchWorkgroupsIndirect(GPUComputePassEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> indirectBuffer, ulong indirectOffset)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.End(GPUComputePassEncoder<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetBindGroup(GPUComputePassEncoder<WGPUBackend> handle, int index, GPUBindGroup<WGPUBackend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
     {
         throw new NotImplementedException();
     }
