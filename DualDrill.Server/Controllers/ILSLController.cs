@@ -1,34 +1,56 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
+﻿using DualDrill.Engine.Shader;
+using DualDrill.ILSL;
+using DualDrill.Server.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DualDrill.Server.Controllers;
 
-[Route("/ilsl")]
-public class ILSLController : Controller
+[Route("[controller]")]
+public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Controller
 {
+    IShaderModule? GetShaderModule(string name)
+    {
+        return ShaderModules.ShaderModules[name];
+    }
+
+    IILSLDevelopShaderModule? GetDevelopmentShaderModule(string name)
+    {
+        return ShaderModules.ShaderModules[name];
+    }
+
     [HttpGet("")]
     public IActionResult Index()
     {
         return View();
     }
 
-    [HttpGet("expected")]
-    public IActionResult ExpectedCode()
+    [HttpGet("wgsl/{name}/expected")]
+    public IActionResult ExpectedCode(string name)
     {
-        return Ok(Engine.Shader.ExpectedResult.Code);
+        return Ok(GetDevelopmentShaderModule(name).ILSLWGSLExpectedCode);
     }
 
 
-    [HttpGet("generated")]
-    public IActionResult GeneratedCode()
+    [HttpGet("wgsl/{name}")]
+    public IActionResult GeneratedCode(string name)
     {
-        var code = ILSL.ILSLCompiler.Compile<Engine.Shader.ShaderModule>();
+        var shaderModule = GetShaderModule(name);
+        if (shaderModule is null)
+        {
+            return NotFound();
+        }
+        var code = ILSL.ILSLCompiler.Compile(shaderModule);
         return Ok(code);
     }
 
-    [HttpGet("ast")]
-    public IActionResult GeneratedAst()
+    [HttpGet("ast/{name}")]
+    public IActionResult GeneratedAst(string name)
     {
-        return Ok(ILSL.ILSLCompiler.ASTToJson<Engine.Shader.ShaderModule>());
+        var shaderModule = GetShaderModule(name);
+        if (shaderModule is null)
+        {
+            return NotFound();
+        }
+        return Ok(ILSL.ILSLCompiler.ASTToJson(shaderModule));
     }
 }

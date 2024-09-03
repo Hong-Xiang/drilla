@@ -1,7 +1,6 @@
 using DualDrill.Engine.Headless;
 using DualDrill.Graphics;
 using DualDrill.Server.Connection;
-using DualDrill.Server.WebApi;
 using Serilog;
 using Serilog.Extensions.Logging;
 using System.Text.Json;
@@ -86,7 +85,6 @@ public class Program
         app.UseStaticFiles();
         app.UseAntiforgery();
         app.MapControllers();
-        app.MapRenderControls();
         //app.MapControllerRoute(
         //    name: "default",
         //    pattern: "{controller=Home}/{action=Index}/{id?}")

@@ -23,8 +23,8 @@ export async function ILSLDevelopMain() {
       });
     },
   };
-  const expected = await (await fetch("ilsl/expected")).text();
-  const generated = await (await fetch("ilsl/generated")).text();
+  const expected = await (await fetch("ilsl/wgsl/expected")).text();
+  const generated = await (await fetch("ilsl/wgsl")).text();
   const ast = await (await fetch("ilsl/ast")).text();
   const expectedEditor = editor.create(
     document.getElementById("editor-expected") as HTMLDivElement,
