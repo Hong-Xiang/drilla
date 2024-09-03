@@ -5,3 +5,7 @@ public readonly record struct GPUHandle<TBackend, TResource>(nint Pointer, objec
 {
 }
 
+public interface IGPUHandle<TBackend, TResource>
+    where TBackend : IBackend<TBackend>
+{
+}

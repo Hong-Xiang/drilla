@@ -1,11 +1,15 @@
-﻿using System.Runtime.InteropServices;
-using DualDrill.Interop;
-using Evergine.Bindings.WebGPU;
+﻿using Evergine.Bindings.WebGPU;
+using System.Runtime.InteropServices;
 namespace DualDrill.Graphics.Backend;
 using static Evergine.Bindings.WebGPU.WebGPUNative;
-
-using Native = Evergine.Bindings.WebGPU;
 using Backend = DualDrill.Graphics.Backend.WebGPUNETBackend;
+using Native = Evergine.Bindings.WebGPU;
+
+internal readonly record struct WebGPUNETHandle<THandle, TResource>(
+    THandle Handle
+) : IGPUHandle<Backend, TResource>
+{
+}
 
 public sealed partial class WebGPUNETBackend : IBackend<Backend>
 {

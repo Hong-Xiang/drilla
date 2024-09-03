@@ -1,10 +1,10 @@
 ﻿namespace DualDrill.Graphics;
-public interface IGPUAdapter
+public record class IGPUAdapter
 {
 }
 
 public sealed partial record class GPUAdapter<TBackend>(GPUHandle<TBackend, GPUAdapter<TBackend>> Handle)
-    : IDisposable, IGPUAdapter
+    : IGPUAdapter, IDisposable
     where TBackend : IBackend<TBackend>
 {
     public void Dispose()

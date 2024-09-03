@@ -1,55 +1,10 @@
 ﻿using DualDrill.ApiGen.Mini;
 using DualDrill.Common;
 using System.Collections.Immutable;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace DualDrill.ApiGen.CodeGen;
-
-sealed record class GPUApiPreCodeGenVisitor() : IDeclarationVisitor<IDeclaration>
-{
-    public IDeclaration VisitEnumDeclaration(EnumDeclaration decl) => decl;
-
-    public IDeclaration VisitEnumValueDeclaration(EnumValueDeclaration decl) => decl;
-
-    public IDeclaration VisitHandleDeclaration(HandleDeclaration decl)
-        => decl with
-        {
-            Methods = decl.Methods.Select(m => (MethodDeclaration)m.AcceptVisitor(this)).ToImmutableArray(),
-            Properties = decl.Methods.Select(m => (PropertyDeclaration)m.AcceptVisitor(this)).ToImmutableArray(),
-        };
-
-    public IDeclaration VisitMethodDeclaration(MethodDeclaration decl)
-    {
-        var ps = decl.Parameters.Select(p => p.AcceptVisitor(this)).OfType<ParameterDeclaration>();
-        if (decl.IsAsync)
-        {
-            ps = ps.Concat([new ParameterDeclaration("cancellation", new PlainTypeRef("CancellationToken"), null)]);
-        }
-        return decl with
-        {
-            Name = decl.IsAsync ? decl.Name + "Async" : decl.Name,
-            Parameters = ps.ToImmutableArray(),
-        };
-    }
-
-    public IDeclaration VisitParameterDeclaration(ParameterDeclaration decl) => decl;
-
-    public IDeclaration VisitPropertyDeclaration(PropertyDeclaration decl) => decl;
-
-    public IDeclaration VisitStructDeclaration(StructDeclaration decl)
-        => decl with
-        {
-            Properties = decl.Properties.Select(p => (PropertyDeclaration)p.AcceptVisitor(this)).ToImmutableArray()
-        };
-
-    public IDeclaration VisitTypeSystem(TypeSystem typeSystem)
-        => typeSystem with
-        {
-            TypeDeclarations = typeSystem.TypeDeclarations
-                                    .Select(d => KeyValuePair.Create(d.Key, (ITypeDeclaration)d.Value.AcceptVisitor(this)))
-                                    .ToImmutableDictionary()
-        };
-}
 
 public sealed record class GPUBackendCodeGen(GPUApi Spec)
 {
@@ -80,22 +35,12 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
     //"GPUTexture",
     //"GPUTextureView"
     ];
-    public void GPUHandleDisposer(StringBuilder sb)
+
+    public void EmitIGPUHandleDisposer(StringBuilder sb)
     {
         foreach (var h in Spec.Handles)
         {
             sb.AppendLine($"    , IGPUHandleDisposer<TBackend, {h.Name}<TBackend>>");
-        }
-    }
-
-    public void DisposeImpl(StringBuilder sb)
-    {
-        foreach (var h in Spec.Handles)
-        {
-            sb.AppendLine($"    void IGPUHandleDisposer<TBackend, {h.Name}<TBackend>>.DisposeHandle(GPUHandle<TBackend, {h.Name}<TBackend>> handle)");
-            sb.AppendLine("    {");
-            sb.AppendLine($"        TBackend.Instance.DisposeHandle(handle);");
-            sb.AppendLine("    }");
         }
     }
 
@@ -121,23 +66,22 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
         };
     }
 
-    public void GenerateHandleMethods(StringBuilder sb)
+    public void EmitHandleMethods(StringBuilder sb)
     {
-        foreach (var h in Spec.Handles)
+        foreach (var h in Spec.Handles.OrderBy(h => h.Name))
         {
-            if (!MemberSupportedHandles.Contains(h.Name))
+            if (!h.Methods.Any())
             {
                 continue;
             }
+
+            sb.AppendLine($"#region {h.Name} methods");
+            sb.AppendLine();
+
             foreach (var m in h.Methods)
             {
-                if (!ShouldGenerateMethod(m))
-                {
-                    continue;
-                }
                 var isAsync = m.ReturnType is FutureTypeRef;
-                var methodName = isAsync ? $"{m.Name.Capitalize()}Async" : m.Name.Capitalize();
-                sb.AppendLine($"    internal {RenameHandleType(m.ReturnType).GetCSharpName()} {methodName}(");
+                sb.AppendLine($"    internal {RenameHandleType(m.ReturnType).GetCSharpName()} {m.Name}(");
                 sb.Append($"        {h.Name}<TBackend> handle");
 
                 for (var i = 0; i < m.Parameters.Length; i++)
@@ -157,41 +101,19 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
                 }
                 sb.AppendLine();
             }
+            sb.AppendLine("#endregion");
+            sb.AppendLine();
         }
     }
 
-    bool ShouldGenerateMethod(MethodDeclaration m)
-    {
-        ImmutableHashSet<string> skipNames = [
-            "destroy",
-            "requestAdapterInfo",
-            "pushErrorScope"
-        ];
-
-        ImmutableHashSet<string> skipTypes = [
-            "GPUError",
-            "GPUExternalTexture"
-        ];
-
-        if (skipNames.Contains(m.Name))
-        {
-            return false;
-        }
-        if (skipTypes.Any(s => References(m.ReturnType, s)))
-        {
-            return false;
-        }
-        return true;
-    }
-
-    public void GenerateAll(StringBuilder sb)
+    public void EmitAll(StringBuilder sb)
     {
         sb.AppendLine("namespace DualDrill.Graphics;");
         sb.AppendLine("public partial interface IBackend<TBackend>");
         sb.AppendLine(" : IDisposable");
-        GPUHandleDisposer(sb);
+        EmitIGPUHandleDisposer(sb);
         sb.AppendLine("{");
-        GenerateHandleMethods(sb);
+        EmitHandleMethods(sb);
         sb.AppendLine("}");
     }
 }

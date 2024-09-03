@@ -36,7 +36,10 @@ public readonly record struct CSharpTypeNameVisitorOption(
         PropertyType
     }
 
-    public static CSharpTypeNameVisitorOption Default { get; } = new();
+    public static CSharpTypeNameVisitorOption Default { get; } = new()
+    {
+        UseValueTask = true
+    };
 }
 public sealed record class CSharpTypeNameVisitor(CSharpTypeNameVisitorOption Option) : ITypeReferenceVisitor<string>
 {
@@ -79,7 +82,7 @@ public sealed record class CSharpTypeNameVisitor(CSharpTypeNameVisitorOption Opt
     }
 
     public string VisitNullable(NullableTypeRef type)
-        => $"{type.AcceptVisitor(this)}?";
+        => $"{type.Type.AcceptVisitor(this)}?";
 
     public string VisitPlain(PlainTypeRef type) => type.Name;
 

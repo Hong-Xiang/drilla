@@ -1,37 +1,34 @@
-﻿using System.Text;
+﻿using DualDrill.ApiGen.Mini;
+using System.Text;
 
 namespace DualDrill.ApiGen.CodeGen;
 
 public sealed record class GPUHandlesCodeGen(GPUApi Spec)
 {
-    public void HandleDecl(StringBuilder sb)
+    public void EmitHandleDeclaration(StringBuilder sb, HandleDeclaration decl)
     {
-        foreach (var h in Spec.Handles)
+        if (decl.Name != "GPUSurface")
         {
-            if (h.Name != "GPUSurface")
-            {
-                sb.AppendLine($"public interface I{h.Name}");
-                sb.AppendLine("{");
-                sb.AppendLine("}");
-                sb.AppendLine();
-            }
-            sb.AppendLine($"public sealed partial record class {h.Name}<TBackend>(GPUHandle<TBackend, {h.Name}<TBackend>> Handle)");
-            if (h.Name == "GPUSurface")
-            {
-                sb.AppendLine($"    : IDisposable");
-            }
-            else
-            {
-                sb.AppendLine($"    : IDisposable, I{h.Name}");
-            }
-            sb.AppendLine("    where TBackend : IBackend<TBackend>");
+            sb.AppendLine($"public interface I{decl.Name}");
             sb.AppendLine("{");
-            sb.AppendLine("    public void Dispose()");
-            sb.AppendLine("    {");
-            sb.AppendLine("        TBackend.Instance.DisposeHandle(Handle);");
-            sb.AppendLine("    }");
             sb.AppendLine("}");
+            sb.AppendLine();
         }
+        sb.AppendLine($"public sealed partial record class {decl.Name}<TBackend>(GPUHandle<TBackend, {decl.Name}<TBackend>> Handle)");
+        if (decl.Name == "GPUSurface")
+        {
+            sb.AppendLine($"    : IDisposable");
+        }
+        else
+        {
+            sb.AppendLine($"    : IDisposable, I{decl.Name}");
+        }
+        sb.AppendLine("    where TBackend : IBackend<TBackend>");
+        sb.AppendLine("{");
+        sb.AppendLine("    public void Dispose()");
+        sb.AppendLine("    {");
+        sb.AppendLine("        TBackend.Instance.DisposeHandle(Handle);");
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
     }
-
 }

@@ -4,6 +4,7 @@ using DualDrill.ApiGen.WebIDL;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using System.Text.Json;
+using Vortice.Direct3D11;
 
 namespace DualDrill.Server.Controllers;
 
@@ -20,29 +21,28 @@ public class ApiGenController(
         return Ok(api);
     }
 
-    [HttpGet("webgpu/handles/name")]
+    [HttpGet("webgpu/spec/handle/name")]
     public async Task<IActionResult> GetWebGPUHandleNamesAsync(CancellationToken cancellation)
     {
         var api = await GetGPUApiSpecAsync(cancellation);
         return Ok(api.Handles.Select(h => h.Name));
     }
 
+
+
     [HttpGet("webgpu/codegen/backend")]
-    public async Task<IActionResult> BackendCodeGenAsync([FromQuery] string? kind, CancellationToken cancellation)
+    public async Task<IActionResult> GenerateBackendCodeAsync([FromQuery] string? part, CancellationToken cancellation)
     {
         var spec = await GetGPUApiSpecAsync(cancellation);
         var generator = new GPUBackendCodeGen(spec);
         var sb = new StringBuilder();
-        switch (kind)
+        switch (part)
         {
-            case nameof(GPUBackendCodeGen.GPUHandleDisposer):
-                generator.GPUHandleDisposer(sb);
-                break;
-            case nameof(GPUBackendCodeGen.DisposeImpl):
-                generator.DisposeImpl(sb);
+            case nameof(GPUBackendCodeGen.EmitIGPUHandleDisposer):
+                generator.EmitIGPUHandleDisposer(sb);
                 break;
             default:
-                generator.GenerateAll(sb);
+                generator.EmitAll(sb);
                 break;
         }
 
@@ -50,31 +50,35 @@ public class ApiGenController(
     }
 
 
-    [HttpGet("webgpu/handles/codegen")]
-    public async Task<IActionResult> HandlesCodeGen([FromQuery] string? kind, CancellationToken cancellation)
+
+    [HttpGet("webgpu/codegen/handle")]
+    public async Task<IActionResult> GenerateAllGPUHandleCodeAsync(CancellationToken cancellation)
     {
         var spec = await GetGPUApiSpecAsync(cancellation);
-        var generator = new GPUBackendCodeGen(spec);
-        var handlesCodeGen = new GPUHandlesCodeGen(spec);
+        var generator = new GPUHandlesCodeGen(spec);
         var sb = new StringBuilder();
-        switch (kind)
+        foreach (var h in spec.Handles)
         {
-            case nameof(GPUBackendCodeGen.GPUHandleDisposer):
-                generator.GPUHandleDisposer(sb);
-                break;
-            case nameof(GPUBackendCodeGen.DisposeImpl):
-                generator.DisposeImpl(sb);
-                break;
-            case nameof(GPUHandlesCodeGen.HandleDecl):
-                handlesCodeGen.HandleDecl(sb);
-                break;
-            default:
-                generator.GenerateAll(sb);
-                break;
+            generator.EmitHandleDeclaration(sb, h);
         }
-
         return Ok(sb.ToString());
     }
+
+    [HttpGet("webgpu/codegen/handle/{name}")]
+    public async Task<IActionResult> GenerateGPUHandleCodeAsync(string name, CancellationToken cancellation)
+    {
+        var spec = await GetGPUApiSpecAsync(cancellation);
+        var generator = new GPUHandlesCodeGen(spec);
+        var sb = new StringBuilder();
+        var h = spec.Handles.FirstOrDefault(h => string.Equals(h.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (h is null)
+        {
+            return NotFound();
+        }
+        generator.EmitHandleDeclaration(sb, h);
+        return Ok(sb.ToString());
+    }
+
 
 
     [HttpGet("webgpu/webidl")]

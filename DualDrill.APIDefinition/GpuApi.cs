@@ -1,4 +1,5 @@
-﻿using DualDrill.ApiGen.Mini;
+﻿using DualDrill.ApiGen.CodeGen;
+using DualDrill.ApiGen.Mini;
 using DualDrill.ApiGen.WebIDL;
 using DualDrill.Common;
 using System.Collections.Immutable;
@@ -40,7 +41,10 @@ public sealed record class GPUApi(
     {
         var idlSpec = WebIDLSpec.Parse(doc);
         var handleNames = ParseEvergineGPUHandleTypeNames().ToImmutableHashSet();
+        var postProcess = new PostParseProcessGPUApiDeclarationsVisitor();
         var handles = handleNames.Select(n => ParseHandle(n, idlSpec))
+                                 .Select(h => h.AcceptVisitor(postProcess) as HandleDeclaration)
+                                 .OfType<HandleDeclaration>()
                                  .OrderBy(t => t.Name);
         var result = new GPUApi([.. handles]);
         result.Validate();
@@ -99,10 +103,77 @@ public sealed record class GPUApi(
             }
         }
     }
+
+    public GPUApi ProcessForCodeGen()
+    {
+        var visitor = new GPUApiPreCodeGenVisitor();
+        return this with
+        {
+            Handles = Handles.Select(h => (HandleDeclaration)h.AcceptVisitor(visitor)).ToImmutableArray()
+        };
+    }
+}
+
+internal sealed class ParseWebIDLResultToGPUApiTypeVisitor : ITypeReferenceVisitor<ITypeReference>
+{
+    public ITypeReference VisitBool(BoolTypeReference type) => type;
+
+    public ITypeReference VisitFloat(FloatTypeReference type) => type;
+
+    public ITypeReference VisitFuture(FutureTypeRef type) => type with
+    {
+        Type = type.Type.AcceptVisitor(this)
+    };
+
+
+    public ITypeReference VisitGeneric(GenericTypeRef type) => type;
+
+
+    public ITypeReference VisitInteger(IntegerTypeReference type) => type;
+
+
+    public ITypeReference VisitMatrix(MatrixTypeReference type) => type;
+
+
+    public ITypeReference VisitNullable(NullableTypeRef type) => type;
+
+
+    public ITypeReference VisitPlain(PlainTypeRef type)
+    {
+        return type.Name switch
+        {
+            "undefined" => new VoidTypeRef(),
+            "boolean" => new BoolTypeReference(),
+            "USVString" => new StringTypeReference(),
+            "GPUSize64" => new IntegerTypeReference(BitWidth.N64, false),
+            "GPUSize32" => new IntegerTypeReference(BitWidth.N32, false),
+            _ => type
+        };
+    }
+
+    public ITypeReference VisitSequence(SequenceTypeRef type)
+        => type with
+        {
+            Type = type.Type.AcceptVisitor(this)
+        };
+
+    public ITypeReference VisitString(StringTypeReference type)
+        => type;
+
+    public ITypeReference VisitUnknown(UnknownTypeRef type)
+        => type;
+
+    public ITypeReference VisitVector(VectorTypeReference type) => type;
+
+
+    public ITypeReference VisitVoid(VoidTypeRef type) => type;
+
 }
 
 internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVisitor<Mini.IDeclaration?>
 {
+    ParseWebIDLResultToGPUApiTypeVisitor TypePostProcessVisitor { get; } = new();
+
     private ImmutableHashSet<string> RemoveTypes = [
         "GPUError",
         "GPUExternalTexture"
@@ -118,9 +189,9 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
        "GPUAdapter",
     //"GPUBindGroup",
     //"GPUBindGroupLayout",
-    //"GPUBuffer",
+    "GPUBuffer",
     //"GPUCommandBuffer",
-    //"GPUCommandEncoder",
+    "GPUCommandEncoder",
     //"GPUComputePassEncoder",
     //"GPUComputePipeline",
     "GPUDevice",
@@ -148,7 +219,7 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
     public Mini.IDeclaration? VisitEnumValueDeclaration(EnumValueDeclaration decl)
         => decl with
         {
-            Name = decl.Name.Capitalize()
+            Name = decl.Name.Capitalize(),
         };
 
     public Mini.IDeclaration? VisitHandleDeclaration(HandleDeclaration decl)
@@ -159,7 +230,9 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
         }
         return decl with
         {
-            Name = decl.Name.Capitalize()
+            Name = decl.Name.Capitalize(),
+            Methods = decl.Methods.Select(m => m.AcceptVisitor(this)).OfType<MethodDeclaration>().ToImmutableArray(),
+            Properties = decl.Properties.Select(p => p.AcceptVisitor(this)).OfType<PropertyDeclaration>().ToImmutableArray()
         };
     }
 
@@ -169,19 +242,27 @@ internal sealed class PostParseProcessGPUApiDeclarationsVisitor : IDeclarationVi
         {
             return null;
         }
-        return decl;
+        return decl with
+        {
+            ReturnType = decl.ReturnType.AcceptVisitor(TypePostProcessVisitor),
+            Parameters = (decl.Parameters.Select(p => p.AcceptVisitor(this) as ParameterDeclaration))
+                            .OfType<ParameterDeclaration>()
+                            .ToImmutableArray()
+        };
     }
 
     public Mini.IDeclaration? VisitParameterDeclaration(ParameterDeclaration decl)
-    {
-        throw new NotImplementedException();
-    }
+        => decl with
+        {
+            Type = decl.Type.AcceptVisitor(TypePostProcessVisitor)
+        };
 
     public Mini.IDeclaration? VisitPropertyDeclaration(PropertyDeclaration decl)
-         => decl with
-         {
-             Name = decl.Name.Capitalize()
-         };
+        => decl with
+        {
+            Name = decl.Name.Capitalize(),
+            Type = decl.Type.AcceptVisitor(TypePostProcessVisitor)
+        };
 
 
     public Mini.IDeclaration? VisitStructDeclaration(StructDeclaration decl)
