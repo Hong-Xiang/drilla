@@ -61,15 +61,26 @@ public struct ShaderModule : IShaderModule
     {
         return new Vector4(0.3f, 0.2f, 0.1f, 1.0f);
     }
+
+    public TResult Match<TResult>(IShaderModule.IVisitor<TResult> matcher)
+        => matcher.Match(this);
 }
 
 public interface IDevelopILSLExpectedCode
 {
+    public interface IMatcher<TResult>
+    {
+        TResult Match<T>(T value) where T : IDevelopILSLExpectedCode;
+    }
+
     internal abstract static string __ILSLWGSLCode { get; }
 
     public static string GetCode<T>()
         where T : IDevelopILSLExpectedCode => T.__ILSLWGSLCode;
+
+    TResult Match<TResult>(IMatcher<TResult> matcher);
 }
+
 
 
 
@@ -107,4 +118,6 @@ public struct MinimumTriangle : IShaderModule, IDevelopILSLExpectedCode
         return new Vector4(0.5f, 1.0f, 0.5f, 1.0f);
     }
 
+    public TResult Match<TResult>(IDevelopILSLExpectedCode.IMatcher<TResult> matcher)
+        => matcher.Match(this);
 }

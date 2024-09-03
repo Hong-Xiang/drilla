@@ -21,4 +21,10 @@ public sealed class LocationAttribute(int Binding) : Attribute
 
 public interface IShaderModule
 {
+    public interface IVisitor<TResult>
+    {
+        TResult Match<T>(T value) where T : IShaderModule;
+    }
+
+    TResult Match<TResult>(IVisitor<TResult> matcher);
 }

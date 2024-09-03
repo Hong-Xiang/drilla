@@ -1,7 +1,5 @@
 ﻿using DualDrill.Engine.Shader;
 using Microsoft.AspNetCore.Mvc;
-using System.Reflection;
-using System.Text.Json;
 
 namespace DualDrill.Server.Controllers;
 
@@ -26,25 +24,6 @@ public class ILSLController : Controller
     {
         var code = ILSL.ILSLCompiler.Compile<Engine.Shader.MinimumTriangle>();
         return Ok(code);
-    }
-
-    [HttpGet("methodIL")]
-    public IActionResult GetIL()
-    {
-        var mb = this.GetType().GetMethod(nameof(TestMethod)).GetMethodBody();
-        return File(mb.GetILAsByteArray(), "application/octet-stream");
-    }
-
-    [HttpGet("methodCode")]
-    public IActionResult DecompileMethod()
-    {
-        var m = this.GetType().GetMethod(nameof(TestMethod));
-        return Ok(ILSL.ILSLCompiler.CompileMethod(m));
-    }
-
-    public int TestMethod(int a, int b)
-    {
-        return a + b;
     }
 
     [HttpGet("ast")]
