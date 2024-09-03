@@ -10,10 +10,9 @@ namespace DualDrill.ILSL;
 
 public static class ILSLCompiler
 {
-    public static string Compile<T>()
-        where T : IShaderModule
+    public static string Compile(IShaderModule shaderModule)
     {
-        var target = typeof(T);
+        var target = shaderModule.GetType();
         var module = target.Assembly.Modules.ToArray();
         var decompiler = new CSharpDecompiler(target.Assembly.Location, new DecompilerSettings()
         {
@@ -40,10 +39,9 @@ public static class ILSLCompiler
         return ast.ToString();
     }
 
-    public static JsonNode ASTToJson<T>()
-        where T : IShaderModule
+    public static JsonNode ASTToJson(IShaderModule shaderModule)
     {
-        var target = typeof(T);
+        var target = shaderModule.GetType();
         var decompiler = new CSharpDecompiler(target.Assembly.Location, new DecompilerSettings()
         {
             UsingDeclarations = false,

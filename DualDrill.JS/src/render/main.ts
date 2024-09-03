@@ -59,27 +59,28 @@ export async function BatchRenderMain() {
   });
   createRealtimeUserInterface(realtimeState);
 
-  const code = await (await fetch('/ilsl/wgsl')).text();
+  const shaderName = "MinimumTriangle";
+  const code = await (await fetch(`/ilsl/wgsl/${shaderName}`)).text();
 
   const module = device.createShaderModule({
     label: "our hardcoded red triangle shaders",
-    code
-//     code: `
-// @vertex
-// fn vs (@builtin (vertex_index) vertexIndex:u32) -> @builtin(position) vec4<f32>
-// {
-// 	var x:f32 = f32(i32((1 - vertexIndex))) * 0.5f;
-// 	var y:f32 = f32(i32(((vertexIndex & 1) * 2 - 1))) * 0.5f;
-// 	return vec4<f32> (x, y, 0f, 1f);
-// }
+    code,
+    //     code: `
+    // @vertex
+    // fn vs (@builtin (vertex_index) vertexIndex:u32) -> @builtin(position) vec4<f32>
+    // {
+    // 	var x:f32 = f32(i32((1 - vertexIndex))) * 0.5f;
+    // 	var y:f32 = f32(i32(((vertexIndex & 1) * 2 - 1))) * 0.5f;
+    // 	return vec4<f32> (x, y, 0f, 1f);
+    // }
 
-// @fragment
-// fn fs () ->@location (0)
-//  vec4<f32>
-// {
-// 	return vec4<f32> (1f, 1f, 0.5f, 1f);
-// }
-// `
+    // @fragment
+    // fn fs () ->@location (0)
+    //  vec4<f32>
+    // {
+    // 	return vec4<f32> (1f, 1f, 0.5f, 1f);
+    // }
+    // `
     // code: `
     //   @vertex fn vs(
     //     @builtin(vertex_index) vertex_index : u32
@@ -88,7 +89,7 @@ export async function BatchRenderMain() {
     //     let y = f32(i32(vertex_index & 1u) * 2 - 1) * 0.5;
     //     return vec4f(x, y, 0.0, 1.0);
     //   }
- 
+
     //   @fragment fn fs() -> @location(0) vec4f {
     //     return vec4f(1.0, 1.0, 0.5, 1.0);
     //   }

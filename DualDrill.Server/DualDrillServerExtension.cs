@@ -4,6 +4,7 @@ using DualDrill.Engine.Media;
 using DualDrill.Engine.Services;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
+using DualDrill.Server.Services;
 using DualDrill.WebView;
 
 namespace DualDrill.Server;
@@ -60,6 +61,7 @@ public static class DualDrillServerExtension
         services.AddSingleton<DualDrill.Engine.Renderer.ClearColorRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.VolumeRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.StaticTriangleRenderer>();
+        services.AddSingleton<ILSLDevelopShaderModuleService>();
     }
 
     static void AddSingletonHostedService<T>(this IServiceCollection services)

@@ -30,7 +30,7 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
 
     public override void VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration)
     {
-        if (propertyDeclaration.Name.StartsWith("__ILSL"))
+        if (propertyDeclaration.Name.StartsWith("ILSLWGSLExpectedCode"))
         {
             return;
         }
