@@ -13,7 +13,6 @@ public sealed record class GPUApi(
     ModuleDeclaration Module
 )
 {
-
     public ImmutableArray<HandleDeclaration> Handles =>
         [.. Module.TypeDeclarations.OfType<HandleDeclaration>().OrderBy(h => h.Name)];
 
@@ -41,6 +40,16 @@ public sealed record class GPUApi(
         }
     }
 
+    public static ImmutableArray<string> ParseEverginGPUEnumTypeNames()
+    {
+        var assembly = typeof(Evergine.Bindings.WebGPU.WebGPUNative).Assembly;
+        var types = assembly.GetTypes();
+        var handles = types.Where(t => t.IsValueType
+                                         && t.IsEnum)
+                           .Select(t => t.Name[1..]);
+        return [.. handles];
+    }
+
 
     public static GPUApi ParseIDLSpec(JsonDocument doc)
     {
@@ -51,7 +60,8 @@ public sealed record class GPUApi(
                                  .Select(h => h.AcceptVisitor(postProcess) as HandleDeclaration)
                                  .OfType<HandleDeclaration>()
                                  .OrderBy(t => t.Name);
-        var result = new GPUApi(new ModuleDeclaration([.. handles]));
+        var enums = ParseEnums(idlSpec);
+        var result = new GPUApi(new ModuleDeclaration([.. handles, .. enums]));
         result.Validate();
         return result;
 
@@ -62,8 +72,19 @@ public sealed record class GPUApi(
                 "GPU" => "GPUInstance",
                 "GPUCanvasContext" => "GPUSurface",
                 "GPUMapModeFlags" => "GPUMapMode",
+                "GPUColorWrite" => "GPUColorWriteMask",
                 _ => idlName
             };
+        }
+
+        static ImmutableHashSet<EnumDeclaration> ParseEnums(WebIDLSpec spec)
+        {
+            var flagEnums = spec.Declarations.OfType<WebIDL.Namespace>()
+                                         .Select(n => new EnumDeclaration(SpecName(n.Name), [], true));
+            var enums = spec.Declarations.OfType<WebIDL.WebIDLEnum>()
+                                         .Select(n => new EnumDeclaration(SpecName(n.Name), [], false));
+
+            return [.. flagEnums, .. enums];
         }
 
         static HandleDeclaration ParseHandle(string name, WebIDLSpec spec)

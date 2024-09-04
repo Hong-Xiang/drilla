@@ -1,5 +1,6 @@
 ﻿using DualDrill.ApiGen;
 using DualDrill.ApiGen.CodeGen;
+using DualDrill.ApiGen.DrillLang;
 using DualDrill.ApiGen.WebIDL;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
@@ -19,6 +20,28 @@ public class ApiGenController(
         var api = await GetGPUApiSpecAsync(cancellation);
         return Ok(api);
     }
+
+    [HttpGet("webgpu/evergine/enum/name")]
+    public async Task<IActionResult> GetWebGPUEnumNames(CancellationToken cancellation)
+    {
+        return Ok(GPUApi.ParseEverginGPUEnumTypeNames());
+    }
+
+    [HttpGet("webgpu/spec/enum")]
+    public async Task<IActionResult> GetWebGPUSpecEnums(CancellationToken cancellation)
+    {
+        var api = await GetGPUApiSpecAsync(cancellation);
+        return Ok(api.Module.TypeDeclarations.OfType<EnumDeclaration>());
+    }
+
+    [HttpGet("webgpu/spec/enum/name")]
+    public async Task<IActionResult> GetWebGPUSpecEnumNames(CancellationToken cancellation)
+    {
+        var api = await GetGPUApiSpecAsync(cancellation);
+        return Ok(api.Module.TypeDeclarations.OfType<EnumDeclaration>().Select(d => d.Name));
+    }
+
+
 
     [HttpGet("webgpu/spec/handle/name")]
     public async Task<IActionResult> GetWebGPUHandleNamesAsync(CancellationToken cancellation)
