@@ -51,9 +51,8 @@ public sealed record class GPUApi(
     }
 
 
-    public static GPUApi ParseIDLSpec(JsonDocument doc)
+    public static GPUApi ParseIDLSpec(WebIDL.WebIDLSpec idlSpec)
     {
-        var idlSpec = WebIDLSpec.Parse(doc);
         var handleNames = ParseEvergineGPUHandleTypeNames().ToImmutableHashSet();
         var postProcess = new PostParseProcessGPUApiDeclarationsVisitor();
         var handles = handleNames.Select(n => ParseHandle(n, idlSpec))
@@ -80,9 +79,17 @@ public sealed record class GPUApi(
         static ImmutableHashSet<EnumDeclaration> ParseEnums(WebIDLSpec spec)
         {
             var flagEnums = spec.Declarations.OfType<WebIDL.Namespace>()
-                                         .Select(n => new EnumDeclaration(SpecName(n.Name), [], true));
+                                         .Select(n =>
+                                         {
+                                             var values = n.Members.Select(m => new EnumValueDeclaration(m.Name, new IntegerValue(0)));
+                                             return new EnumDeclaration(SpecName(n.Name), [.. values], true);
+                                         });
             var enums = spec.Declarations.OfType<WebIDL.WebIDLEnum>()
-                                         .Select(n => new EnumDeclaration(SpecName(n.Name), [], false));
+                                         .Select(n =>
+                                         {
+                                             var values = n.Values.Select(m => new EnumValueDeclaration(m.Type, new IntegerValue(0)));
+                                             return new EnumDeclaration(SpecName(n.Name), [.. values], false);
+                                         });
 
             return [.. flagEnums, .. enums];
         }

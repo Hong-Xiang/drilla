@@ -1,7 +1,5 @@
 ﻿using DualDrill.ApiGen.DrillLang;
-using DualDrill.ApiGen.DrillLang;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -137,14 +135,22 @@ public sealed record class TypeDef(
 
 public sealed record class Namespace(
     string Name,
-    ImmutableArray<EnumValue> Members
+    ImmutableArray<ConstDeclaration> Members
 ) : IDeclaration
+{
+}
+
+public sealed record class ConstDeclaration(
+    string Name,
+    JsonElement IdlType,
+    ConstValue Value
+)
 {
 }
 
 public sealed record class EnumValue(
     string Name,
-    ConstValue Value
+    string Value
 ) : IMember
 {
 }
@@ -157,29 +163,31 @@ public sealed record WebIDLSpec(
 
     public static WebIDLSpec Parse(JsonDocument doc)
     {
-        var el = doc.RootElement.GetProperty("idl");
-        var results = el.EnumerateArray().Select(n =>
-        {
-            Debug.Assert(n.GetArrayLength() == 2);
-            IDeclaration[] parsed = [];
-            try
-            {
-                parsed = n[1].Deserialize<IDeclaration[]>(new JsonSerializerOptions
-                {
+        return new([.. doc.Deserialize<IDeclaration[]>(new JsonSerializerOptions {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                }) ?? throw new Exception("Deserialize return null exception");
-            }
-            catch (Exception e)
-            {
-                parsed = [new FailedToParse(
-                                    n[0].GetString(),
-                                    n[1].ToString(),
-                                    e.ToString()
-                                )];
-            }
-            return KeyValuePair.Create(n[0].GetString()!, parsed);
-        });
-        return new(results.SelectMany(x => x.Value).ToImmutableArray());
+        })]);
+        //var results = el.EnumerateArray().Select(n =>
+        //{
+        //    Debug.Assert(n.GetArrayLength() == 2);
+        //    IDeclaration[] parsed = [];
+        //    try
+        //    {
+        //        parsed = n[1].Deserialize<IDeclaration[]>(new JsonSerializerOptions
+        //        {
+        //            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        //        }) ?? throw new Exception("Deserialize return null exception");
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        parsed = [new FailedToParse(
+        //                            n[0].GetString(),
+        //                            n[1].ToString(),
+        //                            e.ToString()
+        //                        )];
+        //    }
+        //    return KeyValuePair.Create(n[0].GetString()!, parsed);
+        //});
+        //return new(results.SelectMany(x => x.Value).ToImmutableArray());
     }
 
     public static ITypeReference ParseWebIDLTypeRef(JsonElement doc)

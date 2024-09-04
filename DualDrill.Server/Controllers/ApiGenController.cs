@@ -104,15 +104,14 @@ public class ApiGenController(
     [HttpGet("webgpu/webidl")]
     public async Task<IActionResult> ParseRawNodes(CancellationToken cancellation)
     {
-        var root = await GetWebGPUIDLSpecAsync(cancellation);
-        var spec = WebIDLSpec.Parse(root);
+        var spec = await GetWebGPUIDLSpecAsync(cancellation);
         return Ok(spec);
     }
-    private async ValueTask<JsonDocument> GetWebGPUIDLSpecAsync(CancellationToken cancellation)
+    private async ValueTask<WebIDLSpec> GetWebGPUIDLSpecAsync(CancellationToken cancellation)
     {
-        var uri = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host + "/spec/raw-nodes.json";
+        var uri = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host + "/spec/webgpu-webidl.json";
         var content = await HttpClient.GetStringAsync(uri, cancellation);
-        return JsonDocument.Parse(content);
+        return WebIDLSpec.Parse(JsonDocument.Parse(content));
     }
 
     private async ValueTask<GPUApi> GetGPUApiForCodeGenAsync(CancellationToken cancellation)
