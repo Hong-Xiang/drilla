@@ -1,6 +1,7 @@
 ﻿using DualDrill.ApiGen;
 using DualDrill.ApiGen.CodeGen;
-using DualDrill.ApiGen.DrillLang;
+using DualDrill.ApiGen.DrillGpu;
+using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.WebIDL;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
@@ -21,24 +22,30 @@ public class ApiGenController(
         return Ok(api);
     }
 
+    [HttpGet("webgpu/evergine")]
+    public async Task<IActionResult> GetEverginApi()
+    {
+        return Ok(EvergineWebGPUApi.Create());
+    }
+
     [HttpGet("webgpu/evergine/enum/name")]
     public async Task<IActionResult> GetWebGPUEnumNames(CancellationToken cancellation)
     {
-        return Ok(GPUApi.ParseEverginGPUEnumTypeNames());
+        return Ok(EvergineWebGPUApi.Create().Enums.Select(e => e.Name));
     }
 
     [HttpGet("webgpu/spec/enum")]
     public async Task<IActionResult> GetWebGPUSpecEnums(CancellationToken cancellation)
     {
         var api = await GetGPUApiSpecAsync(cancellation);
-        return Ok(api.Module.TypeDeclarations.OfType<EnumDeclaration>());
+        return Ok(api.Enums);
     }
 
     [HttpGet("webgpu/spec/enum/name")]
     public async Task<IActionResult> GetWebGPUSpecEnumNames(CancellationToken cancellation)
     {
         var api = await GetGPUApiSpecAsync(cancellation);
-        return Ok(api.Module.TypeDeclarations.OfType<EnumDeclaration>().Select(d => d.Name));
+        return Ok(api.Enums.Select(e => e.Name));
     }
 
 
@@ -107,9 +114,7 @@ public class ApiGenController(
         var sb = new StringBuilder();
         if (name is not null)
         {
-            var h = spec.Module.TypeDeclarations
-                                .OfType<EnumDeclaration>()
-                                .FirstOrDefault(h => string.Equals(h.Name, name, StringComparison.OrdinalIgnoreCase));
+            var h = spec.Enums.FirstOrDefault(h => string.Equals(h.Name, name, StringComparison.OrdinalIgnoreCase));
             if (h is null)
             {
                 return NotFound();
@@ -118,7 +123,7 @@ public class ApiGenController(
         }
         else
         {
-            foreach (var e in spec.Module.TypeDeclarations.OfType<EnumDeclaration>())
+            foreach (var e in spec.Enums)
             {
                 generator.EmitEnumDecl(sb, e);
             }
@@ -128,10 +133,8 @@ public class ApiGenController(
 
     [HttpGet("webgpu/webidl")]
     public async Task<IActionResult> ParseRawNodes(CancellationToken cancellation)
-    {
-        var spec = await GetWebGPUIDLSpecAsync(cancellation);
-        return Ok(spec);
-    }
+        => Ok(await GetWebGPUIDLSpecAsync(cancellation));
+
     private async ValueTask<WebIDLSpec> GetWebGPUIDLSpecAsync(CancellationToken cancellation)
     {
         var uri = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host + "/spec/webgpu-webidl.json";
@@ -139,18 +142,15 @@ public class ApiGenController(
         return WebIDLSpec.Parse(JsonDocument.Parse(content));
     }
 
-    private async ValueTask<GPUApi> GetGPUApiForCodeGenAsync(CancellationToken cancellation)
+    private async ValueTask<ModuleDeclaration> GetGPUApiForCodeGenAsync(CancellationToken cancellation)
     {
-        var api = await GetGPUApiSpecAsync(cancellation);
-        var processed = api.ProcessForCodeGen(true);
-        return processed;
+        var gpuApi = await GetGPUApiSpecAsync(cancellation);
+        return gpuApi.CodeGenAdHocTransform();
     }
-    private async ValueTask<GPUApi> GetGPUApiSpecAsync(CancellationToken cancellation)
+
+    private async ValueTask<ModuleDeclaration> GetGPUApiSpecAsync(CancellationToken cancellation)
     {
-        //var uri = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host + "/spec/gpu.json";
-
-        //await HttpClient.GetFromJsonAsync<GPUApi>(uri, cancellation);
-
-        return GPUApi.ParseWebIDLSpec(await GetWebGPUIDLSpecAsync(cancellation));
+        var idl = await GetWebGPUIDLSpecAsync(cancellation);
+        return idl.ParseWebGPUWebIDLSpecToModuleDeclaration(EvergineWebGPUApi.Create());
     }
 }

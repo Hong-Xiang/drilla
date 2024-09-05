@@ -1,5 +1,5 @@
-﻿using DualDrill.ApiGen.DrillLang;
-using DualDrill.ApiGen.DrillLang;
+﻿using DualDrill.ApiGen.DrillLang.Declaration;
+using DualDrill.ApiGen.DrillLang.Types;
 using DualDrill.Common;
 using System.Collections.Immutable;
 using System.Security.Cryptography;
@@ -7,10 +7,10 @@ using System.Text;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-public sealed record class GPUBackendCodeGen(GPUApi Spec)
+public sealed record class GPUBackendCodeGen(ModuleDeclaration Module)
 {
 
-    private readonly ImmutableHashSet<string> HandleNames = Spec.Handles.Select(h => h.Name).ToImmutableHashSet();
+    private readonly ImmutableHashSet<string> HandleNames = Module.Handles.Select(h => h.Name).ToImmutableHashSet();
 
     private string[] MemberSupportedHandles => [
     "GPUAdapter",
@@ -39,7 +39,7 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
 
     public void EmitIGPUHandleDisposer(StringBuilder sb)
     {
-        foreach (var h in Spec.Handles)
+        foreach (var h in Module.Handles)
         {
             sb.AppendLine($"    , IGPUHandleDisposer<TBackend, {h.Name}<TBackend>>");
         }
@@ -49,9 +49,9 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
     {
         return t switch
         {
-            PlainTypeRef { Name: var n } p when HandleNames.Contains(n) => p with { Name = $"{n}<TBackend>" },
-            FutureTypeRef f => f with { Type = RenameHandleType(f.Type) },
-            NullableTypeRef n => n with { Type = RenameHandleType(n.Type) },
+            OpaqueTypeReference { Name: var n } p when HandleNames.Contains(n) => p with { Name = $"{n}<TBackend>" },
+            FutureTypeReference f => f with { Type = RenameHandleType(f.Type) },
+            NullableTypeReference n => n with { Type = RenameHandleType(n.Type) },
             _ => t
         };
     }
@@ -60,16 +60,16 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
     {
         return t switch
         {
-            PlainTypeRef { Name: var n } => n == name,
-            FutureTypeRef f => References(f.Type, name),
-            NullableTypeRef n => References(n.Type, name),
+            OpaqueTypeReference { Name: var n } => n == name,
+            FutureTypeReference f => References(f.Type, name),
+            NullableTypeReference n => References(n.Type, name),
             _ => false
         };
     }
 
     public void EmitHandleMethods(StringBuilder sb)
     {
-        foreach (var h in Spec.Handles.OrderBy(h => h.Name))
+        foreach (var h in Module.Handles.OrderBy(h => h.Name))
         {
             if (!h.Methods.Any())
             {
@@ -81,14 +81,14 @@ public sealed record class GPUBackendCodeGen(GPUApi Spec)
 
             foreach (var m in h.Methods)
             {
-                sb.AppendLine($"    internal {RenameHandleType(m.ReturnType).GetCSharpName()} {m.Name}(");
+                sb.AppendLine($"    internal {RenameHandleType(m.ReturnType).GetCSharpTypeName()} {m.Name}(");
                 sb.Append($"        {h.Name}<TBackend> handle");
 
                 for (var i = 0; i < m.Parameters.Length; i++)
                 {
                     var p = m.Parameters[i];
                     sb.AppendLine(",");
-                    sb.Append($"        {RenameHandleType(p.Type).GetCSharpName()} {p.Name}");
+                    sb.Append($"        {RenameHandleType(p.Type).GetCSharpTypeName()} {p.Name}");
                 }
                 sb.AppendLine(");");
                 sb.AppendLine();

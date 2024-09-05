@@ -1,12 +1,13 @@
-﻿using DualDrill.ApiGen.DrillLang;
+﻿using DualDrill.ApiGen.DrillLang.Declaration;
+using DualDrill.ApiGen.DrillLang.Types;
 using System.Collections.Immutable;
 using System.Text;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-public sealed record class GPUHandlesCodeGen(GPUApi Spec)
+public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
 {
-    ImmutableHashSet<string> HandleNames = [.. Spec.Handles.Select(h => h.Name)];
+    ImmutableHashSet<string> HandleNames = [.. Module.Handles.Select(h => h.Name)];
     public void EmitHandleDeclaration(StringBuilder sb, HandleDeclaration decl)
     {
         if (decl.Name != "GPUSurface")
@@ -43,19 +44,19 @@ public sealed record class GPUHandlesCodeGen(GPUApi Spec)
         foreach (var m in decl.Methods)
         {
             var isFirstArgument = true;
-            sb.AppendLine($"public {m.ReturnType.GetCSharpName()} {m.Name} (");
+            sb.AppendLine($"public {m.ReturnType.GetCSharpTypeName()} {m.Name} (");
             foreach (var p in m.Parameters)
             {
                 sb.Append(isFirstArgument ? " " : ",");
                 isFirstArgument = false;
 
-                sb.Append(p.Type.GetCSharpName());
+                sb.Append(p.Type.GetCSharpTypeName());
                 sb.Append(" ");
                 sb.AppendLine(p.Name);
             }
             sb.AppendLine(")");
             sb.AppendLine("{");
-            if (!(m.ReturnType is VoidTypeRef))
+            if (!(m.ReturnType is VoidTypeReference))
             {
                 sb.Append("  return ");
             }

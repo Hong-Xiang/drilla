@@ -1,4 +1,4 @@
-﻿using DualDrill.ApiGen.DrillLang;
+﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -189,6 +189,12 @@ public sealed record WebIDLSpec(
         return new([.. parsed]);
     }
 
+    public ModuleDeclaration ToModuleDeclaration()
+    {
+        var parser = new WebGPUWebIDLSpecParser();
+        return parser.Parse(this);
+    }
+
     public IEnumerable<IMember> GetAllMembers(IHasMemeberDecl decl)
     {
         IEnumerable<IMember> result = decl.GetMemebers();
@@ -201,5 +207,5 @@ public sealed record WebIDLSpec(
         return result.Concat(mixins).OrderBy(m => m.Name);
     }
 
-
 }
+

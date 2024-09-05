@@ -1,4 +1,6 @@
 ﻿using DualDrill.ApiGen.DrillLang;
+using DualDrill.ApiGen.DrillLang.Declaration;
+using DualDrill.ApiGen.DrillLang.Types;
 using DualDrill.Common;
 using System.Collections.Immutable;
 
@@ -12,24 +14,24 @@ sealed record class GPUApiPreCodeGenVisitor(
     TypeVisitor TypeTransform { get; } = new TypeVisitor(HandleNames);
     sealed class TypeVisitor(ImmutableHashSet<string> HandleNames) : ITypeReferenceTransformVisitor
     {
-        public ITypeReference VisitFuture(FutureTypeRef type)
+        public ITypeReference VisitFuture(FutureTypeReference type)
             => type with
             {
                 Type = type.Type.AcceptVisitor(this)
             };
 
-        public ITypeReference VisitGeneric(GenericTypeRef type)
+        public ITypeReference VisitGeneric(GenericTypeReference type)
         {
             throw new NotImplementedException();
         }
 
-        public ITypeReference VisitNullable(NullableTypeRef type)
+        public ITypeReference VisitNullable(NullableTypeReference type)
             => type with
             {
                 Type = type.Type.AcceptVisitor(this)
             };
 
-        public ITypeReference VisitPlain(PlainTypeRef type)
+        public ITypeReference VisitOpaque(OpaqueTypeReference type)
         {
             if (HandleNames.Contains(type.Name))
             {
@@ -44,7 +46,7 @@ sealed record class GPUApiPreCodeGenVisitor(
             }
         }
 
-        public ITypeReference VisitSequence(SequenceTypeRef type)
+        public ITypeReference VisitSequence(SequenceTypeReference type)
             => type with
             {
                 Type = type.Type.AcceptVisitor(this)
@@ -52,7 +54,7 @@ sealed record class GPUApiPreCodeGenVisitor(
     }
     public IDeclaration VisitEnum(EnumDeclaration decl) => decl;
 
-    public IDeclaration VisitEnumValue(EnumValueDeclaration decl) => decl with
+    public IDeclaration VisitEnumValue(EnumMemberDeclaration decl) => decl with
     {
         Name = decl.Name.Capitalize()
     };
@@ -73,7 +75,7 @@ sealed record class GPUApiPreCodeGenVisitor(
         var ps = decl.Parameters.Select(p => p.AcceptVisitor(this)).OfType<ParameterDeclaration>();
         if (decl.IsAsync)
         {
-            ps = ps.Concat([new ParameterDeclaration("cancellation", new PlainTypeRef("CancellationToken"), null)]);
+            ps = ps.Concat([new ParameterDeclaration("cancellation", new OpaqueTypeReference("CancellationToken"), null)]);
         }
         var name = decl.Name.Capitalize();
         var result = decl with
@@ -104,10 +106,9 @@ sealed record class GPUApiPreCodeGenVisitor(
 
     public IDeclaration VisitModule(ModuleDeclaration module)
     {
-        var result = module with
-        {
-            TypeDeclarations = [.. module.TypeDeclarations.Select(d => d.AcceptVisitor(this)).OfType<ITypeDeclaration>()]
-        };
-        return result;
+        return ModuleDeclaration.Create(
+            module.Name,
+            [.. module.Handles.Select(d => d.AcceptVisitor(this)).OfType<ITypeDeclaration>()]
+        );
     }
 }

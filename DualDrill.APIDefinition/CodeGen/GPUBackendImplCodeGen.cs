@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-public sealed class GPUBackendImplCodeGen(GPUApi Spec)
+public sealed class GPUBackendImplCodeGen(ModuleDeclaration Module)
 {
     public void EmitDisposeHandle(StringBuilder sb)
     {
-        foreach (var h in Spec.Handles)
+        foreach (var h in Module.Handles)
         {
             sb.AppendLine($"    void IGPUHandleDisposer<TBackend, {h.Name}<TBackend>>.DisposeHandle(GPUHandle<TBackend, {h.Name}<TBackend>> handle)");
             sb.AppendLine("    {");

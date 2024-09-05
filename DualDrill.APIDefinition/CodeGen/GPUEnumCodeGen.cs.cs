@@ -1,4 +1,4 @@
-﻿using DualDrill.ApiGen.DrillLang;
+﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.Common;
 using System.Collections.Immutable;
 using System.Diagnostics;
