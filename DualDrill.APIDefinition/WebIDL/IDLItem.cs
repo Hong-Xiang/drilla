@@ -7,29 +7,42 @@ namespace DualDrill.ApiGen.WebIDL;
 
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-[JsonDerivedType(typeof(InterfaceMixin), typeDiscriminator: "interface mixin")]
-[JsonDerivedType(typeof(Interface), typeDiscriminator: "interface")]
+[JsonDerivedType(typeof(InterfaceMixinDecl), typeDiscriminator: "interface mixin")]
+[JsonDerivedType(typeof(InterfaceDecl), typeDiscriminator: "interface")]
 [JsonDerivedType(typeof(Dictionary), typeDiscriminator: "dictionary")]
 [JsonDerivedType(typeof(IncludeDecl), typeDiscriminator: "includes")]
-[JsonDerivedType(typeof(WebIDLEnum), typeDiscriminator: "enum")]
-[JsonDerivedType(typeof(TypeDef), typeDiscriminator: "typedef")]
-[JsonDerivedType(typeof(Namespace), typeDiscriminator: "namespace")]
+[JsonDerivedType(typeof(EnumDecl), typeDiscriminator: "enum")]
+[JsonDerivedType(typeof(TypeDefDecl), typeDiscriminator: "typedef")]
+[JsonDerivedType(typeof(NamespaceDecl), typeDiscriminator: "namespace")]
 [JsonDerivedType(typeof(FailedToParse), typeDiscriminator: "<failed-to-parse>")]
 public interface IDeclaration
 {
 }
+
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-[JsonDerivedType(typeof(Field), typeDiscriminator: "field")]
-[JsonDerivedType(typeof(WebIDLAttribute), typeDiscriminator: "attribute")]
-[JsonDerivedType(typeof(Operation), typeDiscriminator: "operation")]
-[JsonDerivedType(typeof(EnumValue), typeDiscriminator: "const")]
-[JsonDerivedType(typeof(Constructor), typeDiscriminator: "constructor")]
+[JsonDerivedType(typeof(FieldDecl), typeDiscriminator: "field")]
+[JsonDerivedType(typeof(AttributeDecl), typeDiscriminator: "attribute")]
+[JsonDerivedType(typeof(OperationDecl), typeDiscriminator: "operation")]
+[JsonDerivedType(typeof(ConstDecl), typeDiscriminator: "const")]
+[JsonDerivedType(typeof(ConstructorDecl), typeDiscriminator: "constructor")]
 [JsonDerivedType(typeof(SetlikeMember), typeDiscriminator: "setlike")]
 public interface IMember
 {
+    string? Name { get; }
 }
 
-public sealed record class Argument(
+public interface IValue
+{
+    string Type { get; }
+}
+
+public interface IHasMemeberDecl
+{
+    public string Name { get; }
+    public IEnumerable<IMember> GetMemebers();
+}
+
+public sealed record class ArgumentDecl(
     string Name,
     JsonElement IdlType,
     ConstValue Default
@@ -38,17 +51,17 @@ public sealed record class Argument(
 
 }
 
-public sealed record class Operation(
+public sealed record class OperationDecl(
     string Name,
     JsonElement IdlType,
-    ImmutableArray<Argument> Arguments
+    ImmutableArray<ArgumentDecl> Arguments
 ) : IMember
 {
 }
 
-public sealed record class Constructor(
+public sealed record class ConstructorDecl(
     string Name,
-    ImmutableArray<Argument> Arguments
+    ImmutableArray<ArgumentDecl> Arguments
 ) : IMember
 {
 }
@@ -71,7 +84,7 @@ public sealed record class FailedToParse(
 public sealed record class ConstValue(
     string Type,
     JsonElement? Value
-)
+) : IValue
 {
 }
 
@@ -82,16 +95,17 @@ public sealed record class SetlikeMember
     ImmutableArray<JsonElement> IdlType
 ) : IMember
 {
+    public string? Name => null;
 }
 
-public sealed record class Field(
+public sealed record class FieldDecl(
     string Name,
     JsonElement IdlType
 ) : IMember
 {
 }
 
-public sealed record class WebIDLAttribute(
+public sealed record class AttributeDecl(
     string Name,
     JsonElement IdlType,
     bool Readonly
@@ -99,61 +113,66 @@ public sealed record class WebIDLAttribute(
 {
 }
 
-public sealed record class InterfaceMixin(
+public sealed record class InterfaceMixinDecl(
     string Name,
     ImmutableArray<IMember> Members
-) : IDeclaration
+) : IDeclaration, IHasMemeberDecl
 {
+    public IEnumerable<IMember> GetMemebers() => Members;
 }
 
-public sealed record class Interface(
+public sealed record class InterfaceDecl(
     string Name,
     ImmutableArray<IMember> Members
-) : IDeclaration
+) : IDeclaration, IHasMemeberDecl
 {
+    public IEnumerable<IMember> GetMemebers() => Members;
 }
 
 public sealed record class Dictionary(
     string Name,
     ImmutableArray<IMember> Members
+) : IDeclaration, IHasMemeberDecl
+{
+    public IEnumerable<IMember> GetMemebers() => Members;
+}
+
+public sealed record class EnumDecl(
+    string Name,
+    ImmutableArray<EnumValue> Values
 ) : IDeclaration
+{
+}
+public sealed record class EnumValue(
+    string Type,
+    string Value
+) : IValue
 {
 }
 
-public sealed record class WebIDLEnum(
-    string Name,
-    ImmutableArray<ConstValue> Values
-) : IDeclaration
-{
-}
-public sealed record class TypeDef(
+public sealed record class TypeDefDecl(
     string Name,
     JsonElement IdlType
 ) : IDeclaration
 {
 }
 
-public sealed record class Namespace(
+public sealed record class NamespaceDecl(
     string Name,
-    ImmutableArray<ConstDeclaration> Members
+    ImmutableArray<ConstDecl> Members
 ) : IDeclaration
 {
 }
 
-public sealed record class ConstDeclaration(
+public sealed record class ConstDecl(
     string Name,
     JsonElement IdlType,
     ConstValue Value
-)
-{
-}
-
-public sealed record class EnumValue(
-    string Name,
-    string Value
 ) : IMember
 {
 }
+
+
 
 public sealed record WebIDLSpec(
     ImmutableArray<IDeclaration> Declarations
@@ -163,82 +182,24 @@ public sealed record WebIDLSpec(
 
     public static WebIDLSpec Parse(JsonDocument doc)
     {
-        return new([.. doc.Deserialize<IDeclaration[]>(new JsonSerializerOptions {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        })]);
-        //var results = el.EnumerateArray().Select(n =>
-        //{
-        //    Debug.Assert(n.GetArrayLength() == 2);
-        //    IDeclaration[] parsed = [];
-        //    try
-        //    {
-        //        parsed = n[1].Deserialize<IDeclaration[]>(new JsonSerializerOptions
-        //        {
-        //            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        //        }) ?? throw new Exception("Deserialize return null exception");
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        parsed = [new FailedToParse(
-        //                            n[0].GetString(),
-        //                            n[1].ToString(),
-        //                            e.ToString()
-        //                        )];
-        //    }
-        //    return KeyValuePair.Create(n[0].GetString()!, parsed);
-        //});
-        //return new(results.SelectMany(x => x.Value).ToImmutableArray());
+        var parsed = doc.Deserialize<IDeclaration[]>(new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        return new([.. parsed]);
     }
 
-    public static ITypeReference ParseWebIDLTypeRef(JsonElement doc)
+    public IEnumerable<IMember> GetAllMembers(IHasMemeberDecl decl)
     {
-        if (doc.ValueKind == JsonValueKind.String)
-        {
-            return new PlainTypeRef(doc.GetString()!);
-        }
-        if (doc.ValueKind == JsonValueKind.Array && doc.GetArrayLength() == 1)
-        {
-            return ParseWebIDLTypeRef(doc[0]);
-        }
-        if (doc.ValueKind == JsonValueKind.Object)
-        {
-            var meta = doc.Deserialize<WebIDLTypeMeta>(new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            }) ?? throw new JsonException("Failed to parse IDLTypeMeta");
-            var isGeneric = !string.IsNullOrEmpty(meta.Generic);
-            var t = ParseWebIDLTypeRef(doc.GetProperty("idlType"));
-            if (!isGeneric && !meta.Nullable && !meta.Union)
-            {
-                return t;
-            }
-            if (!isGeneric && meta.Nullable && !meta.Union)
-            {
-                return new NullableTypeRef(t);
-            }
-            if (isGeneric && !meta.Nullable && !meta.Union)
-            {
-                if (meta.Generic == "Promise")
-                {
-                    return new FutureTypeRef(t);
-                }
-                if (meta.Generic == "sequence")
-                {
-                    return new SequenceTypeRef(t);
-                }
-            }
-        }
-
-        return new UnknownTypeRef(doc);
+        IEnumerable<IMember> result = decl.GetMemebers();
+        var mixins = from d in Declarations.OfType<IncludeDecl>()
+                     where d.Target == decl.Name
+                     from included in Declarations.OfType<IHasMemeberDecl>()
+                                                  .Where(v => v.Name == d.Includes)
+                     from m in GetAllMembers(included)
+                     select m;
+        return result.Concat(mixins).OrderBy(m => m.Name);
     }
-}
 
-internal sealed record class WebIDLTypeMeta(
-    string Generic,
-    bool Nullable,
-    bool Union,
-    string Type
-)
-{
-}
 
+}

@@ -387,21 +387,6 @@
       },
       {
         "type": "attribute",
-        "name": "maxInterStageShaderComponents",
-        "idlType": {
-          "type": "attribute-type",
-          "extAttrs": [],
-          "generic": "",
-          "nullable": false,
-          "union": false,
-          "idlType": "unsigned long"
-        },
-        "extAttrs": [],
-        "special": "",
-        "readonly": true
-      },
-      {
-        "type": "attribute",
         "name": "maxInterStageShaderVariables",
         "idlType": {
           "type": "attribute-type",
@@ -1182,8 +1167,25 @@
               "extAttrs": [],
               "generic": "",
               "nullable": false,
-              "union": false,
-              "idlType": "GPUSize64"
+              "union": true,
+              "idlType": [
+                {
+                  "type": "dictionary-type",
+                  "extAttrs": [],
+                  "generic": "",
+                  "nullable": false,
+                  "union": false,
+                  "idlType": "GPUSize64"
+                },
+                {
+                  "type": "dictionary-type",
+                  "extAttrs": [],
+                  "generic": "",
+                  "nullable": false,
+                  "union": false,
+                  "idlType": "undefined"
+                }
+              ]
             }
           ]
         },
@@ -1231,6 +1233,10 @@
       },
       {
         "type": "enum-value",
+        "value": "texture-compression-bc-sliced-3d"
+      },
+      {
+        "type": "enum-value",
         "value": "texture-compression-etc2"
       },
       {
@@ -1264,6 +1270,10 @@
       {
         "type": "enum-value",
         "value": "clip-distances"
+      },
+      {
+        "type": "enum-value",
+        "value": "dual-source-blending"
       }
     ],
     "extAttrs": []
@@ -4995,21 +5005,6 @@
       },
       {
         "type": "field",
-        "name": "sourceMap",
-        "extAttrs": [],
-        "idlType": {
-          "type": "dictionary-type",
-          "extAttrs": [],
-          "generic": "",
-          "nullable": false,
-          "union": false,
-          "idlType": "object"
-        },
-        "default": null,
-        "required": false
-      },
-      {
-        "type": "field",
         "name": "compilationHints",
         "extAttrs": [],
         "idlType": {
@@ -6423,6 +6418,22 @@
       {
         "type": "enum-value",
         "value": "one-minus-constant"
+      },
+      {
+        "type": "enum-value",
+        "value": "src1"
+      },
+      {
+        "type": "enum-value",
+        "value": "one-minus-src1"
+      },
+      {
+        "type": "enum-value",
+        "value": "src1-alpha"
+      },
+      {
+        "type": "enum-value",
+        "value": "one-minus-src1-alpha"
       }
     ],
     "extAttrs": []
@@ -10869,6 +10880,48 @@
     "extAttrs": []
   },
   {
+    "type": "enum",
+    "name": "GPUCanvasToneMappingMode",
+    "values": [
+      {
+        "type": "enum-value",
+        "value": "standard"
+      },
+      {
+        "type": "enum-value",
+        "value": "extended"
+      }
+    ],
+    "extAttrs": []
+  },
+  {
+    "type": "dictionary",
+    "name": "GPUCanvasToneMapping",
+    "inheritance": null,
+    "members": [
+      {
+        "type": "field",
+        "name": "mode",
+        "extAttrs": [],
+        "idlType": {
+          "type": "dictionary-type",
+          "extAttrs": [],
+          "generic": "",
+          "nullable": false,
+          "union": false,
+          "idlType": "GPUCanvasToneMappingMode"
+        },
+        "default": {
+          "type": "string",
+          "value": "standard"
+        },
+        "required": false
+      }
+    ],
+    "extAttrs": [],
+    "partial": false
+  },
+  {
     "type": "dictionary",
     "name": "GPUCanvasConfiguration",
     "inheritance": null,
@@ -10963,6 +11016,23 @@
         "default": {
           "type": "string",
           "value": "srgb"
+        },
+        "required": false
+      },
+      {
+        "type": "field",
+        "name": "toneMapping",
+        "extAttrs": [],
+        "idlType": {
+          "type": "dictionary-type",
+          "extAttrs": [],
+          "generic": "",
+          "nullable": false,
+          "union": false,
+          "idlType": "GPUCanvasToneMapping"
+        },
+        "default": {
+          "type": "dictionary"
         },
         "required": false
       },

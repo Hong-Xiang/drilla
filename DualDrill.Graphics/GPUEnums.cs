@@ -14,7 +14,6 @@ public enum GPUAddressMode : uint
     MirrorRepeat = 0x00000001,
     ClampToEdge = 0x00000002,
 }
-
 public enum GPUBlendFactor : uint
 {
     Zero = 0x00000000,

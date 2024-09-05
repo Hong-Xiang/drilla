@@ -2,7 +2,7 @@
 
 public sealed record class EnumValueDeclaration(
     string Name,
-    IntegerValue Value
+    IntegerValue? Value = null
 ) : IDeclaration
 {
 }

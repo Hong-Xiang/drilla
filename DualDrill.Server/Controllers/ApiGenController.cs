@@ -99,7 +99,32 @@ public class ApiGenController(
         return Ok(sb.ToString());
     }
 
-
+    [HttpGet("webgpu/codegen/enum")]
+    public async Task<IActionResult> GenerateGPUEnumCodeAsync([FromQuery] string? name, CancellationToken cancellation)
+    {
+        var spec = await GetGPUApiForCodeGenAsync(cancellation);
+        var generator = new GPUEnumCodeGen();
+        var sb = new StringBuilder();
+        if (name is not null)
+        {
+            var h = spec.Module.TypeDeclarations
+                                .OfType<EnumDeclaration>()
+                                .FirstOrDefault(h => string.Equals(h.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (h is null)
+            {
+                return NotFound();
+            }
+            generator.EmitEnumDecl(sb, h);
+        }
+        else
+        {
+            foreach (var e in spec.Module.TypeDeclarations.OfType<EnumDeclaration>())
+            {
+                generator.EmitEnumDecl(sb, e);
+            }
+        }
+        return Ok(sb.ToString());
+    }
 
     [HttpGet("webgpu/webidl")]
     public async Task<IActionResult> ParseRawNodes(CancellationToken cancellation)
@@ -126,6 +151,6 @@ public class ApiGenController(
 
         //await HttpClient.GetFromJsonAsync<GPUApi>(uri, cancellation);
 
-        return GPUApi.ParseIDLSpec(await GetWebGPUIDLSpecAsync(cancellation));
+        return GPUApi.ParseWebIDLSpec(await GetWebGPUIDLSpecAsync(cancellation));
     }
 }
