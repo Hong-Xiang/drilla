@@ -7,6 +7,13 @@
 
 	<Import Project="..\Silk.NET.Packages.props" />
 
+	<Target Name="PreBuild" BeforeTargets="Build">
+		<Exec Command="echo Running pnpm install" />
+		<Exec Command="pnpm install" WorkingDirectory="..\DualDrill.JS" />
+		<Exec Command ="echo running node .\esbuild.mjs" />
+		<Exec Command="node .\esbuild.mjs" WorkingDirectory="..\DualDrill.JS" />
+	</Target>
+
 	<ItemGroup>
 		<PackageReference Include="AngleSharp" Version="1.1.2" />
 		<PackageReference Include="Autofac" Version="8.0.0" />
@@ -36,6 +43,6 @@
 		<PackageReference Include="SIPSorceryMedia.Encoders" Version="0.0.13" />
 		<PackageReference Include="System.Reactive" Version="6.0.1" />
 		<PackageReference Include="ICSharpCode.Decompiler" Version="8.2.0.7535" />
-	  	<PackageReference Update="DotNext.Unsafe" Version="5.12.0" />
+		<PackageReference Update="DotNext.Unsafe" Version="5.12.0" />
 	</ItemGroup>
 </Project>

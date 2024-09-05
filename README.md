@@ -19,9 +19,9 @@ requirements:
 
 #### dev loop
 
-* Enter `DualDrill.JS` directory, run `pnpm install` and `node .\esbuild.mjs` to build js code.
-
 * Open `Drilla.sln`, run `DualDrill.Server` project to start a backend server
+
+* _optional_ In `DualDrill.JS` directory, run `node .\esbuild.mjs --watch` so ts code gets rebuilt automaticall on change
 
 * Open browser, visit `https://localhost:7117/desktop` for basic rendering. 
 
