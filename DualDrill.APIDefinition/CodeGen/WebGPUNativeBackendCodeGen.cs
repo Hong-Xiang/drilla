@@ -50,10 +50,10 @@ public sealed record class WebGPUNativeBackendCodeGen(
         }
         return tm switch
         {
-            IntegerTypeReference { BitWidth: BitWidth.N32, Signed: false } => tn == typeof(uint),
-            IntegerTypeReference { BitWidth: BitWidth.N32, Signed: true } => tn == typeof(int),
-            IntegerTypeReference { BitWidth: BitWidth.N64, Signed: false } => tn == typeof(ulong),
-            IntegerTypeReference { BitWidth: BitWidth.N64, Signed: true } => tn == typeof(long),
+            IntegerTypeReference { BitWidth: BitWidth._32, Signed: false } => tn == typeof(uint),
+            IntegerTypeReference { BitWidth: BitWidth._32, Signed: true } => tn == typeof(int),
+            IntegerTypeReference { BitWidth: BitWidth._64, Signed: false } => tn == typeof(ulong),
+            IntegerTypeReference { BitWidth: BitWidth._64, Signed: true } => tn == typeof(long),
             StringTypeReference => tn == typeof(char*),
             _ => false
         };

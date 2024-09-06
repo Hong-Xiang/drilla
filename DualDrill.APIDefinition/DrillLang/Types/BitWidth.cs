@@ -2,8 +2,8 @@
 
 public enum BitWidth : int
 {
-    N8,
-    N16,
-    N32,
-    N64,
+    _8,
+    _16,
+    _32,
+    _64,
 }

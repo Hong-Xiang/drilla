@@ -58,6 +58,21 @@ internal sealed class NameTransformVisitor(
             return new OpaqueTypeReference(name);
         }
 
+        public ITypeReference? VisitRecord(RecordTypeReference type)
+        {
+            var kt = type.KeyType.AcceptVisitor(this);
+            var vt = type.ValueType.AcceptVisitor(this);
+            if (kt is null || vt is null)
+            {
+                return null;
+            }
+            return type with
+            {
+                KeyType = kt,
+                ValueType = vt
+            };
+        }
+
         public ITypeReference? VisitSequence(SequenceTypeReference type)
         {
             var r = type.Type.AcceptVisitor(this);

@@ -9,7 +9,7 @@ namespace DualDrill.ApiGen.WebIDL;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(InterfaceMixinDecl), typeDiscriminator: "interface mixin")]
 [JsonDerivedType(typeof(InterfaceDecl), typeDiscriminator: "interface")]
-[JsonDerivedType(typeof(Dictionary), typeDiscriminator: "dictionary")]
+[JsonDerivedType(typeof(DictionaryDeclaration), typeDiscriminator: "dictionary")]
 [JsonDerivedType(typeof(IncludeDecl), typeDiscriminator: "includes")]
 [JsonDerivedType(typeof(EnumDecl), typeDiscriminator: "enum")]
 [JsonDerivedType(typeof(TypeDefDecl), typeDiscriminator: "typedef")]
@@ -36,7 +36,7 @@ public interface IValue
     string Type { get; }
 }
 
-public interface IHasMemeberDecl
+public interface IWebIDLMemberContainer
 {
     public string Name { get; }
     public IEnumerable<IMember> GetMemebers();
@@ -116,7 +116,7 @@ public sealed record class AttributeDecl(
 public sealed record class InterfaceMixinDecl(
     string Name,
     ImmutableArray<IMember> Members
-) : IDeclaration, IHasMemeberDecl
+) : IDeclaration, IWebIDLMemberContainer
 {
     public IEnumerable<IMember> GetMemebers() => Members;
 }
@@ -124,15 +124,15 @@ public sealed record class InterfaceMixinDecl(
 public sealed record class InterfaceDecl(
     string Name,
     ImmutableArray<IMember> Members
-) : IDeclaration, IHasMemeberDecl
+) : IDeclaration, IWebIDLMemberContainer
 {
     public IEnumerable<IMember> GetMemebers() => Members;
 }
 
-public sealed record class Dictionary(
+public sealed record class DictionaryDeclaration(
     string Name,
     ImmutableArray<IMember> Members
-) : IDeclaration, IHasMemeberDecl
+) : IDeclaration, IWebIDLMemberContainer
 {
     public IEnumerable<IMember> GetMemebers() => Members;
 }
@@ -191,16 +191,16 @@ public sealed record WebIDLSpec(
 
     public ModuleDeclaration ToModuleDeclaration()
     {
-        var parser = new WebIDLSpecParser();
+        var parser = new WebIDLSpecParser(WebIDLSpecParser.ParseOption.Default);
         return parser.Parse(this);
     }
 
-    public IEnumerable<IMember> GetAllMembers(IHasMemeberDecl decl)
+    public IEnumerable<IMember> GetAllMembers(IWebIDLMemberContainer decl)
     {
         IEnumerable<IMember> result = decl.GetMemebers();
         var mixins = from d in Declarations.OfType<IncludeDecl>()
                      where d.Target == decl.Name
-                     from included in Declarations.OfType<IHasMemeberDecl>()
+                     from included in Declarations.OfType<IWebIDLMemberContainer>()
                                                   .Where(v => v.Name == d.Includes)
                      from m in GetAllMembers(included)
                      select m;
@@ -208,4 +208,3 @@ public sealed record WebIDLSpec(
     }
 
 }
-

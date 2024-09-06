@@ -10,6 +10,7 @@ public interface ITypeReferenceVisitor<TResult>
     TResult VisitNullable(NullableTypeReference type);
     TResult VisitFuture(FutureTypeReference type);
     TResult VisitSequence(SequenceTypeReference type);
+    TResult VisitRecord(RecordTypeReference type);
     TResult VisitVoid(VoidTypeReference type);
     TResult VisitBool(BoolTypeReference type);
     TResult VisitString(StringTypeReference type);
@@ -48,6 +49,7 @@ public static partial class DrillLangExtension
             NullableTypeReference t => visitor.VisitNullable(t),
             FutureTypeReference t => visitor.VisitFuture(t),
             SequenceTypeReference t => visitor.VisitSequence(t),
+            RecordTypeReference t => visitor.VisitRecord(t),
             VoidTypeReference t => visitor.VisitVoid(t),
             BoolTypeReference t => visitor.VisitBool(t),
             StringTypeReference t => visitor.VisitString(t),

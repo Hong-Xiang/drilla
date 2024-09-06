@@ -4,6 +4,7 @@ using DualDrill.ApiGen.DrillGpu;
 using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.WebIDL;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
 
@@ -16,7 +17,7 @@ public class ApiGenController(
 ) : ControllerBase
 {
     [HttpGet("webgpu/webidl")]
-    public async Task<IActionResult> ParseRawNodes(CancellationToken cancellation)
+    public async Task<IActionResult> GetWebGPUWebIDLSpecAsync(CancellationToken cancellation)
         => Ok(await GetWebGPUIDLSpecAsync(cancellation));
 
     [HttpGet("webgpu/evergine")]
@@ -92,6 +93,27 @@ public class ApiGenController(
         }
         return Ok(sb.ToString());
     }
+
+    [HttpGet("webgpu/codegen/struct")]
+    public async Task<IActionResult> GenerateGPUStructCodeAsync(
+        [FromQuery] string[] name,
+        CancellationToken cancellation)
+    {
+        var spec = await GetGPUApiForCodeGenAsync(cancellation);
+        var generator = new GPUStructCodeGen(spec);
+        var sw = new StringWriter();
+        var targetNames = name.ToImmutableHashSet();
+        foreach (var h in spec.Structs)
+        {
+            if (targetNames.Count == 0 || targetNames.Contains(h.Name))
+            {
+                generator.EmitStruct(sw, h);
+            }
+        }
+        return Ok(sw.ToString());
+    }
+
+
 
     [HttpGet("webgpu/codegen/handle/{name}")]
     public async Task<IActionResult> GenerateGPUHandleCodeAsync(string name, CancellationToken cancellation)

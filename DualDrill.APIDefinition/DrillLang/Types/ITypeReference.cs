@@ -15,6 +15,7 @@ namespace DualDrill.ApiGen.DrillLang.Types;
 [JsonDerivedType(typeof(FloatTypeReference), nameof(FloatTypeReference))]
 [JsonDerivedType(typeof(VectorTypeReference), nameof(VectorTypeReference))]
 [JsonDerivedType(typeof(MatrixTypeReference), nameof(MatrixTypeReference))]
+[JsonDerivedType(typeof(RecordTypeReference), nameof(RecordTypeReference))]
 public interface ITypeReference
 {
 }

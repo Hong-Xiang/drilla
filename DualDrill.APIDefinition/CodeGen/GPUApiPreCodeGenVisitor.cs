@@ -6,7 +6,7 @@ using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-
+[Obsolete("Deprecated")]
 sealed record class GPUApiPreCodeGenVisitor(
     ImmutableHashSet<string> HandleNames,
     bool UseGenericBackend) : IDeclarationVisitor<IDeclaration>
@@ -45,6 +45,13 @@ sealed record class GPUApiPreCodeGenVisitor(
                 return type;
             }
         }
+
+        public ITypeReference VisitRecord(RecordTypeReference type)
+            => type with
+            {
+                KeyType = type.KeyType.AcceptVisitor(this),
+                ValueType = type.KeyType.AcceptVisitor(this)
+            };
 
         public ITypeReference VisitSequence(SequenceTypeReference type)
             => type with

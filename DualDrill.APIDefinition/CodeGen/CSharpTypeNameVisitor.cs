@@ -34,9 +34,9 @@ public sealed record class CSharpTypeNameVisitor(
     public string VisitFloat(FloatTypeReference type) =>
         type switch
         {
-            { BitWidth: BitWidth.N16 } => "Half",
-            { BitWidth: BitWidth.N32 } => "float",
-            { BitWidth: BitWidth.N64 } => "double",
+            { BitWidth: BitWidth._16 } => "Half",
+            { BitWidth: BitWidth._32 } => "float",
+            { BitWidth: BitWidth._64 } => "double",
             _ => throw new NotImplementedException($"Unsupported float type {type}")
         };
 
@@ -56,14 +56,14 @@ public sealed record class CSharpTypeNameVisitor(
     public string VisitInteger(IntegerTypeReference type)
         => type switch
         {
-            { Signed: true, BitWidth: BitWidth.N8 } => "sbyte",
-            { Signed: true, BitWidth: BitWidth.N16 } => "short",
-            { Signed: true, BitWidth: BitWidth.N32 } => "int",
-            { Signed: true, BitWidth: BitWidth.N64 } => "long",
-            { Signed: false, BitWidth: BitWidth.N8 } => "byte",
-            { Signed: false, BitWidth: BitWidth.N16 } => "ushort",
-            { Signed: false, BitWidth: BitWidth.N32 } => "uint",
-            { Signed: false, BitWidth: BitWidth.N64 } => "ulong",
+            { Signed: true, BitWidth: BitWidth._8 } => "sbyte",
+            { Signed: true, BitWidth: BitWidth._16 } => "short",
+            { Signed: true, BitWidth: BitWidth._32 } => "int",
+            { Signed: true, BitWidth: BitWidth._64 } => "long",
+            { Signed: false, BitWidth: BitWidth._8 } => "byte",
+            { Signed: false, BitWidth: BitWidth._16 } => "ushort",
+            { Signed: false, BitWidth: BitWidth._32 } => "uint",
+            { Signed: false, BitWidth: BitWidth._64 } => "ulong",
             _ => throw new NotImplementedException($"Unsupported integer type {type}")
         };
 
@@ -83,7 +83,7 @@ public sealed record class CSharpTypeNameVisitor(
     public string VisitSequence(SequenceTypeReference type)
         => Option.Usage switch
         {
-            VisitorOption.TypeUsage.PropertyType => $"ReadonlyMemory<{type.Type.AcceptVisitor(this)}>",
+            VisitorOption.TypeUsage.PropertyType => $"ReadOnlyMemory<{type.Type.AcceptVisitor(this)}>",
             _ => $"ReadOnlySpan<{type.Type.AcceptVisitor(this)}>"
         };
 
@@ -98,12 +98,14 @@ public sealed record class CSharpTypeNameVisitor(
     {
         return type switch
         {
-            { Size: Rank.N2, ElementType: FloatTypeReference { BitWidth: BitWidth.N32 } } => "Vector2",
-            { Size: Rank.N3, ElementType: FloatTypeReference { BitWidth: BitWidth.N32 } } => "Vector3",
-            { Size: Rank.N4, ElementType: FloatTypeReference { BitWidth: BitWidth.N32 } } => "Vector4",
+            { Size: Rank.N2, ElementType: FloatTypeReference { BitWidth: BitWidth._32 } } => "Vector2",
+            { Size: Rank.N3, ElementType: FloatTypeReference { BitWidth: BitWidth._32 } } => "Vector3",
+            { Size: Rank.N4, ElementType: FloatTypeReference { BitWidth: BitWidth._32 } } => "Vector4",
             _ => throw new NotImplementedException()
         };
     }
 
     public string VisitVoid(VoidTypeReference type) => "void";
+
+    public string VisitRecord(RecordTypeReference type) => $"Dictionary<{type.KeyType.AcceptVisitor(this)}, {type.KeyType.AcceptVisitor(this)}>";
 }

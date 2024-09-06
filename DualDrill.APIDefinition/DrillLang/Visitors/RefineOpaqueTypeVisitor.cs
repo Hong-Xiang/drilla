@@ -45,6 +45,13 @@ internal sealed class RefineOpaqueTypeVisitor(
         }
     }
 
+    public ITypeReference VisitRecord(RecordTypeReference type)
+        => type with
+        {
+            KeyType = type.KeyType.AcceptVisitor(this),
+            ValueType = type.KeyType.AcceptVisitor(this)
+        };
+
     public ITypeReference VisitSequence(SequenceTypeReference type)
         => type with
         {
@@ -65,6 +72,6 @@ public static partial class TypeReferenceExtension
     public static ITypeReference RefineOpaqueType(ITypeReference type, Func<string, ITypeReference> refinement)
         => type.AcceptVisitor(new RefineOpaqueTypeVisitor(refinement));
 
- 
+
 }
 
