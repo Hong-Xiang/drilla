@@ -8,27 +8,27 @@ internal sealed record class GpuApiCodeGenTransform(ModuleDeclaration EvergineMo
 {
     static ImmutableHashSet<string> SupportMethodHandles = [
      "GPUAdapter",
-    //"GPUBindGroup",
-    //"GPUBindGroupLayout",
+    "GPUBindGroup",
+    "GPUBindGroupLayout",
     "GPUBuffer",
     "GPUCommandBuffer",
     "GPUCommandEncoder",
     "GPUComputePassEncoder",
-    //"GPUComputePipeline",
+    "GPUComputePipeline",
     "GPUDevice",
     "GPUInstance",
-    //"GPUPipelineLayout",
-    //"GPUQuerySet",
-    //"GPUQueue",
-    //"GPURenderBundle",
-    //"GPURenderBundleEncoder",
-    //"GPURenderPassEncoder",
-    //"GPURenderPipeline",
-    //"GPUSampler",
-    //"GPUShaderModule",
-    //"GPUSurface",
-    //"GPUTexture",
-    //"GPUTextureView"
+    "GPUPipelineLayout",
+    "GPUQuerySet",
+    "GPUQueue",
+    "GPURenderBundle",
+    "GPURenderBundleEncoder",
+    "GPURenderPassEncoder",
+    "GPURenderPipeline",
+    "GPUSampler",
+    "GPUShaderModule",
+    "GPUSurface",
+    "GPUTexture",
+    "GPUTextureView"
     ];
 
     string? INameTransform.EnumValueName(string enumName, string valueName)
@@ -46,6 +46,7 @@ internal sealed record class GpuApiCodeGenTransform(ModuleDeclaration EvergineMo
         return (typeName, methodName) switch
         {
             (_, "destroy") => null,
+            (_, "CopyExternalImageToTexture") => null,
             (_, _) when SupportMethodHandles.Contains(typeName) => methodName.Capitalize(),
             _ => null
         };

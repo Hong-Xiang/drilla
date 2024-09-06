@@ -97,8 +97,14 @@ public static class GPUApi
             "GPUBufferDynamicOffset" => new IntegerTypeReference(BitWidth.N32, false),
             "ArrayBuffer" => new SequenceTypeReference(new IntegerTypeReference(BitWidth.N8, false)),
             "Uint32Array" => new SequenceTypeReference(new IntegerTypeReference(BitWidth.N32, false)),
-
+            "unsigned long" => new IntegerTypeReference(BitWidth.N64, false),
+            "GPUStencilValue" => new IntegerTypeReference(BitWidth.N32, false),
+            "GPUIntegerCoordinate" =>  new IntegerTypeReference(BitWidth.N32, false),
             "GPUMapModeFlags" => new OpaqueTypeReference("GPUMapMode"),
+            "GPUSignedOffset32" => new IntegerTypeReference(BitWidth.N32, true),
+            "AllowSharedBufferSource" => new OpaqueTypeReference("nint"),
+            "GPUImageDataLayout" => new OpaqueTypeReference("GPUTextureDataLayout"),
+            "GPUCanvasConfiguration" => new OpaqueTypeReference("GPUSurfaceConfiguration"),
             _ => new OpaqueTypeReference(name)
         };
 

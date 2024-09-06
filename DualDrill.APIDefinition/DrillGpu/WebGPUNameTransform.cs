@@ -26,6 +26,7 @@ internal sealed record class WebGPUNameTransform(
         return (typeName, methodName) switch
         {
             (_, "pushErrorScope") => null,
+            (_, "copyExternalImageToTexture") => null,
             _ => methodName,
         };
     }
@@ -38,6 +39,7 @@ internal sealed record class WebGPUNameTransform(
             "GPUPipelineErrorReason" => null,
             "GPUCanvasToneMappingMode" => null,
             "GPUCanvasAlphaMode" => null,
+            "GPUColorWrite" => "GPUColorWriteMask",
             _ => name
         };
     }
@@ -75,6 +77,7 @@ internal sealed record class WebGPUNameTransform(
             "GPUExternalTexture" => null,
 
             "GPUMapModeFlags" => "GPUMapMode",
+            "GPUColorWrite" => "GPUColorWriteMask",
             _ => name
         };
     }

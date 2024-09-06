@@ -1,5 +1,5 @@
-﻿using Evergine.Bindings.WebGPU;
-using System.Collections.Immutable;
+﻿using DualDrill.Interop;
+using Evergine.Bindings.WebGPU;
 using System.Runtime.InteropServices;
 namespace DualDrill.Graphics.Backend;
 using static Evergine.Bindings.WebGPU.WebGPUNative;
@@ -54,7 +54,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
                 tcs.SetException(new GraphicsApiException<Backend>($"Could not get WebGPU adapter: {Marshal.PtrToStringUTF8((nint)message)}"));
             }
         }
-        wgpuInstanceRequestAdapter(instance.Handle.ToNative(),
+        wgpuInstanceRequestAdapter(ToNative(instance.Handle),
                                         &options_,
                                         OnAdapterRequestEnded, null);
         return new(tcs.Task);
@@ -77,7 +77,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
                 tcs.SetException(new GraphicsApiException<Backend>($"Could not get WebGPU device: {Marshal.PtrToStringUTF8((nint)message)}"));
             }
         }
-        wgpuAdapterRequestDevice(adapter.Handle.ToNative(), &descriptor_, OnDeviceRequestEnded, null);
+        wgpuAdapterRequestDevice(ToNative(adapter.Handle), &descriptor_, OnDeviceRequestEnded, null);
         return new(tcs.Task);
     }
 
@@ -87,20 +87,15 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         //Debug.Assert(descriptor.Size == alignedSize, "Buffer byte size should be multiple of 4");
         WGPUBufferDescriptor nativeDescriptor = new()
         {
-            mappedAtCreation = descriptor.MappedAtCreation.Value,
+            mappedAtCreation = descriptor.MappedAtCreation,
             size = alignedSize,
             usage = ToNative(descriptor.Usage),
         };
-        var handle = wgpuDeviceCreateBuffer(device.Handle.ToNative(), &nativeDescriptor);
+        var handle = wgpuDeviceCreateBuffer(ToNative(device.Handle), &nativeDescriptor);
         return new(new(handle.Handle))
         {
             Length = alignedSize
         };
-    }
-
-    private WGPUBufferUsage ToNative(GPUBufferUsage value)
-    {
-        return (WGPUBufferUsage)value;
     }
 
     GPUTextureView<Backend> IBackend<Backend>.CreateTextureView(GPUTexture<Backend> texture, GPUTextureViewDescriptor descriptor)
@@ -123,9 +118,32 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return GPUTextureFormat.BGRA8Unorm;
     }
 
-    GPUTexture<Backend> IBackend<Backend>.CreateTexture(GPUDevice<Backend> handle, GPUTextureDescriptor descriptor)
+    unsafe GPUTexture<Backend> IBackend<Backend>.CreateTexture(GPUDevice<Backend> handle, GPUTextureDescriptor descriptor)
     {
-        throw new NotImplementedException();
+        var label = InteropUtf8String.Create(descriptor.Label);
+        using var pLabel = label.Pin();
+        WGPUTextureDescriptor desc = new();
+        desc.usage = ToNative(descriptor.Usage);
+        desc.mipLevelCount = (uint)descriptor.MipLevelCount;
+        desc.sampleCount = (uint)descriptor.SampleCount;
+        desc.label = (char*)pLabel.Pointer;
+        desc.dimension = ToNative(descriptor.Dimension);
+        desc.size = new WGPUExtent3D();
+        desc.size.width = (uint)descriptor.Size.Width;
+        desc.size.height = (uint)descriptor.Size.Height;
+        desc.size.depthOrArrayLayers = (uint)descriptor.Size.DepthOrArrayLayers;
+        desc.format = ToNative(descriptor.Format);
+        var p = stackalloc WGPUTextureFormat[descriptor.ViewFormats.Length];
+        if (descriptor.ViewFormats.Length > 0)
+        {
+            desc.viewFormats = p;
+            for (var i = 0; i < descriptor.ViewFormats.Length; i++)
+            {
+                p[i] = ToNative(descriptor.ViewFormats.Span[i]);
+            }
+        }
+        var h = wgpuDeviceCreateTexture(ToNative(handle.Handle), &desc);
+        return new GPUTexture<Backend>(new GPUHandle<Backend, GPUTexture<Backend>>(h.Handle));
     }
 
     GPUSampler<Backend> IBackend<Backend>.CreateSampler(GPUDevice<Backend> handle, GPUSamplerDescriptor descriptor)
@@ -198,10 +216,6 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    void IBackend<Backend>.Unmap(GPUBuffer<Backend> handle)
-    {
-        throw new NotImplementedException();
-    }
 
     GPURenderPassEncoder<Backend> IBackend<Backend>.BeginRenderPass(GPUCommandEncoder<Backend> handle, GPURenderPassDescriptor descriptor)
     {
@@ -213,10 +227,6 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    void IBackend<Backend>.CopyBufferToBuffer(GPUCommandEncoder<Backend> handle, GPUBuffer<Backend> source, ulong sourceOffset, GPUBuffer<Backend> destination, ulong destinationOffset, ulong size)
-    {
-        throw new NotImplementedException();
-    }
 
     void IBackend<Backend>.CopyBufferToTexture(GPUCommandEncoder<Backend> handle, GPUImageCopyBuffer source, GPUImageCopyTexture destination, GPUExtent3D copySize)
     {
@@ -233,72 +243,119 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    void IBackend<Backend>.ClearBuffer(GPUCommandEncoder<Backend> handle, GPUBuffer<Backend> buffer, ulong offset, ulong size)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.ResolveQuerySet(GPUCommandEncoder<Backend> handle, GPUQuerySet<Backend> querySet, uint firstQuery, uint queryCount, GPUBuffer<Backend> destination, ulong destinationOffset)
-    {
-        throw new NotImplementedException();
-    }
 
     GPUCommandBuffer<Backend> IBackend<Backend>.Finish(GPUCommandEncoder<Backend> handle, GPUCommandBufferDescriptor descriptor)
     {
         throw new NotImplementedException();
     }
 
-    void IBackend<Backend>.PushDebugGroup(GPUCommandEncoder<Backend> handle, string groupLabel)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.PopDebugGroup(GPUCommandEncoder<Backend> handle)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.InsertDebugMarker(GPUCommandEncoder<Backend> handle, string markerLabel)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.PushDebugGroup(GPUComputePassEncoder<Backend> handle, string groupLabel)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.PopDebugGroup(GPUComputePassEncoder<Backend> handle)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.InsertDebugMarker(GPUComputePassEncoder<Backend> handle, string markerLabel)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.SetPipeline(GPUComputePassEncoder<Backend> handle, GPUComputePipeline<Backend> pipeline)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.DispatchWorkgroups(GPUComputePassEncoder<Backend> handle, uint workgroupCountX, uint workgroupCountY, uint workgroupCountZ)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.DispatchWorkgroupsIndirect(GPUComputePassEncoder<Backend> handle, GPUBuffer<Backend> indirectBuffer, ulong indirectOffset)
-    {
-        throw new NotImplementedException();
-    }
-
-    void IBackend<Backend>.End(GPUComputePassEncoder<Backend> handle)
-    {
-        throw new NotImplementedException();
-    }
 
     void IBackend<Backend>.SetBindGroup(GPUComputePassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.Submit(GPUQueue<Backend> handle, ReadOnlySpan<GPUCommandBuffer> commandBuffers)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.WriteBuffer(GPUQueue<Backend> handle, GPUBuffer<Backend> buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.WriteTexture(GPUQueue<Backend> handle, GPUImageCopyTexture destination, nint data, GPUTextureDataLayout dataLayout, GPUExtent3D size)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    GPURenderBundle<Backend> IBackend<Backend>.Finish(GPURenderBundleEncoder<Backend> handle, GPURenderBundleDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    void IBackend<Backend>.SetBindGroup(GPURenderBundleEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.SetBindGroup(GPURenderBundleEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.SetIndexBuffer(GPURenderBundleEncoder<Backend> handle, GPUBuffer<Backend> buffer, GPUIndexFormat indexFormat, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    void IBackend<Backend>.SetVertexBuffer(GPURenderBundleEncoder<Backend> handle, int slot, GPUBuffer<Backend>? buffer, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.ExecuteBundles(GPURenderPassEncoder<Backend> handle, ReadOnlySpan<GPURenderBundle> bundles)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    void IBackend<Backend>.SetBindGroup(GPURenderPassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.SetBindGroup(GPURenderPassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.SetBlendConstant(GPURenderPassEncoder<Backend> handle, GPUColor color)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.SetIndexBuffer(GPURenderPassEncoder<Backend> handle, GPUBuffer<Backend> buffer, GPUIndexFormat indexFormat, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.SetVertexBuffer(GPURenderPassEncoder<Backend> handle, int slot, GPUBuffer<Backend>? buffer, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.SetViewport(GPURenderPassEncoder<Backend> handle, float x, float y, float width, float height, float minDepth, float maxDepth)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBindGroupLayout<Backend> IBackend<Backend>.GetBindGroupLayout(GPURenderPipeline<Backend> handle, ulong index)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPUCompilationInfo> IBackend<Backend>.GetCompilationInfoAsync(GPUShaderModule<Backend> handle, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.Configure(GPUSurface<Backend> handle, GPUSurfaceConfiguration configuration)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUTexture<Backend> IBackend<Backend>.GetCurrentTexture(GPUSurface<Backend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    GPUTextureView<Backend> IBackend<Backend>.CreateView(GPUTexture<Backend> handle, GPUTextureViewDescriptor descriptor)
     {
         throw new NotImplementedException();
     }
@@ -307,14 +364,14 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     {
         throw new NotImplementedException();
     }
-}
 
-public static partial class WebGPUNetBackendExtensions
-{
-    //public static WGPUInstance ToNative(this GPUHandle<Backend, GPUInstance<Backend>> instance)
-    //    => new(instance.Pointer);
-    //public static WGPUAdapter ToNative(this GPUHandle<Backend, GPUAdapter<Backend>> adapter)
-    //    => new(adapter.Pointer);
-    //public static WGPUDevice ToNative(this GPUHandle<Backend, GPUDevice<Backend>> device) 
-    //    => new(device.Pointer);
+    GPUBindGroupLayout<Backend> IBackend<Backend>.GetBindGroupLayout(GPUComputePipeline<Backend> handle, ulong index)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask IBackend<Backend>.OnSubmittedWorkDoneAsync(GPUQueue<Backend> handle, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
 }

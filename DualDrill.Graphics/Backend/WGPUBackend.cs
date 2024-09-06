@@ -433,6 +433,226 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
     {
         throw new NotImplementedException();
     }
+
+    GPUBindGroupLayout<WGPUBackend> IBackend<WGPUBackend>.GetBindGroupLayout(GPUComputePipeline<WGPUBackend> handle, ulong index)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask IBackend<WGPUBackend>.OnSubmittedWorkDoneAsync(GPUQueue<WGPUBackend> handle, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.Submit(GPUQueue<WGPUBackend> handle, ReadOnlySpan<GPUCommandBuffer> commandBuffers)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.WriteBuffer(GPUQueue<WGPUBackend> handle, GPUBuffer<WGPUBackend> buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.WriteTexture(GPUQueue<WGPUBackend> handle, GPUImageCopyTexture destination, nint data, GPUTextureDataLayout dataLayout, GPUExtent3D size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.Draw(GPURenderBundleEncoder<WGPUBackend> handle, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.DrawIndexed(GPURenderBundleEncoder<WGPUBackend> handle, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.DrawIndexedIndirect(GPURenderBundleEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> indirectBuffer, ulong indirectOffset)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.DrawIndirect(GPURenderBundleEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> indirectBuffer, ulong indirectOffset)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPURenderBundle<WGPUBackend> IBackend<WGPUBackend>.Finish(GPURenderBundleEncoder<WGPUBackend> handle, GPURenderBundleDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.InsertDebugMarker(GPURenderBundleEncoder<WGPUBackend> handle, string markerLabel)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.PopDebugGroup(GPURenderBundleEncoder<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.PushDebugGroup(GPURenderBundleEncoder<WGPUBackend> handle, string groupLabel)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetBindGroup(GPURenderBundleEncoder<WGPUBackend> handle, int index, GPUBindGroup<WGPUBackend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetBindGroup(GPURenderBundleEncoder<WGPUBackend> handle, int index, GPUBindGroup<WGPUBackend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetIndexBuffer(GPURenderBundleEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> buffer, GPUIndexFormat indexFormat, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetPipeline(GPURenderBundleEncoder<WGPUBackend> handle, GPURenderPipeline<WGPUBackend> pipeline)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetVertexBuffer(GPURenderBundleEncoder<WGPUBackend> handle, int slot, GPUBuffer<WGPUBackend>? buffer, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.BeginOcclusionQuery(GPURenderPassEncoder<WGPUBackend> handle, uint queryIndex)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.Draw(GPURenderPassEncoder<WGPUBackend> handle, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.DrawIndexed(GPURenderPassEncoder<WGPUBackend> handle, uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.DrawIndexedIndirect(GPURenderPassEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> indirectBuffer, ulong indirectOffset)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.DrawIndirect(GPURenderPassEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> indirectBuffer, ulong indirectOffset)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.End(GPURenderPassEncoder<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.EndOcclusionQuery(GPURenderPassEncoder<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.ExecuteBundles(GPURenderPassEncoder<WGPUBackend> handle, ReadOnlySpan<GPURenderBundle> bundles)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.InsertDebugMarker(GPURenderPassEncoder<WGPUBackend> handle, string markerLabel)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.PopDebugGroup(GPURenderPassEncoder<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.PushDebugGroup(GPURenderPassEncoder<WGPUBackend> handle, string groupLabel)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetBindGroup(GPURenderPassEncoder<WGPUBackend> handle, int index, GPUBindGroup<WGPUBackend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetBindGroup(GPURenderPassEncoder<WGPUBackend> handle, int index, GPUBindGroup<WGPUBackend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetBlendConstant(GPURenderPassEncoder<WGPUBackend> handle, GPUColor color)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetIndexBuffer(GPURenderPassEncoder<WGPUBackend> handle, GPUBuffer<WGPUBackend> buffer, GPUIndexFormat indexFormat, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetPipeline(GPURenderPassEncoder<WGPUBackend> handle, GPURenderPipeline<WGPUBackend> pipeline)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetScissorRect(GPURenderPassEncoder<WGPUBackend> handle, uint x, uint y, uint width, uint height)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetStencilReference(GPURenderPassEncoder<WGPUBackend> handle, uint reference)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetVertexBuffer(GPURenderPassEncoder<WGPUBackend> handle, int slot, GPUBuffer<WGPUBackend>? buffer, ulong offset, ulong size)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.SetViewport(GPURenderPassEncoder<WGPUBackend> handle, float x, float y, float width, float height, float minDepth, float maxDepth)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUBindGroupLayout<WGPUBackend> IBackend<WGPUBackend>.GetBindGroupLayout(GPURenderPipeline<WGPUBackend> handle, ulong index)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPUCompilationInfo> IBackend<WGPUBackend>.GetCompilationInfoAsync(GPUShaderModule<WGPUBackend> handle, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.Configure(GPUSurface<WGPUBackend> handle, GPUSurfaceConfiguration configuration)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUTexture<WGPUBackend> IBackend<WGPUBackend>.GetCurrentTexture(GPUSurface<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.Unconfigure(GPUSurface<WGPUBackend> handle)
+    {
+        throw new NotImplementedException();
+    }
+
+    GPUTextureView<WGPUBackend> IBackend<WGPUBackend>.CreateView(GPUTexture<WGPUBackend> handle, GPUTextureViewDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 //public unsafe sealed class WebGPUGraphicsApi : IGraphicsApi<WebGPUGraphicsApi, nint>, IDisposable

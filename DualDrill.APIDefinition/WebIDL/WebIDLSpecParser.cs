@@ -1,6 +1,5 @@
 ﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.DrillLang.Types;
-using DualDrill.ApiGen.DrillLang.Value;
 using System.Collections.Immutable;
 using System.Text.Json;
 
@@ -10,10 +9,12 @@ internal sealed class WebIDLSpecParser()
 {
     public ModuleDeclaration Parse(WebIDLSpec spec)
     {
-        return ModuleDeclaration.Create(nameof(WebIDLSpec),
-            [
-            .. spec.Declarations.OfType<InterfaceDecl>().Select(d => ParseHandleDecl(spec, d)).OfType<HandleDeclaration>(),
-            ..ParseEnums(spec) ]);
+        return new ModuleDeclaration(nameof(WebIDLSpec),
+            [.. spec.Declarations.OfType<InterfaceDecl>().Select(d => ParseHandleDecl(spec, d)).OfType<HandleDeclaration>()],
+            [],
+            [.. ParseEnums(spec)],
+            []
+        );
     }
 
     ImmutableHashSet<EnumDeclaration> ParseEnums(WebIDLSpec spec)

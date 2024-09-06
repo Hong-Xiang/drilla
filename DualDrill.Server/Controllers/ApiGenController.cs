@@ -15,12 +15,9 @@ public class ApiGenController(
     HttpClient HttpClient
 ) : ControllerBase
 {
-    [HttpGet("webgpu/spec")]
-    public async Task<IActionResult> GetWebGPUHandles(CancellationToken cancellation)
-    {
-        var api = await GetGPUApiSpecAsync(cancellation);
-        return Ok(api);
-    }
+    [HttpGet("webgpu/webidl")]
+    public async Task<IActionResult> ParseRawNodes(CancellationToken cancellation)
+        => Ok(await GetWebGPUIDLSpecAsync(cancellation));
 
     [HttpGet("webgpu/evergine")]
     public async Task<IActionResult> GetEverginApi()
@@ -32,6 +29,13 @@ public class ApiGenController(
     public async Task<IActionResult> GetWebGPUEnumNames(CancellationToken cancellation)
     {
         return Ok(EvergineWebGPUApi.Create().Enums.Select(e => e.Name));
+    }
+
+    [HttpGet("webgpu/spec")]
+    public async Task<IActionResult> GetWebGPUHandles(CancellationToken cancellation)
+    {
+        var api = await GetGPUApiSpecAsync(cancellation);
+        return Ok(api);
     }
 
     [HttpGet("webgpu/spec/enum")]
@@ -129,9 +133,33 @@ public class ApiGenController(
         return Ok(sb.ToString());
     }
 
-    [HttpGet("webgpu/webidl")]
-    public async Task<IActionResult> ParseRawNodes(CancellationToken cancellation)
-        => Ok(await GetWebGPUIDLSpecAsync(cancellation));
+    [HttpGet("codegen/webgpu-native-backend")]
+    public async Task<IActionResult> GenerateWebGPUNativeBackendImplAsync(CancellationToken cancellation)
+    {
+        var spec = await GetGPUApiForCodeGenAsync(cancellation);
+        var generator = new WebGPUNativeBackendCodeGen(spec);
+        var sb = new StringBuilder();
+        generator.EmitAll(sb);
+        return Ok(sb.ToString());
+    }
+
+    [HttpGet("codegen/webgpu-native-backend/method")]
+    public async Task<IActionResult> GenerateWebGPUNativeBackendMethodImplAsync(
+        [FromQuery] string name,
+        CancellationToken cancellation)
+    {
+        var spec = await GetGPUApiForCodeGenAsync(cancellation);
+        var generator = new WebGPUNativeBackendCodeGen(spec);
+        var sb = new StringBuilder();
+        foreach (var h in spec.Handles.Where(h => h.Name == name).OrderBy(h => h.Name))
+        {
+            foreach (var m in h.Methods)
+            {
+                generator.EmitMethod(sb, h, m);
+            }
+        }
+        return Ok(sb.ToString());
+    }
 
     private async ValueTask<WebIDLSpec> GetWebGPUIDLSpecAsync(CancellationToken cancellation)
     {

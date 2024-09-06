@@ -24,7 +24,8 @@ public sealed record class CSharpTypeNameVisitor(
         {
             Unknown,
             ReturnType,
-            PropertyType
+            PropertyType,
+            ParameterType
         }
     }
 

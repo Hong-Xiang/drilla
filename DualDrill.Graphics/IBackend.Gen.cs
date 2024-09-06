@@ -1,30 +1,32 @@
 ﻿using System;
 using System.Collections.Immutable;
+
+
 namespace DualDrill.Graphics;
 public partial interface IBackend<TBackend>
  : IDisposable
-    , IGPUHandleDisposer<TBackend, GPUSurface<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUSampler<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUBindGroupLayout<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUTextureView<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUTexture<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUQueue<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUCommandEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUDevice<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUBuffer<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUCommandBuffer<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUInstance<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUSurface<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderPipeline<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUQuerySet<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderPassEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUBindGroup<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUComputePassEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUBindGroupLayout<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUPipelineLayout<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderBundle<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUTexture<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUSampler<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUTextureView<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUShaderModule<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUComputePipeline<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUDevice<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUCommandEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUComputePassEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderBundle<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUQueue<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUAdapter<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUBuffer<TBackend>>
     , IGPUHandleDisposer<TBackend, GPURenderBundleEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUBindGroup<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderPassEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUQuerySet<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderPipeline<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUInstance<TBackend>>
 {
     #region GPUAdapter methods
 
@@ -168,6 +170,14 @@ public partial interface IBackend<TBackend>
 
     #endregion
 
+    #region GPUComputePipeline methods
+
+    internal GPUBindGroupLayout<TBackend> GetBindGroupLayout(
+        GPUComputePipeline<TBackend> handle,
+        ulong index);
+
+    #endregion
+
     #region GPUDevice methods
 
     internal GPUBindGroup<TBackend> CreateBindGroup(
@@ -242,4 +252,256 @@ public partial interface IBackend<TBackend>
 
     #endregion
 
+    #region GPUQueue methods
+
+    internal ValueTask OnSubmittedWorkDoneAsync(
+        GPUQueue<TBackend> handle,
+        CancellationToken cancellation);
+
+    internal void Submit(
+        GPUQueue<TBackend> handle,
+        ReadOnlySpan<GPUCommandBuffer> commandBuffers);
+
+    internal void WriteBuffer(
+        GPUQueue<TBackend> handle,
+        GPUBuffer<TBackend> buffer,
+        ulong bufferOffset,
+        nint data,
+        ulong dataOffset,
+        ulong size);
+
+    internal void WriteTexture(
+        GPUQueue<TBackend> handle,
+        GPUImageCopyTexture destination,
+        nint data,
+        GPUTextureDataLayout dataLayout,
+        GPUExtent3D size);
+
+    #endregion
+
+    #region GPURenderBundleEncoder methods
+
+    internal void Draw(
+        GPURenderBundleEncoder<TBackend> handle,
+        uint vertexCount,
+        uint instanceCount,
+        uint firstVertex,
+        uint firstInstance);
+
+    internal void DrawIndexed(
+        GPURenderBundleEncoder<TBackend> handle,
+        uint indexCount,
+        uint instanceCount,
+        uint firstIndex,
+        int baseVertex,
+        uint firstInstance);
+
+    internal void DrawIndexedIndirect(
+        GPURenderBundleEncoder<TBackend> handle,
+        GPUBuffer<TBackend> indirectBuffer,
+        ulong indirectOffset);
+
+    internal void DrawIndirect(
+        GPURenderBundleEncoder<TBackend> handle,
+        GPUBuffer<TBackend> indirectBuffer,
+        ulong indirectOffset);
+
+    internal GPURenderBundle<TBackend> Finish(
+        GPURenderBundleEncoder<TBackend> handle,
+        GPURenderBundleDescriptor descriptor);
+
+    internal void InsertDebugMarker(
+        GPURenderBundleEncoder<TBackend> handle,
+        string markerLabel);
+
+    internal void PopDebugGroup(
+        GPURenderBundleEncoder<TBackend> handle);
+
+    internal void PushDebugGroup(
+        GPURenderBundleEncoder<TBackend> handle,
+        string groupLabel);
+
+    internal void SetBindGroup(
+        GPURenderBundleEncoder<TBackend> handle,
+        int index,
+        GPUBindGroup<TBackend>? bindGroup,
+        ReadOnlySpan<uint> dynamicOffsets);
+
+    internal void SetBindGroup(
+        GPURenderBundleEncoder<TBackend> handle,
+        int index,
+        GPUBindGroup<TBackend>? bindGroup,
+        ReadOnlySpan<uint> dynamicOffsetsData,
+        ulong dynamicOffsetsDataStart,
+        uint dynamicOffsetsDataLength);
+
+    internal void SetIndexBuffer(
+        GPURenderBundleEncoder<TBackend> handle,
+        GPUBuffer<TBackend> buffer,
+        GPUIndexFormat indexFormat,
+        ulong offset,
+        ulong size);
+
+    internal void SetPipeline(
+        GPURenderBundleEncoder<TBackend> handle,
+        GPURenderPipeline<TBackend> pipeline);
+
+    internal void SetVertexBuffer(
+        GPURenderBundleEncoder<TBackend> handle,
+        int slot,
+        GPUBuffer<TBackend>? buffer,
+        ulong offset,
+        ulong size);
+
+    #endregion
+
+    #region GPURenderPassEncoder methods
+
+    internal void BeginOcclusionQuery(
+        GPURenderPassEncoder<TBackend> handle,
+        uint queryIndex);
+
+    internal void Draw(
+        GPURenderPassEncoder<TBackend> handle,
+        uint vertexCount,
+        uint instanceCount,
+        uint firstVertex,
+        uint firstInstance);
+
+    internal void DrawIndexed(
+        GPURenderPassEncoder<TBackend> handle,
+        uint indexCount,
+        uint instanceCount,
+        uint firstIndex,
+        int baseVertex,
+        uint firstInstance);
+
+    internal void DrawIndexedIndirect(
+        GPURenderPassEncoder<TBackend> handle,
+        GPUBuffer<TBackend> indirectBuffer,
+        ulong indirectOffset);
+
+    internal void DrawIndirect(
+        GPURenderPassEncoder<TBackend> handle,
+        GPUBuffer<TBackend> indirectBuffer,
+        ulong indirectOffset);
+
+    internal void End(
+        GPURenderPassEncoder<TBackend> handle);
+
+    internal void EndOcclusionQuery(
+        GPURenderPassEncoder<TBackend> handle);
+
+    internal void ExecuteBundles(
+        GPURenderPassEncoder<TBackend> handle,
+        ReadOnlySpan<GPURenderBundle> bundles);
+
+    internal void InsertDebugMarker(
+        GPURenderPassEncoder<TBackend> handle,
+        string markerLabel);
+
+    internal void PopDebugGroup(
+        GPURenderPassEncoder<TBackend> handle);
+
+    internal void PushDebugGroup(
+        GPURenderPassEncoder<TBackend> handle,
+        string groupLabel);
+
+    internal void SetBindGroup(
+        GPURenderPassEncoder<TBackend> handle,
+        int index,
+        GPUBindGroup<TBackend>? bindGroup,
+        ReadOnlySpan<uint> dynamicOffsets);
+
+    internal void SetBindGroup(
+        GPURenderPassEncoder<TBackend> handle,
+        int index,
+        GPUBindGroup<TBackend>? bindGroup,
+        ReadOnlySpan<uint> dynamicOffsetsData,
+        ulong dynamicOffsetsDataStart,
+        uint dynamicOffsetsDataLength);
+
+    internal void SetBlendConstant(
+        GPURenderPassEncoder<TBackend> handle,
+        GPUColor color);
+
+    internal void SetIndexBuffer(
+        GPURenderPassEncoder<TBackend> handle,
+        GPUBuffer<TBackend> buffer,
+        GPUIndexFormat indexFormat,
+        ulong offset,
+        ulong size);
+
+    internal void SetPipeline(
+        GPURenderPassEncoder<TBackend> handle,
+        GPURenderPipeline<TBackend> pipeline);
+
+    internal void SetScissorRect(
+        GPURenderPassEncoder<TBackend> handle,
+        uint x,
+        uint y,
+        uint width,
+        uint height);
+
+    internal void SetStencilReference(
+        GPURenderPassEncoder<TBackend> handle,
+        uint reference);
+
+    internal void SetVertexBuffer(
+        GPURenderPassEncoder<TBackend> handle,
+        int slot,
+        GPUBuffer<TBackend>? buffer,
+        ulong offset,
+        ulong size);
+
+    internal void SetViewport(
+        GPURenderPassEncoder<TBackend> handle,
+        float x,
+        float y,
+        float width,
+        float height,
+        float minDepth,
+        float maxDepth);
+
+    #endregion
+
+    #region GPURenderPipeline methods
+
+    internal GPUBindGroupLayout<TBackend> GetBindGroupLayout(
+        GPURenderPipeline<TBackend> handle,
+        ulong index);
+
+    #endregion
+
+    #region GPUShaderModule methods
+
+    internal ValueTask<GPUCompilationInfo> GetCompilationInfoAsync(
+        GPUShaderModule<TBackend> handle,
+        CancellationToken cancellation);
+
+    #endregion
+
+    #region GPUSurface methods
+
+    internal void Configure(
+        GPUSurface<TBackend> handle,
+        GPUSurfaceConfiguration configuration);
+
+    internal GPUTexture<TBackend> GetCurrentTexture(
+        GPUSurface<TBackend> handle);
+
+    internal void Unconfigure(
+        GPUSurface<TBackend> handle);
+
+    #endregion
+
+    #region GPUTexture methods
+
+    internal GPUTextureView<TBackend> CreateView(
+        GPUTexture<TBackend> handle,
+        GPUTextureViewDescriptor descriptor);
+
+    #endregion
+
 }
+
