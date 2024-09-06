@@ -1,6 +1,6 @@
 ﻿
 namespace DualDrill.Graphics;
-public interface IGPUSurface
+public partial interface IGPUSurface
 {
     GPUTexture? GetCurrentTexture();
     void Configure(GPUSurfaceConfiguration configuration);

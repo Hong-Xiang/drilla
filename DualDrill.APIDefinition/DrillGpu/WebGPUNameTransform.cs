@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.DrillGpu;
 
-internal sealed class WebGPUNameTransform(
+internal sealed record class WebGPUNameTransform(
     ImmutableHashSet<string> HandleNames
 ) : INameTransform
 {
@@ -11,13 +11,22 @@ internal sealed class WebGPUNameTransform(
     {
         return name switch
         {
-            _ when HandleNames.Contains(name) => name,
+            _ when HandleNames.Contains("W" + name) => name,
             "GPU" => "GPUInstance",
             "GPUCanvasContext" => "GPUSurface",
 
             //"GPUError" => null,
             //"GPUExternalTexture" => null,
             _ => null
+        };
+    }
+
+    string? INameTransform.MethodName(string typeName, string methodName)
+    {
+        return (typeName, methodName) switch
+        {
+            (_, "pushErrorScope") => null,
+            _ => methodName,
         };
     }
 
@@ -45,15 +54,6 @@ internal sealed class WebGPUNameTransform(
         };
     }
 
-    string? INameTransform.MethodName(string typeName, string methodName)
-    {
-        return (typeName, methodName) switch
-        {
-            (_, "destroy") => "Dispose",
-            _ => methodName
-        };
-    }
-
     string? INameTransform.TypeReferenceName(string name)
     {
         return name switch
@@ -69,6 +69,10 @@ internal sealed class WebGPUNameTransform(
             //"GPUBufferDynamicOffset" => new IntegerTypeReference(BitWidth.N32, false),
             //"ArrayBuffer" => new SequenceTypeReference(new IntegerTypeReference(BitWidth.N8, false)),
             //"Uint32Array" => new SequenceTypeReference(new IntegerTypeReference(BitWidth.N32, false)),
+
+            // no support for GPUError and GPUExternalTexture
+            "GPUError" => null,
+            "GPUExternalTexture" => null,
 
             "GPUMapModeFlags" => "GPUMapMode",
             _ => name

@@ -5,6 +5,7 @@ using DualDrill.ApiGen.WebIDL;
 using DualDrill.Common;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace DualDrill.ApiGen.DrillGpu;
 
@@ -17,9 +18,24 @@ public static class GPUApi
     {
         Debug.Assert(evergineApi.Handles.Count == drillGpuApi.Handles.Count, "Handle count should be same for two apis");
         Debug.Assert(drillGpuApi.Handles.Count == 22, $"GPU API should provide 22 handles, got {drillGpuApi.Handles.Count}");
+
+        foreach (var eDecl in drillGpuApi.Enums)
+        {
+            var evergineEnumName = EvergineWebGPUApi.GetEnumTypeName(eDecl.Name);
+            var evergineEnumDecl = evergineApi.Enums.Single(e_ => string.Equals(e_.Name, evergineEnumName, StringComparison.OrdinalIgnoreCase));
+
+            if (evergineEnumDecl.Values.Any(m => m.Name.Contains("Undefined")) && evergineEnumName != "WGPUDeviceLostReason")
+            {
+                Debug.Assert(eDecl.Values.Length == evergineEnumDecl.Values.Length - 2);
+            }
+            else
+            {
+                Debug.Assert(eDecl.Values.Length == evergineEnumDecl.Values.Length - 1);
+            }
+        }
     }
 
-    private static WebIDLSpec AdHocFix(this WebIDLSpec spec)
+    public static WebIDLSpec WebGPUSpecAdHocFix(this WebIDLSpec spec)
     {
         // merge GPUDevice members
         var gpuDeviceDecls = spec.Declarations.OfType<InterfaceDecl>().Where(d => d.Name == "GPUDevice");
@@ -28,13 +44,15 @@ public static class GPUApi
         return new WebIDLSpec([.. otherDecls, mergedGPUDeviceDecl]);
     }
 
-    private static ModuleDeclaration AdHocFix(this ModuleDeclaration module)
+    private static ModuleDeclaration AdHocFix(this ModuleDeclaration module, ModuleDeclaration evergineModule)
     {
-        return module with
+        var result = module with
         {
             Enums = [..module.Enums.Select(e => {
                 if(e.IsFlag){
-                    return new EnumDeclaration(e.Name, [new EnumMemberDeclaration("none", new(0, true)), ..e.Values]);
+                    return  e with {
+                        Values =  [new EnumMemberDeclaration("NONE", new(0, true)), ..e.Values]
+                    };
                 }
                 if(e.Name == "GPUVertexStepMode"){
                     return e with {
@@ -47,6 +65,21 @@ public static class GPUApi
                 return e;
             })]
         };
+
+        // attach evergine values
+        result = result with
+        {
+            Enums = [..result.Enums.Select(e => {
+                var evergineType = EvergineWebGPUApi.GetEnumType(e.Name);
+                var values = e.Values.Select(v => v with {
+                    Value = new ((int) Enum.Parse(evergineType, EvergineWebGPUApi.GetEnumMemberName( e.Name, v.Name, evergineModule )))
+                });
+                return e with {
+                    Values = [..values] };
+            })]
+        };
+
+        return result;
     }
 
     static ITypeReference WebGPUWebIDLOpaqueTypeRefinement(string name)
@@ -72,7 +105,7 @@ public static class GPUApi
     }
 
     public static ModuleDeclaration ParseWebGPUWebIDLSpecToModuleDeclaration(
-        this WebIDLSpec idlSpec,
+        WebIDLSpec idlSpec,
         ModuleDeclaration evergineModule)
     {
         // WebGPU specific transform,
@@ -80,26 +113,15 @@ public static class GPUApi
         //         map type names, enum names, etc.
         var transform = new WebGPUNameTransform([.. evergineModule.Handles.Select(h => h.Name)]);
 
-        idlSpec = idlSpec.AdHocFix();
+        //idlSpec = idlSpec.WebGPUSpecAdHocFix();
         var module = idlSpec.ToModuleDeclaration();
         module = module.Transform(transform);
         module = module.RefineOpaqueType(WebGPUWebIDLOpaqueTypeRefinement);
-        module = module.AdHocFix();
+        module = module.AdHocFix(evergineModule);
         Validate(module, evergineModule);
         return module;
     }
 
-    //public static ModuleDeclaration ProcessForCodeGen(bool useGenericBackend)
-    //{
-    //    var visitor = new GPUApiPreCodeGenVisitor([
-    //        ..Module.Handles .Select(h => h.Name)
-    //    ], useGenericBackend);
-    //    var result = this with
-    //    {
-    //        Module = (ModuleDeclaration)Module.AcceptVisitor(visitor)
-    //    };
-    //    return result;
-    //}
 }
 
 internal sealed class ParseWebIDLResultToGPUApiTypeVisitor : ITypeReferenceVisitor<ITypeReference>

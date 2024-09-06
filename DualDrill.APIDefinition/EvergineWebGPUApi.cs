@@ -1,5 +1,6 @@
 ﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.DrillLang.Types;
+using DualDrill.Common;
 using System.Collections.Immutable;
 using System.Reflection;
 
@@ -13,6 +14,52 @@ public sealed class EvergineWebGPUApi
     public static ModuleDeclaration Create()
     {
         return ModuleDeclaration.Create(nameof(EvergineWebGPUApi), [.. Types.Select(ParseType).OfType<ITypeDeclaration>()]);
+    }
+
+    public static string GetEnumTypeName(string apiName)
+    {
+        return apiName switch
+        {
+            "GPUColorWrite" => "WGPUColorWriteMask",
+            _ => "W" + apiName
+        };
+    }
+    static string GetEnumMemberCSharpFriendlyName(string name)
+    {
+        name = string.Join(string.Empty, name.Split('-', '_').Select(s => s.ToLower().Capitalize()));
+        return name switch
+        {
+            "1d" => "_1D",
+            "2d" => "_2D",
+            "3d" => "_3D",
+            "2dArray" => "_2DArray",
+            _ => name
+        };
+    }
+
+
+    public static string GetEnumMemberName(string enumName, string valueName, ModuleDeclaration module)
+    {
+        if (enumName == "GPUDeviceLostReason" && valueName == "unknown")
+        {
+            return "Undefined";
+        }
+
+        var csharpFriendlyName = GetEnumMemberCSharpFriendlyName(valueName);
+        var targetEvergineEnumName = enumName switch
+        {
+            "GPUColorWrite" => "WGPUColorWriteMask",
+            _ => "W" + enumName
+        };
+        var evergineEnum = module.Enums.Single(e => string.Equals(targetEvergineEnumName, e.Name, StringComparison.OrdinalIgnoreCase));
+        var evergineMember = evergineEnum.Values
+                                         .Single(m => string.Equals(m.Name, csharpFriendlyName, StringComparison.OrdinalIgnoreCase));
+        return evergineMember.Name;
+    }
+
+    public static Type GetEnumType(string name)
+    {
+        return Types.Single(t => string.Equals(t.Name, GetEnumTypeName(name), StringComparison.OrdinalIgnoreCase));
     }
 
     static ITypeDeclaration? ParseType(Type type)

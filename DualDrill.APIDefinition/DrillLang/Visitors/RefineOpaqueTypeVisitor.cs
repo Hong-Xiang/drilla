@@ -34,7 +34,7 @@ internal sealed class RefineOpaqueTypeVisitor(
 
     public ITypeReference VisitOpaque(OpaqueTypeReference type)
     {
-        var result = RefineMap(type.Name).AcceptVisitor(this);
+        var result = RefineMap(type.Name);
         if (result is OpaqueTypeReference opaqueResult)
         {
             return opaqueResult;

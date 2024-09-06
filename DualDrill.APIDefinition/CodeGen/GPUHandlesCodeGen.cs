@@ -10,13 +10,10 @@ public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
     ImmutableHashSet<string> HandleNames = [.. Module.Handles.Select(h => h.Name)];
     public void EmitHandleDeclaration(StringBuilder sb, HandleDeclaration decl)
     {
-        if (decl.Name != "GPUSurface")
-        {
-            sb.AppendLine($"public interface I{decl.Name}");
-            sb.AppendLine("{");
-            sb.AppendLine("}");
-            sb.AppendLine();
-        }
+        sb.AppendLine($"public partial interface I{decl.Name}");
+        sb.AppendLine("{");
+        sb.AppendLine("}");
+        sb.AppendLine();
         sb.AppendLine($"public sealed partial record class {decl.Name}<TBackend>(GPUHandle<TBackend, {decl.Name}<TBackend>> Handle)");
         if (decl.Name == "GPUSurface")
         {
@@ -37,8 +34,6 @@ public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
         sb.AppendLine("}");
     }
 
-    readonly string Indent = new string(' ', 4);
-
     public void EmitMethodDefinitions(StringBuilder sb, HandleDeclaration decl)
     {
         foreach (var m in decl.Methods)
@@ -51,7 +46,7 @@ public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
                 isFirstArgument = false;
 
                 sb.Append(p.Type.GetCSharpTypeName());
-                sb.Append(" ");
+                sb.Append(' ');
                 sb.AppendLine(p.Name);
             }
             sb.AppendLine(")");

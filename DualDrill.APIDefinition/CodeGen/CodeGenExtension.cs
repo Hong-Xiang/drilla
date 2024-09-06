@@ -14,8 +14,29 @@ public static class CodeGenExtension
                 transform ?? CSharpTypeNameVisitor.Default.Transform
         ));
 
-    public static ModuleDeclaration CodeGenAdHocTransform(this ModuleDeclaration module)
+    public static ModuleDeclaration CodeGenAdHocTransform(this ModuleDeclaration module, ModuleDeclaration evergineModule)
     {
-        return module.Transform(new GpuApiCodeGenTransform());
+        var result = module.Transform(new GpuApiCodeGenTransform(evergineModule));
+
+        // add async method support
+        result = result with
+        {
+            Handles = [..result.Handles.Select(h => h with {
+                Methods = [..h.Methods.Select(m => {
+                    if(m.ReturnType is FutureTypeReference){
+                        return m with {
+                            Name = m.Name + "Async",
+                            Parameters = [..m.Parameters, new ParameterDeclaration(
+                                "cancellation",
+                                new OpaqueTypeReference("CancellationToken"), null )]
+                        };
+                    }else{
+                        return m;
+                    }
+                })]
+            })]
+        };
+
+        return result;
     }
 }

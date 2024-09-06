@@ -48,8 +48,6 @@ public class ApiGenController(
         return Ok(api.Enums.Select(e => e.Name));
     }
 
-
-
     [HttpGet("webgpu/spec/handle/name")]
     public async Task<IActionResult> GetWebGPUHandleNamesAsync(CancellationToken cancellation)
     {
@@ -139,18 +137,20 @@ public class ApiGenController(
     {
         var uri = HttpContext.Request.Scheme + "://" + HttpContext.Request.Host + "/spec/webgpu-webidl.json";
         var content = await HttpClient.GetStringAsync(uri, cancellation);
-        return WebIDLSpec.Parse(JsonDocument.Parse(content));
+        var idl = WebIDLSpec.Parse(JsonDocument.Parse(content));
+        idl = idl.WebGPUSpecAdHocFix();
+        return idl;
     }
 
     private async ValueTask<ModuleDeclaration> GetGPUApiForCodeGenAsync(CancellationToken cancellation)
     {
         var gpuApi = await GetGPUApiSpecAsync(cancellation);
-        return gpuApi.CodeGenAdHocTransform();
+        return gpuApi.CodeGenAdHocTransform(EvergineWebGPUApi.Create());
     }
 
     private async ValueTask<ModuleDeclaration> GetGPUApiSpecAsync(CancellationToken cancellation)
     {
         var idl = await GetWebGPUIDLSpecAsync(cancellation);
-        return idl.ParseWebGPUWebIDLSpecToModuleDeclaration(EvergineWebGPUApi.Create());
+        return GPUApi.ParseWebGPUWebIDLSpecToModuleDeclaration(idl, EvergineWebGPUApi.Create());
     }
 }

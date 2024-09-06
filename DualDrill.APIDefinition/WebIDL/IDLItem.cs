@@ -191,7 +191,7 @@ public sealed record WebIDLSpec(
 
     public ModuleDeclaration ToModuleDeclaration()
     {
-        var parser = new WebGPUWebIDLSpecParser();
+        var parser = new WebIDLSpecParser();
         return parser.Parse(this);
     }
 

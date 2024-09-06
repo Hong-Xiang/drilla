@@ -1,8 +1,10 @@
-﻿using System.Collections.Immutable;
+﻿using DualDrill.ApiGen.DrillLang.Declaration;
+using DualDrill.Common;
+using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-internal sealed class GpuApiCodeGenTransform : INameTransform
+internal sealed record class GpuApiCodeGenTransform(ModuleDeclaration EvergineModule) : INameTransform
 {
     static ImmutableHashSet<string> SupportMethodHandles = [
      "GPUAdapter",
@@ -27,15 +29,24 @@ internal sealed class GpuApiCodeGenTransform : INameTransform
     //"GPUSurface",
     //"GPUTexture",
     //"GPUTextureView"
-
     ];
+
+    string? INameTransform.EnumValueName(string enumName, string valueName)
+    {
+        return EvergineWebGPUApi.GetEnumMemberName(enumName, valueName, EvergineModule);
+    }
+
+    string? INameTransform.PropertyName(string typeName, string propertyName)
+    {
+        return propertyName.Capitalize();
+    }
 
     string? INameTransform.MethodName(string typeName, string methodName)
     {
         return (typeName, methodName) switch
         {
-            (_, "destroy") => "Dispose",
-            (_, _) when SupportMethodHandles.Contains(typeName) => methodName,
+            (_, "destroy") => null,
+            (_, _) when SupportMethodHandles.Contains(typeName) => methodName.Capitalize(),
             _ => null
         };
     }

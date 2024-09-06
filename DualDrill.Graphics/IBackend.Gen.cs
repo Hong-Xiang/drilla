@@ -1,31 +1,30 @@
 ﻿using System;
 using System.Collections.Immutable;
-
 namespace DualDrill.Graphics;
 public partial interface IBackend<TBackend>
  : IDisposable
-    , IGPUHandleDisposer<TBackend, GPUAdapter<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUBindGroup<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUSurface<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUSampler<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUBindGroupLayout<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUBuffer<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUTextureView<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUTexture<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUCommandBuffer<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUCommandEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUComputePassEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUComputePipeline<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUDevice<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUInstance<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUPipelineLayout<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUQuerySet<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUQueue<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderBundle<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderBundleEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderPassEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderPipeline<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUSampler<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUShaderModule<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUSurface<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUTexture<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUTextureView<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUComputePipeline<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUDevice<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUCommandEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUComputePassEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderBundle<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUQueue<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUAdapter<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUBuffer<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderBundleEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUBindGroup<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderPassEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUQuerySet<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderPipeline<TBackend>>
 {
     #region GPUAdapter methods
 
@@ -38,17 +37,17 @@ public partial interface IBackend<TBackend>
 
     #region GPUBuffer methods
 
+    internal ReadOnlySpan<byte> GetMappedRange(
+        GPUBuffer<TBackend> handle,
+        ulong offset,
+        ulong size);
+
     internal ValueTask MapAsyncAsync(
         GPUBuffer<TBackend> handle,
         GPUMapMode mode,
         ulong offset,
         ulong size,
         CancellationToken cancellation);
-
-    internal ReadOnlySpan<byte> GetMappedRange(
-        GPUBuffer<TBackend> handle,
-        ulong offset,
-        ulong size);
 
     internal void Unmap(
         GPUBuffer<TBackend> handle);
@@ -57,13 +56,19 @@ public partial interface IBackend<TBackend>
 
     #region GPUCommandEncoder methods
 
+    internal GPUComputePassEncoder<TBackend> BeginComputePass(
+        GPUCommandEncoder<TBackend> handle,
+        GPUComputePassDescriptor descriptor);
+
     internal GPURenderPassEncoder<TBackend> BeginRenderPass(
         GPUCommandEncoder<TBackend> handle,
         GPURenderPassDescriptor descriptor);
 
-    internal GPUComputePassEncoder<TBackend> BeginComputePass(
+    internal void ClearBuffer(
         GPUCommandEncoder<TBackend> handle,
-        GPUComputePassDescriptor descriptor);
+        GPUBuffer<TBackend> buffer,
+        ulong offset,
+        ulong size);
 
     internal void CopyBufferToBuffer(
         GPUCommandEncoder<TBackend> handle,
@@ -91,11 +96,20 @@ public partial interface IBackend<TBackend>
         GPUImageCopyTexture destination,
         GPUExtent3D copySize);
 
-    internal void ClearBuffer(
+    internal GPUCommandBuffer<TBackend> Finish(
         GPUCommandEncoder<TBackend> handle,
-        GPUBuffer<TBackend> buffer,
-        ulong offset,
-        ulong size);
+        GPUCommandBufferDescriptor descriptor);
+
+    internal void InsertDebugMarker(
+        GPUCommandEncoder<TBackend> handle,
+        string markerLabel);
+
+    internal void PopDebugGroup(
+        GPUCommandEncoder<TBackend> handle);
+
+    internal void PushDebugGroup(
+        GPUCommandEncoder<TBackend> handle,
+        string groupLabel);
 
     internal void ResolveQuerySet(
         GPUCommandEncoder<TBackend> handle,
@@ -105,53 +119,9 @@ public partial interface IBackend<TBackend>
         GPUBuffer<TBackend> destination,
         ulong destinationOffset);
 
-    internal GPUCommandBuffer<TBackend> Finish(
-        GPUCommandEncoder<TBackend> handle,
-        GPUCommandBufferDescriptor descriptor);
-
-    internal void PushDebugGroup(
-        GPUCommandEncoder<TBackend> handle,
-        string groupLabel);
-
-    internal void PopDebugGroup(
-        GPUCommandEncoder<TBackend> handle);
-
-    internal void InsertDebugMarker(
-        GPUCommandEncoder<TBackend> handle,
-        string markerLabel);
-
     #endregion
 
     #region GPUComputePassEncoder methods
-
-    internal void SetBindGroup(
-        GPUComputePassEncoder<TBackend> handle,
-        int index,
-        GPUBindGroup<TBackend>? bindGroup,
-        ReadOnlySpan<uint> dynamicOffsets);
-
-    internal void SetBindGroup(
-        GPUComputePassEncoder<TBackend> handle,
-        int index,
-        GPUBindGroup<TBackend>? bindGroup,
-        ReadOnlySpan<uint> dynamicOffsetsData,
-        ulong dynamicOffsetsDataStart,
-        uint dynamicOffsetsDataLength);
-
-    internal void PushDebugGroup(
-        GPUComputePassEncoder<TBackend> handle,
-        string groupLabel);
-
-    internal void PopDebugGroup(
-        GPUComputePassEncoder<TBackend> handle);
-
-    internal void InsertDebugMarker(
-        GPUComputePassEncoder<TBackend> handle,
-        string markerLabel);
-
-    internal void SetPipeline(
-        GPUComputePassEncoder<TBackend> handle,
-        GPUComputePipeline<TBackend> pipeline);
 
     internal void DispatchWorkgroups(
         GPUComputePassEncoder<TBackend> handle,
@@ -167,81 +137,109 @@ public partial interface IBackend<TBackend>
     internal void End(
         GPUComputePassEncoder<TBackend> handle);
 
+    internal void InsertDebugMarker(
+        GPUComputePassEncoder<TBackend> handle,
+        string markerLabel);
+
+    internal void PopDebugGroup(
+        GPUComputePassEncoder<TBackend> handle);
+
+    internal void PushDebugGroup(
+        GPUComputePassEncoder<TBackend> handle,
+        string groupLabel);
+
+    internal void SetBindGroup(
+        GPUComputePassEncoder<TBackend> handle,
+        int index,
+        GPUBindGroup<TBackend>? bindGroup,
+        ReadOnlySpan<uint> dynamicOffsets);
+
+    internal void SetBindGroup(
+        GPUComputePassEncoder<TBackend> handle,
+        int index,
+        GPUBindGroup<TBackend>? bindGroup,
+        ReadOnlySpan<uint> dynamicOffsetsData,
+        ulong dynamicOffsetsDataStart,
+        uint dynamicOffsetsDataLength);
+
+    internal void SetPipeline(
+        GPUComputePassEncoder<TBackend> handle,
+        GPUComputePipeline<TBackend> pipeline);
+
     #endregion
 
     #region GPUDevice methods
-
-    internal GPUBuffer<TBackend> CreateBuffer(
-        GPUDevice<TBackend> handle,
-        GPUBufferDescriptor descriptor);
-
-    internal GPUTexture<TBackend> CreateTexture(
-        GPUDevice<TBackend> handle,
-        GPUTextureDescriptor descriptor);
-
-    internal GPUSampler<TBackend> CreateSampler(
-        GPUDevice<TBackend> handle,
-        GPUSamplerDescriptor descriptor);
-
-    internal GPUBindGroupLayout<TBackend> CreateBindGroupLayout(
-        GPUDevice<TBackend> handle,
-        GPUBindGroupLayoutDescriptor descriptor);
-
-    internal GPUPipelineLayout<TBackend> CreatePipelineLayout(
-        GPUDevice<TBackend> handle,
-        GPUPipelineLayoutDescriptor descriptor);
 
     internal GPUBindGroup<TBackend> CreateBindGroup(
         GPUDevice<TBackend> handle,
         GPUBindGroupDescriptor descriptor);
 
-    internal GPUShaderModule<TBackend> CreateShaderModule(
+    internal GPUBindGroupLayout<TBackend> CreateBindGroupLayout(
         GPUDevice<TBackend> handle,
-        GPUShaderModuleDescriptor descriptor);
+        GPUBindGroupLayoutDescriptor descriptor);
+
+    internal GPUBuffer<TBackend> CreateBuffer(
+        GPUDevice<TBackend> handle,
+        GPUBufferDescriptor descriptor);
+
+    internal GPUCommandEncoder<TBackend> CreateCommandEncoder(
+        GPUDevice<TBackend> handle,
+        GPUCommandEncoderDescriptor descriptor);
 
     internal GPUComputePipeline<TBackend> CreateComputePipeline(
         GPUDevice<TBackend> handle,
         GPUComputePipelineDescriptor descriptor);
-
-    internal GPURenderPipeline<TBackend> CreateRenderPipeline(
-        GPUDevice<TBackend> handle,
-        GPURenderPipelineDescriptor descriptor);
 
     internal ValueTask<GPUComputePipeline<TBackend>> CreateComputePipelineAsyncAsync(
         GPUDevice<TBackend> handle,
         GPUComputePipelineDescriptor descriptor,
         CancellationToken cancellation);
 
-    internal ValueTask<GPURenderPipeline<TBackend>> CreateRenderPipelineAsyncAsync(
+    internal GPUPipelineLayout<TBackend> CreatePipelineLayout(
         GPUDevice<TBackend> handle,
-        GPURenderPipelineDescriptor descriptor,
-        CancellationToken cancellation);
-
-    internal GPUCommandEncoder<TBackend> CreateCommandEncoder(
-        GPUDevice<TBackend> handle,
-        GPUCommandEncoderDescriptor descriptor);
-
-    internal GPURenderBundleEncoder<TBackend> CreateRenderBundleEncoder(
-        GPUDevice<TBackend> handle,
-        GPURenderBundleEncoderDescriptor descriptor);
+        GPUPipelineLayoutDescriptor descriptor);
 
     internal GPUQuerySet<TBackend> CreateQuerySet(
         GPUDevice<TBackend> handle,
         GPUQuerySetDescriptor descriptor);
 
+    internal GPURenderBundleEncoder<TBackend> CreateRenderBundleEncoder(
+        GPUDevice<TBackend> handle,
+        GPURenderBundleEncoderDescriptor descriptor);
+
+    internal GPURenderPipeline<TBackend> CreateRenderPipeline(
+        GPUDevice<TBackend> handle,
+        GPURenderPipelineDescriptor descriptor);
+
+    internal ValueTask<GPURenderPipeline<TBackend>> CreateRenderPipelineAsyncAsync(
+        GPUDevice<TBackend> handle,
+        GPURenderPipelineDescriptor descriptor,
+        CancellationToken cancellation);
+
+    internal GPUSampler<TBackend> CreateSampler(
+        GPUDevice<TBackend> handle,
+        GPUSamplerDescriptor descriptor);
+
+    internal GPUShaderModule<TBackend> CreateShaderModule(
+        GPUDevice<TBackend> handle,
+        GPUShaderModuleDescriptor descriptor);
+
+    internal GPUTexture<TBackend> CreateTexture(
+        GPUDevice<TBackend> handle,
+        GPUTextureDescriptor descriptor);
+
     #endregion
 
     #region GPUInstance methods
+
+    internal GPUTextureFormat GetPreferredCanvasFormat(
+        GPUInstance<TBackend> handle);
 
     internal ValueTask<GPUAdapter<TBackend>?> RequestAdapterAsync(
         GPUInstance<TBackend> handle,
         GPURequestAdapterOptions options,
         CancellationToken cancellation);
 
-    internal GPUTextureFormat GetPreferredCanvasFormat(
-        GPUInstance<TBackend> handle);
-
     #endregion
 
 }
-

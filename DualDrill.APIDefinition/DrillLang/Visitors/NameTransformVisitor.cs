@@ -159,15 +159,43 @@ internal sealed class NameTransformVisitor(
         {
             return null;
         }
+        var returnType = decl.ReturnType.AcceptVisitor(TypeReferenceVisitor);
+        if (returnType is null)
+        {
+            return null;
+        }
+
+        List<ParameterDeclaration> paramters = [];
+        foreach (var p in decl.Parameters)
+        {
+            var rpt = p.Type.AcceptVisitor(TypeReferenceVisitor);
+            if (rpt is null)
+            {
+                return null;
+            }
+            paramters.Add(p with
+            {
+                Type = rpt
+            });
+        }
+
+
         return decl with
         {
-            Name = r
+            Name = r,
+            ReturnType = returnType,
+            Parameters = [.. paramters]
         };
     }
 
-    public IDeclaration? VisitModule(ModuleDeclaration typeSystem)
+    public IDeclaration? VisitModule(ModuleDeclaration module)
     {
-        throw new NotImplementedException();
+        return module with
+        {
+            Handles = [.. module.Handles.Select(d => d.AcceptVisitor(this)).OfType<HandleDeclaration>()],
+            Structs = [.. module.Structs.Select(d => d.AcceptVisitor(this)).OfType<StructDeclaration>()],
+            Enums = [.. module.Enums.Select(d => d.AcceptVisitor(this)).OfType<EnumDeclaration>()],
+        };
     }
 
     public IDeclaration? VisitParameter(ParameterDeclaration decl)
