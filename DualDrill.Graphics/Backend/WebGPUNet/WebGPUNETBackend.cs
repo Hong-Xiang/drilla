@@ -8,7 +8,7 @@ using Native = Evergine.Bindings.WebGPU;
 
 internal readonly record struct WebGPUNETHandle<THandle, TResource>(
     THandle Handle
-) : IGPUHandle<Backend, TResource>
+) : IGPUNativeHandle<Backend, TResource>
 {
 }
 
@@ -23,11 +23,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new GPUInstance<Backend>(new(nativeInstance.Handle));
     }
 
-    sealed record class AdapterData
-    {
-    }
-
-    unsafe ValueTask<GPUAdapter<Backend>?> IBackend<Backend>.RequestAdapterAsync(GPUInstance<Backend> instance, GPURequestAdapterOptions options, CancellationToken cancellationToken)
+    unsafe ValueTask<GPUAdapter<Backend>> IBackend<Backend>.RequestAdapterAsync(GPUInstance<Backend> instance, GPURequestAdapterOptions options, CancellationToken cancellationToken)
     {
         var tcs = new TaskCompletionSource<GPUAdapter<Backend>?>(cancellationToken);
         // TODO: static method implementation (passing tcs using user GCHandle/data pointer) for better performance
@@ -36,7 +32,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             if (status == WGPURequestAdapterStatus.Success)
             {
-                tcs.SetResult(new(new(candidateAdapter.Handle, new AdapterData())));
+                tcs.SetResult(new(new(candidateAdapter.Handle)));
 
                 // TODO: update AdapterProperties and AdapterLimits
 
@@ -188,12 +184,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    ValueTask<GPUComputePipeline<Backend>> IBackend<Backend>.CreateComputePipelineAsyncAsync(GPUDevice<Backend> handle, GPUComputePipelineDescriptor descriptor, CancellationToken cancellationToken)
+    ValueTask<GPUComputePipeline<Backend>> IBackend<Backend>.CreateComputePipelineAsync(GPUDevice<Backend> handle, GPUComputePipelineDescriptor descriptor, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    ValueTask<GPURenderPipeline<Backend>> IBackend<Backend>.CreateRenderPipelineAsyncAsync(GPUDevice<Backend> handle, GPURenderPipelineDescriptor descriptor, CancellationToken cancellationToken)
+    ValueTask<GPURenderPipeline<Backend>> IBackend<Backend>.CreateRenderPipelineAsync(GPUDevice<Backend> handle, GPURenderPipelineDescriptor descriptor, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
@@ -380,5 +376,22 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     ValueTask IBackend<Backend>.OnSubmittedWorkDoneAsync(GPUQueue<Backend> handle, CancellationToken cancellation)
     {
         throw new NotImplementedException();
+    }
+
+    unsafe void IBackend<Backend>.Poll(GPUDevice<Backend> device)
+    {
+        wgpuDevicePoll(ToNative(device.Handle), false, null);
+    }
+
+    async ValueTask IBackend<Backend>.PollAsync(GPUDevice<Backend> device, CancellationToken cancellation)
+    {
+        await Task.Run(() =>
+        {
+            unsafe static void PollWait(WGPUDevice device)
+            {
+                wgpuDevicePoll(device, true, null);
+            }
+            PollWait(ToNative(device.Handle));
+        }, cancellation).ConfigureAwait(true);
     }
 }

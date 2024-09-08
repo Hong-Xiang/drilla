@@ -115,34 +115,7 @@ public sealed partial record class GPUCommandEncoder<TBackend>(GPUHandle<TBacken
         TBackend.Instance.DisposeHandle(Handle);
     }
 }
-public partial interface IGPUInstance
-{
-}
 
-public sealed partial record class GPUInstance<TBackend>(GPUHandle<TBackend, GPUInstance<TBackend>> Handle)
-    : IDisposable, IGPUInstance
-    where TBackend : IBackend<TBackend>
-{
-
-    public GPUTextureFormat GetPreferredCanvasFormat(
-    )
-    {
-        return TBackend.Instance.GetPreferredCanvasFormat(this);
-    }
-
-    public ValueTask<GPUAdapter<TBackend>?> RequestAdapterAsync(
-     GPURequestAdapterOptions options
-    , CancellationToken cancellation
-    )
-    {
-        return TBackend.Instance.RequestAdapterAsync(this, options, cancellation);
-    }
-
-    public void Dispose()
-    {
-        TBackend.Instance.DisposeHandle(Handle);
-    }
-}
 public partial interface IGPURenderBundle
 {
 }
@@ -536,120 +509,6 @@ public sealed partial record class GPUBindGroup<TBackend>(GPUHandle<TBackend, GP
         TBackend.Instance.DisposeHandle(Handle);
     }
 }
-public partial interface IGPUDevice
-{
-}
-
-public sealed partial record class GPUDevice<TBackend>(GPUHandle<TBackend, GPUDevice<TBackend>> Handle)
-    : IDisposable, IGPUDevice
-    where TBackend : IBackend<TBackend>
-{
-
-    public GPUBindGroup<TBackend> CreateBindGroup(
-     GPUBindGroupDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateBindGroup(this, descriptor);
-    }
-
-    public GPUBindGroupLayout<TBackend> CreateBindGroupLayout(
-     GPUBindGroupLayoutDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateBindGroupLayout(this, descriptor);
-    }
-
-    public GPUBuffer<TBackend> CreateBuffer(
-     GPUBufferDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateBuffer(this, descriptor);
-    }
-
-    public GPUCommandEncoder<TBackend> CreateCommandEncoder(
-     GPUCommandEncoderDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateCommandEncoder(this, descriptor);
-    }
-
-    public GPUComputePipeline<TBackend> CreateComputePipeline(
-     GPUComputePipelineDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateComputePipeline(this, descriptor);
-    }
-
-    public ValueTask<GPUComputePipeline<TBackend>> CreateComputePipelineAsyncAsync(
-     GPUComputePipelineDescriptor descriptor
-    , CancellationToken cancellation
-    )
-    {
-        return TBackend.Instance.CreateComputePipelineAsyncAsync(this, descriptor, cancellation);
-    }
-
-    public GPUPipelineLayout<TBackend> CreatePipelineLayout(
-     GPUPipelineLayoutDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreatePipelineLayout(this, descriptor);
-    }
-
-    public GPUQuerySet<TBackend> CreateQuerySet(
-     GPUQuerySetDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateQuerySet(this, descriptor);
-    }
-
-    public GPURenderBundleEncoder<TBackend> CreateRenderBundleEncoder(
-     GPURenderBundleEncoderDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateRenderBundleEncoder(this, descriptor);
-    }
-
-    public GPURenderPipeline<TBackend> CreateRenderPipeline(
-     GPURenderPipelineDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateRenderPipeline(this, descriptor);
-    }
-
-    public ValueTask<GPURenderPipeline<TBackend>> CreateRenderPipelineAsyncAsync(
-     GPURenderPipelineDescriptor descriptor
-    , CancellationToken cancellation
-    )
-    {
-        return TBackend.Instance.CreateRenderPipelineAsyncAsync(this, descriptor, cancellation);
-    }
-
-    public GPUSampler<TBackend> CreateSampler(
-     GPUSamplerDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateSampler(this, descriptor);
-    }
-
-    public GPUShaderModule<TBackend> CreateShaderModule(
-     GPUShaderModuleDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateShaderModule(this, descriptor);
-    }
-
-    public GPUTexture<TBackend> CreateTexture(
-     GPUTextureDescriptor descriptor
-    )
-    {
-        return TBackend.Instance.CreateTexture(this, descriptor);
-    }
-
-    public void Dispose()
-    {
-        TBackend.Instance.DisposeHandle(Handle);
-    }
-}
 public partial interface IGPURenderPipeline
 {
 }
@@ -664,28 +523,6 @@ public sealed partial record class GPURenderPipeline<TBackend>(GPUHandle<TBacken
     )
     {
         return TBackend.Instance.GetBindGroupLayout(this, index);
-    }
-
-    public void Dispose()
-    {
-        TBackend.Instance.DisposeHandle(Handle);
-    }
-}
-public partial interface IGPUAdapter
-{
-}
-
-public sealed partial record class GPUAdapter<TBackend>(GPUHandle<TBackend, GPUAdapter<TBackend>> Handle)
-    : IDisposable, IGPUAdapter
-    where TBackend : IBackend<TBackend>
-{
-
-    public ValueTask<GPUDevice<TBackend>> RequestDeviceAsync(
-     GPUDeviceDescriptor descriptor
-    , CancellationToken cancellation
-    )
-    {
-        return TBackend.Instance.RequestDeviceAsync(this, descriptor, cancellation);
     }
 
     public void Dispose()

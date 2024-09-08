@@ -12,7 +12,7 @@ public sealed record class GPUBackendCodeGen(ModuleDeclaration Module)
 
     public void EmitIGPUHandleDisposer(StringBuilder sb)
     {
-        foreach (var h in Module.Handles)
+        foreach (var h in Module.Handles.OrderBy(h => h.Name))
         {
             sb.AppendLine($"    , IGPUHandleDisposer<TBackend, {h.Name}<TBackend>>");
         }
@@ -41,7 +41,7 @@ public sealed record class GPUBackendCodeGen(ModuleDeclaration Module)
             sb.AppendLine($"#region {h.Name} methods");
             sb.AppendLine();
 
-            foreach (var m in h.Methods)
+            foreach (var m in h.Methods.OrderBy(m => m.Name))
             {
                 sb.AppendLine($"    internal {RenameHandleType(m.ReturnType).GetCSharpTypeName()} {m.Name}(");
                 sb.Append($"        {h.Name}<TBackend> handle");

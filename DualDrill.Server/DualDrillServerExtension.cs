@@ -44,7 +44,7 @@ public static class DualDrillServerExtension
         {
             PowerPreference = GPUPowerPreference.HighPerformance
         }, cancellation);
-        var deviceLegacy = await adapterLegacy.RequestDeviceAsyncLegacy(new GPUDeviceDescriptor(), cancellation);
+        var deviceLegacy = await (adapterLegacy as GPUAdapter<WGPUBackend>).RequestDeviceAsyncLegacy(new GPUDeviceDescriptor(), cancellation);
         services.AddSingleton(deviceLegacy);
         services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
     }

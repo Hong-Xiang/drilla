@@ -290,12 +290,12 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    ValueTask<GPUComputePipeline<WGPUBackend>> IBackend<WGPUBackend>.CreateComputePipelineAsyncAsync(GPUDevice<WGPUBackend> handle, GPUComputePipelineDescriptor descriptor, CancellationToken cancellationToken)
+    ValueTask<GPUComputePipeline<WGPUBackend>> IBackend<WGPUBackend>.CreateComputePipelineAsync(GPUDevice<WGPUBackend> handle, GPUComputePipelineDescriptor descriptor, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    ValueTask<GPURenderPipeline<WGPUBackend>> IBackend<WGPUBackend>.CreateRenderPipelineAsyncAsync(GPUDevice<WGPUBackend> handle, GPURenderPipelineDescriptor descriptor, CancellationToken cancellationToken)
+    ValueTask<GPURenderPipeline<WGPUBackend>> IBackend<WGPUBackend>.CreateRenderPipelineAsync(GPUDevice<WGPUBackend> handle, GPURenderPipelineDescriptor descriptor, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
@@ -650,6 +650,16 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
     }
 
     GPUTextureView<WGPUBackend> IBackend<WGPUBackend>.CreateView(GPUTexture<WGPUBackend> handle, GPUTextureViewDescriptor descriptor)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.Poll(GPUDevice<WGPUBackend> device)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask IBackend<WGPUBackend>.PollAsync(GPUDevice<WGPUBackend> device, CancellationToken cancellation)
     {
         throw new NotImplementedException();
     }

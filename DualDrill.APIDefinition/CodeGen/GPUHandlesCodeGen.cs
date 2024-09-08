@@ -5,24 +5,9 @@ using System.Text;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-sealed class HandleAddBackendGeneric(ModuleDeclaration Module) : INameTransform
-{
-    string? INameTransform.TypeReferenceName(string name)
-    {
-        if (Module.Handles.Any(h => h.Name == name))
-        {
-            return name + "<TBackend>";
-        }
-        else
-        {
-            return name;
-        }
-    }
-}
-
 public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
 {
-    INameTransform HandleRename = new HandleAddBackendGeneric(Module);
+    INameTransform HandleRename = new BackendHandleNameTransform(Module);
 
     ImmutableHashSet<string> HandleNames = [.. Module.Handles.Select(h => h.Name)];
     public void EmitHandleDeclaration(StringBuilder sb, HandleDeclaration decl)

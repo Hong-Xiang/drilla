@@ -11,5 +11,9 @@ public partial interface IBackend<TBackend>
         CancellationToken cancellation
     );
     internal GPUTextureView<TBackend> CreateTextureView(GPUTexture<TBackend> texture, GPUTextureViewDescriptor descriptor);
+
+    internal void Poll(GPUDevice<TBackend> device);
+
+    internal ValueTask PollAsync(GPUDevice<TBackend> device, CancellationToken cancellation);
 }
 

@@ -5,28 +5,28 @@ using System.Collections.Immutable;
 namespace DualDrill.Graphics;
 public partial interface IBackend<TBackend>
  : IDisposable
-    , IGPUHandleDisposer<TBackend, GPUQueue<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUCommandEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUDevice<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUAdapter<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUBindGroup<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUBindGroupLayout<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUBuffer<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUCommandBuffer<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUSurface<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderPipeline<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUQuerySet<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderPassEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUBindGroup<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUCommandEncoder<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUComputePassEncoder<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUBindGroupLayout<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUPipelineLayout<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderBundle<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUTexture<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUSampler<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUTextureView<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUShaderModule<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUComputePipeline<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPUAdapter<TBackend>>
-    , IGPUHandleDisposer<TBackend, GPURenderBundleEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUDevice<TBackend>>
     , IGPUHandleDisposer<TBackend, GPUInstance<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUPipelineLayout<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUQuerySet<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUQueue<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderBundle<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderBundleEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderPassEncoder<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPURenderPipeline<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUSampler<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUShaderModule<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUSurface<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUTexture<TBackend>>
+    , IGPUHandleDisposer<TBackend, GPUTextureView<TBackend>>
 {
     #region GPUAdapter methods
 
@@ -200,7 +200,7 @@ public partial interface IBackend<TBackend>
         GPUDevice<TBackend> handle,
         GPUComputePipelineDescriptor descriptor);
 
-    internal ValueTask<GPUComputePipeline<TBackend>> CreateComputePipelineAsyncAsync(
+    internal ValueTask<GPUComputePipeline<TBackend>> CreateComputePipelineAsync(
         GPUDevice<TBackend> handle,
         GPUComputePipelineDescriptor descriptor,
         CancellationToken cancellation);
@@ -221,7 +221,7 @@ public partial interface IBackend<TBackend>
         GPUDevice<TBackend> handle,
         GPURenderPipelineDescriptor descriptor);
 
-    internal ValueTask<GPURenderPipeline<TBackend>> CreateRenderPipelineAsyncAsync(
+    internal ValueTask<GPURenderPipeline<TBackend>> CreateRenderPipelineAsync(
         GPUDevice<TBackend> handle,
         GPURenderPipelineDescriptor descriptor,
         CancellationToken cancellation);
@@ -245,7 +245,7 @@ public partial interface IBackend<TBackend>
     internal GPUTextureFormat GetPreferredCanvasFormat(
         GPUInstance<TBackend> handle);
 
-    internal ValueTask<GPUAdapter<TBackend>?> RequestAdapterAsync(
+    internal ValueTask<GPUAdapter<TBackend>> RequestAdapterAsync(
         GPUInstance<TBackend> handle,
         GPURequestAdapterOptions options,
         CancellationToken cancellation);
@@ -504,4 +504,3 @@ public partial interface IBackend<TBackend>
     #endregion
 
 }
-
