@@ -92,6 +92,7 @@ internal sealed class NameTransformVisitor(
         public ITypeReference? VisitVoid(VoidTypeReference type) => type;
     }
 
+
     public IDeclaration? VisitEnum(EnumDeclaration decl)
     {
         var r = Transform.EnumName(decl.Name);

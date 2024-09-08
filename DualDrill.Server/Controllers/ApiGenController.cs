@@ -64,6 +64,7 @@ public class ApiGenController(
     public async Task<IActionResult> GenerateBackendCodeAsync([FromQuery] string? part, CancellationToken cancellation)
     {
         var spec = await GetGPUApiForCodeGenAsync(cancellation);
+        spec = spec.Transform(new BackendHandleNameTransform(spec));
         var generator = new GPUBackendCodeGen(spec);
         var sb = new StringBuilder();
         switch (part)

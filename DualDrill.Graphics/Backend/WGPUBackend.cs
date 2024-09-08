@@ -444,7 +444,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    void IBackend<WGPUBackend>.Submit(GPUQueue<WGPUBackend> handle, ReadOnlySpan<GPUCommandBuffer> commandBuffers)
+    void IBackend<WGPUBackend>.Submit(GPUQueue<WGPUBackend> handle, ReadOnlySpan<GPUCommandBuffer<WGPUBackend>> commandBuffers)
     {
         throw new NotImplementedException();
     }
@@ -559,7 +559,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    void IBackend<WGPUBackend>.ExecuteBundles(GPURenderPassEncoder<WGPUBackend> handle, ReadOnlySpan<GPURenderBundle> bundles)
+    void IBackend<WGPUBackend>.ExecuteBundles(GPURenderPassEncoder<WGPUBackend> handle, ReadOnlySpan<GPURenderBundle<WGPUBackend>> bundles)
     {
         throw new NotImplementedException();
     }

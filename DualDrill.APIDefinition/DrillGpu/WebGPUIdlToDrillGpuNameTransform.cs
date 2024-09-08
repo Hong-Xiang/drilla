@@ -92,6 +92,7 @@ internal sealed record class WebGPUIdlToDrillGpuNameTransform(
 
             _ when name.EndsWith("Flags") => name[..^5],
             "GPUColorWrite" => "GPUColorWriteMask",
+            "GPUColorWriteFlags" => "GPUColorWriteMask",
             _ => name
         };
     }

@@ -16,7 +16,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 {
     public static Backend Instance { get; } = new();
 
-    public unsafe static GPUInstance<Backend> CreateGPUInstance()
+    public unsafe GPUInstance<Backend> CreateGPUInstance()
     {
         Native.WGPUInstanceDescriptor descriptor = new();
         var nativeInstance = wgpuCreateInstance(&descriptor);
@@ -70,7 +70,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             if (status == WGPURequestDeviceStatus.Success)
             {
-                tcs.SetResult(new(new(device.Handle)));
+                var queue_ = wgpuDeviceGetQueue(device);
+                var queue = new GPUQueue<Backend>(new(queue_.Handle));
+                tcs.SetResult(new(new(device.Handle)) { Queue = queue });
             }
             else
             {
@@ -128,9 +130,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         desc.sampleCount = (uint)descriptor.SampleCount;
         desc.label = (char*)pLabel.Pointer;
         desc.dimension = ToNative(descriptor.Dimension);
-        desc.size = new WGPUExtent3D();
-        desc.size.width = (uint)descriptor.Size.Width;
-        desc.size.height = (uint)descriptor.Size.Height;
+        PopulateNative(ref desc.size, descriptor.Size);
         desc.size.depthOrArrayLayers = (uint)descriptor.Size.DepthOrArrayLayers;
         desc.format = ToNative(descriptor.Format);
         var p = stackalloc WGPUTextureFormat[descriptor.ViewFormats.Length];
@@ -144,6 +144,13 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         }
         var h = wgpuDeviceCreateTexture(ToNative(handle.Handle), &desc);
         return new GPUTexture<Backend>(new GPUHandle<Backend, GPUTexture<Backend>>(h.Handle));
+    }
+
+    void PopulateNative(ref WGPUExtent3D native, GPUExtent3D value)
+    {
+        native.height = (uint)value.Height;
+        native.width = (uint)value.Width;
+        native.depthOrArrayLayers = (uint)value.DepthOrArrayLayers;
     }
 
     GPUSampler<Backend> IBackend<Backend>.CreateSampler(GPUDevice<Backend> handle, GPUSamplerDescriptor descriptor)
@@ -255,7 +262,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    void IBackend<Backend>.Submit(GPUQueue<Backend> handle, ReadOnlySpan<GPUCommandBuffer> commandBuffers)
+    void IBackend<Backend>.Submit(GPUQueue<Backend> handle, ReadOnlySpan<GPUCommandBuffer<Backend>> commandBuffers)
     {
         throw new NotImplementedException();
     }
@@ -298,7 +305,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    void IBackend<Backend>.ExecuteBundles(GPURenderPassEncoder<Backend> handle, ReadOnlySpan<GPURenderBundle> bundles)
+    void IBackend<Backend>.ExecuteBundles(GPURenderPassEncoder<Backend> handle, ReadOnlySpan<GPURenderBundle<Backend>> bundles)
     {
         throw new NotImplementedException();
     }

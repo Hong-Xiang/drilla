@@ -1,8 +1,15 @@
 ﻿using DualDrill.Graphics.Interop;
+using Silk.NET.Vulkan;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace DualDrill.Graphics;
+
+public partial interface IGPUQueue
+{
+    //string Label { get; }
+    //void Submit(ReadOnlySpan<IGPUCommandBuffer> commandBuffers);
+}
 
 public sealed partial class GPUQueue
 {

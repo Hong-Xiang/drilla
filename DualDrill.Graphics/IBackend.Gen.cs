@@ -260,7 +260,7 @@ public partial interface IBackend<TBackend>
 
     internal void Submit(
         GPUQueue<TBackend> handle,
-        ReadOnlySpan<GPUCommandBuffer> commandBuffers);
+        ReadOnlySpan<GPUCommandBuffer<TBackend>> commandBuffers);
 
     internal void WriteBuffer(
         GPUQueue<TBackend> handle,
@@ -394,7 +394,7 @@ public partial interface IBackend<TBackend>
 
     internal void ExecuteBundles(
         GPURenderPassEncoder<TBackend> handle,
-        ReadOnlySpan<GPURenderBundle> bundles);
+        ReadOnlySpan<GPURenderBundle<TBackend>> bundles);
 
     internal void InsertDebugMarker(
         GPURenderPassEncoder<TBackend> handle,

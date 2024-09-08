@@ -5,8 +5,25 @@ using System.Text;
 
 namespace DualDrill.ApiGen.CodeGen;
 
+sealed class HandleAddBackendGeneric(ModuleDeclaration Module) : INameTransform
+{
+    string? INameTransform.TypeReferenceName(string name)
+    {
+        if (Module.Handles.Any(h => h.Name == name))
+        {
+            return name + "<TBackend>";
+        }
+        else
+        {
+            return name;
+        }
+    }
+}
+
 public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
 {
+    INameTransform HandleRename = new HandleAddBackendGeneric(Module);
+
     ImmutableHashSet<string> HandleNames = [.. Module.Handles.Select(h => h.Name)];
     public void EmitHandleDeclaration(StringBuilder sb, HandleDeclaration decl)
     {
@@ -34,18 +51,48 @@ public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
         sb.AppendLine("}");
     }
 
+    bool IsHandle(string name)
+    {
+        return Module.Handles.Any(h => h.Name == name);
+    }
+
+    void EmitTypeReference(StringBuilder sb, ITypeReference type)
+    {
+        sb.Append(type.GetCSharpTypeName());
+        if (type is OpaqueTypeReference { Name: var name } && IsHandle(name))
+        {
+            sb.Append("<TBackend>");
+        }
+    }
+
     public void EmitMethodDefinitions(StringBuilder sb, HandleDeclaration decl)
     {
         foreach (var m in decl.Methods)
         {
             var isFirstArgument = true;
-            sb.AppendLine($"public {m.ReturnType.GetCSharpTypeName()} {m.Name} (");
+            sb.Append($"public ");
+            sb.Append(m.ReturnType.GetCSharpTypeName(
+                                option: CSharpTypeNameVisitor.Default.Option with
+                                {
+                                    Usage = CSharpTypeNameVisitor.VisitorOption.TypeUsage.ParameterType
+                                },
+                                transform: HandleRename
+                            ));
+            sb.Append(' ');
+            sb.Append(m.Name);
+            sb.AppendLine(" (");
             foreach (var p in m.Parameters)
             {
                 sb.Append(isFirstArgument ? " " : ",");
                 isFirstArgument = false;
 
-                sb.Append(p.Type.GetCSharpTypeName());
+                sb.Append(p.Type.GetCSharpTypeName(
+                    option: CSharpTypeNameVisitor.Default.Option with
+                    {
+                        Usage = CSharpTypeNameVisitor.VisitorOption.TypeUsage.ParameterType
+                    },
+                    transform: HandleRename
+                ));
                 sb.Append(' ');
                 sb.AppendLine(p.Name);
             }

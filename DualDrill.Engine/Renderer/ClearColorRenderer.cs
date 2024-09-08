@@ -1,4 +1,5 @@
 ﻿using DualDrill.Graphics;
+using DualDrill.Graphics.Backend;
 using System.Numerics;
 
 namespace DualDrill.Engine.Renderer;
@@ -36,4 +37,5 @@ public sealed class ClearColorRenderer : IRenderer<Vector3>
         using var drawCommands = encoder.Finish(new());
         queue.Submit([drawCommands]);
     }
+
 }

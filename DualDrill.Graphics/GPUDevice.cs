@@ -3,6 +3,11 @@ using Silk.NET.WebGPU;
 
 namespace DualDrill.Graphics;
 
+public sealed partial record class GPUDevice<TBackend>
+{
+    public required GPUQueue<TBackend> Queue { get; init; }
+}
+
 public sealed partial class GPUDevice
 {
     public GPURenderPipeline CreateRenderPipeline(GPURenderPipelineDescriptor descriptor)
