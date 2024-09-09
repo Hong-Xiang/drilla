@@ -1,9 +1,9 @@
 ﻿namespace DualDrill.Graphics;
 
-public partial interface IGPUAdapter
+public partial interface IGPUAdapter : IDisposable
 {
-
     public ValueTask<IGPUDevice> RequestDeviceAsync(GPUDeviceDescriptor descriptor, CancellationToken cancellation);
+    public ValueTask<GPUAdapterInfo> RequestAdapterInfoAsync(CancellationToken cancellation);
 }
 
 public sealed partial record class GPUAdapter<TBackend>
@@ -24,5 +24,10 @@ public sealed partial record class GPUAdapter<TBackend>(GPUHandle<TBackend, GPUA
     public void Dispose()
     {
         TBackend.Instance.DisposeHandle(Handle);
+    }
+
+    public ValueTask<GPUAdapterInfo> RequestAdapterInfoAsync(CancellationToken cancellation)
+    {
+        return TBackend.Instance.RequestAdapterInfoAsync(this, cancellation);
     }
 }

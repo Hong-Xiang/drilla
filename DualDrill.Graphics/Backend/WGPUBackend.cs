@@ -649,7 +649,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    GPUTextureView<WGPUBackend> IBackend<WGPUBackend>.CreateView(GPUTexture<WGPUBackend> handle, GPUTextureViewDescriptor descriptor)
+    GPUTextureView<WGPUBackend> IBackend<WGPUBackend>.CreateView(GPUTexture<WGPUBackend> handle, GPUTextureViewDescriptor? descriptor)
     {
         throw new NotImplementedException();
     }
@@ -660,6 +660,16 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
     }
 
     ValueTask IBackend<WGPUBackend>.PollAsync(GPUDevice<WGPUBackend> device, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
+
+    ValueTask<GPUAdapterInfo> IBackend<WGPUBackend>.RequestAdapterInfoAsync(GPUAdapter<WGPUBackend> adapter, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.Present(GPUSurface<WGPUBackend> surface)
     {
         throw new NotImplementedException();
     }

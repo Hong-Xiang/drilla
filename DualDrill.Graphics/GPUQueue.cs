@@ -5,11 +5,45 @@ using System.Runtime.InteropServices;
 
 namespace DualDrill.Graphics;
 
-public partial interface IGPUQueue
+public partial interface IGPUQueue : IDisposable
 {
-    //string Label { get; }
-    //void Submit(ReadOnlySpan<IGPUCommandBuffer> commandBuffers);
+    public ValueTask OnSubmittedWorkDoneAsync(CancellationToken cancellation);
+    public void Submit(IReadOnlyList<IGPUCommandBuffer> commandBuffers);
+    public void WriteBuffer(IGPUBuffer buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size);
+    public void WriteTexture(GPUImageCopyTexture destination, nint data, GPUTextureDataLayout dataLayout, GPUExtent3D size);
 }
+
+public sealed partial record class GPUQueue<TBackend>(GPUHandle<TBackend, GPUQueue<TBackend>> Handle)
+    : IDisposable, IGPUQueue
+    where TBackend : IBackend<TBackend>
+{
+
+    public ValueTask OnSubmittedWorkDoneAsync(CancellationToken cancellation)
+    {
+        return TBackend.Instance.OnSubmittedWorkDoneAsync(this, cancellation);
+    }
+
+    public void Submit(IReadOnlyList<IGPUCommandBuffer> commandBuffers)
+    {
+        TBackend.Instance.Submit(this, commandBuffers);
+    }
+
+    public void WriteBuffer(GPUBuffer<TBackend> buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size)
+    {
+        TBackend.Instance.WriteBuffer(this, buffer, bufferOffset, data, dataOffset, size);
+    }
+
+    public void WriteTexture(GPUImageCopyTexture destination, nint data, GPUTextureDataLayout dataLayout, GPUExtent3D size)
+    {
+        TBackend.Instance.WriteTexture(this, destination, data, dataLayout, size);
+    }
+
+    public void Dispose()
+    {
+        TBackend.Instance.DisposeHandle(Handle);
+    }
+}
+
 
 public sealed partial class GPUQueue
 {

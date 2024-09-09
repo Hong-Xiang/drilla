@@ -74,7 +74,7 @@ public sealed class HeadlessSurface : IGPUSurface
         return CurrentTarget;
     }
 
-    public GPUTexture? GetCurrentTexture()
+    public GPUTexture? GetCurrentTextureLegacy()
     {
         return CurrentTarget?.Texture;
     }
@@ -118,5 +118,14 @@ public sealed class HeadlessSurface : IGPUSurface
             await EmitOnFrame.PublishAsync(frame);
             await RenderTargetChannel.Writer.WriteAsync(target);
         });
+    }
+
+    public void Dispose()
+    {
+    }
+
+    public IGPUTexture? GetCurrentTexture2()
+    {
+        throw new NotImplementedException();
     }
 }

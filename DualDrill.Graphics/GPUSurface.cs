@@ -1,11 +1,56 @@
 ﻿using DualDrill.Graphics.Interop;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
+
+public partial interface IGPUSurface : IDisposable
+{
+    GPUTexture? GetCurrentTextureLegacy();
+    IGPUTexture? GetCurrentTexture2();
+    void Configure(GPUSurfaceConfiguration configuration);
+    void Unconfigure();
+    void Present();
+}
+
+public sealed partial record class GPUSurface<TBackend>(GPUHandle<TBackend, GPUSurface<TBackend>> Handle)
+    : IGPUSurface, IDisposable
+    where TBackend : IBackend<TBackend>
+{
+
+    public void Configure(
+     GPUSurfaceConfiguration configuration
+    )
+    {
+        TBackend.Instance.Configure(this, configuration);
+    }
+
+    public void Unconfigure(
+    )
+    {
+        TBackend.Instance.Unconfigure(this);
+    }
+
+    public void Dispose()
+    {
+        TBackend.Instance.DisposeHandle(Handle);
+    }
+
+    GPUTexture? IGPUSurface.GetCurrentTextureLegacy()
+    {
+        throw new NotImplementedException();
+    }
+
+    public IGPUTexture? GetCurrentTexture2()
+    {
+        return TBackend.Instance.GetCurrentTexture(this);
+    }
+
+    public void Present()
+    {
+        TBackend.Instance.Present(this);
+    }
+}
+
+
 
 public sealed partial class GPUSurface : IDisposable
 {
@@ -32,7 +77,7 @@ public sealed partial class GPUSurface : IDisposable
         WGPU.SurfacePresent(Handle);
     }
 
-   
+
     public unsafe GPUSurfaceTexture GetCurrentTexture()
     {
         WGPUSurfaceTexture texture;

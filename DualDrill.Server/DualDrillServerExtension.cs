@@ -24,7 +24,8 @@ public static class DualDrillServerExtension
     private static async ValueTask AddGraphicsServices(this IServiceCollection services, CancellationToken cancellation)
     {
         var instance = WebGPUNETBackend.Instance.CreateGPUInstance();
-        services.AddSingleton<GPUInstance<WebGPUNETBackend>>(instance);
+        services.AddSingleton<IGPUInstance, GPUInstance<WebGPUNETBackend>>(sp => instance);
+
         var instanceLegacy = WGPUBackend.Instance.CreateGPUInstance();
         services.AddSingleton(instanceLegacy);
 

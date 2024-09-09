@@ -1,7 +1,10 @@
-﻿namespace DualDrill.Graphics;
+﻿using System.Collections.Immutable;
+
+namespace DualDrill.Graphics;
 
 public partial interface IGPUInstance : IGPUHandle
 {
+    ImmutableHashSet<string> WGSLLanguageFeatures { get; }
     public GPUTextureFormat GetPreferredCanvasFormat();
     public ValueTask<IGPUAdapter> RequestAdapterAsync(GPURequestAdapterOptions options, CancellationToken cancellation);
 }
@@ -10,6 +13,8 @@ public sealed partial record class GPUInstance<TBackend>(GPUHandle<TBackend, GPU
     : IDisposable, IGPUInstance
     where TBackend : IBackend<TBackend>
 {
+    public ImmutableHashSet<string> WGSLLanguageFeatures => throw new NotImplementedException();
+
     public GPUTextureFormat GetPreferredCanvasFormat()
     {
         return TBackend.Instance.GetPreferredCanvasFormat(this);

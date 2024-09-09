@@ -313,13 +313,13 @@ public partial struct GPUBufferDescriptor
 }
 public partial struct GPUTextureDescriptor()
 {
-    public GPUTextureUsage Usage { get; set; }
+    public required GPUTextureUsage Usage { get; set; }
     public int MipLevelCount { get; set; } = 1;
     public int SampleCount { get; set; } = 1;
-    public string? Label { get; set; }
+    public string Label { get; set; } = string.Empty;
     public GPUTextureDimension Dimension { get; set; } = GPUTextureDimension._2D;
-    public GPUExtent3D Size { get; set; }
-    public GPUTextureFormat Format { get; set; }
+    public required GPUExtent3D Size { get; set; }
+    public required GPUTextureFormat Format { get; set; }
     public ReadOnlyMemory<GPUTextureFormat> ViewFormats { get; set; }
 }
 public partial struct GPUTextureViewDescriptor()
@@ -328,7 +328,7 @@ public partial struct GPUTextureViewDescriptor()
     public required int MipLevelCount { get; set; }
     public required int BaseArrayLayer { get; set; }
     public int ArrayLayerCount { get; set; } = 0;
-    public string? Label { get; set; }
+    public string Label { get; set; } = string.Empty;
     public required GPUTextureFormat Format { get; set; }
     public required GPUTextureViewDimension Dimension { get; set; }
     public GPUTextureAspect Aspect { get; set; } = GPUTextureAspect.All;

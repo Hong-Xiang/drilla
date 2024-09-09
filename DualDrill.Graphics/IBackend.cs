@@ -15,5 +15,9 @@ public partial interface IBackend<TBackend>
     internal void Poll(GPUDevice<TBackend> device);
 
     internal ValueTask PollAsync(GPUDevice<TBackend> device, CancellationToken cancellation);
+
+    internal ValueTask<GPUAdapterInfo> RequestAdapterInfoAsync(GPUAdapter<TBackend> adapter, CancellationToken cancellation);
+
+    internal void Present(GPUSurface<TBackend> surface);
 }
 

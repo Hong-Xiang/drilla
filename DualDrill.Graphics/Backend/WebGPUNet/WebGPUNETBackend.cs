@@ -118,13 +118,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUTexture<Backend> IBackend<Backend>.CreateTexture(GPUDevice<Backend> handle, GPUTextureDescriptor descriptor)
     {
-        var label = InteropUtf8String.Create(descriptor.Label);
-        using var pLabel = label.Pin();
+        using var pLabel = InteropUtf8StringValue.Create(descriptor.Label);
         WGPUTextureDescriptor desc = new();
         desc.usage = ToNative(descriptor.Usage);
         desc.mipLevelCount = (uint)descriptor.MipLevelCount;
         desc.sampleCount = (uint)descriptor.SampleCount;
-        desc.label = (char*)pLabel.Pointer;
+        desc.label = pLabel.CharPointer;
         desc.dimension = ToNative(descriptor.Dimension);
         PopulateNative(ref desc.size, descriptor.Size);
         desc.size.depthOrArrayLayers = (uint)descriptor.Size.DepthOrArrayLayers;
@@ -149,9 +148,32 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         native.depthOrArrayLayers = (uint)value.DepthOrArrayLayers;
     }
 
-    GPUSampler<Backend> IBackend<Backend>.CreateSampler(GPUDevice<Backend> handle, GPUSamplerDescriptor descriptor)
+
+    unsafe GPUSampler<Backend> IBackend<Backend>.CreateSampler(GPUDevice<Backend> handle, GPUSamplerDescriptor descriptor)
     {
-        throw new NotImplementedException();
+        var nativeDescriptor = ToNative(descriptor);
+        var result = wgpuDeviceCreateSampler(ToNative(handle.Handle), &nativeDescriptor);
+        return new GPUSampler<Backend>(new(result.Handle));
+        // TODO: add finally / using to free the label
+    }
+
+    private unsafe WGPUSamplerDescriptor ToNative(GPUSamplerDescriptor descriptor)
+    {
+        WGPUSamplerDescriptor nativeDescriptor = new()
+        {
+            label = (char*)Marshal.StringToHGlobalAnsi(descriptor.Label),
+            addressModeU = ToNative(descriptor.AddressModeU),
+            addressModeV = ToNative(descriptor.AddressModeV),
+            addressModeW = ToNative(descriptor.AddressModeW),
+            magFilter = ToNative(descriptor.MagFilter),
+            minFilter = ToNative(descriptor.MinFilter),
+            mipmapFilter = ToNative(descriptor.MipmapFilter),
+            lodMinClamp = descriptor.LodMinClamp,
+            lodMaxClamp = descriptor.LodMaxClamp,
+            compare = ToNative(descriptor.Compare),
+            maxAnisotropy = descriptor.MaxAnisotropy,
+        };
+        return nativeDescriptor;
     }
 
     GPUBindGroupLayout<Backend> IBackend<Backend>.CreateBindGroupLayout(GPUDevice<Backend> handle, GPUBindGroupLayoutDescriptor descriptor)
@@ -258,14 +280,16 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    void IBackend<Backend>.Submit(GPUQueue<Backend> handle, ReadOnlySpan<GPUCommandBuffer<Backend>> commandBuffers)
+    unsafe void IBackend<Backend>.Submit(GPUQueue<Backend> handle, IReadOnlyList<GPUCommandBuffer<Backend>> commandBuffers)
     {
-        throw new NotImplementedException();
+        var count = commandBuffers.Count;
+        var cmds = stackalloc WGPUCommandBuffer[count];
+        wgpuQueueSubmit(ToNative(handle.Handle), (uint)count, cmds);
     }
 
-    void IBackend<Backend>.WriteBuffer(GPUQueue<Backend> handle, GPUBuffer<Backend> buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size)
+    unsafe void IBackend<Backend>.WriteBuffer(GPUQueue<Backend> handle, GPUBuffer<Backend> buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size)
     {
-        throw new NotImplementedException();
+        wgpuQueueWriteBuffer(ToNative(handle.Handle), ToNative(buffer.Handle), bufferOffset, (void*)data, size);
     }
 
     void IBackend<Backend>.WriteTexture(GPUQueue<Backend> handle, GPUImageCopyTexture destination, nint data, GPUTextureDataLayout dataLayout, GPUExtent3D size)
@@ -347,20 +371,88 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    void IBackend<Backend>.Configure(GPUSurface<Backend> handle, GPUSurfaceConfiguration configuration)
+    unsafe void IBackend<Backend>.Configure(GPUSurface<Backend> handle, GPUSurfaceConfiguration configuration)
     {
-        throw new NotImplementedException();
+        fixed (GPUTextureFormat* viewFormats = configuration.ViewFormats)
+        {
+            var nativeConfig = new WGPUSurfaceConfiguration
+            {
+                device = ToNative(configuration.Device.Handle),
+                format = ToNative(configuration.Format),
+                usage = ToNative(configuration.Usage),
+                viewFormatCount = (nuint)configuration.ViewFormats.Length,
+                viewFormats = viewFormats,
+                alphaMode = ToNative(configuration.AlphaMode),
+                width = (uint)configuration.Width,
+                height = (uint)configuration.Height,
+                presentMode = ToNative(configuration.PresentMode)
+            };
+            wgpuSurfaceConfigure(ToNative(handle.Handle), &nativeConfig);
+        }
+
     }
 
-    GPUTexture<Backend> IBackend<Backend>.GetCurrentTexture(GPUSurface<Backend> handle)
+    WGPUPresentMode ToNative(GPUPresentMode mode)
     {
-        throw new NotImplementedException();
+        return (WGPUPresentMode)mode;
     }
 
-
-    GPUTextureView<Backend> IBackend<Backend>.CreateView(GPUTexture<Backend> handle, GPUTextureViewDescriptor descriptor)
+    WGPUCompositeAlphaMode ToNative(GPUCompositeAlphaMode alphaMode)
     {
-        throw new NotImplementedException();
+        return (WGPUCompositeAlphaMode)alphaMode;
+    }
+
+    unsafe GPUTexture<Backend> IBackend<Backend>.GetCurrentTexture(GPUSurface<Backend> handle)
+    {
+        WGPUSurfaceTexture result = new();
+        wgpuSurfaceGetCurrentTexture(ToNative(handle.Handle), &result);
+        if (result.status != WGPUSurfaceGetCurrentTextureStatus.Success)
+        {
+            throw new GraphicsApiException<Backend>($"Failed to get current texture, status {Enum.GetName(result.status)}");
+        }
+        return new GPUTexture<Backend>(new(result.texture.Handle));
+    }
+
+    unsafe WGPUTextureViewDescriptor ToNative(GPUTextureViewDescriptor descriptor)
+    {
+        var result = new WGPUTextureViewDescriptor();
+        if (!string.IsNullOrEmpty(descriptor.Label))
+        {
+            result.label = (char*)Marshal.StringToHGlobalAnsi(descriptor.Label);
+        }
+        result.format = ToNative(descriptor.Format);
+        result.dimension = ToNative(descriptor.Dimension);
+        result.baseMipLevel = (uint)descriptor.BaseMipLevel;
+        result.mipLevelCount = (uint)descriptor.MipLevelCount;
+        result.baseArrayLayer = (uint)descriptor.BaseArrayLayer;
+        result.arrayLayerCount = (uint)descriptor.ArrayLayerCount;
+        result.aspect = ToNative(descriptor.Aspect);
+        return result;
+    }
+
+    unsafe GPUTextureView<Backend> IBackend<Backend>.CreateView(GPUTexture<Backend> handle, GPUTextureViewDescriptor? descriptor)
+    {
+        WGPUTextureView resultHandle;
+        if (descriptor is null)
+        {
+            resultHandle = wgpuTextureCreateView(ToNative(handle.Handle), null);
+        }
+        else
+        {
+            var d_ = ToNative(descriptor.Value);
+            try
+            {
+                resultHandle = wgpuTextureCreateView(ToNative(handle.Handle), &d_);
+            }
+            finally
+            {
+                if (d_.label is not null)
+                {
+                    Marshal.FreeHGlobal((nint)d_.label);
+                }
+            }
+        }
+        return new GPUTextureView<Backend>(new GPUHandle<Backend, GPUTextureView<Backend>>(resultHandle.Handle));
     }
 
     void IBackend<Backend>.SetBindGroup(GPUComputePassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
@@ -393,5 +485,15 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             }
             PollWait(ToNative(device.Handle));
         }, cancellation).ConfigureAwait(true);
+    }
+
+    ValueTask<GPUAdapterInfo> IBackend<Backend>.RequestAdapterInfoAsync(GPUAdapter<Backend> adapter, CancellationToken cancellation)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<Backend>.Present(GPUSurface<Backend> surface)
+    {
+        wgpuSurfacePresent(ToNative(surface.Handle));
     }
 }

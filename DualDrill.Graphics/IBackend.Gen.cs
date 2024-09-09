@@ -260,7 +260,7 @@ public partial interface IBackend<TBackend>
 
     internal void Submit(
         GPUQueue<TBackend> handle,
-        ReadOnlySpan<GPUCommandBuffer<TBackend>> commandBuffers);
+        IReadOnlyList<GPUCommandBuffer<TBackend>> commandBuffers);
 
     internal void WriteBuffer(
         GPUQueue<TBackend> handle,
@@ -499,7 +499,7 @@ public partial interface IBackend<TBackend>
 
     internal GPUTextureView<TBackend> CreateView(
         GPUTexture<TBackend> handle,
-        GPUTextureViewDescriptor descriptor);
+        GPUTextureViewDescriptor? descriptor);
 
     #endregion
 
