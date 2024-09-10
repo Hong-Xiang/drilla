@@ -321,11 +321,6 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    ReadOnlySpan<byte> IBackend<WGPUBackend>.GetMappedRange(GPUBuffer<WGPUBackend> handle, ulong offset, ulong size)
-    {
-        throw new NotImplementedException();
-    }
-
     void IBackend<WGPUBackend>.Unmap(GPUBuffer<WGPUBackend> handle)
     {
         throw new NotImplementedException();
@@ -455,11 +450,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    void IBackend<WGPUBackend>.WriteTexture(GPUQueue<WGPUBackend> handle, GPUImageCopyTexture destination, nint data, GPUImageDataLayout dataLayout, GPUExtent3D size)
-    {
-        throw new NotImplementedException();
-    }
-
+ 
     void IBackend<WGPUBackend>.Draw(GPURenderBundleEncoder<WGPUBackend> handle, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
     {
         throw new NotImplementedException();
@@ -671,6 +662,16 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
     }
 
     void IBackend<WGPUBackend>.Present(GPUSurface<WGPUBackend> surface)
+    {
+        throw new NotImplementedException();
+    }
+
+    void IBackend<WGPUBackend>.WriteTexture(GPUQueue<WGPUBackend> handle, GPUImageCopyTexture destination, ReadOnlySpan<byte> data, GPUImageDataLayout dataLayout, GPUExtent3D size)
+    {
+        throw new NotImplementedException();
+    }
+
+    Span<byte> IBackend<WGPUBackend>.GetMappedRange(GPUBuffer<WGPUBackend> handle, ulong offset, ulong size)
     {
         throw new NotImplementedException();
     }

@@ -34,7 +34,7 @@ public sealed partial record class GPURenderBundle<TBackend>(GPUHandle<TBackend,
         TBackend.Instance.DisposeHandle(Handle);
     }
 }
-public partial interface IGPUPipelineLayout
+public partial interface IGPUPipelineLayout : IDisposable
 {
 }
 
@@ -134,6 +134,7 @@ public sealed partial record class GPUBindGroup<TBackend>(GPUHandle<TBackend, GP
 }
 public partial interface IGPURenderPipeline : IDisposable
 {
+    public IGPUBindGroupLayout GetBindGroupLayout(ulong index);
 }
 
 public sealed partial record class GPURenderPipeline<TBackend>(GPUHandle<TBackend, GPURenderPipeline<TBackend>> Handle)
@@ -141,9 +142,7 @@ public sealed partial record class GPURenderPipeline<TBackend>(GPUHandle<TBacken
     where TBackend : IBackend<TBackend>
 {
 
-    public GPUBindGroupLayout<TBackend> GetBindGroupLayout(
-     ulong index
-    )
+    public IGPUBindGroupLayout GetBindGroupLayout(ulong index)
     {
         return TBackend.Instance.GetBindGroupLayout(this, index);
     }

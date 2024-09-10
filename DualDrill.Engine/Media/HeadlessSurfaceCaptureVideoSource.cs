@@ -64,7 +64,7 @@ public sealed class HeadlessSurfaceCaptureVideoSource
     {
         lock (encoderLock)
         {
-            var result = VideoEncoder.EncodeVideo(frame.Size.Width, frame.Size.Height, frame.Data.ToArray(), VideoPixelFormatsEnum.Bgra, VideoCodecsEnum.VP8);
+            var result = VideoEncoder.EncodeVideo((int)frame.Size.Width, (int)frame.Size.Height, frame.Data.ToArray(), VideoPixelFormatsEnum.Bgra, VideoCodecsEnum.VP8);
             if (result is not null)
             {
                 OnVideoSourceEncodedSample?.Invoke(90000 / 60, result);

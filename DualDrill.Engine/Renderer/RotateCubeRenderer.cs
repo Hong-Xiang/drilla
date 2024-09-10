@@ -136,7 +136,7 @@ fn fs_main(
         {
             BindGroupLayouts = [BindGroupLayout]
         });
-        Pipeline = GPURenderPipeline.Create(Device, new GPURenderPipelineDescriptor()
+        Pipeline = Device.CreateRenderPipeline(new GPURenderPipelineDescriptor()
         {
             Vertex = new GPUVertexState
             {
@@ -216,7 +216,7 @@ fn fs_main(
         }
 
         var cpuData = CubeVertexArray.AsSpan();
-        var gpuBuffer = VertexBuffer.GetMappedRange(0, (int)VertexBufferByteSize);
+        var gpuBuffer = VertexBuffer.GetMappedRange(0, (ulong)VertexBufferByteSize);
         var cpuByteData = MemoryMarshal.Cast<float, byte>(cpuData);
         cpuByteData.CopyTo(gpuBuffer);
         VertexBuffer.Unmap();
@@ -240,7 +240,7 @@ fn fs_main(
 
     static readonly ReadOnlyMemory<byte> Name = "abc"u8.ToArray();
 
-    public unsafe void Render(double time, GPUQueue queue, GPUTexture renderTarget, State state)
+    public unsafe void Render(double time, IGPUQueue queue, IGPUTexture renderTarget, State state)
     {
         using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());

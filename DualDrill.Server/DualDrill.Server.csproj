@@ -4,6 +4,10 @@
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
+	<PropertyGroup>
+		<!-- Workaround for issue https://github.com/microsoft/ClangSharp/issues/129 -->
+		<RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' AND '$(PackAsTool)' != 'true'">$(NETCoreSdkRuntimeIdentifier)</RuntimeIdentifier>
+	</PropertyGroup>
 
 	<Import Project="..\Silk.NET.Packages.props" />
 

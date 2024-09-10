@@ -265,7 +265,7 @@ public partial struct GPURenderPipelineDescriptor()
 {
     public string Label { get; set; }
     public IGPUPipelineLayout? Layout { get; set; }
-    public GPUDepthStencilState DepthStencil { get; set; }
+    public GPUDepthStencilState? DepthStencil { get; set; }
     public GPUFragmentState? Fragment { get; set; }
     public GPUMultisampleState Multisample { get; set; }
     public GPUPrimitiveState Primitive { get; set; }

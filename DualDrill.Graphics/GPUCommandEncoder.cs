@@ -14,6 +14,7 @@ public partial interface IGPUCommandEncoder : IDisposable
     public IGPURenderPassEncoder BeginRenderPass(GPURenderPassDescriptor descriptor);
     public void ClearBuffer(IGPUBuffer buffer, ulong offset, ulong size);
     public void CopyBufferToBuffer(IGPUBuffer source, ulong sourceOffset, IGPUBuffer destination, ulong destinationOffset, ulong size);
+    public void CopyTextureToBuffer(GPUImageCopyTexture source, GPUImageCopyBuffer destination, GPUExtent3D copySize);
     public unsafe IGPUCommandBuffer Finish(GPUCommandBufferDescriptor descriptor);
 }
 

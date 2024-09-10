@@ -1,9 +1,12 @@
 ﻿using DotNext;
 using DualDrill.Interop;
 using Evergine.Bindings.WebGPU;
+using Silk.NET.SDL;
 using System.Globalization;
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Varena;
 namespace DualDrill.Graphics.Backend;
 using static Evergine.Bindings.WebGPU.WebGPUNative;
 using Backend = DualDrill.Graphics.Backend.WebGPUNETBackend;
@@ -18,6 +21,11 @@ internal readonly record struct WebGPUNETHandle<THandle, TResource>(
 public sealed partial class WebGPUNETBackend : IBackend<Backend>
 {
     public static Backend Instance { get; } = new();
+
+    private unsafe T* Alloc<T>(int count = 1) where T : unmanaged
+    {
+        return (T*)NativeMemory.AllocZeroed((nuint)count, (nuint)(sizeof(T)));
+    }
 
     public unsafe GPUInstance<Backend> CreateGPUInstance()
     {
@@ -327,9 +335,24 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return ToNative(((GPUBindGroupLayout<Backend>)layout).Handle);
     }
 
-    GPUShaderModule<Backend> IBackend<Backend>.CreateShaderModule(GPUDevice<Backend> handle, GPUShaderModuleDescriptor descriptor)
+    unsafe GPUShaderModule<Backend> IBackend<Backend>.CreateShaderModule(GPUDevice<Backend> handle, GPUShaderModuleDescriptor descriptor)
     {
-        throw new NotImplementedException();
+        using var codeUtf8 = InteropUtf8StringValue.Create(descriptor.Code);
+        var dc = new WGPUShaderModuleWGSLDescriptor
+        {
+            code = codeUtf8.CharPointer,
+            chain = new WGPUChainedStruct
+            {
+                sType = Native.WGPUSType.ShaderModuleWGSLDescriptor
+            }
+        };
+
+        var d = new WGPUShaderModuleDescriptor
+        {
+            nextInChain = &dc.chain,
+        };
+        var h = wgpuDeviceCreateShaderModule(ToNative(handle.Handle), &d);
+        return new(new(h.Handle));
     }
 
     GPUComputePipeline<Backend> IBackend<Backend>.CreateComputePipeline(GPUDevice<Backend> handle, GPUComputePipelineDescriptor descriptor)
@@ -342,105 +365,111 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPURenderPipeline<Backend> IBackend<Backend>.CreateRenderPipeline(GPUDevice<Backend> handle, GPURenderPipelineDescriptor descriptor)
     {
-        using var disposables = new CompositeDisposable();
-
+        // TODO: use arena based allocator for better performance and easier free
         WGPURenderPipelineDescriptor desc = new();
-        using var vertexEntryPoint = InteropUtf8StringValue.Create(descriptor.Vertex.EntryPoint);
-        using var fragmentEntryPoint = InteropUtf8StringValue.Create(descriptor.Fragment?.EntryPoint);
-
-        desc.vertex = ToNative(descriptor.Vertex);
-        desc.vertex.entryPoint = vertexEntryPoint.CharPointer;
-        var vertexConstants = stackalloc WGPUConstantEntry[descriptor.Vertex.Constants.Length];
-
-        WGPUConstantEntry* fragmentConstants = null;
-        WGPUFragmentState fragment = new()
+        try
         {
-            constantCount = (nuint)(descriptor.Fragment.HasValue ? descriptor.Fragment.Value.Constants.Length : 0),
-            constants = fragmentConstants
+            using var pipelineLabel = InteropUtf8StringValue.Create(descriptor.Label);
+            using var vertexEntryPoint = InteropUtf8StringValue.Create(descriptor.Vertex.EntryPoint);
+            using var fragmentEntryPoint = InteropUtf8StringValue.Create(descriptor.Fragment?.EntryPoint);
+
+            desc.label = pipelineLabel.CharPointer;
+            if (descriptor.Layout is not null)
+            {
+                desc.layout = ToNative(descriptor.Layout);
+            }
+            desc.vertex = ToNative(descriptor.Vertex);
+            desc.primitive = ToNative(descriptor.Primitive);
+            if (descriptor.DepthStencil is not null)
+            {
+                desc.depthStencil = Alloc<WGPUDepthStencilState>();
+                *desc.depthStencil = ToNative(descriptor.DepthStencil.Value);
+            }
+            
+            desc.multisample = ToNative(descriptor.Multisample);
+
+            if (descriptor.Fragment is not null)
+            {
+                desc.fragment = Alloc<WGPUFragmentState>();
+                ref var fragment = ref *desc.fragment;
+                *desc.fragment = ToNative(descriptor.Fragment.Value);
+            }
+
+            var result = wgpuDeviceCreateRenderPipeline(ToNative(handle.Handle), &desc);
+            return new(new(result.Handle));
+        }
+        finally
+        {
+            if (desc.fragment is not null)
+            {
+                Free(*desc.fragment);
+                NativeMemory.Free(desc.fragment);
+            }
+            Free(desc.vertex);
+        }
+    }
+
+    unsafe private WGPUFragmentState ToNative(GPUFragmentState fragment)
+    {
+        var result = new WGPUFragmentState
+        {
+            module = ToNative(fragment.Module),
+            constantCount = (ulong)fragment.Constants.Length,
+            targetCount = (ulong)fragment.Targets.Length
         };
-
-        var colorStateCount = 0;
-        if (descriptor.Fragment.HasValue)
+        if (fragment.EntryPoint is not null)
         {
-            colorStateCount = descriptor.Fragment.Value.Targets.Length;
+            result.entryPoint = MarshalString(fragment.EntryPoint);
         }
-
-        WGPUBlendState* fragmentBlendState = stackalloc WGPUBlendState[descriptor.Fragment?.Targets.Length ?? 0];
-
-        if (descriptor.Fragment.HasValue)
+        if (fragment.Constants.Length > 0)
         {
-            fragment.module = ToNative(descriptor.Fragment.Value.Module);
-            fragment.entryPoint = fragmentEntryPoint.CharPointer;
-            fragment.targetCount = (ulong)descriptor.Fragment.Value.Targets.Length;
-            WGPUColorTargetState* targets = stackalloc WGPUColorTargetState[descriptor.Fragment.Value.Targets.Length];
-            for (var i = 0; i < descriptor.Fragment.Value.Targets.Length; i++)
+            throw new NotSupportedException();
+        }
+        if (fragment.Targets.Length > 0)
+        {
+            result.targets = Alloc<WGPUColorTargetState>(fragment.Targets.Length);
+            for (var i = 0; i < fragment.Targets.Length; i++)
             {
-                var c = descriptor.Fragment.Value.Targets.Span[i];
-                targets[i] = ToNative(c);
-                if (c.Blend.HasValue)
-                {
-                    fragmentBlendState[i] = ToNative(c.Blend.Value);
-                    targets[i].blend = &(fragmentBlendState[i]);
-                }
-            }
-            fragment.targets = targets;
-        }
-
-        desc.primitive = ToNative(descriptor.Primitive);
-        desc.multisample = ToNative(descriptor.Multisample);
-        if (descriptor.Fragment.HasValue)
-        {
-            desc.fragment = &fragment;
-        }
-
-        if (descriptor.Layout is not null)
-        {
-            desc.layout = ToNative(descriptor.Layout);
-        }
-
-
-        var vertexBuffer = stackalloc WGPUVertexBufferLayout[descriptor.Vertex.Buffers.Length];
-        var attributesTotalCount = 0;
-        {
-            var index = 0;
-            foreach (var buffer in descriptor.Vertex.Buffers.Span)
-            {
-                vertexBuffer[index] = new WGPUVertexBufferLayout
-                {
-                    arrayStride = buffer.ArrayStride,
-                    attributeCount = (nuint)buffer.Attributes.Length,
-                };
-                attributesTotalCount += buffer.Attributes.Length;
-                index++;
+                result.targets[i] = ToNative(fragment.Targets.Span[i]);
             }
         }
-        //var attributes = stackalloc GPUVertexAttribute[attributesTotalCount];
+        return result;
+    }
+
+    private WGPUDepthStencilState ToNative(GPUDepthStencilState depthStencil)
+    {
+
+        return new()
         {
-            var bufferIndex = 0;
-            //var attributeIndex = 0;
-            foreach (var buffer in descriptor.Vertex.Buffers.Span)
-            {
-                var pin = buffer.Attributes.Pin();
-                disposables.Add(pin);
-                vertexBuffer[bufferIndex].attributes = (GPUVertexAttribute*)pin.Pointer;
+            depthWriteEnabled = depthStencil.DepthWriteEnabled,
+            depthCompare = ToNative(depthStencil.DepthCompare),
+            stencilFront = ToNative(depthStencil.StencilFront),
+            stencilBack = ToNative(depthStencil.StencilBack),
+            stencilReadMask = depthStencil.StencilReadMask,
+            stencilWriteMask = depthStencil.StencilWriteMask,
+            depthBias = depthStencil.DepthBias,
+            depthBiasSlopeScale = depthStencil.DepthBiasSlopeScale,
+            depthBiasClamp = depthStencil.DepthBiasClamp,
+        };
+    }
 
-                //foreach (var attribute in buffer.Attributes.Span)
-                //{
-                //    attributes[attributeIndex] = attribute;
-                //    Console.WriteLine(attributes[attributeIndex].Format);
-                //    Console.WriteLine(attribute.Format);
-                //    attributeIndex++;
-                //}
+    private WGPUStencilFaceState ToNative(GPUStencilFaceState stencilFront)
+    {
+        return new WGPUStencilFaceState
+        {
+            compare = ToNative(stencilFront.Compare),
+            depthFailOp = ToNative(stencilFront.DepthFailOp),
+            failOp = ToNative(stencilFront.FailOp),
+            passOp = ToNative(stencilFront.PassOp)
+        };
+    }
 
-                bufferIndex++;
-            }
+    unsafe private void Free(WGPUFragmentState value)
+    {
+        if (value.targets is not null)
+        {
+            // TODO: implement free
         }
-        desc.vertex.buffers = descriptor.Vertex.Buffers.Length > 0 ? vertexBuffer : null;
-
-        var result = wgpuDeviceCreateRenderPipeline(ToNative(handle.Handle), &desc);
-        return new(new(result.Handle));
-
-
     }
 
     private WGPUPipelineLayout ToNative(IGPUPipelineLayout layout)
@@ -488,25 +517,103 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         };
     }
 
-    private WGPUColorTargetState ToNative(GPUColorTargetState c)
+    unsafe private WGPUColorTargetState ToNative(GPUColorTargetState c)
     {
-        return new()
+        var result = new WGPUColorTargetState()
         {
             format = ToNative(c.Format),
-            writeMask = ToNative(c.WriteMask)
+            writeMask = ToNative(c.WriteMask),
         };
+        if (c.Blend is not null)
+        {
+            result.blend = Alloc<WGPUBlendState>();
+            *result.blend = ToNative(c.Blend.Value);
+        }
+        return result;
     }
 
-    private WGPUVertexState ToNative(GPUVertexState vertex)
+    unsafe private WGPUVertexState ToNative(GPUVertexState vertex)
     {
         if (vertex.Constants.Length > 0)
         {
             throw new NotImplementedException("Constant Entry is not support yet");
         }
-        return new WGPUVertexState()
+        var result = new WGPUVertexState()
         {
             module = ToNative(vertex.Module),
         };
+        if (vertex.EntryPoint is not null)
+        {
+            result.entryPoint = (char*)MarshalString(vertex.EntryPoint);
+        }
+        if (vertex.Buffers.Length > 0)
+        {
+            result.buffers = Alloc<WGPUVertexBufferLayout>(vertex.Buffers.Length);
+            result.bufferCount = (ulong)vertex.Buffers.Length;
+            for (var i = 0; i < vertex.Buffers.Length; i++)
+            {
+                result.buffers[i] = ToNative(vertex.Buffers.Span[i]);
+            }
+        }
+        return result;
+    }
+
+    unsafe private WGPUVertexBufferLayout ToNative(GPUVertexBufferLayout value)
+    {
+        var result = new WGPUVertexBufferLayout()
+        {
+            arrayStride = value.ArrayStride,
+            stepMode = ToNative(value.StepMode),
+            attributeCount = (ulong)value.Attributes.Length
+        };
+        if (value.Attributes.Length > 0)
+        {
+            result.attributes = Alloc<WGPUVertexAttribute>(value.Attributes.Length);
+            for (var i = 0; i < value.Attributes.Length; i++)
+            {
+                result.attributes[i] = ToNative(value.Attributes.Span[i]);
+            }
+        }
+        return result;
+    }
+
+    private WGPUVertexAttribute ToNative(GPUVertexAttribute value)
+    {
+        return new WGPUVertexAttribute()
+        {
+            format = ToNative(value.Format),
+            offset = value.Offset,
+            shaderLocation = (uint)value.ShaderLocation
+        };
+    }
+
+    unsafe private char* MarshalString(string value)
+    {
+        var size = System.Text.Encoding.UTF8.GetByteCount(value) + 1;
+        var buffer = NativeMemory.Alloc((nuint)size);
+        System.Text.Encoding.UTF8.GetBytes(value, new Span<byte>(buffer, size));
+        ((byte*)buffer)[size - 1] = 0;
+        return (char*)buffer;
+    }
+
+    unsafe void Free(WGPUVertexState value)
+    {
+        if (value.entryPoint is not null)
+        {
+            NativeMemory.Free(value.entryPoint);
+        }
+        if (value.buffers is not null)
+        {
+            foreach (var b in value.GetBuffers())
+            {
+                Free(b);
+            }
+        }
+        NativeMemory.Free(value.buffers);
+    }
+
+    unsafe void Free(WGPUVertexBufferLayout value)
+    {
     }
 
     private void PopolateNative(ref WGPUFragmentState target, GPUVertexState value)
@@ -555,9 +662,10 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    ReadOnlySpan<byte> IBackend<Backend>.GetMappedRange(GPUBuffer<Backend> handle, ulong offset, ulong size)
+    unsafe Span<byte> IBackend<Backend>.GetMappedRange(GPUBuffer<Backend> handle, ulong offset, ulong size)
     {
-        throw new NotImplementedException();
+        var ptr = wgpuBufferGetMappedRange(ToNative(handle.Handle), offset, size);
+        return new(ptr, (int)size);
     }
 
     WGPUColor ToNative(GPUColor c)
@@ -717,9 +825,25 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         wgpuQueueWriteBuffer(ToNative(handle.Handle), ToNative(buffer.Handle), bufferOffset, (void*)data, size);
     }
 
-    void IBackend<Backend>.WriteTexture(GPUQueue<Backend> handle, GPUImageCopyTexture destination, nint data, GPUImageDataLayout dataLayout, GPUExtent3D size)
+    unsafe void IBackend<Backend>.WriteTexture(GPUQueue<Backend> handle, GPUImageCopyTexture destination, ReadOnlySpan<byte> data, GPUImageDataLayout dataLayout, GPUExtent3D size)
     {
-        throw new NotImplementedException();
+        var nativeDestination = new WGPUImageCopyTexture
+        {
+            aspect = ToNative(destination.Aspect),
+            mipLevel = destination.MipLevel,
+            origin = ToNative(destination.Origin),
+            texture = ToNative(destination.Texture),
+        };
+        var nativeLayout = ToNative(dataLayout);
+        var nativeExtend = ToNative(size);
+        wgpuQueueWriteTexture(
+            ToNative(handle.Handle),
+            &nativeDestination,
+            Unsafe.AsPointer(ref MemoryMarshal.GetReference(data)),
+            (nuint)data.Length,
+            &nativeLayout,
+            &nativeExtend
+        );
     }
 
 
@@ -932,3 +1056,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         wgpuSurfacePresent(ToNative(surface.Handle));
     }
 }
+static class WebGPUNETExtension
+{
+    public unsafe static Span<WGPUVertexBufferLayout> GetBuffers(this WGPUVertexState value)
+             => new(value.buffers, (int)value.bufferCount);
+}
+

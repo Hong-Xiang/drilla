@@ -8,8 +8,8 @@ namespace DualDrill.Graphics;
 public partial interface IGPUBuffer : IDisposable
 {
     public ulong Length { get; }
-    ReadOnlySpan<byte> GetMappedRange(ulong offset, ulong size);
-    ValueTask MapAsyncAsync(GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation);
+    Span<byte> GetMappedRange(ulong offset, ulong size);
+    ValueTask MapAsync(GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation);
     void Unmap();
 }
 
@@ -19,12 +19,12 @@ public sealed partial record class GPUBuffer<TBackend>(GPUHandle<TBackend, GPUBu
 {
 
     public required ulong Length { get; init; }
-    public ReadOnlySpan<byte> GetMappedRange(ulong offset, ulong size)
+    public Span<byte> GetMappedRange(ulong offset, ulong size)
     {
         return TBackend.Instance.GetMappedRange(this, offset, size);
     }
 
-    public ValueTask MapAsyncAsync(
+    public ValueTask MapAsync(
      GPUMapMode mode
     , ulong offset
     , ulong size

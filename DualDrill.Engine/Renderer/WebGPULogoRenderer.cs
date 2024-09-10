@@ -170,7 +170,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         queue.WriteBuffer(UniformBuffer, 0, [0.0f, 0.0f, 640f / 480f, 1.0f]);
     }
 
-    public void Render(double time, GPUQueue queue, GPUTexture renderTarget, State state)
+    public void Render(double time, IGPUQueue queue, IGPUTexture renderTarget, State state)
     {
         using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());

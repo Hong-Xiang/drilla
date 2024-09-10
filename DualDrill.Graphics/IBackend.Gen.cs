@@ -39,7 +39,7 @@ public partial interface IBackend<TBackend>
 
     #region GPUBuffer methods
 
-    internal ReadOnlySpan<byte> GetMappedRange(
+    internal Span<byte> GetMappedRange(
         GPUBuffer<TBackend> handle,
         ulong offset,
         ulong size);
@@ -273,7 +273,7 @@ public partial interface IBackend<TBackend>
     internal void WriteTexture(
         GPUQueue<TBackend> handle,
         GPUImageCopyTexture destination,
-        nint data,
+        ReadOnlySpan<byte> data,
         GPUImageDataLayout dataLayout,
         GPUExtent3D size);
 

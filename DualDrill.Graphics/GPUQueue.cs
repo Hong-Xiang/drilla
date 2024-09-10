@@ -5,17 +5,27 @@ using System.Runtime.InteropServices;
 
 namespace DualDrill.Graphics;
 
+
 public partial interface IGPUQueue : IDisposable
 {
     public ValueTask OnSubmittedWorkDoneAsync(CancellationToken cancellation);
     public void Submit(IReadOnlyList<IGPUCommandBuffer> commandBuffers);
-    public void WriteBuffer<T>(IGPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<T> data) where T : unmanaged;
+    public void WriteBuffer(IGPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<byte> data);
     public void WriteTexture(GPUImageCopyTexture destination, ReadOnlySpan<byte> data, GPUImageDataLayout dataLayout, GPUExtent3D size);
 }
 
+public static partial class GraphicsExtension
+{
+    public static void WriteBuffer<T>(this IGPUQueue queue, IGPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<T> data)
+        where T : unmanaged
+    {
+        queue.WriteBuffer(buffer, bufferOffset, MemoryMarshal.Cast<T, byte>(data));
+    }
+}
+
 public sealed partial record class GPUQueue<TBackend>(GPUHandle<TBackend, GPUQueue<TBackend>> Handle)
-    : IDisposable, IGPUQueue
-    where TBackend : IBackend<TBackend>
+: IDisposable, IGPUQueue
+where TBackend : IBackend<TBackend>
 {
 
     public ValueTask OnSubmittedWorkDoneAsync(CancellationToken cancellation)
@@ -28,23 +38,16 @@ public sealed partial record class GPUQueue<TBackend>(GPUHandle<TBackend, GPUQue
         TBackend.Instance.Submit(this, (IReadOnlyList<GPUCommandBuffer<TBackend>>)commandBuffers);
     }
 
-    unsafe public void WriteBuffer<T>(IGPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<T> data)
-        where T : unmanaged
+    unsafe public void WriteBuffer(IGPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<byte> data)
     {
-        fixed (T* p = data)
-        {
-            TBackend.Instance.WriteBuffer(this, (GPUBuffer<TBackend>)buffer, bufferOffset, (nint)p, 0, (ulong)data.Length * (ulong)sizeof(T));
-        }
+        var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(data));
+        TBackend.Instance.WriteBuffer(this, (GPUBuffer<TBackend>)buffer, bufferOffset, (nint)ptr, 0, (ulong)data.Length);
     }
-
 
 
     unsafe public void WriteTexture(GPUImageCopyTexture destination, ReadOnlySpan<byte> data, GPUImageDataLayout dataLayout, GPUExtent3D size)
     {
-        fixed (byte* p = data)
-        {
-            TBackend.Instance.WriteTexture(this, destination, (nint)p, dataLayout, size);
-        }
+        TBackend.Instance.WriteTexture(this, destination, data, dataLayout, size);
     }
 
     public void Dispose()
@@ -78,46 +81,46 @@ public sealed partial class GPUQueue
         WGPU.QueueWriteBuffer(Handle, buffer.Handle, bufferOffset, ptr, (nuint)byteSpan.Length);
     }
 
-    public unsafe void WriteTexture(
-        GPUImageCopyTexture destination,
-        ReadOnlySpan<byte> data,
-        GPUImageDataLayout layout,
-        GPUExtent3D extent)
-    {
-        var nativeDestination = new WGPUImageCopyTexture
-        {
-            aspect = destination.Aspect,
-            mipLevel = (uint)destination.MipLevel,
-            origin = new()
-            {
-                x = (uint)destination.Origin.X,
-                y = (uint)destination.Origin.Y,
-                z = (uint)destination.Origin.Z,
-            },
-            texture = destination.Texture.Handle,
-        };
-        var nativeLayout = new WGPUTextureDataLayout
-        {
-            offset = layout.Offset,
-            bytesPerRow = (uint)layout.BytesPerRow,
-            rowsPerImage = (uint)layout.RowsPerImage,
-        };
-        var nativeExtend = new WGPUExtent3D
-        {
-            width = (uint)extent.Width,
-            height = (uint)extent.Height,
-            depthOrArrayLayers = (uint)extent.DepthOrArrayLayers
-        };
-        var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(data));
-        WGPU.QueueWriteTexture(
-            Handle,
-            &nativeDestination,
-            ptr,
-            (nuint)data.Length,
-            &nativeLayout,
-            &nativeExtend
-        );
-    }
+    //public unsafe void WriteTexture(
+    //    GPUImageCopyTexture destination,
+    //    ReadOnlySpan<byte> data,
+    //    GPUImageDataLayout layout,
+    //    GPUExtent3D extent)
+    //{
+    //    var nativeDestination = new WGPUImageCopyTexture
+    //    {
+    //        aspect = destination.Aspect,
+    //        mipLevel = (uint)destination.MipLevel,
+    //        origin = new()
+    //        {
+    //            x = (uint)destination.Origin.X,
+    //            y = (uint)destination.Origin.Y,
+    //            z = (uint)destination.Origin.Z,
+    //        },
+    //        texture = destination.Texture.Handle,
+    //    };
+    //    var nativeLayout = new WGPUTextureDataLayout
+    //    {
+    //        offset = layout.Offset,
+    //        bytesPerRow = (uint)layout.BytesPerRow,
+    //        rowsPerImage = (uint)layout.RowsPerImage,
+    //    };
+    //    var nativeExtend = new WGPUExtent3D
+    //    {
+    //        width = (uint)extent.Width,
+    //        height = (uint)extent.Height,
+    //        depthOrArrayLayers = (uint)extent.DepthOrArrayLayers
+    //    };
+    //    var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(data));
+    //    WGPU.QueueWriteTexture(
+    //        Handle,
+    //        &nativeDestination,
+    //        ptr,
+    //        (nuint)data.Length,
+    //        &nativeLayout,
+    //        &nativeExtend
+    //    );
+    //}
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     unsafe static void QueueWorkDone(GPUQueueWorkDoneStatus status, void* data)
