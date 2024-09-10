@@ -33,5 +33,6 @@ public sealed class GPUEnumCodeGen
             sb.AppendLine(",");
         }
         sb.AppendLine("}");
+        sb.AppendLine();
     }
 }

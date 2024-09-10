@@ -6,14 +6,14 @@ namespace DualDrill.Engine.Renderer;
 
 public sealed class ClearColorRenderer : IRenderer<Vector3>
 {
-    public ClearColorRenderer(GPUDevice device)
+    public ClearColorRenderer(IGPUDevice device)
     {
         Device = device;
     }
 
-    public GPUDevice Device { get; }
+    public IGPUDevice Device { get; }
 
-    public void Render(double time, GPUQueue queue, GPUTexture texture, Vector3 data)
+    public void Render(double time, IGPUQueue queue, IGPUTexture texture, Vector3 data)
     {
         using var view = texture.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());
@@ -57,7 +57,7 @@ public sealed class ClearColorRenderer2
         {
             ColorAttachments = (GPURenderPassColorAttachment[])[
                 new GPURenderPassColorAttachment() {
-                    View = view,
+                    //View = view,
                     LoadOp = GPULoadOp.Clear,
                     StoreOp = GPUStoreOp.Store,
                     ClearValue = new GPUColor {

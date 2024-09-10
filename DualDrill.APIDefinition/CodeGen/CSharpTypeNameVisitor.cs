@@ -4,30 +4,42 @@ using DualDrill.ApiGen.DrillLang.Types;
 
 namespace DualDrill.ApiGen.CodeGen;
 
+public readonly record struct CSharpTypeNameVisitorOption(
+           CSharpTypeNameVisitorOption.TypeUsage Usage = CSharpTypeNameVisitorOption.TypeUsage.Unknown,
+           bool UseValueTask = true)
+{
+    public enum TypeUsage
+    {
+        Unknown,
+        ReturnType,
+        PropertyType,
+        ParameterType
+    }
+
+    public static CSharpTypeNameVisitorOption Default = new(TypeUsage.Unknown, true);
+    public static CSharpTypeNameVisitorOption MethodReturnType = Default with
+    {
+        Usage = TypeUsage.ReturnType
+    };
+    public static CSharpTypeNameVisitorOption ParameterType = Default with
+    {
+        Usage = TypeUsage.ParameterType
+    };
+}
+
+
+
 public sealed record class CSharpTypeNameVisitor(
-    CSharpTypeNameVisitor.VisitorOption Option,
+    CSharpTypeNameVisitorOption Option,
     INameTransform Transform
 ) : ITypeReferenceVisitor<string>
 {
     public static CSharpTypeNameVisitor Default { get; }
-        = new(new VisitorOption
+        = new(new CSharpTypeNameVisitorOption
         {
             UseValueTask = true,
-            Usage = VisitorOption.TypeUsage.Unknown,
+            Usage = CSharpTypeNameVisitorOption.TypeUsage.Unknown,
         }, IdentityNameTransform.Instance);
-
-    public readonly record struct VisitorOption(
-            VisitorOption.TypeUsage Usage = VisitorOption.TypeUsage.Unknown,
-            bool UseValueTask = true)
-    {
-        public enum TypeUsage
-        {
-            Unknown,
-            ReturnType,
-            PropertyType,
-            ParameterType
-        }
-    }
 
     public string VisitBool(BoolTypeReference type) => "bool";
 
@@ -83,7 +95,7 @@ public sealed record class CSharpTypeNameVisitor(
     public string VisitSequence(SequenceTypeReference type)
         => Option.Usage switch
         {
-            VisitorOption.TypeUsage.PropertyType => $"ReadOnlyMemory<{type.Type.AcceptVisitor(this)}>",
+            CSharpTypeNameVisitorOption.TypeUsage.PropertyType => $"ReadOnlyMemory<{type.Type.AcceptVisitor(this)}>",
             _ => $"ReadOnlySpan<{type.Type.AcceptVisitor(this)}>"
         };
 

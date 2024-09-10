@@ -97,20 +97,21 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         CancellationToken cancellation
     )
     {
-        WGPUDeviceDescriptor descriptor_ = new();
-        var result = new RequestCallbackResult<WGPUDeviceImpl, GPURequestDeviceStatus>();
-        WGPU.AdapterRequestDevice(
-            ToNativePointer(adapter.Handle),
-            &descriptor_,
-            &RequestDeviceCallback,
-            &result
-        );
-        if (result.Handle is null)
-        {
-            throw new GraphicsApiException($"Request {nameof(GPUDevice)} failed, status {result.Status}, message {Marshal.PtrToStringUTF8((nint)result.Message)}");
-        }
-        WGPU.DeviceSetUncapturedErrorCallback(result.Handle, &DeviceUncapturedErrorCallback, null);
-        return ValueTask.FromResult(new GPUDevice(result.Handle));
+        //WGPUDeviceDescriptor descriptor_ = new();
+        //var result = new RequestCallbackResult<WGPUDeviceImpl, GPURequestDeviceStatus>();
+        //WGPU.AdapterRequestDevice(
+        //    ToNativePointer(adapter.Handle),
+        //    &descriptor_,
+        //    &RequestDeviceCallback,
+        //    &result
+        //);
+        //if (result.Handle is null)
+        //{
+        //    throw new GraphicsApiException($"Request {nameof(GPUDevice)} failed, status {result.Status}, message {Marshal.PtrToStringUTF8((nint)result.Message)}");
+        //}
+        //WGPU.DeviceSetUncapturedErrorCallback(result.Handle, &DeviceUncapturedErrorCallback, null);
+        //return ValueTask.FromResult(new GPUDevice(result.Handle));
+        throw new NotImplementedException();
     }
 
     void IGPUHandleDisposer<WGPUBackend, GPUAdapter<WGPUBackend>>.DisposeHandle(GPUHandle<WGPUBackend, GPUAdapter<WGPUBackend>> handle)
@@ -444,7 +445,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    void IBackend<WGPUBackend>.Submit(GPUQueue<WGPUBackend> handle, ReadOnlySpan<GPUCommandBuffer<WGPUBackend>> commandBuffers)
+    void IBackend<WGPUBackend>.Submit(GPUQueue<WGPUBackend> handle, IReadOnlyList<GPUCommandBuffer<WGPUBackend>> commandBuffers)
     {
         throw new NotImplementedException();
     }
@@ -454,7 +455,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    void IBackend<WGPUBackend>.WriteTexture(GPUQueue<WGPUBackend> handle, GPUImageCopyTexture destination, nint data, GPUTextureDataLayout dataLayout, GPUExtent3D size)
+    void IBackend<WGPUBackend>.WriteTexture(GPUQueue<WGPUBackend> handle, GPUImageCopyTexture destination, nint data, GPUImageDataLayout dataLayout, GPUExtent3D size)
     {
         throw new NotImplementedException();
     }

@@ -10,9 +10,9 @@ public class StaticTriangleRenderer : IRenderer<StaticTriangleRenderer.State>
     {
     }
 
-    readonly GPUDevice Device;
-    GPUShaderModule ShaderModule { get; }
-    GPURenderPipeline Pipeline { get; }
+    readonly IGPUDevice Device;
+    IGPUShaderModule ShaderModule { get; }
+    IGPURenderPipeline Pipeline { get; }
 
     static readonly string SHADER_CODE = @"
       @vertex fn vs(
@@ -35,11 +35,11 @@ public class StaticTriangleRenderer : IRenderer<StaticTriangleRenderer.State>
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
 
-    public StaticTriangleRenderer(GPUDevice device)
+    public StaticTriangleRenderer(IGPUDevice device)
     {
         Device = device;
-        ShaderModule = Device.CreateShaderModule(SHADER_CODE);
-        Pipeline = GPURenderPipeline.Create(Device, new GPURenderPipelineDescriptor()
+        ShaderModule = Device.CreateShaderModule(new() { Code = SHADER_CODE });
+        Pipeline = Device.CreateRenderPipeline( new GPURenderPipelineDescriptor()
         {
             Vertex = new GPUVertexState()
             {
@@ -55,7 +55,7 @@ public class StaticTriangleRenderer : IRenderer<StaticTriangleRenderer.State>
                     new()
                     {
                         Format = TextureFormat,
-                        WriteMask = (uint)GPUColorWriteMask.All
+                        WriteMask = GPUColorWriteMask.All
                     }
                 }
             },
@@ -66,7 +66,7 @@ public class StaticTriangleRenderer : IRenderer<StaticTriangleRenderer.State>
         });
     }
 
-    public void Render(double time, GPUQueue queue, GPUTexture texture, State data)
+    public void Render(double time, IGPUQueue queue, IGPUTexture texture, State data)
     {
         using var view = texture.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());

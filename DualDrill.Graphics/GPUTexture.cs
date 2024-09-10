@@ -2,7 +2,7 @@
 
 namespace DualDrill.Graphics;
 
-public partial interface IGPUTexture
+public partial interface IGPUTexture : IDisposable
 {
     string Label { get; }
     int Width { get; }

@@ -4,9 +4,45 @@ using System.Runtime.InteropServices;
 
 namespace DualDrill.Graphics;
 
-public sealed partial record class GPUBuffer<TBackend>
+
+public partial interface IGPUBuffer : IDisposable
 {
+    public ulong Length { get; }
+    ReadOnlySpan<byte> GetMappedRange(ulong offset, ulong size);
+    ValueTask MapAsyncAsync(GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation);
+    void Unmap();
+}
+
+public sealed partial record class GPUBuffer<TBackend>(GPUHandle<TBackend, GPUBuffer<TBackend>> Handle)
+    : IDisposable, IGPUBuffer
+    where TBackend : IBackend<TBackend>
+{
+
     public required ulong Length { get; init; }
+    public ReadOnlySpan<byte> GetMappedRange(ulong offset, ulong size)
+    {
+        return TBackend.Instance.GetMappedRange(this, offset, size);
+    }
+
+    public ValueTask MapAsyncAsync(
+     GPUMapMode mode
+    , ulong offset
+    , ulong size
+    , CancellationToken cancellation
+    )
+    {
+        return TBackend.Instance.MapAsyncAsync(this, mode, offset, size, cancellation);
+    }
+
+    public void Unmap()
+    {
+        TBackend.Instance.Unmap(this);
+    }
+
+    public void Dispose()
+    {
+        TBackend.Instance.DisposeHandle(Handle);
+    }
 }
 
 

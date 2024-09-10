@@ -2,7 +2,7 @@
 
 namespace DualDrill.Engine.Services;
 
-public sealed class DevicePollHostedService(GPUDevice Device) : IHostableBackgroundService
+public sealed class DevicePollHostedService(IGPUDevice Device) : IHostableBackgroundService
 {
     // TODO: find proper way to pool device event (used for async operation like map buffer async)
     public async Task ExecuteAsync(CancellationToken stoppingToken)

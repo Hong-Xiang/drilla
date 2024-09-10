@@ -9,8 +9,8 @@ public partial interface IGPUQueue : IDisposable
 {
     public ValueTask OnSubmittedWorkDoneAsync(CancellationToken cancellation);
     public void Submit(IReadOnlyList<IGPUCommandBuffer> commandBuffers);
-    public void WriteBuffer(IGPUBuffer buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size);
-    public void WriteTexture(GPUImageCopyTexture destination, nint data, GPUTextureDataLayout dataLayout, GPUExtent3D size);
+    public void WriteBuffer<T>(IGPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<T> data) where T : unmanaged;
+    public void WriteTexture(GPUImageCopyTexture destination, ReadOnlySpan<byte> data, GPUImageDataLayout dataLayout, GPUExtent3D size);
 }
 
 public sealed partial record class GPUQueue<TBackend>(GPUHandle<TBackend, GPUQueue<TBackend>> Handle)
@@ -25,17 +25,26 @@ public sealed partial record class GPUQueue<TBackend>(GPUHandle<TBackend, GPUQue
 
     public void Submit(IReadOnlyList<IGPUCommandBuffer> commandBuffers)
     {
-        TBackend.Instance.Submit(this, commandBuffers);
+        TBackend.Instance.Submit(this, (IReadOnlyList<GPUCommandBuffer<TBackend>>)commandBuffers);
     }
 
-    public void WriteBuffer(GPUBuffer<TBackend> buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size)
+    unsafe public void WriteBuffer<T>(IGPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<T> data)
+        where T : unmanaged
     {
-        TBackend.Instance.WriteBuffer(this, buffer, bufferOffset, data, dataOffset, size);
+        fixed (T* p = data)
+        {
+            TBackend.Instance.WriteBuffer(this, (GPUBuffer<TBackend>)buffer, bufferOffset, (nint)p, 0, (ulong)data.Length * (ulong)sizeof(T));
+        }
     }
 
-    public void WriteTexture(GPUImageCopyTexture destination, nint data, GPUTextureDataLayout dataLayout, GPUExtent3D size)
+
+
+    unsafe public void WriteTexture(GPUImageCopyTexture destination, ReadOnlySpan<byte> data, GPUImageDataLayout dataLayout, GPUExtent3D size)
     {
-        TBackend.Instance.WriteTexture(this, destination, data, dataLayout, size);
+        fixed (byte* p = data)
+        {
+            TBackend.Instance.WriteTexture(this, destination, (nint)p, dataLayout, size);
+        }
     }
 
     public void Dispose()
@@ -72,7 +81,7 @@ public sealed partial class GPUQueue
     public unsafe void WriteTexture(
         GPUImageCopyTexture destination,
         ReadOnlySpan<byte> data,
-        GPUTextureDataLayout layout,
+        GPUImageDataLayout layout,
         GPUExtent3D extent)
     {
         var nativeDestination = new WGPUImageCopyTexture

@@ -8,8 +8,7 @@ namespace DualDrill.Engine.Services;
 
 public sealed record class FrameRenderService(
     ILogger<FrameRenderService> Logger,
-    GPUDevice Device,
-    IGPUDevice Device2,
+    IGPUDevice Device,
     WebGPULogoRenderer LogoRenderer,
     RotateCubeRenderer CubeRenderer,
     ClearColorRenderer ClearColorRenderer,
@@ -17,10 +16,9 @@ public sealed record class FrameRenderService(
     //VolumeRenderer VolumeRenderer
     ) : IFrameRenderService
 {
-    public async ValueTask RenderAsync(long frame, RenderScene scene, GPUTexture renderTarget, CancellationToken cancellation)
+    public async ValueTask RenderAsync(long frame, RenderScene scene, IGPUTexture renderTarget, CancellationToken cancellation)
     {
-        using var queue = Device.GetQueue();
-        var queue2 = Device2.Queue;
+        var queue = Device.Queue;
         ClearColorRenderer.Render(frame, queue, renderTarget, scene.ClearColor);
         //VolumeRenderer.Render(frame, queue, renderTarget, new()
         //{

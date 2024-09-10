@@ -4,8 +4,8 @@ namespace DualDrill.Graphics;
 
 public partial interface IGPUSurface : IDisposable
 {
-    GPUTexture? GetCurrentTextureLegacy();
-    IGPUTexture? GetCurrentTexture2();
+    //GPUTexture? GetCurrentTextureLegacy();
+    IGPUTexture? GetCurrentTexture();
     void Configure(GPUSurfaceConfiguration configuration);
     void Unconfigure();
     void Present();
@@ -34,12 +34,7 @@ public sealed partial record class GPUSurface<TBackend>(GPUHandle<TBackend, GPUS
         TBackend.Instance.DisposeHandle(Handle);
     }
 
-    GPUTexture? IGPUSurface.GetCurrentTextureLegacy()
-    {
-        throw new NotImplementedException();
-    }
-
-    public IGPUTexture? GetCurrentTexture2()
+    public IGPUTexture? GetCurrentTexture()
     {
         return TBackend.Instance.GetCurrentTexture(this);
     }
@@ -95,25 +90,25 @@ public sealed partial class GPUSurface : IDisposable
         return result;
     }
 
-    public unsafe void Configure(GPUSurfaceConfiguration configuration)
-    {
-        fixed (GPUTextureFormat* viewFormats = configuration.ViewFormats)
-        {
-            var nativeConfig = new WGPUSurfaceConfiguration
-            {
-                device = configuration.Device.Handle,
-                format = configuration.Format,
-                usage = (uint)configuration.Usage,
-                viewFormatCount = (nuint)configuration.ViewFormats.Length,
-                viewFormats = viewFormats,
-                alphaMode = configuration.AlphaMode,
-                width = (uint)configuration.Width,
-                height = (uint)configuration.Height,
-                presentMode = configuration.PresentMode
-            };
-            WGPU.SurfaceConfigure(Handle, &nativeConfig);
-        }
-    }
+    //public unsafe void Configure(GPUSurfaceConfiguration configuration)
+    //{
+    //    fixed (GPUTextureFormat* viewFormats = configuration.ViewFormats)
+    //    {
+    //        var nativeConfig = new WGPUSurfaceConfiguration
+    //        {
+    //            device = configuration.Device.Handle,
+    //            format = configuration.Format,
+    //            usage = (uint)configuration.Usage,
+    //            viewFormatCount = (nuint)configuration.ViewFormats.Length,
+    //            viewFormats = viewFormats,
+    //            alphaMode = configuration.AlphaMode,
+    //            width = (uint)configuration.Width,
+    //            height = (uint)configuration.Height,
+    //            presentMode = configuration.PresentMode
+    //        };
+    //        WGPU.SurfaceConfigure(Handle, &nativeConfig);
+    //    }
+    //}
 
     public unsafe void Unconfigure()
     {

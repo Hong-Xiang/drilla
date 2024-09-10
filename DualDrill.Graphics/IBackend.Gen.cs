@@ -274,7 +274,7 @@ public partial interface IBackend<TBackend>
         GPUQueue<TBackend> handle,
         GPUImageCopyTexture destination,
         nint data,
-        GPUTextureDataLayout dataLayout,
+        GPUImageDataLayout dataLayout,
         GPUExtent3D size);
 
     #endregion

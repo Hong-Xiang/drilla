@@ -7,15 +7,58 @@ namespace DualDrill.ApiGen.CodeGen;
 
 public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
 {
-    INameTransform HandleRename = new BackendHandleNameTransform(Module);
+    INameTransform HandleRename = new InterfaceHandleNameTransform(Module);
 
     ImmutableHashSet<string> HandleNames = [.. Module.Handles.Select(h => h.Name)];
-    public void EmitHandleDeclaration(StringBuilder sb, HandleDeclaration decl)
+
+    public void Emit(StringBuilder sb, HandleDeclaration decl)
     {
-        sb.AppendLine($"public partial interface I{decl.Name}");
+        EmitHandleInterfaceDeclaration(sb, decl);
+        EmitHandleDedinition(sb, decl);
+    }
+
+    public void EmitHandleInterfaceDeclaration(StringBuilder sb, HandleDeclaration decl)
+    {
+        sb.AppendLine($"public partial interface I{decl.Name} : IDisposable");
         sb.AppendLine("{");
+        foreach (var m in decl.Methods)
+        {
+            EmitMethodDeclaration(sb, decl, m);
+            sb.AppendLine(";");
+        }
         sb.AppendLine("}");
         sb.AppendLine();
+    }
+
+    void EmitMethodDeclaration(StringBuilder sb, HandleDeclaration handle, MethodDeclaration method)
+    {
+
+        var isFirstArgument = true;
+        sb.Append($"public ");
+        sb.Append(method.ReturnType.GetCSharpTypeName(
+                            option: CSharpTypeNameVisitorOption.ParameterType,
+                            transform: HandleRename
+                        ));
+        sb.Append(' ');
+        sb.Append(method.Name);
+        sb.AppendLine(" (");
+        foreach (var p in method.Parameters)
+        {
+            sb.Append(isFirstArgument ? " " : ",");
+            isFirstArgument = false;
+
+            sb.Append(p.Type.GetCSharpTypeName(
+                option: CSharpTypeNameVisitorOption.ParameterType,
+                transform: HandleRename
+            ));
+            sb.Append(' ');
+            sb.AppendLine(p.Name);
+        }
+        sb.Append(")");
+    }
+
+    public void EmitHandleDedinition(StringBuilder sb, HandleDeclaration decl)
+    {
         sb.AppendLine($"public sealed partial record class {decl.Name}<TBackend>(GPUHandle<TBackend, {decl.Name}<TBackend>> Handle)");
         if (decl.Name == "GPUSurface")
         {
@@ -54,41 +97,24 @@ public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
     {
         foreach (var m in decl.Methods)
         {
-            var isFirstArgument = true;
-            sb.Append($"public ");
-            sb.Append(m.ReturnType.GetCSharpTypeName(
-                                option: CSharpTypeNameVisitor.Default.Option with
-                                {
-                                    Usage = CSharpTypeNameVisitor.VisitorOption.TypeUsage.ParameterType
-                                },
-                                transform: HandleRename
-                            ));
-            sb.Append(' ');
-            sb.Append(m.Name);
-            sb.AppendLine(" (");
-            foreach (var p in m.Parameters)
+            if (m.ReturnType is FutureTypeReference)
             {
-                sb.Append(isFirstArgument ? " " : ",");
-                isFirstArgument = false;
-
-                sb.Append(p.Type.GetCSharpTypeName(
-                    option: CSharpTypeNameVisitor.Default.Option with
-                    {
-                        Usage = CSharpTypeNameVisitor.VisitorOption.TypeUsage.ParameterType
-                    },
-                    transform: HandleRename
-                ));
-                sb.Append(' ');
-                sb.AppendLine(p.Name);
+                continue;
             }
-            sb.AppendLine(")");
+            EmitMethodDeclaration(sb, decl, m);
+            sb.AppendLine();
             sb.AppendLine("{");
             if (!(m.ReturnType is VoidTypeReference))
             {
                 sb.Append("  return ");
             }
-            var thisValue = "this";
-            sb.AppendLine($"TBackend.Instance.{m.Name}({string.Join(',', [thisValue, .. m.Parameters.Select(p => p.Name)])});");
+            sb.Append($"TBackend.Instance.{m.Name}(this");
+            foreach (var p in m.Parameters)
+            {
+                sb.Append(", ");
+                sb.Append(p.Name);
+            }
+            sb.AppendLine(");");
             sb.AppendLine("}");
             sb.AppendLine();
         }

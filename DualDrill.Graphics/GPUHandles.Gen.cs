@@ -1,6 +1,25 @@
 ﻿using System.Collections.Immutable;
 
 namespace DualDrill.Graphics;
+public partial interface IGPUAdapter : IDisposable
+{
+    public ValueTask<IGPUDevice> RequestDeviceAsync(
+     GPUDeviceDescriptor descriptor
+    , CancellationToken cancellation
+    );
+}
+
+public sealed partial record class GPUAdapter<TBackend>(GPUHandle<TBackend, GPUAdapter<TBackend>> Handle)
+    : IDisposable, IGPUAdapter
+    where TBackend : IBackend<TBackend>
+{
+
+    public void Dispose()
+    {
+        TBackend.Instance.DisposeHandle(Handle);
+    }
+}
+
 public partial interface IGPURenderBundle
 {
 }
@@ -50,7 +69,7 @@ public sealed partial record class GPUComputePipeline<TBackend>(GPUHandle<TBacke
         TBackend.Instance.DisposeHandle(Handle);
     }
 }
-public partial interface IGPUShaderModule
+public partial interface IGPUShaderModule : IDisposable
 {
 }
 
@@ -99,45 +118,6 @@ public sealed partial record class GPUSampler<TBackend>(GPUHandle<TBackend, GPUS
         TBackend.Instance.DisposeHandle(Handle);
     }
 }
-public partial interface IGPUBuffer
-{
-}
-
-public sealed partial record class GPUBuffer<TBackend>(GPUHandle<TBackend, GPUBuffer<TBackend>> Handle)
-    : IDisposable, IGPUBuffer
-    where TBackend : IBackend<TBackend>
-{
-
-    public ReadOnlySpan<byte> GetMappedRange(
-     ulong offset
-    , ulong size
-    )
-    {
-        return TBackend.Instance.GetMappedRange(this, offset, size);
-    }
-
-    public ValueTask MapAsyncAsync(
-     GPUMapMode mode
-    , ulong offset
-    , ulong size
-    , CancellationToken cancellation
-    )
-    {
-        return TBackend.Instance.MapAsyncAsync(this, mode, offset, size, cancellation);
-    }
-
-    public void Unmap(
-    )
-    {
-        TBackend.Instance.Unmap(this);
-    }
-
-    public void Dispose()
-    {
-        TBackend.Instance.DisposeHandle(Handle);
-    }
-}
-
 public partial interface IGPUBindGroup
 {
 }
@@ -152,7 +132,7 @@ public sealed partial record class GPUBindGroup<TBackend>(GPUHandle<TBackend, GP
         TBackend.Instance.DisposeHandle(Handle);
     }
 }
-public partial interface IGPURenderPipeline
+public partial interface IGPURenderPipeline : IDisposable
 {
 }
 

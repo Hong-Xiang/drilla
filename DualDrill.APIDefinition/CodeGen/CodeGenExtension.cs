@@ -7,7 +7,7 @@ namespace DualDrill.ApiGen.CodeGen;
 public static class CodeGenExtension
 {
     public static string GetCSharpTypeName(this ITypeReference typeRef,
-        CSharpTypeNameVisitor.VisitorOption? option = default,
+        CSharpTypeNameVisitorOption? option = default,
         INameTransform? transform = default)
         => typeRef.AcceptVisitor(new CSharpTypeNameVisitor(
                 option ?? CSharpTypeNameVisitor.Default.Option,

@@ -13,7 +13,7 @@ namespace DualDrill.Engine.Renderer;
 
 public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposable
 {
-    private GPUDevice Device { get; }
+    private IGPUDevice Device { get; }
 
     private static readonly string SHADER = """
         @group(0) @binding(0) var mySampler : sampler;
@@ -100,22 +100,22 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
         """;
 
 
-    private GPUShaderModule ShaderModule { get; }
-    private GPUBindGroupLayout BindGroupLayout { get; }
-    private GPURenderPipeline Pipeline { get; }
-    private GPUBuffer UniformBuffer { get; }
-    private GPUBindGroup BindGroup { get; }
-    private GPUSampler Sampler { get; }
+    private IGPUShaderModule ShaderModule { get; }
+    private IGPUBindGroupLayout BindGroupLayout { get; }
+    private IGPURenderPipeline Pipeline { get; }
+    private IGPUBuffer UniformBuffer { get; }
+    private IGPUBindGroup BindGroup { get; }
+    private IGPUSampler Sampler { get; }
     private ITexture DataTexture { get; }
 
     private readonly int TextureWidth = 256;
     private readonly int TextureHeight = 256;
     private readonly int TextureDepth = 109;
 
-    public VolumeRenderer(GPUDevice device, TextureService textureService)
+    public VolumeRenderer(IGPUDevice device, TextureService textureService)
     {
         Device = device;
-        ShaderModule = Device.CreateShaderModule(SHADER);
+        ShaderModule = Device.CreateShaderModule(new() { Code = SHADER });
         Pipeline = Device.CreateRenderPipeline(new()
         {
             Vertex = new()
@@ -180,7 +180,7 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
         ShaderModule.Dispose();
     }
 
-    public void Render(double time, GPUQueue queue, GPUTexture texture, State data)
+    public void Render(double time, IGPUQueue queue, IGPUTexture texture, State data)
     {
         queue.WriteBuffer(UniformBuffer, 0, [data.Theta, data.Phi, data.Z, data.Window]);
         using var encoder = Device.CreateCommandEncoder(new());

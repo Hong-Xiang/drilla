@@ -41,13 +41,13 @@ public static class DualDrillServerExtension
         services.AddSingleton(device);
 
 
-        var adapterLegacy = await instanceLegacy.RequestAdapterAsync(new GPURequestAdapterOptions()
-        {
-            PowerPreference = GPUPowerPreference.HighPerformance
-        }, cancellation);
-        var deviceLegacy = await (adapterLegacy as GPUAdapter<WGPUBackend>).RequestDeviceAsyncLegacy(new GPUDeviceDescriptor(), cancellation);
-        services.AddSingleton(deviceLegacy);
-        services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
+        //var adapterLegacy = await instanceLegacy.RequestAdapterAsync(new GPURequestAdapterOptions()
+        //{
+        //    PowerPreference = GPUPowerPreference.HighPerformance
+        //}, cancellation);
+        //var deviceLegacy = await (adapterLegacy as GPUAdapter<WGPUBackend>).RequestDeviceAsyncLegacy(new GPUDeviceDescriptor(), cancellation);
+        //services.AddSingleton(deviceLegacy);
+        //services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
     }
 
     private static void AddRealtimeSimulationServices(IServiceCollection services)

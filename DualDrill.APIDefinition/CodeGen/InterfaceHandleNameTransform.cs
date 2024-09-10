@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-public sealed class BackendHandleNameTransform(
+public sealed class InterfaceHandleNameTransform(
     ModuleDeclaration Module
 ) : INameTransform
 {
@@ -11,6 +11,6 @@ public sealed class BackendHandleNameTransform(
 
     string? INameTransform.TypeReferenceName(string name)
     {
-        return HandleNames.Contains(name) ? name + "<TBackend>" : name;
+        return HandleNames.Contains(name) ? "I" + name : name;
     }
 }

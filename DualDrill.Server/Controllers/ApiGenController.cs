@@ -64,7 +64,7 @@ public class ApiGenController(
     public async Task<IActionResult> GenerateBackendCodeAsync([FromQuery] string? part, CancellationToken cancellation)
     {
         var spec = await GetGPUApiForCodeGenAsync(cancellation);
-        spec = spec.Transform(new BackendHandleNameTransform(spec));
+        spec = spec.Transform(new InterfaceHandleNameTransform(spec));
         var generator = new GPUBackendCodeGen(spec);
         var sb = new StringBuilder();
         switch (part)
@@ -83,15 +83,30 @@ public class ApiGenController(
 
 
     [HttpGet("webgpu/codegen/handle")]
-    public async Task<IActionResult> GenerateAllGPUHandleCodeAsync(CancellationToken cancellation)
+    public async Task<IActionResult> GenerateAllGPUHandleCodeAsync([FromQuery] string? name, CancellationToken cancellation)
     {
         var spec = await GetGPUApiForCodeGenAsync(cancellation);
         var generator = new GPUHandlesCodeGen(spec);
         var sb = new StringBuilder();
-        foreach (var h in spec.Handles)
+        if (string.IsNullOrEmpty(name))
         {
-            generator.EmitHandleDeclaration(sb, h);
+            foreach (var h in spec.Handles)
+            {
+                generator.Emit(sb, h);
+            }
         }
+        else
+        {
+            foreach (var h in spec.Handles)
+            {
+                if (!(h.Name == name))
+                {
+                    continue;
+                }
+                generator.Emit(sb, h);
+            }
+        }
+
         return Ok(sb.ToString());
     }
 
@@ -104,7 +119,7 @@ public class ApiGenController(
         var generator = new GPUStructCodeGen(spec);
         var sw = new StringWriter();
         var targetNames = name.ToImmutableHashSet();
-        foreach (var h in spec.Structs)
+        foreach (var h in spec.Structs.OrderBy(s => s.Name))
         {
             if (targetNames.Count == 0 || targetNames.Contains(h.Name))
             {
@@ -114,32 +129,16 @@ public class ApiGenController(
         return Ok(sw.ToString());
     }
 
-
-
-    [HttpGet("webgpu/codegen/handle/{name}")]
-    public async Task<IActionResult> GenerateGPUHandleCodeAsync(string name, CancellationToken cancellation)
-    {
-        var spec = await GetGPUApiForCodeGenAsync(cancellation);
-        var generator = new GPUHandlesCodeGen(spec);
-        var sb = new StringBuilder();
-        var h = spec.Handles.FirstOrDefault(h => string.Equals(h.Name, name, StringComparison.OrdinalIgnoreCase));
-        if (h is null)
-        {
-            return NotFound();
-        }
-        generator.EmitHandleDeclaration(sb, h);
-        return Ok(sb.ToString());
-    }
-
     [HttpGet("webgpu/codegen/enum")]
     public async Task<IActionResult> GenerateGPUEnumCodeAsync([FromQuery] string? name, CancellationToken cancellation)
     {
         var spec = await GetGPUApiForCodeGenAsync(cancellation);
         var generator = new GPUEnumCodeGen();
         var sb = new StringBuilder();
+        var targets = spec.Enums.OrderBy(e => e.Name);
         if (name is not null)
         {
-            var h = spec.Enums.FirstOrDefault(h => string.Equals(h.Name, name, StringComparison.OrdinalIgnoreCase));
+            var h = targets.FirstOrDefault(h => string.Equals(h.Name, name, StringComparison.OrdinalIgnoreCase));
             if (h is null)
             {
                 return NotFound();
@@ -148,7 +147,7 @@ public class ApiGenController(
         }
         else
         {
-            foreach (var e in spec.Enums)
+            foreach (var e in targets)
             {
                 generator.EmitEnumDecl(sb, e);
             }

@@ -21,6 +21,16 @@ internal sealed record class WebGPUIdlToDrillGpuNameTransform(
         };
     }
 
+    string? INameTransform.PropertyName(string typeName, string propertyName)
+    {
+        return (typeName, propertyName) switch
+        {
+            ("GPUSurfaceConfiguration", "colorSpace") => null,
+            ("GPUSurfaceConfiguration", "toneMapping") => null,
+            _ => propertyName,
+        };
+    }
+
     string? INameTransform.MethodName(string typeName, string methodName)
     {
         return (typeName, methodName) switch
@@ -39,6 +49,12 @@ internal sealed record class WebGPUIdlToDrillGpuNameTransform(
             _ when name.EndsWith("Base") => null,
             _ when name.Contains("External") => null,
             "GPUPipelineErrorInit" => null,
+            "GPUImageCopyTextureTagged" => null,
+            "GPUBindGroupLayoutEntry" => null,
+            "GPUBindGroupEntry" => null,
+            "GPUCanvasConfiguration" => "GPUSurfaceConfiguration",
+            "GPUCanvasToneMapping" => null,
+            "GPURequestAdapterOptions" => null,
             //"GPUExternalTextureDescriptor" => null,
 
             _ => name
@@ -89,10 +105,11 @@ internal sealed record class WebGPUIdlToDrillGpuNameTransform(
             // no support for GPUError and GPUExternalTexture
             "GPUError" => null,
             "GPUExternalTexture" => null,
-
-            _ when name.EndsWith("Flags") => name[..^5],
             "GPUColorWrite" => "GPUColorWriteMask",
             "GPUColorWriteFlags" => "GPUColorWriteMask",
+            "GPUCanvasAlphaMode" => "GPUCompositeAlphaMode",
+            _ when name.EndsWith("Flags") => name[..^5],
+
             _ => name
         };
     }

@@ -6,7 +6,7 @@ namespace DualDrill.Engine.Headless;
 public sealed class HeadlessRenderTarget : IDisposable
 {
     public HeadlessRenderTarget(
-        GPUDevice device,
+        IGPUDevice device,
         int width, int height, GPUTextureFormat format,
         int slotIndex = 0)
     {
@@ -36,12 +36,12 @@ public sealed class HeadlessRenderTarget : IDisposable
         });
         BufferCPUMemoryOwner = DotNext.Buffers.UnmanagedMemoryPool<byte>.Shared.Rent(CPUBufferByteSize);
     }
-    private GPUDevice Device { get; }
+    private IGPUDevice Device { get; }
     public int SlotIndex { get; }
     public int Width { get; }
     public int Height { get; }
     public GPUTextureFormat Format { get; }
-    public GPUTexture Texture { get; }
+    public IGPUTexture Texture { get; }
     public ReadOnlyMemory<byte> Memory => BufferCPUMemoryOwner.Memory[..CPUBufferByteSize];
 
     static int PaddedBytesPerRow(int byteSize) => byteSize + 255 & ~255;
@@ -63,7 +63,7 @@ public sealed class HeadlessRenderTarget : IDisposable
         }, new GPUImageCopyBuffer
         {
             Buffer = GPUBuffer,
-            Layout = new GPUTextureDataLayout
+            Layout = new GPUImageDataLayout
             {
                 BytesPerRow = GPUBytesPerRow,
                 Offset = 0,

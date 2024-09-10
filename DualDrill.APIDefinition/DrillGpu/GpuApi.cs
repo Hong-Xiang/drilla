@@ -102,6 +102,7 @@ public static class GPUApi
             "undefined" => new VoidTypeReference(),
             "boolean" => new BoolTypeReference(),
             "USVString" => new StringTypeReference(),
+            "DOMString" => new StringTypeReference(),
             "GPUSize64" => new IntegerTypeReference(BitWidth._64, false),
             "GPUSize32" => new IntegerTypeReference(BitWidth._32, false),
             "GPUSize32Out" => new IntegerTypeReference(BitWidth._32, false),
@@ -112,7 +113,8 @@ public static class GPUApi
             "GPUBufferDynamicOffset" => new IntegerTypeReference(BitWidth._32, false),
             "ArrayBuffer" => new SequenceTypeReference(new IntegerTypeReference(BitWidth._8, false)),
             "Uint32Array" => new SequenceTypeReference(new IntegerTypeReference(BitWidth._32, false)),
-            "unsigned long" => new IntegerTypeReference(BitWidth._64, false),
+            "unsigned long" => new IntegerTypeReference(BitWidth._32, false),
+            "unsigned short" => new IntegerTypeReference(BitWidth._16, false),
             "GPUStencilValue" => new IntegerTypeReference(BitWidth._32, false),
             "GPUIntegerCoordinate" => new IntegerTypeReference(BitWidth._32, false),
             "GPUMapModeFlags" => new OpaqueTypeReference("GPUMapMode"),
@@ -120,6 +122,8 @@ public static class GPUApi
             "AllowSharedBufferSource" => new OpaqueTypeReference("nint"),
             "GPUImageDataLayout" => new OpaqueTypeReference("GPUTextureDataLayout"),
             "GPUCanvasConfiguration" => new OpaqueTypeReference("GPUSurfaceConfiguration"),
+            "GPUSampleMask" => new IntegerTypeReference(BitWidth._32, false),
+            "GPUDepthBias" => new IntegerTypeReference(BitWidth._32, true),
             _ => new OpaqueTypeReference(name)
         };
 

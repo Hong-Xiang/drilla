@@ -15,14 +15,14 @@ public sealed class RotateCubeRenderer : IRenderer<RotateCubeRenderer.State>
     {
     }
 
-    readonly GPUDevice Device;
-    GPUShaderModule ShaderModule { get; }
-    GPUPipelineLayout PipelineLayout { get; }
-    GPURenderPipeline Pipeline { get; }
-    GPUBuffer UniformBuffer { get; }
-    GPUBuffer VertexBuffer { get; }
-    GPUBindGroupLayout BindGroupLayout { get; }
-    GPUBindGroup BindGroup { get; }
+    readonly IGPUDevice Device;
+    IGPUShaderModule ShaderModule { get; }
+    IGPUPipelineLayout PipelineLayout { get; }
+    IGPURenderPipeline Pipeline { get; }
+    IGPUBuffer UniformBuffer { get; }
+    IGPUBuffer VertexBuffer { get; }
+    IGPUBindGroupLayout BindGroupLayout { get; }
+    IGPUBindGroup BindGroup { get; }
 
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
@@ -109,10 +109,13 @@ fn fs_main(
     public int UniformBufferByteSize = 4 * 4 * 4;
 
 
-    public RotateCubeRenderer(GPUDevice device)
+    public RotateCubeRenderer(IGPUDevice device)
     {
         Device = device;
-        ShaderModule = Device.CreateShaderModule(SHADER);
+        ShaderModule = Device.CreateShaderModule(new()
+        {
+            Code = SHADER
+        });
         BindGroupLayout = Device.CreateBindGroupLayout(new GPUBindGroupLayoutDescriptor
         {
             Entries = new[]
@@ -131,10 +134,7 @@ fn fs_main(
         });
         PipelineLayout = Device.CreatePipelineLayout(new GPUPipelineLayoutDescriptor()
         {
-            BindGroupLayouts = new GPUBindGroupLayout[]
-            {
-                BindGroupLayout
-            }
+            BindGroupLayouts = [BindGroupLayout]
         });
         Pipeline = GPURenderPipeline.Create(Device, new GPURenderPipelineDescriptor()
         {
@@ -188,7 +188,7 @@ fn fs_main(
                 EntryPoint = "fs_main",
                 Targets = new[]{new GPUColorTargetState {
                     Format = TextureFormat,
-                    WriteMask = (uint)GPUColorWriteMask.All
+                    WriteMask = GPUColorWriteMask.All
                 }}
             },
             Layout = PipelineLayout

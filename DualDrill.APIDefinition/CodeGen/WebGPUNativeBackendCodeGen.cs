@@ -88,14 +88,14 @@ public sealed record class WebGPUNativeBackendCodeGen(
         sb.Append("unsafe ");
         sb.Append(method.ReturnType.GetCSharpTypeName(defaultDumpTypeOption with
         {
-            Usage = CSharpTypeNameVisitor.VisitorOption.TypeUsage.ReturnType
+            Usage = CSharpTypeNameVisitorOption.TypeUsage.ReturnType
         }));
         sb.Append(" IBackend<Backend>.");
         sb.Append(method.Name);
         sb.Append('(');
         var paramterOption = defaultDumpTypeOption with
         {
-            Usage = CSharpTypeNameVisitor.VisitorOption.TypeUsage.ParameterType
+            Usage = CSharpTypeNameVisitorOption.TypeUsage.ParameterType
         };
         sb.Append(handle.Name);
         sb.Append("<Backend> handle");

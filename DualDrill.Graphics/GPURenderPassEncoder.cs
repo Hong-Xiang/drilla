@@ -6,29 +6,23 @@ public partial interface IGPURenderPassEncoder : IDisposable
 {
     string Label { get; }
     public void BeginOcclusionQuery(uint queryIndex);
-
-
-    public void Draw(uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance);
-    public void DrawIndexed(uint indexCount, uint instanceCount, uint firstIndex, int baseVertex, uint firstInstance);
-
+    public void Draw(uint vertexCount, uint instanceCount = 1, uint firstVertex = 0, uint firstInstance = 0);
+    public void DrawIndexed(uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int baseVertex = 0, uint firstInstance = 0);
     public void DrawIndexedIndirect(IGPUBuffer indirectBuffer, ulong indirectOffset);
     public void DrawIndirect(IGPUBuffer indirectBuffer, ulong indirectOffset);
-
     public void End();
     public void EndOcclusionQuery();
-
     public void ExecuteBundles(IEnumerable<IGPURenderBundle> bundles);
     public void InsertDebugMarker(string markerLabel);
     public void PopDebugGroup();
     public void PushDebugGroup(string groupLabel);
-    public void SetBindGroup(int index, IGPUBindGroup? bindGroup, ReadOnlySpan<uint> dynamicOffsets);
-    public void SetBindGroup(int index, IGPUBindGroup? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength);
+    public void SetBindGroup(int index, IGPUBindGroup? bindGroup, ReadOnlySpan<uint> dynamicOffsets = default);
     public void SetBlendConstant(GPUColor color);
     public void SetIndexBuffer(IGPUBuffer buffer, GPUIndexFormat indexFormat, ulong offset, ulong size);
     public void SetPipeline(IGPURenderPipeline pipeline);
     public void SetScissorRect(uint x, uint y, uint width, uint height);
     public void SetStencilReference(uint reference);
-    public void SetVertexBuffer(int slot, IGPUBuffer? buffer, ulong offset, ulong size);
+    public void SetVertexBuffer(int slot, IGPUBuffer? buffer, ulong offset = 0, ulong? size = default);
     public void SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
 }
 
@@ -129,9 +123,9 @@ public sealed partial record class GPURenderPassEncoder<TBackend>(GPUHandle<TBac
         TBackend.Instance.SetStencilReference(this, reference);
     }
 
-    public void SetVertexBuffer(int slot, IGPUBuffer? buffer, ulong offset, ulong size)
+    public void SetVertexBuffer(int slot, IGPUBuffer? buffer, ulong offset, ulong? size)
     {
-        TBackend.Instance.SetVertexBuffer(this, slot, (GPUBuffer<TBackend>?)buffer, offset, size);
+        TBackend.Instance.SetVertexBuffer(this, slot, (GPUBuffer<TBackend>?)buffer, offset, size ?? buffer?.Length ?? throw new GraphicsApiException<TBackend>("Buffer size unknown"));
     }
 
     public void SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)

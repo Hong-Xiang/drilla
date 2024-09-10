@@ -16,7 +16,7 @@ public sealed record class GPUStructCodeGen(
 
         var fieldTypeNameOption = CSharpTypeNameVisitor.Default.Option with
         {
-            Usage = CSharpTypeNameVisitor.VisitorOption.TypeUsage.PropertyType
+            Usage = CSharpTypeNameVisitorOption.TypeUsage.PropertyType
         };
         foreach (var f in decl.Properties)
         {
