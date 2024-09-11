@@ -1,13 +1,4 @@
-﻿using DualDrill.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using DualDrill.Graphics.Interop;
-using System.Collections.Immutable;
-using DualDrill.Interop;
-
+﻿using Evergine.Bindings.WebGPU;
 
 namespace DualDrill.Graphics;
 
@@ -150,7 +141,7 @@ public partial struct GPUSurfaceTexture
 {
     public bool Suboptimal { get; set; }
     public GPUSurfaceGetCurrentTextureStatus Status { get; set; }
-    public GPUTexture Texture { get; set; }
+    public IGPUTexture Texture { get; set; }
 }
 //public partial struct GPUImageDataLayout
 //{
@@ -161,7 +152,7 @@ public partial struct GPUSurfaceTexture
 public partial struct GPUCompilationInfo { public ReadOnlyMemory<GPUCompilationMessage> Messages { get; set; } }
 public partial struct GPUProgrammableStageDescriptor
 {
-    public GPUShaderModule Module { get; set; }
+    public IGPUShaderModule Module { get; set; }
     public string EntryPoint { get; set; }
     public ReadOnlyMemory<GPUConstantEntry> Constants { get; set; }
 }
@@ -211,7 +202,7 @@ public partial struct GPUPipelineLayoutExtras
 public partial struct GPUWrappedSubmissionIndex
 {
     public ulong SubmissionIndex { get; set; }
-    public GPUQueue Queue { get; set; }
+    public IGPUQueue Queue { get; set; }
 }
 public partial struct GPUShaderDefine
 {
@@ -265,9 +256,9 @@ public partial struct GPUGlobalReport
 public partial struct GPUInstanceEnumerateAdapterOptions { public uint Backends { get; set; } }
 public partial struct GPUBindGroupEntryExtras
 {
-    public ReadOnlyMemory<GPUBuffer> Buffers { get; set; }
-    public ReadOnlyMemory<GPUSampler> Samplers { get; set; }
-    public ReadOnlyMemory<GPUTextureView> TextureViews { get; set; }
+    public ReadOnlyMemory<IGPUBuffer> Buffers { get; set; }
+    public ReadOnlyMemory<IGPUSampler> Samplers { get; set; }
+    public ReadOnlyMemory<IGPUTextureView> TextureViews { get; set; }
     public GPUChainedStruct Chain { get; set; }
 }
 public partial struct GPUBindGroupLayoutEntryExtras

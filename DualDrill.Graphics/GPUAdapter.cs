@@ -7,12 +7,6 @@ public partial interface IGPUAdapter : IDisposable
 
 public sealed partial record class GPUAdapter<TBackend>
 {
-    public ValueTask<GPUDevice> RequestDeviceAsyncLegacy(GPUDeviceDescriptor descriptor, CancellationToken cancellation)
-       => TBackend.Instance.RequestDeviceAsyncLegacy(this, descriptor, cancellation);
-}
-
-public sealed partial record class GPUAdapter<TBackend>
-{
     public async ValueTask<IGPUDevice> RequestDeviceAsync(GPUDeviceDescriptor descriptor, CancellationToken cancellation)
     {
         return await TBackend.Instance.RequestDeviceAsync(this, descriptor, cancellation);

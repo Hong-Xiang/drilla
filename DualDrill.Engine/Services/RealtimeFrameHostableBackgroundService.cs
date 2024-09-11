@@ -40,7 +40,7 @@ public sealed class RealtimeFrameHostableBackgroundService(
     {
         await Task.Yield();
         await WebViewService.StartAsync(stoppingToken);
-        _ = WebViewService.CaptureAsync(surface, 30);
+        //_ = WebViewService.CaptureAsync(surface, 30);
         //await VideoSource.StartVideo();
         using var timer = TimeProvider.CreateTimer(TimerFrameCallback, this, TimeSpan.Zero, SampleRate);
 

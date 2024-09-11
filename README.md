@@ -28,3 +28,5 @@ requirements:
 * visit `https://localhost:7117/ilsl` for basic C# IL to shader translation development
 
 * _optional_ add `DUALDRILL_DATA_ROOT` to environment variable for mesh/texture data
+
+NOTE when runtime identifier is required to build/run, i.e. we need use `x64` runtime identifier, `Any CPU` will not work
