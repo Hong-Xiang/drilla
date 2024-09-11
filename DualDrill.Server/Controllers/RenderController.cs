@@ -11,7 +11,7 @@ namespace DualDrill.Server.Controllers;
 
 [Route("render")]
 public class RenderController(
-    GPUDevice Device,
+    IGPUDevice Device,
     IFrameRenderService RenderService
 ) : Controller
 {

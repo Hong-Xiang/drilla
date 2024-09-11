@@ -15,14 +15,14 @@ public sealed class RotateCubeRenderer : IRenderer<RotateCubeRenderer.State>
     {
     }
 
-    readonly GPUDevice Device;
-    GPUShaderModule ShaderModule { get; }
-    GPUPipelineLayout PipelineLayout { get; }
-    GPURenderPipeline Pipeline { get; }
-    GPUBuffer UniformBuffer { get; }
-    GPUBuffer VertexBuffer { get; }
-    GPUBindGroupLayout BindGroupLayout { get; }
-    GPUBindGroup BindGroup { get; }
+    readonly IGPUDevice Device;
+    IGPUShaderModule ShaderModule { get; }
+    IGPUPipelineLayout PipelineLayout { get; }
+    IGPURenderPipeline Pipeline { get; }
+    IGPUBuffer UniformBuffer { get; }
+    IGPUBuffer VertexBuffer { get; }
+    IGPUBindGroupLayout BindGroupLayout { get; }
+    IGPUBindGroup BindGroup { get; }
 
     public readonly GPUTextureFormat TextureFormat = GPUTextureFormat.BGRA8UnormSrgb;
 
@@ -109,10 +109,13 @@ fn fs_main(
     public int UniformBufferByteSize = 4 * 4 * 4;
 
 
-    public RotateCubeRenderer(GPUDevice device)
+    public RotateCubeRenderer(IGPUDevice device)
     {
         Device = device;
-        ShaderModule = Device.CreateShaderModule(SHADER);
+        ShaderModule = Device.CreateShaderModule(new()
+        {
+            Code = SHADER
+        });
         BindGroupLayout = Device.CreateBindGroupLayout(new GPUBindGroupLayoutDescriptor
         {
             Entries = new[]
@@ -131,12 +134,9 @@ fn fs_main(
         });
         PipelineLayout = Device.CreatePipelineLayout(new GPUPipelineLayoutDescriptor()
         {
-            BindGroupLayouts = new GPUBindGroupLayout[]
-            {
-                BindGroupLayout
-            }
+            BindGroupLayouts = [BindGroupLayout]
         });
-        Pipeline = GPURenderPipeline.Create(Device, new GPURenderPipelineDescriptor()
+        Pipeline = Device.CreateRenderPipeline(new GPURenderPipelineDescriptor()
         {
             Vertex = new GPUVertexState
             {
@@ -171,24 +171,24 @@ fn fs_main(
                 Topology = GPUPrimitiveTopology.TriangleList,
                 CullMode = GPUCullMode.Back
             },
-            Multisample = new GPUMultisampleState
+            Multisample = new GPUMultisampleState()
             {
                 Count = 1,
                 Mask = ~0u
             },
-            DepthStencil = new GPUDepthStencilState
-            {
-                DepthWriteEnabled = true,
-                DepthCompare = GPUCompareFunction.Less,
-                Format = GPUTextureFormat.Depth24Plus
-            },
+            //DepthStencil = new GPUDepthStencilState()
+            //{
+            //    DepthWriteEnabled = true,
+            //    DepthCompare = GPUCompareFunction.Less,
+            //    Format = GPUTextureFormat.Depth24Plus
+            //},
             Fragment = new GPUFragmentState
             {
                 Module = ShaderModule,
                 EntryPoint = "fs_main",
                 Targets = new[]{new GPUColorTargetState {
                     Format = TextureFormat,
-                    WriteMask = (uint)GPUColorWriteMask.All
+                    WriteMask = GPUColorWriteMask.All
                 }}
             },
             Layout = PipelineLayout
@@ -216,7 +216,7 @@ fn fs_main(
         }
 
         var cpuData = CubeVertexArray.AsSpan();
-        var gpuBuffer = VertexBuffer.GetMappedRange(0, (int)VertexBufferByteSize);
+        var gpuBuffer = VertexBuffer.GetMappedRange(0, (ulong)VertexBufferByteSize);
         var cpuByteData = MemoryMarshal.Cast<float, byte>(cpuData);
         cpuByteData.CopyTo(gpuBuffer);
         VertexBuffer.Unmap();
@@ -240,7 +240,7 @@ fn fs_main(
 
     static readonly ReadOnlyMemory<byte> Name = "abc"u8.ToArray();
 
-    public unsafe void Render(double time, GPUQueue queue, GPUTexture renderTarget, State state)
+    public unsafe void Render(double time, IGPUQueue queue, IGPUTexture renderTarget, State state)
     {
         using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());

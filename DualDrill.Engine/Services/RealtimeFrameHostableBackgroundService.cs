@@ -8,7 +8,7 @@ using System.Threading.Channels;
 namespace DualDrill.Engine.Services;
 
 public sealed class RealtimeFrameHostableBackgroundService(
-    GPUDevice Device,
+    IGPUDevice Device,
     FrameInputService FrameInputService,
     FrameSimulationService SimulationService,
     IFrameRenderService frameService,

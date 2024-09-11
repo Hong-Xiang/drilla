@@ -11,30 +11,10 @@
 	  <PackageReference Include="Evergine.Bindings.WebGPU" Version="2024.8.10.11" />
 	  <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
 	  <PackageReference Include="System.Reactive" Version="6.0.1" />
+	  <PackageReference Include="Varena" Version="1.2.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Update="Native\wgpu_native.dll">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Native\wgpu_native.dll.lib">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Native\wgpu_native.pdb">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="wgpu_native.dll">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="wgpu_native.dll.lib">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	  <None Update="wgpu_native.pdb">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	</ItemGroup>
 </Project>

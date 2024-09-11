@@ -10,30 +10,14 @@ public partial interface IBackend<TBackend>
         GPUDeviceDescriptor descriptor,
         CancellationToken cancellation
     );
-    //createTexture(descriptor: GPUTextureDescriptor): GPUTexture
-    //createSampler(descriptor: GPUSamplerDescriptor): GPUSampler
-    //importExternalTexture(descriptor: GPUExternalTextureDescriptor): GPUExternalTexture
-    //createBindGroupLayout(descriptor: GPUBindGroupLayoutDescriptor): GPUBindGroupLayout
-    //createPipelineLayout(descriptor: GPUPipelineLayoutDescriptor): GPUPipelineLayout
-    //createBindGroup(descriptor: GPUBindGroupDescriptor): GPUBindGroup
-    //createShaderModule(descriptor: GPUShaderModuleDescriptor): GPUShaderModule
-    //createComputePipeline(descriptor: GPUComputePipelineDescriptor): GPUComputePipeline
-    //createRenderPipeline(descriptor: GPURenderPipelineDescriptor): GPURenderPipeline
-    //createComputePipelineAsync(descriptor: GPUComputePipelineDescriptor): Promise<GPUComputePipeline>
-    //createRenderPipelineAsync(descriptor: GPURenderPipelineDescriptor): Promise<GPURenderPipeline>
-    //createCommandEncoder(descriptor: GPUCommandEncoderDescriptor): GPUCommandEncoder
-    //createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): GPURenderBundleEncoder
-    //createQuerySet(descriptor: GPUQuerySetDescriptor): GPUQuerySet
-
     internal GPUTextureView<TBackend> CreateTextureView(GPUTexture<TBackend> texture, GPUTextureViewDescriptor descriptor);
 
-    // GPUInstance
-    //ValueTask<GPUAdaptor<TBackend>> RequestAdapterAsync(GPUInstance<TBackend> instance, GPURequestAdapterOptions options, CancellationToken cancellation);
-    //GPUTextureFormat GetPreferredCanvasFormat(GPUInstance<TBackend> instance);
+    internal void Poll(GPUDevice<TBackend> device);
 
-    // GPUAdapter
+    internal ValueTask PollAsync(GPUDevice<TBackend> device, CancellationToken cancellation);
 
-    // GPUSurface/GPUCanvasContext
-    //void Present(GPUSurface<TBackend> surface);
+    internal ValueTask<GPUAdapterInfo> RequestAdapterInfoAsync(GPUAdapter<TBackend> adapter, CancellationToken cancellation);
+
+    internal void Present(GPUSurface<TBackend> surface);
 }
 

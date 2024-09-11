@@ -5,6 +5,6 @@ namespace DualDrill.Engine.Services;
 
 public interface IFrameRenderService
 {
-    ValueTask RenderAsync(long frame, RenderScene scene, GPUTexture renderTarget, CancellationToken cancellation);
+    ValueTask RenderAsync(long frame, RenderScene scene, IGPUTexture renderTarget, CancellationToken cancellation);
 }
 

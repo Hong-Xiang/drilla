@@ -37,7 +37,7 @@ public sealed class HeadlessSurface : IGPUSurface
 
 
     private readonly Channel<HeadlessRenderTarget> RenderTargetChannel;
-    GPUDevice Device;
+    IGPUDevice Device;
     public readonly int Width;
     public readonly int Height;
     public readonly GPUTextureFormat Format;
@@ -45,7 +45,7 @@ public sealed class HeadlessSurface : IGPUSurface
     HeadlessRenderTarget? CurrentTarget = null;
     public IAsyncSubscriber<HeadlessSurfaceFrame> OnFrame { get; }
     private IAsyncPublisher<HeadlessSurfaceFrame> EmitOnFrame { get; }
-    public HeadlessSurface(GPUDevice device, IOptions<Option> options, EventFactory eventFactory)
+    public HeadlessSurface(IGPUDevice device, IOptions<Option> options, EventFactory eventFactory)
     {
         var option = options.Value;
         Device = device;
@@ -74,10 +74,11 @@ public sealed class HeadlessSurface : IGPUSurface
         return CurrentTarget;
     }
 
-    public GPUTexture? GetCurrentTexture()
+    public IGPUTexture? GetCurrentTexture()
     {
         return CurrentTarget?.Texture;
     }
+
 
     public void Configure(GPUSurfaceConfiguration configuration)
     {
@@ -107,8 +108,8 @@ public sealed class HeadlessSurface : IGPUSurface
             var frame = new HeadlessSurfaceFrame(
                 new GPUExtent3D
                 {
-                    Width = Width,
-                    Height = Height,
+                    Width = (uint)Width,
+                    Height = (uint)Height,
                     DepthOrArrayLayers = 1
                 },
                 Format,
@@ -119,4 +120,9 @@ public sealed class HeadlessSurface : IGPUSurface
             await RenderTargetChannel.Writer.WriteAsync(target);
         });
     }
+
+    public void Dispose()
+    {
+    }
+
 }

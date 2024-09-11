@@ -8,7 +8,7 @@ public interface ITexture
     int Height { get; }
     int Depth { get; }
     GPUTextureFormat Format { get; }
-    GPUTexture GPUTexture { get; }
+    IGPUTexture GPUTexture { get; }
 }
 
 public sealed class HeadVolumeTexture : ITexture, IDisposable
@@ -23,25 +23,25 @@ public sealed class HeadVolumeTexture : ITexture, IDisposable
     public int Depth => 109;
 
     public GPUTextureFormat Format => GPUTextureFormat.R8Unorm;
-    public GPUTexture GPUTexture { get; }
+    public IGPUTexture GPUTexture { get; }
 
-    public HeadVolumeTexture(GPUDevice device, ReadOnlyMemory<byte> data)
+    public HeadVolumeTexture(IGPUDevice device, ReadOnlyMemory<byte> data)
     {
         GPUTexture = device.CreateTexture(new()
         {
             Dimension = GPUTextureDimension._3D,
             Size = new()
             {
-                Width = Width,
-                Height = Height,
-                DepthOrArrayLayers = Depth
+                Width = (uint)Width,
+                Height = (uint)Height,
+                DepthOrArrayLayers = (uint)Depth
             },
             Format = GPUTextureFormat.R8Unorm,
             Usage = GPUTextureUsage.TextureBinding | GPUTextureUsage.CopyDst,
             SampleCount = 1,
             MipLevelCount = 1,
         });
-        device.GetQueue().WriteTexture(new()
+        device.Queue.WriteTexture(new()
         {
             Texture = GPUTexture
         },
@@ -49,14 +49,14 @@ public sealed class HeadVolumeTexture : ITexture, IDisposable
         new()
         {
             Offset = 0,
-            BytesPerRow = Width,
-            RowsPerImage = Height
+            BytesPerRow = (uint)Width,
+            RowsPerImage = (uint)Height
         },
         new()
         {
-            Width = Width,
-            Height = Height,
-            DepthOrArrayLayers = Depth
+            Width = (uint)Width,
+            Height = (uint)Height,
+            DepthOrArrayLayers = (uint)Depth
         });
     }
 
@@ -87,7 +87,7 @@ public sealed class TextureService
 
     }
 
-    public ITexture GetTexture(GPUDevice device, string name)
+    public ITexture GetTexture(IGPUDevice device, string name)
     {
         if (name == "head-volume")
         {

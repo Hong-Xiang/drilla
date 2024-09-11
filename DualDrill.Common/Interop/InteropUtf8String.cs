@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace DualDrill.Interop;
@@ -16,6 +17,36 @@ public unsafe readonly struct PinnedNullTerminatedUtf8String : IDisposable
         Handle.Dispose();
     }
     public sbyte* Pointer => (sbyte*)Handle.Pointer;
+}
+
+public unsafe sealed class InteropUtf8StringValue : IDisposable
+{
+    nint Buffer = 0;
+    InteropUtf8StringValue(string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+        {
+            var size = Encoding.UTF8.GetByteCount(value) + 1;
+            Buffer = Marshal.AllocHGlobal(size);
+            Encoding.UTF8.GetBytes(value, new Span<byte>((void*)Buffer, size));
+            ((byte*)Buffer)[size - 1] = 0;
+        }
+    }
+
+    public char* CharPointer => (char*)Buffer;
+    public sbyte* SbytePointer => (sbyte*)Buffer;
+    public byte* BytePointer => (byte*)Buffer;
+
+    public static InteropUtf8StringValue Create(string? value = default) => new(value);
+
+    public void Dispose()
+    {
+        if (Buffer is not 0)
+        {
+            Marshal.FreeHGlobal(Buffer);
+            Buffer = 0;
+        }
+    }
 }
 
 

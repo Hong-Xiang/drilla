@@ -1,4 +1,5 @@
-﻿using DualDrill.Engine.Connection;
+﻿using DualDrill.ApiGen;
+using DualDrill.Engine.Connection;
 using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
 using DualDrill.Engine.Services;
@@ -22,17 +23,31 @@ public static class DualDrillServerExtension
 
     private static async ValueTask AddGraphicsServices(this IServiceCollection services, CancellationToken cancellation)
     {
-        var instance = WGPUBackend.Instance.CreateGPUInstance();
-        services.AddSingleton<GPUInstance<WGPUBackend>>(instance);
+        var instance = WebGPUNETBackend.Instance.CreateGPUInstance();
+        services.AddSingleton<IGPUInstance, GPUInstance<WebGPUNETBackend>>(sp => instance);
+
+        var instanceLegacy = WGPUBackend.Instance.CreateGPUInstance();
+        services.AddSingleton(instanceLegacy);
 
         var adapter = await instance.RequestAdapterAsync(new GPURequestAdapterOptions()
         {
             PowerPreference = GPUPowerPreference.HighPerformance
         }, cancellation);
-        services.AddSingleton(adapter);
-        var device = await adapter.RequestDeviceAsyncLegacy(new GPUDeviceDescriptor(), cancellation);
+
+        services.AddSingleton(adapter ?? throw new GraphicsApiException<WebGPUNETBackend>("Failed to get adapter"));
+        var device = await adapter.RequestDeviceAsync(new GPUDeviceDescriptor(), cancellation);
+
+
         services.AddSingleton(device);
-        services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
+
+
+        //var adapterLegacy = await instanceLegacy.RequestAdapterAsync(new GPURequestAdapterOptions()
+        //{
+        //    PowerPreference = GPUPowerPreference.HighPerformance
+        //}, cancellation);
+        //var deviceLegacy = await (adapterLegacy as GPUAdapter<WGPUBackend>).RequestDeviceAsyncLegacy(new GPUDeviceDescriptor(), cancellation);
+        //services.AddSingleton(deviceLegacy);
+        //services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
     }
 
     private static void AddRealtimeSimulationServices(IServiceCollection services)

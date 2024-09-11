@@ -18,17 +18,17 @@ public sealed class WebGPULogoRenderer :
     {
     }
 
-    readonly GPUDevice Device;
+    readonly IGPUDevice Device;
 
     //Graphics.ShaderModule Shader { get; set; }
-    GPUShaderModule ShaderModule { get; set; }
-    GPUPipelineLayout PipelineLayout { get; set; }
-    GPURenderPipeline Pipeline { get; set; }
-    private GPUBuffer VertexBuffer { get; }
-    private GPUBuffer IndexBuffer { get; }
-    private GPUBuffer UniformBuffer { get; }
-    private GPUBindGroupLayout UniformBindGroupLayout { get; }
-    private GPUBindGroup UniformBindGroup { get; }
+    IGPUShaderModule ShaderModule { get; set; }
+    IGPUPipelineLayout PipelineLayout { get; set; }
+    IGPURenderPipeline Pipeline { get; set; }
+    private IGPUBuffer VertexBuffer { get; }
+    private IGPUBuffer IndexBuffer { get; }
+    private IGPUBuffer UniformBuffer { get; }
+    private IGPUBindGroupLayout UniformBindGroupLayout { get; }
+    private IGPUBindGroup UniformBindGroup { get; }
 
     private readonly IMesh Mesh = new WebGPULogo();
 
@@ -79,10 +79,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(in.color, 1.0);
 }";
 
-    public WebGPULogoRenderer(GPUDevice device)
+    public WebGPULogoRenderer(IGPUDevice device)
     {
         Device = device;
-        ShaderModule = Device.CreateShaderModule(SHADER);
+        ShaderModule = Device.CreateShaderModule(new() { Code = SHADER });
         UniformBindGroupLayout = Device.CreateBindGroupLayout(
                     new()
                     {
@@ -100,12 +100,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         );
         PipelineLayout = Device.CreatePipelineLayout(new GPUPipelineLayoutDescriptor()
         {
-            BindGroupLayouts = (GPUBindGroupLayout[])[
-                UniformBindGroupLayout
-            ]
+            BindGroupLayouts = [UniformBindGroupLayout]
         });
 
-        Pipeline = GPURenderPipeline.Create(Device, new GPURenderPipelineDescriptor()
+        Pipeline = Device.CreateRenderPipeline(new GPURenderPipelineDescriptor()
         {
             Vertex = new GPUVertexState
             {
@@ -130,7 +128,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 EntryPoint = "fs_main",
                 Targets = new[]{new GPUColorTargetState {
                     Format = TextureFormat,
-                    WriteMask = (uint)GPUColorWriteMask.All
+                    WriteMask = GPUColorWriteMask.All
                 }}
             },
             Layout = PipelineLayout
@@ -165,14 +163,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         });
 
 
-        var queue = Device.GetQueue();
+        var queue = Device.Queue;
         queue.WriteBuffer(VertexBuffer, 0, Mesh.VertexData);
         queue.WriteBuffer(IndexBuffer, 0, Mesh.IndexData);
         //ReadOnlySpan<float> time = [1.0f];
         queue.WriteBuffer(UniformBuffer, 0, [0.0f, 0.0f, 640f / 480f, 1.0f]);
     }
 
-    public void Render(double time, GPUQueue queue, GPUTexture renderTarget, State state)
+    public void Render(double time, IGPUQueue queue, IGPUTexture renderTarget, State state)
     {
         using var view = renderTarget.CreateView();
         using var encoder = Device.CreateCommandEncoder(new());
