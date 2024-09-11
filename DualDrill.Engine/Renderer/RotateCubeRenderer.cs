@@ -171,17 +171,17 @@ fn fs_main(
                 Topology = GPUPrimitiveTopology.TriangleList,
                 CullMode = GPUCullMode.Back
             },
-            Multisample = new GPUMultisampleState
+            Multisample = new GPUMultisampleState()
             {
                 Count = 1,
                 Mask = ~0u
             },
-            DepthStencil = new GPUDepthStencilState
-            {
-                DepthWriteEnabled = true,
-                DepthCompare = GPUCompareFunction.Less,
-                Format = GPUTextureFormat.Depth24Plus
-            },
+            //DepthStencil = new GPUDepthStencilState()
+            //{
+            //    DepthWriteEnabled = true,
+            //    DepthCompare = GPUCompareFunction.Less,
+            //    Format = GPUTextureFormat.Depth24Plus
+            //},
             Fragment = new GPUFragmentState
             {
                 Module = ShaderModule,

@@ -27,7 +27,7 @@ public class GraphicsApiException(string Message) : Exception(Message)
 {
 }
 
-public sealed class GraphicsApiException<TBackend>(string message)
+public class GraphicsApiException<TBackend>(string message)
     : GraphicsApiException(message)
     where TBackend : IBackend<TBackend>
 {

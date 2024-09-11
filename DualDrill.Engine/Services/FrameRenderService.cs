@@ -28,8 +28,8 @@ public sealed record class FrameRenderService(
         //    Window = 0.1f
         //});
         StaticTriangleRenderer.Render(frame, queue, renderTarget, new());
-        //LogoRenderer.Render(frame, queue, renderTarget, scene.LogoState);
-        //CubeRenderer.Render(frame, queue, renderTarget, new(scene.Camera, scene.Cube));
+        LogoRenderer.Render(frame, queue, renderTarget, scene.LogoState);
+        CubeRenderer.Render(frame, queue, renderTarget, new(scene.Camera, scene.Cube));
     }
 }
 

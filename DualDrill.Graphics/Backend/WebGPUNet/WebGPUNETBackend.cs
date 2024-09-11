@@ -4,8 +4,10 @@ using Evergine.Bindings.WebGPU;
 using Silk.NET.SDL;
 using System.Globalization;
 using System.Reactive.Disposables;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Varena;
 namespace DualDrill.Graphics.Backend;
 using static Evergine.Bindings.WebGPU.WebGPUNative;
@@ -67,6 +69,15 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new(tcs.Task);
     }
 
+    sealed class DeviceUncapturedError(
+        WGPUErrorType ErrorType,
+        string Message
+    ) : GraphicsApiException<Backend>(
+        $"Device Error {Enum.GetName(ErrorType)}, Message: {Message}"
+    )
+    {
+    }
+
     unsafe ValueTask<GPUDevice<Backend>> IBackend<Backend>.RequestDeviceAsync(GPUAdapter<Backend> adapter, GPUDeviceDescriptor descriptor, CancellationToken cancellation)
     {
         WGPUDeviceDescriptor descriptor_ = new();
@@ -79,6 +90,11 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             {
                 var queue_ = wgpuDeviceGetQueue(device);
                 var queue = new GPUQueue<Backend>(new(queue_.Handle));
+                wgpuDeviceSetUncapturedErrorCallback(device, static (errorType, message, data) =>
+                {
+                    var messageString = Marshal.PtrToStringUTF8((nint)message) ?? "Failed to get message";
+                    throw new DeviceUncapturedError(errorType, messageString);
+                }, null);
                 tcs.SetResult(new(new(device.Handle)) { Queue = queue });
             }
             else
@@ -385,7 +401,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
                 desc.depthStencil = Alloc<WGPUDepthStencilState>();
                 *desc.depthStencil = ToNative(descriptor.DepthStencil.Value);
             }
-            
+
             desc.multisample = ToNative(descriptor.Multisample);
 
             if (descriptor.Fragment is not null)
@@ -441,6 +457,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
         return new()
         {
+            format = ToNative(depthStencil.Format),
             depthWriteEnabled = depthStencil.DepthWriteEnabled,
             depthCompare = ToNative(depthStencil.DepthCompare),
             stencilFront = ToNative(depthStencil.StencilFront),
@@ -657,9 +674,23 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    ValueTask IBackend<Backend>.MapAsyncAsync(GPUBuffer<Backend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
+
+    unsafe ValueTask IBackend<Backend>.MapAsync(GPUBuffer<Backend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
     {
-        throw new NotImplementedException();
+        var t = new TaskCompletionSource();
+        unsafe void BufferMapped(WGPUBufferMapAsyncStatus status, void* userData)
+        {
+            if (status == WGPUBufferMapAsyncStatus.Success)
+            {
+                t.SetResult();
+            }
+            else
+            {
+                t.SetException(new GraphicsApiException<Backend>($"Map buffer failed {Enum.GetName(status)}"));
+            }
+        }
+        wgpuBufferMapAsync(ToNative(handle.Handle), ToNative(mode), offset, size, BufferMapped, null);
+        return new ValueTask(t.Task);
     }
 
     unsafe Span<byte> IBackend<Backend>.GetMappedRange(GPUBuffer<Backend> handle, ulong offset, ulong size)
@@ -697,7 +728,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPURenderPassEncoder<Backend> IBackend<Backend>.BeginRenderPass(GPUCommandEncoder<Backend> handle, GPURenderPassDescriptor descriptor)
     {
-        WGPURenderPassDepthStencilAttachment depthStencilAttachment = default;
+        WGPURenderPassDepthStencilAttachment depthStencilAttachment = new();
         if (descriptor.DepthStencilAttachment.HasValue)
         {
             throw new NotImplementedException();
@@ -802,9 +833,15 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     }
 
 
-    GPUCommandBuffer<Backend> IBackend<Backend>.Finish(GPUCommandEncoder<Backend> handle, GPUCommandBufferDescriptor descriptor)
+    unsafe GPUCommandBuffer<Backend> IBackend<Backend>.Finish(GPUCommandEncoder<Backend> handle, GPUCommandBufferDescriptor descriptor)
     {
-        throw new NotImplementedException();
+        using var label = InteropUtf8StringValue.Create(descriptor.Label);
+        WGPUCommandBufferDescriptor d = new()
+        {
+            label = label.CharPointer
+        };
+        var h = wgpuCommandEncoderFinish(ToNative(handle.Handle), &d);
+        return new(new(h.Handle));
     }
 
 
@@ -817,8 +854,13 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     {
         var count = commandBuffers.Count;
         var cmds = stackalloc WGPUCommandBuffer[count];
+        for (int i = 0; i < count; i++)
+        {
+            cmds[i] = ToNative(commandBuffers[i].Handle);
+        }
         wgpuQueueSubmit(ToNative(handle.Handle), (uint)count, cmds);
     }
+
 
     unsafe void IBackend<Backend>.WriteBuffer(GPUQueue<Backend> handle, GPUBuffer<Backend> buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size)
     {
@@ -880,9 +922,14 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     }
 
 
-    void IBackend<Backend>.SetBindGroup(GPURenderPassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
+    unsafe void IBackend<Backend>.SetBindGroup(GPURenderPassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
     {
-        throw new NotImplementedException();
+        uint* ptr = null;
+        if (dynamicOffsets.Length > 0)
+        {
+            ptr = (uint*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dynamicOffsets));
+        }
+        wgpuRenderPassEncoderSetBindGroup(ToNative(handle.Handle), (uint)index, bindGroup is not null ? ToNative(bindGroup.Handle) : WGPUBindGroup.Null, (ulong)dynamicOffsets.Length, ptr);
     }
 
     void IBackend<Backend>.SetBindGroup(GPURenderPassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
@@ -897,12 +944,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     void IBackend<Backend>.SetIndexBuffer(GPURenderPassEncoder<Backend> handle, GPUBuffer<Backend> buffer, GPUIndexFormat indexFormat, ulong offset, ulong size)
     {
-        throw new NotImplementedException();
+        wgpuRenderPassEncoderSetIndexBuffer(ToNative(handle.Handle), ToNative(buffer.Handle), ToNative(indexFormat), offset, size);
     }
 
     void IBackend<Backend>.SetVertexBuffer(GPURenderPassEncoder<Backend> handle, int slot, GPUBuffer<Backend>? buffer, ulong offset, ulong size)
     {
-        throw new NotImplementedException();
+        wgpuRenderPassEncoderSetVertexBuffer(ToNative(handle.Handle), (uint)slot, buffer is not null ? ToNative(buffer.Handle) : WGPUBuffer.Null, offset, size);
     }
 
     void IBackend<Backend>.SetViewport(GPURenderPassEncoder<Backend> handle, float x, float y, float width, float height, float minDepth, float maxDepth)

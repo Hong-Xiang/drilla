@@ -44,7 +44,7 @@ public partial interface IBackend<TBackend>
         ulong offset,
         ulong size);
 
-    internal ValueTask MapAsyncAsync(
+    internal ValueTask MapAsync(
         GPUBuffer<TBackend> handle,
         GPUMapMode mode,
         ulong offset,

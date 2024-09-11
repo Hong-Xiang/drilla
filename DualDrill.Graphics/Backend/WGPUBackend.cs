@@ -316,7 +316,7 @@ public sealed class WGPUBackend : IBackend<WGPUBackend>
         throw new NotImplementedException();
     }
 
-    ValueTask IBackend<WGPUBackend>.MapAsyncAsync(GPUBuffer<WGPUBackend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
+    ValueTask IBackend<WGPUBackend>.MapAsync(GPUBuffer<WGPUBackend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
     {
         throw new NotImplementedException();
     }

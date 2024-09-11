@@ -99,16 +99,16 @@ public partial struct GPUComputePipelineDescriptor()
 
 public partial struct GPUDepthStencilState()
 {
-    public int DepthBias { get; set; }
-    public float DepthBiasClamp { get; set; }
-    public float DepthBiasSlopeScale { get; set; }
+    public int DepthBias { get; set; } = 0;
+    public float DepthBiasClamp { get; set; } = 0;
+    public float DepthBiasSlopeScale { get; set; } = 0;
     public GPUCompareFunction DepthCompare { get; set; }
     public bool DepthWriteEnabled { get; set; }
-    public GPUTextureFormat Format { get; set; }
-    public GPUStencilFaceState StencilBack { get; set; }
-    public GPUStencilFaceState StencilFront { get; set; }
-    public uint StencilReadMask { get; set; }
-    public uint StencilWriteMask { get; set; }
+    public required GPUTextureFormat Format { get; set; }
+    public GPUStencilFaceState StencilBack { get; set; } = new();
+    public GPUStencilFaceState StencilFront { get; set; } = new();
+    public uint StencilReadMask { get; set; } = uint.MaxValue;
+    public uint StencilWriteMask { get; set; } = uint.MaxValue;
 }
 
 public partial struct GPUDeviceDescriptor()
@@ -150,9 +150,9 @@ public partial record struct GPUImageDataLayout()
 
 public partial struct GPUMultisampleState()
 {
-    public bool AlphaToCoverageEnabled { get; set; }
-    public uint Count { get; set; }
-    public uint Mask { get; set; }
+    public bool AlphaToCoverageEnabled { get; set; } = false;
+    public uint Count { get; set; } = 1;
+    public uint Mask { get; set; } = uint.MaxValue;
 }
 
 public partial struct GPUOrigin2D()
@@ -176,11 +176,11 @@ public partial struct GPUPipelineLayoutDescriptor()
 
 public partial struct GPUPrimitiveState()
 {
-    public GPUCullMode CullMode { get; set; }
-    public GPUFrontFace FrontFace { get; set; }
+    public GPUCullMode CullMode { get; set; } = GPUCullMode.None;
+    public GPUFrontFace FrontFace { get; set; } = GPUFrontFace.CCW;
     public GPUIndexFormat StripIndexFormat { get; set; }
-    public GPUPrimitiveTopology Topology { get; set; }
-    public bool UnclippedDepth { get; set; }
+    public GPUPrimitiveTopology Topology { get; set; } = GPUPrimitiveTopology.TriangleList;
+    public bool UnclippedDepth { get; set; } = false;
 }
 
 public partial struct GPUProgrammableStage()
@@ -267,8 +267,8 @@ public partial struct GPURenderPipelineDescriptor()
     public IGPUPipelineLayout? Layout { get; set; }
     public GPUDepthStencilState? DepthStencil { get; set; }
     public GPUFragmentState? Fragment { get; set; }
-    public GPUMultisampleState Multisample { get; set; }
-    public GPUPrimitiveState Primitive { get; set; }
+    public GPUMultisampleState Multisample { get; set; } = new();
+    public GPUPrimitiveState Primitive { get; set; } = new();
     public GPUVertexState Vertex { get; set; }
 }
 
@@ -313,10 +313,10 @@ public partial struct GPUShaderModuleDescriptor()
 
 public partial struct GPUStencilFaceState()
 {
-    public GPUCompareFunction Compare { get; set; }
-    public GPUStencilOperation DepthFailOp { get; set; }
-    public GPUStencilOperation FailOp { get; set; }
-    public GPUStencilOperation PassOp { get; set; }
+    public GPUCompareFunction Compare { get; set; } = GPUCompareFunction.Always;
+    public GPUStencilOperation DepthFailOp { get; set; } = GPUStencilOperation.Keep;
+    public GPUStencilOperation FailOp { get; set; } = GPUStencilOperation.Keep;
+    public GPUStencilOperation PassOp { get; set; } = GPUStencilOperation.Keep;
 }
 
 public partial struct GPUStorageTextureBindingLayout()

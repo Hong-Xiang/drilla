@@ -24,14 +24,14 @@ public sealed partial record class GPUBuffer<TBackend>(GPUHandle<TBackend, GPUBu
         return TBackend.Instance.GetMappedRange(this, offset, size);
     }
 
-    public ValueTask MapAsync(
+    public async ValueTask MapAsync(
      GPUMapMode mode
     , ulong offset
     , ulong size
     , CancellationToken cancellation
     )
     {
-        return TBackend.Instance.MapAsyncAsync(this, mode, offset, size, cancellation);
+        await TBackend.Instance.MapAsync(this, mode, offset, size, cancellation);
     }
 
     public void Unmap()

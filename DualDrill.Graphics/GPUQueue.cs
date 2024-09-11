@@ -35,7 +35,7 @@ where TBackend : IBackend<TBackend>
 
     public void Submit(IReadOnlyList<IGPUCommandBuffer> commandBuffers)
     {
-        TBackend.Instance.Submit(this, (IReadOnlyList<GPUCommandBuffer<TBackend>>)commandBuffers);
+        TBackend.Instance.Submit(this, [.. commandBuffers.OfType<GPUCommandBuffer<TBackend>>()]);
     }
 
     unsafe public void WriteBuffer(IGPUBuffer buffer, ulong bufferOffset, ReadOnlySpan<byte> data)
