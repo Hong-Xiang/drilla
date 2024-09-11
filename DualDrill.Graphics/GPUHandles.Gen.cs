@@ -1,25 +1,4 @@
-﻿using System.Collections.Immutable;
-
-namespace DualDrill.Graphics;
-public partial interface IGPUAdapter : IDisposable
-{
-    public ValueTask<IGPUDevice> RequestDeviceAsync(
-     GPUDeviceDescriptor descriptor
-    , CancellationToken cancellation
-    );
-}
-
-public sealed partial record class GPUAdapter<TBackend>(GPUHandle<TBackend, GPUAdapter<TBackend>> Handle)
-    : IDisposable, IGPUAdapter
-    where TBackend : IBackend<TBackend>
-{
-
-    public void Dispose()
-    {
-        TBackend.Instance.DisposeHandle(Handle);
-    }
-}
-
+﻿namespace DualDrill.Graphics;
 public partial interface IGPURenderBundle
 {
 }

@@ -26,9 +26,6 @@ public static class DualDrillServerExtension
         var instance = WebGPUNETBackend.Instance.CreateGPUInstance();
         services.AddSingleton<IGPUInstance, GPUInstance<WebGPUNETBackend>>(sp => instance);
 
-        var instanceLegacy = WGPUBackend.Instance.CreateGPUInstance();
-        services.AddSingleton(instanceLegacy);
-
         var adapter = await instance.RequestAdapterAsync(new GPURequestAdapterOptions()
         {
             PowerPreference = GPUPowerPreference.HighPerformance
