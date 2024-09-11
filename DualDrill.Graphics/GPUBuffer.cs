@@ -1,6 +1,5 @@
 ﻿namespace DualDrill.Graphics;
 
-
 public partial interface IGPUBuffer : IDisposable
 {
     public ulong Length { get; }
@@ -40,4 +39,3 @@ public sealed partial record class GPUBuffer<TBackend>(GPUHandle<TBackend, GPUBu
         TBackend.Instance.DisposeHandle(Handle);
     }
 }
-
