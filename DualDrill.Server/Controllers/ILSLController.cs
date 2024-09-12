@@ -1,5 +1,6 @@
 ﻿using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
+using DualDrill.ILSL.IR.Declaration;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,6 +42,19 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         }
         var code = ILSL.ILSLCompiler.Compile(shaderModule);
         return Ok(code);
+    }
+
+    [HttpGet("wgsl/ir")]
+    public async Task<IActionResult> GenerateCodeUsingIRAsync()
+    {
+        var module = MinimumTriangleModule.CreateModule();
+        var tw = new StringWriter();
+        var wgslVisitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
+        foreach (var d in module.Declarations)
+        {
+            await d.AcceptVisitor(wgslVisitor);
+        }
+        return Ok(tw.ToString());
     }
 
     [HttpGet("ast/{name}")]

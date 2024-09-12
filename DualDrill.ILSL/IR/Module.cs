@@ -1,5 +1,8 @@
-﻿namespace DualDrill.ILSL.IR;
+﻿using System.Collections.Immutable;
+using DualDrill.ILSL.IR.Declaration;
 
-internal class ShaderSharpModule
+namespace DualDrill.ILSL.IR;
+
+public sealed record class Module(ImmutableArray<IDeclaration> Declarations)
 {
 }

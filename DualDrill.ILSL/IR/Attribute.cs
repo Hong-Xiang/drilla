@@ -7,3 +7,5 @@ using System.Threading.Tasks;
 namespace DualDrill.ILSL.IR;
 
 public interface IAttribute { }
+
+public interface IIOAttribute : IAttribute { }

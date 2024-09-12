@@ -1,4 +1,6 @@
-﻿namespace DualDrill.ILSL;
+﻿using DualDrill.ILSL.IR;
+
+namespace DualDrill.ILSL;
 
 public enum BuiltinBinding
 {
@@ -23,15 +25,15 @@ public enum BuiltinBinding
     FrontFacing,
 }
 
-public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute
+public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, IAttribute
 {
     public BuiltinBinding Slot { get; } = Slot;
 }
 
-public sealed class VertexAttribute() : Attribute { }
-public sealed class FragmentAttribute() : Attribute { }
+public sealed class VertexAttribute() : Attribute, IAttribute { }
+public sealed class FragmentAttribute() : Attribute, IAttribute { }
 
-public sealed class LocationAttribute(int Binding) : Attribute
+public sealed class LocationAttribute(int Binding) : Attribute, IAttribute
 {
     public int Binding { get; } = Binding;
 }

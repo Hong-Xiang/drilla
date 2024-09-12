@@ -1,36 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DualDrill.ILSL.IR.Declaration;
 
 namespace DualDrill.ILSL.IR;
 
-public interface ILiteral { }
+public interface ILiteral
+{
+    IType Type { get; }
+
+}
 
 public interface INumericLiteral : ILiteral { }
 
 public readonly record struct BoolLiteral(bool Value) : ILiteral
 {
+    public IType Type => new BoolType();
 }
 
-public enum FloatLiteralSuffix
+public readonly record struct FloatLiteral<TBitWidth>(double Value)
+    : INumericLiteral
+    where TBitWidth : IBitWidth
 {
-    d,
-    f,
-    h
+    public IType Type => new FloatType<TBitWidth>();
 }
 
-public readonly record struct FloatLiteral(float Value, FloatLiteralSuffix? Suffix = default) : INumericLiteral
+public readonly record struct IntLiteral<TBitWidth>(long Value)
+    : INumericLiteral
+    where TBitWidth : IBitWidth
 {
+    public IType Type => new IntType<TBitWidth>();
 }
 
-public enum IntLiteralSuffix
+public readonly record struct UIntLiteral<TBitWidth>(ulong Value)
+    : INumericLiteral
+    where TBitWidth : IBitWidth
 {
-    i,
-    u
-}
-
-public readonly record struct IntLiteral(int Value, IntLiteralSuffix? Suffix = default) : INumericLiteral
-{
+    public IType Type => new UIntType<TBitWidth>();
 }
