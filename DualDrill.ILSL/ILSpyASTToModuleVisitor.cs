@@ -1,12 +1,18 @@
 ﻿using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
+using DualDrill.ILSL.IR.Expression;
+using DualDrill.ILSL.IR.Statement;
 using ICSharpCode.Decompiler.CSharp.Syntax;
+using ICSharpCode.Decompiler.Semantics;
 using ICSharpCode.Decompiler.TypeSystem;
+using System.Collections.Immutable;
+using System.Numerics;
 
 namespace DualDrill.ILSL;
 
 public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 {
+    Stack<ImmutableDictionary<string, IDeclaration>> Env = [];
     public INode? VisitAccessor(Accessor accessor)
     {
         throw new NotImplementedException();
@@ -49,6 +55,23 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitAttribute(ICSharpCode.Decompiler.CSharp.Syntax.Attribute attribute)
     {
+        var a = attribute.Annotation<MemberResolveResult>().Type;
+        if (a.FullName == typeof(BuiltinAttribute).FullName)
+        {
+            return new BuiltinAttribute(Enum.Parse<BuiltinBinding>(attribute.Children.OfType<MemberReferenceExpression>().Single().MemberName));
+        }
+        if (a.FullName == typeof(VertexAttribute).FullName)
+        {
+            return new VertexAttribute();
+        }
+        if (a.FullName == typeof(FragmentAttribute).FullName)
+        {
+            return new FragmentAttribute();
+        }
+        if (a.FullName == typeof(LocationAttribute).FullName)
+        {
+            return new LocationAttribute(0);
+        }
         throw new NotImplementedException();
     }
 
@@ -69,7 +92,18 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitBlockStatement(BlockStatement blockStatement)
     {
-        throw new NotImplementedException();
+        if (Env.Count > 0)
+        {
+            Env.Push(Env.Peek());
+        }
+        else
+        {
+            ImmutableDictionary<string, IDeclaration> d = ImmutableDictionary.Create<string, IDeclaration>();
+            Env.Push(d);
+        }
+        var result = new CompoundStatement([.. blockStatement.Statements.Select(s => s.AcceptVisitor(this)).OfType<IStatement>()]);
+        Env.Pop();
+        return result;
     }
 
     public INode? VisitBreakStatement(BreakStatement breakStatement)
@@ -269,7 +303,7 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitIdentifierExpression(IdentifierExpression identifierExpression)
     {
-        throw new NotImplementedException();
+        return SyntaxFactory.Identifier((VariableDeclaration)Env.Peek()[identifierExpression.GetChildByRole(Roles.Identifier).Name]);
     }
 
     public INode? VisitIfElseStatement(IfElseStatement ifElseStatement)
@@ -366,12 +400,16 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
 
 
+        var body = (CompoundStatement)methodDeclaration.Body.AcceptVisitor(this);
         return new IR.Declaration.FunctionDeclaration(
             methodDeclaration.Name,
             [.. methodDeclaration.Parameters.Select(p => p.AcceptVisitor(this)).OfType<IR.Declaration.ParameterDeclaration>()],
             new IR.Declaration.FunctionReturn(null, [.. returnAttributes]),
             [.. methodAttributes]
-            );
+            )
+        {
+            Body = body
+        };
     }
 
     public INode? VisitNamedArgumentExpression(NamedArgumentExpression namedArgumentExpression)
@@ -402,6 +440,20 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitObjectCreateExpression(ObjectCreateExpression objectCreateExpression)
     {
+        var t = objectCreateExpression.GetChildByRole(Roles.Type);
+        var args = objectCreateExpression.GetChildrenByRole(Roles.Argument)
+                                         .Select(a => a.AcceptVisitor(this))
+                                         .OfType<IExpression>()
+                                         .ToImmutableArray();
+        return GetConstructExpression(t.Annotation<TypeResolveResult>().Type, args);
+    }
+
+    IExpression GetConstructExpression(ICSharpCode.Decompiler.TypeSystem.IType type, ImmutableArray<IExpression> args)
+    {
+        if (type.FullName == typeof(Vector4).FullName)
+        {
+            return SyntaxFactory.vec4<FloatType<B32>>(args.ToArray());
+        }
         throw new NotImplementedException();
     }
 
@@ -424,7 +476,7 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
         );
     }
 
-    public INode? VisitParenthesizedExpression(ParenthesizedExpression parenthesizedExpression)
+    public INode? VisitParenthesizedExpression(ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression parenthesizedExpression)
     {
         throw new NotImplementedException();
     }
@@ -451,7 +503,12 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitPrimitiveExpression(PrimitiveExpression primitiveExpression)
     {
-        throw new NotImplementedException();
+        var value = primitiveExpression.Value;
+        return value switch
+        {
+            float v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
+            _ => throw new NotSupportedException()
+        };
     }
 
     public INode? VisitPrimitiveType(PrimitiveType primitiveType)
@@ -529,9 +586,19 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
         throw new NotImplementedException();
     }
 
-    public INode? VisitReturnStatement(ReturnStatement returnStatement)
+    public INode? VisitReturnStatement(ICSharpCode.Decompiler.CSharp.Syntax.ReturnStatement returnStatement)
     {
-        throw new NotImplementedException();
+        if (returnStatement.HasChildren)
+        {
+            return new IR.Statement.ReturnStatement(
+                (IExpression)returnStatement.GetChildByRole(Roles.Expression).AcceptVisitor(this)
+            );
+        }
+        else
+        {
+            return new IR.Statement.ReturnStatement(null);
+        }
+
     }
 
     public INode? VisitSimpleType(SimpleType simpleType)
@@ -680,7 +747,13 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitVariableDeclarationStatement(VariableDeclarationStatement variableDeclarationStatement)
     {
-        throw new NotImplementedException();
+        // TODO: handle multiple variable declaration 
+        var v = variableDeclarationStatement.Variables.Single();
+        // TODO: proper handling of variable type
+        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, new FloatType<B32>(), []);
+        var e = Env.Pop();
+        Env.Push(e.Add(varDecl.Name, varDecl));
+        return new VariableOrValueStatement(varDecl);
     }
 
     public INode? VisitVariableInitializer(VariableInitializer variableInitializer)

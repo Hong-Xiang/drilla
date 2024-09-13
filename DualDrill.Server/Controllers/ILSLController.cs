@@ -40,10 +40,14 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return NotFound();
         }
-        var code = ILSL.ILSLCompiler.Compile(shaderModule);
-
-        //return await GenerateCodeUsingIRAsync(); 
-        return Ok(code);
+        var module = ILSL.ILSLCompiler.CompileIR(shaderModule);
+        var tw = new StringWriter();
+        var wgslVisitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
+        foreach (var d in module.Declarations)
+        {
+            await d.AcceptVisitor(wgslVisitor);
+        }
+        return Ok(tw.ToString());
     }
 
     [HttpGet("wgsl/{name}/ir")]
@@ -55,8 +59,6 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             return NotFound();
         }
         var code = ILSL.ILSLCompiler.CompileIR(shaderModule);
-
-        //return await GenerateCodeUsingIRAsync(); 
         return Ok(code);
     }
 
