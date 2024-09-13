@@ -33,7 +33,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
 
 
     [HttpGet("wgsl/{name}")]
-    public IActionResult GeneratedCode(string name)
+    public async Task<IActionResult> GeneratedCode(string name)
     {
         var shaderModule = GetShaderModule(name);
         if (shaderModule is null)
@@ -41,6 +41,22 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             return NotFound();
         }
         var code = ILSL.ILSLCompiler.Compile(shaderModule);
+
+        //return await GenerateCodeUsingIRAsync(); 
+        return Ok(code);
+    }
+
+    [HttpGet("wgsl/{name}/ir")]
+    public async Task<IActionResult> GeneratedCodeUsingIR(string name)
+    {
+        var shaderModule = GetShaderModule(name);
+        if (shaderModule is null)
+        {
+            return NotFound();
+        }
+        var code = ILSL.ILSLCompiler.CompileIR(shaderModule);
+
+        //return await GenerateCodeUsingIRAsync(); 
         return Ok(code);
     }
 

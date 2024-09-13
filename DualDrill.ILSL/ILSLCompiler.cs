@@ -26,6 +26,22 @@ public static class ILSLCompiler
         ast.AcceptVisitor(new SimpleWGSLOutputVisitor(writer));
         return writer.ToString();
     }
+
+    public static IR.Module CompileIR(IShaderModule shaderModule)
+    {
+        var target = shaderModule.GetType();
+        var module = target.Assembly.Modules.ToArray();
+        var decompiler = new CSharpDecompiler(target.Assembly.Location, new DecompilerSettings()
+        {
+            AlwaysQualifyMemberReferences = true,
+            AlwaysUseGlobal = true,
+            UsingDeclarations = false,
+        });
+        var name = new FullTypeName(target.FullName);
+        var ast = decompiler.DecompileType(name);
+        return (IR.Module)ast.AcceptVisitor(new ILSpyASTToModuleVisitor());
+    }
+
     public static string CompileMethod(MethodInfo m)
     {
         var module = m.DeclaringType.Assembly.Modules.ToArray();

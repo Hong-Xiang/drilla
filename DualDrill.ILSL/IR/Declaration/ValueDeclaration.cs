@@ -5,7 +5,7 @@ namespace DualDrill.ILSL.IR.Declaration;
 
 public sealed record class ValueDeclaration(
     DeclarationScope DeclarationScope,
-    IName Name,
+    string Name,
     IType Type,
     ValueDeclarationKind Kind,
     ImmutableHashSet<IAttribute> Attributes

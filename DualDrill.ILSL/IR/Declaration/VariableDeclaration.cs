@@ -5,7 +5,7 @@ namespace DualDrill.ILSL.IR.Declaration;
 
 public sealed record class VariableDeclaration(
     DeclarationScope DeclarationScope,
-    IName Name,
+    string Name,
     IType Type,
     ImmutableHashSet<IAttribute> Attributes
 ) : IDeclaration

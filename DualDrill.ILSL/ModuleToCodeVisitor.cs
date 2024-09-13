@@ -52,7 +52,7 @@ public sealed class WGSLLanguage : ITargetLanguage
 
     public string GetName<TSize, TElement>(VecType<TSize, TElement> type)
         where TSize : IRank
-        where TElement : IScalarType
+        where TElement : IScalarType, new()
     {
         return type switch
         {
@@ -64,7 +64,7 @@ public sealed class WGSLLanguage : ITargetLanguage
     public string GetName<TRow, TCol, TElement>(MatType<TRow, TCol, TElement> type)
         where TRow : IRank
         where TCol : IRank
-        where TElement : IScalarType
+        where TElement : IScalarType, new()
     {
         throw new NotImplementedException();
     }
@@ -93,7 +93,7 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
                 Writer.Write(")");
                 break;
             case LocationAttribute a:
-                Writer.Write("localtion(");
+                Writer.Write("location(");
                 Writer.Write(a.Binding);
                 Writer.Write(")");
                 break;
@@ -122,7 +122,7 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
     {
         await WriteAttributesAsync(decl.Attributes, true);
         Writer.Write("fn ");
-        Writer.Write(decl.Name.GetName(TargetLanguage));
+        Writer.Write(decl.Name);
         Writer.Write("(");
         foreach (var p in decl.Parameters)
         {
@@ -149,7 +149,7 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
     public async ValueTask VisitParameter(ParameterDeclaration decl)
     {
         await WriteAttributesAsync(decl.Attributes);
-        Writer.Write(decl.Name.GetName(TargetLanguage));
+        Writer.Write(decl.Name);
         Writer.Write(": ");
         await decl.Type.AcceptVisitor(this);
         Writer.Write(", ");
@@ -157,7 +157,7 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
 
     public async ValueTask VisitType(IType type)
     {
-        Writer.Write(type.Name.GetName(TargetLanguage));
+        Writer.Write(type.Name);
     }
 
     public ValueTask VisitValue(ValueDeclaration decl)
@@ -188,7 +188,7 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
     public async ValueTask VisitVariableOrValue(VariableOrValueStatement stmt)
     {
         Writer.Write("var ");
-        Writer.Write(stmt.Variable.Name.GetName(TargetLanguage));
+        Writer.Write(stmt.Variable.Name);
         Writer.Write(" : ");
         await stmt.Variable.Type.AcceptVisitor(this);
         if (stmt.Variable.Initializer is not null)
@@ -210,12 +210,17 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
 
     public async ValueTask VisitFunctionCallExpression(FunctionCallExpression expr)
     {
-        Writer.Write(expr.Callee.Name.GetName(TargetLanguage));
+        Writer.Write(expr.Callee.Name);
         Writer.Write('(');
+        bool firstArgument = true;
         foreach (var a in expr.Arguments)
         {
+            if (!firstArgument)
+            {
+                Writer.Write(", ");
+            }
+            firstArgument = false;
             await a.AcceptVisitor(this);
-            Writer.Write(',');
         }
         Writer.Write(')');
     }
@@ -229,7 +234,7 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
             BinaryArithmeticOp.Subtraction => "-",
             BinaryArithmeticOp.Multiplication => "*",
             BinaryArithmeticOp.Division => "/",
-            BinaryArithmeticOp.Remainder => "/",
+            BinaryArithmeticOp.Remainder => "%",
             _ => throw new NotSupportedException()
         };
         Writer.Write(' ');
@@ -245,6 +250,28 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
 
     public async ValueTask VisitVariableIdentifierExpression(VariableIdentifierExpression expr)
     {
-        Writer.Write(expr.Variable.Name.GetName(TargetLanguage));
+        Writer.Write(expr.Variable.Name);
+    }
+
+    public async ValueTask VisitFormalParameterExpression(FormalParameterExpression expr)
+    {
+        Writer.Write(expr.Parameter.Name);
+    }
+
+    public async ValueTask VisitBinaryBitwiseExpression(BinaryBitwiseExpression expr)
+    {
+        await expr.L.AcceptVisitor(this);
+        var op = expr.Op switch
+        {
+            BinaryBitwiseOp.BitwiseOr => "|",
+            BinaryBitwiseOp.BitwiseAnd => "&",
+            BinaryBitwiseOp.BitwiseExclusiveOr => "^",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(' ');
+        Writer.Write(op);
+        Writer.Write(' ');
+        await expr.R.AcceptVisitor(this);
+
     }
 }

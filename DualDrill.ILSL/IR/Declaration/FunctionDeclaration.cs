@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 namespace DualDrill.ILSL.IR.Declaration;
 
 public sealed record class FunctionDeclaration(
-    IName Name,
+    string Name,
     ImmutableArray<ParameterDeclaration> Parameters,
     FunctionReturn Return,
     ImmutableHashSet<IAttribute> Attributes

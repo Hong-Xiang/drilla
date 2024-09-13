@@ -1,9 +1,14 @@
 ﻿using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace DualDrill.ILSL.IR.Declaration;
 
-public interface IDeclaration
+[JsonDerivedType(typeof(FunctionDeclaration), nameof(FunctionDeclaration))]
+[JsonDerivedType(typeof(ParameterDeclaration), nameof(ParameterDeclaration))]
+[JsonDerivedType(typeof(TypeDeclaration), nameof(TypeDeclaration))]
+[JsonDerivedType(typeof(ValueDeclaration), nameof(ValueDeclaration))]
+public interface IDeclaration : INode
 {
-    IName Name { get; }
+    string Name { get; }
     ImmutableHashSet<IAttribute> Attributes { get; }
 }

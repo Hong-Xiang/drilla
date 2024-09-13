@@ -3,7 +3,7 @@
 namespace DualDrill.ILSL.IR.Declaration;
 
 public sealed record class ParameterDeclaration(
-    IName Name,
+    string Name,
     IType Type,
     ImmutableHashSet<IAttribute> Attributes) : IDeclaration
 {

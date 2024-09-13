@@ -1,6 +1,6 @@
 ﻿namespace DualDrill.ILSL.IR.Statement;
 
-public interface IStatement { }
+public interface IStatement : INode { }
 
 public interface IStatementVisitor<T>
 {
