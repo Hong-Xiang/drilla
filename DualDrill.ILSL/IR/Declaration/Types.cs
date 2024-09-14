@@ -1,0 +1,205 @@
+﻿using System.Collections.Immutable;
+
+namespace DualDrill.ILSL.IR.Declaration;
+public interface IRank
+{
+    abstract static IEnumerable<T> Select<T>(Func<int, T> f);
+    abstract static int Value { get; }
+}
+public readonly struct R2 : IRank
+{
+    public static int Value => 2;
+
+    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1)];
+}
+public readonly struct R3 : IRank
+{
+    public static int Value => 3;
+    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1), f(2)];
+}
+public readonly struct R4 : IRank
+{
+    public static int Value => 4;
+    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1), f(2), f(3)];
+}
+
+public interface IBitWidth
+{
+    abstract static int Value { get; }
+}
+
+public readonly struct B16 : IBitWidth
+{
+    public static int Value => 16;
+}
+public readonly struct B32 : IBitWidth
+{
+    public static int Value => 32;
+}
+public readonly struct B64 : IBitWidth
+{
+    public static int Value => 64;
+}
+
+public interface IType : IDeclaration
+{
+}
+
+public interface IBuiltinType
+{
+    abstract static IType Instance { get; }
+}
+
+internal interface IBuiltinType<T> : IType, IBuiltinType
+    where T : IBuiltinType<T>, new()
+{
+    static IType IBuiltinType.Instance => new T();
+
+    ImmutableHashSet<IAttribute> IDeclaration.Attributes => [];
+}
+
+public interface ISingletonType
+{
+    abstract static IType Instance { get; }
+}
+
+public interface IPlainType : IType
+{
+}
+
+public interface IScalarType : IPlainType, IStorableType, IBuiltinType
+{
+}
+
+public readonly record struct BoolType : IScalarType, IBuiltinType<BoolType>
+{
+    public string Name => "bool";
+}
+
+public interface IFloatType : IScalarType { }
+
+public readonly struct FloatType<TBitWidth> : IFloatType, IBuiltinType<FloatType<TBitWidth>>
+    where TBitWidth : IBitWidth
+{
+    public readonly static FunctionDeclaration Cast = new FunctionDeclaration(
+      new FloatType<TBitWidth>().Name,
+      [],
+      new FunctionReturn(new FloatType<TBitWidth>(), []),
+      []
+  );
+
+    public string Name => $"f{TBitWidth.Value}";
+}
+
+
+internal interface IZeroValueConstructibleType : IType
+{
+    FunctionDeclaration ZeroValueConstructor(ITargetLanguage targetLanguage);
+}
+
+public interface IIntegerType : IScalarType { }
+
+public readonly record struct IntType<TBitWidth>() : IIntegerType, IBuiltinType<IntType<TBitWidth>>
+    where TBitWidth : IBitWidth
+{
+
+    public readonly static FunctionDeclaration Cast = new FunctionDeclaration(
+           new IntType<TBitWidth>().Name,
+           [],
+           new FunctionReturn(new IntType<TBitWidth>(), []),
+           []
+       );
+
+
+    public string Name => $"i{TBitWidth.Value}";
+}
+
+public readonly record struct UIntType<TBitWidth>() : IIntegerType, IBuiltinType<UIntType<TBitWidth>>
+    where TBitWidth : IBitWidth
+{
+    public string Name => $"u{TBitWidth.Value}";
+}
+
+public readonly record struct VecType<TSize, TElement>() : IBuiltinType<VecType<TSize, TElement>>
+    , IStorableType
+    where TSize : IRank
+    where TElement : IScalarType, new()
+{
+    static readonly ImmutableArray<string> ParameterNames = ["x", "y", "z", "w"];
+
+    public static readonly ImmutableArray<FunctionDeclaration> Constructors =
+        [
+          new FunctionDeclaration(
+                new VecType<TSize, TElement>().Name,
+                [],
+                new FunctionReturn(new VecType<TSize, TElement>(), []),
+                []
+          ),
+          ..TSize.Select(static count =>
+            new FunctionDeclaration(
+                new VecType<TSize, TElement>().Name,
+                [.. Enumerable.Range(0, count + 1).Select(static i => new ParameterDeclaration(ParameterNames[i], TElement.Instance, []))],
+                new FunctionReturn(new VecType<TSize, TElement>(), []),
+            []
+        ))];
+
+
+    public string Name => $"vec{TSize.Value}<{new TElement().Name}>";
+}
+
+public readonly struct MatType<TRow, TCol, TElement>()
+    : IBuiltinType<MatType<TRow, TCol, TElement>>, IStorableType
+    where TRow : IRank
+    where TCol : IRank
+    where TElement : IScalarType, new()
+{
+    public string Name => $"mat{TRow.Value}x{TCol.Value}<{new TElement().Name}>";
+}
+
+public sealed record class FixedSizedArrayType(IPlainType ElementType, int Size)
+{
+}
+
+public sealed record class RuntimeSizedArrayType(IScalarType ElementType)
+{
+}
+
+public readonly record struct StructureMember(string Name, IPlainType Type)
+{
+    public ImmutableArray<IAttribute> Attributes { get; init; } = [];
+}
+
+public sealed record class StructureType(ImmutableArray<StructureMember> Members)
+{
+}
+
+
+public interface IStorableType { }
+
+sealed record class MemoryView(
+    IStorableType StoreType,
+    AccessMode AccessMode
+)
+{
+}
+
+sealed record class PointerType(
+    AddressSpace AddressSpace,
+    IStorableType StoreType,
+    AccessMode AccessMode)
+{ }
+
+public enum ValueDeclarationKind
+{
+    Const,
+    Override,
+    Let,
+    FormalParameter
+}
+
+public enum DeclarationScope
+{
+    Undefined,
+    Module,
+    Function
+}

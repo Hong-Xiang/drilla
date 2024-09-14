@@ -670,22 +670,40 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     }
 
 
-    unsafe ValueTask IBackend<Backend>.MapAsync(GPUBuffer<Backend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
+    async ValueTask IBackend<Backend>.MapAsync(GPUBuffer<Backend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
     {
         var t = new TaskCompletionSource();
-        unsafe void BufferMapped(WGPUBufferMapAsyncStatus status, void* userData)
+        GCHandle h = GCHandle.Alloc(t);
+        try
         {
-            if (status == WGPUBufferMapAsyncStatus.Success)
+            unsafe static void BufferMapped(WGPUBufferMapAsyncStatus status, void* userData)
             {
-                t.SetResult();
+                var h_ = GCHandle.FromIntPtr((nint)userData);
+                var t_ = h_.Target as TaskCompletionSource;
+                if (t_ is not null)
+                {
+                    if (status == WGPUBufferMapAsyncStatus.Success)
+                    {
+                        t_.SetResult();
+                    }
+                    else
+                    {
+                        t_.SetException(new GraphicsApiException<Backend>($"Map buffer failed {Enum.GetName(status)}"));
+                    }
+                }
+
             }
-            else
+            unsafe void Go()
             {
-                t.SetException(new GraphicsApiException<Backend>($"Map buffer failed {Enum.GetName(status)}"));
+                wgpuBufferMapAsync(ToNative(handle.Handle), ToNative(mode), offset, size, BufferMapped, (void*)GCHandle.ToIntPtr(h));
             }
+            Go();
+            await t.Task;
         }
-        wgpuBufferMapAsync(ToNative(handle.Handle), ToNative(mode), offset, size, BufferMapped, null);
-        return new ValueTask(t.Task);
+        finally
+        {
+            h.Free();
+        }
     }
 
     unsafe Span<byte> IBackend<Backend>.GetMappedRange(GPUBuffer<Backend> handle, ulong offset, ulong size)
