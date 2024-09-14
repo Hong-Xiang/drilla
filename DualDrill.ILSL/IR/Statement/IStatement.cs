@@ -1,5 +1,10 @@
-﻿namespace DualDrill.ILSL.IR.Statement;
+﻿using System.Text.Json.Serialization;
 
+namespace DualDrill.ILSL.IR.Statement;
+
+[JsonDerivedType(typeof(ReturnStatement), nameof(ReturnStatement))]
+[JsonDerivedType(typeof(VariableOrValueStatement), nameof(VariableOrValueStatement))]
+[JsonDerivedType(typeof(CompoundStatement), nameof(CompoundStatement))]
 public interface IStatement : INode { }
 
 public interface IStatementVisitor<T>

@@ -99,7 +99,7 @@ public static class MinimumTriangleModule
 
 public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
 {
- string IILSLDevelopShaderModule.ILSLWGSLExpectedCode => """
+    string IILSLDevelopShaderModule.ILSLWGSLExpectedCode => """
       @vertex fn vs(@builtin(vertex_index) vertex_index : u32) 
         -> @builtin(position) vec4f 
       {
@@ -113,7 +113,7 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
       }
       """;
 
-   
+
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
@@ -121,8 +121,11 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
         [Builtin(BuiltinBinding.vertex_index)] uint vertexIndex
     )
     {
-        var x = (float)(1 - (int)vertexIndex) * 0.5f;
-        var y = (float)((int)(vertexIndex & 1u) * 2 - 1) * 0.5f;
+        // explicit type as a temp workaround for IL treating 1u literal using 1 (int)
+        int c = (int)(vertexIndex - 0u);
+        var x = (float)(1 - c) * 0.5f;
+        var d = (int)(1 & c);
+        var y = (float)(d * 2 - 1) * 0.5f;
         return new Vector4(x, y, 0.0f, 1.0f);
     }
 

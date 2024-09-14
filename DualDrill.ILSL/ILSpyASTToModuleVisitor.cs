@@ -10,9 +10,8 @@ using System.Numerics;
 
 namespace DualDrill.ILSL;
 
-public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
+public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Symbols) : IAstVisitor<INode?>
 {
-    Stack<ImmutableDictionary<string, IDeclaration>> Env = [];
     public INode? VisitAccessor(Accessor accessor)
     {
         throw new NotImplementedException();
@@ -87,22 +86,37 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitBinaryOperatorExpression(BinaryOperatorExpression binaryOperatorExpression)
     {
-        throw new NotImplementedException();
+        var l = (IExpression)binaryOperatorExpression.Left.AcceptVisitor(this);
+        var r = (IExpression)binaryOperatorExpression.Right.AcceptVisitor(this);
+        // TODO: proper expression type handling
+        if (l is LiteralValueExpression { Literal: IntLiteral<B32> { Value: var v } }
+            && r is FormalParameterExpression { Parameter: { Type: UIntType<B32> } })
+        {
+            l = new LiteralValueExpression(new UIntLiteral<B32>((uint)v));
+        }
+        return binaryOperatorExpression.Operator switch
+        {
+            BinaryOperatorType.Add => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Addition),
+            BinaryOperatorType.Subtract => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Subtraction),
+            BinaryOperatorType.Multiply => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Multiplication),
+            BinaryOperatorType.Divide => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Division),
+            BinaryOperatorType.Modulus => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Remainder),
+            BinaryOperatorType.BitwiseAnd => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseAnd),
+            BinaryOperatorType.BitwiseOr => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseOr),
+            BinaryOperatorType.ExclusiveOr => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseExclusiveOr),
+            _ => throw new NotSupportedException($"{nameof(VisitBinaryOperatorExpression)} does not support {binaryOperatorExpression}")
+        };
     }
 
     public INode? VisitBlockStatement(BlockStatement blockStatement)
     {
-        if (Env.Count > 0)
+        Dictionary<string, IDeclaration> newScope = [];
+        foreach (var kv in Symbols)
         {
-            Env.Push(Env.Peek());
+            newScope.Add(kv.Key, kv.Value);
         }
-        else
-        {
-            ImmutableDictionary<string, IDeclaration> d = ImmutableDictionary.Create<string, IDeclaration>();
-            Env.Push(d);
-        }
-        var result = new CompoundStatement([.. blockStatement.Statements.Select(s => s.AcceptVisitor(this)).OfType<IStatement>()]);
-        Env.Pop();
+        var blockScopeVisitor = new ILSpyASTToModuleVisitor(newScope);
+        var result = new CompoundStatement([.. blockStatement.Statements.Select(s => s.AcceptVisitor(blockScopeVisitor)).OfType<IStatement>()]);
         return result;
     }
 
@@ -118,7 +132,18 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitCastExpression(CastExpression castExpression)
     {
-        throw new NotImplementedException();
+        var t = castExpression.Type.Annotation<TypeResolveResult>();
+        var f = t switch
+        {
+            { Type.FullName: "System.Single" } => FloatType<B32>.Cast,
+            { Type.FullName: "System.Double" } => FloatType<B64>.Cast,
+            { Type.FullName: "System.Int32" } => IntType<B32>.Cast,
+            { Type.FullName: "System.Int64" } => IntType<B64>.Cast,
+            //{ Type: { FullName: "System.UInt32" } } => UIntType<B32>.Cast,
+            //{ Type: { FullName: "System.UInt64" } } => UIntType<B64>.Cast,
+            _ => throw new NotSupportedException()
+        };
+        return new FunctionCallExpression(f, [(IExpression)castExpression.Expression.AcceptVisitor(this)]);
     }
 
     public INode? VisitCatchClause(CatchClause catchClause)
@@ -303,7 +328,13 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitIdentifierExpression(IdentifierExpression identifierExpression)
     {
-        return SyntaxFactory.Identifier((VariableDeclaration)Env.Peek()[identifierExpression.GetChildByRole(Roles.Identifier).Name]);
+        var sym = Symbols[identifierExpression.GetChildByRole(Roles.Identifier).Name];
+        return sym switch
+        {
+            VariableDeclaration v => SyntaxFactory.Identifier(v),
+            IR.Declaration.ParameterDeclaration v => new FormalParameterExpression(v),
+            _ => throw new NotSupportedException()
+        };
     }
 
     public INode? VisitIfElseStatement(IfElseStatement ifElseStatement)
@@ -378,7 +409,12 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitMemberType(MemberType memberType)
     {
-        throw new NotImplementedException();
+        var t = memberType.Annotation<TypeResolveResult>();
+        return t.Type.FullName switch
+        {
+            "System.Numerics.Vector4" => new IR.Declaration.TypeDeclaration(new VecType<R4, FloatType<B32>>()),
+            _ => throw new NotSupportedException()
+        };
     }
 
     public INode? VisitMethodDeclaration(MethodDeclaration methodDeclaration)
@@ -397,14 +433,37 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
                                                 .SelectMany(sec => sec.Attributes)
                                                 .Select(attr => attr.AcceptVisitor(this))
                                                 .OfType<IR.IAttribute>();
-
-
-
-        var body = (CompoundStatement)methodDeclaration.Body.AcceptVisitor(this);
+        var parameters = methodDeclaration.Parameters
+                                                .Select(p => p.AcceptVisitor(this))
+                                                .OfType<IR.Declaration.ParameterDeclaration>()
+                                                .ToImmutableArray();
+        var env = new Dictionary<string, IDeclaration>();
+        foreach (var kv in Symbols)
+        {
+            env.Add(kv.Key, kv.Value);
+        }
+        foreach (var p in parameters)
+        {
+            if (env.ContainsKey(p.Name))
+            {
+                env[p.Name] = p;
+            }
+            else
+            {
+                env.Add(p.Name, p);
+            }
+        }
+        var visitor = new ILSpyASTToModuleVisitor(env);
+        var body = (CompoundStatement)methodDeclaration.Body.AcceptVisitor(visitor);
+        // TODO: proper handling of return type
+        var rt = methodDeclaration.ReturnType.AcceptVisitor(this);
+        var fReturn = new IR.Declaration.FunctionReturn(
+            rt is IR.Declaration.TypeDeclaration { Type: var t } ? t : null
+            , [.. returnAttributes]);
         return new IR.Declaration.FunctionDeclaration(
             methodDeclaration.Name,
-            [.. methodDeclaration.Parameters.Select(p => p.AcceptVisitor(this)).OfType<IR.Declaration.ParameterDeclaration>()],
-            new IR.Declaration.FunctionReturn(null, [.. returnAttributes]),
+            parameters,
+            fReturn,
             [.. methodAttributes]
             )
         {
@@ -478,7 +537,7 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
 
     public INode? VisitParenthesizedExpression(ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression parenthesizedExpression)
     {
-        throw new NotImplementedException();
+        return new IR.Expression.ParenthesizedExpression((IExpression)parenthesizedExpression.Expression.AcceptVisitor(this));
     }
 
     public INode? VisitParenthesizedVariableDesignation(ParenthesizedVariableDesignation parenthesizedVariableDesignation)
@@ -507,7 +566,9 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
         return value switch
         {
             float v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
-            _ => throw new NotSupportedException()
+            int v => new LiteralValueExpression(new IntLiteral<B32>(v)),
+            uint v => new LiteralValueExpression(new UIntLiteral<B32>(v)),
+            _ => throw new NotSupportedException($"{nameof(VisitPrimitiveExpression)} does not support {primitiveExpression}")
         };
     }
 
@@ -518,7 +579,7 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
             KnownTypeCode.Boolean => new BoolType(),
             KnownTypeCode.UInt32 => new UIntType<B32>(),
             KnownTypeCode.UInt64 => new UIntType<B64>(),
-            KnownTypeCode.Int32 => new IntType<B64>(),
+            KnownTypeCode.Int32 => new IntType<B32>(),
             KnownTypeCode.Int64 => new IntType<B64>(),
             KnownTypeCode.Single => new FloatType<B32>(),
             KnownTypeCode.Double => new FloatType<B64>(),
@@ -748,11 +809,15 @@ public sealed class ILSpyASTToModuleVisitor : IAstVisitor<INode?>
     public INode? VisitVariableDeclarationStatement(VariableDeclarationStatement variableDeclarationStatement)
     {
         // TODO: handle multiple variable declaration 
-        var v = variableDeclarationStatement.Variables.Single();
         // TODO: proper handling of variable type
-        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, new FloatType<B32>(), []);
-        var e = Env.Pop();
-        Env.Push(e.Add(varDecl.Name, varDecl));
+        var v = variableDeclarationStatement.Variables.Single();
+        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, (IR.Declaration.IType)variableDeclarationStatement.Type.AcceptVisitor(this), []);
+        Symbols.Add(varDecl.Name, varDecl);
+        var c = v.GetChildByRole(Roles.Expression);
+        if (c is not null)
+        {
+            varDecl.Initializer = (IExpression)c.AcceptVisitor(this);
+        }
         return new VariableOrValueStatement(varDecl);
     }
 

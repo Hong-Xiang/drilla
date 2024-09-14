@@ -1,5 +1,8 @@
-﻿namespace DualDrill.ILSL.IR.Expression;
+﻿using System.Text.Json.Serialization;
 
+namespace DualDrill.ILSL.IR.Expression;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum BinaryBitwiseOp
 {
     BitwiseOr,

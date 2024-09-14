@@ -274,4 +274,11 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         await expr.R.AcceptVisitor(this);
 
     }
+
+    public async ValueTask VisitParenthesizedExpression(ParenthesizedExpression expr)
+    {
+        Writer.Write("(");
+        await expr.Expr.AcceptVisitor(this);
+        Writer.Write(")");
+    }
 }
