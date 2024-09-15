@@ -1,8 +1,11 @@
 ﻿using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
+using DualDrill.ILSL.Frontend;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.Server.Services;
+using ICSharpCode.Decompiler.Metadata;
 using Microsoft.AspNetCore.Mvc;
+using System.Numerics;
 
 namespace DualDrill.Server.Controllers;
 
@@ -77,5 +80,26 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             return NotFound();
         }
         return Ok(ILSL.ILSLCompiler.ASTToJson(shaderModule));
+    }
+
+    [HttpGet("ilreader")]
+    public IActionResult TryRead()
+    {
+        var parser = new RuntimeILParser();
+        var method = typeof(ILSLController).GetMethod("TestMethod2");
+        //var ops = ILSLCompiler.ILReader(method);
+        //return Ok(ops.Select(op => (op, op.GetDisplayName())));
+        var code = ILSLCompiler.ILReaderFromRuntimeAssembly(method);
+        return Ok(code);
+    }
+
+    public int TestMethod(int a, int b)
+    {
+        return a * b;
+    }
+
+    public Vector4 TestMethod2()
+    {
+        return new Vector4(0.1f, 0.1f, 0.4f, 0.5f);
     }
 }
