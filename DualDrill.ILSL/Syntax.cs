@@ -41,3 +41,7 @@ public sealed class LocationAttribute(int Binding) : Attribute, IAttribute
 public interface IShaderModule
 {
 }
+
+public sealed class ShaderMethodAttribute() : Attribute
+{
+}
