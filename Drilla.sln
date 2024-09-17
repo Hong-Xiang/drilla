@@ -21,6 +21,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.ILSL", "DualDrill
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.ApiGen", "DualDrill.APIDefinition\DualDrill.ApiGen.csproj", "{3908EBC4-1E6C-4414-8AD9-9C4308243258}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.ILSL.Tests", "DualDrill.ILSL.Tests\DualDrill.ILSL.Tests.csproj", "{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,14 @@ Global
 		{3908EBC4-1E6C-4414-8AD9-9C4308243258}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3908EBC4-1E6C-4414-8AD9-9C4308243258}.Release|x64.ActiveCfg = Release|Any CPU
 		{3908EBC4-1E6C-4414-8AD9-9C4308243258}.Release|x64.Build.0 = Release|Any CPU
+		{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}.Debug|x64.Build.0 = Debug|Any CPU
+		{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}.Release|x64.ActiveCfg = Release|Any CPU
+		{3FD3194C-0824-4F9A-A69C-CC57CDB137C6}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
