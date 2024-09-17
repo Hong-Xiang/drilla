@@ -208,6 +208,32 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         }
     }
 
+    public async ValueTask VisitIf(IfStatement stmt)
+    {
+        var ifClause = stmt.IfClause;
+        Writer.Write("if ");
+        await ifClause.Expr.AcceptVisitor(this);
+        Writer.WriteLine();
+        Writer.WriteLine('{');
+        await ifClause.CompountStatement.AcceptVisitor(this);
+        Writer.WriteLine('}');
+        foreach (var elseIfClause in stmt.ElseIfClause)
+        {
+            Writer.WriteLine("else if ");
+            await elseIfClause.Expr.AcceptVisitor(this);
+            Writer.WriteLine('{');
+            await elseIfClause.CompountStatement.AcceptVisitor(this);
+            Writer.WriteLine('}');
+        }
+        if (stmt.Else is not null)
+        {
+            Writer.WriteLine("else");
+            Writer.WriteLine('{');
+            await stmt.Else.AcceptVisitor(this);
+            Writer.WriteLine('}');
+        }
+    }
+
     public async ValueTask VisitFunctionCallExpression(FunctionCallExpression expr)
     {
         Writer.Write(expr.Callee.Name);

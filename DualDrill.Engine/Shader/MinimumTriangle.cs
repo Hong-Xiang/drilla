@@ -82,14 +82,30 @@ public static class MinimumTriangleModule
                             [new FragmentAttribute()])
         {
             Body = new CompoundStatement([
-                SyntaxFactory.Return(
-                    SyntaxFactory.vec4<FloatType<B32>>(
-                        SyntaxFactory.Literal(0.5f),
-                        SyntaxFactory.Literal(1.0f),
-                        SyntaxFactory.Literal(0.5f),
-                        SyntaxFactory.Literal(1.0f)
-                    ))
-                ])
+                SyntaxFactory.IfElse(
+                    SyntaxFactory.Literal(false),
+                    new CompoundStatement([
+                        SyntaxFactory.Return(
+                            SyntaxFactory.vec4<FloatType<B32>>(
+                                SyntaxFactory.Literal(0.5f),
+                                SyntaxFactory.Literal(1.0f),
+                                SyntaxFactory.Literal(0.5f),
+                                SyntaxFactory.Literal(1.0f)
+                            )
+                        )
+                    ]),
+                    new CompoundStatement([
+                        SyntaxFactory.Return(
+                            SyntaxFactory.vec4<FloatType<B32>>(
+                                SyntaxFactory.Literal(0.5f),
+                                SyntaxFactory.Literal(1.0f),
+                                SyntaxFactory.Literal(0.5f),
+                                SyntaxFactory.Literal(1.0f)
+                            )
+                        )
+                    ])        
+                )
+            ])
         };
     }
 }
@@ -133,7 +149,7 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
     [return: Location(0)]
     static Vector4 fs()
     {
-        return new Vector4(1.0f, 1.0f, 0.5f, 1.0f);
+        return new Vector4(0.2f, 0.7f, 0.4f, 1.0f);
     }
 
 }
