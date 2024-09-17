@@ -104,6 +104,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             BinaryOperatorType.BitwiseAnd => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseAnd),
             BinaryOperatorType.BitwiseOr => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseOr),
             BinaryOperatorType.ExclusiveOr => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseExclusiveOr),
+            BinaryOperatorType.LessThan => new BinaryRelationalExpression(l, r, BinaryRelationalOp.LessThan),
+            BinaryOperatorType.GreaterThan => new BinaryRelationalExpression(l, r, BinaryRelationalOp.GreaterThan),
+            BinaryOperatorType.LessThanOrEqual => new BinaryRelationalExpression(l, r, BinaryRelationalOp.LessThanEqual),
+            BinaryOperatorType.GreaterThanOrEqual => new BinaryRelationalExpression(l, r, BinaryRelationalOp.GreaterThanEqual),
+            BinaryOperatorType.Equality => new BinaryRelationalExpression(l, r, BinaryRelationalOp.Equal),
+            BinaryOperatorType.InEquality => new BinaryRelationalExpression(l, r, BinaryRelationalOp.NotEqual),
             _ => throw new NotSupportedException($"{nameof(VisitBinaryOperatorExpression)} does not support {binaryOperatorExpression}")
         };
     }
@@ -339,7 +345,18 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitIfElseStatement(IfElseStatement ifElseStatement)
     {
-        throw new NotImplementedException();
+        // if time, expand nested if/else into list of else if clauses
+        return new IfStatement(
+            Attributes: [],
+            new IfClause(
+                (IExpression)ifElseStatement.Condition.AcceptVisitor(this)!,
+                (IStatement)ifElseStatement.TrueStatement.AcceptVisitor(this)!
+            ),
+            ElseIfClause: []
+        )
+        {
+            Else = (IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this)
+        };
     }
 
     public INode? VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration)
@@ -489,7 +506,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitNullNode(AstNode nullNode)
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     public INode? VisitNullReferenceExpression(NullReferenceExpression nullReferenceExpression)
@@ -568,6 +585,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             float v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
             int v => new LiteralValueExpression(new IntLiteral<B32>(v)),
             uint v => new LiteralValueExpression(new UIntLiteral<B32>(v)),
+            bool v => new LiteralValueExpression(new BoolLiteral(v)),
             _ => throw new NotSupportedException($"{nameof(VisitPrimitiveExpression)} does not support {primitiveExpression}")
         };
     }

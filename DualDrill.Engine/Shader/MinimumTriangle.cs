@@ -82,30 +82,14 @@ public static class MinimumTriangleModule
                             [new FragmentAttribute()])
         {
             Body = new CompoundStatement([
-                SyntaxFactory.IfElse(
-                    SyntaxFactory.Literal(false),
-                    new CompoundStatement([
-                        SyntaxFactory.Return(
-                            SyntaxFactory.vec4<FloatType<B32>>(
-                                SyntaxFactory.Literal(0.5f),
-                                SyntaxFactory.Literal(1.0f),
-                                SyntaxFactory.Literal(0.5f),
-                                SyntaxFactory.Literal(1.0f)
-                            )
-                        )
-                    ]),
-                    new CompoundStatement([
-                        SyntaxFactory.Return(
-                            SyntaxFactory.vec4<FloatType<B32>>(
-                                SyntaxFactory.Literal(0.5f),
-                                SyntaxFactory.Literal(1.0f),
-                                SyntaxFactory.Literal(0.5f),
-                                SyntaxFactory.Literal(1.0f)
-                            )
-                        )
-                    ])        
-                )
-            ])
+                SyntaxFactory.Return(
+                    SyntaxFactory.vec4<FloatType<B32>>(
+                        SyntaxFactory.Literal(0.5f),
+                        SyntaxFactory.Literal(1.0f),
+                        SyntaxFactory.Literal(0.5f),
+                        SyntaxFactory.Literal(1.0f)
+                    ))
+                ])
         };
     }
 }
@@ -149,6 +133,19 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
     [return: Location(0)]
     static Vector4 fs()
     {
+        float x = 0.0f;
+        if (x < 0.5f)
+        {
+            int test1 = 1;
+        } 
+        else if (x < 0.75f)
+        {
+            int test2 = 2;
+        }
+        else
+        {
+            int test3 = 3;
+        }
         return new Vector4(0.2f, 0.7f, 0.4f, 1.0f);
     }
 

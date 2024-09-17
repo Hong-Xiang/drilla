@@ -215,14 +215,14 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         await ifClause.Expr.AcceptVisitor(this);
         Writer.WriteLine();
         Writer.WriteLine('{');
-        await ifClause.CompountStatement.AcceptVisitor(this);
+        await ifClause.Statement.AcceptVisitor(this);
         Writer.WriteLine('}');
         foreach (var elseIfClause in stmt.ElseIfClause)
         {
             Writer.WriteLine("else if ");
             await elseIfClause.Expr.AcceptVisitor(this);
             Writer.WriteLine('{');
-            await elseIfClause.CompountStatement.AcceptVisitor(this);
+            await elseIfClause.Statement.AcceptVisitor(this);
             Writer.WriteLine('}');
         }
         if (stmt.Else is not null)
@@ -299,6 +299,24 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         Writer.Write(' ');
         await expr.R.AcceptVisitor(this);
 
+    }
+    public async ValueTask VisitBinaryRelationalExpression(BinaryRelationalExpression expr)
+    {
+        await expr.L.AcceptVisitor(this);
+        var op = expr.Op switch
+        {
+            BinaryRelationalOp.LessThan => "<",
+            BinaryRelationalOp.GreaterThan => ">",
+            BinaryRelationalOp.LessThanEqual => "<=",
+            BinaryRelationalOp.GreaterThanEqual => ">=",
+            BinaryRelationalOp.Equal => "==",
+            BinaryRelationalOp.NotEqual => "!=",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(' ');
+        Writer.Write(op);
+        Writer.Write(' ');
+        await expr.R.AcceptVisitor(this);
     }
 
     public async ValueTask VisitParenthesizedExpression(ParenthesizedExpression expr)

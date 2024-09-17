@@ -11,9 +11,9 @@ public sealed record class IfStatement(
     ImmutableArray<IfClause> ElseIfClause
 ) : IStatement
 {
-    public CompoundStatement? Else { get; set; } = null;
+    public IStatement? Else { get; set; } = null;
 }
 
-public readonly record struct IfClause(IExpression Expr, CompoundStatement CompountStatement)
+public readonly record struct IfClause(IExpression Expr, IStatement Statement)
 {
 }
