@@ -23,6 +23,6 @@ public sealed record class SimpleAssignmentStatement(
     IExpression L,
     IExpression R,
     AssignmentOp Op
-) : IStatement 
+) : IStatement, IForInit, IForUpdate
 {
 }

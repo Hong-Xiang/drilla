@@ -2,7 +2,7 @@
 
 namespace DualDrill.ILSL.IR.Statement;
 
-public sealed record class VariableOrValueStatement(VariableDeclaration Variable) : IStatement
+public sealed record class VariableOrValueStatement(VariableDeclaration Variable) : IStatement, IForInit
 {
 }
 

@@ -16,8 +16,11 @@ public interface IStatementVisitor<T>
     T VisitIf(IfStatement stmt);
     T VisitWhile(WhileStatement stmt);
     T VisitBreak(BreakStatement stmt);
+    T VisitFor(ForStatement stmt);
     T VisitSimpleAssignment(SimpleAssignmentStatement stmt);
     T VisitPhonyAssignment(PhonyAssignmentStatement stmt);
+
+    T AppendSemicolon(T t);
 }
 
 public static class StatementExtension
@@ -26,14 +29,15 @@ public static class StatementExtension
     {
         return stmt switch
         {
-            ReturnStatement s => visitor.VisitReturn(s),
-            VariableOrValueStatement s => visitor.VisitVariableOrValue(s),
+            ReturnStatement s => visitor.AppendSemicolon(visitor.VisitReturn(s)),
+            VariableOrValueStatement s => visitor.AppendSemicolon(visitor.VisitVariableOrValue(s)),
             CompoundStatement s => visitor.VisitCompound(s),
             IfStatement s => visitor.VisitIf(s),
             WhileStatement s => visitor.VisitWhile(s),
-            BreakStatement s => visitor.VisitBreak(s),
-            SimpleAssignmentStatement s => visitor.VisitSimpleAssignment(s),
-            PhonyAssignmentStatement s => visitor.VisitPhonyAssignment(s),
+            BreakStatement s => visitor.AppendSemicolon(visitor.VisitBreak(s)),
+            ForStatement s => visitor.VisitFor(s),
+            SimpleAssignmentStatement s => visitor.AppendSemicolon(visitor.VisitSimpleAssignment(s)),
+            PhonyAssignmentStatement s => visitor.AppendSemicolon(visitor.VisitPhonyAssignment(s)),
             _ => throw new NotSupportedException($"visit {nameof(IStatement)} does not support {stmt}")
         };
     }
