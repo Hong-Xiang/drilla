@@ -10,6 +10,7 @@ namespace DualDrill.ILSL.IR.Statement;
 [JsonDerivedType(typeof(PhonyAssignmentStatement), nameof(PhonyAssignmentStatement))]
 [JsonDerivedType(typeof(WhileStatement), nameof(WhileStatement))]
 [JsonDerivedType(typeof(BreakStatement), nameof(BreakStatement))]
+[JsonDerivedType(typeof(ForStatement), nameof(ForStatement))]
 public interface IStatement : INode { }
 
 public interface IStatementVisitor<T>
