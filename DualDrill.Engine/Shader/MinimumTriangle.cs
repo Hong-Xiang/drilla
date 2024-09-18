@@ -137,7 +137,7 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
         if (x < 0.5f)
         {
             int test1 = 1;
-        } 
+        }
         else if (x < 0.75f)
         {
             int test2 = 2;
@@ -146,7 +146,7 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
         {
             int test3 = 3;
         }
-        return new Vector4(0.2f, 0.7f, 0.4f, 1.0f);
+        return new Vector4(0.5f, 0.0f, 1.0f, 1.0f);
     }
 
 }
