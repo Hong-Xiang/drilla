@@ -400,12 +400,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             Attributes: [],
             new IfClause(
                 (IExpression)ifElseStatement.Condition.AcceptVisitor(this)!,
-                (IStatement)ifElseStatement.TrueStatement.AcceptVisitor(this)!
+                MapCompoundStatement((IStatement?)ifElseStatement.TrueStatement.AcceptVisitor(this))!
             ),
             ElseIfClause: []
         )
         {
-            Else = (IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this)
+            Else = MapCompoundStatement((IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this))
         };
     }
 
@@ -921,6 +921,16 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     public INode? VisitYieldReturnStatement(YieldReturnStatement yieldReturnStatement)
     {
         throw new NotImplementedException();
+    }
+
+    private static CompoundStatement? MapCompoundStatement(IStatement? stmt)
+    {
+        return stmt switch
+        {
+            CompoundStatement s => s,
+            not null => new CompoundStatement([stmt]),
+            null => null
+        };
     }
 
     private static AssignmentOp MapAssignmentOperator(AssignmentOperatorType op)
