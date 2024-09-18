@@ -14,6 +14,8 @@ public interface IStatementVisitor<T>
     T VisitVariableOrValue(VariableOrValueStatement stmt);
     T VisitCompound(CompoundStatement stmt);
     T VisitIf(IfStatement stmt);
+    T VisitSimpleAssignment(SimpleAssignmentStatement stmt);
+    T VisitPhonyAssignment(PhonyAssignmentStatement stmt);
 }
 
 public static class StatementExtension
@@ -26,6 +28,8 @@ public static class StatementExtension
             VariableOrValueStatement s => visitor.VisitVariableOrValue(s),
             CompoundStatement s => visitor.VisitCompound(s),
             IfStatement s => visitor.VisitIf(s),
+            SimpleAssignmentStatement s => visitor.VisitSimpleAssignment(s),
+            PhonyAssignmentStatement s => visitor.VisitPhonyAssignment(s),
             _ => throw new NotSupportedException($"visit {nameof(IStatement)} does not support {stmt}")
         };
     }

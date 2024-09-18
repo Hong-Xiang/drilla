@@ -134,19 +134,11 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
     static Vector4 fs()
     {
         float x = 0.0f;
-        if (x < 0.5f)
-        {
-            int test1 = 1;
-        } 
-        else if (x < 0.75f)
-        {
-            int test2 = 2;
-        }
-        else
-        {
-            int test3 = 3;
-        }
-        return new Vector4(0.2f, 0.7f, 0.4f, 1.0f);
+        float r = 1.0f;
+        r = x + 1.0f;
+        x += r;
+        new Vector4(1.0f);
+        return new Vector4(1.0f, 0.7f, 0.4f, 1.0f);
     }
 
 }

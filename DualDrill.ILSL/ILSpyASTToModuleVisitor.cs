@@ -269,7 +269,19 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
-        throw new NotImplementedException();
+        var expr = expressionStatement.Expression;
+        if (expr is AssignmentExpression assignment)
+        {
+            return new SimpleAssignmentStatement(
+                (IExpression) assignment.Left.AcceptVisitor(this)!,
+                (IExpression) assignment.Right.AcceptVisitor(this)!,
+                MapAssignmentOperator(assignment.Operator)
+            );
+        }
+
+        return new PhonyAssignmentStatement(
+            (IExpression) expr.AcceptVisitor(this)!
+        );
     }
 
     public INode? VisitExternAliasDeclaration(ExternAliasDeclaration externAliasDeclaration)
@@ -862,5 +874,24 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     public INode? VisitYieldReturnStatement(YieldReturnStatement yieldReturnStatement)
     {
         throw new NotImplementedException();
+    }
+
+    private static AssignmentOp MapAssignmentOperator(AssignmentOperatorType op)
+    {
+        return op switch
+        {
+            AssignmentOperatorType.Assign => AssignmentOp.Assign,
+            AssignmentOperatorType.Add => AssignmentOp.Add,
+            AssignmentOperatorType.Subtract => AssignmentOp.Subtract,
+            AssignmentOperatorType.Multiply => AssignmentOp.Multiply,
+            AssignmentOperatorType.Divide => AssignmentOp.Divide,
+            AssignmentOperatorType.Modulus => AssignmentOp.Modulus,
+            AssignmentOperatorType.BitwiseAnd => AssignmentOp.BitwiseAnd,
+            AssignmentOperatorType.BitwiseOr => AssignmentOp.BitwiseOr,
+            AssignmentOperatorType.ExclusiveOr => AssignmentOp.ExclusiveOr,
+            AssignmentOperatorType.ShiftLeft => AssignmentOp.ShiftLeft,
+            AssignmentOperatorType.ShiftRight => AssignmentOp.ShiftRight,
+            _ => throw new NotImplementedException()
+        };
     }
 }
