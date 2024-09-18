@@ -9,6 +9,9 @@ namespace DualDrill.ILSL.IR.Expression;
 [JsonDerivedType(typeof(BinaryBitwiseExpression), nameof(BinaryBitwiseExpression))]
 [JsonDerivedType(typeof(FormalParameterExpression), nameof(FormalParameterExpression))]
 [JsonDerivedType(typeof(ParenthesizedExpression), nameof(ParenthesizedExpression))]
+[JsonDerivedType(typeof(BinaryRelationalExpression), nameof(BinaryRelationalExpression))]
+[JsonDerivedType(typeof(BinaryLogicalExpression), nameof(BinaryLogicalExpression))]
+[JsonDerivedType(typeof(UnaryLogicalExpression), nameof(UnaryLogicalExpression))]
 public interface IExpression : INode
 {
 }
