@@ -8,6 +8,8 @@ namespace DualDrill.ILSL.IR.Statement;
 [JsonDerivedType(typeof(IfStatement), nameof(IfStatement))]
 [JsonDerivedType(typeof(SimpleAssignmentStatement), nameof(SimpleAssignmentStatement))]
 [JsonDerivedType(typeof(PhonyAssignmentStatement), nameof(PhonyAssignmentStatement))]
+[JsonDerivedType(typeof(WhileStatement), nameof(WhileStatement))]
+[JsonDerivedType(typeof(BreakStatement), nameof(BreakStatement))]
 public interface IStatement : INode { }
 
 public interface IStatementVisitor<T>
