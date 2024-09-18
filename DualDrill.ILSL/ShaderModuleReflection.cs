@@ -10,9 +10,14 @@ public interface IShaderModuleReflection
         IR.Module module
     );
 
-    public GPUVertexBufferLayout GetVertexBufferLayout(
-        IR.Module module
-    );
+    public IVertexBufferMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>();
+}
+
+public interface IVertexBufferMappingBuilder<TGPULayout, THostLayout>
+{
+    IVertexBufferMappingBuilder<TGPULayout, THostLayout> AddMapping<TElement>(
+           Expression<Func<TGPULayout, TElement>> targetBinding,
+           Expression<Func<THostLayout, TElement>> sourceBuffer);
 }
 
 sealed class HostBufferLayout<TBufferModel>(int Binding)

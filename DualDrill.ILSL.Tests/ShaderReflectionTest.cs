@@ -31,6 +31,26 @@ public class ShaderReflectionTest
                 ]
             )
         ]);
+
+        IShaderModuleReflection reflection = null;
+        var layout = reflection.GetBindGroupLayoutDescriptor(module);
+        var expected = new GPUBindGroupLayoutDescriptor()
+        {
+            Entries = new GPUBindGroupLayoutEntry[]
+                {
+                    new GPUBindGroupLayoutEntry()
+                    {
+                        Binding = 0,
+                        Visibility = GPUShaderStage.Vertex,
+                        Buffer = new GPUBufferBindingLayout()
+                        {
+                            Type = GPUBufferBindingType.Uniform,
+                            HasDynamicOffset = false,
+                            MinBindingSize = 8
+                        }
+                    }
+                }
+        };
     }
 
 
@@ -87,24 +107,84 @@ public class ShaderReflectionBasicVertexLayoutTest
         }
     }
 
-    struct HostColorOffsetModel
+    struct UserDefinedHostColorOffsetModel
     {
         public Vector4 Color;
         public Vector2 Offset;
     }
 
-    struct UserDefinedMesh
+    struct UserDefinedMeshModel
     {
         // Ideally we should support
         // public IGPUBuffer<Vector2> PositionBuffer;
         [VertexStepMode(GPUVertexStepMode.Vertex)] // attribute could be omitted as default
-        public IGPUBuffer PositionBuffer;
+        // buffer index 0
+        public Vector2 Position;
 
         // public IGPUBuffer<Host> ColorOffsetBuffer;
         [VertexStepMode(GPUVertexStepMode.Instance)]
-        public IGPUBuffer ColorOffsetBuffer;
+        // buffer index 1
+        public UserDefinedHostColorOffsetModel ColorOffset;
 
         [VertexStepMode(GPUVertexStepMode.Instance)]
-        public IGPUBuffer ScaleBuffer;
+        // buffer index 2
+        public Vector2 Scale;
+    }
+
+    [Fact]
+    public void VertexBufferLayoutSpecTest()
+    {
+
+
+
+        IShaderModuleReflection reflection = null;
+        var vertexMappingBuilder = reflection.GetVertexBufferLayoutBuilder<Vertex, UserDefinedMeshModel>();
+        vertexMappingBuilder.AddMapping(g => g.Position, h => h.Position)
+                            .AddMapping(g => g.Color, h => h.ColorOffset.Color)
+                            .AddMapping(g => g.Offset, h => h.ColorOffset.Offset);
+        // TODO:  shaders can add default values, how to support auto type conversion?
+        //.AddMapping(g => g.Scale, h => h.Scale); 
+
+        GPUVertexBufferLayout[] expectedLayouts = [
+            new() {
+                ArrayStride = 2 * 4,
+                Attributes = new GPUVertexAttribute[] {
+                    new GPUVertexAttribute(){
+                        ShaderLocation = 0,
+                        Offset = 0,
+                        Format = GPUVertexFormat.Float32x2,
+                    }
+                }
+            },
+            new(){
+                ArrayStride = 6 * 4,
+                StepMode = GPUVertexStepMode.Instance,
+                Attributes = new GPUVertexAttribute[] {
+                    new GPUVertexAttribute(){
+                        ShaderLocation = 1,
+                        Offset = 0,
+                        Format = GPUVertexFormat.Float32x4,
+                    },
+                    new GPUVertexAttribute(){
+                        ShaderLocation = 2,
+                        Offset = 4 * 4,
+                        Format = GPUVertexFormat.Float32x2,
+                    },
+                }
+            },
+            new(){
+                ArrayStride = 2 * 4,
+                StepMode = GPUVertexStepMode.Instance,
+                Attributes = new GPUVertexAttribute[] {
+                    new GPUVertexAttribute(){
+                        ShaderLocation = 3,
+                        Offset = 0,
+                        Format = GPUVertexFormat.Float32x2,
+                    }
+                }
+            }
+        ];
+        // TODO: Equals implementation based on value/sequence equal
+        Assert.Equal(expectedLayouts, vertexMappingBuilder.Build());
     }
 }
