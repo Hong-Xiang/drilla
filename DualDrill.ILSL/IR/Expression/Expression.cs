@@ -20,6 +20,7 @@ public interface IExpressionVisitor<T>
     T VisitFunctionCallExpression(FunctionCallExpression expr);
     T VisitBinaryArithmeticExpression(BinaryArithmeticExpression expr);
     T VisitBinaryBitwiseExpression(BinaryBitwiseExpression expr);
+    T VisitBinaryRelationalExpression(BinaryRelationalExpression expr);
     T VisitFormalParameterExpression(FormalParameterExpression expr);
     T VisitParenthesizedExpression(ParenthesizedExpression expr);
 }
@@ -33,6 +34,7 @@ public static class ExpressionExtension
             FunctionCallExpression e => visitor.VisitFunctionCallExpression(e),
             BinaryArithmeticExpression e => visitor.VisitBinaryArithmeticExpression(e),
             BinaryBitwiseExpression e => visitor.VisitBinaryBitwiseExpression(e),
+            BinaryRelationalExpression e => visitor.VisitBinaryRelationalExpression(e),
             LiteralValueExpression e => visitor.VisitLiteralValueExpression(e),
             VariableIdentifierExpression e => visitor.VisitVariableIdentifierExpression(e),
             FormalParameterExpression e => visitor.VisitFormalParameterExpression(e),

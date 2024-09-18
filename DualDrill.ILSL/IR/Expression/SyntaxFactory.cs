@@ -41,7 +41,16 @@ public static class SyntaxFactory
     public static IExpression Literal(float value) => new LiteralValueExpression(new FloatLiteral<B32>(value));
     public static IExpression Literal(int value) => new LiteralValueExpression(new IntLiteral<B32>(value));
     public static IExpression Literal(uint value) => new LiteralValueExpression(new UIntLiteral<B32>(value));
+    public static IExpression Literal(bool value) => new LiteralValueExpression(new BoolLiteral(value));
     public static IStatement Return(IExpression? Expr) => new ReturnStatement(Expr);
     public static IStatement Declare(VariableDeclaration variable) => new VariableOrValueStatement(variable);
+    public static IStatement IfElse(IExpression expr, CompoundStatement ifBranch, CompoundStatement elseBranch) => new IfStatement(
+        Attributes: [],
+        new IfClause(expr, ifBranch),
+        ElseIfClause: []
+    )
+    {
+        Else = elseBranch
+    };
 
 }
