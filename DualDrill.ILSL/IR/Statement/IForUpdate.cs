@@ -4,7 +4,7 @@ namespace DualDrill.ILSL.IR.Statement;
 
 [JsonDerivedType(typeof(SimpleAssignmentStatement), nameof(SimpleAssignmentStatement))]
 [JsonDerivedType(typeof(PhonyAssignmentStatement), nameof(PhonyAssignmentStatement))]
-public interface IForUpdate : IStatement
+public interface IForUpdate
 {
 }
 
