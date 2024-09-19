@@ -143,8 +143,14 @@ public readonly record struct VecType<TSize, TElement>() : IBuiltinType<VecType<
             []
         ))];
 
-
     public string Name => $"vec{TSize.Value}<{new TElement().Name}>";
+
+    public static readonly FunctionDeclaration Dot =
+        new FunctionDeclaration("dot",
+                               [new ParameterDeclaration("e1", new VecType<TSize, TElement>(), []),
+                                new ParameterDeclaration("e2", new VecType<TSize, TElement>(), [])],
+                                new FunctionReturn(new TElement(), []),
+                                []);
 }
 
 public readonly struct MatType<TRow, TCol, TElement>()

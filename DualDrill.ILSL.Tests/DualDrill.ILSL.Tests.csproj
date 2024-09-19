@@ -22,4 +22,8 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.0.0-pre.30" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
+  </ItemGroup>
+
 </Project>
