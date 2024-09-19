@@ -481,7 +481,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         {
             "System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
             //"System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
-            _ => throw new NotSupportedException()
+            _ => throw new NotSupportedException($"{nameof(VisitMemberType)} not support {memberType}")
         };
     }
 
