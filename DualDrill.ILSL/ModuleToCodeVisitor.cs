@@ -302,6 +302,18 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         await stmt.Expr.AcceptVisitor(this);
     }
 
+    public async ValueTask VisitIncrement(IncrementStatement stmt)
+    {
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.Write("++");
+    }
+
+    public async ValueTask VisitDecrement(DecrementStatement stmt)
+    {
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.Write("--");
+    }
+
     public async ValueTask VisitFunctionCallExpression(FunctionCallExpression expr)
     {
         Writer.Write(expr.Callee.Name);
@@ -407,6 +419,17 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         var op = expr.Op switch
         {
             UnaryLogicalOp.Not => "!",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(op);
+        await expr.Expr.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitUnaryArithmeticExpression(UnaryArithmeticExpression expr)
+    {
+        var op = expr.Op switch
+        {
+            UnaryArithmeticOp.Minus => "-",
             _ => throw new NotSupportedException()
         };
         Writer.Write(op);

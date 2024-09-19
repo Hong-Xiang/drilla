@@ -272,18 +272,23 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     public INode? VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var expr = expressionStatement.Expression;
-        if (expr is AssignmentExpression assignment)
+        return expr switch
         {
-            return new SimpleAssignmentStatement(
-                (IExpression) assignment.Left.AcceptVisitor(this)!,
-                (IExpression) assignment.Right.AcceptVisitor(this)!,
+            AssignmentExpression assignment => new SimpleAssignmentStatement(
+                (IExpression)assignment.Left.AcceptVisitor(this)!,
+                (IExpression)assignment.Right.AcceptVisitor(this)!,
                 MapAssignmentOperator(assignment.Operator)
-            );
-        }
-
-        return new PhonyAssignmentStatement(
-            (IExpression) expr.AcceptVisitor(this)!
-        );
+            ),
+            UnaryOperatorExpression { Operator: UnaryOperatorType.PostIncrement } unary => new IncrementStatement(
+                (IExpression)unary.Expression.AcceptVisitor(this)!
+            ),
+            UnaryOperatorExpression { Operator: UnaryOperatorType.PostDecrement } unary => new DecrementStatement(
+                (IExpression)unary.Expression.AcceptVisitor(this)!
+            ),
+            _ => new PhonyAssignmentStatement(
+                (IExpression)expr.AcceptVisitor(this)!
+            )
+        };
     }
 
     public INode? VisitExternAliasDeclaration(ExternAliasDeclaration externAliasDeclaration)
@@ -843,6 +848,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return unaryOperatorExpression.Operator switch
         {
             UnaryOperatorType.Not => new UnaryLogicalExpression(expr, UnaryLogicalOp.Not),
+            UnaryOperatorType.Minus => new UnaryArithmeticExpression(expr, UnaryArithmeticOp.Minus),
             _ => throw new NotSupportedException($"{nameof(VisitUnaryOperatorExpression)} does not support {unaryOperatorExpression}")
         };
     }
