@@ -367,6 +367,32 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         await expr.R.AcceptVisitor(this);
     }
 
+    public async ValueTask VisitBinaryLogicalExpression(BinaryLogicalExpression expr)
+    {
+        await expr.L.AcceptVisitor(this);
+        var op = expr.Op switch
+        {
+            BinaryLogicalOp.And => "&&",
+            BinaryLogicalOp.Or => "||",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(' ');
+        Writer.Write(op);
+        Writer.Write(' ');
+        await expr.R.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitUnaryLogicalExpression(UnaryLogicalExpression expr)
+    {
+        var op = expr.Op switch
+        {
+            UnaryLogicalOp.Not => "!",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(op);
+        await expr.Expr.AcceptVisitor(this);
+    }
+
     public async ValueTask VisitParenthesizedExpression(ParenthesizedExpression expr)
     {
         Writer.Write("(");

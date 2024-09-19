@@ -135,15 +135,12 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
     {
         float x = 1.0f;
         float y = 100.0f;
-        while (x < y)
+        bool b = x + y < y;
+        if (x < 10f && !(x > y) || !b)
         {
-            x *= 2.0f;
-            if (x >= 50.0f)
-            {
-                break;
-            }
+            y = 1.0f;
         }
-        return new Vector4(0.2f, 0.7f, 0.4f, 1.0f);
+        return new Vector4(1.0f);
     }
 
 }

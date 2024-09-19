@@ -110,6 +110,8 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             BinaryOperatorType.GreaterThanOrEqual => new BinaryRelationalExpression(l, r, BinaryRelationalOp.GreaterThanEqual),
             BinaryOperatorType.Equality => new BinaryRelationalExpression(l, r, BinaryRelationalOp.Equal),
             BinaryOperatorType.InEquality => new BinaryRelationalExpression(l, r, BinaryRelationalOp.NotEqual),
+            BinaryOperatorType.ConditionalAnd => new BinaryLogicalExpression(l, r, BinaryLogicalOp.And),
+            BinaryOperatorType.ConditionalOr => new BinaryLogicalExpression(l, r, BinaryLogicalOp.Or),
             _ => throw new NotSupportedException($"{nameof(VisitBinaryOperatorExpression)} does not support {binaryOperatorExpression}")
         };
     }
@@ -801,7 +803,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitUnaryOperatorExpression(UnaryOperatorExpression unaryOperatorExpression)
     {
-        throw new NotImplementedException();
+        var expr = (IExpression)unaryOperatorExpression.Expression.AcceptVisitor(this)!;
+        return unaryOperatorExpression.Operator switch
+        {
+            UnaryOperatorType.Not => new UnaryLogicalExpression(expr, UnaryLogicalOp.Not),
+            _ => throw new NotSupportedException($"{nameof(VisitUnaryOperatorExpression)} does not support {unaryOperatorExpression}")
+        };
     }
 
     public INode? VisitUncheckedExpression(UncheckedExpression uncheckedExpression)
