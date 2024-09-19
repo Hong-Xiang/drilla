@@ -69,6 +69,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
             AlwaysQualifyMemberReferences = true,
             AlwaysUseGlobal = true,
             UsingDeclarations = false,
+            MakeAssignmentExpressions = false,
         };
     }
 

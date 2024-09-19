@@ -274,11 +274,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var expr = expressionStatement.Expression;
         return expr switch
         {
-            AssignmentExpression assignment => new SimpleAssignmentStatement(
-                (IExpression)assignment.Left.AcceptVisitor(this)!,
-                (IExpression)assignment.Right.AcceptVisitor(this)!,
-                MapAssignmentOperator(assignment.Operator)
-            ),
+            AssignmentExpression assignment => VisitAssignmentStatement(assignment),
             UnaryOperatorExpression { Operator: UnaryOperatorType.PostIncrement } unary => new IncrementStatement(
                 (IExpression)unary.Expression.AcceptVisitor(this)!
             ),
@@ -289,6 +285,40 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
                 (IExpression)expr.AcceptVisitor(this)!
             )
         };
+    }
+
+    private INode? VisitAssignmentStatement(AssignmentExpression assignment)
+    {
+        var lhs = (IExpression)assignment.Left.AcceptVisitor(this)!;
+        var op = MapAssignmentOperator(assignment.Operator);
+
+        // unwrap "x = (a ? b : c)"
+        if (assignment.Right is ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression { 
+            Expression: ConditionalExpression cond 
+        })
+        {
+            return new IfStatement(
+                Attributes: [],
+                new IfClause(
+                    (IExpression)cond.Condition.AcceptVisitor(this)!,
+                    new SimpleAssignmentStatement(
+                        lhs,
+                        (IExpression)cond.TrueExpression.AcceptVisitor(this)!,
+                        op
+                    )
+                ),
+                ElseIfClause: []
+            )
+            {
+                Else = new SimpleAssignmentStatement(
+                    lhs,
+                    (IExpression)cond.FalseExpression.AcceptVisitor(this)!,
+                    op
+                )
+            };
+        }
+
+        return new SimpleAssignmentStatement(lhs, (IExpression)assignment.Right.AcceptVisitor(this)!, op);
     }
 
     public INode? VisitExternAliasDeclaration(ExternAliasDeclaration externAliasDeclaration)
