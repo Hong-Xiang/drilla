@@ -274,7 +274,11 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var expr = expressionStatement.Expression;
         return expr switch
         {
-            AssignmentExpression assignment => VisitAssignmentStatement(assignment),
+            AssignmentExpression assignment => UnwrapConditionalAssignment(
+                (IExpression)assignment.Left.AcceptVisitor(this)!,
+                assignment.Right,
+                MapAssignmentOperator(assignment.Operator)
+            ),
             UnaryOperatorExpression { Operator: UnaryOperatorType.PostIncrement } unary => new IncrementStatement(
                 (IExpression)unary.Expression.AcceptVisitor(this)!
             ),
@@ -287,38 +291,24 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    private INode? VisitAssignmentStatement(AssignmentExpression assignment)
+    private IStatement UnwrapConditionalAssignment(IExpression lhs, Expression expr, AssignmentOp op)
     {
-        var lhs = (IExpression)assignment.Left.AcceptVisitor(this)!;
-        var op = MapAssignmentOperator(assignment.Operator);
-
-        // unwrap "x = (a ? b : c)"
-        if (assignment.Right is ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression { 
-            Expression: ConditionalExpression cond 
-        })
+        if (expr is ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression { Expression: ConditionalExpression cond })
         {
             return new IfStatement(
                 Attributes: [],
                 new IfClause(
                     (IExpression)cond.Condition.AcceptVisitor(this)!,
-                    new SimpleAssignmentStatement(
-                        lhs,
-                        (IExpression)cond.TrueExpression.AcceptVisitor(this)!,
-                        op
-                    )
+                    UnwrapConditionalAssignment(lhs, cond.TrueExpression, op)
                 ),
                 ElseIfClause: []
             )
             {
-                Else = new SimpleAssignmentStatement(
-                    lhs,
-                    (IExpression)cond.FalseExpression.AcceptVisitor(this)!,
-                    op
-                )
+                Else = UnwrapConditionalAssignment(lhs, cond.FalseExpression, op)
             };
         }
 
-        return new SimpleAssignmentStatement(lhs, (IExpression)assignment.Right.AcceptVisitor(this)!, op);
+        return new SimpleAssignmentStatement(lhs, (IExpression)expr.AcceptVisitor(this)!, op);
     }
 
     public INode? VisitExternAliasDeclaration(ExternAliasDeclaration externAliasDeclaration)
