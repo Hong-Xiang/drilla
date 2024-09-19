@@ -4,8 +4,8 @@ using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
 using System.Numerics;
-
-namespace DualDrill.Engine.Shader;
+using DualDrill.Engine.Mesh;
+namespace DualDrill.Graphics;
 
 public static class MinimumTriangleModule
 {

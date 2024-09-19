@@ -2,6 +2,7 @@
 using DualDrill.ILSL.IR.Declaration;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -18,6 +19,7 @@ public class ShaderReflectionTest
         //
         // @group(0) @binding(0) var<uniform> data: vec2f;
         // 
+        //[GroupAttribute(0), BindingAttribute(0), StageAttribute(GPUShaderStage.Vertex), UniformAttribute()] Vector2 data;
 
         var module = new IR.Module([
             new IR.Declaration.VariableDeclaration(
@@ -27,35 +29,34 @@ public class ShaderReflectionTest
                 [
                     new GroupAttribute(0),
                     new BindingAttribute(0),
+                    new StageAttribute(GPUShaderStage.Vertex),
                     new UniformAttribute()
                 ]
             )
         ]);
 
-        IShaderModuleReflection reflection = null;
+        IShaderModuleReflection reflection = new ShaderModuleReflection();
         var layout = reflection.GetBindGroupLayoutDescriptor(module);
         var expected = new GPUBindGroupLayoutDescriptor()
         {
             Entries = new GPUBindGroupLayoutEntry[]
+            {
+                new GPUBindGroupLayoutEntry()
                 {
-                    new GPUBindGroupLayoutEntry()
+                    Binding = 0,
+                    Visibility = GPUShaderStage.Vertex,
+                    Buffer = new GPUBufferBindingLayout()
                     {
-                        Binding = 0,
-                        Visibility = GPUShaderStage.Vertex,
-                        Buffer = new GPUBufferBindingLayout()
-                        {
-                            Type = GPUBufferBindingType.Uniform,
-                            HasDynamicOffset = false,
-                            MinBindingSize = 8
-                        }
+                        Type = GPUBufferBindingType.Uniform,
+                        HasDynamicOffset = false,
+                        MinBindingSize = 8
                     }
                 }
+            }
         };
+
+        Assert.True(expected.Entries.Span.SequenceEqual(layout.Entries.Span));
     }
-
-
-
-
 }
 
 /// <summary>
@@ -75,7 +76,7 @@ public class ShaderReflectionBasicVertexLayoutTest
         public Vector2 Offset;
 
         [Location(3)]
-        public Vector3 Scale;
+        public Vector2 Scale;
     }
 
     struct VSOutput
@@ -134,20 +135,19 @@ public class ShaderReflectionBasicVertexLayoutTest
     [Fact]
     public void VertexBufferLayoutSpecTest()
     {
-
-
-
-        IShaderModuleReflection reflection = null;
+        IShaderModuleReflection reflection = new ShaderModuleReflection();
         var vertexMappingBuilder = reflection.GetVertexBufferLayoutBuilder<Vertex, UserDefinedMeshModel>();
         vertexMappingBuilder.AddMapping(g => g.Position, h => h.Position)
                             .AddMapping(g => g.Color, h => h.ColorOffset.Color)
-                            .AddMapping(g => g.Offset, h => h.ColorOffset.Offset);
+                            .AddMapping(g => g.Offset, h => h.ColorOffset.Offset)
+                            .AddMapping(g => g.Scale, h => h.Scale);
         // TODO:  shaders can add default values, how to support auto type conversion?
         //.AddMapping(g => g.Scale, h => h.Scale); 
 
-        GPUVertexBufferLayout[] expectedLayouts = [
+        ImmutableArray<GPUVertexBufferLayout> expectedLayouts = [
             new() {
                 ArrayStride = 2 * 4,
+                StepMode = GPUVertexStepMode.Vertex,
                 Attributes = new GPUVertexAttribute[] {
                     new GPUVertexAttribute(){
                         ShaderLocation = 0,
@@ -184,7 +184,19 @@ public class ShaderReflectionBasicVertexLayoutTest
                 }
             }
         ];
+
         // TODO: Equals implementation based on value/sequence equal
-        Assert.Equal(expectedLayouts, vertexMappingBuilder.Build());
+        var vertexBufferLayouts = vertexMappingBuilder.Build();
+        Assert.True(expectedLayouts[0].ArrayStride == vertexBufferLayouts[0].ArrayStride);
+        Assert.True(expectedLayouts[0].StepMode == vertexBufferLayouts[0].StepMode);
+        Assert.True(expectedLayouts[0].Attributes.Span.SequenceEqual(vertexBufferLayouts[0].Attributes.Span));
+
+        Assert.True(expectedLayouts[1].ArrayStride == vertexBufferLayouts[1].ArrayStride);
+        Assert.True(expectedLayouts[1].StepMode == vertexBufferLayouts[1].StepMode);
+        Assert.True(expectedLayouts[1].Attributes.Span.SequenceEqual(vertexBufferLayouts[1].Attributes.Span));
+
+        Assert.True(expectedLayouts[2].ArrayStride == vertexBufferLayouts[2].ArrayStride);
+        Assert.True(expectedLayouts[2].StepMode == vertexBufferLayouts[2].StepMode);
+        Assert.True(expectedLayouts[2].Attributes.Span.SequenceEqual(vertexBufferLayouts[2].Attributes.Span));
     }
 }
