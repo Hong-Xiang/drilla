@@ -282,6 +282,39 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         Writer.WriteLine(';');
     }
 
+    public async ValueTask VisitSimpleAssignment(SimpleAssignmentStatement stmt)
+    {
+        var op = stmt.Op switch
+        {
+            AssignmentOp.Assign => "=",
+            AssignmentOp.Add => "+=",
+            AssignmentOp.Subtract => "-=",
+            AssignmentOp.Multiply => "*=",
+            AssignmentOp.Divide => "/=",
+            AssignmentOp.Modulus => "%=",
+            AssignmentOp.BitwiseAnd => "&=",
+            AssignmentOp.BitwiseOr => "|=",
+            AssignmentOp.ExclusiveOr => "^=",
+            AssignmentOp.ShiftLeft => "<<=",
+            AssignmentOp.ShiftRight => ">>=",
+            _ => throw new NotSupportedException()
+        };
+
+        await stmt.L.AcceptVisitor(this);
+        Writer.Write(' ');
+        Writer.Write(op);
+        Writer.Write(' ');
+        await stmt.R.AcceptVisitor(this);
+        Writer.WriteLine(';');
+    }
+
+    public async ValueTask VisitPhonyAssignment(PhonyAssignmentStatement stmt)
+    {
+        Writer.Write("_ = ");
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.WriteLine(';');
+    }
+
     public async ValueTask VisitFunctionCallExpression(FunctionCallExpression expr)
     {
         Writer.Write(expr.Callee.Name);
