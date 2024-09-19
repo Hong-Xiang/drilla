@@ -18,6 +18,8 @@ public interface IVertexBufferMappingBuilder<TGPULayout, THostLayout>
     IVertexBufferMappingBuilder<TGPULayout, THostLayout> AddMapping<TElement>(
            Expression<Func<TGPULayout, TElement>> targetBinding,
            Expression<Func<THostLayout, TElement>> sourceBuffer);
+
+    ImmutableArray<GPUVertexBufferLayout> Build();
 }
 
 sealed class HostBufferLayout<TBufferModel>(int Binding)
