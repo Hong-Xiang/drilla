@@ -4,7 +4,9 @@ namespace DualDrill.ILSL.IR.Statement;
 
 [JsonDerivedType(typeof(SimpleAssignmentStatement), nameof(SimpleAssignmentStatement))]
 [JsonDerivedType(typeof(PhonyAssignmentStatement), nameof(PhonyAssignmentStatement))]
-public interface IForUpdate : IStatement
+[JsonDerivedType(typeof(IncrementStatement), nameof(IncrementStatement))]
+[JsonDerivedType(typeof(DecrementStatement), nameof(DecrementStatement))]
+public interface IForUpdate
 {
 }
 
@@ -16,6 +18,8 @@ public static class ForUpdateExtension
         {
             SimpleAssignmentStatement s => visitor.VisitSimpleAssignment(s),
             PhonyAssignmentStatement s => visitor.VisitPhonyAssignment(s),
+            IncrementStatement s => visitor.VisitIncrement(s),
+            DecrementStatement s => visitor.VisitDecrement(s),
             _ => throw new NotSupportedException($"visit {nameof(IForUpdate)} does not support {stmt}")
         };
     }
