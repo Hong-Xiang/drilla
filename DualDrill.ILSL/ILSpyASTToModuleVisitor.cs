@@ -71,7 +71,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         {
             return new LocationAttribute(0);
         }
-        throw new NotImplementedException();
+        return null;
     }
 
     public INode? VisitAttributeSection(AttributeSection attributeSection)
@@ -479,7 +479,8 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var t = memberType.Annotation<TypeResolveResult>();
         return t.Type.FullName switch
         {
-            "System.Numerics.Vector4" => new IR.Declaration.TypeDeclaration(new VecType<R4, FloatType<B32>>()),
+            "System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
+            //"System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
             _ => throw new NotSupportedException()
         };
     }
@@ -524,8 +525,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var body = (CompoundStatement)methodDeclaration.Body.AcceptVisitor(visitor);
         // TODO: proper handling of return type
         var rt = methodDeclaration.ReturnType.AcceptVisitor(this);
+        // TODO: remove pattern matching hack for return type
         var fReturn = new IR.Declaration.FunctionReturn(
-            rt is IR.Declaration.TypeDeclaration { Type: var t } ? t : null
+            //rt is IR.Declaration.TypeDeclaration { Type: var t } ? t :
+            rt is IR.Declaration.IType it ? it : null
             , [.. returnAttributes]);
         return new IR.Declaration.FunctionDeclaration(
             methodDeclaration.Name,
@@ -884,7 +887,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         // TODO: handle multiple variable declaration 
         // TODO: proper handling of variable type
         var v = variableDeclarationStatement.Variables.Single();
-        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, (IR.Declaration.IType)variableDeclarationStatement.Type.AcceptVisitor(this), []);
+        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, ((IR.Declaration.IType)variableDeclarationStatement.Type.AcceptVisitor(this)), []);
         Symbols.Add(varDecl.Name, varDecl);
         var c = v.GetChildByRole(Roles.Expression);
         if (c is not null)
