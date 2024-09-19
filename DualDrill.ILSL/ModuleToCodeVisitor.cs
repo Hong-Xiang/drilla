@@ -234,6 +234,21 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         }
     }
 
+    public async ValueTask VisitWhile(WhileStatement stmt)
+    {
+        Writer.Write("while ");
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.WriteLine();
+        Writer.WriteLine('{');
+        await stmt.Statement.AcceptVisitor(this);
+        Writer.WriteLine('}');
+    }
+
+    public async ValueTask VisitBreak(BreakStatement stmt)
+    {
+        Writer.WriteLine("break;");
+    }
+
     public async ValueTask VisitSimpleAssignment(SimpleAssignmentStatement stmt)
     {
         var op = stmt.Op switch

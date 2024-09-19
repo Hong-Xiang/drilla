@@ -126,9 +126,9 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return result;
     }
 
-    public INode? VisitBreakStatement(BreakStatement breakStatement)
+    public INode? VisitBreakStatement(ICSharpCode.Decompiler.CSharp.Syntax.BreakStatement breakStatement)
     {
-        throw new NotImplementedException();
+        return new IR.Statement.BreakStatement();
     }
 
     public INode? VisitCaseLabel(CaseLabel caseLabel)
@@ -859,9 +859,13 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         throw new NotImplementedException();
     }
 
-    public INode? VisitWhileStatement(WhileStatement whileStatement)
+    public INode? VisitWhileStatement(ICSharpCode.Decompiler.CSharp.Syntax.WhileStatement whileStatement)
     {
-        throw new NotImplementedException();
+        return new IR.Statement.WhileStatement(
+            Attributes: [],
+            (IExpression) whileStatement.Condition.AcceptVisitor(this)!,
+            (IStatement) whileStatement.EmbeddedStatement.AcceptVisitor(this)!
+        );
     }
 
     public INode? VisitWithInitializerExpression(WithInitializerExpression withInitializerExpression)
