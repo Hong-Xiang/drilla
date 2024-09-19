@@ -1,4 +1,5 @@
-﻿using DualDrill.ILSL.IR;
+﻿using DualDrill.Graphics;
+using DualDrill.ILSL.IR;
 
 namespace DualDrill.ILSL;
 
@@ -15,14 +16,6 @@ public enum BuiltinBinding
     global_invocation_id,
     workgroup_id,
     num_workgroups,
-    [Obsolete($"use {nameof(vertex_index)}")]
-    VertexIndex,
-    [Obsolete($"use {nameof(instance_index)}")]
-    InstanceIndex,
-    [Obsolete($"use {nameof(position)}")]
-    Position,
-    [Obsolete($"use {nameof(front_facing)}")]
-    FrontFacing,
 }
 
 public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, IAttribute
@@ -32,11 +25,32 @@ public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, IAttribut
 
 public sealed class VertexAttribute() : Attribute, IAttribute { }
 public sealed class FragmentAttribute() : Attribute, IAttribute { }
+public sealed class ComputeAttribute() : Attribute, IAttribute { }
 
 public sealed class LocationAttribute(int Binding) : Attribute, IAttribute
 {
     public int Binding { get; } = Binding;
 }
+
+public sealed class GroupAttribute(int Binding) : Attribute, IAttribute
+{
+    public int Binding { get; } = Binding;
+}
+
+public sealed class BindingAttribute(int Binding) : Attribute, IAttribute
+{
+    public int Binding { get; } = Binding;
+}
+
+public sealed class UniformAttribute() : Attribute, IAttribute { }
+public sealed class ReadAttribute() : Attribute, IAttribute { }
+public sealed class ReadWriteAttribute() : Attribute, IAttribute { }
+
+public sealed class VertexStepModeAttribute(GPUVertexStepMode StepMode) : Attribute
+{
+    public GPUVertexStepMode StepMode { get; } = StepMode;
+}
+
 
 public interface IShaderModule
 {

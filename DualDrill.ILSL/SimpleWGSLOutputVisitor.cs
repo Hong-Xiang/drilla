@@ -132,8 +132,8 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
 
                     WriteIdentifier(memberReferenceExpression.MemberNameToken switch
                     {
-                        { Name: nameof(BuiltinBinding.Position) } => "position",
-                        { Name: nameof(BuiltinBinding.VertexIndex) } => "vertex_index",
+                        { Name: nameof(BuiltinBinding.position) } => "position",
+                        { Name: nameof(BuiltinBinding.vertex_index) } => "vertex_index",
                         _ => memberReferenceExpression.MemberNameToken.Name,
                     });
                     //WriteTypeArguments(memberReferenceExpression.TypeArguments);
