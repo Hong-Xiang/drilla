@@ -316,9 +316,45 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         throw new NotImplementedException();
     }
 
-    public INode? VisitForStatement(ForStatement forStatement)
+    public INode? VisitForStatement(ICSharpCode.Decompiler.CSharp.Syntax.ForStatement forStatement)
     {
-        throw new NotImplementedException();
+        IForInit? init = null;
+        IForUpdate? update = null;
+
+        var initializers = forStatement.Initializers;
+        if (initializers.Count() == 1)
+        {
+            init = (IForInit)initializers.First().AcceptVisitor(this)!;
+        }
+        else if (initializers.Count() > 1)
+        {
+            // later we can generate a sequence of assignment statements
+            // followed by the for-loop with only one initializer
+            throw new NotImplementedException("ForStatement only accepts 1 initializer statement");
+        }
+
+        var iterators = forStatement.Iterators;
+        if (iterators.Count() == 1)
+        {
+            update = (IForUpdate)iterators.First().AcceptVisitor(this)!;
+        }
+        else if (iterators.Count() > 1)
+        {
+            // later we could generate a sequence of update statements before
+            // the end of the loop and before every continue statement
+            throw new NotImplementedException("ForStatement only accepts 1 iterator statement");
+        }
+
+        return new IR.Statement.ForStatement(
+            Attributes: [],
+            new ForHeader()
+            {
+                Init = init,
+                Expr = (IExpression) forStatement.Condition.AcceptVisitor(this)!,
+                Update = update
+            },
+            (IStatement) forStatement.EmbeddedStatement.AcceptVisitor(this)!
+        );
     }
 
     public INode? VisitFunctionPointerType(FunctionPointerAstType functionPointerType)

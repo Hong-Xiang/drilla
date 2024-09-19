@@ -182,7 +182,6 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         {
             await stmt.Expr.AcceptVisitor(this);
         }
-        Writer.WriteLine(";");
     }
 
     public async ValueTask VisitVariableOrValue(VariableOrValueStatement stmt)
@@ -196,7 +195,6 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
             Writer.Write(" = ");
             await stmt.Variable.Initializer.AcceptVisitor(this);
         }
-        Writer.WriteLine(";");
     }
 
     public async ValueTask VisitCompound(CompoundStatement stmt)
@@ -246,7 +244,31 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
 
     public async ValueTask VisitBreak(BreakStatement stmt)
     {
-        Writer.WriteLine("break;");
+        Writer.WriteLine("break");
+    }
+
+    public async ValueTask VisitFor(ForStatement stmt)
+    {
+        Writer.Write("for (");
+        var header = stmt.ForHeader;
+        if (header.Init != null)
+        {
+            await header.Init.AcceptVisitor(this);
+        }
+        Writer.Write("; ");
+        if (header.Expr != null)
+        {
+            await header.Expr.AcceptVisitor(this);
+        }
+        Writer.Write("; ");
+        if (header.Update != null)
+        {
+            await header.Update.AcceptVisitor(this);
+        }
+        Writer.WriteLine(')');
+        Writer.WriteLine('{');
+        await stmt.Statement.AcceptVisitor(this);
+        Writer.WriteLine('}');
     }
 
     public async ValueTask VisitSimpleAssignment(SimpleAssignmentStatement stmt)
@@ -272,14 +294,12 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         Writer.Write(op);
         Writer.Write(' ');
         await stmt.R.AcceptVisitor(this);
-        Writer.WriteLine(';');
     }
 
     public async ValueTask VisitPhonyAssignment(PhonyAssignmentStatement stmt)
     {
         Writer.Write("_ = ");
         await stmt.Expr.AcceptVisitor(this);
-        Writer.WriteLine(';');
     }
 
     public async ValueTask VisitFunctionCallExpression(FunctionCallExpression expr)
@@ -398,5 +418,11 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         Writer.Write("(");
         await expr.Expr.AcceptVisitor(this);
         Writer.Write(")");
+    }
+
+    public async ValueTask AppendSemicolon(ValueTask task)
+    {
+        await task;
+        Writer.WriteLine(';');
     }
 }

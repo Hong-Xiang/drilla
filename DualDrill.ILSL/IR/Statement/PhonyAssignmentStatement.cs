@@ -2,6 +2,8 @@
 
 namespace DualDrill.ILSL.IR.Statement;
 
-public sealed record class PhonyAssignmentStatement(IExpression Expr) : IStatement
+public sealed record class PhonyAssignmentStatement(
+    IExpression Expr
+) : IStatement, IForInit, IForUpdate
 {
 }
