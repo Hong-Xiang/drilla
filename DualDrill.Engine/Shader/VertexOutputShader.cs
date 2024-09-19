@@ -5,7 +5,7 @@ namespace DualDrill.Engine.Shader;
 
 struct VertexOutput
 {
-    [Builtin(BuiltinBinding.Position)]
+    [Builtin(BuiltinBinding.position)]
     public Vector4 clip_position { get; set; }
 }
 
@@ -39,7 +39,7 @@ public struct VertexOutputShader : IILSLDevelopShaderModule
 
     [Vertex]
     static VertexOutput vs_main(
-        [Builtin(BuiltinBinding.Position)]
+        [Builtin(BuiltinBinding.position)]
         uint in_vertex_index
     )
     {
