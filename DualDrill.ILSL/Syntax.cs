@@ -25,9 +25,11 @@ public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, IAttribut
     public BuiltinBinding Slot { get; } = Slot;
 }
 
-public sealed class VertexAttribute() : Attribute, IAttribute { }
-public sealed class FragmentAttribute() : Attribute, IAttribute { }
-public sealed class ComputeAttribute() : Attribute, IAttribute { }
+public sealed class VertexAttribute() : Attribute, IShaderStageAttribute { }
+public sealed class FragmentAttribute() : Attribute, IShaderStageAttribute { }
+public sealed class ComputeAttribute() : Attribute, IShaderStageAttribute { }
+
+interface IShaderStageAttribute : IAttribute { }
 
 public sealed class LocationAttribute(int Binding) : Attribute, IAttribute
 {

@@ -14,6 +14,7 @@ namespace DualDrill.ILSL.IR.Expression;
 [JsonDerivedType(typeof(BinaryLogicalExpression), nameof(BinaryLogicalExpression))]
 [JsonDerivedType(typeof(UnaryLogicalExpression), nameof(UnaryLogicalExpression))]
 [JsonDerivedType(typeof(UnaryArithmeticExpression), nameof(UnaryArithmeticExpression))]
+[JsonDerivedType(typeof(NamedComponentExpression), nameof(NamedComponentExpression))]
 public interface IExpression : INode
 {
 }
@@ -32,6 +33,7 @@ public interface IExpressionVisitor<T>
     T VisitFormalParameterExpression(FormalParameterExpression expr);
     T VisitParenthesizedExpression(ParenthesizedExpression expr);
     T VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr);
+    T VisitNamedComponentExpression(NamedComponentExpression expr);
 }
 
 public static class ExpressionExtension
@@ -52,6 +54,7 @@ public static class ExpressionExtension
             FormalParameterExpression e => visitor.VisitFormalParameterExpression(e),
             ParenthesizedExpression e => visitor.VisitParenthesizedExpression(e),
             VectorSwizzleAccessExpression e => visitor.VisitVectorSwizzleAccessExpression(e),
+            NamedComponentExpression e => visitor.VisitNamedComponentExpression(e),
             _ => throw new NotSupportedException($"Expression Visitor does not support {expr}")
         };
     }

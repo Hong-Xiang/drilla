@@ -1,4 +1,5 @@
-﻿using DualDrill.ILSL.IR.Declaration;
+﻿using DualDrill.ILSL.IR;
+using DualDrill.ILSL.IR.Declaration;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;
@@ -21,7 +22,7 @@ public record struct ILSpyOption()
 
 public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
 {
-    public ParserContext Context { get; } = new ParserContext([]);
+    public ParserContext Context { get; } = ParserContext.Create();
 
     Dictionary<Assembly, CSharpDecompiler> Decompilers = [];
 
@@ -37,14 +38,20 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
 
     Dictionary<Assembly, RuntimePEData> RuntimePEDatas = [];
 
+    static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+
     public IR.Module ParseModule(IShaderModule module)
     {
         var moduleType = module.GetType();
-        var methods = moduleType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+        var methods = moduleType.GetMethods(TargetMethodBindingFlags);
         var context = ParserContext.Create();
         foreach (var m in methods)
         {
-            ParseMethod(m);
+            var shaderStageAttributes = m.GetCustomAttributes().OfType<IShaderStageAttribute>().Any();
+            if (shaderStageAttributes)
+            {
+                _ = ParseMethod(m);
+            }
         }
         return new([.. context.FunctionDeclarations.Values]);
     }
@@ -117,7 +124,8 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
         return Option.HotReloadAssemblies.Contains(method.DeclaringType.Assembly);
     }
 
-    public FunctionDeclaration ParseMethod(MethodBase method)
+
+    public FunctionDeclaration ParseMethod(MethodBase method, Dictionary<string, IDeclaration>? symbols = default)
     {
         var shouldCache = IsCacheable(method);
         if (!shouldCache && Context.FunctionDeclarations.TryGetValue(method, out var existedDecl))
@@ -127,7 +135,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
         else
         {
             var ast = Decompile(method);
-            var result = (FunctionDeclaration)ast.AcceptVisitor(new ILSpyASTToModuleVisitor([]));
+            var result = (FunctionDeclaration)ast.AcceptVisitor(new ILSpyASTToModuleVisitor(symbols ?? [], method.DeclaringType.Assembly));
             // Ad hoc fixing of return type attribute missing
             if (method is MethodInfo minfo)
             {

@@ -21,6 +21,38 @@ public static class ILSLCompiler
         return code;
     }
 
+    public static async ValueTask<string> CompileV2(IShaderModule shaderModule)
+    {
+        var type = shaderModule.GetType();
+        using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+        {
+            HotReloadAssemblies = [
+               type.Assembly,
+               typeof(ILSLCompiler).Assembly
+            ]
+        });
+
+        var parser = new MetadataParser();
+        var module = parser.ParseModule(shaderModule);
+        parser.ParseFunctionBodies(bodyParser);
+        var tw = new IndentStringWriter("\t");
+        var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
+        foreach (var d in module.Declarations.OfType<VariableDeclaration>())
+        {
+            await d.AcceptVisitor(visitor);
+        }
+        foreach (var d in module.Declarations.OfType<StructureDeclaration>())
+        {
+            await d.AcceptVisitor(visitor);
+        }
+        foreach (var d in module.Declarations.OfType<FunctionDeclaration>())
+        {
+            await d.AcceptVisitor(visitor);
+        }
+        var code = tw.ToString();
+        return code;
+    }
+
     public static IR.Module Parse(IShaderModule module)
     {
         var type = module.GetType();
@@ -128,11 +160,6 @@ public static class ILSLCompiler
     //        return ast;
     //    }
     //}
-
-    static IR.Module CompileFrontend(SyntaxTree ast)
-    {
-        return (IR.Module)ast.AcceptVisitor(new ILSpyASTToModuleVisitor([]));
-    }
 
     public static async ValueTask<string> EmitCode(this IR.Module module)
     {

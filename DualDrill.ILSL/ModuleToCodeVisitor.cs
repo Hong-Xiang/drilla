@@ -74,6 +74,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
     : IDeclarationVisitor<ValueTask>
     , IStatementVisitor<ValueTask>
     , IExpressionVisitor<ValueTask>
+    , ITypeReferenceVisitor<ValueTask>
 
 {
     async ValueTask WriteAttributeAsync(IAttribute attr, CancellationToken cancellation = default)
@@ -133,7 +134,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         await WriteAttributesAsync(decl.Return.Attributes);
         if (decl.Return.Type is not null)
         {
-            await decl.Return.Type.AcceptVisitor(this);
+            await VisitTypeReference(decl.Return.Type);
         }
         Writer.WriteLine();
         if (decl.Body is not null)
@@ -149,13 +150,8 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         await WriteAttributesAsync(decl.Attributes);
         Writer.Write(decl.Name);
         Writer.Write(": ");
-        await decl.Type.AcceptVisitor(this);
+        await VisitTypeReference(decl.Type);
         Writer.Write(", ");
-    }
-
-    public async ValueTask VisitType(IType type)
-    {
-        Writer.Write(type.Name);
     }
 
     public ValueTask VisitValue(ValueDeclaration decl)
@@ -163,9 +159,35 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         throw new NotImplementedException();
     }
 
-    public ValueTask VisitVariable(VariableDeclaration decl)
+    public async ValueTask VisitVariable(VariableDeclaration decl)
     {
-        throw new NotImplementedException();
+        foreach (var a in decl.Attributes)
+        {
+            switch (a)
+            {
+                case GroupAttribute g:
+                    Writer.Write("@group(");
+                    Writer.Write(g.Binding);
+                    Writer.Write(") ");
+                    break;
+                case BindingAttribute b:
+                    Writer.Write("@binding(");
+                    Writer.Write(b.Binding);
+                    Writer.Write(") ");
+                    break;
+                case UniformAttribute u:
+                    Writer.Write("var<uniform> ");
+                    break;
+                default:
+                    throw new NotSupportedException($"VisitVariableDeclaration attribute {a} not support ");
+            }
+        }
+        Writer.Write(decl.Name);
+        Writer.Write(": ");
+        await VisitTypeReference(decl.Type);
+
+        Writer.WriteLine(";");
+        Writer.WriteLine();
     }
 
     public async ValueTask VisitReturn(ReturnStatement stmt)
@@ -182,7 +204,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         Writer.Write("var ");
         Writer.Write(stmt.Variable.Name);
         Writer.Write(" : ");
-        await stmt.Variable.Type.AcceptVisitor(this);
+        await VisitTypeReference(stmt.Variable.Type);
         if (stmt.Variable.Initializer is not null)
         {
             Writer.Write(" = ");
@@ -444,5 +466,40 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         {
             Writer.Write(c);
         }
+    }
+
+    public async ValueTask VisitStructure(StructureDeclaration decl)
+    {
+        Writer.Write("struct ");
+        Writer.Write(decl.Name);
+        Writer.WriteLine(" {");
+        Writer.Indent();
+        foreach (var m in decl.Members)
+        {
+            await m.AcceptVisitor(this);
+        }
+        Writer.Unindent();
+        Writer.WriteLine("};");
+        Writer.WriteLine();
+    }
+
+    public async ValueTask VisitMember(MemberDeclaration decl)
+    {
+        Writer.Write(decl.Name);
+        Writer.Write(": ");
+        await VisitTypeReference(decl.Type);
+        Writer.WriteLine(",");
+    }
+
+    public async ValueTask VisitTypeReference(IType type)
+    {
+        Writer.Write(type.Name);
+    }
+
+    public async ValueTask VisitNamedComponentExpression(NamedComponentExpression expr)
+    {
+        await expr.Base.AcceptVisitor(this);
+        Writer.Write(".");
+        Writer.Write(expr.ComponentName);
     }
 }
