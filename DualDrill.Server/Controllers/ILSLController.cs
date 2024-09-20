@@ -44,6 +44,12 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return Ok(await ILSLCompiler.CompileV2(new SimpleUniformShader()));
         }
+        if (name == nameof(SampleFragmentShader))
+        {
+            return Ok(await ILSLCompiler.CompileV2(new SampleFragmentShader()));
+        }
+
+
         var shaderModule = GetShaderModule(name);
         if (shaderModule is null)
         {

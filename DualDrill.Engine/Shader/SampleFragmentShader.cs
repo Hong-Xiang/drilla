@@ -97,21 +97,26 @@ public static class SampleFragmentShaderModule
 
 
 
-public struct SampleFragmentShader : IShaderModule, IILSLDevelopShaderModule
+public struct SampleFragmentShader : IShaderModule
 {
-    string IILSLDevelopShaderModule.ILSLWGSLExpectedCode => """
-      @vertex fn vs(@builtin(vertex_index) vertex_index : u32) 
-        -> @builtin(position) vec4f 
-      {
-        let x = f32(1 - i32(vertex_index)) * 0.5;
-        let y = f32(i32(vertex_index & 1u) * 2 - 1) * 0.5;
-        return vec4f(x, y, 0.0, 1.0);
-      }
+    //string IILSLDevelopShaderModule.ILSLWGSLExpectedCode => """
+    //  @vertex fn vs(@builtin(vertex_index) vertex_index : u32) 
+    //    -> @builtin(position) vec4f 
+    //  {
+    //    let x = f32(1 - i32(vertex_index)) * 0.5;
+    //    let y = f32(i32(vertex_index & 1u) * 2 - 1) * 0.5;
+    //    return vec4f(x, y, 0.0, 1.0);
+    //  }
  
-      @fragment fn fs() -> @location(0) vec4f {
-        return vec4f(0.5, 1.0, 0.5, 1.0);
-      }
-      """;
+    //  @fragment fn fs() -> @location(0) vec4f {
+    //    return vec4f(0.5, 1.0, 0.5, 1.0);
+    //  }
+    //  """;
+
+    [Uniform]
+    [Group(0)]
+    [Binding(0)]
+    float iTime;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
@@ -148,10 +153,10 @@ public struct SampleFragmentShader : IShaderModule, IILSLDevelopShaderModule
 
     [Fragment]
     [return: Location(0)]
-    static Vector4 fs([Builtin(BuiltinBinding.position)] Vector4 fragCoord)
+     Vector4 fs([Builtin(BuiltinBinding.position)] Vector4 fragCoord)
     {
         // Courtesy https://www.shadertoy.com/view/lsX3W4
-        float iTime = 0.0f;
+        //float iTime = 0.0f;
         Vector2 iResolution = new Vector2(800.0f, 600.0f);
         Vector2 p = new Vector2(
           (2.0f * fragCoord.X - iResolution.X) / iResolution.Y,

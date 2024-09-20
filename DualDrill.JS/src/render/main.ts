@@ -47,7 +47,7 @@ export async function BatchRenderMain() {
   });
 
   let interactiveState: InteractiveState = {
-    loop: false,
+    loop: true,
   };
   let needOneTimeRender = true;
   const realtimeState: RealtimeState = {
@@ -139,7 +139,10 @@ export async function BatchRenderMain() {
         layout: pipeline.getBindGroupLayout(0),
         entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
       })
-    : undefined;
+    : device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+      });
 
   const render = (f: number) => {
     if (!interactiveState.loop && !needOneTimeRender) {
@@ -151,8 +154,11 @@ export async function BatchRenderMain() {
     const aspect = canvas.width / canvas.height;
     if (isUniformTest) {
       uniformValues.set([0.5 / aspect, 0.5], kScaleOffset); // set the scale
-      device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+      // device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+    } else {
+      uniformValues.set([f / 500], 0); // set the scale
     }
+    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
     const view = context.getCurrentTexture().createView();
 
     const encoder = device.createCommandEncoder();
@@ -172,9 +178,9 @@ export async function BatchRenderMain() {
 
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
-    if (isUniformTest) {
-      pass.setBindGroup(0, bindGroup!);
-    }
+    // if (isUniformTest) {
+    pass.setBindGroup(0, bindGroup!);
+    // }
     pass.draw(6);
     pass.end();
 

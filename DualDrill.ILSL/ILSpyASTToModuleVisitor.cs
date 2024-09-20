@@ -9,6 +9,7 @@ using ICSharpCode.Decompiler.TypeSystem;
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 
 namespace DualDrill.ILSL;
 
@@ -565,9 +566,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     public INode? VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
     {
         var targetType = memberReferenceExpression.Target.Annotation<ResolveResult>().Type;
+        var targetTypeDefinition = targetType.GetDefinition();
         var targetMember = memberReferenceExpression.Target.Annotation<MemberResolveResult>();
         // TODO: proper handling this reference, check target type
-        if (targetMember is not null && memberReferenceExpression.Target is ThisReferenceExpression)
+        if (memberReferenceExpression.Target is ThisReferenceExpression)
         {
             // assume this references to IShaderModule, which is global naming space for shaders
             return new VariableIdentifierExpression((VariableDeclaration)Symbols[memberReferenceExpression.MemberName]);
