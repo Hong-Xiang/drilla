@@ -39,15 +39,19 @@ public sealed class GroupAttribute(int Binding) : Attribute, IAttribute
     public int Binding { get; } = Binding;
 }
 
-public sealed class BindingAttribute(int Binding) : Attribute, IAttribute
+public sealed class BindingAttribute(int Binding, bool HasDynamicOffset = false) : Attribute, IAttribute
 {
     public int Binding { get; } = Binding;
+    public bool HasDynamicOffset { get; } = HasDynamicOffset;
 }
 
 public sealed class UniformAttribute() : Attribute, IAttribute { }
 public sealed class ReadAttribute() : Attribute, IAttribute { }
 public sealed class ReadWriteAttribute() : Attribute, IAttribute { }
-
+public sealed class StageAttribute(GPUShaderStage stage) : Attribute, IAttribute
+{
+    public GPUShaderStage Stage { get; } = stage;
+}
 public sealed class VertexStepModeAttribute(GPUVertexStepMode StepMode) : Attribute
 {
     public GPUVertexStepMode StepMode { get; } = StepMode;

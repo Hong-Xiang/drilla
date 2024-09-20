@@ -48,6 +48,7 @@ public interface IType : IDeclaration
 public interface IBuiltinType
 {
     abstract static IType Instance { get; }
+    int ByteSize { get; }
 }
 
 internal interface IBuiltinType<T> : IType, IBuiltinType
@@ -74,6 +75,7 @@ public interface IScalarType : IPlainType, IStorableType, IBuiltinType
 public readonly record struct BoolType : IScalarType, IBuiltinType<BoolType>
 {
     public string Name => "bool";
+    public int ByteSize => 4;
 }
 
 public interface IFloatType : IScalarType { }
@@ -81,6 +83,7 @@ public interface IFloatType : IScalarType { }
 public readonly struct FloatType<TBitWidth> : IFloatType, IBuiltinType<FloatType<TBitWidth>>
     where TBitWidth : IBitWidth
 {
+    public int ByteSize => TBitWidth.Value / 8;
     public readonly static FunctionDeclaration Cast = new FunctionDeclaration(
         new FloatType<TBitWidth>().Name,
         [],
@@ -161,12 +164,16 @@ public readonly record struct IntType<TBitWidth>() : IIntegerType, IBuiltinType<
 
 
     public string Name => $"i{TBitWidth.Value}";
+
+    public int ByteSize => TBitWidth.Value / 8;
 }
 
 public readonly record struct UIntType<TBitWidth>() : IIntegerType, IBuiltinType<UIntType<TBitWidth>>
     where TBitWidth : IBitWidth
 {
     public string Name => $"u{TBitWidth.Value}";
+
+    public int ByteSize => TBitWidth.Value / 8;
 }
 
 public readonly record struct VecType<TSize, TElement>() : IBuiltinType<VecType<TSize, TElement>>
@@ -200,6 +207,7 @@ public readonly record struct VecType<TSize, TElement>() : IBuiltinType<VecType<
                                 new ParameterDeclaration("e2", new VecType<TSize, TElement>(), [])],
                                 new FunctionReturn(new TElement(), []),
                                 []);
+    public int ByteSize => TSize.Value * new TElement().ByteSize;
 }
 
 public readonly struct MatType<TRow, TCol, TElement>()
@@ -209,6 +217,8 @@ public readonly struct MatType<TRow, TCol, TElement>()
     where TElement : IScalarType, new()
 {
     public string Name => $"mat{TRow.Value}x{TCol.Value}<{new TElement().Name}>";
+
+    public int ByteSize => TRow.Value * TCol.Value * new TElement().ByteSize;
 }
 
 public sealed record class FixedSizedArrayType(IPlainType ElementType, int Size)
