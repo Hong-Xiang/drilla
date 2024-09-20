@@ -52,7 +52,7 @@ public class MetadataParserTests
         Assert.Equal("InteropPosition", structDecl.Members[1].Name);
         Assert.Equal(new VecType<R2, FloatType<B32>>(), structDecl.Members[1].Type);
 
-        var tw = new StringWriter();
+        var tw = new IndentStringWriter("\t");
         var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
         foreach (var d in module.Declarations)
         {
@@ -76,7 +76,7 @@ public class MetadataParserTests
         [Group(0)]
         [Binding(0)]
         [Uniform]
-        OurStruct ourStruct { get; }
+        OurStruct ourStruct;
 
         [Vertex]
         [return: Builtin(BuiltinBinding.position)]
@@ -125,7 +125,7 @@ public class MetadataParserTests
         Assert.Single(uniformDecl.Attributes.OfType<UniformAttribute>());
         Assert.IsType<StructureDeclaration>(uniformDecl.Type);
 
-        var tw = new StringWriter();
+        var tw = new IndentStringWriter("\t");
         var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
         foreach (var d in module.Declarations)
         {

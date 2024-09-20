@@ -125,7 +125,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
     }
 
 
-    public FunctionDeclaration ParseMethod(MethodBase method)
+    public FunctionDeclaration ParseMethod(MethodBase method, Dictionary<string, IDeclaration>? symbols = default)
     {
         var shouldCache = IsCacheable(method);
         if (!shouldCache && Context.FunctionDeclarations.TryGetValue(method, out var existedDecl))
@@ -135,7 +135,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
         else
         {
             var ast = Decompile(method);
-            var result = (FunctionDeclaration)ast.AcceptVisitor(new ILSpyASTToModuleVisitor([]));
+            var result = (FunctionDeclaration)ast.AcceptVisitor(new ILSpyASTToModuleVisitor(symbols ?? [], method.DeclaringType.Assembly));
             // Ad hoc fixing of return type attribute missing
             if (method is MethodInfo minfo)
             {

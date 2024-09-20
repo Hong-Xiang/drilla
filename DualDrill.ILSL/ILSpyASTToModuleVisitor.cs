@@ -2,15 +2,17 @@
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
+using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 using ICSharpCode.Decompiler.Semantics;
 using ICSharpCode.Decompiler.TypeSystem;
 using System.Collections.Immutable;
 using System.Numerics;
+using System.Reflection;
 
 namespace DualDrill.ILSL;
 
-public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Symbols) : IAstVisitor<INode?>
+public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Symbols, Assembly Assembly) : IAstVisitor<INode?>
 {
     public INode? VisitAccessor(Accessor accessor)
     {
@@ -123,7 +125,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         {
             newScope.Add(kv.Key, kv.Value);
         }
-        var blockScopeVisitor = new ILSpyASTToModuleVisitor(newScope);
+        var blockScopeVisitor = new ILSpyASTToModuleVisitor(newScope, Assembly);
         var result = new CompoundStatement([.. blockStatement.Statements.Select(s => s.AcceptVisitor(blockScopeVisitor)).OfType<IStatement>()]);
         return result;
     }
@@ -375,10 +377,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             new ForHeader()
             {
                 Init = init,
-                Expr = (IExpression) forStatement.Condition.AcceptVisitor(this)!,
+                Expr = (IExpression)forStatement.Condition.AcceptVisitor(this)!,
                 Update = update
             },
-            (IStatement) forStatement.EmbeddedStatement.AcceptVisitor(this)!
+            (IStatement)forStatement.EmbeddedStatement.AcceptVisitor(this)!
         );
     }
 
@@ -490,7 +492,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
                         immutableArgs
                     );
                 case "global::System.Math.Cos":
-                    var res =  new FunctionCallExpression(
+                    var res = new FunctionCallExpression(
                         FloatType<B32>.Cos,
                         immutableArgs
                     );
@@ -523,7 +525,8 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
                 default:
                     throw new NotImplementedException();
             }
-        } else
+        }
+        else
         {
             throw new NotImplementedException();
         }
@@ -561,10 +564,27 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
     {
+        var targetType = memberReferenceExpression.Target.Annotation<ResolveResult>().Type;
+        var targetMember = memberReferenceExpression.Target.Annotation<MemberResolveResult>();
+        // TODO: proper handling this reference, check target type
+        if (targetMember is not null && memberReferenceExpression.Target is ThisReferenceExpression)
+        {
+            // assume this references to IShaderModule, which is global naming space for shaders
+            return new VariableIdentifierExpression((VariableDeclaration)Symbols[memberReferenceExpression.MemberName]);
+        }
         // TODO: check if it's a vector
-        var baseExpr = (IExpression) (memberReferenceExpression.Target.AcceptVisitor(this));
-        var member = (SwizzleComponent) Enum.Parse(typeof(SwizzleComponent), memberReferenceExpression.MemberName.ToLower());
-        return new VectorSwizzleAccessExpression(baseExpr, [member]);
+        var baseExpr = (IExpression)(memberReferenceExpression.Target.AcceptVisitor(this));
+        if (targetType.FullName == typeof(Vector2).FullName
+            || targetType.FullName == typeof(Vector3).FullName
+            || targetType.FullName == typeof(Vector4).FullName)
+        {
+            var member = (SwizzleComponent)Enum.Parse(typeof(SwizzleComponent), memberReferenceExpression.MemberName.ToLower());
+            return new VectorSwizzleAccessExpression(baseExpr, [member]);
+        }
+        else
+        {
+            return new NamedComponentExpression(baseExpr, memberReferenceExpression.MemberName);
+        }
     }
 
     public INode? VisitMemberType(MemberType memberType)
@@ -616,7 +636,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
                 env.Add(p.Name, p);
             }
         }
-        var visitor = new ILSpyASTToModuleVisitor(env);
+        var visitor = new ILSpyASTToModuleVisitor(env, Assembly);
         var body = (CompoundStatement)methodDeclaration.Body.AcceptVisitor(visitor);
         // TODO: proper handling of return type
         var rt = methodDeclaration.ReturnType.AcceptVisitor(this);
@@ -677,7 +697,8 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         if (type.FullName == typeof(Vector4).FullName)
         {
             return SyntaxFactory.vec4<FloatType<B32>>(args.ToArray());
-        } else if (type.FullName == typeof(Vector3).FullName)
+        }
+        else if (type.FullName == typeof(Vector3).FullName)
         {
             return SyntaxFactory.vec3<FloatType<B32>>(args.ToArray());
         }
@@ -884,6 +905,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitThisReferenceExpression(ThisReferenceExpression thisReferenceExpression)
     {
+        // TODO: check if is referencing shader module object (only this case we can simply access member as global references)
         throw new NotImplementedException();
     }
 
@@ -922,7 +944,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var nodes = typeDeclaration.Members.Where(m => !m.Name.StartsWith("ILSLWGSL"))
                                            .Select(m => m.AcceptVisitor(this))
                                            .OfType<FunctionDeclaration>();
-        return new Module([.. nodes]);
+        return new IR.Module([.. nodes]);
     }
 
     public INode? VisitTypeOfExpression(TypeOfExpression typeOfExpression)
@@ -1010,8 +1032,8 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     {
         return new IR.Statement.WhileStatement(
             Attributes: [],
-            (IExpression) whileStatement.Condition.AcceptVisitor(this)!,
-            (IStatement) whileStatement.EmbeddedStatement.AcceptVisitor(this)!
+            (IExpression)whileStatement.Condition.AcceptVisitor(this)!,
+            (IStatement)whileStatement.EmbeddedStatement.AcceptVisitor(this)!
         );
     }
 

@@ -12,7 +12,7 @@ namespace DualDrill.ILSL.Frontend;
 public sealed class MetadataParser()
 {
     ParserContext Context = ParserContext.Create();
-    Dictionary<MethodBase, bool> NeedBody = [];
+    Dictionary<MethodBase, FunctionDeclaration> NeedParseBody = [];
 
     FrozenDictionary<Type, IType> BuiltinTypeMap = new Dictionary<Type, IType>()
     {
@@ -170,6 +170,7 @@ public sealed class MetadataParser()
             new FunctionReturn(returnType, returnAttributes),
             ParseAttribute(method)
         );
+        NeedParseBody.Add(method, decl);
         Context.FunctionDeclarations.Add(method, decl);
         return decl;
     }
@@ -189,6 +190,24 @@ public sealed class MetadataParser()
             }
         }
         throw new NotImplementedException();
+    }
+
+    public void ParseFunctionBodies(ILSpyFrontend frontend)
+    {
+        var symbols = new Dictionary<string, IDeclaration>();
+        foreach (var d in Context.VariableDeclarations)
+        {
+            symbols.Add(d.Key.Name, d.Value);
+        }
+        foreach (var d in Context.FunctionDeclarations)
+        {
+            symbols.Add(d.Key.Name, d.Value);
+        }
+        // TODO: use ILSpyFrontEnd for body only, passing referenced symbols as environment
+        foreach (var (m, f) in NeedParseBody)
+        {
+            f.Body = frontend.ParseMethod(m, symbols).Body;
+        }
     }
 
     public IR.Module Build()

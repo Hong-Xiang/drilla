@@ -59,8 +59,28 @@ export async function BatchRenderMain() {
   });
   createRealtimeUserInterface(realtimeState);
 
-  const shaderName = "SampleFragmentShader";
+  // const shaderName = "SampleFragmentShader";
+  const isUniformTest = false;
+  const shaderName = isUniformTest
+    ? "SimpleUniformShader"
+    : "SampleFragmentShader";
   const code = await (await fetch(`/ilsl/wgsl/${shaderName}`)).text();
+
+  const uniformBufferSize =
+    4 * 4 + // color is 4 32bit floats (4bytes each)
+    2 * 4 + // scale is 2 32bit floats (4bytes each)
+    2 * 4; // offset is 2 32bit floats (4bytes each)
+  const uniformBuffer = device.createBuffer({
+    size: uniformBufferSize,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const uniformValues = new Float32Array(uniformBufferSize / 4);
+  const kColorOffset = 0;
+  const kScaleOffset = 4;
+  const kOffsetOffset = 6;
+
+  uniformValues.set([1, 1, 0, 1], kColorOffset); // set the color
+  uniformValues.set([-0.5, -0.25], kOffsetOffset); // set the offset
 
   const module = device.createShaderModule({
     label: "our hardcoded red triangle shaders",
@@ -114,6 +134,13 @@ export async function BatchRenderMain() {
     },
   });
 
+  const bindGroup = isUniformTest
+    ? device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+      })
+    : undefined;
+
   const render = (f: number) => {
     if (!interactiveState.loop && !needOneTimeRender) {
       console.log("skip rendering");
@@ -121,7 +148,11 @@ export async function BatchRenderMain() {
       return;
     }
     needOneTimeRender = false;
-
+    const aspect = canvas.width / canvas.height;
+    if (isUniformTest) {
+      uniformValues.set([0.5 / aspect, 0.5], kScaleOffset); // set the scale
+      device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+    }
     const view = context.getCurrentTexture().createView();
 
     const encoder = device.createCommandEncoder();
@@ -141,6 +172,9 @@ export async function BatchRenderMain() {
 
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
+    if (isUniformTest) {
+      pass.setBindGroup(0, bindGroup!);
+    }
     pass.draw(6);
     pass.end();
 

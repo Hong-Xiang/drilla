@@ -130,25 +130,67 @@ public struct SampleFragmentShader : IShaderModule, IILSLDevelopShaderModule
         if (v == v0 || v == v2 || v == v3)
         {
             x = -1.0f;
-        } else
+        }
+        else
         {
             x = 1.0f;
         }
         if (v == v0 || v == v1 || v == v4)
         {
             y = -1.0f;
-        } else
+        }
+        else
         {
             y = 1.0f;
         }
         return new Vector4(x, y, 0.0f, 1.0f);
     }
 
-
     [Fragment]
     [return: Location(0)]
     static Vector4 fs([Builtin(BuiltinBinding.position)] Vector4 fragCoord)
     {
-        return new Vector4(0.5f, 1.0f, 0.5f, 1.0f);
+        // Courtesy https://www.shadertoy.com/view/lsX3W4
+        float iTime = 0.0f;
+        Vector2 iResolution = new Vector2(800.0f, 600.0f);
+        Vector2 p = new Vector2(
+          (2.0f * fragCoord.X - iResolution.X) / iResolution.Y,
+          (2.0f * fragCoord.Y - iResolution.Y) / iResolution.Y
+        );
+        // animation
+        float tz = 0.5f - 0.5f * ((float)Math.Cos(0.225f * iTime));
+        float zoo = (float)Math.Pow(0.5f, 13.0f * tz);
+        Vector2 c = new Vector2(-0.05f, 0.6805f) + p * zoo;
+        // distance to Mandelbrot
+        float di = 1.0f;
+        Vector2 z = new Vector2(0.0f, 0.0f);
+        float m2 = 0.0f;
+        Vector2 dz = new Vector2(0.0f, 0.0f);
+        for (int i = 0; i < 300; i = i + 1)
+        {
+            if (m2 > 1024.0f)
+            {
+                di = 0.0f;
+                break;
+            }
+            // Z' -> 2·Z·Z' + 1
+            dz = 2.0f * new Vector2(z.X * dz.X - z.Y * dz.Y, z.X * dz.Y + z.Y * dz.X) + new Vector2(1.0f, 0.0f);
+            // Z -> Z² + c
+            z = new Vector2(z.X * z.X - z.Y * z.Y, 2.0f * z.X * z.Y) + c;
+            //m2 = dot(z, z);
+            m2 = Vector2.Dot(z, z);
+        }
+        // distance
+        // d(c) = |Z|·log|Z|/|Z'|
+        float d = 0.5f * (float)(Math.Sqrt(Vector2.Dot(z, z) / Vector2.Dot(dz, dz)) * Math.Log(Vector2.Dot(z, z)));
+        if (di > 0.5f)
+        {
+            d = 0.0f;
+        }
+        // do some soft coloring based on distance
+        float d_clamped = (float)Math.Clamp(Math.Pow(4.0f * d / zoo, 0.2f), 0.0f, 1.0f);
+        Vector3 col = new Vector3(d_clamped);
+        return new Vector4(col, 1.0f);
     }
+
 }

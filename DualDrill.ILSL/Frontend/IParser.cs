@@ -6,7 +6,7 @@ namespace DualDrill.ILSL.Frontend;
 public interface IParser
 {
     ParserContext Context { get; }
-    public FunctionDeclaration ParseMethod(MethodBase method);
+    public FunctionDeclaration ParseMethod(MethodBase method, Dictionary<string, IDeclaration>? symbols = default);
 }
 
 public sealed record class ParserContext(

@@ -9,5 +9,6 @@ public sealed class ILSLDevelopShaderModuleService
         [nameof(MinimumTriangle)] = new MinimumTriangle(),
         [nameof(SampleFragmentShader)] = new SampleFragmentShader(),
         [nameof(VertexOutputShader)] = new VertexOutputShader(),
+        //[nameof(SimpleUniformShader)] = new SimpleUniformShader(),
     };
 }

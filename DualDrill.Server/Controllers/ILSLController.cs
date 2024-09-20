@@ -40,11 +40,16 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("wgsl/{name}")]
     public async Task<IActionResult> CompileModule(string name)
     {
+        if (name == nameof(SimpleUniformShader))
+        {
+            return Ok(await ILSLCompiler.CompileV2(new SimpleUniformShader()));
+        }
         var shaderModule = GetShaderModule(name);
         if (shaderModule is null)
         {
             return NotFound();
         }
+
         return Ok(await ILSLCompiler.Compile(shaderModule));
     }
 
@@ -131,7 +136,8 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         //return Ok(ops);
         var insts = method.GetInstructions();
         return Ok(insts.Select(s =>
-        new {
+        new
+        {
             offset = s.Offset,
             opCode = s.OpCode,
             operand = s.Operand?.ToString()
