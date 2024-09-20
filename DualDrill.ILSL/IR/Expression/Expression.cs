@@ -9,6 +9,7 @@ namespace DualDrill.ILSL.IR.Expression;
 [JsonDerivedType(typeof(BinaryBitwiseExpression), nameof(BinaryBitwiseExpression))]
 [JsonDerivedType(typeof(FormalParameterExpression), nameof(FormalParameterExpression))]
 [JsonDerivedType(typeof(ParenthesizedExpression), nameof(ParenthesizedExpression))]
+[JsonDerivedType(typeof(VectorSwizzleAccessExpression), nameof(VectorSwizzleAccessExpression))]
 [JsonDerivedType(typeof(BinaryRelationalExpression), nameof(BinaryRelationalExpression))]
 [JsonDerivedType(typeof(BinaryLogicalExpression), nameof(BinaryLogicalExpression))]
 [JsonDerivedType(typeof(UnaryLogicalExpression), nameof(UnaryLogicalExpression))]
@@ -30,6 +31,7 @@ public interface IExpressionVisitor<T>
     T VisitUnaryArithmeticExpression(UnaryArithmeticExpression expr);
     T VisitFormalParameterExpression(FormalParameterExpression expr);
     T VisitParenthesizedExpression(ParenthesizedExpression expr);
+    T VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr);
 }
 
 public static class ExpressionExtension
@@ -49,6 +51,7 @@ public static class ExpressionExtension
             VariableIdentifierExpression e => visitor.VisitVariableIdentifierExpression(e),
             FormalParameterExpression e => visitor.VisitFormalParameterExpression(e),
             ParenthesizedExpression e => visitor.VisitParenthesizedExpression(e),
+            VectorSwizzleAccessExpression e => visitor.VisitVectorSwizzleAccessExpression(e),
             _ => throw new NotSupportedException($"Expression Visitor does not support {expr}")
         };
     }

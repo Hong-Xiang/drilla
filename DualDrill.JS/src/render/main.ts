@@ -59,7 +59,7 @@ export async function BatchRenderMain() {
   });
   createRealtimeUserInterface(realtimeState);
 
-  const shaderName = "MinimumTriangle";
+  const shaderName = "SampleFragmentShader";
   const code = await (await fetch(`/ilsl/wgsl/${shaderName}`)).text();
 
   const module = device.createShaderModule({
@@ -141,7 +141,7 @@ export async function BatchRenderMain() {
 
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
-    pass.draw(3);
+    pass.draw(6);
     pass.end();
 
     device.queue.submit([encoder.finish()]);
