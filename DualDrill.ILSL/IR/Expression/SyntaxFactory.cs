@@ -13,6 +13,20 @@ public static class SyntaxFactory
         var c = VecType<R4, TElement>.Constructors[arguments.Length];
         return Call(c, arguments);
     }
+    public static IExpression vec3<TElement>(params IExpression[] arguments)
+        where TElement : IScalarType, new()
+    {
+        Debug.Assert(arguments.Length <= 3);
+        var c = VecType<R3, TElement>.Constructors[arguments.Length];
+        return Call(c, arguments);
+    }
+    public static IExpression vec2<TElement>(params IExpression[] arguments)
+    where TElement : IScalarType, new()
+    {
+        Debug.Assert(arguments.Length <= 2);
+        var c = VecType<R2, TElement>.Constructors[arguments.Length];
+        return Call(c, arguments);
+    }
     public static IExpression f32(IExpression expr)
     {
         return Call(FloatType<B32>.Cast, expr);
