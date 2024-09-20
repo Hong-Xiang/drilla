@@ -70,7 +70,7 @@ public sealed class WGSLLanguage : ITargetLanguage
     }
 }
 
-public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage TargetLanguage)
+public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLanguage TargetLanguage)
     : IDeclarationVisitor<ValueTask>
     , IStatementVisitor<ValueTask>
     , IExpressionVisitor<ValueTask>
@@ -136,12 +136,10 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
             await decl.Return.Type.AcceptVisitor(this);
         }
         Writer.WriteLine();
-        Writer.WriteLine('{');
         if (decl.Body is not null)
         {
             await decl.Body.AcceptVisitor(this);
         }
-        Writer.WriteLine('}');
         Writer.WriteLine();
         Writer.WriteLine();
     }
@@ -170,11 +168,6 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         throw new NotImplementedException();
     }
 
-    async ValueTask Indent()
-    {
-        await Writer.WriteAsync('\t');
-    }
-
     public async ValueTask VisitReturn(ReturnStatement stmt)
     {
         Writer.Write("return ");
@@ -199,11 +192,14 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
 
     public async ValueTask VisitCompound(CompoundStatement stmt)
     {
+        Writer.WriteLine('{');
+        Writer.Indent();
         foreach (var s in stmt.Statements)
         {
-            await Indent();
             await s.AcceptVisitor(this);
         }
+        Writer.Unindent();
+        Writer.WriteLine('}');
     }
 
     public async ValueTask VisitIf(IfStatement stmt)
@@ -212,23 +208,18 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         Writer.Write("if ");
         await ifClause.Expr.AcceptVisitor(this);
         Writer.WriteLine();
-        Writer.WriteLine('{');
-        await ifClause.Statement.AcceptVisitor(this);
-        Writer.WriteLine('}');
+        await ifClause.Body.AcceptVisitor(this);
         foreach (var elseIfClause in stmt.ElseIfClause)
         {
-            Writer.WriteLine("else if ");
+            Writer.Write("else if ");
             await elseIfClause.Expr.AcceptVisitor(this);
-            Writer.WriteLine('{');
-            await elseIfClause.Statement.AcceptVisitor(this);
-            Writer.WriteLine('}');
+            Writer.WriteLine();
+            await elseIfClause.Body.AcceptVisitor(this);
         }
         if (stmt.Else is not null)
         {
             Writer.WriteLine("else");
-            Writer.WriteLine('{');
             await stmt.Else.AcceptVisitor(this);
-            Writer.WriteLine('}');
         }
     }
 
@@ -237,14 +228,12 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         Writer.Write("while ");
         await stmt.Expr.AcceptVisitor(this);
         Writer.WriteLine();
-        Writer.WriteLine('{');
         await stmt.Statement.AcceptVisitor(this);
-        Writer.WriteLine('}');
     }
 
     public async ValueTask VisitBreak(BreakStatement stmt)
     {
-        Writer.WriteLine("break");
+        Writer.Write("break");
     }
 
     public async ValueTask VisitFor(ForStatement stmt)
@@ -266,9 +255,7 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
             await header.Update.AcceptVisitor(this);
         }
         Writer.WriteLine(')');
-        Writer.WriteLine('{');
         await stmt.Statement.AcceptVisitor(this);
-        Writer.WriteLine('}');
     }
 
     public async ValueTask VisitSimpleAssignment(SimpleAssignmentStatement stmt)
@@ -300,6 +287,18 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
     {
         Writer.Write("_ = ");
         await stmt.Expr.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitIncrement(IncrementStatement stmt)
+    {
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.Write("++");
+    }
+
+    public async ValueTask VisitDecrement(DecrementStatement stmt)
+    {
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.Write("--");
     }
 
     public async ValueTask VisitFunctionCallExpression(FunctionCallExpression expr)
@@ -407,6 +406,17 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         var op = expr.Op switch
         {
             UnaryLogicalOp.Not => "!",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(op);
+        await expr.Expr.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitUnaryArithmeticExpression(UnaryArithmeticExpression expr)
+    {
+        var op = expr.Op switch
+        {
+            UnaryArithmeticOp.Minus => "-",
             _ => throw new NotSupportedException()
         };
         Writer.Write(op);

@@ -12,6 +12,7 @@ namespace DualDrill.ILSL.IR.Expression;
 [JsonDerivedType(typeof(BinaryRelationalExpression), nameof(BinaryRelationalExpression))]
 [JsonDerivedType(typeof(BinaryLogicalExpression), nameof(BinaryLogicalExpression))]
 [JsonDerivedType(typeof(UnaryLogicalExpression), nameof(UnaryLogicalExpression))]
+[JsonDerivedType(typeof(UnaryArithmeticExpression), nameof(UnaryArithmeticExpression))]
 public interface IExpression : INode
 {
 }
@@ -26,6 +27,7 @@ public interface IExpressionVisitor<T>
     T VisitBinaryRelationalExpression(BinaryRelationalExpression expr);
     T VisitBinaryLogicalExpression(BinaryLogicalExpression expr);
     T VisitUnaryLogicalExpression(UnaryLogicalExpression expr);
+    T VisitUnaryArithmeticExpression(UnaryArithmeticExpression expr);
     T VisitFormalParameterExpression(FormalParameterExpression expr);
     T VisitParenthesizedExpression(ParenthesizedExpression expr);
 }
@@ -42,6 +44,7 @@ public static class ExpressionExtension
             BinaryRelationalExpression e => visitor.VisitBinaryRelationalExpression(e),
             BinaryLogicalExpression e => visitor.VisitBinaryLogicalExpression(e),
             UnaryLogicalExpression e => visitor.VisitUnaryLogicalExpression(e),
+            UnaryArithmeticExpression e => visitor.VisitUnaryArithmeticExpression(e),
             LiteralValueExpression e => visitor.VisitLiteralValueExpression(e),
             VariableIdentifierExpression e => visitor.VisitVariableIdentifierExpression(e),
             FormalParameterExpression e => visitor.VisitFormalParameterExpression(e),

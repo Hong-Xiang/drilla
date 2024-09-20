@@ -11,6 +11,8 @@ namespace DualDrill.ILSL.IR.Statement;
 [JsonDerivedType(typeof(WhileStatement), nameof(WhileStatement))]
 [JsonDerivedType(typeof(BreakStatement), nameof(BreakStatement))]
 [JsonDerivedType(typeof(ForStatement), nameof(ForStatement))]
+[JsonDerivedType(typeof(IncrementStatement), nameof(IncrementStatement))]
+[JsonDerivedType(typeof(DecrementStatement), nameof(DecrementStatement))]
 public interface IStatement : INode { }
 
 public interface IStatementVisitor<T>
@@ -24,6 +26,8 @@ public interface IStatementVisitor<T>
     T VisitFor(ForStatement stmt);
     T VisitSimpleAssignment(SimpleAssignmentStatement stmt);
     T VisitPhonyAssignment(PhonyAssignmentStatement stmt);
+    T VisitIncrement(IncrementStatement stmt);
+    T VisitDecrement(DecrementStatement stmt);
 
     T AppendSemicolon(T t);
 }
@@ -43,6 +47,8 @@ public static class StatementExtension
             ForStatement s => visitor.VisitFor(s),
             SimpleAssignmentStatement s => visitor.AppendSemicolon(visitor.VisitSimpleAssignment(s)),
             PhonyAssignmentStatement s => visitor.AppendSemicolon(visitor.VisitPhonyAssignment(s)),
+            IncrementStatement s => visitor.AppendSemicolon(visitor.VisitIncrement(s)),
+            DecrementStatement s => visitor.AppendSemicolon(visitor.VisitDecrement(s)),
             _ => throw new NotSupportedException($"visit {nameof(IStatement)} does not support {stmt}")
         };
     }

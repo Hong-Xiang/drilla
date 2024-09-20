@@ -272,18 +272,43 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     public INode? VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var expr = expressionStatement.Expression;
-        if (expr is AssignmentExpression assignment)
+        return expr switch
         {
-            return new SimpleAssignmentStatement(
-                (IExpression) assignment.Left.AcceptVisitor(this)!,
-                (IExpression) assignment.Right.AcceptVisitor(this)!,
+            AssignmentExpression assignment => UnwrapConditionalAssignment(
+                (IExpression)assignment.Left.AcceptVisitor(this)!,
+                assignment.Right,
                 MapAssignmentOperator(assignment.Operator)
-            );
+            ),
+            UnaryOperatorExpression { Operator: UnaryOperatorType.PostIncrement } unary => new IncrementStatement(
+                (IExpression)unary.Expression.AcceptVisitor(this)!
+            ),
+            UnaryOperatorExpression { Operator: UnaryOperatorType.PostDecrement } unary => new DecrementStatement(
+                (IExpression)unary.Expression.AcceptVisitor(this)!
+            ),
+            _ => new PhonyAssignmentStatement(
+                (IExpression)expr.AcceptVisitor(this)!
+            )
+        };
+    }
+
+    private IStatement UnwrapConditionalAssignment(IExpression lhs, Expression expr, AssignmentOp op)
+    {
+        if (expr is ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression { Expression: ConditionalExpression cond })
+        {
+            return new IfStatement(
+                Attributes: [],
+                new IfClause(
+                    (IExpression)cond.Condition.AcceptVisitor(this)!,
+                    MapCompoundStatement(UnwrapConditionalAssignment(lhs, cond.TrueExpression, op))!
+                ),
+                ElseIfClause: []
+            )
+            {
+                Else = MapCompoundStatement(UnwrapConditionalAssignment(lhs, cond.FalseExpression, op))
+            };
         }
 
-        return new PhonyAssignmentStatement(
-            (IExpression) expr.AcceptVisitor(this)!
-        );
+        return new SimpleAssignmentStatement(lhs, (IExpression)expr.AcceptVisitor(this)!, op);
     }
 
     public INode? VisitExternAliasDeclaration(ExternAliasDeclaration externAliasDeclaration)
@@ -400,12 +425,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             Attributes: [],
             new IfClause(
                 (IExpression)ifElseStatement.Condition.AcceptVisitor(this)!,
-                (IStatement)ifElseStatement.TrueStatement.AcceptVisitor(this)!
+                MapCompoundStatement((IStatement?)ifElseStatement.TrueStatement.AcceptVisitor(this))!
             ),
             ElseIfClause: []
         )
         {
-            Else = (IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this)
+            Else = MapCompoundStatement((IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this))
         };
     }
 
@@ -843,6 +868,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return unaryOperatorExpression.Operator switch
         {
             UnaryOperatorType.Not => new UnaryLogicalExpression(expr, UnaryLogicalOp.Not),
+            UnaryOperatorType.Minus => new UnaryArithmeticExpression(expr, UnaryArithmeticOp.Minus),
             _ => throw new NotSupportedException($"{nameof(VisitUnaryOperatorExpression)} does not support {unaryOperatorExpression}")
         };
     }
@@ -924,6 +950,16 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     public INode? VisitYieldReturnStatement(YieldReturnStatement yieldReturnStatement)
     {
         throw new NotImplementedException();
+    }
+
+    private static CompoundStatement? MapCompoundStatement(IStatement? stmt)
+    {
+        return stmt switch
+        {
+            CompoundStatement s => s,
+            not null => new CompoundStatement([stmt]),
+            null => null
+        };
     }
 
     private static AssignmentOp MapAssignmentOperator(AssignmentOperatorType op)
