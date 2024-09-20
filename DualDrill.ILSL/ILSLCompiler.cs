@@ -136,7 +136,7 @@ public static class ILSLCompiler
 
     public static async ValueTask<string> EmitCode(this IR.Module module)
     {
-        var tw = new StringWriter();
+        var tw = new IndentStringWriter("\t");
         var wgslVisitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
         foreach (var d in module.Declarations)
         {

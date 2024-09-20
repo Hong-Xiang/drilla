@@ -4,8 +4,8 @@ using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
 using System.Numerics;
-using DualDrill.Engine.Mesh;
-namespace DualDrill.Graphics;
+
+namespace DualDrill.Engine.Shader;
 
 public static class MinimumTriangleModule
 {
@@ -133,20 +133,23 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
     [return: Location(0)]
     static Vector4 fs()
     {
-        float x = 0.0f;
-        if (x < 0.5f)
+        float x = 1.0f;
+        float y = 100.0f;
+
+        for (int i = 0; i < 10; i += 2)
         {
-            int test1 = 1;
+            x -= i;
         }
-        else if (x < 0.75f)
+
+        for (;; x += 3.0f)
         {
-            int test2 = 2;
+            if (x + y < 100000.0f)
+            {
+                break;
+            }
         }
-        else
-        {
-            int test3 = 3;
-        }
-        return new Vector4(0.5f, 0.0f, 1.0f, 1.0f);
+
+        return new Vector4(1.0f);
     }
 
 }

@@ -110,6 +110,8 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             BinaryOperatorType.GreaterThanOrEqual => new BinaryRelationalExpression(l, r, BinaryRelationalOp.GreaterThanEqual),
             BinaryOperatorType.Equality => new BinaryRelationalExpression(l, r, BinaryRelationalOp.Equal),
             BinaryOperatorType.InEquality => new BinaryRelationalExpression(l, r, BinaryRelationalOp.NotEqual),
+            BinaryOperatorType.ConditionalAnd => new BinaryLogicalExpression(l, r, BinaryLogicalOp.And),
+            BinaryOperatorType.ConditionalOr => new BinaryLogicalExpression(l, r, BinaryLogicalOp.Or),
             _ => throw new NotSupportedException($"{nameof(VisitBinaryOperatorExpression)} does not support {binaryOperatorExpression}")
         };
     }
@@ -126,9 +128,9 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return result;
     }
 
-    public INode? VisitBreakStatement(BreakStatement breakStatement)
+    public INode? VisitBreakStatement(ICSharpCode.Decompiler.CSharp.Syntax.BreakStatement breakStatement)
     {
-        throw new NotImplementedException();
+        return new IR.Statement.BreakStatement();
     }
 
     public INode? VisitCaseLabel(CaseLabel caseLabel)
@@ -269,7 +271,44 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
-        throw new NotImplementedException();
+        var expr = expressionStatement.Expression;
+        return expr switch
+        {
+            AssignmentExpression assignment => UnwrapConditionalAssignment(
+                (IExpression)assignment.Left.AcceptVisitor(this)!,
+                assignment.Right,
+                MapAssignmentOperator(assignment.Operator)
+            ),
+            UnaryOperatorExpression { Operator: UnaryOperatorType.PostIncrement } unary => new IncrementStatement(
+                (IExpression)unary.Expression.AcceptVisitor(this)!
+            ),
+            UnaryOperatorExpression { Operator: UnaryOperatorType.PostDecrement } unary => new DecrementStatement(
+                (IExpression)unary.Expression.AcceptVisitor(this)!
+            ),
+            _ => new PhonyAssignmentStatement(
+                (IExpression)expr.AcceptVisitor(this)!
+            )
+        };
+    }
+
+    private IStatement UnwrapConditionalAssignment(IExpression lhs, Expression expr, AssignmentOp op)
+    {
+        if (expr is ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression { Expression: ConditionalExpression cond })
+        {
+            return new IfStatement(
+                Attributes: [],
+                new IfClause(
+                    (IExpression)cond.Condition.AcceptVisitor(this)!,
+                    MapCompoundStatement(UnwrapConditionalAssignment(lhs, cond.TrueExpression, op))!
+                ),
+                ElseIfClause: []
+            )
+            {
+                Else = MapCompoundStatement(UnwrapConditionalAssignment(lhs, cond.FalseExpression, op))
+            };
+        }
+
+        return new SimpleAssignmentStatement(lhs, (IExpression)expr.AcceptVisitor(this)!, op);
     }
 
     public INode? VisitExternAliasDeclaration(ExternAliasDeclaration externAliasDeclaration)
@@ -302,9 +341,45 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         throw new NotImplementedException();
     }
 
-    public INode? VisitForStatement(ForStatement forStatement)
+    public INode? VisitForStatement(ICSharpCode.Decompiler.CSharp.Syntax.ForStatement forStatement)
     {
-        throw new NotImplementedException();
+        IForInit? init = null;
+        IForUpdate? update = null;
+
+        var initializers = forStatement.Initializers;
+        if (initializers.Count() == 1)
+        {
+            init = (IForInit)initializers.First().AcceptVisitor(this)!;
+        }
+        else if (initializers.Count() > 1)
+        {
+            // later we can generate a sequence of assignment statements
+            // followed by the for-loop with only one initializer
+            throw new NotImplementedException("ForStatement only accepts 1 initializer statement");
+        }
+
+        var iterators = forStatement.Iterators;
+        if (iterators.Count() == 1)
+        {
+            update = (IForUpdate)iterators.First().AcceptVisitor(this)!;
+        }
+        else if (iterators.Count() > 1)
+        {
+            // later we could generate a sequence of update statements before
+            // the end of the loop and before every continue statement
+            throw new NotImplementedException("ForStatement only accepts 1 iterator statement");
+        }
+
+        return new IR.Statement.ForStatement(
+            Attributes: [],
+            new ForHeader()
+            {
+                Init = init,
+                Expr = (IExpression) forStatement.Condition.AcceptVisitor(this)!,
+                Update = update
+            },
+            (IStatement) forStatement.EmbeddedStatement.AcceptVisitor(this)!
+        );
     }
 
     public INode? VisitFunctionPointerType(FunctionPointerAstType functionPointerType)
@@ -350,12 +425,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             Attributes: [],
             new IfClause(
                 (IExpression)ifElseStatement.Condition.AcceptVisitor(this)!,
-                (IStatement)ifElseStatement.TrueStatement.AcceptVisitor(this)!
+                MapCompoundStatement((IStatement?)ifElseStatement.TrueStatement.AcceptVisitor(this))!
             ),
             ElseIfClause: []
         )
         {
-            Else = (IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this)
+            Else = MapCompoundStatement((IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this))
         };
     }
 
@@ -386,7 +461,72 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitInvocationExpression(InvocationExpression invocationExpression)
     {
-        throw new NotImplementedException();
+        List<INode> args = new();
+        foreach (var argument in invocationExpression.Arguments)
+        {
+            // For example, you can add it to the 'args' list
+            args.Add(argument.AcceptVisitor(this));
+        }
+        var immutableArgs = args.Cast<IExpression>().ToImmutableArray();
+        if (invocationExpression.Target is MemberReferenceExpression memberReference)
+        {
+            string functionName = memberReference.ToString();
+            // special case for vector dot as it's generic type
+            switch (functionName)
+            {
+                case "global::System.Numerics.Vector2.Dot":
+                    return new FunctionCallExpression(
+                        VecType<R2, FloatType<B32>>.Dot,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector3.Dot":
+                    return new FunctionCallExpression(
+                        VecType<R3, FloatType<B32>>.Dot,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector4.Dot":
+                    return new FunctionCallExpression(
+                        VecType<R4, FloatType<B32>>.Dot,
+                        immutableArgs
+                    );
+                case "global::System.Math.Cos":
+                    var res =  new FunctionCallExpression(
+                        FloatType<B32>.Cos,
+                        immutableArgs
+                    );
+                    return res;
+                case "global::System.Math.Sin":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Sin,
+                        immutableArgs
+                    );
+                case "global::System.Math.Sqrt":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Sqrt,
+                        immutableArgs
+                    );
+                case "global::System.Math.Pow":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Pow,
+                        immutableArgs
+                    );
+                case "global::System.Math.Log":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Log,
+                        immutableArgs
+                    );
+                case "global::System.Math.Clamp":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Clamp,
+                        immutableArgs
+                    );
+                default:
+                    throw new NotImplementedException();
+            }
+        } else
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public INode? VisitInvocationType(InvocationAstType invocationType)
@@ -421,7 +561,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
     {
-        throw new NotImplementedException();
+        // TODO: check if it's a vector
+        var baseExpr = (IExpression) (memberReferenceExpression.Target.AcceptVisitor(this));
+        var member = (SwizzleComponent) Enum.Parse(typeof(SwizzleComponent), memberReferenceExpression.MemberName.ToLower());
+        return new VectorSwizzleAccessExpression(baseExpr, [member]);
     }
 
     public INode? VisitMemberType(MemberType memberType)
@@ -430,6 +573,8 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return t.Type.FullName switch
         {
             "System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
+            "System.Numerics.Vector3" => new VecType<R3, FloatType<B32>>(),
+            "System.Numerics.Vector2" => new VecType<R2, FloatType<B32>>(),
             //"System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
             _ => throw new NotSupportedException()
         };
@@ -532,6 +677,13 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         if (type.FullName == typeof(Vector4).FullName)
         {
             return SyntaxFactory.vec4<FloatType<B32>>(args.ToArray());
+        } else if (type.FullName == typeof(Vector3).FullName)
+        {
+            return SyntaxFactory.vec3<FloatType<B32>>(args.ToArray());
+        }
+        else if (type.FullName == typeof(Vector2).FullName)
+        {
+            return SyntaxFactory.vec2<FloatType<B32>>(args.ToArray());
         }
         throw new NotImplementedException();
     }
@@ -586,6 +738,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return value switch
         {
             float v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
+            double v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
             int v => new LiteralValueExpression(new IntLiteral<B32>(v)),
             uint v => new LiteralValueExpression(new UIntLiteral<B32>(v)),
             bool v => new LiteralValueExpression(new BoolLiteral(v)),
@@ -789,7 +942,13 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitUnaryOperatorExpression(UnaryOperatorExpression unaryOperatorExpression)
     {
-        throw new NotImplementedException();
+        var expr = (IExpression)unaryOperatorExpression.Expression.AcceptVisitor(this)!;
+        return unaryOperatorExpression.Operator switch
+        {
+            UnaryOperatorType.Not => new UnaryLogicalExpression(expr, UnaryLogicalOp.Not),
+            UnaryOperatorType.Minus => new UnaryArithmeticExpression(expr, UnaryArithmeticOp.Minus),
+            _ => throw new NotSupportedException($"{nameof(VisitUnaryOperatorExpression)} does not support {unaryOperatorExpression}")
+        };
     }
 
     public INode? VisitUncheckedExpression(UncheckedExpression uncheckedExpression)
@@ -847,9 +1006,13 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         throw new NotImplementedException();
     }
 
-    public INode? VisitWhileStatement(WhileStatement whileStatement)
+    public INode? VisitWhileStatement(ICSharpCode.Decompiler.CSharp.Syntax.WhileStatement whileStatement)
     {
-        throw new NotImplementedException();
+        return new IR.Statement.WhileStatement(
+            Attributes: [],
+            (IExpression) whileStatement.Condition.AcceptVisitor(this)!,
+            (IStatement) whileStatement.EmbeddedStatement.AcceptVisitor(this)!
+        );
     }
 
     public INode? VisitWithInitializerExpression(WithInitializerExpression withInitializerExpression)
@@ -865,5 +1028,34 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     public INode? VisitYieldReturnStatement(YieldReturnStatement yieldReturnStatement)
     {
         throw new NotImplementedException();
+    }
+
+    private static CompoundStatement? MapCompoundStatement(IStatement? stmt)
+    {
+        return stmt switch
+        {
+            CompoundStatement s => s,
+            not null => new CompoundStatement([stmt]),
+            null => null
+        };
+    }
+
+    private static AssignmentOp MapAssignmentOperator(AssignmentOperatorType op)
+    {
+        return op switch
+        {
+            AssignmentOperatorType.Assign => AssignmentOp.Assign,
+            AssignmentOperatorType.Add => AssignmentOp.Add,
+            AssignmentOperatorType.Subtract => AssignmentOp.Subtract,
+            AssignmentOperatorType.Multiply => AssignmentOp.Multiply,
+            AssignmentOperatorType.Divide => AssignmentOp.Divide,
+            AssignmentOperatorType.Modulus => AssignmentOp.Modulus,
+            AssignmentOperatorType.BitwiseAnd => AssignmentOp.BitwiseAnd,
+            AssignmentOperatorType.BitwiseOr => AssignmentOp.BitwiseOr,
+            AssignmentOperatorType.ExclusiveOr => AssignmentOp.ExclusiveOr,
+            AssignmentOperatorType.ShiftLeft => AssignmentOp.ShiftLeft,
+            AssignmentOperatorType.ShiftRight => AssignmentOp.ShiftRight,
+            _ => throw new NotImplementedException()
+        };
     }
 }

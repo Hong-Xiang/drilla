@@ -1,5 +1,7 @@
 ﻿using DualDrill.Graphics;
 using DualDrill.ILSL.IR;
+using Silk.NET.Maths;
+using System.Numerics;
 
 namespace DualDrill.ILSL;
 
@@ -63,3 +65,15 @@ public interface IShaderModule
 public sealed class ShaderMethodAttribute() : Attribute
 {
 }
+
+public interface ISampler
+{
+}
+
+public interface ITexture2D<T>
+{
+    public T Sample(ISampler sampler, Vector2 coordinate);
+    public T Sample(ISampler sampler, Vector2D<float> coordinate);
+}
+
+

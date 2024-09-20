@@ -83,16 +83,64 @@ public interface IFloatType : IScalarType { }
 public readonly struct FloatType<TBitWidth> : IFloatType, IBuiltinType<FloatType<TBitWidth>>
     where TBitWidth : IBitWidth
 {
+    public int ByteSize => TBitWidth.Value / 8;
     public readonly static FunctionDeclaration Cast = new FunctionDeclaration(
-      new FloatType<TBitWidth>().Name,
-      [],
-      new FunctionReturn(new FloatType<TBitWidth>(), []),
-      []
-  );
+        new FloatType<TBitWidth>().Name,
+        [],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+
+    public readonly static FunctionDeclaration Sin = new FunctionDeclaration(
+        "sin",
+        [new ParameterDeclaration("e", new FloatType<TBitWidth>(), [])],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+
+    public readonly static FunctionDeclaration Cos = new FunctionDeclaration(
+        "cos",
+        [new ParameterDeclaration("e", new FloatType<TBitWidth>(), [])],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+
+    public readonly static FunctionDeclaration Sqrt = new FunctionDeclaration(
+        "sqrt",
+        [new ParameterDeclaration("e", new FloatType<TBitWidth>(), [])],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+
+    public readonly static FunctionDeclaration Log = new FunctionDeclaration(
+        "log",
+        [new ParameterDeclaration("e", new FloatType<TBitWidth>(), [])],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+
+    public readonly static FunctionDeclaration Pow = new FunctionDeclaration(
+        "pow",
+        [
+            new ParameterDeclaration("base", new FloatType<TBitWidth>(), []),
+            new ParameterDeclaration("exponent", new FloatType<TBitWidth>(), [])
+        ],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+
+    public readonly static FunctionDeclaration Clamp = new FunctionDeclaration(
+        "clamp",
+        [
+            new ParameterDeclaration("value", new FloatType<TBitWidth>(), []),
+            new ParameterDeclaration("min", new FloatType<TBitWidth>(), []),
+            new ParameterDeclaration("max", new FloatType<TBitWidth>(), [])
+        ],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
 
     public string Name => $"f{TBitWidth.Value}";
-
-    public int ByteSize => TBitWidth.Value / 8;
 }
 
 
