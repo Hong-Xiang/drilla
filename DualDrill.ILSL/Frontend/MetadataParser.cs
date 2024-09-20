@@ -1,4 +1,6 @@
-﻿using DualDrill.ILSL.IR.Declaration;
+﻿using DotNext.Reflection;
+using DualDrill.ILSL.IR;
+using DualDrill.ILSL.IR.Declaration;
 using Lokad.ILPack.IL;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
@@ -7,9 +9,9 @@ using System.Reflection;
 
 namespace DualDrill.ILSL.Frontend;
 
-public sealed class MetadataParser
+public sealed class MetadataParser()
 {
-    Dictionary<MethodBase, FunctionDeclaration> ContextMethods = BuiltinMethods();
+    ParserContext Context = ParserContext.Create();
     Dictionary<MethodBase, bool> NeedBody = [];
 
     FrozenDictionary<Type, IType> BuiltinTypeMap = new Dictionary<Type, IType>()
@@ -27,10 +29,6 @@ public sealed class MetadataParser
         [typeof(Vector2)] = new VecType<R2, FloatType<B32>>(),
     }.ToFrozenDictionary();
 
-
-    public MetadataParser()
-    {
-    }
 
     static Dictionary<MethodBase, FunctionDeclaration> BuiltinMethods()
     {
@@ -52,11 +50,34 @@ public sealed class MetadataParser
             return bt;
         }
         // TODO: array type support?
-        return t switch
+        if (Context.StructDeclarations.TryGetValue(t, out var ct))
         {
-            _ when t == typeof(float) => new FloatType<B32>(),
-            _ => throw new NotSupportedException($"{nameof(ParseTypeReference)} does not support {t}")
-        };
+            return ct;
+        }
+        // TODO: may be we should use is value type
+        if (t.IsValueType)
+        {
+            var decl = ParseStructDeclaration(t);
+            Context.StructDeclarations.Add(t, decl);
+            return decl;
+        }
+
+        throw new NotSupportedException($"{nameof(ParseTypeReference)} does not support {t}");
+    }
+
+    StructureDeclaration ParseStructDeclaration(Type t)
+    {
+        var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                      .Where(f => !f.Name.EndsWith("k__BackingField"));
+        var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.FieldType), [.. f.GetCustomAttributes().OfType<IAttribute>()]));
+        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.PropertyType), [.. f.GetCustomAttributes().OfType<IAttribute>()]));
+
+        var result = new StructureDeclaration(t.Name, [
+            ..fieldMembers,
+            ..propsMembers
+            ], [.. t.GetCustomAttributes().OfType<IAttribute>()]);
+        return result;
     }
 
     ImmutableHashSet<IR.IAttribute> ParseAttribute(ParameterInfo p)
@@ -76,12 +97,46 @@ public sealed class MetadataParser
 
 
     static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+    static readonly BindingFlags TargetVariableBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+    VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
+    {
+        if (Context.VariableDeclarations.TryGetValue(info, out var result))
+        {
+            return result;
+        }
+        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.FieldType), [.. info.GetCustomAttributes().OfType<IAttribute>()]);
+        Context.VariableDeclarations.Add(info, decl);
+        return decl;
+    }
+    VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
+    {
+        if (Context.VariableDeclarations.TryGetValue(info, out var result))
+        {
+            return result;
+        }
+        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.PropertyType), [.. info.GetCustomAttributes().OfType<IAttribute>()]);
+        Context.VariableDeclarations.Add(info, decl);
+        return decl;
+
+    }
+
 
     public IR.Module ParseModule(IShaderModule module)
     {
         var moduleType = module.GetType();
+        var fieldVars = moduleType.GetFields(TargetVariableBindingFlags)
+                                  .Where(f => !f.Name.EndsWith("k__BackingField"));
+        var propVars = moduleType.GetProperties(TargetVariableBindingFlags);
+        foreach (var v in fieldVars)
+        {
+            _ = ParseModuleVariableDeclaration(v);
+        }
+        foreach (var v in propVars)
+        {
+            _ = ParseModuleVariableDeclaration(v);
+        }
         var methods = moduleType.GetMethods(TargetMethodBindingFlags);
-        var context = ParserContext.Create();
         foreach (var m in methods)
         {
             var shaderStageAttributes = m.GetCustomAttributes().OfType<IShaderStageAttribute>().Any();
@@ -90,7 +145,7 @@ public sealed class MetadataParser
                 _ = ParseMethod(m);
             }
         }
-        return new([.. context.FunctionDeclarations.Values]);
+        return Build();
     }
 
     public FunctionDeclaration ParseMethod(MethodBase method)
@@ -108,14 +163,19 @@ public sealed class MetadataParser
             _ => throw new NotSupportedException($"Unsupported method {method}")
         };
 
-        return new FunctionDeclaration(
+        var decl = new FunctionDeclaration(
             method.Name,
             [.. method.GetParameters()
                       .Select(p => new ParameterDeclaration(p.Name, ParseTypeReference(p.ParameterType), ParseAttribute(p)))],
             new FunctionReturn(returnType, returnAttributes),
             ParseAttribute(method)
         );
+        Context.FunctionDeclarations.Add(method, decl);
+        return decl;
+    }
 
+    IEnumerable<MethodBase> GetCalledMethods(MethodBase method)
+    {
         foreach (var inst in method.GetInstructions())
         {
             switch (inst.Operand)
@@ -128,14 +188,11 @@ public sealed class MetadataParser
                     break;
             }
         }
-    }
-
-    public void AddShaderModule(IShaderModule module)
-    {
+        throw new NotImplementedException();
     }
 
     public IR.Module Build()
     {
-        return new([]);
+        return new([.. Context.VariableDeclarations.Values, .. Context.StructDeclarations.Values, .. Context.FunctionDeclarations.Values]);
     }
 }

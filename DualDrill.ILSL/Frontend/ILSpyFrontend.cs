@@ -22,7 +22,7 @@ public record struct ILSpyOption()
 
 public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
 {
-    public ParserContext Context { get; } = new ParserContext([]);
+    public ParserContext Context { get; } = ParserContext.Create();
 
     Dictionary<Assembly, CSharpDecompiler> Decompilers = [];
 

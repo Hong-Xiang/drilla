@@ -37,7 +37,7 @@ public class MetadataParserTests
     }
 
     [Fact]
-    void SimpleStructDeclarationParseTest()
+    async Task SimpleStructDeclarationParseTest()
     {
         var parser = new MetadataParser();
         var module = parser.ParseModule(new SimpleStructDeclarationShader());
@@ -51,6 +51,16 @@ public class MetadataParserTests
         Assert.Equal(new VecType<R4, FloatType<B32>>(), structDecl.Members[0].Type);
         Assert.Equal("InteropPosition", structDecl.Members[1].Name);
         Assert.Equal(new VecType<R2, FloatType<B32>>(), structDecl.Members[1].Type);
+
+        var tw = new StringWriter();
+        var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
+        foreach (var d in module.Declarations)
+        {
+            await d.AcceptVisitor(visitor);
+        }
+        var code = tw.ToString();
+        Assert.NotEmpty(code);
+
     }
 
     // https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html
@@ -101,7 +111,7 @@ public class MetadataParserTests
     }
 
     [Fact]
-    void SimpleUniformDeclarationParseTest()
+    async Task SimpleUniformDeclarationParseTest()
     {
         var parser = new MetadataParser();
         var module = parser.ParseModule(new SimpleUniformShader());
@@ -114,5 +124,14 @@ public class MetadataParserTests
         Assert.Equal(0, uniformDecl.Attributes.OfType<BindingAttribute>().Single().Binding);
         Assert.Single(uniformDecl.Attributes.OfType<UniformAttribute>());
         Assert.IsType<StructureDeclaration>(uniformDecl.Type);
+
+        var tw = new StringWriter();
+        var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
+        foreach (var d in module.Declarations)
+        {
+            await d.AcceptVisitor(visitor);
+        }
+        var code = tw.ToString();
+        Assert.NotEmpty(code);
     }
 }
