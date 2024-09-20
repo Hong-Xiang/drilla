@@ -117,6 +117,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
             throw new Exception("Not in the ILSL GPUVertexFormat");
         }
     }
+
     private MemberInfo ParseMemberExpression(System.Linq.Expressions.Expression exp)
     {
         if (exp is MemberExpression memberExp)
@@ -135,6 +136,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
             throw new Exception("Not a member expression");
         }
     }
+
     public IVertexBufferMappingBuilder<TGPULayout, THostLayout> AddMapping<TElement>(
             Expression<Func<TGPULayout, TElement>> targetBinding,
             Expression<Func<THostLayout, TElement>> sourceBuffer)
@@ -151,6 +153,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
         }
         return (IVertexBufferMappingBuilder<TGPULayout, THostLayout>)this;
     }
+
     public GPUVertexBufferLayout[] Build()
     {
         var gpuVertexBufferLayouts = new List<GPUVertexBufferLayout>();
@@ -210,9 +213,9 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
             _ => throw new NotImplementedException()
         };
     }
+
     public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(IR.Module module)
     {
-
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntry>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
         {
