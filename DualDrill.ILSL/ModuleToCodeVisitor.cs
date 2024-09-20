@@ -435,4 +435,14 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         await task;
         Writer.WriteLine(';');
     }
+
+    public async ValueTask VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr)
+    {
+        await expr.Base.AcceptVisitor(this);
+        Writer.Write('.');
+        foreach (SwizzleComponent c in expr.Components)
+        {
+            Writer.Write(c);
+        }
+    }
 }

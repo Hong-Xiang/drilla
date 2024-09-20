@@ -461,7 +461,72 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitInvocationExpression(InvocationExpression invocationExpression)
     {
-        throw new NotImplementedException();
+        List<INode> args = new();
+        foreach (var argument in invocationExpression.Arguments)
+        {
+            // For example, you can add it to the 'args' list
+            args.Add(argument.AcceptVisitor(this));
+        }
+        var immutableArgs = args.Cast<IExpression>().ToImmutableArray();
+        if (invocationExpression.Target is MemberReferenceExpression memberReference)
+        {
+            string functionName = memberReference.ToString();
+            // special case for vector dot as it's generic type
+            switch (functionName)
+            {
+                case "global::System.Numerics.Vector2.Dot":
+                    return new FunctionCallExpression(
+                        VecType<R2, FloatType<B32>>.Dot,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector3.Dot":
+                    return new FunctionCallExpression(
+                        VecType<R3, FloatType<B32>>.Dot,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector4.Dot":
+                    return new FunctionCallExpression(
+                        VecType<R4, FloatType<B32>>.Dot,
+                        immutableArgs
+                    );
+                case "global::System.Math.Cos":
+                    var res =  new FunctionCallExpression(
+                        FloatType<B32>.Cos,
+                        immutableArgs
+                    );
+                    return res;
+                case "global::System.Math.Sin":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Sin,
+                        immutableArgs
+                    );
+                case "global::System.Math.Sqrt":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Sqrt,
+                        immutableArgs
+                    );
+                case "global::System.Math.Pow":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Pow,
+                        immutableArgs
+                    );
+                case "global::System.Math.Log":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Log,
+                        immutableArgs
+                    );
+                case "global::System.Math.Clamp":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Clamp,
+                        immutableArgs
+                    );
+                default:
+                    throw new NotImplementedException();
+            }
+        } else
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public INode? VisitInvocationType(InvocationAstType invocationType)
@@ -496,7 +561,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
     {
-        throw new NotImplementedException();
+        // TODO: check if it's a vector
+        var baseExpr = (IExpression) (memberReferenceExpression.Target.AcceptVisitor(this));
+        var member = (SwizzleComponent) Enum.Parse(typeof(SwizzleComponent), memberReferenceExpression.MemberName.ToLower());
+        return new VectorSwizzleAccessExpression(baseExpr, [member]);
     }
 
     public INode? VisitMemberType(MemberType memberType)
@@ -505,6 +573,8 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return t.Type.FullName switch
         {
             "System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
+            "System.Numerics.Vector3" => new VecType<R3, FloatType<B32>>(),
+            "System.Numerics.Vector2" => new VecType<R2, FloatType<B32>>(),
             //"System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
             _ => throw new NotSupportedException()
         };
@@ -607,6 +677,13 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         if (type.FullName == typeof(Vector4).FullName)
         {
             return SyntaxFactory.vec4<FloatType<B32>>(args.ToArray());
+        } else if (type.FullName == typeof(Vector3).FullName)
+        {
+            return SyntaxFactory.vec3<FloatType<B32>>(args.ToArray());
+        }
+        else if (type.FullName == typeof(Vector2).FullName)
+        {
+            return SyntaxFactory.vec2<FloatType<B32>>(args.ToArray());
         }
         throw new NotImplementedException();
     }
@@ -661,6 +738,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return value switch
         {
             float v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
+            double v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
             int v => new LiteralValueExpression(new IntLiteral<B32>(v)),
             uint v => new LiteralValueExpression(new UIntLiteral<B32>(v)),
             bool v => new LiteralValueExpression(new BoolLiteral(v)),
