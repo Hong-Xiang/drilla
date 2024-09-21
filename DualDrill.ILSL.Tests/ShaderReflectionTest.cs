@@ -1,4 +1,5 @@
-﻿using DualDrill.Graphics;
+﻿using DotNext.Collections.Generic;
+using DualDrill.Graphics;
 using DualDrill.ILSL.IR.Declaration;
 using System;
 using System.Collections.Generic;
@@ -142,7 +143,6 @@ public class ShaderReflectionBasicVertexLayoutTest
                             .AddMapping(g => g.Offset, h => h.ColorOffset.Offset)
                             .AddMapping(g => g.Scale, h => h.Scale);
         // TODO:  shaders can add default values, how to support auto type conversion?
-        //.AddMapping(g => g.Scale, h => h.Scale); 
 
         ImmutableArray<GPUVertexBufferLayout> expectedLayouts = [
             new() {
