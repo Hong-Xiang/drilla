@@ -6,7 +6,13 @@ public interface IDeclarationVisitor<T>
     T VisitVariable(VariableDeclaration decl);
     T VisitFunction(FunctionDeclaration decl);
     T VisitParameter(ParameterDeclaration decl);
-    T VisitType(IType type);
+    T VisitStructure(StructureDeclaration decl);
+    T VisitMember(MemberDeclaration decl);
+}
+
+public interface ITypeReferenceVisitor<T>
+{
+    T VisitTypeReference(IType type);
 }
 
 public static class DeclarationExtension
@@ -16,7 +22,8 @@ public static class DeclarationExtension
         return decl switch
         {
             ValueDeclaration d => visitor.VisitValue(d),
-            IType t => visitor.VisitType(t),
+            StructureDeclaration s => visitor.VisitStructure(s),
+            MemberDeclaration m => visitor.VisitMember(m),
             FunctionDeclaration d => visitor.VisitFunction(d),
             ParameterDeclaration p => visitor.VisitParameter(p),
             VariableDeclaration d => visitor.VisitVariable(d),

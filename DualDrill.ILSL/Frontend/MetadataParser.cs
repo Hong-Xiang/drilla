@@ -1,4 +1,6 @@
-﻿using DualDrill.ILSL.IR.Declaration;
+﻿using DotNext.Reflection;
+using DualDrill.ILSL.IR;
+using DualDrill.ILSL.IR.Declaration;
 using Lokad.ILPack.IL;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
@@ -7,29 +9,33 @@ using System.Reflection;
 
 namespace DualDrill.ILSL.Frontend;
 
-public sealed class MetadataParser
+public sealed class MetadataParser()
 {
-    Dictionary<MethodBase, FunctionDeclaration> ContextMethods = BuiltinMethods();
-    Dictionary<MethodBase, bool> NeedBody = [];
+    ParserContext Context = ParserContext.Create();
+    Dictionary<MethodBase, FunctionDeclaration> NeedParseBody = [];
 
     FrozenDictionary<Type, IType> BuiltinTypeMap = new Dictionary<Type, IType>()
     {
+        [typeof(bool)] = new BoolType(),
+        [typeof(int)] = new IntType<B32>(),
+        [typeof(uint)] = new UIntType<B32>(),
+        [typeof(long)] = new IntType<B64>(),
+        [typeof(ulong)] = new UIntType<B64>(),
+        [typeof(Half)] = new FloatType<B16>(),
         [typeof(float)] = new FloatType<B32>(),
         [typeof(double)] = new FloatType<B64>(),
         [typeof(Vector4)] = new VecType<R4, FloatType<B32>>(),
+        [typeof(Vector3)] = new VecType<R3, FloatType<B32>>(),
+        [typeof(Vector2)] = new VecType<R2, FloatType<B32>>(),
     }.ToFrozenDictionary();
 
-
-    public MetadataParser()
-    {
-    }
 
     static Dictionary<MethodBase, FunctionDeclaration> BuiltinMethods()
     {
         var result = new Dictionary<MethodBase, FunctionDeclaration>
         {
             {
-                typeof(Vector4).GetConstructor(BindingFlags.Public, [typeof(float), typeof(float), typeof(float), typeof(float)]),
+                typeof(Vector4).GetConstructor(BindingFlags.Public | BindingFlags.Instance, [typeof(float), typeof(float), typeof(float), typeof(float)]),
                 VecType<R4, FloatType<B32>>.Constructors[4]
             }
         };
@@ -37,12 +43,41 @@ public sealed class MetadataParser
         return result;
     }
 
-    IType ParseType(Type t)
+    IType ParseTypeReference(Type t)
     {
-        return t switch
+        if (BuiltinTypeMap.TryGetValue(t, out var bt))
         {
-            _ when t == typeof(float) => new FloatType<B32>(),
-        };
+            return bt;
+        }
+        // TODO: array type support?
+        if (Context.StructDeclarations.TryGetValue(t, out var ct))
+        {
+            return ct;
+        }
+        // TODO: may be we should use is value type
+        if (t.IsValueType)
+        {
+            var decl = ParseStructDeclaration(t);
+            Context.StructDeclarations.Add(t, decl);
+            return decl;
+        }
+
+        throw new NotSupportedException($"{nameof(ParseTypeReference)} does not support {t}");
+    }
+
+    StructureDeclaration ParseStructDeclaration(Type t)
+    {
+        var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                      .Where(f => !f.Name.EndsWith("k__BackingField"));
+        var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.FieldType), [.. f.GetCustomAttributes().OfType<IAttribute>()]));
+        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.PropertyType), [.. f.GetCustomAttributes().OfType<IAttribute>()]));
+
+        var result = new StructureDeclaration(t.Name, [
+            ..fieldMembers,
+            ..propsMembers
+            ], [.. t.GetCustomAttributes().OfType<IAttribute>()]);
+        return result;
     }
 
     ImmutableHashSet<IR.IAttribute> ParseAttribute(ParameterInfo p)
@@ -60,12 +95,65 @@ public sealed class MetadataParser
         ];
     }
 
+
+    static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+    static readonly BindingFlags TargetVariableBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+    VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
+    {
+        if (Context.VariableDeclarations.TryGetValue(info, out var result))
+        {
+            return result;
+        }
+        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.FieldType), [.. info.GetCustomAttributes().OfType<IAttribute>()]);
+        Context.VariableDeclarations.Add(info, decl);
+        return decl;
+    }
+    VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
+    {
+        if (Context.VariableDeclarations.TryGetValue(info, out var result))
+        {
+            return result;
+        }
+        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.PropertyType), [.. info.GetCustomAttributes().OfType<IAttribute>()]);
+        Context.VariableDeclarations.Add(info, decl);
+        return decl;
+
+    }
+
+
+    public IR.Module ParseModule(IShaderModule module)
+    {
+        var moduleType = module.GetType();
+        var fieldVars = moduleType.GetFields(TargetVariableBindingFlags)
+                                  .Where(f => !f.Name.EndsWith("k__BackingField"));
+        var propVars = moduleType.GetProperties(TargetVariableBindingFlags);
+        foreach (var v in fieldVars)
+        {
+            _ = ParseModuleVariableDeclaration(v);
+        }
+        foreach (var v in propVars)
+        {
+            _ = ParseModuleVariableDeclaration(v);
+        }
+        var methods = moduleType.GetMethods(TargetMethodBindingFlags);
+        foreach (var m in methods)
+        {
+            var shaderStageAttributes = m.GetCustomAttributes().OfType<IShaderStageAttribute>().Any();
+            if (shaderStageAttributes)
+            {
+                _ = ParseMethod(m);
+            }
+        }
+        return Build();
+    }
+
     public FunctionDeclaration ParseMethod(MethodBase method)
     {
         var returnType = method switch
         {
-            MethodInfo m => ParseType(m.ReturnType),
-            ConstructorInfo c => ParseType(c.DeclaringType),
+            MethodInfo m => ParseTypeReference(m.ReturnType),
+            ConstructorInfo c => ParseTypeReference(c.DeclaringType),
             _ => throw new NotSupportedException($"Unsupported method {method}")
         };
         var returnAttributes = method switch
@@ -75,13 +163,20 @@ public sealed class MetadataParser
             _ => throw new NotSupportedException($"Unsupported method {method}")
         };
 
-        return new FunctionDeclaration(
+        var decl = new FunctionDeclaration(
             method.Name,
-            [.. method.GetParameters().Select(p => new ParameterDeclaration(p.Name, ParseType(p.ParameterType), ParseAttribute(p)))],
+            [.. method.GetParameters()
+                      .Select(p => new ParameterDeclaration(p.Name, ParseTypeReference(p.ParameterType), ParseAttribute(p)))],
             new FunctionReturn(returnType, returnAttributes),
             ParseAttribute(method)
         );
+        NeedParseBody.Add(method, decl);
+        Context.FunctionDeclarations.Add(method, decl);
+        return decl;
+    }
 
+    IEnumerable<MethodBase> GetCalledMethods(MethodBase method)
+    {
         foreach (var inst in method.GetInstructions())
         {
             switch (inst.Operand)
@@ -94,14 +189,29 @@ public sealed class MetadataParser
                     break;
             }
         }
+        throw new NotImplementedException();
     }
 
-    public void AddShaderModule(IShaderModule module)
+    public void ParseFunctionBodies(ILSpyFrontend frontend)
     {
+        var symbols = new Dictionary<string, IDeclaration>();
+        foreach (var d in Context.VariableDeclarations)
+        {
+            symbols.Add(d.Key.Name, d.Value);
+        }
+        foreach (var d in Context.FunctionDeclarations)
+        {
+            symbols.Add(d.Key.Name, d.Value);
+        }
+        // TODO: use ILSpyFrontEnd for body only, passing referenced symbols as environment
+        foreach (var (m, f) in NeedParseBody)
+        {
+            f.Body = frontend.ParseMethod(m, symbols).Body;
+        }
     }
 
     public IR.Module Build()
     {
-        return new([]);
+        return new([.. Context.VariableDeclarations.Values, .. Context.StructDeclarations.Values, .. Context.FunctionDeclarations.Values]);
     }
 }

@@ -14,6 +14,6 @@ public enum SwizzleComponent
     a
 }
 
-public sealed record class VectorSwizzleAccessExpression(IExpression Base, ImmutableArray<SwizzleComponent> Components)
+public sealed record class VectorSwizzleAccessExpression(IExpression Base, ImmutableArray<SwizzleComponent> Components) : IExpression
 {
 }

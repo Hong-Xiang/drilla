@@ -1,5 +1,7 @@
 ﻿using DualDrill.Graphics;
 using DualDrill.ILSL.IR;
+using Silk.NET.Maths;
+using System.Numerics;
 
 namespace DualDrill.ILSL;
 
@@ -23,9 +25,11 @@ public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, IAttribut
     public BuiltinBinding Slot { get; } = Slot;
 }
 
-public sealed class VertexAttribute() : Attribute, IAttribute { }
-public sealed class FragmentAttribute() : Attribute, IAttribute { }
-public sealed class ComputeAttribute() : Attribute, IAttribute { }
+public sealed class VertexAttribute() : Attribute, IShaderStageAttribute { }
+public sealed class FragmentAttribute() : Attribute, IShaderStageAttribute { }
+public sealed class ComputeAttribute() : Attribute, IShaderStageAttribute { }
+
+interface IShaderStageAttribute : IAttribute { }
 
 public sealed class LocationAttribute(int Binding) : Attribute, IAttribute
 {
@@ -63,3 +67,15 @@ public interface IShaderModule
 public sealed class ShaderMethodAttribute() : Attribute
 {
 }
+
+public interface ISampler
+{
+}
+
+public interface ITexture2D<T>
+{
+    public T Sample(ISampler sampler, Vector2 coordinate);
+    public T Sample(ISampler sampler, Vector2D<float> coordinate);
+}
+
+

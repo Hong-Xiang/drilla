@@ -70,10 +70,11 @@ public sealed class WGSLLanguage : ITargetLanguage
     }
 }
 
-public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage TargetLanguage)
+public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLanguage TargetLanguage)
     : IDeclarationVisitor<ValueTask>
     , IStatementVisitor<ValueTask>
     , IExpressionVisitor<ValueTask>
+    , ITypeReferenceVisitor<ValueTask>
 
 {
     async ValueTask WriteAttributeAsync(IAttribute attr, CancellationToken cancellation = default)
@@ -133,15 +134,13 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         await WriteAttributesAsync(decl.Return.Attributes);
         if (decl.Return.Type is not null)
         {
-            await decl.Return.Type.AcceptVisitor(this);
+            await VisitTypeReference(decl.Return.Type);
         }
         Writer.WriteLine();
-        Writer.WriteLine('{');
         if (decl.Body is not null)
         {
             await decl.Body.AcceptVisitor(this);
         }
-        Writer.WriteLine('}');
         Writer.WriteLine();
         Writer.WriteLine();
     }
@@ -151,13 +150,8 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         await WriteAttributesAsync(decl.Attributes);
         Writer.Write(decl.Name);
         Writer.Write(": ");
-        await decl.Type.AcceptVisitor(this);
+        await VisitTypeReference(decl.Type);
         Writer.Write(", ");
-    }
-
-    public async ValueTask VisitType(IType type)
-    {
-        Writer.Write(type.Name);
     }
 
     public ValueTask VisitValue(ValueDeclaration decl)
@@ -165,14 +159,35 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         throw new NotImplementedException();
     }
 
-    public ValueTask VisitVariable(VariableDeclaration decl)
+    public async ValueTask VisitVariable(VariableDeclaration decl)
     {
-        throw new NotImplementedException();
-    }
+        foreach (var a in decl.Attributes)
+        {
+            switch (a)
+            {
+                case GroupAttribute g:
+                    Writer.Write("@group(");
+                    Writer.Write(g.Binding);
+                    Writer.Write(") ");
+                    break;
+                case BindingAttribute b:
+                    Writer.Write("@binding(");
+                    Writer.Write(b.Binding);
+                    Writer.Write(") ");
+                    break;
+                case UniformAttribute u:
+                    Writer.Write("var<uniform> ");
+                    break;
+                default:
+                    throw new NotSupportedException($"VisitVariableDeclaration attribute {a} not support ");
+            }
+        }
+        Writer.Write(decl.Name);
+        Writer.Write(": ");
+        await VisitTypeReference(decl.Type);
 
-    async ValueTask Indent()
-    {
-        await Writer.WriteAsync('\t');
+        Writer.WriteLine(";");
+        Writer.WriteLine();
     }
 
     public async ValueTask VisitReturn(ReturnStatement stmt)
@@ -182,7 +197,6 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         {
             await stmt.Expr.AcceptVisitor(this);
         }
-        Writer.WriteLine(";");
     }
 
     public async ValueTask VisitVariableOrValue(VariableOrValueStatement stmt)
@@ -190,22 +204,24 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         Writer.Write("var ");
         Writer.Write(stmt.Variable.Name);
         Writer.Write(" : ");
-        await stmt.Variable.Type.AcceptVisitor(this);
+        await VisitTypeReference(stmt.Variable.Type);
         if (stmt.Variable.Initializer is not null)
         {
             Writer.Write(" = ");
             await stmt.Variable.Initializer.AcceptVisitor(this);
         }
-        Writer.WriteLine(";");
     }
 
     public async ValueTask VisitCompound(CompoundStatement stmt)
     {
+        Writer.WriteLine('{');
+        Writer.Indent();
         foreach (var s in stmt.Statements)
         {
-            await Indent();
             await s.AcceptVisitor(this);
         }
+        Writer.Unindent();
+        Writer.WriteLine('}');
     }
 
     public async ValueTask VisitIf(IfStatement stmt)
@@ -214,24 +230,97 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         Writer.Write("if ");
         await ifClause.Expr.AcceptVisitor(this);
         Writer.WriteLine();
-        Writer.WriteLine('{');
-        await ifClause.Statement.AcceptVisitor(this);
-        Writer.WriteLine('}');
+        await ifClause.Body.AcceptVisitor(this);
         foreach (var elseIfClause in stmt.ElseIfClause)
         {
-            Writer.WriteLine("else if ");
+            Writer.Write("else if ");
             await elseIfClause.Expr.AcceptVisitor(this);
-            Writer.WriteLine('{');
-            await elseIfClause.Statement.AcceptVisitor(this);
-            Writer.WriteLine('}');
+            Writer.WriteLine();
+            await elseIfClause.Body.AcceptVisitor(this);
         }
         if (stmt.Else is not null)
         {
             Writer.WriteLine("else");
-            Writer.WriteLine('{');
             await stmt.Else.AcceptVisitor(this);
-            Writer.WriteLine('}');
         }
+    }
+
+    public async ValueTask VisitWhile(WhileStatement stmt)
+    {
+        Writer.Write("while ");
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.WriteLine();
+        await stmt.Statement.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitBreak(BreakStatement stmt)
+    {
+        Writer.Write("break");
+    }
+
+    public async ValueTask VisitFor(ForStatement stmt)
+    {
+        Writer.Write("for (");
+        var header = stmt.ForHeader;
+        if (header.Init != null)
+        {
+            await header.Init.AcceptVisitor(this);
+        }
+        Writer.Write("; ");
+        if (header.Expr != null)
+        {
+            await header.Expr.AcceptVisitor(this);
+        }
+        Writer.Write("; ");
+        if (header.Update != null)
+        {
+            await header.Update.AcceptVisitor(this);
+        }
+        Writer.WriteLine(')');
+        await stmt.Statement.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitSimpleAssignment(SimpleAssignmentStatement stmt)
+    {
+        var op = stmt.Op switch
+        {
+            AssignmentOp.Assign => "=",
+            AssignmentOp.Add => "+=",
+            AssignmentOp.Subtract => "-=",
+            AssignmentOp.Multiply => "*=",
+            AssignmentOp.Divide => "/=",
+            AssignmentOp.Modulus => "%=",
+            AssignmentOp.BitwiseAnd => "&=",
+            AssignmentOp.BitwiseOr => "|=",
+            AssignmentOp.ExclusiveOr => "^=",
+            AssignmentOp.ShiftLeft => "<<=",
+            AssignmentOp.ShiftRight => ">>=",
+            _ => throw new NotSupportedException()
+        };
+
+        await stmt.L.AcceptVisitor(this);
+        Writer.Write(' ');
+        Writer.Write(op);
+        Writer.Write(' ');
+        await stmt.R.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitPhonyAssignment(PhonyAssignmentStatement stmt)
+    {
+        Writer.Write("_ = ");
+        await stmt.Expr.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitIncrement(IncrementStatement stmt)
+    {
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.Write("++");
+    }
+
+    public async ValueTask VisitDecrement(DecrementStatement stmt)
+    {
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.Write("--");
     }
 
     public async ValueTask VisitFunctionCallExpression(FunctionCallExpression expr)
@@ -319,10 +408,98 @@ public sealed class ModuleToCodeVisitor(TextWriter Writer, ITargetLanguage Targe
         await expr.R.AcceptVisitor(this);
     }
 
+    public async ValueTask VisitBinaryLogicalExpression(BinaryLogicalExpression expr)
+    {
+        await expr.L.AcceptVisitor(this);
+        var op = expr.Op switch
+        {
+            BinaryLogicalOp.And => "&&",
+            BinaryLogicalOp.Or => "||",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(' ');
+        Writer.Write(op);
+        Writer.Write(' ');
+        await expr.R.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitUnaryLogicalExpression(UnaryLogicalExpression expr)
+    {
+        var op = expr.Op switch
+        {
+            UnaryLogicalOp.Not => "!",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(op);
+        await expr.Expr.AcceptVisitor(this);
+    }
+
+    public async ValueTask VisitUnaryArithmeticExpression(UnaryArithmeticExpression expr)
+    {
+        var op = expr.Op switch
+        {
+            UnaryArithmeticOp.Minus => "-",
+            _ => throw new NotSupportedException()
+        };
+        Writer.Write(op);
+        await expr.Expr.AcceptVisitor(this);
+    }
+
     public async ValueTask VisitParenthesizedExpression(ParenthesizedExpression expr)
     {
         Writer.Write("(");
         await expr.Expr.AcceptVisitor(this);
         Writer.Write(")");
+    }
+
+    public async ValueTask AppendSemicolon(ValueTask task)
+    {
+        await task;
+        Writer.WriteLine(';');
+    }
+
+    public async ValueTask VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr)
+    {
+        await expr.Base.AcceptVisitor(this);
+        Writer.Write('.');
+        foreach (SwizzleComponent c in expr.Components)
+        {
+            Writer.Write(c);
+        }
+    }
+
+    public async ValueTask VisitStructure(StructureDeclaration decl)
+    {
+        Writer.Write("struct ");
+        Writer.Write(decl.Name);
+        Writer.WriteLine(" {");
+        Writer.Indent();
+        foreach (var m in decl.Members)
+        {
+            await m.AcceptVisitor(this);
+        }
+        Writer.Unindent();
+        Writer.WriteLine("};");
+        Writer.WriteLine();
+    }
+
+    public async ValueTask VisitMember(MemberDeclaration decl)
+    {
+        Writer.Write(decl.Name);
+        Writer.Write(": ");
+        await VisitTypeReference(decl.Type);
+        Writer.WriteLine(",");
+    }
+
+    public async ValueTask VisitTypeReference(IType type)
+    {
+        Writer.Write(type.Name);
+    }
+
+    public async ValueTask VisitNamedComponentExpression(NamedComponentExpression expr)
+    {
+        await expr.Base.AcceptVisitor(this);
+        Writer.Write(".");
+        Writer.Write(expr.ComponentName);
     }
 }
