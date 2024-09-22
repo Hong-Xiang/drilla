@@ -30,33 +30,33 @@ public class QuadShaderReflection : IReflectable
     }
 }
 
-public struct QuadShader : IILSLDevelopShaderModule
+public struct QuadShader : IShaderModule
 {
-    public string ILSLWGSLExpectedCode => """
+    //public string ILSLWGSLExpectedCode => """
 
-    @location(0) position: vec2<f32>;
+    //@location(0) position: vec2<f32>;
 
-    struct Resolution
-    {
-        resX: u32,
-        resY: u32,
-    };
+    //struct Resolution
+    //{
+    //    resX: u32,
+    //    resY: u32,
+    //};
 
-    @group(0) @binding(0) var<uniform> resolution: Resolution;
+    //@group(0) @binding(0) var<uniform> resolution: Resolution;
 
-    @vertex
-    fn vs(position: vec2<f32>) -> @builtin(position) vec4<f32>
-    {
-      return vec4<f32>(vert.position.x, vert.position.y, 0f, 1f);
-    }
+    //@vertex
+    //fn vs(position: vec2<f32>) -> @builtin(position) vec4<f32>
+    //{
+    //  return vec4<f32>(vert.position.x, vert.position.y, 0f, 1f);
+    //}
 
 
-    @fragment
-    fn fs(@builtin(position) vertex_in: vec4<f32>) -> @location(0) vec4<f32>
-    {
-      return vec4<f32>(vertex_in.x / f32(resolution.resX), vertex_in.y / f32(resolution.resY) , 0f, 1f);
-    }
-    """;
+    //@fragment
+    //fn fs(@builtin(position) vertex_in: vec4<f32>) -> @location(0) vec4<f32>
+    //{
+    //  return vec4<f32>(vertex_in.x / f32(resolution.resX), vertex_in.y / f32(resolution.resY) , 0f, 1f);
+    //}
+    //""";
 
     public struct Resolution
     {

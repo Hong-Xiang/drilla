@@ -49,10 +49,10 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return Ok(await ILSLCompiler.CompileV2(new SampleFragmentShader()));
         }
-        //if(name == nameof(QuadShader))
-        //{
-        //    return Ok(await ILSLCompiler.CompileV2(new QuadShader()));
-        //}
+        if (name == nameof(QuadShader))
+        {
+            return Ok(await ILSLCompiler.CompileV2(new QuadShader()));
+        }
 
         var shaderModule = GetShaderModule(name);
         if (shaderModule is null)

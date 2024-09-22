@@ -71,7 +71,8 @@ export async function BatchRenderMain() {
   const vertexBufferLayoutJson = await(await fetch(`/ilsl/wgsl/vertexbufferlayout/${shaderName2}`)).text();
   const vertexBufferLayout = JSON.parse(vertexBufferLayoutJson);
 
-  const code = `
+  const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
+  const code1 = `
 
     // struct VertexOutput {
     //   @location(0) position: vec2<f32>
