@@ -83,6 +83,8 @@ public interface IFloatType : IScalarType { }
 public readonly struct FloatType<TBitWidth> : IFloatType, IBuiltinType<FloatType<TBitWidth>>
     where TBitWidth : IBitWidth
 {
+    public string Name => $"f{TBitWidth.Value}";
+
     public int ByteSize => TBitWidth.Value / 8;
     public readonly static FunctionDeclaration Cast = new FunctionDeclaration(
         new FloatType<TBitWidth>().Name,
@@ -139,8 +141,6 @@ public readonly struct FloatType<TBitWidth> : IFloatType, IBuiltinType<FloatType
         new FunctionReturn(new FloatType<TBitWidth>(), []),
         []
     );
-
-    public string Name => $"f{TBitWidth.Value}";
 }
 
 

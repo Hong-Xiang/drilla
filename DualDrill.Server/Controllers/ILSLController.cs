@@ -6,8 +6,10 @@ using DualDrill.Server.Services;
 using ICSharpCode.Decompiler.Metadata;
 using Lokad.ILPack.IL;
 using Microsoft.AspNetCore.Mvc;
+using Silk.NET.Vulkan;
 using System.Numerics;
 using System.Reflection;
+using TinyJson;
 
 namespace DualDrill.Server.Controllers;
 
@@ -48,7 +50,10 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return Ok(await ILSLCompiler.CompileV2(new SampleFragmentShader()));
         }
-
+        if (name == nameof(QuadShader))
+        {
+            return Ok(await ILSLCompiler.CompileV2(new QuadShader()));
+        }
 
         var shaderModule = GetShaderModule(name);
         if (shaderModule is null)
@@ -57,6 +62,69 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         }
 
         return Ok(await ILSLCompiler.Compile(shaderModule));
+    }
+
+    [HttpGet("wgsl/vertexbufferlayout/{name}")]
+    public async Task<IActionResult> GetVertexBufferLayout(string name)
+    {
+        if(name == nameof(QuadShader))
+        {
+            var reflection = new QuadShaderReflection();
+            return Ok(reflection.GetVertexBufferLayout());
+        }
+        else if(name == nameof(ReflectionTestShader))
+        {
+            var reflection = new ReflectionTestShaderReflection();
+            return Ok(reflection.GetVertexBufferLayout());
+        }
+        return NotFound();
+    }
+
+    [HttpGet("wgsl/bindgrouplayoutdescriptor/{name}")]
+    public async Task<IActionResult> GetBindGroupLayoutDescriptor(string name)
+    {
+        if(name == nameof(QuadShader))
+        {
+            var shaderModule = new QuadShader();
+            var type = shaderModule.GetType();
+            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            {
+                HotReloadAssemblies = [
+                   type.Assembly,
+               typeof(ILSLCompiler).Assembly
+                ]
+            });
+
+            var parser = new MetadataParser();
+            var module = parser.ParseModule(shaderModule);
+            var reflection = new QuadShaderReflection();
+            return Ok(reflection.GetBindGroupLayoutDescriptor(module));
+        }
+        return NotFound();
+    }
+
+
+    [HttpGet("wgsl/bindgrouplayoutdescriptorbuffer/{name}")]
+    public async Task<IActionResult> GetBindGroupLayoutDescriptorBuffer(string name)
+    {
+        if (name == nameof(QuadShader))
+        {
+            var shaderModule = new QuadShader();
+            var type = shaderModule.GetType();
+            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            {
+                HotReloadAssemblies = [
+                   type.Assembly,
+               typeof(ILSLCompiler).Assembly
+                ]
+            });
+
+            var parser = new MetadataParser();
+            var module = parser.ParseModule(shaderModule);
+            var reflection = new QuadShaderReflection();
+            return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
+        }
+        return NotFound();
     }
 
     [HttpGet("parse/{name}")]

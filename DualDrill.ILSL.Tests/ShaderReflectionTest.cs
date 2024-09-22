@@ -1,5 +1,7 @@
-﻿using DualDrill.Graphics;
+﻿using DotNext.Collections.Generic;
+using DualDrill.Graphics;
 using DualDrill.ILSL.IR.Declaration;
+using Silk.NET.SDL;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -19,7 +21,11 @@ public class ShaderReflectionTest
         //
         // @group(0) @binding(0) var<uniform> data: vec2f;
         // 
-        //[GroupAttribute(0), BindingAttribute(0), StageAttribute(GPUShaderStage.Vertex), UniformAttribute()] Vector2 data;
+        //  [GroupAttribute(0)]
+        //  [BindingAttribute(0)]
+        //  [StageAttribute(GPUShaderStage.Vertex)]
+        //  [UniformAttribute()]
+        //  Vector2 data;
 
         var module = new IR.Module([
             new IR.Declaration.VariableDeclaration(
@@ -88,7 +94,7 @@ public class ShaderReflectionBasicVertexLayoutTest
         public Vector4 Color;
     }
 
-    struct ShaderModule : IShaderModule
+    struct ShaderModule
     {
         [Vertex]
         VSOutput vs(Vertex vert)
@@ -142,7 +148,6 @@ public class ShaderReflectionBasicVertexLayoutTest
                             .AddMapping(g => g.Offset, h => h.ColorOffset.Offset)
                             .AddMapping(g => g.Scale, h => h.Scale);
         // TODO:  shaders can add default values, how to support auto type conversion?
-        //.AddMapping(g => g.Scale, h => h.Scale); 
 
         ImmutableArray<GPUVertexBufferLayout> expectedLayouts = [
             new() {
@@ -198,5 +203,93 @@ public class ShaderReflectionBasicVertexLayoutTest
         Assert.True(expectedLayouts[2].ArrayStride == vertexBufferLayouts[2].ArrayStride);
         Assert.True(expectedLayouts[2].StepMode == vertexBufferLayouts[2].StepMode);
         Assert.True(expectedLayouts[2].Attributes.Span.SequenceEqual(vertexBufferLayouts[2].Attributes.Span));
+    }
+}
+
+
+
+public class ShaderReflectionBasicDefaultVertexLayoutTest
+{
+    struct Vertex
+    {
+        [Location(0)]
+        public Vector2 Position;
+
+        [Location(1)]
+        public Vector4 Color;
+
+        [Location(2)]
+        public Vector2 Offset;
+
+        [Location(3)]
+        public Vector2 Scale;
+    }
+
+    struct VSOutput
+    {
+        [Builtin(BuiltinBinding.position)]
+        public Vector4 Position;
+
+        [Location(0)]
+        public Vector4 Color;
+    }
+
+    struct ShaderModule
+    {
+        [Vertex]
+        VSOutput vs(Vertex vert)
+        {
+            VSOutput vsOut = new();
+            // seems no buintin conversion from Vector3 to Vector2
+            var s = new Vector2(vert.Scale.X, vert.Scale.Y);
+            vsOut.Position = new Vector4(vert.Position * s + vert.Offset, 0.0f, 1.0f);
+            vsOut.Color = vert.Color;
+            return vsOut;
+        }
+
+        [Fragment]
+        Vector4 fs(VSOutput vsOut)
+        {
+            return vsOut.Color;
+        }
+    }
+
+    [Fact]
+    public void VertexBufferLayoutSpecTest()
+    {
+        IShaderModuleReflection reflection = new ShaderModuleReflection();
+        var vertexMappingBuilder = reflection.GetVertexBufferLayoutBuilder<Vertex>();
+
+        ImmutableArray<GPUVertexBufferLayout> expectedLayouts = [
+            new() {
+                ArrayStride = 4 * 10,
+                Attributes = new GPUVertexAttribute[] {
+                    new GPUVertexAttribute(){
+                        ShaderLocation = 0,
+                        Offset = 0,
+                        Format = GPUVertexFormat.Float32x2,
+                    },
+                    new GPUVertexAttribute(){
+                        ShaderLocation = 1,
+                        Offset = 4 * 2,
+                        Format = GPUVertexFormat.Float32x4,
+                    },
+                    new GPUVertexAttribute(){
+                        ShaderLocation = 2,
+                        Offset = 4 * 6,
+                        Format = GPUVertexFormat.Float32x2,
+                    },
+                    new GPUVertexAttribute(){
+                        ShaderLocation = 3,
+                        Offset = 4 * 8,
+                        Format = GPUVertexFormat.Float32x2,
+                    },
+                }
+            }
+        ];
+        var vertexBufferLayouts = vertexMappingBuilder.Build();
+
+        Assert.True(expectedLayouts[0].ArrayStride == vertexBufferLayouts[0].ArrayStride);
+        Assert.True(expectedLayouts[0].Attributes.Span.SequenceEqual(vertexBufferLayouts[0].Attributes.Span));
     }
 }

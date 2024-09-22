@@ -2,6 +2,8 @@ import { GUI } from "lil-gui";
 import { createRoot } from "react-dom/client";
 import { InteractiveApp } from "./interactive-ui";
 import { createElement } from "react";
+import { uniform } from "three/examples/jsm/nodes/Nodes.js";
+import { min } from "wgpu-matrix/dist/2.x/vec2-impl";
 
 interface InteractiveState {
   loop: boolean;
@@ -60,27 +62,77 @@ export async function BatchRenderMain() {
   createRealtimeUserInterface(realtimeState);
 
   // const shaderName = "SampleFragmentShader";
-  const isUniformTest = false;
-  const shaderName = isUniformTest
-    ? "SimpleUniformShader"
-    : "SampleFragmentShader";
-  const code = await (await fetch(`/ilsl/wgsl/${shaderName}`)).text();
+  // const isUniformTest = true;
+  // const shaderName = isUniformTest
+  //   ? "SimpleUniformShader"
+  //   : "SampleFragmentShader";
+  //const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
 
-  const uniformBufferSize =
-    4 * 4 + // color is 4 32bit floats (4bytes each)
-    2 * 4 + // scale is 2 32bit floats (4bytes each)
-    2 * 4; // offset is 2 32bit floats (4bytes each)
-  const uniformBuffer = device.createBuffer({
-    size: uniformBufferSize,
+  const demoShaderName = "QuadShader";
+  const meshName = "ScreenQuad";
+  const vertexBufferLayoutJson = await (await fetch(`/ilsl/wgsl/vertexbufferlayout/${demoShaderName}`)).text();
+  const vertexBufferLayout = JSON.parse(vertexBufferLayoutJson);
+  const code = await (await fetch(`/ilsl/wgsl/${demoShaderName}`)).text();
+  const meshVertices = await (await fetch(`/api/Mesh/${meshName}/vertex`)).arrayBuffer(); //Quad
+  const meshIndices = await (await fetch(`/api/Mesh/${meshName}/index`)).arrayBuffer();   //Quad
+  const bindGroupLayoutDescriptorJson = await (await fetch(`/ilsl/wgsl/bindgrouplayoutdescriptorbuffer/${demoShaderName}`)).text();
+  const bindGroupLayoutDescriptor = JSON.parse(bindGroupLayoutDescriptorJson);
+
+  const targetWGSL = `
+    struct VertexOutput {
+      @location(0) position: vec2<f32>
+    };
+
+    @location(0) position: vec2<f32>;
+
+    struct Resolution {
+      resX: u32,
+      resY: u32,
+    };
+
+    @group(0) @binding(0) var<uniform> resolution: Resolution;
+
+    @vertex
+    fn vs(position: vec2<f32>) -> @builtin(position) vec4<f32>
+    {
+      return vec4<f32>(vert.position.x, vert.position.y, 0f, 1f);
+    }
+
+    @fragment
+    fn fs(@builtin(position) vertex_in: vec4<f32>) -> @location(0) vec4<f32>
+    {
+      return vec4<f32>(vertex_in.x / f32(resolution.resX), vertex_in.y / f32(resolution.resY) , 0f, 1f);
+    }
+  `;
+
+
+
+  // Uniform Buffer to pass resolution
+  const resolutionBufferSize = 4 * 2;
+  const resolutionBuffer = device.createBuffer({
+    size: resolutionBufferSize,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const uniformValues = new Float32Array(uniformBufferSize / 4);
-  const kColorOffset = 0;
-  const kScaleOffset = 4;
-  const kOffsetOffset = 6;
+  const resolution = new Uint32Array([800, 600]);
+  device.queue.writeBuffer(resolutionBuffer, 0, resolution);
 
-  uniformValues.set([1, 1, 0, 1], kColorOffset); // set the color
-  uniformValues.set([-0.5, -0.25], kOffsetOffset); // set the offset
+  // Vertex Buffer
+  const verticesBufferSize = meshVertices.byteLength;
+  const vertexBuffer = device.createBuffer({
+    size: verticesBufferSize,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+  });
+  const vertices = new Float32Array(meshVertices);
+  device.queue.writeBuffer(vertexBuffer, 0, vertices);
+
+  // Index Buffer
+  const indexBufferSize = meshIndices.byteLength;
+  const indexBuffer = device.createBuffer({
+    size: indexBufferSize,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
+  });
+  const indices = new Uint16Array(meshIndices);
+  device.queue.writeBuffer(indexBuffer, 0, indices);
 
   const module = device.createShaderModule({
     label: "our hardcoded red triangle shaders",
@@ -116,10 +168,25 @@ export async function BatchRenderMain() {
     // `,
   });
 
+
+  const bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDescriptor);
+  const bindGroup = device.createBindGroup({
+    layout: bindGroupLayout,
+    entries: [{ binding: 0, resource: { buffer: resolutionBuffer } }]
+  })
+
+  const pipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [
+      bindGroupLayout, // @group(0)
+    ]
+  });
+
   const pipeline = device.createRenderPipeline({
-    layout: "auto",
+    layout: pipelineLayout,
     vertex: {
       module: module,
+      entryPoint: "vs",
+      buffers: vertexBufferLayout
     },
     fragment: {
       module,
@@ -134,16 +201,6 @@ export async function BatchRenderMain() {
     },
   });
 
-  const bindGroup = isUniformTest
-    ? device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-      })
-    : device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-      });
-
   const render = (f: number) => {
     if (!interactiveState.loop && !needOneTimeRender) {
       console.log("skip rendering");
@@ -152,13 +209,7 @@ export async function BatchRenderMain() {
     }
     needOneTimeRender = false;
     const aspect = canvas.width / canvas.height;
-    if (isUniformTest) {
-      uniformValues.set([0.5 / aspect, 0.5], kScaleOffset); // set the scale
-      // device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-    } else {
-      uniformValues.set([f / 500], 0); // set the scale
-    }
-    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+
     const view = context.getCurrentTexture().createView();
 
     const encoder = device.createCommandEncoder();
@@ -179,9 +230,13 @@ export async function BatchRenderMain() {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
     // if (isUniformTest) {
-    pass.setBindGroup(0, bindGroup!);
+      // pass.setBindGroup(0, bindGroup!);
     // }
-    pass.draw(6);
+    // pass.setBindGroup(0, bindGroup!);
+    pass.setBindGroup(0, bindGroup!);
+    pass.setVertexBuffer(0, vertexBuffer);
+    pass.setIndexBuffer(indexBuffer, "uint16");
+    pass.drawIndexed(indices.length);
     pass.end();
 
     device.queue.submit([encoder.finish()]);

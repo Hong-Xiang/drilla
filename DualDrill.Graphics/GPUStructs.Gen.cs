@@ -18,6 +18,12 @@ public partial struct GPUBindGroupLayoutDescriptor()
     public ReadOnlyMemory<GPUBindGroupLayoutEntry> Entries { get; set; }
 }
 
+public partial struct GPUBindGroupLayoutDescriptorBuffer()
+{
+    public string Label { get; set; }
+    public ReadOnlyMemory<GPUBindGroupLayoutEntryBuffer> Entries { get; set; }
+}
+
 public partial struct GPUBlendComponent()
 {
     public GPUBlendFactor DstFactor { get; set; }

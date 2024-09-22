@@ -1,30 +1,36 @@
-﻿using DualDrill.Graphics;
+using DualDrill.Graphics;
 using DualDrill.ILSL.IR.Declaration;
-using ICSharpCode.Decompiler.CSharp.Syntax;
-using ICSharpCode.Decompiler.IL.Patterns;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Numerics;
+using System.Collections.Immutable;
+using Microsoft.VisualBasic.FileIO;
+using System.Runtime.InteropServices;
+using Silk.NET.SDL;
+using System.Diagnostics;
+using System.Text.Json;
 namespace DualDrill.ILSL;
 
 public interface IShaderModuleReflection
 {
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
-        IR.Module module
-    );
-
-    public IVertexBufferMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>();
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(IR.Module module);
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(IR.Module module);
+    public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>();
+    public IVertexBufferLayoutBuilder<TGPULayout> GetVertexBufferLayoutBuilder<TGPULayout>() where TGPULayout : struct ;
 }
 
-public interface IVertexBufferMappingBuilder<TGPULayout, THostLayout>
+public interface IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout>
 {
-    IVertexBufferMappingBuilder<TGPULayout, THostLayout> AddMapping<TElement>(
+    IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> AddMapping<TElement>(
            Expression<Func<TGPULayout, TElement>> targetBinding,
            Expression<Func<THostLayout, TElement>> sourceBuffer);
 
-    GPUVertexBufferLayout[] Build();
+    ImmutableArray<GPUVertexBufferLayout> Build();
+}
+
+public interface IVertexBufferLayoutBuilder<TGPULayout> where TGPULayout : struct
+{
+    ImmutableArray<GPUVertexBufferLayout> Build();
 }
 
 sealed class HostBufferLayout<TBufferModel>(int Binding)
@@ -37,10 +43,9 @@ sealed record VertexDataMapping<THostBufferModel, TShaderModel>(
 {
 }
 
-public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVertexBufferMappingBuilder<TGPULayout, THostLayout>
+public class VertexBufferLayoutHelper
 {
-    private Dictionary<MemberInfo, List<MemberInfo>> LayoutMap = new();
-    private static Type GetTypeFromMemberInfo(MemberInfo member)
+    public static Type GetTypeFromMemberInfo(MemberInfo member)
     {
         switch (member.MemberType)
         {
@@ -60,26 +65,26 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
         }
     }
 
-    private static int GetByteSize(Type type)
+    public static int GetByteSize(Type type)
     {
         //TODO: Add more types
         if (type == typeof(Vector4))
         {
             return 16;
         }
-        else if(type == typeof(Vector3))
+        else if (type == typeof(Vector3))
         {
             return 12;
         }
-        else if(type == typeof(Vector2))
+        else if (type == typeof(Vector2))
         {
             return 8;
         }
-        else if(type == typeof(float))
+        else if (type == typeof(float))
         {
             return 4;
         }
-        else if(type == typeof(int))
+        else if (type == typeof(int))
         {
             return 4;
         }
@@ -89,7 +94,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
         }
     }
 
-    private static GPUVertexFormat GetGPUVertexFormat(Type type)
+    public static GPUVertexFormat GetGPUVertexFormat(Type type)
     {
         //TODO: Add more types
         if (type == typeof(Vector4))
@@ -118,6 +123,53 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
         }
     }
 
+}
+
+public sealed class VertexBufferLayoutBuilder<TGPULayout> : IVertexBufferLayoutBuilder<TGPULayout> where TGPULayout : struct
+{
+    public ImmutableArray<GPUVertexBufferLayout> Build()
+    {
+        var attributes = new List<GPUVertexAttribute>();
+        Dictionary<int, MemberInfo> LayoutDict = new();
+        var members = typeof(TGPULayout).GetMembers();
+        foreach(var member in members)
+        {
+            if(member.MemberType is not MemberTypes.Field)
+            {
+                continue;
+            }
+            var location = member.GetCustomAttributes(false).OfType<LocationAttribute>().First().Binding;
+            LayoutDict[location] = member;
+        }
+        ulong offset = 0;
+        foreach(var keyValue in LayoutDict)
+        {
+            int key = keyValue.Key;
+            var member = keyValue.Value;
+            attributes.Add(new GPUVertexAttribute()
+            {
+                ShaderLocation = key,
+                Format = VertexBufferLayoutHelper.GetGPUVertexFormat(VertexBufferLayoutHelper.GetTypeFromMemberInfo(member)),
+                Offset = offset
+            });
+            offset += (ulong)VertexBufferLayoutHelper.GetByteSize(VertexBufferLayoutHelper.GetTypeFromMemberInfo(member));
+        }
+        return new GPUVertexBufferLayout[]
+        {
+            new GPUVertexBufferLayout()
+            {
+                ArrayStride = offset,
+                StepMode = GPUVertexStepMode.Vertex,
+                Attributes = attributes.ToArray()
+            }
+        }.ToImmutableArray();
+    }
+}
+
+public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout>
+{
+    private Dictionary<MemberInfo, List<MemberInfo>> LayoutMap = new();
+    
     private MemberInfo ParseMemberExpression(System.Linq.Expressions.Expression exp)
     {
         if (exp is MemberExpression memberExp)
@@ -137,7 +189,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
         }
     }
 
-    public IVertexBufferMappingBuilder<TGPULayout, THostLayout> AddMapping<TElement>(
+    public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> AddMapping<TElement>(
             Expression<Func<TGPULayout, TElement>> targetBinding,
             Expression<Func<THostLayout, TElement>> sourceBuffer)
     {
@@ -151,10 +203,10 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
         {
             LayoutMap.Add(hostLayoutElement, new List<MemberInfo> { gpuLayoutElement });
         }
-        return (IVertexBufferMappingBuilder<TGPULayout, THostLayout>)this;
+        return this;
     }
 
-    public GPUVertexBufferLayout[] Build()
+    public ImmutableArray<GPUVertexBufferLayout> Build()
     {
         var gpuVertexBufferLayouts = new List<GPUVertexBufferLayout>();
         Dictionary<int, GPUVertexAttribute> vertexAttributeDict = new();
@@ -172,8 +224,8 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
             foreach (var vertexLayoutElementType in userDefinedElement.Value)
             {
                 var location = vertexLayoutElementType.GetCustomAttributes(false).OfType<LocationAttribute>().First().Binding;
-                var byteSize = GetByteSize(GetTypeFromMemberInfo(vertexLayoutElementType));
-                var format = GetGPUVertexFormat(GetTypeFromMemberInfo(vertexLayoutElementType));
+                var byteSize = VertexBufferLayoutHelper.GetByteSize(VertexBufferLayoutHelper.GetTypeFromMemberInfo(vertexLayoutElementType));
+                var format = VertexBufferLayoutHelper.GetGPUVertexFormat(VertexBufferLayoutHelper.GetTypeFromMemberInfo(vertexLayoutElementType));
                 vertexAttributeDict[location] = new GPUVertexAttribute()
                 {
                     ShaderLocation = location,
@@ -199,7 +251,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
             vertexAttributeDict.Clear();
             gpuVertexBufferLayouts.Add(gpuVertexBufferLayout);
         }
-        return gpuVertexBufferLayouts.ToArray();
+        return gpuVertexBufferLayouts.ToImmutableArray();
     }
 }
 
@@ -219,15 +271,17 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntry>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
         {
+            //var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            //var type = assemblies.Where(a => a.FullName.Contains("DualDrill.Engine")).First().GetTypes().FirstOrDefault(e => e.Name == decl.Type.Name);
             gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntry()
             {
-                Binding = 0,
-                Visibility = GPUShaderStage.Vertex,
+                Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
+                Visibility = (decl.Attributes.OfType<StageAttribute>().Count() != 0) ? decl.Attributes.OfType<StageAttribute>().First().Stage : (GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute),
                 Buffer = new GPUBufferBindingLayout()
                 {
                     Type = GPUBufferBindingType.Uniform,
                     HasDynamicOffset = decl.Attributes.OfType<BindingAttribute>().First().HasDynamicOffset,
-                    MinBindingSize = (ulong)GetByteSize(decl.Type)
+                    MinBindingSize = 0
                 }
             });
         }
@@ -235,11 +289,44 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         {
             Entries = gpuBindGroupLayoutEntries.ToArray()
         };
+
         return gpuBindGroupDescriptor;
     }
 
-    public IVertexBufferMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>()
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(IR.Module module)
+    {
+        var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntryBuffer>();
+        foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
+        {
+            //var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            //var type = assemblies.Where(a => a.FullName.Contains("DualDrill.Engine")).First().GetTypes().FirstOrDefault(e => e.Name == decl.Type.Name);
+            gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntryBuffer()
+            {
+                Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
+                Visibility = (decl.Attributes.OfType<StageAttribute>().Count() != 0) ? decl.Attributes.OfType<StageAttribute>().First().Stage : (GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute),
+                Buffer = new GPUBufferBindingLayout()
+                {
+                    Type = GPUBufferBindingType.Uniform,
+                    HasDynamicOffset = decl.Attributes.OfType<BindingAttribute>().First().HasDynamicOffset,
+                    MinBindingSize = 0
+                }
+            });
+        }
+        var gpuBindGroupDescriptor = new GPUBindGroupLayoutDescriptorBuffer()
+        {
+            Entries = gpuBindGroupLayoutEntries.ToArray()
+        };
+
+        return gpuBindGroupDescriptor;
+    }
+
+    public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>()
     {
         return new VertexBufferMappingBuilder<TGPULayout, THostLayout>();
+    }
+
+    public IVertexBufferLayoutBuilder<TGPULayout> GetVertexBufferLayoutBuilder<TGPULayout>() where TGPULayout : struct
+    {
+        return new VertexBufferLayoutBuilder<TGPULayout>();
     }
 }

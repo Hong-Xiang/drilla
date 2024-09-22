@@ -1,8 +1,10 @@
-﻿using DualDrill.ILSL;
+﻿using DualDrill.Graphics;
+using DualDrill.ILSL;
 using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
+using System.Collections.Immutable;
 using System.Numerics;
 
 namespace DualDrill.Engine.Shader;
@@ -99,6 +101,7 @@ public static class SampleFragmentShaderModule
 
 public struct SampleFragmentShader : IShaderModule
 {
+
     //string IILSLDevelopShaderModule.ILSLWGSLExpectedCode => """
     //  @vertex fn vs(@builtin(vertex_index) vertex_index : u32) 
     //    -> @builtin(position) vec4f 
@@ -107,7 +110,7 @@ public struct SampleFragmentShader : IShaderModule
     //    let y = f32(i32(vertex_index & 1u) * 2 - 1) * 0.5;
     //    return vec4f(x, y, 0.0, 1.0);
     //  }
- 
+
     //  @fragment fn fs() -> @location(0) vec4f {
     //    return vec4f(0.5, 1.0, 0.5, 1.0);
     //  }
