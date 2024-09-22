@@ -20,7 +20,7 @@ public class QuadShaderReflection : IReflectable
 
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout()
     {
-        var vertexBufferLayoutBuilder = _shaderModuleReflection.GetVertexBufferLayoutBuilder<VertexInput>();
+        var vertexBufferLayoutBuilder = _shaderModuleReflection.GetVertexBufferLayoutBuilder<QuadShaderVertexInput>();
         return vertexBufferLayoutBuilder.Build();
     }
 
@@ -30,54 +30,29 @@ public class QuadShaderReflection : IReflectable
     }
 }
 
-public struct QuadShader : IILSLDevelopShaderModule
+
+public struct QuadShaderResolution
 {
-    public string ILSLWGSLExpectedCode => """
+    public uint resX;
+    public uint resY;
+}
 
-    @location(0) position: vec2<f32>;
+public struct QuadShaderVertexInput
+{
+    [Location(0)]
+    public Vector2 position;
+}
 
-    struct Resolution
-    {
-        resX: u32,
-        resY: u32,
-    };
-
-    @group(0) @binding(0) var<uniform> resolution: Resolution;
-
-    @vertex
-    fn vs(position: vec2<f32>) -> @builtin(position) vec4<f32>
-    {
-      return vec4<f32>(vert.position.x, vert.position.y, 0f, 1f);
-    }
-
-
-    @fragment
-    fn fs(@builtin(position) vertex_in: vec4<f32>) -> @location(0) vec4<f32>
-    {
-      return vec4<f32>(vertex_in.x / f32(resolution.resX), vertex_in.y / f32(resolution.resY) , 0f, 1f);
-    }
-    """;
-
-    public struct Resolution
-    {
-        public uint resX;
-        public uint resY;
-    }
-
-    public struct VertexInput
-    {
-        [Location(0)]
-        public Vector2 position;
-    }
-
+public struct QuadShader : IShaderModule
+{
     [Group(0)]
     [Binding(0)]
     [Uniform]
-    Resolution resolution;
+    QuadShaderResolution resolution;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    Vector4 vs(VertexInput vert)
+    Vector4 vs(QuadShaderVertexInput vert)
     {
         return new Vector4(vert.position.X, vert.position.Y, 0.0f, 1.0f);
     }
@@ -88,5 +63,4 @@ public struct QuadShader : IILSLDevelopShaderModule
     {
         return new Vector4(vertex_in.X / resolution.resX, vertex_in.Y / resolution.resY, 0.0f, 1.0f);
     }
-
 }
