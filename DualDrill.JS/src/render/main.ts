@@ -170,6 +170,10 @@ export async function BatchRenderMain() {
 
 
   const bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDescriptor);
+  const bindGroup = device.createBindGroup({
+    layout: bindGroupLayout,
+    entries: [{ binding: 0, resource: { buffer: resolutionBuffer } }]
+  })
 
   const pipelineLayout = device.createPipelineLayout({
     bindGroupLayouts: [
@@ -196,11 +200,6 @@ export async function BatchRenderMain() {
       topology: "triangle-list",
     },
   });
-
-  const bindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: resolutionBuffer } }]
-  })
 
   const render = (f: number) => {
     if (!interactiveState.loop && !needOneTimeRender) {
@@ -237,7 +236,7 @@ export async function BatchRenderMain() {
     pass.setBindGroup(0, bindGroup!);
     pass.setVertexBuffer(0, vertexBuffer);
     pass.setIndexBuffer(indexBuffer, "uint16");
-    pass.drawIndexed(6);
+    pass.drawIndexed(indices.length);
     pass.end();
 
     device.queue.submit([encoder.finish()]);
