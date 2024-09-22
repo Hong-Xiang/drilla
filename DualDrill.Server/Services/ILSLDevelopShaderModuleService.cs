@@ -11,7 +11,6 @@ public sealed class ILSLDevelopShaderModuleService
         //[nameof(SampleFragmentShader)] = new SampleFragmentShader(),
         [nameof(VertexOutputShader)] = new VertexOutputShader(),
         //[nameof(SimpleUniformShader)] = new SimpleUniformShader(),
-        
     };
 
     public Dictionary<string, IShaderModule> DemoShaderModules { get; } = new()

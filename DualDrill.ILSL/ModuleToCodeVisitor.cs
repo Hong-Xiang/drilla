@@ -178,6 +178,8 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
                 case UniformAttribute u:
                     Writer.Write("var<uniform> ");
                     break;
+                case StageAttribute _:
+                    break;
                 default:
                     throw new NotSupportedException($"VisitVariableDeclaration attribute {a} not support ");
             }
@@ -485,6 +487,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
 
     public async ValueTask VisitMember(MemberDeclaration decl)
     {
+        await WriteAttributesAsync(decl.Attributes, true);
         Writer.Write(decl.Name);
         Writer.Write(": ");
         await VisitTypeReference(decl.Type);

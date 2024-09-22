@@ -1,11 +1,9 @@
-﻿using DualDrill.Graphics;
+using DualDrill.Graphics;
 using DualDrill.ILSL;
-using DualDrill.ILSL.IR.Declaration;
-using Silk.NET.Input;
 using Silk.NET.SDL;
 using System.Collections.Immutable;
 using System.Numerics;
-using static DualDrill.Engine.Shader.QuadShader;
+
 
 namespace DualDrill.Engine.Shader;
 
@@ -20,7 +18,7 @@ public class QuadShaderReflection : IReflectable
 
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout()
     {
-        var vertexBufferLayoutBuilder = _shaderModuleReflection.GetVertexBufferLayoutBuilder<QuadShaderVertexInput>();
+        var vertexBufferLayoutBuilder = _shaderModuleReflection.GetVertexBufferLayoutBuilder<QuadShader.VertexInput>();
         return vertexBufferLayoutBuilder.Build();
     }
 
@@ -30,29 +28,28 @@ public class QuadShaderReflection : IReflectable
     }
 }
 
-
-public struct QuadShaderResolution
-{
-    public uint resX;
-    public uint resY;
-}
-
-public struct QuadShaderVertexInput
-{
-    [Location(0)]
-    public Vector2 position;
-}
-
 public struct QuadShader : IShaderModule
 {
+    public struct Resolution
+    {
+        public uint resX;
+        public uint resY;
+    }
+
+    public struct VertexInput
+    {
+        [Location(0)]
+        public Vector2 position;
+    }
+
     [Group(0)]
     [Binding(0)]
     [Uniform]
-    QuadShaderResolution resolution;
+    Resolution resolution;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    Vector4 vs(QuadShaderVertexInput vert)
+    Vector4 vs(VertexInput vert)
     {
         return new Vector4(vert.position.X, vert.position.Y, 0.0f, 1.0f);
     }
