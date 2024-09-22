@@ -281,7 +281,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
                 {
                     Type = GPUBufferBindingType.Uniform,
                     HasDynamicOffset = decl.Attributes.OfType<BindingAttribute>().First().HasDynamicOffset,
-                    MinBindingSize = 8
+                    MinBindingSize = 0
                 }
             });
         }
@@ -308,7 +308,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
                 {
                     Type = GPUBufferBindingType.Uniform,
                     HasDynamicOffset = decl.Attributes.OfType<BindingAttribute>().First().HasDynamicOffset,
-                    MinBindingSize = 8
+                    MinBindingSize = 0
                 }
             });
         }
