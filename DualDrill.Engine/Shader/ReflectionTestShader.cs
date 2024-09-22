@@ -9,17 +9,17 @@ using System.Numerics;
 
 namespace DualDrill.Engine.Shader;
 
-public struct ReflectionTestShader : IShaderModule, IReflectable
+public class ReflectionTestShaderReflection : IReflection
 {
     private IShaderModuleReflection _shaderModuleReflection;
-    public ReflectionTestShader()
+    public ReflectionTestShaderReflection()
     {
         _shaderModuleReflection = new ShaderModuleReflection();
     }
 
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout()
     {
-        var vertexBufferLayoutBuilder = _shaderModuleReflection.GetVertexBufferLayoutBuilder<Vertex, UserDefinedMeshModel>();
+        var vertexBufferLayoutBuilder = _shaderModuleReflection.GetVertexBufferLayoutBuilder<ReflectionTestShader.Vertex, ReflectionTestShader.UserDefinedMeshModel>();
         vertexBufferLayoutBuilder.AddMapping(g => g.Position, h => h.Position)
                                 .AddMapping(g => g.Color, h => h.ColorOffset.Color)
                                 .AddMapping(g => g.Offset, h => h.ColorOffset.Offset)
@@ -33,8 +33,11 @@ public struct ReflectionTestShader : IShaderModule, IReflectable
     }
 
     public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor() => null;
+}
 
-    struct Vertex
+public struct ReflectionTestShader : IShaderModule
+{
+    public struct Vertex
     {
         [Location(0)]
         public Vector2 Position;
@@ -49,7 +52,7 @@ public struct ReflectionTestShader : IShaderModule, IReflectable
         public Vector2 Scale;
     }
 
-    struct VSOutput
+    public struct VSOutput
     {
         [Builtin(BuiltinBinding.position)]
         public Vector4 Position;
@@ -58,13 +61,13 @@ public struct ReflectionTestShader : IShaderModule, IReflectable
         public Vector4 Color;
     }
 
-    struct UserDefinedHostColorOffsetModel
+    public struct UserDefinedHostColorOffsetModel
     {
         public Vector4 Color;
         public Vector2 Offset;
     }
 
-    struct UserDefinedMeshModel
+    public struct UserDefinedMeshModel
     {
         // Ideally we should support
         // public IGPUBuffer<Vector2> PositionBuffer;

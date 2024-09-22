@@ -65,7 +65,7 @@ public interface IShaderModule
 {
 }
 
-public interface IReflectable
+public interface IReflection
 {
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
     public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ILSL.IR.Module module);

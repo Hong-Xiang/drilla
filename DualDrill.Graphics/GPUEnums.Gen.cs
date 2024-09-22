@@ -1,7 +1,9 @@
-﻿using System;
+﻿using DualDrill.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace DualDrill.Graphics;
@@ -38,6 +40,7 @@ public enum GPUBlendOperation : int
     Max = 4,
 }
 
+[JsonConverter(typeof(KebabCaseLowerEnumConverter<GPUBufferBindingType>))]
 public enum GPUBufferBindingType : int
 {
     Uniform = 1,
@@ -192,6 +195,7 @@ public enum GPUQueryType : int
     Timestamp = 1,
 }
 
+[JsonConverter(typeof(KebabCaseLowerEnumConverter<GPUSamplerBindingType>))]
 public enum GPUSamplerBindingType : int
 {
     Filtering = 1,
@@ -220,6 +224,7 @@ public enum GPUStencilOperation : int
     DecrementWrap = 7,
 }
 
+////[JsonConverter(typeof(KebabCaseLowerEnumConverter<GPUSamplerBindingType>))]
 public enum GPUStorageTextureAccess : int
 {
     WriteOnly = 1,
@@ -247,6 +252,7 @@ public enum GPUTextureDimension : int
     _3D = 2,
 }
 
+//[JsonConverter(typeof(KebabCaseLowerEnumConverter<GPUSamplerBindingType>))]
 public enum GPUTextureFormat : int
 {
     R8Unorm = 1,
@@ -345,7 +351,7 @@ public enum GPUTextureFormat : int
     ASTC12x12Unorm = 94,
     ASTC12x12UnormSrgb = 95,
 }
-
+[JsonConverter(typeof(JsonStringEnumConverter<GPUTextureSampleType>))]
 public enum GPUTextureSampleType : int
 {
     Float = 1,
@@ -366,6 +372,7 @@ public enum GPUTextureUsage : int
     RenderAttachment = 0x10,
 }
 
+//[JsonConverter(typeof(KebabCaseLowerEnumConverter<GPUSamplerBindingType>))]
 public enum GPUTextureViewDimension : int
 {
     _1D = 1,

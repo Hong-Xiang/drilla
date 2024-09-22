@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { InteractiveApp } from "./interactive-ui";
 import { createElement } from "react";
 import { uniform } from "three/examples/jsm/nodes/Nodes.js";
+import { min } from "wgpu-matrix/dist/2.x/vec2-impl";
 
 interface InteractiveState {
   loop: boolean;
@@ -61,19 +62,23 @@ export async function BatchRenderMain() {
   createRealtimeUserInterface(realtimeState);
 
   // const shaderName = "SampleFragmentShader";
-  const isUniformTest = true;
-  const shaderName = isUniformTest
-    ? "SimpleUniformShader"
-    : "SampleFragmentShader";
+  // const isUniformTest = true;
+  // const shaderName = isUniformTest
+  //   ? "SimpleUniformShader"
+  //   : "SampleFragmentShader";
   //const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
 
-  const shaderName2 = "QuadShader";
-  const vertexBufferLayoutJson = await(await fetch(`/ilsl/wgsl/vertexbufferlayout/${shaderName2}`)).text();
+  const demoShaderName = "QuadShader";
+  const meshName = "ScreenQuad";
+  const vertexBufferLayoutJson = await (await fetch(`/ilsl/wgsl/vertexbufferlayout/${demoShaderName}`)).text();
   const vertexBufferLayout = JSON.parse(vertexBufferLayoutJson);
+  const code = await (await fetch(`/ilsl/wgsl/${demoShaderName}`)).text();
+  const meshVertices = await (await fetch(`/api/Mesh/${meshName}/vertex`)).arrayBuffer(); //Quad
+  const meshIndices = await (await fetch(`/api/Mesh/${meshName}/index`)).arrayBuffer();   //Quad
+  const bindGroupLayoutDescriptorJson = await (await fetch(`/ilsl/wgsl/bindgrouplayoutdescriptorbuffer/${demoShaderName}`)).text();
+  const bindGroupLayoutDescriptor = JSON.parse(bindGroupLayoutDescriptorJson);
 
-  const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
-  const code1 = `
-
+  const targetWGSL = `
     struct VertexOutput {
       @location(0) position: vec2<f32>
     };
@@ -93,7 +98,6 @@ export async function BatchRenderMain() {
       return vec4<f32>(vert.position.x, vert.position.y, 0f, 1f);
     }
 
-
     @fragment
     fn fs(@builtin(position) vertex_in: vec4<f32>) -> @location(0) vec4<f32>
     {
@@ -101,8 +105,7 @@ export async function BatchRenderMain() {
     }
   `;
 
-  const meshVertices = await (await fetch(`/api/Mesh/ScreenQuad/vertex`)).arrayBuffer();
-  const meshIndices =await (await fetch(`/api/Mesh/ScreenQuad/index`)).arrayBuffer();
+
 
   // Uniform Buffer to pass resolution
   const resolutionBufferSize = 4 * 2;
@@ -165,8 +168,17 @@ export async function BatchRenderMain() {
     // `,
   });
 
+
+  const bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDescriptor);
+
+  const pipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [
+      bindGroupLayout, // @group(0)
+    ]
+  });
+
   const pipeline = device.createRenderPipeline({
-    layout: "auto",
+    layout: pipelineLayout,
     vertex: {
       module: module,
       entryPoint: "vs",
@@ -186,7 +198,7 @@ export async function BatchRenderMain() {
   });
 
   const bindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
+    layout: bindGroupLayout,
     entries: [{ binding: 0, resource: { buffer: resolutionBuffer } }]
   })
 

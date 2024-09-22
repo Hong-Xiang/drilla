@@ -5,13 +5,16 @@ using System.Reflection;
 using System.Numerics;
 using System.Collections.Immutable;
 using Microsoft.VisualBasic.FileIO;
+using System.Runtime.InteropServices;
+using Silk.NET.SDL;
+using System.Diagnostics;
+using System.Text.Json;
 namespace DualDrill.ILSL;
 
 public interface IShaderModuleReflection
 {
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
-        IR.Module module
-    );
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(IR.Module module);
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(IR.Module module);
     public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>();
     public IVertexBufferLayoutBuilder<TGPULayout> GetVertexBufferLayoutBuilder<TGPULayout>() where TGPULayout : struct ;
 }
@@ -268,15 +271,17 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntry>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
         {
+            //var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            //var type = assemblies.Where(a => a.FullName.Contains("DualDrill.Engine")).First().GetTypes().FirstOrDefault(e => e.Name == decl.Type.Name);
             gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntry()
             {
                 Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
-                Visibility = (decl.Attributes.OfType<StageAttribute>().Count() != 0) ? decl.Attributes.OfType<StageAttribute>().First().Stage : GPUShaderStage.None,
+                Visibility = (decl.Attributes.OfType<StageAttribute>().Count() != 0) ? decl.Attributes.OfType<StageAttribute>().First().Stage : (GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute),
                 Buffer = new GPUBufferBindingLayout()
                 {
                     Type = GPUBufferBindingType.Uniform,
                     HasDynamicOffset = decl.Attributes.OfType<BindingAttribute>().First().HasDynamicOffset,
-                    MinBindingSize = (ulong)GetByteSize(decl.Type)
+                    MinBindingSize = 8
                 }
             });
         }
@@ -284,6 +289,34 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         {
             Entries = gpuBindGroupLayoutEntries.ToArray()
         };
+
+        return gpuBindGroupDescriptor;
+    }
+
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(IR.Module module)
+    {
+        var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntryBuffer>();
+        foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
+        {
+            //var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            //var type = assemblies.Where(a => a.FullName.Contains("DualDrill.Engine")).First().GetTypes().FirstOrDefault(e => e.Name == decl.Type.Name);
+            gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntryBuffer()
+            {
+                Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
+                Visibility = (decl.Attributes.OfType<StageAttribute>().Count() != 0) ? decl.Attributes.OfType<StageAttribute>().First().Stage : (GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute),
+                Buffer = new GPUBufferBindingLayout()
+                {
+                    Type = GPUBufferBindingType.Uniform,
+                    HasDynamicOffset = decl.Attributes.OfType<BindingAttribute>().First().HasDynamicOffset,
+                    MinBindingSize = 8
+                }
+            });
+        }
+        var gpuBindGroupDescriptor = new GPUBindGroupLayoutDescriptorBuffer()
+        {
+            Entries = gpuBindGroupLayoutEntries.ToArray()
+        };
+
         return gpuBindGroupDescriptor;
     }
 

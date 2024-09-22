@@ -8,7 +8,7 @@ using System.Numerics;
 namespace DualDrill.Engine.Shader;
 
 
-public class QuadShaderReflection : IReflectable
+public class QuadShaderReflection : IReflection
 {
     private IShaderModuleReflection _shaderModuleReflection;
     public QuadShaderReflection()
@@ -25,6 +25,11 @@ public class QuadShaderReflection : IReflectable
     public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ILSL.IR.Module module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
+    }
+
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(ILSL.IR.Module module)
+    {
+        return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
     }
 }
 
