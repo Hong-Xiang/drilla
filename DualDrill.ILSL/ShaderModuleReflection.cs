@@ -270,8 +270,8 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         {
             gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntry()
             {
-                Binding = 0,
-                Visibility = GPUShaderStage.Vertex,
+                Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
+                Visibility = (decl.Attributes.OfType<StageAttribute>().Count() != 0) ? decl.Attributes.OfType<StageAttribute>().First().Stage : GPUShaderStage.None,
                 Buffer = new GPUBufferBindingLayout()
                 {
                     Type = GPUBufferBindingType.Uniform,

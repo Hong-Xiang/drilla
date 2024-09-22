@@ -1,6 +1,7 @@
 ﻿using DualDrill.Graphics;
 using DualDrill.ILSL.IR;
 using Silk.NET.Maths;
+using System.Collections.Immutable;
 using System.Numerics;
 
 namespace DualDrill.ILSL;
@@ -62,6 +63,12 @@ public sealed class VertexStepModeAttribute(GPUVertexStepMode StepMode) : Attrib
 
 public interface IShaderModule
 {
+}
+
+public interface IReflectable
+{
+    public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ILSL.IR.Module module);
 }
 
 public sealed class ShaderMethodAttribute() : Attribute

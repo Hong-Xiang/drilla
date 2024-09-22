@@ -1,10 +1,13 @@
-﻿using DualDrill.ILSL;
+﻿using DualDrill.Graphics;
+using DualDrill.ILSL;
+using System.Collections.Immutable;
 using System.Numerics;
 
 namespace DualDrill.Engine.Shader;
 
 public struct SimpleUniformShader : IShaderModule
 {
+
     //public string ILSLWGSLExpectedCode => """
     //   struct OurStruct {
     //      color: vec4f,
@@ -41,6 +44,7 @@ public struct SimpleUniformShader : IShaderModule
 
     [Group(0)]
     [Binding(0)]
+    [StageAttribute(GPUShaderStage.Vertex)]
     [Uniform]
     VertexOutput uniformData;
 

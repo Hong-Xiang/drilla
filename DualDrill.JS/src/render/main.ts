@@ -2,6 +2,7 @@ import { GUI } from "lil-gui";
 import { createRoot } from "react-dom/client";
 import { InteractiveApp } from "./interactive-ui";
 import { createElement } from "react";
+import { uniform } from "three/examples/jsm/nodes/Nodes.js";
 
 interface InteractiveState {
   loop: boolean;
@@ -64,66 +65,70 @@ export async function BatchRenderMain() {
   const shaderName = isUniformTest
     ? "SimpleUniformShader"
     : "SampleFragmentShader";
-  //const code = await (await fetch(`/ilsl/wgsl/SimpleUniformShader`)).text();
+  //const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
+
+  const shaderName2 = "QuadShader";
+  const vertexBufferLayoutJson = await(await fetch(`/ilsl/wgsl/vertexbufferlayout/${shaderName2}`)).text();
+  const vertexBufferLayout = JSON.parse(vertexBufferLayoutJson);
 
   const code = `
-  @vertex fn vs(@buildin(vertex_index) vertex_index : u32) -> vec4f {
 
-    let v0 = vec2f( -1.0,  -1.0);
-    let v1 = vec2f( -1.0,  1.0);
-    let v2 = vec2f( 1.0,  -1.0);
+    // struct VertexOutput {
+    //   @location(0) position: vec2<f32>
+    // };
 
-    let v3 = vec2f(-1.0,  1.0);
-    let v4 = vec2f( 1.0,  1.0);
-    let v5 = vec2f( 1.0, -1.0);
+    @location(0) position: vec2<f32>;
 
-    if(vertex_index == 0u)
-    {
-        return vec4f(v0.x, v0.y, 0.0, 1.0);
-    }
-    else if(vertex_index == 1u)
-    {
-        return vec4f(v1.x, v1.y, 0.0, 1.0);
-    }
-    else if(vertex_index == 2u)
-    {
-        return vec4f(v2.x, v2.y, 0.0, 1.0);
-    }
-    else if(vertex_index == 3u)
-    {
-        return vec4f(v3.x, v3.y, 0.0, 1.0);
-    }
-    else if(vertex_index == 4u)
-    {
-        return vec4f(v4.x, v4.y, 0.0, 1.0);
-    }
-    else
-    {
-        return vec4f(v5.x, v5.y, 0.0, 1.0);
-    }
-  }
+    struct Resolution {
+      resX: u32,
+      resY: u32,
+    };
 
-  @fragment fn fs(in : vec4f) -> @location(0) vec4f {
-      return vec4f(in);
-  }
+    @group(0) @binding(0) var<uniform> resolution: Resolution;
 
-  `
+    @vertex
+    fn vs(position: vec2<f32>) -> @builtin(position) vec4<f32>
+    {
+      return vec4<f32>(vert.position.x, vert.position.y, 0f, 1f);
+    }
 
-  const uniformBufferSize =
-    4 * 4 + // color is 4 32bit floats (4bytes each)
-    2 * 4 + // scale is 2 32bit floats (4bytes each)
-    2 * 4; // offset is 2 32bit floats (4bytes each)
-  const uniformBuffer = device.createBuffer({
-    size: uniformBufferSize,
+
+    @fragment
+    fn fs(@builtin(position) vertex_in: vec4<f32>) -> @location(0) vec4<f32>
+    {
+      return vec4<f32>(vertex_in.x / f32(resolution.resX), vertex_in.y / f32(resolution.resY) , 0f, 1f);
+    }
+  `;
+
+  const meshVertices = await (await fetch(`/api/Mesh/ScreenQuad/vertex`)).arrayBuffer();
+  const meshIndices =await (await fetch(`/api/Mesh/ScreenQuad/index`)).arrayBuffer();
+
+  // Uniform Buffer to pass resolution
+  const resolutionBufferSize = 4 * 2;
+  const resolutionBuffer = device.createBuffer({
+    size: resolutionBufferSize,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const uniformValues = new Float32Array(uniformBufferSize / 4);
-  const kColorOffset = 0;
-  const kScaleOffset = 4;
-  const kOffsetOffset = 6;
+  const resolution = new Uint32Array([800, 600]);
+  device.queue.writeBuffer(resolutionBuffer, 0, resolution);
 
-  uniformValues.set([1, 1, 0, 1], kColorOffset); // set the color
-  uniformValues.set([-0.5, -0.25], kOffsetOffset); // set the offset
+  // Vertex Buffer
+  const verticesBufferSize = meshVertices.byteLength;
+  const vertexBuffer = device.createBuffer({
+    size: verticesBufferSize,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+  });
+  const vertices = new Float32Array(meshVertices);
+  device.queue.writeBuffer(vertexBuffer, 0, vertices);
+
+  // Index Buffer
+  const indexBufferSize = meshIndices.byteLength;
+  const indexBuffer = device.createBuffer({
+    size: indexBufferSize,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
+  });
+  const indices = new Uint16Array(meshIndices);
+  device.queue.writeBuffer(indexBuffer, 0, indices);
 
   const module = device.createShaderModule({
     label: "our hardcoded red triangle shaders",
@@ -163,6 +168,8 @@ export async function BatchRenderMain() {
     layout: "auto",
     vertex: {
       module: module,
+      entryPoint: "vs",
+      buffers: vertexBufferLayout
     },
     fragment: {
       module,
@@ -177,15 +184,10 @@ export async function BatchRenderMain() {
     },
   });
 
-  const bindGroup = isUniformTest
-    ? device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-      })
-    : device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-      });
+  const bindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: resolutionBuffer } }]
+  })
 
   const render = (f: number) => {
     if (!interactiveState.loop && !needOneTimeRender) {
@@ -195,13 +197,7 @@ export async function BatchRenderMain() {
     }
     needOneTimeRender = false;
     const aspect = canvas.width / canvas.height;
-    if (isUniformTest) {
-      uniformValues.set([0.5 / aspect, 0.5], kScaleOffset); // set the scale
-      // device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-    } else {
-      uniformValues.set([f / 500], 0); // set the scale
-    }
-    device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+
     const view = context.getCurrentTexture().createView();
 
     const encoder = device.createCommandEncoder();
@@ -222,9 +218,13 @@ export async function BatchRenderMain() {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
     // if (isUniformTest) {
-    pass.setBindGroup(0, bindGroup!);
+      // pass.setBindGroup(0, bindGroup!);
     // }
-    pass.draw(6);
+    // pass.setBindGroup(0, bindGroup!);
+    pass.setBindGroup(0, bindGroup!);
+    pass.setVertexBuffer(0, vertexBuffer);
+    pass.setIndexBuffer(indexBuffer, "uint16");
+    pass.drawIndexed(6);
     pass.end();
 
     device.queue.submit([encoder.finish()]);

@@ -8,6 +8,7 @@ using Lokad.ILPack.IL;
 using Microsoft.AspNetCore.Mvc;
 using System.Numerics;
 using System.Reflection;
+using TinyJson;
 
 namespace DualDrill.Server.Controllers;
 
@@ -48,7 +49,10 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return Ok(await ILSLCompiler.CompileV2(new SampleFragmentShader()));
         }
-
+        //if(name == nameof(QuadShader))
+        //{
+        //    return Ok(await ILSLCompiler.CompileV2(new QuadShader()));
+        //}
 
         var shaderModule = GetShaderModule(name);
         if (shaderModule is null)
@@ -57,6 +61,22 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         }
 
         return Ok(await ILSLCompiler.Compile(shaderModule));
+    }
+
+    [HttpGet("wgsl/vertexbufferlayout/{name}")]
+    public async Task<IActionResult> GetVertexBufferLayout(string name)
+    {
+        if(name == nameof(QuadShader))
+        {
+            var reflection = new QuadShaderReflection();
+            return Ok(reflection.GetVertexBufferLayout());
+        }
+        else if(name == nameof(ReflectionTestShader))
+        {
+            var shaderModule = new ReflectionTestShader();
+            return Ok(shaderModule.GetVertexBufferLayout());
+        }
+        return NotFound();
     }
 
     [HttpGet("parse/{name}")]

@@ -24,6 +24,7 @@ public class MeshController(MeshService MeshService) : ControllerBase
         });
     }
 
+
     [HttpGet("{name}/vertex")]
     public ActionResult GetMeshVertexData(string name)
     {

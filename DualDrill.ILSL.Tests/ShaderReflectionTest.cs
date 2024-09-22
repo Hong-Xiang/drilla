@@ -94,7 +94,7 @@ public class ShaderReflectionBasicVertexLayoutTest
         public Vector4 Color;
     }
 
-    struct ShaderModule : IShaderModule
+    struct ShaderModule
     {
         [Vertex]
         VSOutput vs(Vertex vert)
@@ -234,7 +234,7 @@ public class ShaderReflectionBasicDefaultVertexLayoutTest
         public Vector4 Color;
     }
 
-    struct ShaderModule : IShaderModule
+    struct ShaderModule
     {
         [Vertex]
         VSOutput vs(Vertex vert)

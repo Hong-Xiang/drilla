@@ -8,7 +8,8 @@ public sealed class MeshService
     {
         [nameof(Cube)] = new Cube(),
         [nameof(Quad)] = new Quad(),
-        [nameof(WebGPULogo)] = new WebGPULogo()
+        [nameof(WebGPULogo)] = new WebGPULogo(),
+        [nameof(ScreenQuad)] = new ScreenQuad()
     };
 
     public IMesh? GetMesh(string name)
