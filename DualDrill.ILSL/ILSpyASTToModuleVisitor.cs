@@ -74,6 +74,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         {
             return new LocationAttribute(0);
         }
+        if(a.FullName == typeof(ShaderMethodAttribute).FullName)
+        {
+            return new ShaderMethodAttribute();
+        }
         return null;
     }
 
@@ -464,6 +468,14 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitInvocationExpression(InvocationExpression invocationExpression)
     {
+        Func<string, string> RemoveThisDot = (string expression) => 
+        {
+            if (expression.StartsWith("this."))
+            {
+                return expression.Substring("this.".Length);
+            }
+            return expression;
+        };
         List<INode> args = new();
         foreach (var argument in invocationExpression.Arguments)
         {
@@ -473,7 +485,14 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var immutableArgs = args.Cast<IExpression>().ToImmutableArray();
         if (invocationExpression.Target is MemberReferenceExpression memberReference)
         {
-            string functionName = memberReference.ToString();
+            string functionName = RemoveThisDot(memberReference.ToString());
+            if(Symbols.ContainsKey(functionName))
+            {
+                return new FunctionCallExpression(
+                    (FunctionDeclaration)Symbols[functionName],
+                    immutableArgs
+                );
+            }
             // special case for vector dot as it's generic type
             switch (functionName)
             {
@@ -490,6 +509,66 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
                 case "global::System.Numerics.Vector4.Dot":
                     return new FunctionCallExpression(
                         VecType<R4, FloatType<B32>>.Dot,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector2.Length":
+                    return new FunctionCallExpression(
+                        VecType<R2, FloatType<B32>>.Length,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector3.Length":
+                    return new FunctionCallExpression(
+                        VecType<R3, FloatType<B32>>.Length,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector4.Length":
+                    return new FunctionCallExpression(
+                        VecType<R4, FloatType<B32>>.Length,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector2.Abs":
+                    return new FunctionCallExpression(
+                        VecType<R2, FloatType<B32>>.Abs,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector3.Abs":
+                    return new FunctionCallExpression(
+                        VecType<R3, FloatType<B32>>.Abs,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector4.Abs":
+                    return new FunctionCallExpression(
+                        VecType<R4, FloatType<B32>>.Abs,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector2.Reflect":
+                    return new FunctionCallExpression(
+                        VecType<R2, FloatType<B32>>.Reflect,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector3.Reflect":
+                    return new FunctionCallExpression(
+                        VecType<R3, FloatType<B32>>.Reflect,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector4.Reflect":
+                    return new FunctionCallExpression(
+                        VecType<R4, FloatType<B32>>.Reflect,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector2.Cross":
+                    return new FunctionCallExpression(
+                        VecType<R2, FloatType<B32>>.Cross,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector3.Cross":
+                    return new FunctionCallExpression(
+                        VecType<R3, FloatType<B32>>.Cross,
+                        immutableArgs
+                    );
+                case "global::System.Numerics.Vector4.Cross":
+                    return new FunctionCallExpression(
+                        VecType<R4, FloatType<B32>>.Cross,
                         immutableArgs
                     );
                 case "global::System.Math.Cos":
@@ -521,6 +600,36 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
                 case "global::System.Math.Clamp":
                     return new FunctionCallExpression(
                         FloatType<B32>.Clamp,
+                        immutableArgs
+                    );
+                case "global::System.Math.Abs":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Abs,
+                        immutableArgs
+                    );
+                case "global::System.Math.Max":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Max,
+                        immutableArgs
+                    );
+                case "global::System.Math.Min":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Min,
+                        immutableArgs
+                    );
+                case "global::System.Math.Floor":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Floor,
+                        immutableArgs
+                    );
+                case "global::System.Math.Exp":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Exp,
+                        immutableArgs
+                    );
+                case "global::System.Math.Sign":
+                    return new FunctionCallExpression(
+                        FloatType<B32>.Sign,
                         immutableArgs
                     );
                 default:

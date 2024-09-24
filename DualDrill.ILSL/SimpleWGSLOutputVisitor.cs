@@ -15,6 +15,7 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
         [typeof(BuiltinAttribute).FullName] = "builtin",
         [typeof(Vector4).FullName] = "vec4<f32>",
         [typeof(uint).FullName] = "u32",
+        [typeof(ShaderMethodAttribute).FullName] = "",
     };
     public override void VisitNamespaceDeclaration(NamespaceDeclaration namespaceDeclaration)
     {

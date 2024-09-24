@@ -79,21 +79,26 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
 {
     async ValueTask WriteAttributeAsync(IAttribute attr, CancellationToken cancellation = default)
     {
-        Writer.Write("@");
         switch (attr)
         {
+            case ShaderMethodAttribute:
+                break;
             case FragmentAttribute:
+                Writer.Write("@");
                 Writer.Write("fragment");
                 break;
             case VertexAttribute:
+                Writer.Write("@");
                 Writer.Write("vertex");
                 break;
             case BuiltinAttribute b:
+                Writer.Write("@");
                 Writer.Write("builtin(");
                 Writer.Write(Enum.GetName(b.Slot));
                 Writer.Write(")");
                 break;
             case LocationAttribute a:
+                Writer.Write("@");
                 Writer.Write("location(");
                 Writer.Write(a.Binding);
                 Writer.Write(")");

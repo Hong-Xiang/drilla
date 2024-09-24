@@ -29,7 +29,9 @@ public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, IAttribut
 public sealed class VertexAttribute() : Attribute, IShaderStageAttribute { }
 public sealed class FragmentAttribute() : Attribute, IShaderStageAttribute { }
 public sealed class ComputeAttribute() : Attribute, IShaderStageAttribute { }
-
+public sealed class ShaderMethodAttribute() : Attribute, IShaderStageAttribute
+{
+}
 interface IShaderStageAttribute : IAttribute { }
 
 public sealed class LocationAttribute(int Binding) : Attribute, IAttribute
@@ -69,10 +71,6 @@ public interface IReflection
 {
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
     public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ILSL.IR.Module module);
-}
-
-public sealed class ShaderMethodAttribute() : Attribute
-{
 }
 
 public interface ISampler

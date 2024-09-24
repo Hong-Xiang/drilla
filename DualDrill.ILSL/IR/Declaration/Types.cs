@@ -141,6 +141,56 @@ public readonly struct FloatType<TBitWidth> : IFloatType, IBuiltinType<FloatType
         new FunctionReturn(new FloatType<TBitWidth>(), []),
         []
     );
+    public readonly static FunctionDeclaration Max = new FunctionDeclaration(
+        "max",
+        [
+            new ParameterDeclaration("value1", new FloatType<TBitWidth>(), []),
+            new ParameterDeclaration("value2", new FloatType<TBitWidth>(), [])
+        ],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+    public readonly static FunctionDeclaration Min = new FunctionDeclaration(
+        "min",
+        [
+            new ParameterDeclaration("value1", new FloatType<TBitWidth>(), []),
+            new ParameterDeclaration("value2", new FloatType<TBitWidth>(), [])
+        ],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+    public readonly static FunctionDeclaration Abs = new FunctionDeclaration(
+        "abs",
+        [
+            new ParameterDeclaration("value", new FloatType<TBitWidth>(), [])
+        ],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+    public readonly static FunctionDeclaration Floor = new FunctionDeclaration(
+        "floor",
+        [
+            new ParameterDeclaration("value", new FloatType<TBitWidth>(), [])
+        ],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+    public readonly static FunctionDeclaration Exp = new FunctionDeclaration(
+        "exp",
+        [
+            new ParameterDeclaration("value", new FloatType<TBitWidth>(), [])
+        ],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
+    public readonly static FunctionDeclaration Sign = new FunctionDeclaration(
+        "sign",
+        [
+            new ParameterDeclaration("value", new FloatType<TBitWidth>(), [])
+        ],
+        new FunctionReturn(new FloatType<TBitWidth>(), []),
+        []
+    );
 }
 
 
@@ -207,6 +257,34 @@ public readonly record struct VecType<TSize, TElement>() : IBuiltinType<VecType<
                                 new ParameterDeclaration("e2", new VecType<TSize, TElement>(), [])],
                                 new FunctionReturn(new TElement(), []),
                                 []);
+    public static readonly FunctionDeclaration Length =
+    new FunctionDeclaration("length",
+                            [],
+                            new FunctionReturn(new TElement(), []),
+                            []);
+    public static readonly FunctionDeclaration Abs =
+    new FunctionDeclaration("abs",
+                            [new ParameterDeclaration("e", new VecType<TSize, TElement>(), [])],
+                            new FunctionReturn(new VecType<TSize, TElement>(), []),
+                            []);
+
+    public static readonly FunctionDeclaration Normalize =
+    new FunctionDeclaration("normalize",
+                        [new ParameterDeclaration("e", new VecType<TSize, TElement>(), [])],
+                        new FunctionReturn(new VecType<TSize, TElement>(), []),
+                        []);
+    public static readonly FunctionDeclaration Reflect =
+    new FunctionDeclaration("reflect",
+                    [new ParameterDeclaration("a", new VecType<TSize, TElement>(), []),
+                    new ParameterDeclaration("norm", new VecType<TSize, TElement>(), [])],
+                    new FunctionReturn(new VecType<TSize, TElement>(), []),
+                    []);
+    public static readonly FunctionDeclaration Cross =
+    new FunctionDeclaration("cross",
+                [new ParameterDeclaration("a", new VecType<TSize, TElement>(), []),
+                    new ParameterDeclaration("b", new VecType<TSize, TElement>(), [])],
+                new FunctionReturn(new VecType<TSize, TElement>(), []),
+                []);
     public int ByteSize => TSize.Value * new TElement().ByteSize;
 }
 
