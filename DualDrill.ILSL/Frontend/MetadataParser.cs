@@ -92,6 +92,7 @@ public sealed class MetadataParser()
         return [
             ..m.GetCustomAttributes<VertexAttribute>(),
             ..m.GetCustomAttributes<FragmentAttribute>(),
+            ..m.GetCustomAttributes<ShaderMethodAttribute>(),
         ];
     }
 

@@ -27,7 +27,6 @@
   },
   "devDependencies": {
     "@microsoft/dotnet-js-interop": "^8.0.0",
-    "@types/node": "^20.11.1",
     "@types/react": "^18.2.71",
     "@types/react-dom": "^18.2.22",
     "@types/three": "^0.164.0",
