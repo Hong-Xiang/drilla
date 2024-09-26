@@ -77,6 +77,11 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             var reflection = new ReflectionTestShaderReflection();
             return Ok(reflection.GetVertexBufferLayout());
         }
+        else if(name == nameof(SampleFragmentShader))
+        {
+            var reflection = new SampleFragmentShaderReflection();
+            return Ok(reflection.GetVertexBufferLayout());
+        }
         return NotFound();
     }
 
@@ -98,6 +103,40 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             var parser = new MetadataParser();
             var module = parser.ParseModule(shaderModule);
             var reflection = new QuadShaderReflection();
+            return Ok(reflection.GetBindGroupLayoutDescriptor(module));
+        }
+        else if (name == nameof(SampleFragmentShader))
+        {
+            var shaderModule = new SampleFragmentShader();
+            var type = shaderModule.GetType();
+            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            {
+                HotReloadAssemblies = [
+                    type.Assembly,
+            typeof(ILSLCompiler).Assembly
+                ]
+            });
+
+            var parser = new MetadataParser();
+            var module = parser.ParseModule(shaderModule);
+            var reflection = new SampleFragmentShaderReflection();
+            return Ok(reflection.GetBindGroupLayoutDescriptor(module));
+        }
+        else if (name == nameof(SampleFragmentShader))
+        {
+            var shaderModule = new SampleFragmentShader();
+            var type = shaderModule.GetType();
+            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            {
+                HotReloadAssemblies = [
+                    type.Assembly,
+            typeof(ILSLCompiler).Assembly
+                ]
+            });
+
+            var parser = new MetadataParser();
+            var module = parser.ParseModule(shaderModule);
+            var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
         return NotFound();
@@ -122,6 +161,23 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             var parser = new MetadataParser();
             var module = parser.ParseModule(shaderModule);
             var reflection = new QuadShaderReflection();
+            return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
+        }
+        else if (name == nameof(SampleFragmentShader))
+        {
+            var shaderModule = new SampleFragmentShader();
+            var type = shaderModule.GetType();
+            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            {
+                HotReloadAssemblies = [
+                   type.Assembly,
+               typeof(ILSLCompiler).Assembly
+                ]
+            });
+
+            var parser = new MetadataParser();
+            var module = parser.ParseModule(shaderModule);
+            var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
         return NotFound();
