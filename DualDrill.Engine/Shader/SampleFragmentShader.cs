@@ -97,24 +97,38 @@ public static class SampleFragmentShaderModule
 }
 
 
+public class SampleFragmentShaderReflection : IReflection
+{
+    private IShaderModuleReflection _shaderModuleReflection;
+    public SampleFragmentShaderReflection()
+    {
+        _shaderModuleReflection = new ShaderModuleReflection();
+    }
+
+    public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout()
+    {
+        var vertexBufferLayoutBuilder = _shaderModuleReflection.GetVertexBufferLayoutBuilder<SampleFragmentShader.VertexInput>();
+        return vertexBufferLayoutBuilder.Build();
+    }
+
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ILSL.IR.Module module)
+    {
+        return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
+    }
+
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(ILSL.IR.Module module)
+    {
+        return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
+    }
+}
 
 
 public struct SampleFragmentShader : IShaderModule
 {
-
-    //string IILSLDevelopShaderModule.ILSLWGSLExpectedCode => """
-    //  @vertex fn vs(@builtin(vertex_index) vertex_index : u32) 
-    //    -> @builtin(position) vec4f 
-    //  {
-    //    let x = f32(1 - i32(vertex_index)) * 0.5;
-    //    let y = f32(i32(vertex_index & 1u) * 2 - 1) * 0.5;
-    //    return vec4f(x, y, 0.0, 1.0);
-    //  }
-
-    //  @fragment fn fs() -> @location(0) vec4f {
-    //    return vec4f(0.5, 1.0, 0.5, 1.0);
-    //  }
-    //  """;
+    public struct VertexInput
+    {
+        [Location(0)] public Vector2 position;
+    }
 
     [Uniform]
     [Group(0)]
@@ -123,40 +137,14 @@ public struct SampleFragmentShader : IShaderModule
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    static Vector4 vs(
-        [Builtin(BuiltinBinding.vertex_index)] uint v
-    )
+    Vector4 vs(VertexInput vertex)
     {
-        var x = 0.0f;
-        var y = 0.0f;
-        uint v0 = 0u;
-        uint v1 = 1u;
-        uint v2 = 2u;
-        uint v3 = 3u;
-        uint v4 = 4u;
-        uint v5 = 5u;
-        if (v == v0 || v == v2 || v == v3)
-        {
-            x = -1.0f;
-        }
-        else
-        {
-            x = 1.0f;
-        }
-        if (v == v0 || v == v1 || v == v4)
-        {
-            y = -1.0f;
-        }
-        else
-        {
-            y = 1.0f;
-        }
-        return new Vector4(x, y, 0.0f, 1.0f);
+        return new Vector4(vertex.position.X, vertex.position.Y, 0.0f, 1.0f);
     }
 
     [Fragment]
     [return: Location(0)]
-     Vector4 fs([Builtin(BuiltinBinding.position)] Vector4 fragCoord)
+    Vector4 fs([Builtin(BuiltinBinding.position)] Vector4 fragCoord)
     {
         // Courtesy https://www.shadertoy.com/view/lsX3W4
         //float iTime = 0.0f;
@@ -200,5 +188,4 @@ public struct SampleFragmentShader : IShaderModule
         Vector3 col = new Vector3(d_clamped);
         return new Vector4(col, 1.0f);
     }
-
 }

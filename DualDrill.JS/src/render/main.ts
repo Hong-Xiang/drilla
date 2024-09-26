@@ -68,7 +68,7 @@ export async function BatchRenderMain() {
   //   : "SampleFragmentShader";
   //const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
 
-  const demoShaderName = "QuadShader";
+  const demoShaderName = "SampleFragmentShader";
   const meshName = "ScreenQuad";
   const vertexBufferLayoutJson = await (await fetch(`/ilsl/wgsl/vertexbufferlayout/${demoShaderName}`)).text();
   const vertexBufferLayout = JSON.parse(vertexBufferLayoutJson);
@@ -348,7 +348,7 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
     size: resolutionBufferSize,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const resolution = new Float32Array([800, 600]);
+  const resolution = new Float32Array([1920, 1080]);
   device.queue.writeBuffer(resolutionBuffer, 0, resolution);
 
   // Uniform Buffer to pass time
@@ -416,7 +416,7 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
   const bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDescriptor);
   const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: resolutionBuffer } }, { binding: 1, resource: { buffer: timeBuffer } }]
+    entries: [{ binding: 0, resource: { buffer: timeBuffer } }]
   })
 
   const pipelineLayout = device.createPipelineLayout({
