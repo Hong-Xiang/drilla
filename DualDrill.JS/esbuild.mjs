@@ -15,6 +15,7 @@ const plugins = [{
 const buildOptions = {
     entryPoints: {
         client: "src/client.ts",
+        codegen: "src/codegen.ts",
         "editor.worker": "monaco-editor/esm/vs/editor/editor.worker.js",
         "ts.worker": "monaco-editor/esm/vs/language/typescript/ts.worker.js",
         "json.worker": "monaco-editor/esm/vs/language/json/json.worker.js",
