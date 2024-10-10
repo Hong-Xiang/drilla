@@ -38,22 +38,22 @@ public sealed record class BType() : IDMathScalarType
 }
 public sealed record class FType(FloatBitWidth BitWidth) : IDMathScalarType
 {
-    public string Name => $"f{BitWidth}";
+    public string Name => $"f{(int)BitWidth}";
 }
 public sealed record class CType(FloatBitWidth BitWidth) : IDMathScalarType
 {
-    public string Name => $"c{BitWidth}";
+    public string Name => $"c{(int)BitWidth}";
 }
 public sealed record class QType(FloatBitWidth BitWidth) : IDMathScalarType
 {
-    public string Name => $"q{BitWidth}";
+    public string Name => $"q{(int)BitWidth}";
 }
 
 public sealed record class IType(IntegerBitWidth BitWidth) : IDMathScalarType
 {
-    public string Name => $"i{BitWidth}";
+    public string Name => $"i{(int)BitWidth}";
 }
 public sealed record class UType(IntegerBitWidth BitWidth) : IDMathScalarType
 {
-    public string Name => $"u{BitWidth}";
+    public string Name => $"u{(int)BitWidth}";
 }

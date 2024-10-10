@@ -4,7 +4,11 @@ namespace DualDrill.ApiGen.DMath;
 
 public sealed record class DMathVectorType(IDMathScalarType ScalarType, Rank Size) : IDMathType
 {
-    public string Name => $"vec{Size}{ScalarType.Name}";
+    public string Name => ScalarType switch
+    {
+        BType _ => $"vec{(int)Size}b",
+        _ => $"vec{(int)Size}{ScalarType.Name}"
+    };
 
     public ImmutableArray<string> Components => Size switch
     {
