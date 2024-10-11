@@ -1,5 +1,6 @@
 ﻿using DualDrill.ApiGen;
 using DualDrill.ApiGen.CodeGen;
+using DualDrill.ApiGen.DMath;
 using DualDrill.ApiGen.DrillGpu;
 using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.WebIDL;
@@ -16,6 +17,12 @@ public class ApiGenController(
     HttpClient HttpClient
 ) : ControllerBase
 {
+    [HttpGet("math")]
+    public string GenerateMathCode()
+    {
+        var codeGen = new DMathCodeGen();
+        return codeGen.Generate();
+    }
     [HttpGet("webgpu/webidl")]
     public async Task<IActionResult> GetWebGPUWebIDLSpecAsync(CancellationToken cancellation)
         => Ok(await GetWebGPUIDLSpecAsync(cancellation));

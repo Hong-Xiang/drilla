@@ -7,6 +7,9 @@ namespace DualDrill.ApiGen.DMath;
 
 public sealed class DMathCodeGen
 {
+    public static readonly string NameSpace = "DualDrill.Mathematics";
+    public static readonly string StaticMathTypeName = "DMath";
+
     ImmutableArray<IDMathScalarType> ScalarType { get; }
 
     ImmutableArray<DMathVectorType> VecTypes { get; }
@@ -39,24 +42,35 @@ public sealed class DMathCodeGen
                     select new DMathMatType(t, r, c)).ToImmutableArray();
     }
 
+    CodeTypeDeclaration StaticMathClassDecl()
+    {
+        return new CodeTypeDeclaration(StaticMathTypeName)
+        {
+            IsPartial = true,
+            IsClass = true,
+        };
+    }
+
     public string Generate()
     {
         var compileUnit = new CodeCompileUnit();
-
-        var ns = new CodeNamespace("DualDrill.Mathematics");
+        var ns = new CodeNamespace(NameSpace);
         compileUnit.Namespaces.Add(ns);
-        ns.Imports.Add(new("System"));
+        var math = StaticMathClassDecl();
 
+        var vecGenertor = new VecCodeGenerator(VecFeatures.StructDeclaration | VecFeatures.Constructor, ns, math);
 
         foreach (var t in VecTypes)
         {
-            ns.Types.Add(GenerateVecDecl(t));
+            vecGenertor.Generate(compileUnit, t);
+            //ns.Types.Add(GenerateVecDecl(t));
         }
         //foreach (var m in MatTypes)
         //{
         //    ns.Types.Add(GenerateMatDecl(m));
         //}
 
+        ns.Types.Add(math);
 
         var provider = CodeDomProvider.CreateProvider("CSharp");
         var sw = new StringWriter();
