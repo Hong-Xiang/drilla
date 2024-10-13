@@ -1,42 +1,19 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.CodeDom;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace DualDrill.ApiGen.DMath;
 
-[Flags]
-public enum VecFeatures
+public sealed record class VecCodeGenerator(DMathVectorType VecType, CodeNamespace Namespace, CodeTypeDeclaration DMath)
 {
-    StructDeclaration = 1,
-    Swizzle = 2,
-    Constructor = 4,
-    ImplicitOperators = 8,
-    ArithmeticOperators = 16,
-}
-
-public sealed record class VecCodeGenerator(VecFeatures Features, CodeNamespace Namespace, CodeTypeDeclaration DMath)
-{
-    public void Generate(CodeCompileUnit compileUnit, DMathVectorType vecType)
-    {
-        if (Features.HasFlag(VecFeatures.StructDeclaration))
-        {
-            Namespace.Types.Add(GenerateVecDecl(vecType));
-        }
-        if (Features.HasFlag(VecFeatures.Constructor))
-        {
-            GenerateConstructors(vecType);
-        }
-    }
-
     CodeAttributeDeclaration aggressiveInliningAttribute = new CodeAttributeDeclaration(
       new CodeTypeReference(typeof(MethodImplAttribute)),
       new CodeAttributeArgument(new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(MethodImplOptions)), "AggressiveInlining"))
     );
+
 
 
     CodeMemberMethod GeneratePrimaryConstructor(DMathVectorType vecType)
@@ -100,23 +77,23 @@ public sealed record class VecCodeGenerator(VecFeatures Features, CodeNamespace 
     }
 
 
-    void GenerateConstructors(DMathVectorType vecType)
+    public IEnumerable<CodeMemberMethod> GenerateConstructors()
     {
-        DMath.Members.Add(GeneratePrimaryConstructor(vecType));
-        DMath.Members.Add(GenerateBroadcastConstructor(vecType));
-        if (vecType.Size == Rank._3)
+        yield return GeneratePrimaryConstructor(VecType);
+        yield return GenerateBroadcastConstructor(VecType);
+        if (VecType.Size == Rank._3)
         {
-            DMath.Members.Add(GenerateVecParameterConstroctor(vecType, 1, 2));
-            DMath.Members.Add(GenerateVecParameterConstroctor(vecType, 2, 1));
+            yield return GenerateVecParameterConstroctor(VecType, 1, 2);
+            yield return GenerateVecParameterConstroctor(VecType, 2, 1);
         }
-        if (vecType.Size == Rank._4)
+        if (VecType.Size == Rank._4)
         {
-            DMath.Members.Add(GenerateVecParameterConstroctor(vecType, 2, 1, 1));
-            DMath.Members.Add(GenerateVecParameterConstroctor(vecType, 1, 2, 1));
-            DMath.Members.Add(GenerateVecParameterConstroctor(vecType, 1, 1, 2));
-            DMath.Members.Add(GenerateVecParameterConstroctor(vecType, 2, 2));
-            DMath.Members.Add(GenerateVecParameterConstroctor(vecType, 1, 3));
-            DMath.Members.Add(GenerateVecParameterConstroctor(vecType, 3, 1));
+            yield return GenerateVecParameterConstroctor(VecType, 2, 1, 1);
+            yield return GenerateVecParameterConstroctor(VecType, 1, 2, 1);
+            yield return GenerateVecParameterConstroctor(VecType, 1, 1, 2);
+            yield return GenerateVecParameterConstroctor(VecType, 2, 2);
+            yield return GenerateVecParameterConstroctor(VecType, 1, 3);
+            yield return GenerateVecParameterConstroctor(VecType, 3, 1);
         }
     }
 
@@ -158,7 +135,7 @@ public sealed record class VecCodeGenerator(VecFeatures Features, CodeNamespace 
             }
             else
             {
-                foreach(var m in ((Rank)s).Components())
+                foreach (var m in ((Rank)s).Components())
                 {
                     exprs.Add(new CodeFieldReferenceExpression(new CodeVariableReferenceExpression(pname), m));
                 }
@@ -175,33 +152,31 @@ public sealed record class VecCodeGenerator(VecFeatures Features, CodeNamespace 
         return method;
 
     }
-
-    CodeTypeDeclaration GenerateVecDecl(DMathVectorType t)
+    public StructDeclarationSyntax GenerateDeclaration()
     {
-        var result = new CodeTypeDeclaration(t.Name)
+        var result = StructDeclaration(VecType.CSharpName()).AddModifiers(
+            Token(SyntaxKind.PartialKeyword),
+            Token(SyntaxKind.PublicKeyword)
+        );
+        foreach (var m in VecType.Components)
         {
-            IsStruct = true,
-            TypeAttributes = System.Reflection.TypeAttributes.Public,
-            IsPartial = true,
-        };
-        result.CustomAttributes.Add(
-            new CodeAttributeDeclaration(
-                new CodeTypeReference(typeof(StructLayoutAttribute)),
-                new CodeAttributeArgument(
-                    new CodePropertyReferenceExpression(
-                        new CodeTypeReferenceExpression(typeof(LayoutKind)),
-                        nameof(LayoutKind.Sequential)))
-                ));
-        foreach (var m in t.Components)
-        {
-            var member = new CodeMemberField()
-            {
-                Name = m,
-                Type = new CodeTypeReference(t.ScalarType.MappedPrimitiveCSharpType()),
-                Attributes = MemberAttributes.Public,
-            };
-            result.Members.Add(member);
+            var member = FieldDeclaration(
+                VariableDeclaration(
+                    ParseTypeName(VecType.ScalarType.MappedPrimitiveCSharpType().FullName)
+                ).AddVariables(VariableDeclarator(m))
+            ).AddModifiers(Token(SyntaxKind.PublicKeyword));
+            //{
+            //    Name = m,
+            //    Type = new CodeTypeReference(VecType.ScalarType.MappedPrimitiveCSharpType()),
+            //    Attributes = MemberAttributes.Public,
+            //};
+            result = result.AddMembers(member);
         }
+
+
+        result = result.WithAttributeLists(
+             SingletonList(
+                AttributeList(SingletonSeparatedList(DMathCodeGen.StructLayoutAttribute))));
         return result;
     }
 

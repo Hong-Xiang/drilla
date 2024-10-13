@@ -1,14 +1,48 @@
-﻿using DualDrill.ApiGen.DrillLang.Types;
+﻿using DotNext;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Formatting;
 using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 namespace DualDrill.ApiGen.DMath;
+
+
+[Flags]
+public enum CodeGenFeatures
+{
+    StructDeclaration = 1 << 0,
+    Swizzle = 1 << 1,
+    Constructor = 1 << 2,
+    Operators = 1 << 4,
+}
 
 public sealed class DMathCodeGen
 {
     public static readonly string NameSpace = "DualDrill.Mathematics";
     public static readonly string StaticMathTypeName = "DMath";
+
+    public static readonly AttributeSyntax StructLayoutAttribute =
+         //{
+         //SyntaxFactory.Attribute(
+         //    SyntaxFactory.IdentifierName("StructLayout"))
+         //    .WithArgumentList(
+         //        SyntaxFactory.AttributeArgumentList(
+         //            SyntaxFactory.SingletonSeparatedList(
+         //                SyntaxFactory.AttributeArgument(
+         //                    SyntaxFactory.MemberAccessExpression(
+         //                                           SyntaxKind.SimpleMemberAccessExpression,
+         //                                           IdentifierName("LayoutKind"),
+         //                                           IdentifierName("Sequential"))))))))),
+         SyntaxFactory.Attribute(
+            SyntaxFactory.ParseName(typeof(StructLayoutAttribute).FullName),
+            SyntaxFactory.ParseAttributeArgumentList($"({typeof(LayoutKind).FullName}.Sequential)"));
+    //}
 
     ImmutableArray<IDMathScalarType> ScalarType { get; }
 
@@ -16,6 +50,11 @@ public sealed class DMathCodeGen
     ImmutableArray<DMathMatType> MatTypes { get; }
 
     ImmutableArray<Rank> Ranks { get; } = [Rank._2, Rank._3, Rank._4];
+
+    DMathVectorType GetVecType(IDMathScalarType scalarType, Rank size)
+    {
+        throw new NotImplementedException();
+    }
 
     public DMathCodeGen()
     {
@@ -53,22 +92,54 @@ public sealed class DMathCodeGen
 
     public string Generate()
     {
+        var cu = SyntaxFactory.CompilationUnit();
+        var compileUnit = new CodeCompileUnit();
+        var nsr = SyntaxFactory.NamespaceDeclaration(SyntaxFactory.ParseName(NameSpace));
+        var ns = new CodeNamespace(NameSpace);
+        compileUnit.Namespaces.Add(ns);
+        var math = StaticMathClassDecl();
+
+
+        foreach (var t in VecTypes)
+        {
+            var vecGenertor = new VecCodeGenerator(t, ns, math);
+            //ns.Types.Add(vecGenertor.GenerateDeclaration());
+            //foreach (var m in vecGenertor.GenerateConstructors())
+            //{
+            //    math.Members.Add(m);
+            //}
+            //ns.Types.Add(GenerateVecDecl(t));
+            nsr = nsr.AddMembers(vecGenertor.GenerateDeclaration());
+        }
+        cu = cu.AddMembers(nsr);
+        var formattedCode = Formatter.Format(cu.NormalizeWhitespace(), new AdhocWorkspace()).ToFullString();
+        return formattedCode;
+    }
+
+    public string Generate2()
+    {
+
         var compileUnit = new CodeCompileUnit();
         var ns = new CodeNamespace(NameSpace);
         compileUnit.Namespaces.Add(ns);
         var math = StaticMathClassDecl();
 
-        var vecGenertor = new VecCodeGenerator(VecFeatures.StructDeclaration | VecFeatures.Constructor, ns, math);
 
         foreach (var t in VecTypes)
         {
-            vecGenertor.Generate(compileUnit, t);
+            var vecGenertor = new VecCodeGenerator(t, ns, math);
+            //ns.Types.Add(vecGenertor.GenerateDeclaration());
+            foreach (var m in vecGenertor.GenerateConstructors())
+            {
+                math.Members.Add(m);
+            }
             //ns.Types.Add(GenerateVecDecl(t));
         }
-        //foreach (var m in MatTypes)
-        //{
-        //    ns.Types.Add(GenerateMatDecl(m));
-        //}
+        foreach (var m in MatTypes)
+        {
+            var g = new MatCodeGenerator(m);
+            ns.Types.Add(g.GenerateDeclaration());
+        }
 
         ns.Types.Add(math);
 

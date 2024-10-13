@@ -17,6 +17,21 @@ internal static class DMathCodeGenExtension
         _ => throw new InvalidEnumArgumentException(nameof(rank), (int)rank, typeof(Rank))
     };
 
+    public static int Value(this Rank rank) => (int)rank;
+
+    public static string CSharpName(this DMathMatType matType) => matType.ScalarType switch
+    {
+        BType _ => $"mat{(int)matType.Rows}x{(int)matType.Columns}b",
+        _ => $"mat{(int)matType.Rows}x{(int)matType.Columns}{matType.ScalarType.Name}"
+    };
+
+
+    public static string CSharpName(this DMathVectorType vecType) => vecType.ScalarType switch
+    {
+        BType _ => $"vec{(int)vecType.Size}b",
+        _ => $"vec{(int)vecType.Size}{vecType.ScalarType.Name}"
+    };
+
     public static Type MappedPrimitiveCSharpType(this IDMathType t)
     {
         return t switch
