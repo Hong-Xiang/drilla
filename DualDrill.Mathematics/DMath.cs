@@ -1,5 +1,5 @@
 ﻿namespace DualDrill.Mathematics;
 
-public static class DMath
+public static partial class DMath
 {
 }

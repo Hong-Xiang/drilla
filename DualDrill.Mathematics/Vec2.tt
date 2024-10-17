@@ -67,6 +67,30 @@ public partial struct <#= name #><#= bw #> {
 			Data =  <#= dataTypeName #>.Create(Data[0], value);
 		}
 	}
+
+<# foreach((_, var c0) in cis.Take(rank)) { #>
+<# foreach((_, var c1) in cis.Take(rank)) { #>
+<# foreach((_, var c2) in cis.Take(rank)) { #>
+	public vec3<#= n #><#= bw #> <#= c0 #><#= c1 #><#= c2 #> {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => vec3(<#= c0 #>, <#= c1 #>, <#= c2 #>);
+	}
+<# } #>
+<# } #>
+<# } #>
+
+<# foreach((_, var c0) in cis.Take(rank)) { #>
+<# foreach((_, var c1) in cis.Take(rank)) { #>
+<# foreach((_, var c2) in cis.Take(rank)) { #>
+<# foreach((_, var c3) in cis.Take(rank)) { #>
+	public vec4<#= n #><#= bw #> <#= c0 #><#= c1 #><#= c2 #><#= c3 #> {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => vec4(<#= c0 #>, <#= c1 #>, <#= c2 #>, <#= c3 #>);
+	}
+<# } #>
+<# } #>
+<# } #>
+<# } #>
 } 
 
 public partial class DMath {

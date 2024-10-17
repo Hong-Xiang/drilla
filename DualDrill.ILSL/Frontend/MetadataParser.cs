@@ -1,6 +1,7 @@
 ﻿using DotNext.Reflection;
 using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
+using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
@@ -27,6 +28,9 @@ public sealed class MetadataParser()
         [typeof(Vector4)] = new VecType<R4, FloatType<B32>>(),
         [typeof(Vector3)] = new VecType<R3, FloatType<B32>>(),
         [typeof(Vector2)] = new VecType<R2, FloatType<B32>>(),
+        [typeof(vec4f32)] = new VecType<R4, FloatType<B32>>(),
+        [typeof(vec3f32)] = new VecType<R3, FloatType<B32>>(),
+        [typeof(vec2f32)] = new VecType<R2, FloatType<B32>>(),
     }.ToFrozenDictionary();
 
 

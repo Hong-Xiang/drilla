@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Vec3 - Copy.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="DMath.gen.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -16,6 +20,11 @@
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Vec2.tt</DependentUpon>
+    </None>
+    <None Include="Vec4.cs">
+      <DependentUpon>Vec4.tt</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
     </None>
     <None Include="Vec3.cs">
       <DesignTime>True</DesignTime>
@@ -37,6 +46,10 @@
     <None Update="Vec2.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Vec2.cs</LastGenOutput>
+    </None>
+    <None Update="Vec4.tt">
+      <LastGenOutput>Vec4.cs</LastGenOutput>
+      <Generator>TextTemplatingFileGenerator</Generator>
     </None>
     <None Update="Vec3.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -72,6 +85,11 @@
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Vec3.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Vec4.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Vec4.tt</DependentUpon>
     </Compile>
   </ItemGroup>
 
