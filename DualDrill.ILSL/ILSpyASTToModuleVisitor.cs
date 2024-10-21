@@ -1,4 +1,5 @@
-﻿using DualDrill.ILSL.IR;
+﻿using DualDrill.Common.Nat;
+using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
@@ -498,77 +499,77 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             {
                 case "global::System.Numerics.Vector2.Dot":
                     return new FunctionCallExpression(
-                        VecType<R2, FloatType<B32>>.Dot,
+                        VecType<N2, FloatType<B32>>.Dot,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Dot":
                     return new FunctionCallExpression(
-                        VecType<R3, FloatType<B32>>.Dot,
+                        VecType<N3, FloatType<B32>>.Dot,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Dot":
                     return new FunctionCallExpression(
-                        VecType<R4, FloatType<B32>>.Dot,
+                        VecType<N4, FloatType<B32>>.Dot,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector2.Length":
                     return new FunctionCallExpression(
-                        VecType<R2, FloatType<B32>>.Length,
+                        VecType<N2, FloatType<B32>>.Length,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Length":
                     return new FunctionCallExpression(
-                        VecType<R3, FloatType<B32>>.Length,
+                        VecType<N3, FloatType<B32>>.Length,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Length":
                     return new FunctionCallExpression(
-                        VecType<R4, FloatType<B32>>.Length,
+                        VecType<N4, FloatType<B32>>.Length,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector2.Abs":
                     return new FunctionCallExpression(
-                        VecType<R2, FloatType<B32>>.Abs,
+                        VecType<N2, FloatType<B32>>.Abs,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Abs":
                     return new FunctionCallExpression(
-                        VecType<R3, FloatType<B32>>.Abs,
+                        VecType<N3, FloatType<B32>>.Abs,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Abs":
                     return new FunctionCallExpression(
-                        VecType<R4, FloatType<B32>>.Abs,
+                        VecType<N4, FloatType<B32>>.Abs,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector2.Reflect":
                     return new FunctionCallExpression(
-                        VecType<R2, FloatType<B32>>.Reflect,
+                        VecType<N2, FloatType<B32>>.Reflect,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Reflect":
                     return new FunctionCallExpression(
-                        VecType<R3, FloatType<B32>>.Reflect,
+                        VecType<N3, FloatType<B32>>.Reflect,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Reflect":
                     return new FunctionCallExpression(
-                        VecType<R4, FloatType<B32>>.Reflect,
+                        VecType<N4, FloatType<B32>>.Reflect,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector2.Cross":
                     return new FunctionCallExpression(
-                        VecType<R2, FloatType<B32>>.Cross,
+                        VecType<N2, FloatType<B32>>.Cross,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Cross":
                     return new FunctionCallExpression(
-                        VecType<R3, FloatType<B32>>.Cross,
+                        VecType<N3, FloatType<B32>>.Cross,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Cross":
                     return new FunctionCallExpression(
-                        VecType<R4, FloatType<B32>>.Cross,
+                        VecType<N4, FloatType<B32>>.Cross,
                         immutableArgs
                     );
                 case "global::System.Math.Cos":
@@ -703,9 +704,9 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var t = memberType.Annotation<TypeResolveResult>();
         return t.Type.FullName switch
         {
-            "System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
-            "System.Numerics.Vector3" => new VecType<R3, FloatType<B32>>(),
-            "System.Numerics.Vector2" => new VecType<R2, FloatType<B32>>(),
+            "System.Numerics.Vector4" => new VecType<N4, FloatType<B32>>(),
+            "System.Numerics.Vector3" => new VecType<N3, FloatType<B32>>(),
+            "System.Numerics.Vector2" => new VecType<N2, FloatType<B32>>(),
             //"System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
             //_ => throw new NotSupportedException($"{nameof(VisitMemberType)} not support {memberType}")
             _ => new StructureDeclaration(t.Type.Name, [], []),

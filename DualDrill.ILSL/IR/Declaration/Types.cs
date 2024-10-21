@@ -1,27 +1,28 @@
-﻿using System.Collections.Immutable;
+﻿using DualDrill.Common.Nat;
+using System.Collections.Immutable;
 
 namespace DualDrill.ILSL.IR.Declaration;
-public interface IRank
-{
-    abstract static IEnumerable<T> Select<T>(Func<int, T> f);
-    abstract static int Value { get; }
-}
-public readonly struct R2 : IRank
-{
-    public static int Value => 2;
+//public interface IRank
+//{
+//    abstract static IEnumerable<T> Select<T>(Func<int, T> f);
+//    abstract static int Value { get; }
+//}
+//public readonly struct R2 : IRank
+//{
+//    public static int Value => 2;
 
-    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1)];
-}
-public readonly struct R3 : IRank
-{
-    public static int Value => 3;
-    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1), f(2)];
-}
-public readonly struct R4 : IRank
-{
-    public static int Value => 4;
-    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1), f(2), f(3)];
-}
+//    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1)];
+//}
+//public readonly struct R3 : IRank
+//{
+//    public static int Value => 3;
+//    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1), f(2)];
+//}
+//public readonly struct R4 : IRank
+//{
+//    public static int Value => 4;
+//    public static IEnumerable<T> Select<T>(Func<int, T> f) => [f(0), f(1), f(2), f(3)];
+//}
 
 public interface IBitWidth
 {
@@ -226,11 +227,25 @@ public readonly record struct UIntType<TBitWidth>() : IIntegerType, IBuiltinType
     public int ByteSize => TBitWidth.Value / 8;
 }
 
-public readonly record struct VecType<TSize, TElement>() : IBuiltinType<VecType<TSize, TElement>>
-    , IStorableType
-    where TSize : IRank
+public interface IVecType : IStorableType
+{
+    public IRank Size { get; }
+    public IScalarType ElementType { get; }
+}
+
+public interface IVecType<TSelf> : IVecType
+{
+    abstract static TSelf Instance { get; }
+}
+
+public sealed class VecType<TSize, TElement>() : IBuiltinType<VecType<TSize, TElement>>
+    , IVecType<VecType<TSize, TElement>>
+    where TSize : IRank<TSize>
     where TElement : IScalarType, new()
 {
+    public static VecType<TSize, TElement> Instance { get; } = new();
+    public IRank Size => TSize.Instance;
+
     static readonly ImmutableArray<string> ParameterNames = ["x", "y", "z", "w"];
 
     public static readonly ImmutableArray<FunctionDeclaration> Constructors =
@@ -241,7 +256,7 @@ public readonly record struct VecType<TSize, TElement>() : IBuiltinType<VecType<
                 new FunctionReturn(new VecType<TSize, TElement>(), []),
                 []
           ),
-          ..TSize.Select(static count =>
+          ..Enumerable.Range(0, TSize.Value).Select(static count =>
             new FunctionDeclaration(
                 new VecType<TSize, TElement>().Name,
                 [.. Enumerable.Range(0, count + 1).Select(static i => new ParameterDeclaration(ParameterNames[i], TElement.Instance, []))],
@@ -286,12 +301,14 @@ public readonly record struct VecType<TSize, TElement>() : IBuiltinType<VecType<
                 new FunctionReturn(new VecType<TSize, TElement>(), []),
                 []);
     public int ByteSize => TSize.Value * new TElement().ByteSize;
+
+    public IScalarType ElementType => new TElement();
 }
 
 public readonly struct MatType<TRow, TCol, TElement>()
     : IBuiltinType<MatType<TRow, TCol, TElement>>, IStorableType
-    where TRow : IRank
-    where TCol : IRank
+    where TRow : IRank<TRow>
+    where TCol : IRank<TCol>
     where TElement : IScalarType, new()
 {
     public string Name => $"mat{TRow.Value}x{TCol.Value}<{new TElement().Name}>";

@@ -1,4 +1,5 @@
-﻿using DualDrill.ILSL.IR;
+﻿using DualDrill.Common.Nat;
+using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
@@ -51,12 +52,12 @@ public sealed class WGSLLanguage : ITargetLanguage
     }
 
     public string GetName<TSize, TElement>(VecType<TSize, TElement> type)
-        where TSize : IRank
+        where TSize : IRank<TSize>
         where TElement : IScalarType, new()
     {
         return type switch
         {
-            VecType<R4, FloatType<B32>> _ => $"vec4<f32>",
+            VecType<N4, FloatType<B32>> _ => $"vec4<f32>",
             _ => throw new NotSupportedException()
         };
     }

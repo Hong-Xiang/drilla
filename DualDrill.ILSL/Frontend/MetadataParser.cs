@@ -1,4 +1,5 @@
 ﻿using DotNext.Reflection;
+using DualDrill.Common.Nat;
 using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.Mathematics;
@@ -25,12 +26,12 @@ public sealed class MetadataParser()
         [typeof(Half)] = new FloatType<B16>(),
         [typeof(float)] = new FloatType<B32>(),
         [typeof(double)] = new FloatType<B64>(),
-        [typeof(Vector4)] = new VecType<R4, FloatType<B32>>(),
-        [typeof(Vector3)] = new VecType<R3, FloatType<B32>>(),
-        [typeof(Vector2)] = new VecType<R2, FloatType<B32>>(),
-        [typeof(vec4f32)] = new VecType<R4, FloatType<B32>>(),
-        [typeof(vec3f32)] = new VecType<R3, FloatType<B32>>(),
-        [typeof(vec2f32)] = new VecType<R2, FloatType<B32>>(),
+        [typeof(Vector4)] = new VecType<N4, FloatType<B32>>(),
+        [typeof(Vector3)] = new VecType<N3, FloatType<B32>>(),
+        [typeof(Vector2)] = new VecType<N2, FloatType<B32>>(),
+        [typeof(vec4f32)] = new VecType<N4, FloatType<B32>>(),
+        [typeof(vec3f32)] = new VecType<N3, FloatType<B32>>(),
+        [typeof(vec2f32)] = new VecType<N2, FloatType<B32>>(),
     }.ToFrozenDictionary();
 
 
@@ -40,7 +41,7 @@ public sealed class MetadataParser()
         {
             {
                 typeof(Vector4).GetConstructor(BindingFlags.Public | BindingFlags.Instance, [typeof(float), typeof(float), typeof(float), typeof(float)]),
-                VecType<R4, FloatType<B32>>.Constructors[4]
+                VecType<N4, FloatType<B32>>.Constructors[4]
             }
         };
 

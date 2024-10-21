@@ -14,6 +14,7 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 	  <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
+	  <ProjectReference Include="..\DualDrill.Mathematics\DualDrill.Mathematics.csproj" />
 	</ItemGroup>
 
 </Project>

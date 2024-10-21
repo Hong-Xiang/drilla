@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using DualDrill.Common.Nat;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Statement;
 
@@ -10,21 +11,21 @@ public static class SyntaxFactory
         where TElement : IScalarType, new()
     {
         Debug.Assert(arguments.Length <= 4);
-        var c = VecType<R4, TElement>.Constructors[arguments.Length];
+        var c = VecType<N4, TElement>.Constructors[arguments.Length];
         return Call(c, arguments);
     }
     public static IExpression vec3<TElement>(params IExpression[] arguments)
         where TElement : IScalarType, new()
     {
         Debug.Assert(arguments.Length <= 3);
-        var c = VecType<R3, TElement>.Constructors[arguments.Length];
+        var c = VecType<N3, TElement>.Constructors[arguments.Length];
         return Call(c, arguments);
     }
     public static IExpression vec2<TElement>(params IExpression[] arguments)
     where TElement : IScalarType, new()
     {
         Debug.Assert(arguments.Length <= 2);
-        var c = VecType<R2, TElement>.Constructors[arguments.Length];
+        var c = VecType<N2, TElement>.Constructors[arguments.Length];
         return Call(c, arguments);
     }
     public static IExpression f32(IExpression expr)

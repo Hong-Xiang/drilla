@@ -1,4 +1,5 @@
-﻿using DualDrill.Graphics;
+﻿using DualDrill.Common.Nat;
+using DualDrill.Graphics;
 using DualDrill.ILSL;
 using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
@@ -20,7 +21,7 @@ public static class SampleFragmentShaderModule
     {
         var vertex_index = new ParameterDeclaration("vertex_index", new UIntType<B32>(), [new BuiltinAttribute(BuiltinBinding.vertex_index)]);
         var fRet = new FunctionReturn(
-            new VecType<R4, FloatType<B32>>(),
+            new VecType<N4, FloatType<B32>>(),
             [new BuiltinAttribute(BuiltinBinding.position)]);
         var x = new VariableDeclaration(DeclarationScope.Function, "x", new FloatType<B32>(), []);
         var y = new VariableDeclaration(DeclarationScope.Function, "y", new FloatType<B32>(), []);
@@ -75,7 +76,7 @@ public static class SampleFragmentShaderModule
     private static FunctionDeclaration FS()
     {
         var fRet = new ILSL.IR.Declaration.FunctionReturn(
-            new VecType<R4, FloatType<B32>>(),
+            new VecType<N4, FloatType<B32>>(),
             [new LocationAttribute(0)]
         );
         return new FunctionDeclaration("fs",

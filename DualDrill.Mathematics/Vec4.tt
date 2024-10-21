@@ -86,6 +86,66 @@ public partial struct <#= name #><#= bw #> {
 			Data = <#= dataTypeName #>.Create(Data[0], Data[1], Data[2], value);
 		}
 	}
+
+	<# foreach((var i0, var c0) in cis.Take(rank)) { #>
+<# foreach((var i1, var c1) in cis.Take(rank)) { #>
+	public vec2<#= n #><#= bw #> <#= c0 #><#= c1 #> {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => vec2(<#= c0 #>, <#= c1 #>);
+
+<# if (i0 != i1) { 
+	    string[] comps = ["x", "y", "z", "w"];
+		comps[i0] = "value.x";
+		comps[i1] = "value.y";
+#>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		set {
+			Data = <#= dataTypeName #>.Create(<#= comps[0] #>, <#= comps[1] #>, <#= comps[2] #>, <#= comps[3] #>);
+		}
+<# } #>
+
+	}
+<# } #>
+<# } #>
+
+<# foreach((var i0, var c0) in cis.Take(rank)) { #>
+<# foreach((var i1, var c1) in cis.Take(rank)) { #>
+<# foreach((var i2, var c2) in cis.Take(rank)) { #>
+	public vec3<#= n #><#= bw #> <#= c0 #><#= c1 #><#= c2 #> {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => vec3(<#= c0 #>, <#= c1 #>, <#= c2 #>);
+
+<# if (i0 != i1 && i0 != i2 && i1 != i2) { 
+	    string[] comps = ["x", "y", "z", "w"];
+		comps[i0] = "value.x";
+		comps[i1] = "value.y";
+		comps[i2] = "value.z";
+#>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		set {
+			Data = <#= dataTypeName #>.Create(<#= comps[0] #>, <#= comps[1] #>, <#= comps[2] #>, <#= comps[3] #>);
+		}
+<# } #>
+      }
+
+<# } #>
+<# } #>
+<# } #>
+
+<# foreach((_, var c0) in cis.Take(rank)) { #>
+<# foreach((_, var c1) in cis.Take(rank)) { #>
+<# foreach((_, var c2) in cis.Take(rank)) { #>
+<# foreach((_, var c3) in cis.Take(rank)) { #>
+	public vec4<#= n #><#= bw #> <#= c0 #><#= c1 #><#= c2 #><#= c3 #> {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => vec4(<#= c0 #>, <#= c1 #>, <#= c2 #>, <#= c3 #>);
+	}
+<# } #>
+<# } #>
+<# } #>
+<# } #>
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static <#= stn #> operator -(<#= stn #> v) => new() { Data = - v.Data };
 

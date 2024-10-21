@@ -1,15 +1,11 @@
-﻿using DotNext;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
 using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
-using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
 namespace DualDrill.ApiGen.DMath;
 
 
