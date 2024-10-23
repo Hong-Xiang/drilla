@@ -11,11 +11,11 @@ public interface ITargetLanguage
     string GetName<TBitWidth>(FloatType<TBitWidth> type) where TBitWidth : IBitWidth;
     string GetName<TSize, TElement>(VecType<TSize, TElement> type)
         where TSize : IRank<TSize>
-        where TElement : IScalarType, new();
+        where TElement : IScalarType<TElement>;
     string GetName<TRow, TCol, TElement>(MatType<TRow, TCol, TElement> type)
-        where TRow : IRank
-        where TCol : IRank
-        where TElement : IScalarType, new();
+        where TRow : IRank<TRow>
+        where TCol : IRank<TCol>
+        where TElement : IScalarType<TElement>;
     string GetLiteralString(ILiteral literal);
 }
 

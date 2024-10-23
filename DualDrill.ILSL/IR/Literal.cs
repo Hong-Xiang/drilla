@@ -1,4 +1,5 @@
-﻿using DualDrill.ILSL.IR.Declaration;
+﻿using DualDrill.Common.Nat;
+using DualDrill.ILSL.IR.Declaration;
 
 namespace DualDrill.ILSL.IR;
 

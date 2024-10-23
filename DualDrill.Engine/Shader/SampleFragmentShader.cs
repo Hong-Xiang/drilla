@@ -19,12 +19,12 @@ public static class SampleFragmentShaderModule
 
     private static FunctionDeclaration VS()
     {
-        var vertex_index = new ParameterDeclaration("vertex_index", new UIntType<B32>(), [new BuiltinAttribute(BuiltinBinding.vertex_index)]);
+        var vertex_index = new ParameterDeclaration("vertex_index", new UIntType<N32>(), [new BuiltinAttribute(BuiltinBinding.vertex_index)]);
         var fRet = new FunctionReturn(
-            new VecType<N4, FloatType<B32>>(),
+            new VecType<N4, FloatType<N32>>(),
             [new BuiltinAttribute(BuiltinBinding.position)]);
-        var x = new VariableDeclaration(DeclarationScope.Function, "x", new FloatType<B32>(), []);
-        var y = new VariableDeclaration(DeclarationScope.Function, "y", new FloatType<B32>(), []);
+        var x = new VariableDeclaration(DeclarationScope.Function, "x", new FloatType<N32>(), []);
+        var y = new VariableDeclaration(DeclarationScope.Function, "y", new FloatType<N32>(), []);
         // let x = f32(1 - i32(vertex_index)) * 0.5;
         x.Initializer = SyntaxFactory.Binary(SyntaxFactory.f32(
                             SyntaxFactory.Binary(
@@ -62,7 +62,7 @@ public static class SampleFragmentShaderModule
                 SyntaxFactory.Declare(x),
                 SyntaxFactory.Declare(y),
                 SyntaxFactory.Return(
-                    SyntaxFactory.vec4<FloatType<B32>>(
+                    SyntaxFactory.vec4<FloatType<N32>>(
                         SyntaxFactory.Identifier(x),
                         SyntaxFactory.Identifier(y),
                         SyntaxFactory.Literal(0.0f),
@@ -76,7 +76,7 @@ public static class SampleFragmentShaderModule
     private static FunctionDeclaration FS()
     {
         var fRet = new ILSL.IR.Declaration.FunctionReturn(
-            new VecType<N4, FloatType<B32>>(),
+            new VecType<N4, FloatType<N32>>(),
             [new LocationAttribute(0)]
         );
         return new FunctionDeclaration("fs",
@@ -86,7 +86,7 @@ public static class SampleFragmentShaderModule
         {
             Body = new CompoundStatement([
                 SyntaxFactory.Return(
-                    SyntaxFactory.vec4<FloatType<B32>>(
+                    SyntaxFactory.vec4<FloatType<N32>>(
                         SyntaxFactory.Literal(0.5f),
                         SyntaxFactory.Literal(1.0f),
                         SyntaxFactory.Literal(0.5f),

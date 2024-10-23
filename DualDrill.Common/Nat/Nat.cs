@@ -8,5 +8,5 @@ sealed class ValueVisitor : INatVisitor<int>
 
 public static partial class Nat
 {
-    public static int ToInt(this INat n) => n.Accept(ValueVisitor.Instance);
+    public static int ToValue(this INat n) => n.Accept(ValueVisitor.Instance);
 }

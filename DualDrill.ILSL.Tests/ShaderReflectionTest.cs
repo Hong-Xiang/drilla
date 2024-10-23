@@ -31,7 +31,7 @@ public class ShaderReflectionTest
             new IR.Declaration.VariableDeclaration(
                 IR.Declaration.DeclarationScope.Module,
                 "data",
-                new VecType<R2, FloatType<B32>>(),
+                new VecType<R2, FloatType<N32>>(),
                 [
                     new GroupAttribute(0),
                     new BindingAttribute(0),

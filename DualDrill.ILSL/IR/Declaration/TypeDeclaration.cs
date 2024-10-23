@@ -2,9 +2,7 @@
 
 namespace DualDrill.ILSL.IR.Declaration;
 
-public sealed record class TypeDeclaration(IType Type) : IDeclaration
+public sealed record class TypeDeclaration(IType Type, ImmutableHashSet<IAttribute> Attributes) : IDeclaration
 {
     public string Name => Type.Name;
-
-    public ImmutableHashSet<IAttribute> Attributes => Type.Attributes;
 }

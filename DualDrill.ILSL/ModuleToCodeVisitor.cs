@@ -13,9 +13,9 @@ public sealed class WGSLLanguage : ITargetLanguage
         return literal switch
         {
             BoolLiteral l => l.Value ? "true" : "false",
-            IntLiteral<B32> l => l.Value + "i",
-            UIntLiteral<B32> l => l.Value + "u",
-            FloatLiteral<B32> l => l.Value + "f",
+            IntLiteral<N32> l => l.Value + "i",
+            UIntLiteral<N32> l => l.Value + "u",
+            FloatLiteral<N32> l => l.Value + "f",
             _ => throw new NotSupportedException($"{nameof(GetLiteralString)} not support {literal}")
         };
     }
@@ -27,7 +27,7 @@ public sealed class WGSLLanguage : ITargetLanguage
     {
         return type switch
         {
-            IntType<B32> _ => "i32",
+            IntType<N32> _ => "i32",
             _ => throw new NotSupportedException()
         };
     }
@@ -36,7 +36,7 @@ public sealed class WGSLLanguage : ITargetLanguage
     {
         return type switch
         {
-            UIntType<B32> _ => "u32",
+            UIntType<N32> _ => "u32",
             _ => throw new NotSupportedException()
         };
     }
@@ -45,27 +45,27 @@ public sealed class WGSLLanguage : ITargetLanguage
     {
         return type switch
         {
-            FloatType<B16> _ => "f16",
-            FloatType<B32> _ => "f32",
+            FloatType<N16> _ => "f16",
+            FloatType<N32> _ => "f32",
             _ => throw new NotSupportedException()
         };
     }
 
     public string GetName<TSize, TElement>(VecType<TSize, TElement> type)
         where TSize : IRank<TSize>
-        where TElement : IScalarType, new()
+        where TElement : IScalarType<TElement>
     {
         return type switch
         {
-            VecType<N4, FloatType<B32>> _ => $"vec4<f32>",
+            VecType<N4, FloatType<N32>> _ => $"vec4<f32>",
             _ => throw new NotSupportedException()
         };
     }
 
     public string GetName<TRow, TCol, TElement>(MatType<TRow, TCol, TElement> type)
-        where TRow : IRank
-        where TCol : IRank
-        where TElement : IScalarType, new()
+        where TRow : IRank<TRow>
+        where TCol : IRank<TCol>
+        where TElement : IScalarType<TElement>
     {
         throw new NotImplementedException();
     }

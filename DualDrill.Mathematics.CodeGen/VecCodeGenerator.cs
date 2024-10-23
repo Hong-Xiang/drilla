@@ -6,7 +6,7 @@ namespace DualDrill.ApiGen.DMath;
 
 public sealed record class VecCodeGenerator(IndentedTextWriter Writer, IVecType VecType)
 {
-    string CSharpTypeName => $"vec{VecType.Size.ToInt()}{VecType.ElementType.Name}";
+    string CSharpTypeName => $"vec{VecType.Size.ToValue()}{VecType.ElementType.Name}";
     public void GenerateDeclaration()
     {
         Writer.Write($"public partial struct {CSharpTypeName} ");
@@ -18,7 +18,7 @@ public sealed record class VecCodeGenerator(IndentedTextWriter Writer, IVecType 
 
     public void WriteFields()
     {
-        if (VecType.Size.ToInt() * VecType.ElementType.ByteSize > 8)
+        if (VecType.Size.ToValue() * VecType.ElementType.ByteSize > 8)
         {
         }
     }

@@ -19,19 +19,19 @@ public sealed class MetadataParser()
     FrozenDictionary<Type, IType> BuiltinTypeMap = new Dictionary<Type, IType>()
     {
         [typeof(bool)] = new BoolType(),
-        [typeof(int)] = new IntType<B32>(),
-        [typeof(uint)] = new UIntType<B32>(),
-        [typeof(long)] = new IntType<B64>(),
-        [typeof(ulong)] = new UIntType<B64>(),
-        [typeof(Half)] = new FloatType<B16>(),
-        [typeof(float)] = new FloatType<B32>(),
-        [typeof(double)] = new FloatType<B64>(),
-        [typeof(Vector4)] = new VecType<N4, FloatType<B32>>(),
-        [typeof(Vector3)] = new VecType<N3, FloatType<B32>>(),
-        [typeof(Vector2)] = new VecType<N2, FloatType<B32>>(),
-        [typeof(vec4f32)] = new VecType<N4, FloatType<B32>>(),
-        [typeof(vec3f32)] = new VecType<N3, FloatType<B32>>(),
-        [typeof(vec2f32)] = new VecType<N2, FloatType<B32>>(),
+        [typeof(int)] = new IntType<N32>(),
+        [typeof(uint)] = new UIntType<N32>(),
+        [typeof(long)] = new IntType<N64>(),
+        [typeof(ulong)] = new UIntType<N64>(),
+        [typeof(Half)] = new FloatType<N16>(),
+        [typeof(float)] = new FloatType<N32>(),
+        [typeof(double)] = new FloatType<N64>(),
+        [typeof(Vector4)] = new VecType<N4, FloatType<N32>>(),
+        [typeof(Vector3)] = new VecType<N3, FloatType<N32>>(),
+        [typeof(Vector2)] = new VecType<N2, FloatType<N32>>(),
+        [typeof(vec4f32)] = new VecType<N4, FloatType<N32>>(),
+        [typeof(vec3f32)] = new VecType<N3, FloatType<N32>>(),
+        [typeof(vec2f32)] = new VecType<N2, FloatType<N32>>(),
     }.ToFrozenDictionary();
 
 
@@ -41,7 +41,7 @@ public sealed class MetadataParser()
         {
             {
                 typeof(Vector4).GetConstructor(BindingFlags.Public | BindingFlags.Instance, [typeof(float), typeof(float), typeof(float), typeof(float)]),
-                VecType<N4, FloatType<B32>>.Constructors[4]
+                VecType<N4, FloatType<N32>>.Constructors[4]
             }
         };
 

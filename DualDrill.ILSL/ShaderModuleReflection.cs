@@ -261,7 +261,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
     {
         return type switch
         {
-            IBuiltinType bt => bt.ByteSize,
+            ICreationFixedFootprintType bt => bt.ByteSize,
             _ => throw new NotImplementedException()
         };
     }

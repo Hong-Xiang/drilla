@@ -48,9 +48,9 @@ public class MetadataParserTests
         Assert.Equal(nameof(SimpleStructDeclarationShader.VertexOutput), structDecl.Name);
         Assert.Equal(2, structDecl.Members.Length);
         Assert.Equal("ClipPosition", structDecl.Members[0].Name);
-        Assert.Equal(new VecType<R4, FloatType<B32>>(), structDecl.Members[0].Type);
+        Assert.Equal(new VecType<R4, FloatType<N32>>(), structDecl.Members[0].Type);
         Assert.Equal("InteropPosition", structDecl.Members[1].Name);
-        Assert.Equal(new VecType<R2, FloatType<B32>>(), structDecl.Members[1].Type);
+        Assert.Equal(new VecType<R2, FloatType<N32>>(), structDecl.Members[1].Type);
 
         var tw = new IndentStringWriter("\t");
         var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());

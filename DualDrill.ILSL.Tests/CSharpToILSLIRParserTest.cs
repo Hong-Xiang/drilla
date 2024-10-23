@@ -35,9 +35,9 @@ public class CSharpToILSLIRParserTest
         using var parser = new ILSpyFrontend(new ILSpyOption { HotReloadAssemblies = [] });
         var method = GetMethodInfo(BasicReturn);
         var parsed = parser.ParseMethod(method);
-        AssertFunctionParsedCorrectly(new IntType<B32>(),
+        AssertFunctionParsedCorrectly(new IntType<N32>(),
             [
-                new ReturnStatement(new LiteralValueExpression(new IntLiteral<B32>(42)))
+                new ReturnStatement(new LiteralValueExpression(new IntLiteral<N32>(42)))
             ], parsed);
     }
 
@@ -51,16 +51,16 @@ public class CSharpToILSLIRParserTest
         using var parser = new ILSpyFrontend(new ILSpyOption { HotReloadAssemblies = [] });
         var method = GetMethodInfo<uint, Vector4>(TestMethod);
         var parsed = parser.ParseMethod(method);
-        AssertFunctionParsedCorrectly(new VecType<R4, FloatType<B32>>(),
+        AssertFunctionParsedCorrectly(new VecType<R4, FloatType<N32>>(),
             [
                 new ReturnStatement(
                     new FunctionCallExpression(
-                        VecType<R4, FloatType<B32>>.Constructors[4],
+                        VecType<R4, FloatType<N32>>.Constructors[4],
                         [
-                            new LiteralValueExpression(new FloatLiteral<B32>(0.5f)),
-                            new LiteralValueExpression(new FloatLiteral<B32>(0.0f)),
-                            new LiteralValueExpression(new FloatLiteral<B32>(1.0f)),
-                            new LiteralValueExpression(new FloatLiteral<B32>(1.0f)),
+                            new LiteralValueExpression(new FloatLiteral<N32>(0.5f)),
+                            new LiteralValueExpression(new FloatLiteral<N32>(0.0f)),
+                            new LiteralValueExpression(new FloatLiteral<N32>(1.0f)),
+                            new LiteralValueExpression(new FloatLiteral<N32>(1.0f)),
                         ])
                 )
             ], parsed);
@@ -79,28 +79,28 @@ public class CSharpToILSLIRParserTest
         var method = GetMethodInfo<uint, float>(TestMethod);
         var parsed = parser.ParseMethod(method);
         var vec4CreateExpr = new FunctionCallExpression(
-                        VecType<R4, FloatType<B32>>.Constructors[4],
+                        VecType<R4, FloatType<N32>>.Constructors[4],
                         [
-                            new LiteralValueExpression(new FloatLiteral<B32>(0.5f)),
-                            new LiteralValueExpression(new FloatLiteral<B32>(0.0f)),
-                            new LiteralValueExpression(new FloatLiteral<B32>(1.0f)),
-                            new LiteralValueExpression(new FloatLiteral<B32>(1.0f)),
+                            new LiteralValueExpression(new FloatLiteral<N32>(0.5f)),
+                            new LiteralValueExpression(new FloatLiteral<N32>(0.0f)),
+                            new LiteralValueExpression(new FloatLiteral<N32>(1.0f)),
+                            new LiteralValueExpression(new FloatLiteral<N32>(1.0f)),
                         ]);
         var v1 = new VariableDeclaration(DeclarationScope.Function,
                                          "v1",
-                                         new VecType<R4, FloatType<B32>>(),
+                                         new VecType<R4, FloatType<N32>>(),
                                          []);
         var v2 = new VariableDeclaration(DeclarationScope.Function,
                                          "v2",
-                                         new VecType<R4, FloatType<B32>>(),
+                                         new VecType<R4, FloatType<N32>>(),
                                          []);
-        AssertFunctionParsedCorrectly(new FloatType<B32>(),
+        AssertFunctionParsedCorrectly(new FloatType<N32>(),
             [
                 new VariableOrValueStatement( v1 ),
                 new VariableOrValueStatement( v2 ),
                 new ReturnStatement(
                     new FunctionCallExpression(
-                        VecType<R4, FloatType<B32>>.Dot,
+                        VecType<R4, FloatType<N32>>.Dot,
                         [
                             new VariableIdentifierExpression(v1),
                             new VariableIdentifierExpression(v2),

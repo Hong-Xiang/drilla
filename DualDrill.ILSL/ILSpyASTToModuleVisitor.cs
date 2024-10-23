@@ -75,7 +75,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         {
             return new LocationAttribute(0);
         }
-        if(a.FullName == typeof(ShaderMethodAttribute).FullName)
+        if (a.FullName == typeof(ShaderMethodAttribute).FullName)
         {
             return new ShaderMethodAttribute();
         }
@@ -97,10 +97,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var l = (IExpression)binaryOperatorExpression.Left.AcceptVisitor(this);
         var r = (IExpression)binaryOperatorExpression.Right.AcceptVisitor(this);
         // TODO: proper expression type handling
-        if (l is LiteralValueExpression { Literal: IntLiteral<B32> { Value: var v } }
-            && r is FormalParameterExpression { Parameter: { Type: UIntType<B32> } })
+        if (l is LiteralValueExpression { Literal: IntLiteral<N32> { Value: var v } }
+            && r is FormalParameterExpression { Parameter: { Type: UIntType<N32> } })
         {
-            l = new LiteralValueExpression(new UIntLiteral<B32>((uint)v));
+            l = new LiteralValueExpression(new UIntLiteral<N32>((uint)v));
         }
         return binaryOperatorExpression.Operator switch
         {
@@ -151,12 +151,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var t = castExpression.Type.Annotation<TypeResolveResult>();
         var f = t switch
         {
-            { Type.FullName: "System.Single" } => FloatType<B32>.Cast,
-            { Type.FullName: "System.Double" } => FloatType<B64>.Cast,
-            { Type.FullName: "System.Int32" } => IntType<B32>.Cast,
-            { Type.FullName: "System.Int64" } => IntType<B64>.Cast,
-            //{ Type: { FullName: "System.UInt32" } } => UIntType<B32>.Cast,
-            //{ Type: { FullName: "System.UInt64" } } => UIntType<B64>.Cast,
+            { Type.FullName: "System.Single" } => FloatType<N32>.Cast,
+            { Type.FullName: "System.Double" } => FloatType<N64>.Cast,
+            { Type.FullName: "System.Int32" } => IntType<N32>.Cast,
+            { Type.FullName: "System.Int64" } => IntType<N64>.Cast,
+            //{ Type: { FullName: "System.UInt32" } } => UIntType<N32>.Cast,
+            //{ Type: { FullName: "System.UInt64" } } => UIntType<N64>.Cast,
             _ => throw new NotSupportedException()
         };
         return new FunctionCallExpression(f, [(IExpression)castExpression.Expression.AcceptVisitor(this)]);
@@ -469,7 +469,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     public INode? VisitInvocationExpression(InvocationExpression invocationExpression)
     {
-        Func<string, string> RemoveThisDot = (string expression) => 
+        Func<string, string> RemoveThisDot = (string expression) =>
         {
             if (expression.StartsWith("this."))
             {
@@ -487,7 +487,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         if (invocationExpression.Target is MemberReferenceExpression memberReference)
         {
             string functionName = RemoveThisDot(memberReference.ToString());
-            if(Symbols.ContainsKey(functionName))
+            if (Symbols.ContainsKey(functionName))
             {
                 return new FunctionCallExpression(
                     (FunctionDeclaration)Symbols[functionName],
@@ -499,138 +499,138 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             {
                 case "global::System.Numerics.Vector2.Dot":
                     return new FunctionCallExpression(
-                        VecType<N2, FloatType<B32>>.Dot,
+                        VecType<N2, FloatType<N32>>.Dot,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Dot":
                     return new FunctionCallExpression(
-                        VecType<N3, FloatType<B32>>.Dot,
+                        VecType<N3, FloatType<N32>>.Dot,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Dot":
                     return new FunctionCallExpression(
-                        VecType<N4, FloatType<B32>>.Dot,
+                        VecType<N4, FloatType<N32>>.Dot,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector2.Length":
                     return new FunctionCallExpression(
-                        VecType<N2, FloatType<B32>>.Length,
+                        VecType<N2, FloatType<N32>>.Length,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Length":
                     return new FunctionCallExpression(
-                        VecType<N3, FloatType<B32>>.Length,
+                        VecType<N3, FloatType<N32>>.Length,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Length":
                     return new FunctionCallExpression(
-                        VecType<N4, FloatType<B32>>.Length,
+                        VecType<N4, FloatType<N32>>.Length,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector2.Abs":
                     return new FunctionCallExpression(
-                        VecType<N2, FloatType<B32>>.Abs,
+                        VecType<N2, FloatType<N32>>.Abs,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Abs":
                     return new FunctionCallExpression(
-                        VecType<N3, FloatType<B32>>.Abs,
+                        VecType<N3, FloatType<N32>>.Abs,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Abs":
                     return new FunctionCallExpression(
-                        VecType<N4, FloatType<B32>>.Abs,
+                        VecType<N4, FloatType<N32>>.Abs,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector2.Reflect":
                     return new FunctionCallExpression(
-                        VecType<N2, FloatType<B32>>.Reflect,
+                        VecType<N2, FloatType<N32>>.Reflect,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Reflect":
                     return new FunctionCallExpression(
-                        VecType<N3, FloatType<B32>>.Reflect,
+                        VecType<N3, FloatType<N32>>.Reflect,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Reflect":
                     return new FunctionCallExpression(
-                        VecType<N4, FloatType<B32>>.Reflect,
+                        VecType<N4, FloatType<N32>>.Reflect,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector2.Cross":
                     return new FunctionCallExpression(
-                        VecType<N2, FloatType<B32>>.Cross,
+                        VecType<N2, FloatType<N32>>.Cross,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector3.Cross":
                     return new FunctionCallExpression(
-                        VecType<N3, FloatType<B32>>.Cross,
+                        VecType<N3, FloatType<N32>>.Cross,
                         immutableArgs
                     );
                 case "global::System.Numerics.Vector4.Cross":
                     return new FunctionCallExpression(
-                        VecType<N4, FloatType<B32>>.Cross,
+                        VecType<N4, FloatType<N32>>.Cross,
                         immutableArgs
                     );
                 case "global::System.Math.Cos":
                     var res = new FunctionCallExpression(
-                        FloatType<B32>.Cos,
+                        FloatType<N32>.Cos,
                         immutableArgs
                     );
                     return res;
                 case "global::System.Math.Sin":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Sin,
+                        FloatType<N32>.Sin,
                         immutableArgs
                     );
                 case "global::System.Math.Sqrt":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Sqrt,
+                        FloatType<N32>.Sqrt,
                         immutableArgs
                     );
                 case "global::System.Math.Pow":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Pow,
+                        FloatType<N32>.Pow,
                         immutableArgs
                     );
                 case "global::System.Math.Log":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Log,
+                        FloatType<N32>.Log,
                         immutableArgs
                     );
                 case "global::System.Math.Clamp":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Clamp,
+                        FloatType<N32>.Clamp,
                         immutableArgs
                     );
                 case "global::System.Math.Abs":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Abs,
+                        FloatType<N32>.Abs,
                         immutableArgs
                     );
                 case "global::System.Math.Max":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Max,
+                        FloatType<N32>.Max,
                         immutableArgs
                     );
                 case "global::System.Math.Min":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Min,
+                        FloatType<N32>.Min,
                         immutableArgs
                     );
                 case "global::System.Math.Floor":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Floor,
+                        FloatType<N32>.Floor,
                         immutableArgs
                     );
                 case "global::System.Math.Exp":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Exp,
+                        FloatType<N32>.Exp,
                         immutableArgs
                     );
                 case "global::System.Math.Sign":
                     return new FunctionCallExpression(
-                        FloatType<B32>.Sign,
+                        FloatType<N32>.Sign,
                         immutableArgs
                     );
                 default:
@@ -704,10 +704,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var t = memberType.Annotation<TypeResolveResult>();
         return t.Type.FullName switch
         {
-            "System.Numerics.Vector4" => new VecType<N4, FloatType<B32>>(),
-            "System.Numerics.Vector3" => new VecType<N3, FloatType<B32>>(),
-            "System.Numerics.Vector2" => new VecType<N2, FloatType<B32>>(),
-            //"System.Numerics.Vector4" => new VecType<R4, FloatType<B32>>(),
+            "System.Numerics.Vector4" => new VecType<N4, FloatType<N32>>(),
+            "System.Numerics.Vector3" => new VecType<N3, FloatType<N32>>(),
+            "System.Numerics.Vector2" => new VecType<N2, FloatType<N32>>(),
+            //"System.Numerics.Vector4" => new VecType<R4, FloatType<N32>>(),
             //_ => throw new NotSupportedException($"{nameof(VisitMemberType)} not support {memberType}")
             _ => new StructureDeclaration(t.Type.Name, [], []),
         };
@@ -809,15 +809,15 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     {
         if (type.FullName == typeof(Vector4).FullName)
         {
-            return SyntaxFactory.vec4<FloatType<B32>>(args.ToArray());
+            return SyntaxFactory.vec4<FloatType<N32>>(args.ToArray());
         }
         else if (type.FullName == typeof(Vector3).FullName)
         {
-            return SyntaxFactory.vec3<FloatType<B32>>(args.ToArray());
+            return SyntaxFactory.vec3<FloatType<N32>>(args.ToArray());
         }
         else if (type.FullName == typeof(Vector2).FullName)
         {
-            return SyntaxFactory.vec2<FloatType<B32>>(args.ToArray());
+            return SyntaxFactory.vec2<FloatType<N32>>(args.ToArray());
         }
         throw new NotImplementedException();
     }
@@ -871,10 +871,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var value = primitiveExpression.Value;
         return value switch
         {
-            float v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
-            double v => new LiteralValueExpression(new FloatLiteral<B32>(v)),
-            int v => new LiteralValueExpression(new IntLiteral<B32>(v)),
-            uint v => new LiteralValueExpression(new UIntLiteral<B32>(v)),
+            float v => new LiteralValueExpression(new FloatLiteral<N32>(v)),
+            double v => new LiteralValueExpression(new FloatLiteral<N32>(v)),
+            int v => new LiteralValueExpression(new IntLiteral<N32>(v)),
+            uint v => new LiteralValueExpression(new UIntLiteral<N32>(v)),
             bool v => new LiteralValueExpression(new BoolLiteral(v)),
             _ => throw new NotSupportedException($"{nameof(VisitPrimitiveExpression)} does not support {primitiveExpression}")
         };
@@ -885,12 +885,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return primitiveType.KnownTypeCode switch
         {
             KnownTypeCode.Boolean => new BoolType(),
-            KnownTypeCode.UInt32 => new UIntType<B32>(),
-            KnownTypeCode.UInt64 => new UIntType<B64>(),
-            KnownTypeCode.Int32 => new IntType<B32>(),
-            KnownTypeCode.Int64 => new IntType<B64>(),
-            KnownTypeCode.Single => new FloatType<B32>(),
-            KnownTypeCode.Double => new FloatType<B64>(),
+            KnownTypeCode.UInt32 => new UIntType<N32>(),
+            KnownTypeCode.UInt64 => new UIntType<N64>(),
+            KnownTypeCode.Int32 => new IntType<N32>(),
+            KnownTypeCode.Int64 => new IntType<N64>(),
+            KnownTypeCode.Single => new FloatType<N32>(),
+            KnownTypeCode.Double => new FloatType<N64>(),
             _ => throw new NotSupportedException($"Unknown primitive type {primitiveType}")
         };
     }

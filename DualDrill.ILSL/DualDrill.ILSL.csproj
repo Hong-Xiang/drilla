@@ -17,4 +17,8 @@
 	  <ProjectReference Include="..\DualDrill.Mathematics\DualDrill.Mathematics.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Types\" />
+	</ItemGroup>
+
 </Project>
