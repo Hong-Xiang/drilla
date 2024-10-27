@@ -19,6 +19,7 @@
 		<PackageReference Include="System.CodeDom" Version="8.0.0" />
 	</ItemGroup>
 	<ItemGroup>
+	  <ProjectReference Include="..\DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj" />
 	  <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 	</ItemGroup>
 

@@ -12,13 +12,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj" />
 	  <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 	  <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
 	  <ProjectReference Include="..\DualDrill.Mathematics\DualDrill.Mathematics.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Types\" />
 	</ItemGroup>
 
 </Project>

@@ -3,10 +3,9 @@
 sealed class ValueVisitor : INatVisitor<int>
 {
     public static readonly ValueVisitor Instance = new();
-    public int Visit<TNat>() where TNat : INat => TNat.Value;
+    public int Visit<TNat>(TNat n) where TNat : INat => n.Value;
 }
 
 public static partial class Nat
 {
-    public static int ToValue(this INat n) => n.Accept(ValueVisitor.Instance);
 }

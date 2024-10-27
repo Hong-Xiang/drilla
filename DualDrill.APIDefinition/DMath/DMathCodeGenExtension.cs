@@ -1,56 +1,73 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace DualDrill.ApiGen.DMath;
 
 internal static class DMathCodeGenExtension
 {
-    public static IEnumerable<string> Components(this Rank rank) => rank switch
+    public static IEnumerable<string> Components(this IRank rank) => rank switch
     {
-        Rank._2 => ["x", "y"],
-        Rank._3 => ["x", "y", "z"],
-        Rank._4 => ["x", "y", "z", "w"],
-        _ => throw new InvalidEnumArgumentException(nameof(rank), (int)rank, typeof(Rank))
+        N2 => ["x", "y"],
+        N3 => ["x", "y", "z"],
+        N4 => ["x", "y", "z", "w"],
+        _ => throw new NotSupportedException($"components for rank {rank} is not supported")
     };
 
-    public static int Value(this Rank rank) => (int)rank;
+    public static string CSharpName(this MatType matType)
+         => $"mat{matType.Row.Value}x{matType.Column.Value}{matType.ElementType.ElementName()}";
 
-    public static string CSharpName(this DMathMatType matType) => matType.ScalarType switch
+
+    public static string ElementName(this IScalarType type) => type switch
     {
-        BType _ => $"mat{(int)matType.Rows}x{(int)matType.Columns}b",
-        _ => $"mat{(int)matType.Rows}x{(int)matType.Columns}{matType.ScalarType.Name}"
+        BoolType _ => $"b",
+        FloatType t => $"f{t.BitWidth.Value}",
+        IntType t => $"i{t.BitWidth.Value}",
+        UIntType t => $"u{t.BitWidth.Value}",
+        _ => throw new NotSupportedException($"{nameof(ElementName)} does not support {type}")
     };
 
+    public static string CSharpStructName(this VecType vecType) => $"vec{vecType.Size.Value}{vecType.ElementType.ElementName()}";
 
-    public static string CSharpName(this DMathVectorType vecType) => vecType.ScalarType switch
+    public static MethodDeclarationSyntax AddMethodInline(this MethodDeclarationSyntax methodSyntax)
     {
-        BType _ => $"vec{(int)vecType.Size}b",
-        _ => $"vec{(int)vecType.Size}{vecType.ScalarType.Name}"
-    };
+        return methodSyntax.AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(DMathCodeGen.AggressiveInlining)));
+    }
 
-    public static Type MappedPrimitiveCSharpType(this IDMathType t)
+    public static MethodDeclarationSyntax WithArrowExpressionBody(this MethodDeclarationSyntax methodSyntax, ExpressionSyntax expr)
+    {
+        return methodSyntax.WithExpressionBody(SyntaxFactory.ArrowExpressionClause(expr)).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+    }
+
+    public static void WriteStructLayout(this TextWriter writer)
+    {
+        writer.WriteLine("[StructLayout(LayoutKind.Sequential)]");
+    }
+
+    public static void WriteMethodInline(this TextWriter writer)
+    {
+        writer.WriteLine("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+    }
+
+    public static Type ScalarCSharpType(this IScalarType t)
     {
         return t switch
         {
-            BType _ => typeof(bool),
+            BoolType _ => typeof(bool),
+            IntType { BitWidth: N8 } => typeof(sbyte),
+            IntType { BitWidth: N16 } => typeof(short),
+            IntType { BitWidth: N32 } => typeof(int),
+            IntType { BitWidth: N64 } => typeof(long),
 
-            IType { BitWidth: IntegerBitWidth._8 } => typeof(sbyte),
-            IType { BitWidth: IntegerBitWidth._16 } => typeof(short),
-            IType { BitWidth: IntegerBitWidth._32 } => typeof(int),
-            IType { BitWidth: IntegerBitWidth._64 } => typeof(long),
+            UIntType { BitWidth: N8 } => typeof(byte),
+            UIntType { BitWidth: N16 } => typeof(ushort),
+            UIntType { BitWidth: N32 } => typeof(uint),
+            UIntType { BitWidth: N64 } => typeof(ulong),
 
-            UType { BitWidth: IntegerBitWidth._8 } => typeof(byte),
-            UType { BitWidth: IntegerBitWidth._16 } => typeof(ushort),
-            UType { BitWidth: IntegerBitWidth._32 } => typeof(uint),
-            UType { BitWidth: IntegerBitWidth._64 } => typeof(ulong),
-
-            FType { BitWidth: FloatBitWidth._16 } => typeof(Half),
-            FType { BitWidth: FloatBitWidth._32 } => typeof(float),
-            FType { BitWidth: FloatBitWidth._64 } => typeof(double),
+            FloatType { BitWidth: N16 } => typeof(Half),
+            FloatType { BitWidth: N32 } => typeof(float),
+            FloatType { BitWidth: N64 } => typeof(double),
             _ => throw new NotSupportedException($"Primitive CSharp Type is not defined for {t}")
         };
     }

@@ -1,5 +1,7 @@
-﻿using DualDrill.ILSL.Frontend;
+﻿using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.ILSL.Frontend;
 using DualDrill.ILSL.IR.Declaration;
+using DualDrill.ILSL.Types;
 using System.Numerics;
 
 namespace DualDrill.ILSL.Tests;

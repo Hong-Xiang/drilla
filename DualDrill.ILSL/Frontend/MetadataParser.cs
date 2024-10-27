@@ -2,6 +2,7 @@
 using DualDrill.Common.Nat;
 using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
+using DualDrill.ILSL.Types;
 using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
 using System.Collections.Frozen;

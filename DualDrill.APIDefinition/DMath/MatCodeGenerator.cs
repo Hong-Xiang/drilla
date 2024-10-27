@@ -1,8 +1,9 @@
-﻿using System.CodeDom;
+﻿using DualDrill.CLSL.Language.Types;
+using System.CodeDom;
 
 namespace DualDrill.ApiGen.DMath;
 
-public sealed class MatCodeGenerator(DMathMatType MatType)
+public sealed class MatCodeGenerator(MatType MatType)
 {
     public CodeTypeDeclaration GenerateDeclaration()
     {
@@ -12,9 +13,9 @@ public sealed class MatCodeGenerator(DMathMatType MatType)
             TypeAttributes = System.Reflection.TypeAttributes.Public,
             IsPartial = true,
         };
-        for (var i = 0; i < (int)MatType.Columns; i++)
+        for (var i = 0; i < (int)MatType.Column.Value; i++)
         {
-            result.Members.Add(new CodeMemberField(new DMathVectorType(MatType.ScalarType, MatType.Rows).CSharpName(), $"c{i}")
+            result.Members.Add(new CodeMemberField(MatType.ElementType.ScalarCSharpType(), $"c{i}")
             {
                 Attributes = MemberAttributes.Public
             });

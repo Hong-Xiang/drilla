@@ -1,4 +1,5 @@
 ﻿using DotNext;
+using DualDrill.CLSL.Language.IR;
 using DualDrill.Graphics;
 using DualDrill.ILSL;
 using DualDrill.ILSL.IR.Declaration;

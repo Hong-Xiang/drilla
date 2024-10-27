@@ -1,10 +1,10 @@
 ﻿using DualDrill.Common.Nat;
 using DualDrill.Graphics;
 using DualDrill.ILSL;
-using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
+using DualDrill.ILSL.Types;
 using System.Collections.Immutable;
 using System.Numerics;
 
@@ -12,7 +12,7 @@ namespace DualDrill.Engine.Shader;
 
 public static class SampleFragmentShaderModule
 {
-    public static Module CreateModule()
+    public static ILSL.IR.Module CreateModule()
     {
         return new ILSL.IR.Module([VS(), FS()]);
     }

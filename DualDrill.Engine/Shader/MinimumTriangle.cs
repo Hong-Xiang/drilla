@@ -1,16 +1,16 @@
 ﻿using DualDrill.Common.Nat;
 using DualDrill.ILSL;
-using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
+using DualDrill.ILSL.Types;
 using System.Numerics;
 
 namespace DualDrill.Engine.Shader;
 
 public static class MinimumTriangleModule
 {
-    public static Module CreateModule()
+    public static ILSL.IR.Module CreateModule()
     {
         return new ILSL.IR.Module([VS(), FS()]);
     }
@@ -142,7 +142,7 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
             x -= i;
         }
 
-        for (;; x += 3.0f)
+        for (; ; x += 3.0f)
         {
             if (x + y < 100000.0f)
             {

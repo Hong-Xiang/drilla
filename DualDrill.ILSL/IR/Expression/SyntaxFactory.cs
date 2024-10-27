@@ -2,6 +2,7 @@
 using DualDrill.Common.Nat;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Statement;
+using DualDrill.ILSL.Types;
 
 namespace DualDrill.ILSL.IR.Expression;
 

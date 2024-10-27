@@ -21,10 +21,10 @@ namespace DualDrill.Common.Nat;
 #>
 public sealed partial class <#= typeName #> : INat<<#= typeName #>>
 {
-	public static int Value => <#= v #>;
+	public int Value => <#= v #>;
 	public static <#= typeName #> Instance { get; } = new();	
 
-	public T Accept<T>(INatVisitor<T> visitor) => visitor.Visit<<#= typeName #>>();
+	public T Accept<T>(INatVisitor<T> visitor) => visitor.Visit<<#= typeName #>>(Instance);
 }
 
 <# } #>
@@ -36,6 +36,15 @@ public static partial class Nat {
 			<#= v #> => N<#= v #>.Instance,
 <# } #>
 			_ => throw new NotSupportedException($"Convert {value} to INat is not supported")
+		};
+	}
+
+	public static INat GetInstance<TNat>() {
+		return typeof(TNat) switch {
+<# foreach(var v in values) { #>
+			var t when t == typeof(N<#= v #>) => N<#= v #>.Instance,
+<# } #>
+			_ => throw new NotSupportedException($"Can not get instance of {typeof(TNat)}")
 		};
 	}
 }

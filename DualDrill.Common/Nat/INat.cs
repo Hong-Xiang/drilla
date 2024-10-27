@@ -8,7 +8,7 @@
 /// </summary>
 public interface INat
 {
-    static abstract int Value { get; }
+    int Value { get; }
 
     public T Accept<T>(INatVisitor<T> visitor);
 }
@@ -20,6 +20,6 @@ public interface INat<TSelf> : INat, ISingleton<TSelf>
 
 public interface INatVisitor<T>
 {
-    public T Visit<TNat>() where TNat : INat;
+    public T Visit<TNat>(TNat n) where TNat : INat;
 }
 

@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using Silk.NET.SDL;
 using System.Diagnostics;
 using System.Text.Json;
+using DualDrill.ILSL.Types;
 namespace DualDrill.ILSL;
 
 public interface IShaderModuleReflection

@@ -3,6 +3,7 @@ using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
+using DualDrill.ILSL.Types;
 
 namespace DualDrill.ILSL;
 
@@ -62,10 +63,7 @@ public sealed class WGSLLanguage : ITargetLanguage
         };
     }
 
-    public string GetName<TRow, TCol, TElement>(MatType<TRow, TCol, TElement> type)
-        where TRow : IRank<TRow>
-        where TCol : IRank<TCol>
-        where TElement : IScalarType<TElement>
+    public string GetName(CLSL.Language.Types.MatType type)
     {
         throw new NotImplementedException();
     }

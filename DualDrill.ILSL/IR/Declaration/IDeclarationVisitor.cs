@@ -1,4 +1,6 @@
-﻿namespace DualDrill.ILSL.IR.Declaration;
+﻿using DualDrill.ILSL.Types;
+
+namespace DualDrill.ILSL.IR.Declaration;
 
 public interface IDeclarationVisitor<T>
 {

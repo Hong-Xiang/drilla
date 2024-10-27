@@ -23,6 +23,7 @@ public class ApiGenController(
         var codeGen = new DMathCodeGen();
         return codeGen.Generate();
     }
+
     [HttpGet("webgpu/webidl")]
     public async Task<IActionResult> GetWebGPUWebIDLSpecAsync(CancellationToken cancellation)
         => Ok(await GetWebGPUIDLSpecAsync(cancellation));

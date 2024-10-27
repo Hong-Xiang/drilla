@@ -15,7 +15,7 @@ namespace DualDrill.ILSL.IR.Expression;
 [JsonDerivedType(typeof(UnaryLogicalExpression), nameof(UnaryLogicalExpression))]
 [JsonDerivedType(typeof(UnaryArithmeticExpression), nameof(UnaryArithmeticExpression))]
 [JsonDerivedType(typeof(NamedComponentExpression), nameof(NamedComponentExpression))]
-public interface IExpression : INode
+public interface IExpression : IAstNode
 {
 }
 

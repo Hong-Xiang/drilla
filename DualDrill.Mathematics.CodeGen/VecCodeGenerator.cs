@@ -1,5 +1,5 @@
 ﻿using DualDrill.Common.Nat;
-using DualDrill.ILSL.IR.Declaration;
+using DualDrill.ILSL.Types;
 using System.CodeDom.Compiler;
 
 namespace DualDrill.ApiGen.DMath;

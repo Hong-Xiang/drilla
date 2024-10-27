@@ -3,6 +3,7 @@ using DualDrill.ILSL.IR;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
+using DualDrill.ILSL.Types;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 using ICSharpCode.Decompiler.Semantics;
@@ -14,49 +15,49 @@ using System.Reflection.Metadata.Ecma335;
 
 namespace DualDrill.ILSL;
 
-public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Symbols, Assembly Assembly) : IAstVisitor<INode?>
+public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Symbols, Assembly Assembly) : IAstVisitor<IAstNode?>
 {
-    public INode? VisitAccessor(Accessor accessor)
+    public IAstNode? VisitAccessor(Accessor accessor)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitAnonymousMethodExpression(AnonymousMethodExpression anonymousMethodExpression)
+    public IAstNode? VisitAnonymousMethodExpression(AnonymousMethodExpression anonymousMethodExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitAnonymousTypeCreateExpression(AnonymousTypeCreateExpression anonymousTypeCreateExpression)
+    public IAstNode? VisitAnonymousTypeCreateExpression(AnonymousTypeCreateExpression anonymousTypeCreateExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitArrayCreateExpression(ArrayCreateExpression arrayCreateExpression)
+    public IAstNode? VisitArrayCreateExpression(ArrayCreateExpression arrayCreateExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitArrayInitializerExpression(ArrayInitializerExpression arrayInitializerExpression)
+    public IAstNode? VisitArrayInitializerExpression(ArrayInitializerExpression arrayInitializerExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitArraySpecifier(ArraySpecifier arraySpecifier)
+    public IAstNode? VisitArraySpecifier(ArraySpecifier arraySpecifier)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitAsExpression(AsExpression asExpression)
+    public IAstNode? VisitAsExpression(AsExpression asExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitAssignmentExpression(AssignmentExpression assignmentExpression)
+    public IAstNode? VisitAssignmentExpression(AssignmentExpression assignmentExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitAttribute(ICSharpCode.Decompiler.CSharp.Syntax.Attribute attribute)
+    public IAstNode? VisitAttribute(ICSharpCode.Decompiler.CSharp.Syntax.Attribute attribute)
     {
         var a = attribute.Annotation<MemberResolveResult>().Type;
         if (a.FullName == typeof(BuiltinAttribute).FullName)
@@ -82,17 +83,17 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return null;
     }
 
-    public INode? VisitAttributeSection(AttributeSection attributeSection)
+    public IAstNode? VisitAttributeSection(AttributeSection attributeSection)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitBaseReferenceExpression(BaseReferenceExpression baseReferenceExpression)
+    public IAstNode? VisitBaseReferenceExpression(BaseReferenceExpression baseReferenceExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitBinaryOperatorExpression(BinaryOperatorExpression binaryOperatorExpression)
+    public IAstNode? VisitBinaryOperatorExpression(BinaryOperatorExpression binaryOperatorExpression)
     {
         var l = (IExpression)binaryOperatorExpression.Left.AcceptVisitor(this);
         var r = (IExpression)binaryOperatorExpression.Right.AcceptVisitor(this);
@@ -124,7 +125,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    public INode? VisitBlockStatement(BlockStatement blockStatement)
+    public IAstNode? VisitBlockStatement(BlockStatement blockStatement)
     {
         Dictionary<string, IDeclaration> newScope = [];
         foreach (var kv in Symbols)
@@ -136,17 +137,17 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return result;
     }
 
-    public INode? VisitBreakStatement(ICSharpCode.Decompiler.CSharp.Syntax.BreakStatement breakStatement)
+    public IAstNode? VisitBreakStatement(ICSharpCode.Decompiler.CSharp.Syntax.BreakStatement breakStatement)
     {
         return new IR.Statement.BreakStatement();
     }
 
-    public INode? VisitCaseLabel(CaseLabel caseLabel)
+    public IAstNode? VisitCaseLabel(CaseLabel caseLabel)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitCastExpression(CastExpression castExpression)
+    public IAstNode? VisitCastExpression(CastExpression castExpression)
     {
         var t = castExpression.Type.Annotation<TypeResolveResult>();
         var f = t switch
@@ -162,122 +163,122 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return new FunctionCallExpression(f, [(IExpression)castExpression.Expression.AcceptVisitor(this)]);
     }
 
-    public INode? VisitCatchClause(CatchClause catchClause)
+    public IAstNode? VisitCatchClause(CatchClause catchClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitCheckedExpression(CheckedExpression checkedExpression)
+    public IAstNode? VisitCheckedExpression(CheckedExpression checkedExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitCheckedStatement(CheckedStatement checkedStatement)
+    public IAstNode? VisitCheckedStatement(CheckedStatement checkedStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitComment(Comment comment)
+    public IAstNode? VisitComment(Comment comment)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitComposedType(ComposedType composedType)
+    public IAstNode? VisitComposedType(ComposedType composedType)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitConditionalExpression(ConditionalExpression conditionalExpression)
+    public IAstNode? VisitConditionalExpression(ConditionalExpression conditionalExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitConstraint(Constraint constraint)
+    public IAstNode? VisitConstraint(Constraint constraint)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitConstructorDeclaration(ConstructorDeclaration constructorDeclaration)
+    public IAstNode? VisitConstructorDeclaration(ConstructorDeclaration constructorDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitConstructorInitializer(ConstructorInitializer constructorInitializer)
+    public IAstNode? VisitConstructorInitializer(ConstructorInitializer constructorInitializer)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitContinueStatement(ContinueStatement continueStatement)
+    public IAstNode? VisitContinueStatement(ContinueStatement continueStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitCSharpTokenNode(CSharpTokenNode cSharpTokenNode)
+    public IAstNode? VisitCSharpTokenNode(CSharpTokenNode cSharpTokenNode)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitCustomEventDeclaration(CustomEventDeclaration customEventDeclaration)
+    public IAstNode? VisitCustomEventDeclaration(CustomEventDeclaration customEventDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitDeclarationExpression(DeclarationExpression declarationExpression)
+    public IAstNode? VisitDeclarationExpression(DeclarationExpression declarationExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitDefaultValueExpression(DefaultValueExpression defaultValueExpression)
+    public IAstNode? VisitDefaultValueExpression(DefaultValueExpression defaultValueExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitDelegateDeclaration(DelegateDeclaration delegateDeclaration)
+    public IAstNode? VisitDelegateDeclaration(DelegateDeclaration delegateDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitDestructorDeclaration(DestructorDeclaration destructorDeclaration)
+    public IAstNode? VisitDestructorDeclaration(DestructorDeclaration destructorDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitDirectionExpression(DirectionExpression directionExpression)
+    public IAstNode? VisitDirectionExpression(DirectionExpression directionExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitDocumentationReference(DocumentationReference documentationReference)
+    public IAstNode? VisitDocumentationReference(DocumentationReference documentationReference)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitDoWhileStatement(DoWhileStatement doWhileStatement)
+    public IAstNode? VisitDoWhileStatement(DoWhileStatement doWhileStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitEmptyStatement(EmptyStatement emptyStatement)
+    public IAstNode? VisitEmptyStatement(EmptyStatement emptyStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitEnumMemberDeclaration(EnumMemberDeclaration enumMemberDeclaration)
+    public IAstNode? VisitEnumMemberDeclaration(EnumMemberDeclaration enumMemberDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitErrorNode(AstNode errorNode)
+    public IAstNode? VisitErrorNode(AstNode errorNode)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitEventDeclaration(EventDeclaration eventDeclaration)
+    public IAstNode? VisitEventDeclaration(EventDeclaration eventDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitExpressionStatement(ExpressionStatement expressionStatement)
+    public IAstNode? VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var expr = expressionStatement.Expression;
         return expr switch
@@ -319,37 +320,37 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return new SimpleAssignmentStatement(lhs, (IExpression)expr.AcceptVisitor(this)!, op);
     }
 
-    public INode? VisitExternAliasDeclaration(ExternAliasDeclaration externAliasDeclaration)
+    public IAstNode? VisitExternAliasDeclaration(ExternAliasDeclaration externAliasDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitFieldDeclaration(FieldDeclaration fieldDeclaration)
+    public IAstNode? VisitFieldDeclaration(FieldDeclaration fieldDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitFixedFieldDeclaration(FixedFieldDeclaration fixedFieldDeclaration)
+    public IAstNode? VisitFixedFieldDeclaration(FixedFieldDeclaration fixedFieldDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitFixedStatement(FixedStatement fixedStatement)
+    public IAstNode? VisitFixedStatement(FixedStatement fixedStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitFixedVariableInitializer(FixedVariableInitializer fixedVariableInitializer)
+    public IAstNode? VisitFixedVariableInitializer(FixedVariableInitializer fixedVariableInitializer)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitForeachStatement(ForeachStatement foreachStatement)
+    public IAstNode? VisitForeachStatement(ForeachStatement foreachStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitForStatement(ICSharpCode.Decompiler.CSharp.Syntax.ForStatement forStatement)
+    public IAstNode? VisitForStatement(ICSharpCode.Decompiler.CSharp.Syntax.ForStatement forStatement)
     {
         IForInit? init = null;
         IForUpdate? update = null;
@@ -390,32 +391,32 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         );
     }
 
-    public INode? VisitFunctionPointerType(FunctionPointerAstType functionPointerType)
+    public IAstNode? VisitFunctionPointerType(FunctionPointerAstType functionPointerType)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitGotoCaseStatement(GotoCaseStatement gotoCaseStatement)
+    public IAstNode? VisitGotoCaseStatement(GotoCaseStatement gotoCaseStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitGotoDefaultStatement(GotoDefaultStatement gotoDefaultStatement)
+    public IAstNode? VisitGotoDefaultStatement(GotoDefaultStatement gotoDefaultStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitGotoStatement(GotoStatement gotoStatement)
+    public IAstNode? VisitGotoStatement(GotoStatement gotoStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitIdentifier(Identifier identifier)
+    public IAstNode? VisitIdentifier(Identifier identifier)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitIdentifierExpression(IdentifierExpression identifierExpression)
+    public IAstNode? VisitIdentifierExpression(IdentifierExpression identifierExpression)
     {
         var sym = Symbols[identifierExpression.GetChildByRole(Roles.Identifier).Name];
         return sym switch
@@ -426,7 +427,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    public INode? VisitIfElseStatement(IfElseStatement ifElseStatement)
+    public IAstNode? VisitIfElseStatement(IfElseStatement ifElseStatement)
     {
         // if time, expand nested if/else into list of else if clauses
         return new IfStatement(
@@ -442,32 +443,32 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    public INode? VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration)
+    public IAstNode? VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitIndexerExpression(IndexerExpression indexerExpression)
+    public IAstNode? VisitIndexerExpression(IndexerExpression indexerExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitInterpolatedStringExpression(InterpolatedStringExpression interpolatedStringExpression)
+    public IAstNode? VisitInterpolatedStringExpression(InterpolatedStringExpression interpolatedStringExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitInterpolatedStringText(InterpolatedStringText interpolatedStringText)
+    public IAstNode? VisitInterpolatedStringText(InterpolatedStringText interpolatedStringText)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitInterpolation(Interpolation interpolation)
+    public IAstNode? VisitInterpolation(Interpolation interpolation)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitInvocationExpression(InvocationExpression invocationExpression)
+    public IAstNode? VisitInvocationExpression(InvocationExpression invocationExpression)
     {
         Func<string, string> RemoveThisDot = (string expression) =>
         {
@@ -477,7 +478,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             }
             return expression;
         };
-        List<INode> args = new();
+        List<IAstNode> args = new();
         foreach (var argument in invocationExpression.Arguments)
         {
             // For example, you can add it to the 'args' list
@@ -643,37 +644,37 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         }
     }
 
-    public INode? VisitInvocationType(InvocationAstType invocationType)
+    public IAstNode? VisitInvocationType(InvocationAstType invocationType)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitIsExpression(IsExpression isExpression)
+    public IAstNode? VisitIsExpression(IsExpression isExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitLabelStatement(LabelStatement labelStatement)
+    public IAstNode? VisitLabelStatement(LabelStatement labelStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitLambdaExpression(LambdaExpression lambdaExpression)
+    public IAstNode? VisitLambdaExpression(LambdaExpression lambdaExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitLocalFunctionDeclarationStatement(LocalFunctionDeclarationStatement localFunctionDeclarationStatement)
+    public IAstNode? VisitLocalFunctionDeclarationStatement(LocalFunctionDeclarationStatement localFunctionDeclarationStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitLockStatement(LockStatement lockStatement)
+    public IAstNode? VisitLockStatement(LockStatement lockStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
+    public IAstNode? VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
     {
         var targetType = memberReferenceExpression.Target.Annotation<ResolveResult>().Type;
         var targetTypeDefinition = targetType.GetDefinition();
@@ -699,7 +700,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         }
     }
 
-    public INode? VisitMemberType(MemberType memberType)
+    public IAstNode? VisitMemberType(MemberType memberType)
     {
         var t = memberType.Annotation<TypeResolveResult>();
         return t.Type.FullName switch
@@ -713,7 +714,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    public INode? VisitMethodDeclaration(MethodDeclaration methodDeclaration)
+    public IAstNode? VisitMethodDeclaration(MethodDeclaration methodDeclaration)
     {
         static bool IsReturnAttributeSection(AttributeSection a)
         {
@@ -756,7 +757,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         // TODO: remove pattern matching hack for return type
         var fReturn = new IR.Declaration.FunctionReturn(
             //rt is IR.Declaration.TypeDeclaration { Type: var t } ? t :
-            rt is IR.Declaration.IType it ? it : null
+            rt is Types.IType it ? it : null
             , [.. returnAttributes]);
         return new IR.Declaration.FunctionDeclaration(
             methodDeclaration.Name,
@@ -769,33 +770,33 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    public INode? VisitNamedArgumentExpression(NamedArgumentExpression namedArgumentExpression)
+    public IAstNode? VisitNamedArgumentExpression(NamedArgumentExpression namedArgumentExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitNamedExpression(NamedExpression namedExpression)
+    public IAstNode? VisitNamedExpression(NamedExpression namedExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitNamespaceDeclaration(NamespaceDeclaration namespaceDeclaration)
+    public IAstNode? VisitNamespaceDeclaration(NamespaceDeclaration namespaceDeclaration)
     {
         var c = namespaceDeclaration.Children.OfType<ICSharpCode.Decompiler.CSharp.Syntax.TypeDeclaration>().Single();
         return c.AcceptVisitor(this);
     }
 
-    public INode? VisitNullNode(AstNode nullNode)
+    public IAstNode? VisitNullNode(AstNode nullNode)
     {
         return null;
     }
 
-    public INode? VisitNullReferenceExpression(NullReferenceExpression nullReferenceExpression)
+    public IAstNode? VisitNullReferenceExpression(NullReferenceExpression nullReferenceExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitObjectCreateExpression(ObjectCreateExpression objectCreateExpression)
+    public IAstNode? VisitObjectCreateExpression(ObjectCreateExpression objectCreateExpression)
     {
         var t = objectCreateExpression.GetChildByRole(Roles.Type);
         var args = objectCreateExpression.GetChildrenByRole(Roles.Argument)
@@ -822,51 +823,51 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         throw new NotImplementedException();
     }
 
-    public INode? VisitOperatorDeclaration(OperatorDeclaration operatorDeclaration)
+    public IAstNode? VisitOperatorDeclaration(OperatorDeclaration operatorDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitOutVarDeclarationExpression(OutVarDeclarationExpression outVarDeclarationExpression)
+    public IAstNode? VisitOutVarDeclarationExpression(OutVarDeclarationExpression outVarDeclarationExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitParameterDeclaration(ICSharpCode.Decompiler.CSharp.Syntax.ParameterDeclaration parameterDeclaration)
+    public IAstNode? VisitParameterDeclaration(ICSharpCode.Decompiler.CSharp.Syntax.ParameterDeclaration parameterDeclaration)
     {
         return new IR.Declaration.ParameterDeclaration(
             parameterDeclaration.Name,
-            (IR.Declaration.IType)parameterDeclaration.Type.AcceptVisitor(this),
+            (Types.IType)parameterDeclaration.Type.AcceptVisitor(this),
             [.. parameterDeclaration.Attributes.SelectMany(sec => sec.Attributes).Select(a => a.AcceptVisitor(this)).OfType<IR.IAttribute>()]
         );
     }
 
-    public INode? VisitParenthesizedExpression(ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression parenthesizedExpression)
+    public IAstNode? VisitParenthesizedExpression(ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression parenthesizedExpression)
     {
         return new IR.Expression.ParenthesizedExpression((IExpression)parenthesizedExpression.Expression.AcceptVisitor(this));
     }
 
-    public INode? VisitParenthesizedVariableDesignation(ParenthesizedVariableDesignation parenthesizedVariableDesignation)
+    public IAstNode? VisitParenthesizedVariableDesignation(ParenthesizedVariableDesignation parenthesizedVariableDesignation)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitPatternPlaceholder(AstNode placeholder, ICSharpCode.Decompiler.CSharp.Syntax.PatternMatching.Pattern pattern)
+    public IAstNode? VisitPatternPlaceholder(AstNode placeholder, ICSharpCode.Decompiler.CSharp.Syntax.PatternMatching.Pattern pattern)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitPointerReferenceExpression(PointerReferenceExpression pointerReferenceExpression)
+    public IAstNode? VisitPointerReferenceExpression(PointerReferenceExpression pointerReferenceExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitPreProcessorDirective(PreProcessorDirective preProcessorDirective)
+    public IAstNode? VisitPreProcessorDirective(PreProcessorDirective preProcessorDirective)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitPrimitiveExpression(PrimitiveExpression primitiveExpression)
+    public IAstNode? VisitPrimitiveExpression(PrimitiveExpression primitiveExpression)
     {
         var value = primitiveExpression.Value;
         return value switch
@@ -880,7 +881,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    public INode? VisitPrimitiveType(PrimitiveType primitiveType)
+    public IAstNode? VisitPrimitiveType(PrimitiveType primitiveType)
     {
         return primitiveType.KnownTypeCode switch
         {
@@ -895,67 +896,67 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    public INode? VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration)
+    public IAstNode? VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryContinuationClause(QueryContinuationClause queryContinuationClause)
+    public IAstNode? VisitQueryContinuationClause(QueryContinuationClause queryContinuationClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryExpression(QueryExpression queryExpression)
+    public IAstNode? VisitQueryExpression(QueryExpression queryExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryFromClause(QueryFromClause queryFromClause)
+    public IAstNode? VisitQueryFromClause(QueryFromClause queryFromClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryGroupClause(QueryGroupClause queryGroupClause)
+    public IAstNode? VisitQueryGroupClause(QueryGroupClause queryGroupClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryJoinClause(QueryJoinClause queryJoinClause)
+    public IAstNode? VisitQueryJoinClause(QueryJoinClause queryJoinClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryLetClause(QueryLetClause queryLetClause)
+    public IAstNode? VisitQueryLetClause(QueryLetClause queryLetClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryOrderClause(QueryOrderClause queryOrderClause)
+    public IAstNode? VisitQueryOrderClause(QueryOrderClause queryOrderClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryOrdering(QueryOrdering queryOrdering)
+    public IAstNode? VisitQueryOrdering(QueryOrdering queryOrdering)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQuerySelectClause(QuerySelectClause querySelectClause)
+    public IAstNode? VisitQuerySelectClause(QuerySelectClause querySelectClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitQueryWhereClause(QueryWhereClause queryWhereClause)
+    public IAstNode? VisitQueryWhereClause(QueryWhereClause queryWhereClause)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitRecursivePatternExpression(RecursivePatternExpression recursivePatternExpression)
+    public IAstNode? VisitRecursivePatternExpression(RecursivePatternExpression recursivePatternExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitReturnStatement(ICSharpCode.Decompiler.CSharp.Syntax.ReturnStatement returnStatement)
+    public IAstNode? VisitReturnStatement(ICSharpCode.Decompiler.CSharp.Syntax.ReturnStatement returnStatement)
     {
         if (returnStatement.HasChildren)
         {
@@ -970,89 +971,89 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
 
     }
 
-    public INode? VisitSimpleType(SimpleType simpleType)
+    public IAstNode? VisitSimpleType(SimpleType simpleType)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitSingleVariableDesignation(SingleVariableDesignation singleVariableDesignation)
+    public IAstNode? VisitSingleVariableDesignation(SingleVariableDesignation singleVariableDesignation)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitSizeOfExpression(SizeOfExpression sizeOfExpression)
+    public IAstNode? VisitSizeOfExpression(SizeOfExpression sizeOfExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitStackAllocExpression(StackAllocExpression stackAllocExpression)
+    public IAstNode? VisitStackAllocExpression(StackAllocExpression stackAllocExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitSwitchExpression(SwitchExpression switchExpression)
+    public IAstNode? VisitSwitchExpression(SwitchExpression switchExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitSwitchExpressionSection(SwitchExpressionSection switchExpressionSection)
+    public IAstNode? VisitSwitchExpressionSection(SwitchExpressionSection switchExpressionSection)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitSwitchSection(SwitchSection switchSection)
+    public IAstNode? VisitSwitchSection(SwitchSection switchSection)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitSwitchStatement(SwitchStatement switchStatement)
+    public IAstNode? VisitSwitchStatement(SwitchStatement switchStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitSyntaxTree(SyntaxTree syntaxTree)
+    public IAstNode? VisitSyntaxTree(SyntaxTree syntaxTree)
     {
         var c = syntaxTree.Children.Single();
         return c.AcceptVisitor(this);
     }
 
-    public INode? VisitThisReferenceExpression(ThisReferenceExpression thisReferenceExpression)
+    public IAstNode? VisitThisReferenceExpression(ThisReferenceExpression thisReferenceExpression)
     {
         // TODO: check if is referencing shader module object (only this case we can simply access member as global references)
         throw new NotImplementedException();
     }
 
-    public INode? VisitThrowExpression(ThrowExpression throwExpression)
+    public IAstNode? VisitThrowExpression(ThrowExpression throwExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitThrowStatement(ThrowStatement throwStatement)
+    public IAstNode? VisitThrowStatement(ThrowStatement throwStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitTryCatchStatement(TryCatchStatement tryCatchStatement)
+    public IAstNode? VisitTryCatchStatement(TryCatchStatement tryCatchStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitTupleExpression(TupleExpression tupleExpression)
+    public IAstNode? VisitTupleExpression(TupleExpression tupleExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitTupleType(TupleAstType tupleType)
+    public IAstNode? VisitTupleType(TupleAstType tupleType)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitTupleTypeElement(TupleTypeElement tupleTypeElement)
+    public IAstNode? VisitTupleTypeElement(TupleTypeElement tupleTypeElement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitTypeDeclaration(ICSharpCode.Decompiler.CSharp.Syntax.TypeDeclaration typeDeclaration)
+    public IAstNode? VisitTypeDeclaration(ICSharpCode.Decompiler.CSharp.Syntax.TypeDeclaration typeDeclaration)
     {
         var nodes = typeDeclaration.Members.Where(m => !m.Name.StartsWith("ILSLWGSL"))
                                            .Select(m => m.AcceptVisitor(this))
@@ -1060,22 +1061,22 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return new IR.Module([.. nodes]);
     }
 
-    public INode? VisitTypeOfExpression(TypeOfExpression typeOfExpression)
+    public IAstNode? VisitTypeOfExpression(TypeOfExpression typeOfExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitTypeParameterDeclaration(TypeParameterDeclaration typeParameterDeclaration)
+    public IAstNode? VisitTypeParameterDeclaration(TypeParameterDeclaration typeParameterDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitTypeReferenceExpression(TypeReferenceExpression typeReferenceExpression)
+    public IAstNode? VisitTypeReferenceExpression(TypeReferenceExpression typeReferenceExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitUnaryOperatorExpression(UnaryOperatorExpression unaryOperatorExpression)
+    public IAstNode? VisitUnaryOperatorExpression(UnaryOperatorExpression unaryOperatorExpression)
     {
         var expr = (IExpression)unaryOperatorExpression.Expression.AcceptVisitor(this)!;
         return unaryOperatorExpression.Operator switch
@@ -1086,47 +1087,47 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         };
     }
 
-    public INode? VisitUncheckedExpression(UncheckedExpression uncheckedExpression)
+    public IAstNode? VisitUncheckedExpression(UncheckedExpression uncheckedExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitUncheckedStatement(UncheckedStatement uncheckedStatement)
+    public IAstNode? VisitUncheckedStatement(UncheckedStatement uncheckedStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitUndocumentedExpression(UndocumentedExpression undocumentedExpression)
+    public IAstNode? VisitUndocumentedExpression(UndocumentedExpression undocumentedExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitUnsafeStatement(UnsafeStatement unsafeStatement)
+    public IAstNode? VisitUnsafeStatement(UnsafeStatement unsafeStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitUsingAliasDeclaration(UsingAliasDeclaration usingAliasDeclaration)
+    public IAstNode? VisitUsingAliasDeclaration(UsingAliasDeclaration usingAliasDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitUsingDeclaration(UsingDeclaration usingDeclaration)
+    public IAstNode? VisitUsingDeclaration(UsingDeclaration usingDeclaration)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitUsingStatement(UsingStatement usingStatement)
+    public IAstNode? VisitUsingStatement(UsingStatement usingStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitVariableDeclarationStatement(VariableDeclarationStatement variableDeclarationStatement)
+    public IAstNode? VisitVariableDeclarationStatement(VariableDeclarationStatement variableDeclarationStatement)
     {
         // TODO: handle multiple variable declaration 
         // TODO: proper handling of variable type
         var v = variableDeclarationStatement.Variables.Single();
-        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, ((IR.Declaration.IType)variableDeclarationStatement.Type.AcceptVisitor(this)), []);
+        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, ((Types.IType)variableDeclarationStatement.Type.AcceptVisitor(this)), []);
         Symbols.Add(varDecl.Name, varDecl);
         var c = v.GetChildByRole(Roles.Expression);
         if (c is not null)
@@ -1136,12 +1137,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         return new VariableOrValueStatement(varDecl);
     }
 
-    public INode? VisitVariableInitializer(VariableInitializer variableInitializer)
+    public IAstNode? VisitVariableInitializer(VariableInitializer variableInitializer)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitWhileStatement(ICSharpCode.Decompiler.CSharp.Syntax.WhileStatement whileStatement)
+    public IAstNode? VisitWhileStatement(ICSharpCode.Decompiler.CSharp.Syntax.WhileStatement whileStatement)
     {
         return new IR.Statement.WhileStatement(
             Attributes: [],
@@ -1150,17 +1151,17 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         );
     }
 
-    public INode? VisitWithInitializerExpression(WithInitializerExpression withInitializerExpression)
+    public IAstNode? VisitWithInitializerExpression(WithInitializerExpression withInitializerExpression)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitYieldBreakStatement(YieldBreakStatement yieldBreakStatement)
+    public IAstNode? VisitYieldBreakStatement(YieldBreakStatement yieldBreakStatement)
     {
         throw new NotImplementedException();
     }
 
-    public INode? VisitYieldReturnStatement(YieldReturnStatement yieldReturnStatement)
+    public IAstNode? VisitYieldReturnStatement(YieldReturnStatement yieldReturnStatement)
     {
         throw new NotImplementedException();
     }
