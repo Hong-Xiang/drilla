@@ -8,14 +8,22 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace DualDrill.ApiGen.DMath;
 
-public sealed record class VecCodeGenerator(VecType VecType, IndentedTextWriter Writer)
+public sealed record class VecCodeGenerator(VecType VecType, IndentedTextWriter Writer) : ITextCodeGenerator
 {
     TypeSyntax VecStructTypeSyntax { get; } = ParseTypeName(VecType.CSharpStructName());
     string ElementName { get; } = VecType.ElementType.ElementName();
     string ElementTypeName { get; } = VecType.ElementType.ScalarCSharpType().FullName;
+    string StructTypeName { get; } = $"vec{VecType.Size.Value}{VecType.ElementType.ElementName()}";
 
-    public ClassDeclarationSyntax GenerateStaticMethods()
+    public void GenerateStaticMethods()
     {
+
+        Writer.Write("public static partial class DMath");
+        using (var _ = this.IndentedScopeWithBracket())
+        {
+            Writer.Write($"public static {StructTypeName} vec{VecType.Size.Value}");
+        }
+
         var dmath = ClassDeclaration("DMath")
                     .WithModifiers(TokenList([Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.PartialKeyword)]));
         // constructors
