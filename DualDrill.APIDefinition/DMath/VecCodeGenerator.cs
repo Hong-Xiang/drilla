@@ -1,301 +1,312 @@
 ﻿using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.CodeDom.Compiler;
-using System.Diagnostics;
-using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.DMath;
 
-public sealed record class VecCodeGenerator(VecType VecType, IndentedTextWriter Writer) : ITextCodeGenerator
+internal sealed class VectorCodeGeneratorConfiguration
 {
-    TypeSyntax VecStructTypeSyntax { get; } = ParseTypeName(VecType.CSharpStructName());
-    string ElementName { get; } = VecType.ElementType.ElementName();
-    string ElementTypeName { get; } = VecType.ElementType.ScalarCSharpType().FullName;
-    string StructTypeName { get; } = $"vec{VecType.Size.Value}{VecType.ElementType.ElementName()}";
+    // for numeric vectors with data larger than 64 bits (except System.Half, which is not supported in VectorXX<Half>),
+    // we use .NET builtin SIMD optimization
+    // for vec3, we use vec4's data for optimizing memory access and SIMD optimization
+    public bool IsSimdSupported { get; }
+    public string ElementName { get; }
+    public string ElementCSharpTypeName { get; }
+    public string VecCSharpTypeName { get; }
+    public VectorCodeGeneratorConfiguration(VecType vecType)
+    {
+        IsSimdSupported = !vecType.ElementType.Equals(ShaderType.Bool)
+                && (!vecType.ElementType.Equals(ShaderType.F16))
+                && ((vecType.Size.Value == 3 ? 4 : vecType.Size.Value) * vecType.ElementType.ByteSize >= 8);
+        ElementName = vecType.ElementType.ElementName();
+        ElementCSharpTypeName = vecType.ElementType.ScalarCSharpType().FullName;
+        VecCSharpTypeName = $"vec{vecType.Size.Value}{ElementName}";
+    }
+}
+
+interface IVectorDetailCodeGenerator
+{
+    void GenerateMemberDeclaration();
+    void GeneratePrimaryFactoryMethodBody();
+}
+
+internal sealed record class VectorComponentCodeGenerator(
+    VecType VecType,
+    VectorCodeGeneratorConfiguration Config,
+    IndentedTextWriter Writer) : IVectorDetailCodeGenerator
+{
+    public void GenerateMemberDeclaration()
+    {
+        foreach (var m in VecType.Size.Components())
+        {
+            Writer.Write($"public {Config.ElementCSharpTypeName} {m} ");
+            Writer.WriteLine("{ get; set; }");
+        }
+    }
+
+    public void GeneratePrimaryFactoryMethodBody()
+    {
+        Writer.Write($"return new {Config.VecCSharpTypeName} () ");
+        Writer.WriteLine('{');
+        using (Writer.IndentedScope())
+        {
+            Writer.WriteSeparatedList(TextCodeSeparator.CommaNewLine, [.. VecType.Size.Components().Select(m => $"{m} = {m}")]);
+        }
+        Writer.WriteLine();
+        Writer.WriteLine("};");
+    }
+}
+
+internal sealed record class VectorSimdCodeGenerator(
+    VecType VecType,
+    VectorCodeGeneratorConfiguration Config,
+    IndentedTextWriter Writer) : IVectorDetailCodeGenerator
+{
+    int SimdDataBitWidth => (VecType.Size.Value == 3 ? 4 : VecType.Size.Value) * VecType.ElementType.ByteSize * 8;
+    string SimdStaticDataTypeName => $"Vector{SimdDataBitWidth}";
+    string SimdDataTypeName => $"Vector{SimdDataBitWidth}<{Config.ElementCSharpTypeName}>";
+
+    public void GenerateMemberDeclaration()
+    {
+        Writer.WriteLine($"internal {SimdDataTypeName} Data;");
+        Writer.WriteLine();
+
+        foreach (var (m, i) in VecType.Size.Components().Select((x, i) => (x, i)))
+        {
+            Writer.Write($"public {Config.ElementCSharpTypeName} {m}");
+            Writer.WriteLine(" {");
+            Writer.Indent++;
+
+            //getter
+            Writer.WriteMethodInline();
+            Writer.WriteLine($"get => Data[{i}];");
+            Writer.WriteLine();
+
+            Writer.WriteMethodInline();
+            Writer.WriteLine("set {");
+            Writer.Indent++;
+            Writer.Write($"Data = Vector{SimdDataBitWidth}.Create(");
+
+            var argumentCount = VecType.Size.Value == 3 ? 4 : VecType.Size.Value;
+            for (var ia = 0; ia < argumentCount; ia++)
+            {
+                if (ia == i)
+                {
+                    Writer.Write("value");
+                }
+                else
+                {
+                    Writer.Write($"Data[{ia}]");
+                }
+                if (ia < argumentCount - 1)
+                {
+                    Writer.Write(", ");
+                }
+            }
+            Writer.WriteLine(");");
+
+
+            Writer.Indent--;
+            Writer.WriteLine("}");
+            Writer.WriteLine();
+
+
+
+            Writer.Indent--;
+            Writer.WriteLine("}");
+            Writer.WriteLine();
+        }
+    }
+
+    public void GeneratePrimaryFactoryMethodBody()
+    {
+        Writer.Write($"return new {Config.VecCSharpTypeName}() ");
+        Writer.Write("{ Data = ");
+        Writer.Write($"{SimdStaticDataTypeName}.Create(");
+        List<string> args = [.. VecType.Size.Components()];
+        if (VecType.Size.Value == 3)
+        {
+            args.Add("default");
+        }
+        Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. args]);
+        Writer.WriteLine(") };");
+    }
+}
+
+
+public sealed record class VecCodeGenerator : ITextCodeGenerator
+{
+    VecType VecType { get; }
+    public IndentedTextWriter Writer { get; }
+    VectorCodeGeneratorConfiguration Config { get; }
+    IVectorDetailCodeGenerator DetailCodeGenerator { get; }
+    public VecCodeGenerator(VecType vecType, IndentedTextWriter writer)
+    {
+        VecType = vecType;
+        Writer = writer;
+        Config = new(VecType);
+        DetailCodeGenerator = Config.IsSimdSupported
+            ? new VectorSimdCodeGenerator(VecType, Config, Writer)
+            : new VectorComponentCodeGenerator(VecType, Config, Writer);
+    }
 
     public void GenerateStaticMethods()
     {
-
         Writer.Write("public static partial class DMath");
-        using (var _ = this.IndentedScopeWithBracket())
+        using (Writer.IndentedScopeWithBracket())
         {
-            Writer.Write($"public static {StructTypeName} vec{VecType.Size.Value}");
-        }
+            Writer.Write($"public static {Config.VecCSharpTypeName} vec{VecType.Size.Value}(");
 
-        var dmath = ClassDeclaration("DMath")
-                    .WithModifiers(TokenList([Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.PartialKeyword)]));
-        // constructors
-        var constructorMethod = MethodDeclaration(
-                        VecStructTypeSyntax,
-                        Identifier($"vec{VecType.Size.Value}"))
-                        .AddMethodInline()
-                        .WithModifiers(
-                            TokenList([Token(SyntaxKind.PublicKeyword),
-                                      Token(SyntaxKind.StaticKeyword)]));
-        {
-            // primary constructor
-            var method = constructorMethod.AddParameterListParameters(
-                [..VecType.Size.Components()
-                .Select(m => Parameter(Identifier(m)).WithType(ElementCSharpTypeSyntax))]
-            );
-            if (IsSIMDOptimized)
+            Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => $"{Config.ElementCSharpTypeName} {m}")]);
+            Writer.Write(')');
+
+            using (Writer.IndentedScopeWithBracket())
             {
-                List<ArgumentSyntax> dataArguments = [];
-                foreach (var m in VecType.Size.Components())
-                {
-                    dataArguments.Add(Argument(IdentifierName(m)));
-                }
-                if (VecType.Size.Value == 3)
-                {
-                }
-
-                var body = ImplicitObjectCreationExpression()
-                            .WithInitializer(
-                                InitializerExpression(
-                                    SyntaxKind.ObjectInitializerExpression,
-                                    SingletonSeparatedList<ExpressionSyntax>(
-                                        AssignmentExpression(
-                                            SyntaxKind.SimpleAssignmentExpression,
-                                            IdentifierName("Data"),
-                                            InvocationExpression(
-                                                MemberAccessExpression(
-                                                    SyntaxKind.SimpleMemberAccessExpression,
-                                                    IdentifierName("Vector64"),
-                                                    IdentifierName("Create")))
-                                            .WithArgumentList(
-                                                                ArgumentList(
-                                                                    SeparatedList<ArgumentSyntax>(
-                                                                        new SyntaxNodeOrToken[]{
-                                                            Argument(
-                                                                IdentifierName("x")),
-                                                            Token(SyntaxKind.CommaToken),
-                                                            Argument(
-                                                                IdentifierName("y"))})))))));
-                method = method.WithArrowExpressionBody(body);
-
+                DetailCodeGenerator.GeneratePrimaryFactoryMethodBody();
             }
-            else
+
+
+            Writer.Write($"public static {Config.VecCSharpTypeName} vec{VecType.Size.Value}({Config.ElementCSharpTypeName} e) => vec{VecType.Size.Value}(");
+            Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(_ => "e")]);
+            Writer.WriteLine(");");
+
             {
-                List<AssignmentExpressionSyntax> assenments = [];
-                foreach (var m in VecType.Size.Components())
+                var v2t = ShaderType.GetVecType(N2.Instance, VecType.ElementType);
+                var v2c = new VectorCodeGeneratorConfiguration(v2t);
+                var v3t = ShaderType.GetVecType(N3.Instance, VecType.ElementType);
+                var v3c = new VectorCodeGeneratorConfiguration(v3t);
+
+                int[][] patterns = VecType.Size switch
                 {
-                    AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                        IdentifierName(m),
-                        IdentifierName(m));
+                    N3 => [[1, 2], [2, 1]],
+                    N4 => [[1, 3], [3, 1], [1, 1, 2], [1, 2, 1], [2, 1, 1], [2, 2]],
+                    _ => []
+                };
+                string[] components = [.. VecType.Size.Components()];
+                foreach (var ptn in patterns)
+                {
+                    Writer.Write($"public static {Config.VecCSharpTypeName} vec{VecType.Size.Value}(");
+                    var ps = ptn.Select((d, i) => d switch
+                    {
+                        1 => Config.ElementCSharpTypeName,
+                        2 => v2c.VecCSharpTypeName,
+                        3 => v3c.VecCSharpTypeName,
+                        _ => throw new NotImplementedException()
+                    } + $" e{i}");
+                    Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. ps]);
+                    Writer.Write($") => vec{VecType.Size.Value}(");
+                    List<string> args = [];
+                    foreach (var (p, i) in ptn.Select((p, i) => (p, i)))
+                    {
+                        var name = $"e{i}";
+                        switch (p)
+                        {
+                            case 1:
+                                args.Add(name);
+                                break;
+                            case 2:
+                                args.Add($"{name}.x");
+                                args.Add($"{name}.y");
+                                break;
+                            case 3:
+                                args.Add($"{name}.x");
+                                args.Add($"{name}.y");
+                                args.Add($"{name}.z");
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. args]);
+                    Writer.WriteLine(");");
                 }
-
-                var body = ImplicitObjectCreationExpression()
-                                           .WithInitializer(
-                                               InitializerExpression(
-                                                   SyntaxKind.ObjectInitializerExpression,
-                                                  SeparatedList<ExpressionSyntax>(
-                                        new SyntaxNodeOrToken[]{
-                                            AssignmentExpression(
-                                                SyntaxKind.SimpleAssignmentExpression,
-                                                IdentifierName("x"),
-                                                IdentifierName("x")),
-                                            Token(SyntaxKind.CommaToken),
-                                            AssignmentExpression(
-                                                SyntaxKind.SimpleAssignmentExpression,
-                                                IdentifierName("y"),
-                                                IdentifierName("y"))})));
-                method = method.WithArrowExpressionBody(body);
-
             }
-            dmath = dmath.AddMembers(method);
         }
-
-        dmath = dmath.WithMembers(
-            List<MemberDeclarationSyntax>(
-                [
-                    MethodDeclaration(
-                        VecStructTypeSyntax,
-                        Identifier($"vec{VecType.Size.Value}"))
-                        .AddMethodInline()
-                        .WithModifiers(
-                            TokenList([Token(SyntaxKind.PublicKeyword),
-                                      Token(SyntaxKind.StaticKeyword)]))
-                    .WithParameterList(
-                        ParameterList(
-                            SeparatedList<ParameterSyntax>(
-                                new SyntaxNodeOrToken[]{
-                                    Parameter(
-                                        Identifier("x"))
-                                    .WithType(
-                                        PredefinedType(
-                                            Token(SyntaxKind.IntKeyword))),
-                                    Token(SyntaxKind.CommaToken),
-                                    Parameter(
-                                        Identifier("y"))
-                                    .WithType(
-                                        PredefinedType(
-                                            Token(SyntaxKind.IntKeyword)))})))
-                    .WithExpressionBody(
-                        ArrowExpressionClause(
-                            ImplicitObjectCreationExpression()
-                            .WithInitializer(
-                                InitializerExpression(
-                                    SyntaxKind.ObjectInitializerExpression,
-                                    SingletonSeparatedList<ExpressionSyntax>(
-                                        AssignmentExpression(
-                                            SyntaxKind.SimpleAssignmentExpression,
-                                            IdentifierName("Data"),
-                                            InvocationExpression(
-                                                MemberAccessExpression(
-                                                    SyntaxKind.SimpleMemberAccessExpression,
-                                                    IdentifierName("Vector64"),
-                                                    IdentifierName("Create")))
-                                            .WithArgumentList(
-                                                ArgumentList(
-                                                    SeparatedList<ArgumentSyntax>(
-                                                        new SyntaxNodeOrToken[]{
-                                                            Argument(
-                                                                IdentifierName("x")),
-                                                            Token(SyntaxKind.CommaToken),
-                                                            Argument(
-                                                                IdentifierName("y"))})))))))))
-                    .WithSemicolonToken(
-                        Token(SyntaxKind.SemicolonToken)),
-                    MethodDeclaration(
-                        IdentifierName("vec2i32"),
-                        Identifier("vec2"))
-                    .WithAttributeLists(
-                        SingletonList<AttributeListSyntax>(
-                            AttributeList(
-                                SingletonSeparatedList<AttributeSyntax>(
-                                    Attribute(
-                                        IdentifierName("MethodImpl"))
-                                    .WithArgumentList(
-                                        AttributeArgumentList(
-                                            SingletonSeparatedList<AttributeArgumentSyntax>(
-                                                AttributeArgument(
-                                                    MemberAccessExpression(
-                                                        SyntaxKind.SimpleMemberAccessExpression,
-                                                        IdentifierName("MethodImplOptions"),
-                                                        IdentifierName("AggressiveInlining"))))))))))
-                    .WithModifiers(
-                        TokenList(
-                            new []{
-                                Token(SyntaxKind.PublicKeyword),
-                                Token(SyntaxKind.StaticKeyword)}))
-                    .WithParameterList(
-                        ParameterList(
-                            SingletonSeparatedList<ParameterSyntax>(
-                                Parameter(
-                                    Identifier("e"))
-                                .WithType(
-                                    PredefinedType(
-                                        Token(SyntaxKind.IntKeyword))))))
-                    .WithExpressionBody(
-                        ArrowExpressionClause(
-                            InvocationExpression(
-                                IdentifierName("vec2"))
-                            .WithArgumentList(
-                                ArgumentList(
-                                    SeparatedList<ArgumentSyntax>(
-                                        new SyntaxNodeOrToken[]{
-                                            Argument(
-                                                IdentifierName("e")),
-                                            Token(SyntaxKind.CommaToken),
-                                            Argument(
-                                                IdentifierName("e"))})))))
-                    .WithSemicolonToken(
-                        Token(SyntaxKind.SemicolonToken))]));
-
-        return dmath;
     }
 
     public void GenerateDeclaration()
     {
-        Writer.Write("public partial struct vec");
-        Writer.Write(VecType.Size.Value);
-        Writer.Write(VecType.ElementType.ElementName());
-        Writer.WriteLine(" {");
-        Writer.Indent++;
-        DataMembersDeclaration();
-        Writer.Indent--;
-        Writer.WriteLine("}");
-        Writer.WriteLine();
-    }
-    // for numeric vectors with data larger than 64 bits (except System.Half, which is not supported in VectorXX<Half>),
-    // we use .NET builtin SIMD optimization
-    // for vec3, we use vec4's data for optimizing memory access and SIMD optimization
-    bool IsSIMDOptimized { get; } =
-        !VecType.ElementType.Equals(ShaderType.Bool)
-        && (!VecType.ElementType.Equals(ShaderType.F16))
-        && ((VecType.Size.Value == 3 ? 4 : VecType.Size.Value) * VecType.ElementType.ByteSize >= 8);
 
-    TypeSyntax ElementCSharpTypeSyntax { get; } = ParseTypeName(VecType.ElementType.ScalarCSharpType().FullName);
-
-    int SIMDDataBitWidth => (VecType.Size.Value == 3 ? 4 : VecType.Size.Value) * VecType.ElementType.ByteSize * 8;
-
-    TypeSyntax SIMDDataType()
-    {
-        Debug.Assert(IsSIMDOptimized);
-        return ParseTypeName($"System.Runtime.Intrinsics.Vector{SIMDDataBitWidth}<{VecType.ElementType.ScalarCSharpType().FullName}>");
-    }
-
-    void DataMembersDeclaration()
-    {
-        if (IsSIMDOptimized)
+        Writer.Write("public partial struct ");
+        Writer.Write(Config.VecCSharpTypeName);
+        using (Writer.IndentedScopeWithBracket())
         {
-            Writer.WriteLine($"internal Vector{SIMDDataBitWidth}<{ElementTypeName}> Data;");
-            Writer.WriteLine();
+            DetailCodeGenerator.GenerateMemberDeclaration();
+            //GenerateSwizzles();
+        }
+    }
 
-            foreach (var (m, i) in VecType.Size.Components().Select((x, i) => (x, i)))
+
+
+    public void GenerateSwizzles()
+    {
+
+        static IEnumerable<ImmutableArray<string>> MakePerm(int count, IReadOnlyList<string> components)
+        {
+            if (count <= 0)
             {
-                Writer.Write($"public {ElementTypeName} {m}");
-                Writer.WriteLine(" {");
-                Writer.Indent++;
-
-                //getter
-                Writer.WriteMethodInline();
-                Writer.WriteLine($"get => Data[{i}];");
-                Writer.WriteLine();
-
-                Writer.WriteMethodInline();
-                Writer.WriteLine("set {");
-                Writer.Indent++;
-                Writer.Write($"Data = Vector{SIMDDataBitWidth}.Create(");
-
-                var argumentCount = VecType.Size.Value == 3 ? 4 : VecType.Size.Value;
-                for (var ia = 0; ia < argumentCount; ia++)
+                yield return [];
+                yield break;
+            }
+            var result = new string[count];
+            if (count == 1)
+            {
+                foreach (var c in components)
                 {
-                    if (ia == i)
+                    result[0] = c;
+                    yield return [.. result];
+                }
+                yield break;
+            }
+            var q = from n in MakePerm(count - 1, components)
+                    from c in components
+                    select (string[])[c, .. n];
+            foreach (var r in q)
+            {
+                yield return [.. r];
+            }
+        }
+
+        string[] components = [.. VecType.Size.Components()];
+        foreach (var rank in (IRank[])[N2.Instance, N3.Instance, N4.Instance])
+        {
+            var rv = ShaderType.GetVecType(rank, VecType.ElementType);
+            var rvc = new VectorCodeGeneratorConfiguration(rv);
+            foreach (var sw in MakePerm(rank.Value, components))
+            {
+                var name = string.Join(string.Empty, sw);
+                Writer.Write($"public {rvc.VecCSharpTypeName} {name} ");
+                using (Writer.IndentedScopeWithBracket())
+                {
+                    Writer.WriteAggressiveInlining();
+                    Writer.Write($"get => vec{rank.Value}(");
+                    Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. sw]);
+                    Writer.WriteLine(");");
+
+                    if (sw.Distinct().Count() == sw.Length && sw.Length < VecType.Size.Value)
                     {
-                        Writer.Write("value");
-                    }
-                    else
-                    {
-                        Writer.Write($"Data[{ia}]");
-                    }
-                    if (ia < argumentCount - 1)
-                    {
-                        Writer.Write(", ");
+                        Writer.WriteLine();
+                        Writer.WriteAggressiveInlining();
+                        Writer.WriteLine("set ");
+                        using (Writer.IndentedScopeWithBracket())
+                        {
+                            for (var i = 0; i < sw.Length; i++)
+                            {
+                                Writer.WriteLine($"{sw[i]} = value.{components[i]};");
+                            }
+                        };
+
                     }
                 }
-                Writer.WriteLine(");");
-
-
-                Writer.Indent--;
-                Writer.WriteLine("}");
-                Writer.WriteLine();
-
-
-
-                Writer.Indent--;
-                Writer.WriteLine("}");
-                Writer.WriteLine();
             }
         }
-        else
-        {
-            foreach (var m in VecType.Size.Components())
-            {
-                Writer.WriteLine($"public {ElementTypeName} {m};");
-            }
-        }
+    }
+
+    public void Generate()
+    {
+        GenerateDeclaration();
+        GenerateStaticMethods();
     }
 }

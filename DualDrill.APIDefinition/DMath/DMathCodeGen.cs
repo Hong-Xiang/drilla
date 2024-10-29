@@ -1,9 +1,6 @@
 ﻿using DualDrill.CLSL.Language.Types;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Runtime.InteropServices;
 namespace DualDrill.ApiGen.DMath;
@@ -54,15 +51,6 @@ public sealed class DMathCodeGen
     {
     }
 
-    CodeTypeDeclaration StaticMathClassDecl()
-    {
-        return new CodeTypeDeclaration(StaticMathTypeName)
-        {
-            IsPartial = true,
-            IsClass = true,
-        };
-    }
-
     void AddGeneratedCodeComment(TextWriter writer)
     {
         writer.WriteLine("//------------------------------------------------------------------------------");
@@ -81,13 +69,11 @@ public sealed class DMathCodeGen
         var itw = new IndentedTextWriter(tw);
 
         AddGeneratedCodeComment(itw);
-        itw.WriteLine("using System.Runtime.CompilerServices");
-        itw.WriteLine("using System.Runtime.Intrinsics");
-        itw.WriteLine($"namespace {NameSpace}");
+        itw.WriteLine("using System.Runtime.CompilerServices;");
+        itw.WriteLine("using System.Runtime.Intrinsics;");
+        itw.WriteLine($"namespace {NameSpace};");
+        itw.WriteLine($"using static DMath;");
         itw.WriteLine();
-
-        var math = StaticMathClassDecl();
-
 
         foreach (var t in ShaderType.GetVecTypes())
         {
@@ -98,8 +84,7 @@ public sealed class DMathCodeGen
             //    math.Members.Add(m);
             //}
             //ns.Types.Add(GenerateVecDecl(t));
-            vecGenertor.GenerateDeclaration();
-            vecGenertor.GenerateStaticMethods();
+            vecGenertor.Generate();
         }
         //cu = cu.AddMembers(nsr);
         //var formattedCode = Formatter.Format(cu.NormalizeWhitespace(), new AdhocWorkspace()).ToFullString();

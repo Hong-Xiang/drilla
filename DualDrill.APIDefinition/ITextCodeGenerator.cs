@@ -1,23 +1,22 @@
-﻿using System.CodeDom.Compiler;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.CodeDom.Compiler;
 
 namespace DualDrill.ApiGen;
 
 public interface ITextCodeGenerator
 {
-
     public IndentedTextWriter Writer { get; }
-
-
-
+    void Generate();
 }
 
-public static class TextSourceGeneratorExtension
+internal enum TextCodeSeparator
 {
-    public static void EmptyLine(this ITextCodeGenerator generator)
-    {
-        generator.Writer.WriteLine();
-    }
+    CommaSpace = 0,
+    CommaNewLine
+}
 
+internal static class IndentedTextWriterExtension
+{
     sealed record class IndentedScopeDisposable : IDisposable
     {
         IndentedTextWriter Writer { get; }
@@ -25,7 +24,8 @@ public static class TextSourceGeneratorExtension
         public IndentedScopeDisposable(IndentedTextWriter writer, bool writeBracket)
         {
             Writer = writer;
-            if (writeBracket)
+            WriteBracket = writeBracket;
+            if (WriteBracket)
             {
                 Writer.WriteLine("{");
             }
@@ -42,33 +42,42 @@ public static class TextSourceGeneratorExtension
         }
     }
 
-    public static IDisposable IndentedScope(this ITextCodeGenerator generator)
+    public static IDisposable IndentedScope(this IndentedTextWriter writer)
     {
-        return new IndentedScopeDisposable(generator.Writer, false);
+        return new IndentedScopeDisposable(writer, false);
     }
 
-    public static void WriteAggressiveInlining(this ITextCodeGenerator generator)
+    public static void WriteAggressiveInlining(this IndentedTextWriter writer)
     {
-        generator.Writer.WriteLine("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+        writer.WriteLine("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
     }
 
-    public static void WriteArguments(this ITextCodeGenerator generator, params string[] arguments)
+    public static void WriteSeparatedList(this IndentedTextWriter writer, TextCodeSeparator separator, params string[] arguments)
     {
-        generator.Writer.Write("(");
         for (var i = 0; i < arguments.Length; i++)
         {
-            generator.Writer.Write(arguments[i]);
+            writer.Write(arguments[i]);
             if (i < arguments.Length - 1)
             {
-                generator.Writer.Write(", ");
+                switch (separator)
+                {
+                    case TextCodeSeparator.CommaSpace:
+                        writer.Write(", ");
+                        break;
+                    case TextCodeSeparator.CommaNewLine:
+                        writer.WriteLine(',');
+                        break;
+                    default:
+                        writer.Write(' ');
+                        break;
+                }
             }
         }
-        generator.Writer.Write(")");
     }
 
-    public static IDisposable IndentedScopeWithBracket(this ITextCodeGenerator generator)
+    public static IDisposable IndentedScopeWithBracket(this IndentedTextWriter writer)
     {
-        return new IndentedScopeDisposable(generator.Writer, true);
+        return new IndentedScopeDisposable(writer, true);
     }
 }
 
