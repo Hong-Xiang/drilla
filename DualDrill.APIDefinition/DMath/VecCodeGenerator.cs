@@ -30,6 +30,8 @@ interface IVectorDetailCodeGenerator
 {
     void GenerateMemberDeclaration();
     void GeneratePrimaryFactoryMethodBody();
+    string CreateVectorExpression(Func<string[], IEnumerable<string>> componentExpressions);
+    void GenerateOperators(); // Add this method
 }
 
 internal sealed record class VectorComponentCodeGenerator(
@@ -56,6 +58,39 @@ internal sealed record class VectorComponentCodeGenerator(
         }
         Writer.WriteLine();
         Writer.WriteLine("};");
+    }
+
+    public string CreateVectorExpression(Func<string[], IEnumerable<string>> componentExpressions)
+    {
+        var components = VecType.Size.Components().ToArray();
+        var expressions = componentExpressions(components);
+        var assignments = components.Zip(expressions, (c, expr) => $"{c} = {expr}");
+        return $"new {Config.VecCSharpTypeName}() {{ {string.Join(", ", assignments)} }}";
+    }
+
+    public void GenerateOperators()
+    {
+        Writer.WriteLine();
+
+        // Generate unary negation operator
+        Writer.WriteAggressiveInlining();
+        Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator -({Config.VecCSharpTypeName} v) => {CreateVectorExpression(components => components.Select(c => $"-v.{c}"))};");
+        Writer.WriteLine();
+
+        // Operators to generate
+        string[] operators = { "+", "-", "*", "/", "&", "|", "^" };
+
+        // Generate binary operators
+        foreach (var op in operators)
+        {
+            Writer.WriteAggressiveInlining();
+            Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator {op} ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => {CreateVectorExpression(components => components.Select(c => $"left.{c} {op} right.{c}"))};");
+            Writer.WriteLine();
+        }
+
+        // Generate modulus operator
+        Writer.WriteAggressiveInlining();
+        Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator % ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => {CreateVectorExpression(components => components.Select(c => $"({Config.ElementCSharpTypeName})(left.{c} % right.{c})"))};");
     }
 }
 
@@ -133,6 +168,55 @@ internal sealed record class VectorSimdCodeGenerator(
         Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. args]);
         Writer.WriteLine(") };");
     }
+
+    public string CreateVectorExpression(Func<string[], IEnumerable<string>> componentExpressions)
+    {
+        var components = VecType.Size.Components().ToArray();
+        var expressions = componentExpressions(components);
+        var argumentList = string.Join(", ", expressions);
+
+        return $"{SimdStaticDataTypeName}.Create({argumentList})";
+    }
+
+    public void GenerateOperators()
+    {
+        Writer.WriteLine();
+
+        // Generate unary negation operator
+        Writer.WriteAggressiveInlining();
+        Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator -({Config.VecCSharpTypeName} v) => new() {{ Data = -v.Data }};");
+        Writer.WriteLine();
+
+        // Operators to generate
+        string[] operators = { "+", "-", "*", "/", "&", "|", "^" };
+
+        // Generate binary operators
+        foreach (var op in operators)
+        {
+            Writer.WriteAggressiveInlining();
+            Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator {op} ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => new() {{ Data = left.Data {op} right.Data }};");
+            Writer.WriteLine();
+        }
+
+        // Generate modulus operator
+        Writer.WriteAggressiveInlining();
+        // if (SupportsVectorizedModulus(VecType.ElementType))
+        // {
+            Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator % ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => new() {{ Data = left.Data % right.Data }};");
+        // }
+        // else
+        // {
+            // Element-wise modulus
+            // Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator % ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => {CreateVectorExpression(components => components.Select(c => $"({Config.ElementCSharpTypeName})(left.{c} % right.{c})"))};");
+        // }
+    }
+
+    // Helper method to determine if the element type supports vectorized modulus
+    // private static bool SupportsVectorizedModulus(IShaderType elementType)
+    // {
+    //     return elementType.Equals(ShaderType.Int) || elementType.Equals(ShaderType.Uint) ||
+    //            elementType.Equals(ShaderType.Long) || elementType.Equals(ShaderType.Ulong);
+    // }
 }
 
 
@@ -234,11 +318,10 @@ public sealed record class VecCodeGenerator : ITextCodeGenerator
         using (Writer.IndentedScopeWithBracket())
         {
             DetailCodeGenerator.GenerateMemberDeclaration();
+            DetailCodeGenerator.GenerateOperators(); // Use polymorphism to generate operators
             //GenerateSwizzles();
         }
     }
-
-
 
     public void GenerateSwizzles()
     {
@@ -310,3 +393,4 @@ public sealed record class VecCodeGenerator : ITextCodeGenerator
         GenerateStaticMethods();
     }
 }
+
