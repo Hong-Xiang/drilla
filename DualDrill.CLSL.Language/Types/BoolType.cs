@@ -1,4 +1,6 @@
-﻿namespace DualDrill.CLSL.Language.Types;
+﻿using DualDrill.Common.Nat;
+
+namespace DualDrill.CLSL.Language.Types;
 
 public sealed record class BoolType : IScalarType, IBasicPrimitiveType<BoolType>
 {
@@ -7,4 +9,6 @@ public sealed record class BoolType : IScalarType, IBasicPrimitiveType<BoolType>
 
     public string Name => "bool";
     public int ByteSize => 4;
+
+    public IBitWidth BitWidth { get; } = N8.Instance;
 }

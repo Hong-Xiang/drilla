@@ -11,39 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="DMath.gen.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>DMath.gen.tt</DependentUpon>
-    </None>
-    <None Include="Functions.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Functions.tt</DependentUpon>
-    </None>
-    <None Include="Vec2.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Vec2.tt</DependentUpon>
-    </None>
-    <None Include="Vec4.cs">
-      <DependentUpon>Vec4.tt</DependentUpon>
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-    </None>
-    <None Include="Vec3.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Vec3.tt</DependentUpon>
-    </None>
-    <None Include="Vec2B16.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Vec2B16.tt</DependentUpon>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="DMath.gen.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>DMath.gen.cs</LastGenOutput>

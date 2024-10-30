@@ -1,7 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace DualDrill.ApiGen.DMath;
 
@@ -27,28 +25,6 @@ internal static class DMathCodeGenExtension
         UIntType t => $"u{t.BitWidth.Value}",
         _ => throw new NotSupportedException($"{nameof(ElementName)} does not support {type}")
     };
-
-    public static string CSharpStructName(this VecType vecType) => $"vec{vecType.Size.Value}{vecType.ElementType.ElementName()}";
-
-    public static MethodDeclarationSyntax AddMethodInline(this MethodDeclarationSyntax methodSyntax)
-    {
-        return methodSyntax.AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(DMathCodeGen.AggressiveInlining)));
-    }
-
-    public static MethodDeclarationSyntax WithArrowExpressionBody(this MethodDeclarationSyntax methodSyntax, ExpressionSyntax expr)
-    {
-        return methodSyntax.WithExpressionBody(SyntaxFactory.ArrowExpressionClause(expr)).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
-    }
-
-    public static void WriteStructLayout(this TextWriter writer)
-    {
-        writer.WriteLine("[StructLayout(LayoutKind.Sequential)]");
-    }
-
-    public static void WriteMethodInline(this TextWriter writer)
-    {
-        writer.WriteLine("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
-    }
 
     public static Type ScalarCSharpType(this IScalarType t)
     {

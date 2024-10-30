@@ -17,13 +17,6 @@ public class ApiGenController(
     HttpClient HttpClient
 ) : ControllerBase
 {
-    [HttpGet("math")]
-    public string GenerateMathCode()
-    {
-        var codeGen = new DMathCodeGen();
-        return codeGen.Generate();
-    }
-
     [HttpGet("webgpu/webidl")]
     public async Task<IActionResult> GetWebGPUWebIDLSpecAsync(CancellationToken cancellation)
         => Ok(await GetWebGPUIDLSpecAsync(cancellation));

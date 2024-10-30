@@ -1,4 +1,6 @@
-﻿using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using Microsoft.CodeAnalysis;
 using System.CodeDom.Compiler;
@@ -6,51 +8,32 @@ using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.DMath;
 
-internal sealed class VectorCodeGeneratorConfiguration
-{
-    // for numeric vectors with data larger than 64 bits (except System.Half, which is not supported in VectorXX<Half>),
-    // we use .NET builtin SIMD optimization
-    // for vec3, we use vec4's data for optimizing memory access and SIMD optimization
-    public bool IsSimdSupported { get; }
-    public string ElementName { get; }
-    public string ElementCSharpTypeName { get; }
-    public string VecCSharpTypeName { get; }
-    public VectorCodeGeneratorConfiguration(VecType vecType)
-    {
-        IsSimdSupported = !vecType.ElementType.Equals(ShaderType.Bool)
-                && (!vecType.ElementType.Equals(ShaderType.F16))
-                && ((vecType.Size.Value == 3 ? 4 : vecType.Size.Value) * vecType.ElementType.ByteSize >= 8);
-        ElementName = vecType.ElementType.ElementName();
-        ElementCSharpTypeName = vecType.ElementType.ScalarCSharpType().FullName;
-        VecCSharpTypeName = $"vec{vecType.Size.Value}{ElementName}";
-    }
-}
-
 interface IVectorDetailCodeGenerator
 {
     void GenerateMemberDeclaration();
     void GeneratePrimaryFactoryMethodBody();
     string CreateVectorExpression(Func<string[], IEnumerable<string>> componentExpressions);
-    void GenerateOperators(); // Add this method
+    void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op);
+    void GenerateArithmeticOperatorBody(UnaryArithmeticOperatorDefinition op);
 }
 
 internal sealed record class VectorComponentCodeGenerator(
     VecType VecType,
-    VectorCodeGeneratorConfiguration Config,
+    CSharpProjectionConfiguration Config,
     IndentedTextWriter Writer) : IVectorDetailCodeGenerator
 {
     public void GenerateMemberDeclaration()
     {
         foreach (var m in VecType.Size.Components())
         {
-            Writer.Write($"public {Config.ElementCSharpTypeName} {m} ");
+            Writer.Write($"public {Config.GetCSharpTypeName(VecType.ElementType)} {m} ");
             Writer.WriteLine("{ get; set; }");
         }
     }
 
     public void GeneratePrimaryFactoryMethodBody()
     {
-        Writer.Write($"return new {Config.VecCSharpTypeName} () ");
+        Writer.Write($"return new {Config.GetCSharpTypeName(VecType)} () ");
         Writer.WriteLine('{');
         using (Writer.IndentedScope())
         {
@@ -65,43 +48,35 @@ internal sealed record class VectorComponentCodeGenerator(
         var components = VecType.Size.Components().ToArray();
         var expressions = componentExpressions(components);
         var assignments = components.Zip(expressions, (c, expr) => $"{c} = {expr}");
-        return $"new {Config.VecCSharpTypeName}() {{ {string.Join(", ", assignments)} }}";
+        return $"new {Config.GetCSharpTypeName(VecType)}() {{ {string.Join(", ", assignments)} }}";
     }
 
-    public void GenerateOperators()
+    public void GenerateArithmeticOperatorBody(UnaryArithmeticOperatorDefinition op)
     {
-        Writer.WriteLine();
+        Writer.Write($"return vec{VecType.Size.Value}(");
+        Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => $"({Config.GetCSharpTypeName(VecType.ElementType)})({Config.OpName(op.Op)}v.{m})")]);
+        Writer.WriteLine(");");
+    }
 
-        // Generate unary negation operator
-        Writer.WriteAggressiveInlining();
-        Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator -({Config.VecCSharpTypeName} v) => {CreateVectorExpression(components => components.Select(c => $"-v.{c}"))};");
-        Writer.WriteLine();
-
-        // Operators to generate
-        string[] operators = { "+", "-", "*", "/", "&", "|", "^" };
-
-        // Generate binary operators
-        foreach (var op in operators)
-        {
-            Writer.WriteAggressiveInlining();
-            Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator {op} ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => {CreateVectorExpression(components => components.Select(c => $"left.{c} {op} right.{c}"))};");
-            Writer.WriteLine();
-        }
-
-        // Generate modulus operator
-        Writer.WriteAggressiveInlining();
-        Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator % ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => {CreateVectorExpression(components => components.Select(c => $"({Config.ElementCSharpTypeName})(left.{c} % right.{c})"))};");
+    public void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op)
+    {
+        Writer.Write($"return vec{VecType.Size.Value}(");
+        Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => {
+            var l = op.Left is IScalarType ?  "left" : $"left.{m}";
+            var r = op.Right is IScalarType ?  "right" : $"right.{m}";
+            return $"({Config.GetCSharpTypeName(VecType.ElementType)})({l} {Config.OpName(op.Op)} {r})"; })]);
+        Writer.WriteLine(");");
     }
 }
 
 internal sealed record class VectorSimdCodeGenerator(
     VecType VecType,
-    VectorCodeGeneratorConfiguration Config,
+    CSharpProjectionConfiguration Config,
     IndentedTextWriter Writer) : IVectorDetailCodeGenerator
 {
-    int SimdDataBitWidth => (VecType.Size.Value == 3 ? 4 : VecType.Size.Value) * VecType.ElementType.ByteSize * 8;
+    int SimdDataBitWidth => (VecType.Size.Value == 3 ? 4 : VecType.Size.Value) * VecType.ElementType.BitWidth.Value;
     string SimdStaticDataTypeName => $"Vector{SimdDataBitWidth}";
-    string SimdDataTypeName => $"Vector{SimdDataBitWidth}<{Config.ElementCSharpTypeName}>";
+    string SimdDataTypeName => $"Vector{SimdDataBitWidth}<{Config.GetCSharpTypeName(VecType.ElementType)}>";
 
     public void GenerateMemberDeclaration()
     {
@@ -110,16 +85,16 @@ internal sealed record class VectorSimdCodeGenerator(
 
         foreach (var (m, i) in VecType.Size.Components().Select((x, i) => (x, i)))
         {
-            Writer.Write($"public {Config.ElementCSharpTypeName} {m}");
+            Writer.Write($"public {Config.GetCSharpTypeName(VecType.ElementType)} {m}");
             Writer.WriteLine(" {");
             Writer.Indent++;
 
             //getter
-            Writer.WriteMethodInline();
+            Writer.WriteAggressiveInlining();
             Writer.WriteLine($"get => Data[{i}];");
             Writer.WriteLine();
 
-            Writer.WriteMethodInline();
+            Writer.WriteAggressiveInlining();
             Writer.WriteLine("set {");
             Writer.Indent++;
             Writer.Write($"Data = Vector{SimdDataBitWidth}.Create(");
@@ -157,7 +132,7 @@ internal sealed record class VectorSimdCodeGenerator(
 
     public void GeneratePrimaryFactoryMethodBody()
     {
-        Writer.Write($"return new {Config.VecCSharpTypeName}() ");
+        Writer.Write($"return new {Config.GetCSharpTypeName(VecType)}() ");
         Writer.Write("{ Data = ");
         Writer.Write($"{SimdStaticDataTypeName}.Create(");
         List<string> args = [.. VecType.Size.Components()];
@@ -177,73 +152,58 @@ internal sealed record class VectorSimdCodeGenerator(
 
         return $"{SimdStaticDataTypeName}.Create({argumentList})";
     }
-
-    public void GenerateOperators()
+    public void GenerateArithmeticOperatorBody(UnaryArithmeticOperatorDefinition op)
     {
-        Writer.WriteLine();
-
-        // Generate unary negation operator
-        Writer.WriteAggressiveInlining();
-        Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator -({Config.VecCSharpTypeName} v) => new() {{ Data = -v.Data }};");
-        Writer.WriteLine();
-
-        // Operators to generate
-        string[] operators = { "+", "-", "*", "/", "&", "|", "^" };
-
-        // Generate binary operators
-        foreach (var op in operators)
-        {
-            Writer.WriteAggressiveInlining();
-            Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator {op} ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => new() {{ Data = left.Data {op} right.Data }};");
-            Writer.WriteLine();
-        }
-
-        // Generate modulus operator
-        Writer.WriteAggressiveInlining();
-        // if (SupportsVectorizedModulus(VecType.ElementType))
-        // {
-            Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator % ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => new() {{ Data = left.Data % right.Data }};");
-        // }
-        // else
-        // {
-            // Element-wise modulus
-            // Writer.WriteLine($"public static {Config.VecCSharpTypeName} operator % ({Config.VecCSharpTypeName} left, {Config.VecCSharpTypeName} right) => {CreateVectorExpression(components => components.Select(c => $"({Config.ElementCSharpTypeName})(left.{c} % right.{c})"))};");
-        // }
+        Writer.WriteLine($"return new() {{ Data = {Config.OpName(op.Op)} v.Data }};");
     }
 
-    // Helper method to determine if the element type supports vectorized modulus
-    // private static bool SupportsVectorizedModulus(IShaderType elementType)
-    // {
-    //     return elementType.Equals(ShaderType.Int) || elementType.Equals(ShaderType.Uint) ||
-    //            elementType.Equals(ShaderType.Long) || elementType.Equals(ShaderType.Ulong);
-    // }
+    public void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op)
+    {
+        if (op.Op != BinaryArithmeticOp.Remainder)
+        {
+            var l = op.Left is IScalarType ? $"{SimdStaticDataTypeName}.Create(left)" : "left.Data";
+            var r = op.Right is IScalarType ? $"{SimdStaticDataTypeName}.Create(right)" : "right.Data";
+            Writer.WriteLine($"return new() {{ Data = {l} {Config.OpName(op.Op)} {r} }};");
+        }
+        else
+        {
+            Writer.Write($"return vec{VecType.Size.Value}(");
+            List<string> args = [.. VecType.Size.Components().Select(c => {
+                var l = op.Left is IScalarType ? "left" : $"left.{c}";
+                var r = op.Right is IScalarType ? "right" : $"right.{c}";
+                return $"({Config.GetCSharpTypeName(VecType.ElementType)})({l} % {r})";
+            })];
+            Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. args]);
+            Writer.WriteLine(");");
+        }
+    }
 }
 
 
-public sealed record class VecCodeGenerator : ITextCodeGenerator
+public sealed record class VecCodeGenerator
 {
     VecType VecType { get; }
     public IndentedTextWriter Writer { get; }
-    VectorCodeGeneratorConfiguration Config { get; }
+    CSharpProjectionConfiguration Config { get; }
     IVectorDetailCodeGenerator DetailCodeGenerator { get; }
-    public VecCodeGenerator(VecType vecType, IndentedTextWriter writer)
+    public VecCodeGenerator(VecType vecType, IndentedTextWriter writer, CSharpProjectionConfiguration config)
     {
         VecType = vecType;
         Writer = writer;
-        Config = new(VecType);
-        DetailCodeGenerator = Config.IsSimdSupported
+        Config = config;
+        DetailCodeGenerator = config.IsSimdDataSupported(VecType)
             ? new VectorSimdCodeGenerator(VecType, Config, Writer)
             : new VectorComponentCodeGenerator(VecType, Config, Writer);
     }
 
     public void GenerateStaticMethods()
     {
-        Writer.Write("public static partial class DMath");
+        Writer.Write($"public static partial class {Config.StaticMathTypeName}");
         using (Writer.IndentedScopeWithBracket())
         {
-            Writer.Write($"public static {Config.VecCSharpTypeName} vec{VecType.Size.Value}(");
+            Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}(");
 
-            Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => $"{Config.ElementCSharpTypeName} {m}")]);
+            Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => $"{Config.GetCSharpTypeName(VecType.ElementType)} {m}")]);
             Writer.Write(')');
 
             using (Writer.IndentedScopeWithBracket())
@@ -252,15 +212,13 @@ public sealed record class VecCodeGenerator : ITextCodeGenerator
             }
 
 
-            Writer.Write($"public static {Config.VecCSharpTypeName} vec{VecType.Size.Value}({Config.ElementCSharpTypeName} e) => vec{VecType.Size.Value}(");
+            Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}({Config.GetCSharpTypeName(VecType.ElementType)} e) => vec{VecType.Size.Value}(");
             Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(_ => "e")]);
             Writer.WriteLine(");");
 
             {
                 var v2t = ShaderType.GetVecType(N2.Instance, VecType.ElementType);
-                var v2c = new VectorCodeGeneratorConfiguration(v2t);
                 var v3t = ShaderType.GetVecType(N3.Instance, VecType.ElementType);
-                var v3c = new VectorCodeGeneratorConfiguration(v3t);
 
                 int[][] patterns = VecType.Size switch
                 {
@@ -271,12 +229,12 @@ public sealed record class VecCodeGenerator : ITextCodeGenerator
                 string[] components = [.. VecType.Size.Components()];
                 foreach (var ptn in patterns)
                 {
-                    Writer.Write($"public static {Config.VecCSharpTypeName} vec{VecType.Size.Value}(");
+                    Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}(");
                     var ps = ptn.Select((d, i) => d switch
                     {
-                        1 => Config.ElementCSharpTypeName,
-                        2 => v2c.VecCSharpTypeName,
-                        3 => v3c.VecCSharpTypeName,
+                        1 => Config.GetCSharpTypeName(VecType.ElementType),
+                        2 => Config.GetCSharpTypeName(v2t),
+                        3 => Config.GetCSharpTypeName(v3t),
                         _ => throw new NotImplementedException()
                     } + $" e{i}");
                     Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. ps]);
@@ -310,16 +268,37 @@ public sealed record class VecCodeGenerator : ITextCodeGenerator
         }
     }
 
+
     public void GenerateDeclaration()
     {
 
+        Writer.WriteStructLayout();
         Writer.Write("public partial struct ");
-        Writer.Write(Config.VecCSharpTypeName);
+        Writer.Write(Config.GetCSharpTypeName(VecType));
         using (Writer.IndentedScopeWithBracket())
         {
             DetailCodeGenerator.GenerateMemberDeclaration();
-            DetailCodeGenerator.GenerateOperators(); // Use polymorphism to generate operators
-            //GenerateSwizzles();
+            foreach (var op in ShaderOperator.UnaryArithmeticOperatorDefinitions.Where(o => o.Source.Equals(VecType)))
+            {
+                Writer.WriteAggressiveInlining();
+                Writer.WriteLine($"public static {Config.GetCSharpTypeName(op.Result)} operator {Config.OpName(op.Op)}({Config.GetCSharpTypeName(op.Source)} v)");
+                using (Writer.IndentedScopeWithBracket())
+                {
+                    DetailCodeGenerator.GenerateArithmeticOperatorBody(op);
+                }
+            }
+
+            foreach (var op in ShaderOperator.BinaryArithmeticOperatorDefinitions.Where(o => o.Left.Equals(VecType) || o.Right.Equals(VecType)))
+            {
+                Writer.WriteAggressiveInlining();
+                Writer.WriteLine($"public static {Config.GetCSharpTypeName(op.Result)} operator {Config.OpName(op.Op)}({Config.GetCSharpTypeName(op.Left)} left, {Config.GetCSharpTypeName(op.Right)} right)");
+                using (Writer.IndentedScopeWithBracket())
+                {
+                    DetailCodeGenerator.GenerateArithmeticOperatorBody(op);
+                }
+            }
+
+            GenerateSwizzles();
         }
     }
 
@@ -356,11 +335,10 @@ public sealed record class VecCodeGenerator : ITextCodeGenerator
         foreach (var rank in (IRank[])[N2.Instance, N3.Instance, N4.Instance])
         {
             var rv = ShaderType.GetVecType(rank, VecType.ElementType);
-            var rvc = new VectorCodeGeneratorConfiguration(rv);
             foreach (var sw in MakePerm(rank.Value, components))
             {
                 var name = string.Join(string.Empty, sw);
-                Writer.Write($"public {rvc.VecCSharpTypeName} {name} ");
+                Writer.Write($"public {Config.GetCSharpTypeName(rv)} {name} ");
                 using (Writer.IndentedScopeWithBracket())
                 {
                     Writer.WriteAggressiveInlining();

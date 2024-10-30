@@ -28,6 +28,7 @@ public interface IPlainType : IShaderType
 
 public interface IScalarType : IPlainType, IStorableType, ICreationFixedFootprintType
 {
+    IBitWidth BitWidth { get; }
 }
 
 public interface IScalarType<TSelf> : IScalarType, IBasicPrimitiveType<TSelf>
