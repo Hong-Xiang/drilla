@@ -31,12 +31,6 @@ public interface IScalarType : IPlainType, IStorableType, ICreationFixedFootprin
     IBitWidth BitWidth { get; }
 }
 
-public interface IScalarType<TSelf> : IScalarType, IBasicPrimitiveType<TSelf>
-    where TSelf : IScalarType<TSelf>
-{
-}
-
-
 public interface IIntegerType : IScalarType { }
 
 

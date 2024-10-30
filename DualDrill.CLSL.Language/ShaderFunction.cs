@@ -211,7 +211,7 @@ public static class ShaderFunction
         };
     }
 
-    static ImmutableArray<FunctionDeclaration> Functions;
+    public static ImmutableArray<FunctionDeclaration> Functions;
 
     static ShaderFunction()
     {
