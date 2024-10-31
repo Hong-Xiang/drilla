@@ -1,27 +1,28 @@
-﻿using DualDrill.ILSL;
-using DualDrill.ILSL.IR;
+﻿using DualDrill.Common.Nat;
+using DualDrill.ILSL;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;
 using DualDrill.ILSL.IR.Statement;
+using DualDrill.ILSL.Types;
 using System.Numerics;
 
 namespace DualDrill.Engine.Shader;
 
 public static class MinimumTriangleModule
 {
-    public static Module CreateModule()
+    public static ILSL.IR.Module CreateModule()
     {
         return new ILSL.IR.Module([VS(), FS()]);
     }
 
     private static FunctionDeclaration VS()
     {
-        var vertex_index = new ParameterDeclaration("vertex_index", new UIntType<B32>(), [new BuiltinAttribute(BuiltinBinding.vertex_index)]);
+        var vertex_index = new ParameterDeclaration("vertex_index", new UIntType<N32>(), [new BuiltinAttribute(BuiltinBinding.vertex_index)]);
         var fRet = new FunctionReturn(
-            new VecType<R4, FloatType<B32>>(),
+            new VecType<N4, FloatType<N32>>(),
             [new BuiltinAttribute(BuiltinBinding.position)]);
-        var x = new VariableDeclaration(DeclarationScope.Function, "x", new FloatType<B32>(), []);
-        var y = new VariableDeclaration(DeclarationScope.Function, "y", new FloatType<B32>(), []);
+        var x = new VariableDeclaration(DeclarationScope.Function, "x", new FloatType<N32>(), []);
+        var y = new VariableDeclaration(DeclarationScope.Function, "y", new FloatType<N32>(), []);
         // let x = f32(1 - i32(vertex_index)) * 0.5;
         x.Initializer = SyntaxFactory.Binary(SyntaxFactory.f32(
                             SyntaxFactory.Binary(
@@ -59,7 +60,7 @@ public static class MinimumTriangleModule
                 SyntaxFactory.Declare(x),
                 SyntaxFactory.Declare(y),
                 SyntaxFactory.Return(
-                    SyntaxFactory.vec4<FloatType<B32>>(
+                    SyntaxFactory.vec4<FloatType<N32>>(
                         SyntaxFactory.Identifier(x),
                         SyntaxFactory.Identifier(y),
                         SyntaxFactory.Literal(0.0f),
@@ -73,7 +74,7 @@ public static class MinimumTriangleModule
     private static FunctionDeclaration FS()
     {
         var fRet = new ILSL.IR.Declaration.FunctionReturn(
-            new VecType<R4, FloatType<B32>>(),
+            new VecType<N4, FloatType<N32>>(),
             [new LocationAttribute(0)]
         );
         return new FunctionDeclaration("fs",
@@ -83,7 +84,7 @@ public static class MinimumTriangleModule
         {
             Body = new CompoundStatement([
                 SyntaxFactory.Return(
-                    SyntaxFactory.vec4<FloatType<B32>>(
+                    SyntaxFactory.vec4<FloatType<N32>>(
                         SyntaxFactory.Literal(0.5f),
                         SyntaxFactory.Literal(1.0f),
                         SyntaxFactory.Literal(0.5f),
@@ -141,7 +142,7 @@ public struct MinimumTriangle : IShaderModule, IILSLDevelopShaderModule
             x -= i;
         }
 
-        for (;; x += 3.0f)
+        for (; ; x += 3.0f)
         {
             if (x + y < 100000.0f)
             {

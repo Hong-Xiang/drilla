@@ -13,7 +13,7 @@ namespace DualDrill.ILSL.IR.Statement;
 [JsonDerivedType(typeof(ForStatement), nameof(ForStatement))]
 [JsonDerivedType(typeof(IncrementStatement), nameof(IncrementStatement))]
 [JsonDerivedType(typeof(DecrementStatement), nameof(DecrementStatement))]
-public interface IStatement : INode { }
+public interface IStatement : IAstNode { }
 
 public interface IStatementVisitor<T>
 {

@@ -1,4 +1,5 @@
 ﻿using DualDrill.ILSL.IR.Statement;
+using DualDrill.ILSL.Types;
 using System.Collections.Immutable;
 
 namespace DualDrill.ILSL.IR.Declaration;

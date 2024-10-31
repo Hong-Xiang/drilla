@@ -2,6 +2,6 @@
 
 namespace DualDrill.ILSL.IR;
 
-public interface IAttribute : INode { }
+public interface IAttribute : IAstNode { }
 
 public interface IIOAttribute : IAttribute { }

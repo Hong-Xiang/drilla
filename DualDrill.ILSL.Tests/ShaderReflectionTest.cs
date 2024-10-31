@@ -1,6 +1,6 @@
 ﻿using DotNext.Collections.Generic;
 using DualDrill.Graphics;
-using DualDrill.ILSL.IR.Declaration;
+using DualDrill.ILSL.Types;
 using Silk.NET.SDL;
 using System;
 using System.Collections.Generic;
@@ -29,9 +29,9 @@ public class ShaderReflectionTest
 
         var module = new IR.Module([
             new IR.Declaration.VariableDeclaration(
-                IR.Declaration.DeclarationScope.Module,
+                DeclarationScope.Module,
                 "data",
-                new VecType<R2, FloatType<B32>>(),
+                new VecType<R2, FloatType<N32>>(),
                 [
                     new GroupAttribute(0),
                     new BindingAttribute(0),

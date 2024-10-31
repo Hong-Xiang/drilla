@@ -11,7 +11,7 @@ namespace DualDrill.ILSL.IR.Declaration;
 //[JsonDerivedType(typeof(IType), nameof(IType))]
 //[JsonDerivedType(typeof(TypeDeclaration), nameof(TypeDeclaration))]
 [JsonDerivedType(typeof(ValueDeclaration), nameof(ValueDeclaration))]
-public interface IDeclaration : INode
+public interface IDeclaration : IAstNode
 {
     string Name { get; }
     ImmutableHashSet<IAttribute> Attributes { get; }

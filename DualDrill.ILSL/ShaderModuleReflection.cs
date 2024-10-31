@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using Silk.NET.SDL;
 using System.Diagnostics;
 using System.Text.Json;
+using DualDrill.ILSL.Types;
 namespace DualDrill.ILSL;
 
 public interface IShaderModuleReflection
@@ -261,7 +262,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
     {
         return type switch
         {
-            IBuiltinType bt => bt.ByteSize,
+            ICreationFixedFootprintType bt => bt.ByteSize,
             _ => throw new NotImplementedException()
         };
     }

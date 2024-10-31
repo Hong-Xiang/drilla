@@ -1,5 +1,4 @@
-﻿using DualDrill.ILSL.IR;
-using DualDrill.ILSL.IR.Declaration;
+﻿using DualDrill.ILSL.IR.Declaration;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;

@@ -108,10 +108,10 @@ public struct QuadShader : IShaderModule
     {
         return new Vector3(Math.Abs(a.X), Math.Abs(a.Y), Math.Abs(a.Z));
     }
-    
+
     [ShaderMethod]
-    float ndot(Vector2 a, Vector2 b) 
-    { 
+    float ndot(Vector2 a, Vector2 b)
+    {
         return a.X * b.X - a.Y * b.Y;
     }
 
@@ -155,7 +155,7 @@ public struct QuadShader : IShaderModule
         var pp = p;
         pp.X = Math.Abs(p.X);
         float k = Length(new Vector3(pp.X, pp.Y, 0.0f));
-        if ((sc.Y * p.X) > (sc.X * p.Y) )
+        if ((sc.Y * p.X) > (sc.X * p.Y))
         {
             k = Vector2.Dot(new Vector2(pp.X, pp.Y), sc);
         }
@@ -235,7 +235,7 @@ public struct QuadShader : IShaderModule
         float x2 = x * x;
         float y2 = y * y * baba;
         float d;
-        if(Math.Max(x, y) < 0.0f)
+        if (Math.Max(x, y) < 0.0f)
         {
             d = -Math.Min(x2, y2);
         }
@@ -243,11 +243,11 @@ public struct QuadShader : IShaderModule
         {
             float k = 0.0f;
             float l = 0.0f;
-            if(x > 0.0f)
+            if (x > 0.0f)
             {
                 k = x2;
             }
-            if(y > 0.0f)
+            if (y > 0.0f)
             {
                 l = y2;
             }
@@ -265,14 +265,14 @@ public struct QuadShader : IShaderModule
         Vector2 k1 = new Vector2(r2, h);
         Vector2 k2 = new Vector2(r2 - r1, 2.0f * h);
         float placeholder = r2;
-        if(q.Y < 0.0f)
+        if (q.Y < 0.0f)
         {
             placeholder = r1;
         }
         Vector2 ca = new Vector2(q.X - Math.Min(q.X, placeholder), Math.Abs(q.Y) - h);
         Vector2 cb = q - k1 + k2 * (float)Math.Clamp(Vector2.Dot(k1 - q, k2) / Vector2.Dot(k2, k2), 0.0f, 1.0f);
         float s = 1.0f;
-        if(cb.X < 0.0f && ca.Y < 0.0f)
+        if (cb.X < 0.0f && ca.Y < 0.0f)
         {
             s = -1.0f;
         }
@@ -303,7 +303,7 @@ public struct QuadShader : IShaderModule
         float cbx = x - ra - f * rba;
         float cby = paba - f;
 
-        float s =  1.0f;
+        float s = 1.0f;
         if (cbx < 0.0f && cay < 0.0f)
         {
             s = -1;
@@ -324,7 +324,7 @@ public struct QuadShader : IShaderModule
     [ShaderMethod]
     Vector2 opU(Vector2 d1, Vector2 d2)
     {
-        if(d1.X < d2.X)
+        if (d1.X < d2.X)
         {
             return d1;
         }
@@ -389,7 +389,7 @@ public struct QuadShader : IShaderModule
         var k = Vector3.Abs(m) * rad;
         var t1 = -n - k;
         var t2 = -n + k;
-	    return new Vector2(Math.Max(Math.Max(t1.X, t1.Y), t1.Z), Math.Min(Math.Min(t2.X, t2.Y), t2.Z ) );
+        return new Vector2(Math.Max(Math.Max(t1.X, t1.Y), t1.Z), Math.Min(Math.Min(t2.X, t2.Y), t2.Z));
     }
 
     [ShaderMethod]
@@ -403,26 +403,26 @@ public struct QuadShader : IShaderModule
         // raytrace floor plane
         float tp1 = (0.0f - ro.Y) / rd.Y;
 
-        if(tp1 > 0.0f)
+        if (tp1 > 0.0f)
         {
-            tmax = Math.Min(tmax, tp1 );
-            res = new Vector2(tp1, 1.0f );
+            tmax = Math.Min(tmax, tp1);
+            res = new Vector2(tp1, 1.0f);
         }
         //else return res;
 
         // raymarch primitives   
         var tb = iBox(ro - new Vector3(0.0f, 0.4f, -0.5f), rd, new Vector3(2.5f, 0.41f, 3.0f));
-        if(tb.X < tb.Y && tb.X > 0.0F && tb.X < tmax)
+        if (tb.X < tb.Y && tb.X > 0.0F && tb.X < tmax)
         {
             //return vec2(tb.x,2.0);
             tmin = Math.Max(tb.X, tmin);
             tmax = Math.Max(tb.Y, tmax);
 
             var t = tmin;
-            for(var i=0; i< 70 && t < tmax; i = i + 1 )
+            for (var i = 0; i < 70 && t < tmax; i = i + 1)
             {
-                var h = map( ro + rd * t );
-                if( Math.Abs(h.X) < (0.0001f * t) )
+                var h = map(ro + rd * t);
+                if (Math.Abs(h.X) < (0.0001f * t))
                 {
                     res = new Vector2(t, h.Y);
                     break;
@@ -441,7 +441,7 @@ public struct QuadShader : IShaderModule
         // analytical integral (box filter)
         var i = 2.0f * (Vector2.Abs(Fract((p - 0.5f * w) * 0.5f) - new Vector2(0.5f, 0.5f)) - Vector2.Abs(Fract((p + 0.5f * w) * 0.5f) - new Vector2(0.5f, 0.5f))) / w;
         // xor pattern
-        return 0.5f - 0.5f * i.X* i.Y;
+        return 0.5f - 0.5f * i.X * i.Y;
     }
 
     [ShaderMethod]
@@ -502,7 +502,7 @@ public struct QuadShader : IShaderModule
             //{
             //    nor = new Vector3(0.0f, 1.0f, 0.0f);
             //}
-            if(m >= 1.5f)
+            if (m >= 1.5f)
             {
                 nor = calcNormal(pos);
             }
