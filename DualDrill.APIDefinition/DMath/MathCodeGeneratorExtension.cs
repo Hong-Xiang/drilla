@@ -3,7 +3,7 @@ using DualDrill.Common.Nat;
 
 namespace DualDrill.ApiGen.DMath;
 
-internal static class DMathCodeGenExtension
+internal static class MathCodeGeneratorExtension
 {
     public static IEnumerable<string> Components(this IRank rank) => rank switch
     {

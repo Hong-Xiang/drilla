@@ -70,6 +70,15 @@ public enum NumericBuiltinFunctionName
     tanh,
     transpose,
     trunc,
+    dpdx,
+    dpdxCoarse,
+    dpdxFine,
+    dpdy,
+    dpdyCoarse,
+    dpdyFine,
+    fwidth,
+    fwidthCoarse,
+    fwidthFine
 }
 
 public enum NumericBuiltinFunctionKind
@@ -154,6 +163,15 @@ public static class ShaderFunction
             NumericBuiltinFunctionName.tanh => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
             NumericBuiltinFunctionName.transpose => NumericBuiltinFunctionKind.Unknown,
             NumericBuiltinFunctionName.trunc => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.dpdx => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.dpdxCoarse => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.dpdxFine => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.dpdy => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.dpdyCoarse => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.dpdyFine => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.fwidth => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.fwidthCoarse => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.fwidthFine => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
             _ => throw new InvalidEnumArgumentException(
              nameof(name),
              (int)name,
@@ -179,6 +197,10 @@ public static class ShaderFunction
                             from s in ShaderType.IntTypes
                             from t in ShaderType.GetVecTypes(s)
                             select new FunctionDeclaration(fn, [new ParameterDeclaration("e", t, [])], new FunctionReturn(t, []), []),
+            (NumericBuiltinFunctionKind.UnaryScalarOrVector, _) =>
+                from s in ShaderType.NumericScalarTypes
+                from t in ShaderType.GetScalarOrVectorTypes(s)
+                select new FunctionDeclaration(fn, [new ParameterDeclaration("e", t, [])], new FunctionReturn(t, []), []),
             (NumericBuiltinFunctionKind.BinaryFloatVector, _) =>
                 from s in ShaderType.FloatTypes
                 from t in ShaderType.GetVecTypes(s)
@@ -207,6 +229,56 @@ public static class ShaderFunction
                 from s in ShaderType.FloatTypes
                 let v = ShaderType.GetVecType(N3.Instance, s)
                 select new FunctionDeclaration(fn, [new ParameterDeclaration("e1", v, []), new ParameterDeclaration("e2", v, [])], new FunctionReturn(v, []), []),
+            (_, NumericBuiltinFunctionName.determinant) => [], // TODO: add mat types and fix this
+            (_, NumericBuiltinFunctionName.dot4U8Packed) => [
+                new FunctionDeclaration(
+                    fn,
+                    [new ParameterDeclaration("e1", ShaderType.U32, []),
+                     new ParameterDeclaration("e2", ShaderType.U32, [])],
+                    new FunctionReturn(ShaderType.U32, []), [])],
+            (_, NumericBuiltinFunctionName.dot4I8Packed) => [
+                new FunctionDeclaration(
+                    fn,
+                    [new ParameterDeclaration("e1", ShaderType.U32, []),
+                     new ParameterDeclaration("e2", ShaderType.U32, [])],
+                    new FunctionReturn(ShaderType.I32, []), [])],
+            (_, NumericBuiltinFunctionName.extractBits) =>
+                from t in (IEnumerable<IShaderType>)[.. ShaderType.GetScalarOrVectorTypes(ShaderType.I32),
+                                                     .. ShaderType.GetScalarOrVectorTypes(ShaderType.U32)]
+                select new FunctionDeclaration(
+                    fn,
+                    [new ParameterDeclaration("e", t, []),
+                     new ParameterDeclaration("offset", ShaderType.U32, []),
+                     new ParameterDeclaration("count", ShaderType.U32, [])],
+                    new FunctionReturn(t, []), []),
+            (_, NumericBuiltinFunctionName.frexp) => [], // TODO: add frexp result type and fix this
+            (_, NumericBuiltinFunctionName.insertBits) =>
+                from t in (IEnumerable<IShaderType>)[.. ShaderType.GetScalarOrVectorTypes(ShaderType.I32),
+                                                     .. ShaderType.GetScalarOrVectorTypes(ShaderType.U32)]
+                select new FunctionDeclaration(
+                    fn,
+                    [new ParameterDeclaration("e", t, []),
+                     new ParameterDeclaration("newBits", t, []),
+                     new ParameterDeclaration("offset", ShaderType.U32, []),
+                     new ParameterDeclaration("count", ShaderType.U32, [])],
+                    new FunctionReturn(t, []), []),
+            (_, NumericBuiltinFunctionName.ldexp) =>
+                from s in ShaderType.FloatTypes
+                from t in ShaderType.GetScalarOrVectorTypes(s)
+                let i = t is IScalarType ? (IShaderType)ShaderType.I32 : ShaderType.GetVecType(((VecType)t).Size, ShaderType.I32)
+                select new FunctionDeclaration(
+                    fn,
+                    [new ParameterDeclaration("e1", t, []),
+                     new ParameterDeclaration("e2", i, [])],
+                    new FunctionReturn(t, []), []),
+            (_, NumericBuiltinFunctionName.modf) => [], // TODO: add modf result type and fix this
+            (_, NumericBuiltinFunctionName.quantizeToF16) =>
+                 from t in ShaderType.GetScalarOrVectorTypes(ShaderType.F32)
+                 select new FunctionDeclaration(
+                     fn,
+                     [new ParameterDeclaration("e", t, [])],
+                     new FunctionReturn(t, []), []),
+            (_, NumericBuiltinFunctionName.transpose) => [], // TODO: add mat types and fix this
             _ => throw new NotSupportedException($"Function {Enum.GetName(name)} is not supported yet")
         };
     }

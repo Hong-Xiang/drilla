@@ -16,14 +16,14 @@ public enum CodeGenFeatures
     Operators = 1 << 4,
 }
 
-public sealed class DMathCodeGen
+public sealed class MathCodeGenerator
 {
     StringWriter BaseWriter { get; }
     IndentedTextWriter Writer { get; }
 
     CSharpProjectionConfiguration Config { get; }
 
-    public DMathCodeGen(CSharpProjectionConfiguration config)
+    public MathCodeGenerator(CSharpProjectionConfiguration config)
     {
         BaseWriter = new();
         Writer = new(BaseWriter);
@@ -52,5 +52,11 @@ public sealed class DMathCodeGen
     {
         var vecGenertor = new VecCodeGenerator(vecType, Writer, Config);
         vecGenertor.Generate();
+    }
+
+    public void GenerateFunctions()
+    {
+        var gen = new FunctionCodeGenerator(Config, Writer);
+        gen.Generate();
     }
 }

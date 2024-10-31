@@ -9,8 +9,8 @@ public sealed class CSharpProjectionConfiguration
 {
     public static readonly CSharpProjectionConfiguration Instance = new();
 
-    public readonly string NameSpace = "DualDrill.Mathematics";
-    public readonly string StaticMathTypeName = "DMath";
+    public string NameSpace { get; } = "DualDrill.Mathematics";
+    public string StaticMathTypeName { get; } = "DMath";
 
     ImmutableDictionary<IShaderType, string> CSharpTypeNameMap { get; }
     CSharpProjectionConfiguration()
@@ -68,21 +68,22 @@ public sealed class CSharpProjectionConfiguration
             FloatType { BitWidth: N32 } => typeof(float).FullName,
             FloatType { BitWidth: N64 } => typeof(double).FullName,
 
-            VecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{CategoryName(b)}",
-            VecType { Size: var size, ElementType: var eType } => $"vec{size.Value}{CategoryName(eType)}{eType.BitWidth.Value}",
+            VecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{ElementName(b)}",
+            VecType { Size: var size, ElementType: var e } => $"vec{size.Value}{ElementName(e)}",
+            MatType { Row: var r, Column: var c, ElementType: var e } => $"mat{r.Value}x{c.Value}{ElementName(e)}",
             _ => throw new NotSupportedException($"C# type map for {type} is undefined")
         })!;
     }
 
-    static string CategoryName(IScalarType type)
+    static string ElementName(IScalarType type)
     {
         return type switch
         {
             BoolType => "b",
-            FloatType => "f",
-            IntType => "i",
-            UIntType => "u",
-            _ => throw new NotSupportedException($"{nameof(CategoryName)} does not support {type}")
+            FloatType => $"f{type.BitWidth.Value}",
+            IntType => $"i{type.BitWidth.Value}",
+            UIntType => $"u{type.BitWidth.Value}",
+            _ => throw new NotSupportedException($"{nameof(ElementName)} does not support {type}")
         };
     }
 

@@ -53,4 +53,4 @@ public sealed record class StructureType(ImmutableArray<StructureMember> Members
 }
 
 
-public interface IStorableType { }
+public interface IStorableType : IShaderType { }

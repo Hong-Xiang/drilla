@@ -9,9 +9,18 @@ Debug.Assert(targetDirectory.Exists);
 var config = CSharpProjectionConfiguration.Instance;
 foreach (var t in ShaderType.GetVecTypes())
 {
-    var gen = new DMathCodeGen(config);
+    var gen = new MathCodeGenerator(config);
     gen.Generate(t);
     var fn = $"{config.GetCSharpTypeName(t)}.gen.cs";
     var fpath = Path.Combine(targetDirectory.FullName, fn);
     File.WriteAllText(fpath, gen.GetCode());
 }
+
+{
+    var gen = new MathCodeGenerator(config);
+    gen.GenerateFunctions();
+    var fn = $"DMath.gen.cs";
+    var fpath = Path.Combine(targetDirectory.FullName, fn);
+    File.WriteAllText(fpath, gen.GetCode());
+}
+
