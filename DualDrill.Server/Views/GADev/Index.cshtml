@@ -85,3 +85,22 @@
     </tbody>
 </table>
 
+
+<h3>Hodge star</h3>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>e</th>
+            <th>star e</th>
+        </tr>
+    </thead>
+    <tbody>
+        @for (int i = 0; i < Model; i++)
+        {
+            <tr>
+                <th>@Controller.GetName(i)</th>
+                <td>@Controller.Dual(i)</td>
+            </tr>
+        }
+    </tbody>
+</table>

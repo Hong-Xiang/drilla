@@ -63,14 +63,13 @@ public sealed class DiagonalAlgebra<TSignature> : IAlgebra<DiagonalAlgebra<TSign
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Element<DiagonalAlgebra<TSignature>> HodgeStar(Basis b)
     {
-        // we assume I is invertible for signatures
-        // inverse of I is I / dot(I, I)
-
-        var eb = Algebra.Base<DiagonalAlgebra<TSignature>>(b);
+        // follow https://en.wikipedia.org/wiki/Hodge_star_operator 's Formal definition for k-vectors
         var bi = Algebra.BasisI<TSignature>();
         var rb = bi & (~b);
         var result = Algebra.VB.Dense(GD);
-        result[(int)rb] = 1.0f / InnerProduct(bi, bi);
+        float s = Algebra.Sign<TSignature>(b, (~b) & bi);
+        float d = InnerProduct(b, b);
+        result[(int)rb] = s * d;
         return new(result);
     }
 }

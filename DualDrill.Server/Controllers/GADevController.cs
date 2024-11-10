@@ -92,6 +92,10 @@ public class GADevController : Controller
     {
         return (Algebra.Base<Alg>((Basis)a) * Algebra.Base<Alg>((Basis)b)).ToString();
     }
+    public static string Dual(int a)
+    {
+        return (!Algebra.Base<Alg>((Basis)a)).ToString();
+    }
     public static string SignName(float sign) => sign switch
     {
         0 => "0",
