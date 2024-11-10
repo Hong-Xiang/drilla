@@ -38,6 +38,7 @@
 		<ProjectReference Include="..\DualDrill.Common.Abstraction\DualDrill.Common.Abstraction.csproj" />
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 		<ProjectReference Include="..\DualDrill.Engine\DualDrill.Engine.csproj" />
+		<ProjectReference Include="..\DualDrill.Geometry\DualDrill.Geometry.csproj" />
 		<ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
 		<ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
 		<ProjectReference Include="..\DualDrill.WebView\DualDrill.WebView.csproj" />
