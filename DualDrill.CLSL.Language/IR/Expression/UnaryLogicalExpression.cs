@@ -13,4 +13,5 @@ public sealed record class UnaryLogicalExpression(
     UnaryLogicalOp Op
 ) : IExpression
 {
+    public IShaderType Type => Expr.Type;
 }

@@ -14,6 +14,6 @@ public sealed record class FunctionDeclaration(
     public CompoundStatement? Body { get; set; } = null;
 }
 
-public sealed record class FunctionReturn(IShaderType? Type, ImmutableHashSet<IAttribute> Attributes)
+public sealed record class FunctionReturn(IShaderType Type, ImmutableHashSet<IAttribute> Attributes)
 {
 }

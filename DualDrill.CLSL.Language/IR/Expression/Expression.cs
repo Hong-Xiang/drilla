@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.IR;
+using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.IR.Expression;
@@ -17,6 +18,11 @@ namespace DualDrill.CLSL.Language.IR.Expression;
 [JsonDerivedType(typeof(UnaryArithmeticExpression), nameof(UnaryArithmeticExpression))]
 [JsonDerivedType(typeof(NamedComponentExpression), nameof(NamedComponentExpression))]
 public interface IExpression : IAstNode
+{
+    IShaderType Type { get; }
+}
+
+public sealed class InvalidExpressionTypeException(string message) : Exception(message)
 {
 }
 

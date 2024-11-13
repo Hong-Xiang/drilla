@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.IR.Expression;
@@ -9,6 +10,8 @@ public sealed record class FunctionCallExpression(
     : IExpression
     , IEquatable<FunctionCallExpression>
 {
+    public IShaderType Type => Callee.Return.Type;
+
     public bool Equals(FunctionCallExpression? other)
     {
         if (other is null)

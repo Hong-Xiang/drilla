@@ -1,3 +1,4 @@
+using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.IR.Expression;
@@ -19,4 +20,5 @@ public sealed record class BinaryRelationalExpression(
     BinaryRelationalOp Op
 ) : IExpression
 {
+    public IShaderType Type => ShaderType.Bool;
 }

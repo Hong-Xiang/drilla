@@ -2,4 +2,5 @@
 
 public sealed record class LogicalNegationExpression(IExpression Expr) : IExpression
 {
+    public IShaderType Type => Expr.Type;
 }

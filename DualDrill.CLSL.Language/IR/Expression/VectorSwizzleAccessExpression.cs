@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using DualDrill.CLSL.Language.Types;
+using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.IR.Expression;
 
@@ -16,4 +17,5 @@ public enum SwizzleComponent
 
 public sealed record class VectorSwizzleAccessExpression(IExpression Base, ImmutableArray<SwizzleComponent> Components) : IExpression
 {
+    public IShaderType Type { get; } = ((VecType)Base.Type).ElementType;
 }

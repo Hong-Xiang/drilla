@@ -1,15 +1,11 @@
 ﻿using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
 using DualDrill.ILSL.Frontend;
-using DualDrill.ILSL.IR.Declaration;
 using DualDrill.Server.Services;
-using ICSharpCode.Decompiler.Metadata;
 using Lokad.ILPack.IL;
 using Microsoft.AspNetCore.Mvc;
-using Silk.NET.Vulkan;
 using System.Numerics;
 using System.Reflection;
-using TinyJson;
 
 namespace DualDrill.Server.Controllers;
 

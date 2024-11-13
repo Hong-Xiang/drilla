@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using DualDrill.CLSL.Language.Types;
+using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.IR.Expression;
 
@@ -18,4 +19,5 @@ public sealed record class BinaryArithmeticExpression(
     BinaryArithmeticOp Op
 ) : IExpression
 {
+    public IShaderType Type => L.Type;
 }

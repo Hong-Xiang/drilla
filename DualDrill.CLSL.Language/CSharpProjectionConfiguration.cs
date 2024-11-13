@@ -35,7 +35,6 @@ public sealed class CSharpProjectionConfiguration
             _ => throw new NotSupportedException($"Unary arithmetic operator {op} is not supported")
         };
     }
-
     public string OpName(BinaryArithmeticOp op)
     {
         return op switch
@@ -48,7 +47,6 @@ public sealed class CSharpProjectionConfiguration
             _ => throw new NotSupportedException($"Binary arithmetic operator {op} is not supported")
         };
     }
-
     static string DefineCSharpTypeName(IShaderType type)
     {
         return (type switch
