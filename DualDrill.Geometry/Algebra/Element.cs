@@ -21,6 +21,8 @@ public readonly record struct Element<TAlgebra>
 
     public float this[Basis b] => Values[(int)b];
 
+    public Element<TAlgebra> this[Element<TAlgebra> m] => (~this) & m;
+
     public override string ToString()
     {
         var isZero = true;
@@ -88,7 +90,7 @@ public readonly record struct Element<TAlgebra>
         return new(a.Values - b.Values);
     }
 
-    public static Element<TAlgebra> operator !(Element<TAlgebra> e)
+    public static Element<TAlgebra> operator ~(Element<TAlgebra> e)
     {
         var gd = Algebra.GeometryDimension<TAlgebra>();
         var result = Algebra.VB.Dense(gd);
@@ -120,10 +122,13 @@ public readonly record struct Element<TAlgebra>
     {
         return new(a.Values * b);
     }
-
+    public static Element<TAlgebra> operator ^(Element<TAlgebra> a, Element<TAlgebra> b)
+    {
+        return (~a & b) | (a & ~b);
+    }
     public static Element<TAlgebra> operator &(Element<TAlgebra> a, Element<TAlgebra> b)
     {
-        return !((!a) | (!b));
+        return ~((~a) | (~b));
     }
     public static Element<TAlgebra> operator |(Element<TAlgebra> a, Element<TAlgebra> b)
     {

@@ -131,7 +131,7 @@ public sealed class TransformedAlgebra<TSource, TTarget, TTransform> : IAlgebra<
     public static Element<TransformedAlgebra<TSource, TTarget, TTransform>> HodgeStar(Basis b)
     {
         var vb = TTransform.TransformTargetToSource(b);
-        var vs = !vb;
+        var vs = ~vb;
         var result = Algebra.VB.Dense(Algebra.GeometryDimension<TTarget>());
         for (var i = 0; i < Algebra.GeometryDimension<TSource>(); i++)
         {

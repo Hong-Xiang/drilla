@@ -6,7 +6,7 @@ namespace DualDrill.Server.Controllers;
 
 using Q = QuaternionAlgebra;
 using H = ComplexAlgebra;
-using Alg = PGA3;
+using Alg = PGA2;
 using CGA3T = TransformedAlgebra<CGA3Diagonal, CGA3, AlgebraTransformFromVectorBasisTransform<CGA3Diagonal, CGA3, CGA3Transform>>;
 readonly record struct Line(Vector3 Start, Vector3 End, string color)
 {
@@ -16,6 +16,7 @@ readonly record struct Line(Vector3 Start, Vector3 End, string color)
                         new Vector3(),
                         color);
     }
+
 }
 
 readonly record struct Point(Vector3 Position, string Color)
@@ -28,6 +29,11 @@ readonly record struct Point(Vector3 Position, string Color)
             p.Y,
             0.0f
         ), color);
+    }
+
+    public static Point From(Element<PGA3> e, string color)
+    {
+        return new(PGA3.Point(e), color);
     }
 }
 
@@ -56,17 +62,19 @@ public class GADevController : Controller
     [HttpGet("entity")]
     public IActionResult Entity()
     {
-        var px = PGA2.Point(1.0f, 0.0f);
-        var py = PGA2.Point(0.0f, 1.0f);
-        var po = PGA2.Point(0.0f, 0.0f);
+        var px = PGA3.Point(1.0f, 0.0f, 0.0f);
+        var py = PGA3.Point(0.0f, 1.0f, 0.0f);
+        var pz = PGA3.Point(0.0f, 0.0f, 1.0f);
+        var po = PGA3.Point(0.0f, 0.0f, 0.0f);
         var p = 0.5f * px + 0.5f * py;
 
         var scene = new EntityModel([
             Point.From(px, "red"),
             Point.From(py, "green"),
+            Point.From(pz, "yellow"),
             Point.From(p, "blue"),
             Point.From(po, "gray"),
-        ], (px | py).ToString());
+        ], (px | py | pz).ToString());
         return View(scene);
     }
 
@@ -94,7 +102,7 @@ public class GADevController : Controller
     }
     public static string Dual(int a)
     {
-        return (!Algebra.Base<Alg>((Basis)a)).ToString();
+        return (~Algebra.Base<Alg>((Basis)a)).ToString();
     }
     public static string SignName(float sign) => sign switch
     {

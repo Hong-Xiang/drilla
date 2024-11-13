@@ -72,4 +72,5 @@ public sealed class DiagonalAlgebra<TSignature> : IAlgebra<DiagonalAlgebra<TSign
         result[(int)rb] = s * d;
         return new(result);
     }
+
 }
