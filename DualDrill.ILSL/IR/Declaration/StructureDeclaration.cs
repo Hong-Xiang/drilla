@@ -6,7 +6,7 @@ namespace DualDrill.ILSL.IR.Declaration;
 public sealed record class StructureDeclaration(
     string Name,
     ImmutableArray<MemberDeclaration> Members,
-    ImmutableHashSet<IAttribute> Attributes
+    ImmutableHashSet<IShaderAttribute> Attributes
 ) : IType, IDeclaration
 {
 }
@@ -14,7 +14,7 @@ public sealed record class StructureDeclaration(
 public sealed record class MemberDeclaration(
     string Name,
     IType Type,
-    ImmutableHashSet<IAttribute> Attributes)
+    ImmutableHashSet<IShaderAttribute> Attributes)
     : IDeclaration
 {
     public bool Equals(MemberDeclaration? other) =>

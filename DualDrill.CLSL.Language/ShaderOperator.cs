@@ -4,8 +4,6 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language;
 
-
-
 public sealed record class UnaryArithmeticOperatorDefinition(
     UnaryArithmeticOp Op,
     IShaderType Source,

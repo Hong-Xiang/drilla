@@ -1,19 +1,18 @@
 ﻿using DualDrill.Common.Nat;
-using DualDrill.ILSL.IR;
-using DualDrill.ILSL.IR.Declaration;
-using DualDrill.ILSL.IR.Expression;
-using DualDrill.ILSL.IR.Statement;
-using DualDrill.ILSL.Types;
-using ICSharpCode.Decompiler.CSharp;
+using DualDrill.CLSL.Language.IR;
+using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.IR.Statement;
+using DualDrill.CLSL.Language.Types;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 using ICSharpCode.Decompiler.Semantics;
 using ICSharpCode.Decompiler.TypeSystem;
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
+using DualDrill.CLSL.Language;
 
-namespace DualDrill.ILSL;
+namespace DualDrill.CLSL.Compiler;
 
 public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Symbols, Assembly Assembly) : IAstVisitor<IAstNode?>
 {

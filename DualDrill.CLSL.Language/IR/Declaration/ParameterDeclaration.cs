@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.IR.Declaration;
@@ -6,7 +7,7 @@ namespace DualDrill.CLSL.Language.IR.Declaration;
 public sealed record class ParameterDeclaration(
     string Name,
     IShaderType Type,
-    ImmutableHashSet<IAttribute> Attributes) : IDeclaration
+    ImmutableHashSet<ShaderAttribute.IShaderAttribute> Attributes) : IDeclaration
 {
 }
 

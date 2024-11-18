@@ -6,7 +6,7 @@ namespace DualDrill.ILSL.IR.Statement;
 
 // attribute* if_clause else_if_clause* else_clause?
 public sealed record class IfStatement(
-    ImmutableHashSet<IAttribute> Attributes,
+    ImmutableHashSet<IShaderAttribute> Attributes,
     IfClause IfClause,
     ImmutableArray<IfClause> ElseIfClause
 ) : IStatement

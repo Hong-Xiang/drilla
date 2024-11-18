@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.Types;
 using System.Numerics;
 using System.Reflection;
 using DualDrill.Common.Nat;
+using DualDrill.CLSL.Language.IR.Expression;
 
 namespace DualDrill.CLSL.Tests;
 
@@ -37,7 +38,7 @@ public class CSharpToILSLIRParserTest
         var parsed = parser.ParseMethod(method);
         AssertFunctionParsedCorrectly(new IntType(N32.Instance),
             [
-                new ReturnStatement(new LiteralValueExpression(new IntLiteral(42)))
+                new ReturnStatement(new LiteralValueExpression(new IntLiteral(N32.Instance, 42)))
             ], parsed);
     }
 
@@ -51,16 +52,16 @@ public class CSharpToILSLIRParserTest
         using var parser = new ILSpyFrontend(new ILSpyOption { HotReloadAssemblies = [] });
         var method = GetMethodInfo<uint, Vector4>(TestMethod);
         var parsed = parser.ParseMethod(method);
-        AssertFunctionParsedCorrectly(new VecType<R4, FloatType>(),
+        AssertFunctionParsedCorrectly(new VecType(ShaderType.F32, N4.Instance),
             [
                 new ReturnStatement(
                     new FunctionCallExpression(
                         VecType<R4, FloatType>.Constructors[4],
                         [
-                            new LiteralValueExpression(new FloatLiteral(0.5f)),
-                            new LiteralValueExpression(new FloatLiteral(0.0f)),
-                            new LiteralValueExpression(new FloatLiteral(1.0f)),
-                            new LiteralValueExpression(new FloatLiteral(1.0f)),
+                            new LiteralValueExpression(new FloatLiteral(N32.Instance, 0.5f)),
+                            new LiteralValueExpression(new FloatLiteral(N32.Instance, 0.0f)),
+                            new LiteralValueExpression(new FloatLiteral(N32.Instance, 1.0f)),
+                            new LiteralValueExpression(new FloatLiteral(N32.Instance, 1.0f)),
                         ])
                 )
             ], parsed);

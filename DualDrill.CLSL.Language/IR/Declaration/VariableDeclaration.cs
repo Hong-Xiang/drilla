@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 
@@ -8,7 +9,7 @@ public sealed record class VariableDeclaration(
     DeclarationScope DeclarationScope,
     string Name,
     IShaderType Type,
-    ImmutableHashSet<IAttribute> Attributes
+    ImmutableHashSet<ShaderAttribute.IShaderAttribute> Attributes
 ) : IDeclaration
 {
     public IExpression? Initializer { get; set; } = null;

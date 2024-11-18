@@ -1,4 +1,6 @@
-﻿namespace DualDrill.CLSL.Language.IR.Expression;
+﻿using DualDrill.CLSL.Language.Types;
+
+namespace DualDrill.CLSL.Language.IR.Expression;
 
 public sealed record class LogicalNegationExpression(IExpression Expr) : IExpression
 {

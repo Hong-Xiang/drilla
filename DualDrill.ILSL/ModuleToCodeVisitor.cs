@@ -76,7 +76,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
     , ITypeReferenceVisitor<ValueTask>
 
 {
-    async ValueTask WriteAttributeAsync(IAttribute attr, CancellationToken cancellation = default)
+    async ValueTask WriteAttributeAsync(IShaderAttribute attr, CancellationToken cancellation = default)
     {
         switch (attr)
         {
@@ -107,7 +107,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         }
     }
 
-    async ValueTask WriteAttributesAsync(IEnumerable<IAttribute> attributes, bool newLine = false)
+    async ValueTask WriteAttributesAsync(IEnumerable<IShaderAttribute> attributes, bool newLine = false)
     {
         foreach (var a in attributes)
         {

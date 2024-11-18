@@ -57,7 +57,7 @@ public sealed record class RuntimeSizedArrayType(IScalarType ElementType)
 
 public readonly record struct StructureMember(string Name, IPlainType Type)
 {
-    public ImmutableArray<IAttribute> Attributes { get; init; } = [];
+    public ImmutableArray<IShaderAttribute> Attributes { get; init; } = [];
 }
 
 public sealed record class StructureType(ImmutableArray<StructureMember> Members)

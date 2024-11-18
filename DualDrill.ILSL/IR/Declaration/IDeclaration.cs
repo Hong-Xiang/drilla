@@ -14,5 +14,5 @@ namespace DualDrill.ILSL.IR.Declaration;
 public interface IDeclaration : IAstNode
 {
     string Name { get; }
-    ImmutableHashSet<IAttribute> Attributes { get; }
+    ImmutableHashSet<IShaderAttribute> Attributes { get; }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.IR.Declaration;
@@ -14,5 +15,5 @@ namespace DualDrill.CLSL.Language.IR.Declaration;
 public interface IDeclaration : IAstNode
 {
     string Name { get; }
-    ImmutableHashSet<IAttribute> Attributes { get; }
+    ImmutableHashSet<ShaderAttribute.IShaderAttribute> Attributes { get; }
 }

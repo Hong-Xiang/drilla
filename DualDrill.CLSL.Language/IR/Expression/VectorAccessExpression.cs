@@ -1,6 +1,8 @@
-﻿namespace DualDrill.CLSL.Language.IR.Expression;
+﻿using DualDrill.CLSL.Language.Types;
+
+namespace DualDrill.CLSL.Language.IR.Expression;
 
 public sealed record class VectorAccessExpression(IExpression Base, IExpression Index) : IExpression
 {
-    public IShaderType Type => ((IVectorType)Base.Type).ElementType;
+    public IShaderType Type => ((VecType)Base.Type).ElementType;
 }

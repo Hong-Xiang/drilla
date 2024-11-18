@@ -1,11 +1,11 @@
-﻿using DualDrill.CLSL.Language.IR;
-using DualDrill.CLSL.Language.IR.Expression;
+﻿using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.IR.Statement;
 
 public sealed record class ForStatement(
-    ImmutableHashSet<IAttribute> Attributes,
+    ImmutableHashSet<ShaderAttribute.IShaderAttribute> Attributes,
     ForHeader ForHeader,
     IStatement Statement
 ) : IStatement

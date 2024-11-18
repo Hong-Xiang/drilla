@@ -8,7 +8,7 @@ public sealed record class VariableDeclaration(
     DeclarationScope DeclarationScope,
     string Name,
     IType Type,
-    ImmutableHashSet<IAttribute> Attributes
+    ImmutableHashSet<IShaderAttribute> Attributes
 ) : IDeclaration
 {
     public IExpression? Initializer { get; set; } = null;

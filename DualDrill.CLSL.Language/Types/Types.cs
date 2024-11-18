@@ -1,10 +1,11 @@
-﻿using DualDrill.Common;
+﻿using DualDrill.CLSL.Language.IR;
+using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Types;
 
-public interface IShaderType : IAstNode
+public interface IShaderType
 {
     string Name { get; }
 }

@@ -76,24 +76,24 @@ public sealed class MetadataParser()
         var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                       .Where(f => !f.Name.EndsWith("k__BackingField"));
         var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.FieldType), [.. f.GetCustomAttributes().OfType<IAttribute>()]));
-        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.PropertyType), [.. f.GetCustomAttributes().OfType<IAttribute>()]));
+        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.FieldType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
+        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.PropertyType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
 
         var result = new StructureDeclaration(t.Name, [
             ..fieldMembers,
             ..propsMembers
-            ], [.. t.GetCustomAttributes().OfType<IAttribute>()]);
+            ], [.. t.GetCustomAttributes().OfType<IShaderAttribute>()]);
         return result;
     }
 
-    ImmutableHashSet<IR.IAttribute> ParseAttribute(ParameterInfo p)
+    ImmutableHashSet<IR.IShaderAttribute> ParseAttribute(ParameterInfo p)
     {
         return [
             ..p.GetCustomAttributes<BuiltinAttribute>(),
             ..p.GetCustomAttributes<LocationAttribute>(),
         ];
     }
-    ImmutableHashSet<IR.IAttribute> ParseAttribute(MethodBase m)
+    ImmutableHashSet<IR.IShaderAttribute> ParseAttribute(MethodBase m)
     {
         return [
             ..m.GetCustomAttributes<VertexAttribute>(),
@@ -112,7 +112,7 @@ public sealed class MetadataParser()
         {
             return result;
         }
-        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.FieldType), [.. info.GetCustomAttributes().OfType<IAttribute>()]);
+        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.FieldType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
         Context.VariableDeclarations.Add(info, decl);
         return decl;
     }
@@ -122,7 +122,7 @@ public sealed class MetadataParser()
         {
             return result;
         }
-        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.PropertyType), [.. info.GetCustomAttributes().OfType<IAttribute>()]);
+        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.PropertyType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
         Context.VariableDeclarations.Add(info, decl);
         return decl;
 

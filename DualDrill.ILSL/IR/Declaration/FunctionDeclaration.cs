@@ -8,12 +8,12 @@ public sealed record class FunctionDeclaration(
     string Name,
     ImmutableArray<ParameterDeclaration> Parameters,
     FunctionReturn Return,
-    ImmutableHashSet<IAttribute> Attributes
+    ImmutableHashSet<IShaderAttribute> Attributes
 ) : IDeclaration
 {
     public CompoundStatement? Body { get; set; } = null;
 }
 
-public readonly record struct FunctionReturn(IType? Type, ImmutableHashSet<IAttribute> Attributes)
+public readonly record struct FunctionReturn(IType? Type, ImmutableHashSet<IShaderAttribute> Attributes)
 {
 }

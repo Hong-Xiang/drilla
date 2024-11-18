@@ -29,6 +29,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Mathematics.CodeG
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.CLSL.Language", "DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj", "{A1EE58EC-8B7E-4A19-AE35-6239CC13CED2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DualDrill.CLSL.CSharp", "DualDrill.CLSL.CSharp\DualDrill.CLSL.CSharp.csproj", "{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -141,6 +143,14 @@ Global
 		{A1EE58EC-8B7E-4A19-AE35-6239CC13CED2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A1EE58EC-8B7E-4A19-AE35-6239CC13CED2}.Release|x64.ActiveCfg = Release|Any CPU
 		{A1EE58EC-8B7E-4A19-AE35-6239CC13CED2}.Release|x64.Build.0 = Release|Any CPU
+		{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}.Debug|x64.Build.0 = Debug|Any CPU
+		{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}.Release|x64.ActiveCfg = Release|Any CPU
+		{3B196B5C-AF1F-4A2F-9AD6-B4BA2FF622BD}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
