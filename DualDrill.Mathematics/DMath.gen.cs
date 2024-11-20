@@ -4438,5 +4438,610 @@ public static partial class DMath{
         throw new NotImplementedException();
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.SByte i8(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int16 i16(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int32 i32(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Int64 i64(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Byte u8(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt16 u16(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt32 u32(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.UInt64 u64(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Half f16(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Single f32(System.Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static System.Double f64(System.Double e){
+        throw new NotImplementedException();
+    }
+    
 }
 

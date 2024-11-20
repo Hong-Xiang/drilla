@@ -145,13 +145,19 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         throw new NotImplementedException();
     }
 
+    Type? GetCSharpType(IType t)
+    {
+        return Type.GetType(t.FullName);
+    }
+
     public IAstNode? VisitCastExpression(CastExpression castExpression)
     {
-        var t = castExpression.Type.Annotation<TypeResolveResult>();
-        var f = t switch
+        var source = castExpression.Expression.Annotation<ResolveResult>().Type;
+        var target = castExpression.Type.Annotation<TypeResolveResult>().Type;
+        var f = (source.FullName, target.FullName) switch
         {
-            { Type.FullName: "System.Single" } => FloatType<N32>.Cast,
-            { Type.FullName: "System.Double" } => FloatType<N64>.Cast,
+            { FullName: "System.Single" } => FloatType<N32>.Cast,
+            { FullName: "System.Double" } => FloatType<N64>.Cast,
             { Type.FullName: "System.Int32" } => IntType<N32>.Cast,
             { Type.FullName: "System.Int64" } => IntType<N64>.Cast,
             //{ Type: { FullName: "System.UInt32" } } => UIntType<N32>.Cast,

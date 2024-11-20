@@ -290,7 +290,7 @@ public static class ShaderFunction
                from t in ShaderType.NumericScalarTypes
                select new FunctionDeclaration(
                    CSharpProjectionConfiguration.ScalarShaderName(s),
-                   [new ParameterDeclaration("e", s, [])],
+                   [new ParameterDeclaration("e", t, [])],
                    new FunctionReturn(s, []),
                    []);
     }

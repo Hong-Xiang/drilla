@@ -66,9 +66,9 @@ public sealed class CSharpProjectionConfiguration
             FloatType { BitWidth: N32 } => typeof(float).FullName,
             FloatType { BitWidth: N64 } => typeof(double).FullName,
 
-            VecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{ScalarShaderName(b)}",
-            VecType { Size: var size, ElementType: var e } => $"vec{size.Value}{ScalarShaderName(e)}",
-            MatType { Row: var r, Column: var c, ElementType: var e } => $"mat{r.Value}x{c.Value}{ScalarShaderName(e)}",
+            VecType { Size: var size, ElementType: BoolType b } => $"DualDrill.Mathematics.vec{size.Value}{ScalarShaderName(b)}",
+            VecType { Size: var size, ElementType: var e } => $"DualDrill.Mathematics.vec{size.Value}{ScalarShaderName(e)}",
+            MatType { Row: var r, Column: var c, ElementType: var e } => $"DualDrill.Mathematics.mat{r.Value}x{c.Value}{ScalarShaderName(e)}",
             _ => throw new NotSupportedException($"C# type map for {type} is undefined")
         })!;
     }
