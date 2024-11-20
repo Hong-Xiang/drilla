@@ -154,9 +154,12 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     {
         var source = castExpression.Expression.Annotation<ResolveResult>().Type;
         var target = castExpression.Type.Annotation<TypeResolveResult>().Type;
-        var f = (source.FullName, target.FullName) switch
+        var sourceType = GetCSharpType(source);
+        var targetType = GetCSharpType(target);
+
+        var f = target.FullName switch
         {
-            { FullName: "System.Single" } => FloatType<N32>.Cast,
+            "System.Single" => FloatType<N32>.Cast,
             { FullName: "System.Double" } => FloatType<N64>.Cast,
             { Type.FullName: "System.Int32" } => IntType<N32>.Cast,
             { Type.FullName: "System.Int64" } => IntType<N64>.Cast,

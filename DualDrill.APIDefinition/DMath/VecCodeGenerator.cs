@@ -273,8 +273,10 @@ public sealed record class VecCodeGenerator
     {
 
         Writer.WriteStructLayout();
+        var csharpName = Config.GetCSharpTypeName(VecType);
+        Writer.Write($"[CLSLMathematicsType({csharpName})]");
         Writer.Write("public partial struct ");
-        Writer.Write(Config.GetCSharpTypeName(VecType));
+        Writer.Write(csharpName);
         using (Writer.IndentedScopeWithBracket())
         {
             DetailCodeGenerator.GenerateMemberDeclaration();
