@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Types;
 using System.CodeDom.Compiler;
 
 namespace DualDrill.ApiGen.DMath;
@@ -12,7 +13,12 @@ internal class FunctionCodeGenerator(CSharpProjectionConfiguration Config, Inden
         {
             foreach (var f in ShaderFunction.Functions)
             {
-                var returnType = f.Return.Type is null ? "void" : Config.GetCSharpTypeName(f.Return.Type);
+                var returnType = f.Return.Type switch
+                {
+                    null => "void",
+                    UnitType => "void",
+                    _ => Config.GetCSharpTypeName(f.Return.Type)
+                };
                 Writer.WriteAggressiveInlining();
                 Writer.Write($"public static {returnType} {f.Name}(");
                 List<string> parameters = [];

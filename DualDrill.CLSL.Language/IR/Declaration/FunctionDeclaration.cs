@@ -9,7 +9,7 @@ public sealed record class FunctionDeclaration(
     string Name,
     ImmutableArray<ParameterDeclaration> Parameters,
     FunctionReturn Return,
-    ImmutableHashSet<ShaderAttribute.IShaderAttribute> Attributes
+    ImmutableHashSet<IShaderAttribute> Attributes
 ) : IDeclaration
 {
     public CompoundStatement? Body { get; set; } = null;

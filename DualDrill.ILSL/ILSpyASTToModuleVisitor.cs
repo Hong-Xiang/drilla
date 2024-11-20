@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 
 namespace DualDrill.CLSL.Compiler;
 
@@ -97,10 +98,10 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
         var l = (IExpression)binaryOperatorExpression.Left.AcceptVisitor(this);
         var r = (IExpression)binaryOperatorExpression.Right.AcceptVisitor(this);
         // TODO: proper expression type handling
-        if (l is LiteralValueExpression { Literal: IntLiteral<N32> { Value: var v } }
-            && r is FormalParameterExpression { Parameter: { Type: UIntType<N32> } })
+        if (l is LiteralValueExpression { Literal: IntLiteral { Value: var v, BitWidth: var bw } }
+            && r is FormalParameterExpression { Parameter: { Type: UIntType { BitWidth: N32 } } })
         {
-            l = new LiteralValueExpression(new UIntLiteral<N32>((uint)v));
+            l = new LiteralValueExpression(SyntaxFactory.Literal((uint)v));
         }
         return binaryOperatorExpression.Operator switch
         {
@@ -137,9 +138,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
     }
 
     public IAstNode? VisitBreakStatement(ICSharpCode.Decompiler.CSharp.Syntax.BreakStatement breakStatement)
-    {
-        return new IR.Statement.BreakStatement();
-    }
+        => SyntaxFactory.Break();
 
     public IAstNode? VisitCaseLabel(CaseLabel caseLabel)
     {
@@ -378,7 +377,7 @@ public sealed class ILSpyASTToModuleVisitor(Dictionary<string, IDeclaration> Sym
             throw new NotImplementedException("ForStatement only accepts 1 iterator statement");
         }
 
-        return new IR.Statement.ForStatement(
+        return new Language.IR.Statement.ForStatement(
             Attributes: [],
             new ForHeader()
             {

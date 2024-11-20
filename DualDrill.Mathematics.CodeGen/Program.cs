@@ -1,11 +1,17 @@
 ﻿using DualDrill.ApiGen.DMath;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Types;
-using System.Diagnostics;
 
-var cwd = Directory.GetCurrentDirectory();
-var targetDirectory = new DirectoryInfo(Path.Combine(cwd, "..", "..", "..", "..", "DualDrill.Mathematics"));
-Debug.Assert(targetDirectory.Exists);
+var targetDirectory = new DirectoryInfo(args[0]);
+
+var projectFile = Path.Combine(targetDirectory.FullName, "DualDrill.Mathematics.csproj");
+if (!File.Exists(projectFile))
+{
+    throw new FileNotFoundException("DualDrill.Mathematics.csproj not found in the target directory.");
+}
+
+
+
 var config = CSharpProjectionConfiguration.Instance;
 foreach (var t in ShaderType.GetVecTypes())
 {

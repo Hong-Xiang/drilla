@@ -284,11 +284,23 @@ public static class ShaderFunction
 
     public static ImmutableArray<FunctionDeclaration> Functions;
 
+    static IEnumerable<FunctionDeclaration> BuiltinScalarConstructors()
+    {
+        return from s in ShaderType.NumericScalarTypes
+               from t in ShaderType.NumericScalarTypes
+               select new FunctionDeclaration(
+                   CSharpProjectionConfiguration.ScalarShaderName(s),
+                   [new ParameterDeclaration("e", s, [])],
+                   new FunctionReturn(s, []),
+                   []);
+    }
+
     static ShaderFunction()
     {
         Functions = [.. from n in Enum.GetValues<NumericBuiltinFunctionName>()
                         from f in CreateFunctionOverloads(n)
-                        select f];
+                        select f,
+                     .. BuiltinScalarConstructors()];
 
         Func1Lookup = (from f in Functions
                        where f.Parameters.Length == 1

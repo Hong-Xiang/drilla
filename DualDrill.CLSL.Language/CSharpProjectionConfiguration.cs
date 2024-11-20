@@ -66,14 +66,14 @@ public sealed class CSharpProjectionConfiguration
             FloatType { BitWidth: N32 } => typeof(float).FullName,
             FloatType { BitWidth: N64 } => typeof(double).FullName,
 
-            VecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{ElementName(b)}",
-            VecType { Size: var size, ElementType: var e } => $"vec{size.Value}{ElementName(e)}",
-            MatType { Row: var r, Column: var c, ElementType: var e } => $"mat{r.Value}x{c.Value}{ElementName(e)}",
+            VecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{ScalarShaderName(b)}",
+            VecType { Size: var size, ElementType: var e } => $"vec{size.Value}{ScalarShaderName(e)}",
+            MatType { Row: var r, Column: var c, ElementType: var e } => $"mat{r.Value}x{c.Value}{ScalarShaderName(e)}",
             _ => throw new NotSupportedException($"C# type map for {type} is undefined")
         })!;
     }
 
-    static string ElementName(IScalarType type)
+    public static string ScalarShaderName(IScalarType type)
     {
         return type switch
         {
@@ -81,7 +81,7 @@ public sealed class CSharpProjectionConfiguration
             FloatType => $"f{type.BitWidth.Value}",
             IntType => $"i{type.BitWidth.Value}",
             UIntType => $"u{type.BitWidth.Value}",
-            _ => throw new NotSupportedException($"{nameof(ElementName)} does not support {type}")
+            _ => throw new NotSupportedException($"{nameof(ScalarShaderName)} does not support {type}")
         };
     }
 

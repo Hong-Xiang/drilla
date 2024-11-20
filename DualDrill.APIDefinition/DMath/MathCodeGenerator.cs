@@ -1,9 +1,6 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Types;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.CodeDom.Compiler;
-using System.Runtime.InteropServices;
 namespace DualDrill.ApiGen.DMath;
 
 
