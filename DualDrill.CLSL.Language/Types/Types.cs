@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.IR;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
