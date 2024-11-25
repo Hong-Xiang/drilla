@@ -1,9 +1,12 @@
-﻿using DualDrill.Engine.Shader;
+﻿using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
 using DualDrill.ILSL.Frontend;
 using DualDrill.Server.Services;
 using Lokad.ILPack.IL;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
 
@@ -12,6 +15,8 @@ namespace DualDrill.Server.Controllers;
 [Route("[controller]")]
 public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Controller
 {
+
+    static MethodBase? LastMethod = null;
     IShaderModule? GetShaderModule(string name)
     {
         return ShaderModules.ShaderModules[name];
@@ -20,6 +25,32 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     IILSLDevelopShaderModule? GetDevelopmentShaderModule(string name)
     {
         return ShaderModules.ShaderModules[name];
+    }
+
+    [HttpGet("ParseHotReload")]
+    public IActionResult ParseHotReload()
+    {
+        var m = ((Func<int, int>)A).Method;
+        var same = LastMethod == m;
+        LastMethod = m;
+        return Ok(m.GetInstructions());
+    }
+
+    int A(int b)
+    {
+        return b + 10;
+    }
+
+    [HttpGet("ParseV3")]
+    public IActionResult ParseV3()
+    {
+        var parser = new ILSpyFrontend(new ILSpyOption() { HotReloadAssemblies = [typeof(ILSLController).Assembly] });
+        var env = new Dictionary<string, IDeclaration>()
+        {
+            ["a"] = new VariableDeclaration(CLSL.Language.DeclarationScope.Function, "a", ShaderType.I32, [])
+        };
+        var body = parser.ParseMethodBody(env.ToImmutableDictionary(), static (int a) => a * 3);
+        return Ok(body);
     }
 
     [HttpGet("")]
@@ -63,17 +94,17 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("wgsl/vertexbufferlayout/{name}")]
     public async Task<IActionResult> GetVertexBufferLayout(string name)
     {
-        if(name == nameof(QuadShader))
+        if (name == nameof(QuadShader))
         {
             var reflection = new QuadShaderReflection();
             return Ok(reflection.GetVertexBufferLayout());
         }
-        else if(name == nameof(ReflectionTestShader))
+        else if (name == nameof(ReflectionTestShader))
         {
             var reflection = new ReflectionTestShaderReflection();
             return Ok(reflection.GetVertexBufferLayout());
         }
-        else if(name == nameof(SampleFragmentShader))
+        else if (name == nameof(SampleFragmentShader))
         {
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetVertexBufferLayout());
@@ -84,7 +115,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("wgsl/bindgrouplayoutdescriptor/{name}")]
     public async Task<IActionResult> GetBindGroupLayoutDescriptor(string name)
     {
-        if(name == nameof(QuadShader))
+        if (name == nameof(QuadShader))
         {
             var shaderModule = new QuadShader();
             var type = shaderModule.GetType();
@@ -243,7 +274,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         return await MethodTargetAction(moduleName, methodName, async (parser, method) =>
         {
             var ir = parser.ParseMethod(method);
-            var module = new ILSL.IR.Module([ir]);
+            var module = new CLSL.Language.IR.Module([ir]);
             var code = await module.EmitCode();
             return Ok(code);
         });

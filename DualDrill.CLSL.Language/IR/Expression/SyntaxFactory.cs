@@ -55,6 +55,7 @@ public static class SyntaxFactory
     public static IExpression Argument(ParameterDeclaration parameter) => new FormalParameterExpression(parameter);
     public static IExpression Call(FunctionDeclaration callee, params IExpression[] arguments) => new FunctionCallExpression(callee, [.. arguments]);
     public static ILiteral Literal(float value) => new FloatLiteral(N32.Instance, value);
+    public static ILiteral Literal(double value) => new FloatLiteral(N64.Instance, value);
     public static ILiteral Literal(int value) => new IntLiteral(N32.Instance, value);
     public static ILiteral Literal(uint value) => new UIntLiteral(N32.Instance, value);
     public static ILiteral Literal(bool value) => new BoolLiteral(value);

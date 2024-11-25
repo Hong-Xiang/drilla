@@ -8,7 +8,7 @@ public interface ITargetLanguage
     string GetName(IntType type);
     string GetName(UIntType type);
     string GetName(FloatType type);
-    string GetName(VecType type);
+    string GetName(IVecType type);
     string GetName(MatType type);
     string GetLiteralString(ILiteral literal);
 }

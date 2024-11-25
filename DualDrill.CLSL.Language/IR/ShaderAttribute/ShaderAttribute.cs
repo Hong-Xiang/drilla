@@ -1,6 +1,6 @@
 ﻿namespace DualDrill.CLSL.Language.IR.ShaderAttribute;
 
-public interface IShaderAttribute : IAstNode { }
+public interface IShaderAttribute : IShaderAstNode { }
 public interface IShaderStageAttribute : IShaderAttribute { }
 
 public sealed class ShaderMethodAttribute() : Attribute, IShaderStageAttribute

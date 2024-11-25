@@ -1,23 +1,19 @@
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.Graphics;
-using DualDrill.ILSL.IR.Declaration;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Numerics;
+using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
-using Microsoft.VisualBasic.FileIO;
-using System.Runtime.InteropServices;
-using Silk.NET.SDL;
-using System.Diagnostics;
-using System.Text.Json;
-using DualDrill.ILSL.Types;
+using System.Linq.Expressions;
+using System.Numerics;
+using System.Reflection;
 namespace DualDrill.ILSL;
 
 public interface IShaderModuleReflection
 {
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(IR.Module module);
-    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(IR.Module module);
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(CLSL.Language.IR.Module module);
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.Module module);
     public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>();
-    public IVertexBufferLayoutBuilder<TGPULayout> GetVertexBufferLayoutBuilder<TGPULayout>() where TGPULayout : struct ;
+    public IVertexBufferLayoutBuilder<TGPULayout> GetVertexBufferLayoutBuilder<TGPULayout>() where TGPULayout : struct;
 }
 
 public interface IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout>
@@ -133,9 +129,9 @@ public sealed class VertexBufferLayoutBuilder<TGPULayout> : IVertexBufferLayoutB
         var attributes = new List<GPUVertexAttribute>();
         Dictionary<int, MemberInfo> LayoutDict = new();
         var members = typeof(TGPULayout).GetMembers();
-        foreach(var member in members)
+        foreach (var member in members)
         {
-            if(member.MemberType is not MemberTypes.Field)
+            if (member.MemberType is not MemberTypes.Field)
             {
                 continue;
             }
@@ -143,7 +139,7 @@ public sealed class VertexBufferLayoutBuilder<TGPULayout> : IVertexBufferLayoutB
             LayoutDict[location] = member;
         }
         ulong offset = 0;
-        foreach(var keyValue in LayoutDict)
+        foreach (var keyValue in LayoutDict)
         {
             int key = keyValue.Key;
             var member = keyValue.Value;
@@ -170,7 +166,7 @@ public sealed class VertexBufferLayoutBuilder<TGPULayout> : IVertexBufferLayoutB
 public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout>
 {
     private Dictionary<MemberInfo, List<MemberInfo>> LayoutMap = new();
-    
+
     private MemberInfo ParseMemberExpression(System.Linq.Expressions.Expression exp)
     {
         if (exp is MemberExpression memberExp)
@@ -219,7 +215,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
             {
                 StepMode = key.GetCustomAttributes(false).OfType<VertexStepModeAttribute>().First().StepMode,
             };
-            var attributes =new List<GPUVertexAttribute>();
+            var attributes = new List<GPUVertexAttribute>();
             int stride = 0;
             var locationList = new List<int>();
             foreach (var vertexLayoutElementType in userDefinedElement.Value)
@@ -239,7 +235,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
             }
             locationList.Sort();
             ulong offset = 0;
-            for(int i = 0; i < locationList.Count; i++)
+            for (int i = 0; i < locationList.Count; i++)
             {
                 int binding = locationList[i];
                 var value = vertexAttributeDict[binding];
@@ -258,7 +254,7 @@ public sealed class VertexBufferMappingBuilder<TGPULayout, THostLayout> : IVerte
 
 public sealed class ShaderModuleReflection : IShaderModuleReflection
 {
-    private static int GetByteSize(IType type)
+    private static int GetByteSize(IShaderType type)
     {
         return type switch
         {
@@ -267,7 +263,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         };
     }
 
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(IR.Module module)
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(CLSL.Language.IR.Module module)
     {
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntry>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
@@ -294,7 +290,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         return gpuBindGroupDescriptor;
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(IR.Module module)
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.Module module)
     {
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntryBuffer>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())

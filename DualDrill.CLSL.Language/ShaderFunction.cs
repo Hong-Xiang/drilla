@@ -264,7 +264,7 @@ public static class ShaderFunction
             (_, NumericBuiltinFunctionName.ldexp) =>
                 from s in ShaderType.FloatTypes
                 from t in ShaderType.GetScalarOrVectorTypes(s)
-                let i = t is IScalarType ? (IShaderType)ShaderType.I32 : ShaderType.GetVecType(((VecType)t).Size, ShaderType.I32)
+                let i = t is IScalarType ? (IShaderType)ShaderType.I32 : ShaderType.GetVecType(((IVecType)t).Size, ShaderType.I32)
                 select new FunctionDeclaration(
                     fn,
                     [new ParameterDeclaration("e1", t, []),

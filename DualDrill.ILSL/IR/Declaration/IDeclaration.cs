@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
 namespace DualDrill.ILSL.IR.Declaration;

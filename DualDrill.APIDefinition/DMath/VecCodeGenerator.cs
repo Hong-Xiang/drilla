@@ -18,7 +18,7 @@ interface IVectorDetailCodeGenerator
 }
 
 internal sealed record class VectorComponentCodeGenerator(
-    VecType VecType,
+    IVecType VecType,
     CSharpProjectionConfiguration Config,
     IndentedTextWriter Writer) : IVectorDetailCodeGenerator
 {
@@ -70,7 +70,7 @@ internal sealed record class VectorComponentCodeGenerator(
 }
 
 internal sealed record class VectorSimdCodeGenerator(
-    VecType VecType,
+    IVecType VecType,
     CSharpProjectionConfiguration Config,
     IndentedTextWriter Writer) : IVectorDetailCodeGenerator
 {
@@ -182,11 +182,11 @@ internal sealed record class VectorSimdCodeGenerator(
 
 public sealed record class VecCodeGenerator
 {
-    VecType VecType { get; }
+    IVecType VecType { get; }
     public IndentedTextWriter Writer { get; }
     CSharpProjectionConfiguration Config { get; }
     IVectorDetailCodeGenerator DetailCodeGenerator { get; }
-    public VecCodeGenerator(VecType vecType, IndentedTextWriter writer, CSharpProjectionConfiguration config)
+    public VecCodeGenerator(IVecType vecType, IndentedTextWriter writer, CSharpProjectionConfiguration config)
     {
         VecType = vecType;
         Writer = writer;

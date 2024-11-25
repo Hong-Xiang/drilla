@@ -1,13 +1,17 @@
 ﻿using DualDrill.Common.Nat;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Types;
 
+public interface IVecType : IShaderType
+{
+    public IScalarType ElementType { get; }
+    public IRank Size { get; }
+}
 
 public sealed record class VecType(
     IScalarType ElementType,
     IRank Size
-) : IShaderType
+) : IVecType
 {
     //public static readonly ImmutableArray<FunctionDeclaration> Constructors =
     //    [
@@ -66,11 +70,15 @@ public sealed record class VecType(
 
 public static partial class ShaderType
 {
-    static IReadOnlyDictionary<(IRank, IScalarType), VecType> VecTypesLookup { get; } = (from r in Ranks
-                                                                                         from e in ScalarTypes
-                                                                                         select KeyValuePair.Create((r, e), new VecType(e, r))).ToDictionary();
-    public static IEnumerable<VecType> GetVecTypes() => VecTypesLookup.Values;
-    public static VecType GetVecType(IRank size, IScalarType elementType)
+    static IReadOnlyDictionary<(IRank, IScalarType), IVecType> VecTypesLookup { get; }
+    static ShaderType()
+    {
+        VecTypesLookup = (from r in Ranks
+                          from e in ScalarTypes
+                          select KeyValuePair.Create((r, e), (IVecType)new VecType(e, r))).ToDictionary();
+    }
+    public static IEnumerable<IVecType> GetVecTypes() => VecTypesLookup.Values;
+    public static IVecType GetVecType(IRank size, IScalarType elementType)
     {
         return VecTypesLookup[(size, elementType)];
     }

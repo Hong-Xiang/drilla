@@ -17,7 +17,7 @@ namespace DualDrill.CLSL.Language.IR.Expression;
 [JsonDerivedType(typeof(UnaryLogicalExpression), nameof(UnaryLogicalExpression))]
 [JsonDerivedType(typeof(UnaryArithmeticExpression), nameof(UnaryArithmeticExpression))]
 [JsonDerivedType(typeof(NamedComponentExpression), nameof(NamedComponentExpression))]
-public interface IExpression : IAstNode
+public interface IExpression : IShaderAstNode
 {
     IShaderType Type { get; }
 }

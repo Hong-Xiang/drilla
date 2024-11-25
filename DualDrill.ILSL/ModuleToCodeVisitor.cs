@@ -1,9 +1,10 @@
-﻿using DualDrill.Common.Nat;
-using DualDrill.ILSL.IR;
-using DualDrill.ILSL.IR.Declaration;
-using DualDrill.ILSL.IR.Expression;
-using DualDrill.ILSL.IR.Statement;
-using DualDrill.ILSL.Types;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.Common.Nat;
+using DualDrill.CLSL.Language.IR;
+using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.IR.Statement;
+using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.ILSL;
 
@@ -14,9 +15,9 @@ public sealed class WGSLLanguage : ITargetLanguage
         return literal switch
         {
             BoolLiteral l => l.Value ? "true" : "false",
-            IntLiteral<N32> l => l.Value + "i",
-            UIntLiteral<N32> l => l.Value + "u",
-            FloatLiteral<N32> l => l.Value + "f",
+            IntLiteral { BitWidth: N32, Value: var value } => value + "i",
+            UIntLiteral { BitWidth: N32, Value: var value } => value + "u",
+            FloatLiteral { BitWidth: N32, Value: var value } => value + "f",
             _ => throw new NotSupportedException($"{nameof(GetLiteralString)} not support {literal}")
         };
     }
@@ -24,41 +25,39 @@ public sealed class WGSLLanguage : ITargetLanguage
     public string GetName(BoolType type) => "bool";
 
 
-    public string GetName<TBitWidth>(IntType<TBitWidth> type) where TBitWidth : IBitWidth
+    public string GetName(IntType type)
     {
         return type switch
         {
-            IntType<N32> _ => "i32",
+            IntType { BitWidth: N32 } _ => "i32",
             _ => throw new NotSupportedException()
         };
     }
 
-    public string GetName<TBitWidth>(UIntType<TBitWidth> type) where TBitWidth : IBitWidth
+    public string GetName(UIntType type)
     {
         return type switch
         {
-            UIntType<N32> _ => "u32",
+            UIntType { BitWidth: N32 } => "u32",
             _ => throw new NotSupportedException()
         };
     }
 
-    public string GetName<TBitWidth>(FloatType<TBitWidth> type) where TBitWidth : IBitWidth
+    public string GetName(FloatType type)
     {
         return type switch
         {
-            FloatType<N16> _ => "f16",
-            FloatType<N32> _ => "f32",
+            FloatType { BitWidth: N16 } _ => "f16",
+            FloatType { BitWidth: N32 } _ => "f32",
             _ => throw new NotSupportedException()
         };
     }
 
-    public string GetName<TSize, TElement>(VecType<TSize, TElement> type)
-        where TSize : IRank<TSize>
-        where TElement : IScalarType<TElement>
+    public string GetName(IVecType type)
     {
         return type switch
         {
-            VecType<N4, FloatType<N32>> _ => $"vec4<f32>",
+            IVecType { Size: N4, ElementType: FloatType { BitWidth: N32 } } => $"vec4<f32>",
             _ => throw new NotSupportedException()
         };
     }
@@ -498,7 +497,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         Writer.WriteLine(",");
     }
 
-    public async ValueTask VisitTypeReference(IType type)
+    public async ValueTask VisitTypeReference(IShaderType type)
     {
         Writer.Write(type.Name);
     }

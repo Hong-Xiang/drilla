@@ -12,7 +12,7 @@ namespace DualDrill.CLSL.Language.IR.Declaration;
 //[JsonDerivedType(typeof(IType), nameof(IType))]
 //[JsonDerivedType(typeof(TypeDeclaration), nameof(TypeDeclaration))]
 [JsonDerivedType(typeof(ValueDeclaration), nameof(ValueDeclaration))]
-public interface IDeclaration : IAstNode
+public interface IDeclaration : IShaderAstNode
 {
     string Name { get; }
     ImmutableHashSet<ShaderAttribute.IShaderAttribute> Attributes { get; }

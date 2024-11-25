@@ -1,5 +1,7 @@
-﻿using DualDrill.ILSL.IR.Declaration;
+﻿using DualDrill.CLSL.Language.IR.Declaration;
+using Lokad.ILPack.IL;
 using System.Reflection;
+using System.Reflection.Emit;
 
 namespace DualDrill.ILSL.Frontend;
 
@@ -17,3 +19,17 @@ public sealed record class ParserContext(
     public static ParserContext Create() => new([], [], []);
 }
 
+public interface IMetadataParser
+{
+    public IEnumerable<MethodBase> ParseCallee(MethodBase method);
+}
+
+public sealed class ILPackMetadataParser : IMetadataParser
+{
+    public IEnumerable<MethodBase> ParseCallee(MethodBase method)
+    {
+        var instructions = method.GetInstructions();
+        return instructions.Where(inst => inst.OpCode == OpCodes.Call || inst.OpCode == OpCodes.Callvirt)
+                    .Select(inst => (MethodBase)inst.Operand);
+    }
+}

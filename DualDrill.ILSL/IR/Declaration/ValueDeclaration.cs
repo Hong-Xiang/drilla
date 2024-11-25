@@ -9,7 +9,7 @@ public sealed record class ValueDeclaration(
     string Name,
     IType Type,
     ValueDeclarationKind Kind,
-    ImmutableHashSet<IShaderAttribute> Attributes
+    ImmutableHashSet<CLSL.Language.IR.ShaderAttribute.IShaderAttribute> Attributes
 ) : IDeclaration
 {
     public IExpression? Initializer { get; set; } = null;

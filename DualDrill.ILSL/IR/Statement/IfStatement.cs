@@ -6,7 +6,7 @@ namespace DualDrill.ILSL.IR.Statement;
 
 // attribute* if_clause else_if_clause* else_clause?
 public sealed record class IfStatement(
-    ImmutableHashSet<IShaderAttribute> Attributes,
+    ImmutableHashSet<CLSL.Language.IR.ShaderAttribute.IShaderAttribute> Attributes,
     IfClause IfClause,
     ImmutableArray<IfClause> ElseIfClause
 ) : IStatement

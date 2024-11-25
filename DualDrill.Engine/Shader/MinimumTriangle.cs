@@ -1,4 +1,5 @@
-﻿using DualDrill.Common.Nat;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.Common.Nat;
 using DualDrill.ILSL;
 using DualDrill.ILSL.IR.Declaration;
 using DualDrill.ILSL.IR.Expression;

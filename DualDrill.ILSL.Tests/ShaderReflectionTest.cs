@@ -1,14 +1,10 @@
-﻿using DotNext.Collections.Generic;
+﻿using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.Graphics;
-using DualDrill.ILSL.Types;
-using Silk.NET.SDL;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.ILSL.Tests;
 
@@ -27,11 +23,11 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = new IR.Module([
-            new IR.Declaration.VariableDeclaration(
+        var module = new CLSL.Language.IR.Module([
+            new VariableDeclaration(
                 DeclarationScope.Module,
                 "data",
-                new VecType<R2, FloatType<N32>>(),
+                ShaderType.vec2f32,
                 [
                     new GroupAttribute(0),
                     new BindingAttribute(0),

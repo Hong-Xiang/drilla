@@ -45,7 +45,7 @@ public sealed class MathCodeGenerator
         return BaseWriter.ToString();
     }
 
-    public void Generate(VecType vecType)
+    public void Generate(IVecType vecType)
     {
         var vecGenertor = new VecCodeGenerator(vecType, Writer, Config);
         vecGenertor.Generate();

@@ -1,5 +1,6 @@
-﻿using DualDrill.ILSL.Frontend;
-using DualDrill.ILSL.IR.Declaration;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.ILSL.Frontend;
+using DualDrill.CLSL.Language.IR.Declaration;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.Disassembler;
@@ -52,7 +53,7 @@ public static class ILSLCompiler
         return code;
     }
 
-    public static IR.Module Parse(IShaderModule module)
+    public static CLSL.Language.IR.Module Parse(IShaderModule module)
     {
         var type = module.GetType();
         using var parser = new ILSpyFrontend(new ILSpyOption()
@@ -64,7 +65,7 @@ public static class ILSLCompiler
         });
 
         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
-        List<FunctionDeclaration> functionDeclarations = [];
+        List<CLSL.Language.IR.Declaration.FunctionDeclaration> functionDeclarations = [];
         foreach (var m in methods)
         {
             if (m.IsSpecialName)
@@ -79,7 +80,7 @@ public static class ILSLCompiler
             }
             functionDeclarations.Add(parser.ParseMethod(m));
         }
-        return new IR.Module([.. functionDeclarations]);
+        return new([.. functionDeclarations]);
     }
 
     //public static SyntaxTree DecompileMethod(MethodBase shaderModule)
@@ -160,7 +161,7 @@ public static class ILSLCompiler
     //    }
     //}
 
-    public static async ValueTask<string> EmitCode(this IR.Module module)
+    public static async ValueTask<string> EmitCode(this CLSL.Language.IR.Module module)
     {
         var tw = new IndentStringWriter("\t");
         var wgslVisitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());

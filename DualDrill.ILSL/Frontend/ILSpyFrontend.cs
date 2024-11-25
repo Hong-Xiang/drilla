@@ -1,4 +1,6 @@
-﻿using DualDrill.ILSL.IR.Declaration;
+﻿using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.CLSL.Language.IR.Statement;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;
@@ -19,7 +21,7 @@ public record struct ILSpyOption()
 }
 
 
-public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
+public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IMethodParser
 {
     public ParserContext Context { get; } = ParserContext.Create();
 
@@ -39,7 +41,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
 
     static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
 
-    public IR.Module ParseModule(IShaderModule module)
+    public CLSL.Language.IR.Module ParseModule(IShaderModule module)
     {
         var moduleType = module.GetType();
         var methods = moduleType.GetMethods(TargetMethodBindingFlags);
@@ -79,12 +81,13 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
         };
     }
 
-    CSharpDecompiler CreateStaticDecompiler(Assembly assembly)
+    private CSharpDecompiler CreateStaticDecompiler(Assembly assembly)
     {
-        return new CSharpDecompiler(assembly.Location, GetDecompilerSettings());
+        var decompiler = new CSharpDecompiler(assembly.Location, GetDecompilerSettings());
+        return decompiler;
     }
 
-    unsafe CSharpDecompiler CreateRuntimeDecompiler(Assembly assembly)
+    private unsafe CSharpDecompiler CreateRuntimeDecompiler(Assembly assembly)
     {
         var generator = new Lokad.ILPack.AssemblyGenerator();
         var assemblyData = generator.GenerateAssemblyBytes(assembly);
@@ -134,7 +137,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
         else
         {
             var ast = Decompile(method);
-            var result = (FunctionDeclaration)ast.AcceptVisitor(new ILSpyASTToModuleVisitor(symbols ?? [], method.DeclaringType.Assembly));
+            var result = (FunctionDeclaration)ast.AcceptVisitor(new ILSpyASTToModuleVisitor(new Dictionary<string, IDeclaration>().ToImmutableDictionary(), method.DeclaringType.Assembly));
             // Ad hoc fixing of return type attribute missing
             if (method is MethodInfo minfo)
             {
@@ -164,5 +167,14 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable
         {
             d.Dispose();
         }
+    }
+
+    public CompoundStatement ParseMethodBody(ImmutableDictionary<string, IDeclaration> env, MethodBase method)
+    {
+
+        var ast = Decompile(method);
+        var body = ast.DescendantNodes().OfType<MethodDeclaration>().First().Body;
+        var result = (CompoundStatement)body.AcceptVisitor(new ILSpyASTToModuleVisitor(env, method.DeclaringType.Assembly));
+        return result;
     }
 }

@@ -1,55 +1,57 @@
 ﻿using DotNext.Reflection;
 using DualDrill.Common.Nat;
-using DualDrill.ILSL.IR;
-using DualDrill.ILSL.IR.Declaration;
-using DualDrill.ILSL.Types;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
+using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Language;
+using System.Diagnostics;
 
 namespace DualDrill.ILSL.Frontend;
 
-public sealed class MetadataParser()
+public sealed class MetadataParser
 {
-    ParserContext Context = ParserContext.Create();
+    public ParserContext Context { get; } = ParserContext.Create();
     Dictionary<MethodBase, FunctionDeclaration> NeedParseBody = [];
 
-    FrozenDictionary<Type, IType> BuiltinTypeMap = new Dictionary<Type, IType>()
+    FrozenDictionary<Type, IShaderType> BuiltinTypeMap = new Dictionary<Type, IShaderType>()
     {
-        [typeof(bool)] = new BoolType(),
-        [typeof(int)] = new IntType<N32>(),
-        [typeof(uint)] = new UIntType<N32>(),
-        [typeof(long)] = new IntType<N64>(),
-        [typeof(ulong)] = new UIntType<N64>(),
-        [typeof(Half)] = new FloatType<N16>(),
-        [typeof(float)] = new FloatType<N32>(),
-        [typeof(double)] = new FloatType<N64>(),
-        [typeof(Vector4)] = new VecType<N4, FloatType<N32>>(),
-        [typeof(Vector3)] = new VecType<N3, FloatType<N32>>(),
-        [typeof(Vector2)] = new VecType<N2, FloatType<N32>>(),
-        [typeof(vec4f32)] = new VecType<N4, FloatType<N32>>(),
-        [typeof(vec3f32)] = new VecType<N3, FloatType<N32>>(),
-        [typeof(vec2f32)] = new VecType<N2, FloatType<N32>>(),
+        [typeof(bool)] = ShaderType.Bool,
+        [typeof(int)] = ShaderType.I32,
+        [typeof(uint)] = ShaderType.U32,
+        [typeof(long)] = ShaderType.I64,
+        [typeof(ulong)] = ShaderType.U64,
+        [typeof(Half)] = ShaderType.F16,
+        [typeof(float)] = ShaderType.F32,
+        [typeof(double)] = ShaderType.F64,
+        [typeof(Vector4)] = ShaderType.GetVecType(N4.Instance, ShaderType.F32),
+        [typeof(Vector3)] = ShaderType.GetVecType(N3.Instance, ShaderType.F32),
+        [typeof(Vector2)] = ShaderType.GetVecType(N2.Instance, ShaderType.F32),
+        [typeof(vec4f32)] = ShaderType.GetVecType(N4.Instance, ShaderType.F32),
+        [typeof(vec3f32)] = ShaderType.GetVecType(N3.Instance, ShaderType.F32),
+        [typeof(vec2f32)] = ShaderType.GetVecType(N2.Instance, ShaderType.F32),
     }.ToFrozenDictionary();
 
 
-    static Dictionary<MethodBase, FunctionDeclaration> BuiltinMethods()
-    {
-        var result = new Dictionary<MethodBase, FunctionDeclaration>
-        {
-            {
-                typeof(Vector4).GetConstructor(BindingFlags.Public | BindingFlags.Instance, [typeof(float), typeof(float), typeof(float), typeof(float)]),
-                VecType<N4, FloatType<N32>>.Constructors[4]
-            }
-        };
+    //static Dictionary<MethodBase, FunctionDeclaration> BuiltinMethods()
+    //{
+    //    var result = new Dictionary<MethodBase, FunctionDeclaration>
+    //    {
+    //        {
+    //            typeof(Vector4).GetConstructor(BindingFlags.Public | BindingFlags.Instance, [typeof(float), typeof(float), typeof(float), typeof(float)]),
+    //            VecType<N4, FloatType<N32>>.Constructors[4]
+    //        }
+    //    };
 
-        return result;
-    }
+    //    return result;
+    //}
 
-    IType ParseTypeReference(Type t)
+    IShaderType ParseTypeReference(Type t)
     {
         if (BuiltinTypeMap.TryGetValue(t, out var bt))
         {
@@ -58,14 +60,16 @@ public sealed class MetadataParser()
         // TODO: array type support?
         if (Context.StructDeclarations.TryGetValue(t, out var ct))
         {
-            return ct;
+            //return ct;
+            throw new NotImplementedException();
         }
         // TODO: may be we should use is value type
         if (t.IsValueType)
         {
-            var decl = ParseStructDeclaration(t);
-            Context.StructDeclarations.Add(t, decl);
-            return decl;
+            throw new NotImplementedException();
+            //var decl = ParseStructDeclaration(t);
+            //Context.StructDeclarations.Add(t, decl);
+            //return decl;
         }
 
         throw new NotSupportedException($"{nameof(ParseTypeReference)} does not support {t}");
@@ -86,14 +90,14 @@ public sealed class MetadataParser()
         return result;
     }
 
-    ImmutableHashSet<IR.IShaderAttribute> ParseAttribute(ParameterInfo p)
+    ImmutableHashSet<IShaderAttribute> ParseAttribute(ParameterInfo p)
     {
         return [
             ..p.GetCustomAttributes<BuiltinAttribute>(),
             ..p.GetCustomAttributes<LocationAttribute>(),
         ];
     }
-    ImmutableHashSet<IR.IShaderAttribute> ParseAttribute(MethodBase m)
+    ImmutableHashSet<IShaderAttribute> ParseAttribute(MethodBase m)
     {
         return [
             ..m.GetCustomAttributes<VertexAttribute>(),
@@ -129,7 +133,7 @@ public sealed class MetadataParser()
     }
 
 
-    public IR.Module ParseModule(IShaderModule module)
+    public CLSL.Language.IR.Module ParseModule(IShaderModule module)
     {
         var moduleType = module.GetType();
         var fieldVars = moduleType.GetFields(TargetVariableBindingFlags)
@@ -149,14 +153,19 @@ public sealed class MetadataParser()
             var shaderStageAttributes = m.GetCustomAttributes().OfType<IShaderStageAttribute>().Any();
             if (shaderStageAttributes)
             {
-                _ = ParseMethod(m);
+                _ = ParseMethodMetadata(m);
             }
         }
         return Build();
     }
 
-    public FunctionDeclaration ParseMethod(MethodBase method)
+    public FunctionDeclaration ParseMethodMetadata(MethodBase method)
     {
+        if (Context.FunctionDeclarations.TryGetValue(method, out var result))
+        {
+            return result;
+        }
+
         var returnType = method switch
         {
             MethodInfo m => ParseTypeReference(m.ReturnType),
@@ -179,27 +188,37 @@ public sealed class MetadataParser()
         );
         NeedParseBody.Add(method, decl);
         Context.FunctionDeclarations.Add(method, decl);
+
+        if (!IsRuntimeMethod(method))
+        {
+            var callees = GetCalledMethods(method);
+            foreach (var callee in callees)
+            {
+                _ = ParseMethodMetadata(callee);
+            }
+        }
         return decl;
+    }
+
+    bool IsRuntimeMethod(MethodBase m)
+    {
+        if (m.DeclaringType == typeof(DMath))
+        {
+            return true;
+        }
+        if (m.DeclaringType == typeof(Vector4))
+        {
+            return true;
+        }
+        return false;
     }
 
     IEnumerable<MethodBase> GetCalledMethods(MethodBase method)
     {
-        foreach (var inst in method.GetInstructions())
-        {
-            switch (inst.Operand)
-            {
-                case MethodInfo m:
-                    break;
-                case ConstructorInfo c:
-                    break;
-                default:
-                    break;
-            }
-        }
-        throw new NotImplementedException();
+        return method.GetInstructions().Where(op => op.Operand is MethodBase).Select(op => (MethodBase)op.Operand);
     }
 
-    public void ParseFunctionBodies(ILSpyFrontend frontend)
+    public void ParseFunctionBodies(IMethodParser frontend)
     {
         var symbols = new Dictionary<string, IDeclaration>();
         foreach (var d in Context.VariableDeclarations)
@@ -210,14 +229,26 @@ public sealed class MetadataParser()
         {
             symbols.Add(d.Key.Name, d.Value);
         }
-        // TODO: use ILSpyFrontEnd for body only, passing referenced symbols as environment
+        var staticEnv = symbols.ToImmutableDictionary();
         foreach (var (m, f) in NeedParseBody)
         {
-            f.Body = frontend.ParseMethod(m, symbols).Body;
+            var env = staticEnv;
+            foreach (var p in f.Parameters)
+            {
+                if (env.ContainsKey(p.Name))
+                {
+                    env = env.SetItem(p.Name, p);
+                }
+                else
+                {
+                    env = env.Add(p.Name, p);
+                }
+            }
+            f.Body = frontend.ParseMethodBody(env, m);
         }
     }
 
-    public IR.Module Build()
+    public CLSL.Language.IR.Module Build()
     {
         return new([.. Context.VariableDeclarations.Values, .. Context.StructDeclarations.Values, .. Context.FunctionDeclarations.Values]);
     }

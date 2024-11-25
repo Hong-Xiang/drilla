@@ -13,7 +13,7 @@ namespace DualDrill.CLSL.Language.IR.Statement;
 [JsonDerivedType(typeof(ForStatement), nameof(ForStatement))]
 [JsonDerivedType(typeof(IncrementStatement), nameof(IncrementStatement))]
 [JsonDerivedType(typeof(DecrementStatement), nameof(DecrementStatement))]
-public interface IStatement : IAstNode { }
+public interface IStatement : IShaderAstNode { }
 
 public interface IStatementVisitor<T>
 {

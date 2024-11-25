@@ -1,15 +1,39 @@
 ﻿using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.ILSL.Frontend;
-using DualDrill.ILSL.IR.Declaration;
-using DualDrill.ILSL.Types;
 using System.Numerics;
+using System.Reflection;
 
 namespace DualDrill.ILSL.Tests;
 
 public class MetadataParserTests
 {
+    [Fact]
+    public void Should_Found_Called_Methods()
+    {
+        var parser = new MetadataParser();
+
+        static int Callee(int a, int b)
+        {
+            return a + b;
+        }
+
+        var callee = ((Func<int, int, int>)Callee).Method;
+        var caller = ((Func<int>)(() =>
+        {
+            return Callee(1, 2);
+        })).Method;
+        _ = parser.ParseMethodMetadata(caller);
+
+        Assert.Contains(parser.Context.FunctionDeclarations, c => c.Key.Equals(callee));
+    }
+
+
     sealed class SimpleStructDeclarationShader : IShaderModule
     {
+
+
         public struct VertexOutput
         {
             [Builtin(BuiltinBinding.position)]
@@ -50,9 +74,9 @@ public class MetadataParserTests
         Assert.Equal(nameof(SimpleStructDeclarationShader.VertexOutput), structDecl.Name);
         Assert.Equal(2, structDecl.Members.Length);
         Assert.Equal("ClipPosition", structDecl.Members[0].Name);
-        Assert.Equal(new VecType<R4, FloatType<N32>>(), structDecl.Members[0].Type);
+        Assert.Equal(ShaderType.vec4f32, structDecl.Members[0].Type);
         Assert.Equal("InteropPosition", structDecl.Members[1].Name);
-        Assert.Equal(new VecType<R2, FloatType<N32>>(), structDecl.Members[1].Type);
+        Assert.Equal(ShaderType.vec2f32, structDecl.Members[1].Type);
 
         var tw = new IndentStringWriter("\t");
         var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());

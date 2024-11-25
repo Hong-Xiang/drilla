@@ -1,4 +1,5 @@
-﻿using Silk.NET.Maths;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using Silk.NET.Maths;
 using System.Numerics;
 
 namespace DualDrill.ILSL.Tests;

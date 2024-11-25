@@ -66,8 +66,8 @@ public sealed class CSharpProjectionConfiguration
             FloatType { BitWidth: N32 } => typeof(float).FullName,
             FloatType { BitWidth: N64 } => typeof(double).FullName,
 
-            VecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{ScalarShaderName(b)}",
-            VecType { Size: var size, ElementType: var e } => $"vec{size.Value}{ScalarShaderName(e)}",
+            IVecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{ScalarShaderName(b)}",
+            IVecType { Size: var size, ElementType: var e } => $"vec{size.Value}{ScalarShaderName(e)}",
             MatType { Row: var r, Column: var c, ElementType: var e } => $"mat{r.Value}x{c.Value}{ScalarShaderName(e)}",
             _ => throw new NotSupportedException($"C# type map for {type} is undefined")
         })!;
@@ -94,10 +94,10 @@ public sealed class CSharpProjectionConfiguration
         // for vec3, we use vec4's data for optimizing memory access and SIMD optimization
         return type switch
         {
-            VecType { ElementType: BoolType } => false,
-            VecType { ElementType: FloatType { BitWidth: N16 } } => false,
-            VecType { ElementType: var e, Size: N3 } when e.BitWidth.Value * 4 >= 64 => true,
-            VecType { ElementType: var e, Size: var s } when e.BitWidth.Value * s.Value >= 64 => true,
+            IVecType { ElementType: BoolType } => false,
+            IVecType { ElementType: FloatType { BitWidth: N16 } } => false,
+            IVecType { ElementType: var e, Size: N3 } when e.BitWidth.Value * 4 >= 64 => true,
+            IVecType { ElementType: var e, Size: var s } when e.BitWidth.Value * s.Value >= 64 => true,
             _ => false
         };
     }

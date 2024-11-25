@@ -1,11 +1,12 @@
 ﻿using DualDrill.Graphics;
-using DualDrill.ILSL;
+using DualDrill.CLSL;
 using System.Collections.Immutable;
 using System.Numerics;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 
 namespace DualDrill.Engine.Shader;
 
-public struct SimpleUniformShader : IShaderModule
+public struct SimpleUniformShader : ILSL.IShaderModule
 {
 
     //public string ILSLWGSLExpectedCode => """
@@ -44,7 +45,7 @@ public struct SimpleUniformShader : IShaderModule
 
     [Group(0)]
     [Binding(0)]
-    [StageAttribute(GPUShaderStage.Vertex)]
+    //[StageAttribute(GPUShaderStage.Vertex)]
     [Uniform]
     VertexOutput uniformData;
 

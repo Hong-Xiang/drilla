@@ -1,4 +1,5 @@
-﻿using DualDrill.ILSL.IR.Statement;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.ILSL.IR.Statement;
 using DualDrill.ILSL.Types;
 using System.Collections.Immutable;
 

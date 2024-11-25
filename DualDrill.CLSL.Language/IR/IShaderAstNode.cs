@@ -1,5 +1,5 @@
 ﻿namespace DualDrill.CLSL.Language.IR;
 
-public interface IAstNode
+public interface IShaderAstNode
 {
 }

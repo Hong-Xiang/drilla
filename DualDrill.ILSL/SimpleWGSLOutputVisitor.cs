@@ -1,4 +1,5 @@
-﻿using ICSharpCode.Decompiler.CSharp.OutputVisitor;
+﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using ICSharpCode.Decompiler.CSharp.OutputVisitor;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 using ICSharpCode.Decompiler.Semantics;
 using System.Numerics;

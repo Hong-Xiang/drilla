@@ -1,8 +1,13 @@
 ﻿using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
+using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.IR;
 
+[JsonDerivedType(typeof(BoolLiteral), nameof(BoolLiteral))]
+[JsonDerivedType(typeof(FloatLiteral), nameof(FloatLiteral))]
+[JsonDerivedType(typeof(IntLiteral), nameof(IntLiteral))]
+[JsonDerivedType(typeof(UIntLiteral), nameof(UIntLiteral))]
 public interface ILiteral
 {
     IShaderType Type { get; }

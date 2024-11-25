@@ -5,6 +5,7 @@ namespace DualDrill.CLSL.Language.Types;
 
 public static partial class ShaderType
 {
+    public static UnitType Unit { get; } = UnitType.Instance;
     public static BoolType Bool { get; } = BoolType.Instance;
 
     internal static IEnumerable<IRank> Ranks => [N2.Instance, N3.Instance, N4.Instance];
@@ -21,4 +22,7 @@ public static partial class ShaderType
         select GetVecType(r, type);
     public static IEnumerable<IShaderType> GetScalarOrVectorTypes(IScalarType type) =>
         [type, .. GetVecTypes(type)];
+
+    public static IShaderType vec4f32 => GetVecType(N4.Instance, F32);
+    public static IShaderType vec2f32 => GetVecType(N2.Instance, F32);
 }
