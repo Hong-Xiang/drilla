@@ -6,6 +6,8 @@ public sealed record class IntType(IBitWidth BitWidth) : IIntegerType, IScalarTy
 {
     public string Name => $"i{BitWidth.Value}";
     public int ByteSize => BitWidth.Value / 8;
+
+    public string ElementTypeName => Name;
 }
 
 public static partial class ShaderType

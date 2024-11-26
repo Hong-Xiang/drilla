@@ -112,22 +112,22 @@ public sealed class MetadataParser
 
     VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
     {
-        if (Context.VariableDeclarations.TryGetValue(info, out var result))
+        if (Context.Vars.TryGetValue(info, out var result))
         {
             return result;
         }
         var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.FieldType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.VariableDeclarations.Add(info, decl);
+        Context.Vars.Add(info, decl);
         return decl;
     }
     VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
     {
-        if (Context.VariableDeclarations.TryGetValue(info, out var result))
+        if (Context.Vars.TryGetValue(info, out var result))
         {
             return result;
         }
         var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.PropertyType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.VariableDeclarations.Add(info, decl);
+        Context.Vars.Add(info, decl);
         return decl;
 
     }
@@ -161,7 +161,7 @@ public sealed class MetadataParser
 
     public FunctionDeclaration ParseMethodMetadata(MethodBase method)
     {
-        if (Context.FunctionDeclarations.TryGetValue(method, out var result))
+        if (Context.Funcs.TryGetValue(method, out var result))
         {
             return result;
         }
@@ -187,7 +187,7 @@ public sealed class MetadataParser
             ParseAttribute(method)
         );
         NeedParseBody.Add(method, decl);
-        Context.FunctionDeclarations.Add(method, decl);
+        Context.Funcs.Add(method, decl);
 
         if (!IsRuntimeMethod(method))
         {
@@ -215,23 +215,28 @@ public sealed class MetadataParser
 
     IEnumerable<MethodBase> GetCalledMethods(MethodBase method)
     {
-        return method.GetInstructions().Where(op => op.Operand is MethodBase).Select(op => (MethodBase)op.Operand);
+        return method.GetInstructions().Select(op => op.Operand).OfType<MethodBase>();
     }
 
-    public void ParseFunctionBodies(IMethodParser frontend)
+    public void ParseFunctionBodies(IMethodParser methodParser)
     {
         var symbols = new Dictionary<string, IDeclaration>();
-        foreach (var d in Context.VariableDeclarations)
+        foreach (var d in Context.Vars)
         {
             symbols.Add(d.Key.Name, d.Value);
         }
-        foreach (var d in Context.FunctionDeclarations)
+        foreach (var d in Context.Funcs)
         {
             symbols.Add(d.Key.Name, d.Value);
         }
         var staticEnv = symbols.ToImmutableDictionary();
-        foreach (var (m, f) in NeedParseBody)
+        foreach (var (m, f) in Context.Funcs)
         {
+            if (IsRuntimeMethod(m) || f.Body is not null)
+            {
+                continue;
+            }
+
             var env = staticEnv;
             foreach (var p in f.Parameters)
             {
@@ -244,12 +249,12 @@ public sealed class MetadataParser
                     env = env.Add(p.Name, p);
                 }
             }
-            f.Body = frontend.ParseMethodBody(env, m);
+            f.Body = methodParser.ParseMethodBody(env, m);
         }
     }
 
     public CLSL.Language.IR.Module Build()
     {
-        return new([.. Context.VariableDeclarations.Values, .. Context.StructDeclarations.Values, .. Context.FunctionDeclarations.Values]);
+        return new([.. Context.Vars.Values, .. Context.StructDeclarations.Values, .. Context.Funcs.Values]);
     }
 }

@@ -29,7 +29,7 @@ public sealed record class VecType(
     //        []
     //    ))];
 
-    public string Name => $"vec{Size.Value}<{ElementType.Name}>";
+    public string Name { get; } = $"vec{Size.Value}{ElementType.ElementName()}";
 
     //public static readonly FunctionDeclaration Dot =
     //    new FunctionDeclaration("dot",

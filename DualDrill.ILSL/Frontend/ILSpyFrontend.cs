@@ -54,7 +54,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IM
                 _ = ParseMethod(m);
             }
         }
-        return new([.. context.FunctionDeclarations.Values]);
+        return new([.. context.Funcs.Values]);
     }
 
     CSharpDecompiler GetOrCreateDecompiler(Assembly assembly)
@@ -130,7 +130,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IM
     public FunctionDeclaration ParseMethod(MethodBase method, Dictionary<string, IDeclaration>? symbols = default)
     {
         var shouldCache = IsCacheable(method);
-        if (!shouldCache && Context.FunctionDeclarations.TryGetValue(method, out var existedDecl))
+        if (!shouldCache && Context.Funcs.TryGetValue(method, out var existedDecl))
         {
             return existedDecl;
         }
@@ -156,7 +156,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IM
             //{
             //    Attributes = [..result.Attributes, ]
             //};
-            Context.FunctionDeclarations.TryAdd(method, result);
+            Context.Funcs.TryAdd(method, result);
             return result;
         }
     }

@@ -11,4 +11,6 @@ public sealed record class BoolType : IScalarType, IBasicPrimitiveType<BoolType>
     public int ByteSize => 4;
 
     public IBitWidth BitWidth { get; } = N8.Instance;
+
+    public string ElementTypeName => "b";
 }

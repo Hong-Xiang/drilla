@@ -5,6 +5,8 @@ public sealed record class FloatType(IBitWidth BitWidth) : IScalarType
 {
     public string Name => $"f{BitWidth.Value}";
     public int ByteSize => BitWidth.Value / 8;
+
+    public string ElementTypeName => Name;
 }
 
 public static partial class ShaderType

@@ -26,7 +26,7 @@ public class MetadataParserTests
         })).Method;
         _ = parser.ParseMethodMetadata(caller);
 
-        Assert.Contains(parser.Context.FunctionDeclarations, c => c.Key.Equals(callee));
+        Assert.Contains(parser.Context.Funcs, c => c.Key.Equals(callee));
     }
 
 

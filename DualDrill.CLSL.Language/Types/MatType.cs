@@ -8,7 +8,7 @@ public sealed record class MatType(
     IRank Column)
     : IShaderType, IStorableType
 {
-    public string Name => $"mat{Row.Value}x{Column.Value}<{ElementType.Name}>";
+    public string Name => $"mat{Row.Value}x{Column.Value}{ElementType.ElementName()}";
 
     public int ByteSize => Row.Value * Column.Value * ElementType.ByteSize;
 }

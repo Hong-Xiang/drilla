@@ -5,6 +5,17 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language;
 
+public interface ILanguageProjectionConfiguration
+{
+    string NameSpace { get; }
+    string StaticMathTypeName { get; }
+    string OpName(UnaryArithmeticOp op);
+    string OpName(BinaryArithmeticOp op);
+    string ProjectedTypeName(IShaderType type);
+    string ProjectedFullTypeName(IShaderType type);
+    bool IsSimdDataSupported(IShaderType type);
+}
+
 public sealed class CSharpProjectionConfiguration
 {
     public static readonly CSharpProjectionConfiguration Instance = new();
@@ -66,9 +77,8 @@ public sealed class CSharpProjectionConfiguration
             FloatType { BitWidth: N32 } => typeof(float).FullName,
             FloatType { BitWidth: N64 } => typeof(double).FullName,
 
-            IVecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{ScalarShaderName(b)}",
-            IVecType { Size: var size, ElementType: var e } => $"vec{size.Value}{ScalarShaderName(e)}",
-            MatType { Row: var r, Column: var c, ElementType: var e } => $"mat{r.Value}x{c.Value}{ScalarShaderName(e)}",
+            IVecType t => t.Name,
+            MatType m => m.Name,
             _ => throw new NotSupportedException($"C# type map for {type} is undefined")
         })!;
     }
@@ -86,19 +96,4 @@ public sealed class CSharpProjectionConfiguration
     }
 
     public string GetCSharpTypeName(IShaderType type) => CSharpTypeNameMap[type];
-
-    public bool IsSimdDataSupported(IShaderType type)
-    {
-        // for numeric vectors with data larger than 64 bits (except System.Half, which is not supported in VectorXX<Half>),
-        // we use .NET builtin SIMD optimization
-        // for vec3, we use vec4's data for optimizing memory access and SIMD optimization
-        return type switch
-        {
-            IVecType { ElementType: BoolType } => false,
-            IVecType { ElementType: FloatType { BitWidth: N16 } } => false,
-            IVecType { ElementType: var e, Size: N3 } when e.BitWidth.Value * 4 >= 64 => true,
-            IVecType { ElementType: var e, Size: var s } when e.BitWidth.Value * s.Value >= 64 => true,
-            _ => false
-        };
-    }
 }

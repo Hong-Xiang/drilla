@@ -186,12 +186,30 @@ public sealed record class VecCodeGenerator
     public IndentedTextWriter Writer { get; }
     CSharpProjectionConfiguration Config { get; }
     IVectorDetailCodeGenerator DetailCodeGenerator { get; }
+
+    static bool IsSimdSupported(IVecType vecType)
+    {
+        // for numeric vectors with data larger than 64 bits (except System.Half, which is not supported in VectorXX<Half>),
+        // we use .NET builtin SIMD optimization
+        // for vec3, we use vec4's data for optimizing memory access and SIMD optimization
+        return vecType switch
+        {
+            IVecType { ElementType: BoolType } => false,
+            IVecType { ElementType: FloatType { BitWidth: N16 } } => false,
+            IVecType { ElementType: var e, Size: N3 } when e.BitWidth.Value * 4 >= 64 => true,
+            IVecType { ElementType: var e, Size: var s } when e.BitWidth.Value * s.Value >= 64 => true,
+            _ => false
+        };
+
+
+    }
+
     public VecCodeGenerator(IVecType vecType, IndentedTextWriter writer, CSharpProjectionConfiguration config)
     {
         VecType = vecType;
         Writer = writer;
         Config = config;
-        DetailCodeGenerator = config.IsSimdDataSupported(VecType)
+        DetailCodeGenerator = IsSimdSupported(VecType)
             ? new VectorSimdCodeGenerator(VecType, Config, Writer)
             : new VectorComponentCodeGenerator(VecType, Config, Writer);
     }

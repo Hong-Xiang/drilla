@@ -1,4 +1,4 @@
-﻿namespace DualDrill.CLSL.Language.IR.MetadataAttribute;
+﻿namespace DualDrill.CLSL.Language.IR.ShaderAttribute;
 
 public sealed class ShaderRuntimeMethodAttribute : Attribute, IShaderMetadataAttribute
 {

@@ -55,3 +55,15 @@ public sealed record class StructureType(ImmutableArray<StructureMember> Members
 
 
 public interface IStorableType : IShaderType { }
+
+public static partial class ShaderType
+{
+    public static string ElementName(this IScalarType t)
+    {
+        return t switch
+        {
+            BoolType => "b",
+            _ => t.Name
+        };
+    }
+}
