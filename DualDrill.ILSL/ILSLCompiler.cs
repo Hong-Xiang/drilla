@@ -14,17 +14,17 @@ namespace DualDrill.ILSL;
 
 public static class ILSLCompiler
 {
-    public static async ValueTask<string> Compile(IShaderModule shaderModule)
+    public static async ValueTask<string> Compile(ISharpShader shaderModule)
     {
         var ir = Parse(shaderModule);
         var code = await EmitCode(ir);
         return code;
     }
 
-    public static async ValueTask<string> CompileV2(IShaderModule shaderModule)
+    public static async ValueTask<string> CompileV2(ISharpShader shaderModule)
     {
         var type = shaderModule.GetType();
-        using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+        using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
         {
             HotReloadAssemblies = [
                type.Assembly,
@@ -32,9 +32,8 @@ public static class ILSLCompiler
             ]
         });
 
-        var parser = new MetadataParser();
+        var parser = new CLSLParser(bodyParser);
         var module = parser.ParseModule(shaderModule);
-        parser.ParseFunctionBodies(bodyParser);
         var tw = new IndentStringWriter("\t");
         var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
         foreach (var d in module.Declarations.OfType<VariableDeclaration>())
@@ -53,10 +52,10 @@ public static class ILSLCompiler
         return code;
     }
 
-    public static CLSL.Language.IR.Module Parse(IShaderModule module)
+    public static CLSL.Language.IR.ShaderModule Parse(ISharpShader module)
     {
         var type = module.GetType();
-        using var parser = new ILSpyFrontend(new ILSpyOption()
+        using var parser = new ILSpyMethodParser(new ILSpyOption()
         {
             HotReloadAssemblies = [
                type.Assembly,
@@ -161,7 +160,7 @@ public static class ILSLCompiler
     //    }
     //}
 
-    public static async ValueTask<string> EmitCode(this CLSL.Language.IR.Module module)
+    public static async ValueTask<string> EmitCode(this CLSL.Language.IR.ShaderModule module)
     {
         var tw = new IndentStringWriter("\t");
         var wgslVisitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
@@ -211,18 +210,5 @@ public static class ILSLCompiler
 
         }
         return ops;
-    }
-
-    public static JsonNode ASTToJson(IShaderModule shaderModule)
-    {
-        var target = shaderModule.GetType();
-        var decompiler = new CSharpDecompiler(target.Assembly.Location, new DecompilerSettings()
-        {
-            UsingDeclarations = false,
-        });
-        var name = new FullTypeName(target.FullName);
-        var ast = decompiler.DecompileType(name);
-        var jsonVisitor = new ASTJsonVisitor();
-        return ast.AcceptVisitor(jsonVisitor);
     }
 }

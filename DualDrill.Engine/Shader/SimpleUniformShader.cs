@@ -6,7 +6,7 @@ using DualDrill.CLSL.Language.IR.ShaderAttribute;
 
 namespace DualDrill.Engine.Shader;
 
-public struct SimpleUniformShader : ILSL.IShaderModule
+public struct SimpleUniformShader : ILSL.ISharpShader
 {
 
     //public string ILSLWGSLExpectedCode => """

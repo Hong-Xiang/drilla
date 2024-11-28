@@ -21,7 +21,7 @@ public record struct ILSpyOption()
 }
 
 
-public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IMethodParser
+public sealed class ILSpyMethodParser(ILSpyOption Option) : IDisposable, IMethodParser
 {
     public ParserContext Context { get; } = ParserContext.Create();
 
@@ -41,7 +41,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IM
 
     static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
 
-    public CLSL.Language.IR.Module ParseModule(IShaderModule module)
+    public CLSL.Language.IR.ShaderModule ParseModule(ISharpShader module)
     {
         var moduleType = module.GetType();
         var methods = moduleType.GetMethods(TargetMethodBindingFlags);
@@ -126,7 +126,6 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IM
         return Option.HotReloadAssemblies.Contains(method.DeclaringType.Assembly);
     }
 
-
     public FunctionDeclaration ParseMethod(MethodBase method, Dictionary<string, IDeclaration>? symbols = default)
     {
         var shouldCache = IsCacheable(method);
@@ -137,7 +136,7 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IM
         else
         {
             var ast = Decompile(method);
-            var result = (FunctionDeclaration)ast.AcceptVisitor(new ILSpyASTToModuleVisitor(new Dictionary<string, IDeclaration>().ToImmutableDictionary(), method.DeclaringType.Assembly));
+            var result = (FunctionDeclaration)ast.AcceptVisitor(new ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContext.Empty, method.DeclaringType.Assembly));
             // Ad hoc fixing of return type attribute missing
             if (method is MethodInfo minfo)
             {
@@ -169,12 +168,11 @@ public sealed class ILSpyFrontend(ILSpyOption Option) : IParser, IDisposable, IM
         }
     }
 
-    public CompoundStatement ParseMethodBody(ImmutableDictionary<string, IDeclaration> env, MethodBase method)
+    public CompoundStatement ParseMethodBody(MethodParseContext env, MethodBase method)
     {
-
         var ast = Decompile(method);
         var body = ast.DescendantNodes().OfType<MethodDeclaration>().First().Body;
-        var result = (CompoundStatement)body.AcceptVisitor(new ILSpyASTToModuleVisitor(env, method.DeclaringType.Assembly));
+        var result = (CompoundStatement)body.AcceptVisitor(new ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContext.Empty, method.DeclaringType.Assembly));
         return result;
     }
 }

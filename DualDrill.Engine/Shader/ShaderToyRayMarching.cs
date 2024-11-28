@@ -37,7 +37,7 @@ public struct AAHigh : IAltiAliasingLevel
 
 
 
-public sealed class ShaderToyRayMarching<TAALevel> : IShaderModule
+public sealed class ShaderToyRayMarching<TAALevel> : ISharpShader
     where TAALevel : IAltiAliasingLevel
 {
 

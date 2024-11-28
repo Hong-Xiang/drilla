@@ -12,7 +12,6 @@ using System.Runtime.InteropServices;
 namespace DualDrill.Mathematics;
 using static DMath;
 
-[CLSLMathematicsType("vec2b")]
 [StructLayout(LayoutKind.Sequential)]
 public partial struct vec2b{
     public System.Boolean x { get; set; }

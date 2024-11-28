@@ -29,14 +29,14 @@ public sealed class VertexStepModeAttribute(GPUVertexStepMode StepMode) : Attrib
 }
 
 
-public interface IShaderModule
+public interface ISharpShader
 {
 }
 
 public interface IReflection
 {
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.Module module);
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module);
 }
 
 public interface ISampler

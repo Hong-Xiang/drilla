@@ -17,7 +17,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
 {
 
     static MethodBase? LastMethod = null;
-    IShaderModule? GetShaderModule(string name)
+    ISharpShader? GetShaderModule(string name)
     {
         return ShaderModules.ShaderModules[name];
     }
@@ -44,12 +44,12 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("ParseV3")]
     public IActionResult ParseV3()
     {
-        var parser = new ILSpyFrontend(new ILSpyOption() { HotReloadAssemblies = [typeof(ILSLController).Assembly] });
+        var parser = new ILSpyMethodParser(new ILSpyOption() { HotReloadAssemblies = [typeof(ILSLController).Assembly] });
         var env = new Dictionary<string, IDeclaration>()
         {
             ["a"] = new VariableDeclaration(CLSL.Language.DeclarationScope.Function, "a", ShaderType.I32, [])
         };
-        var body = parser.ParseMethodBody(env.ToImmutableDictionary(), static (int a) => a * 3);
+        var body = parser.ParseMethodBody(new MethodParseContext(env.ToImmutableDictionary()), static (int a) => a * 3);
         return Ok(body);
     }
 
@@ -119,7 +119,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new QuadShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
                 HotReloadAssemblies = [
                    type.Assembly,
@@ -127,7 +127,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
                 ]
             });
 
-            var parser = new MetadataParser();
+            var parser = new CLSLParser(bodyParser);
             var module = parser.ParseModule(shaderModule);
             var reflection = new QuadShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
@@ -136,7 +136,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new SampleFragmentShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
                 HotReloadAssemblies = [
                     type.Assembly,
@@ -144,7 +144,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
                 ]
             });
 
-            var parser = new MetadataParser();
+            var parser = new CLSLParser(bodyParser);
             var module = parser.ParseModule(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
@@ -153,7 +153,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new SampleFragmentShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
                 HotReloadAssemblies = [
                     type.Assembly,
@@ -161,7 +161,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
                 ]
             });
 
-            var parser = new MetadataParser();
+            var parser = new CLSLParser(bodyParser);
             var module = parser.ParseModule(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
@@ -177,7 +177,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new QuadShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
                 HotReloadAssemblies = [
                    type.Assembly,
@@ -185,7 +185,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
                 ]
             });
 
-            var parser = new MetadataParser();
+            var parser = new CLSLParser(bodyParser);
             var module = parser.ParseModule(shaderModule);
             var reflection = new QuadShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
@@ -194,7 +194,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new SampleFragmentShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyFrontend(new ILSpyOption()
+            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
                 HotReloadAssemblies = [
                    type.Assembly,
@@ -202,7 +202,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
                 ]
             });
 
-            var parser = new MetadataParser();
+            var parser = new CLSLParser(bodyParser);
             var module = parser.ParseModule(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
@@ -224,7 +224,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
 
 
     async Task<IActionResult> MethodTargetAction(string moduleName, string methodName,
-            Func<ILSpyFrontend, MethodBase, Task<IActionResult>> next)
+            Func<ILSpyMethodParser, MethodBase, Task<IActionResult>> next)
     {
         var shaderModule = GetShaderModule(moduleName);
         if (shaderModule is null)
@@ -241,7 +241,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return NotFound($"Method {methodName} not found");
         }
-        var parser = new ILSpyFrontend(new ILSpyOption
+        var parser = new ILSpyMethodParser(new ILSpyOption
         {
             HotReloadAssemblies = [shaderModuleType.Assembly]
         });
@@ -274,7 +274,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         return await MethodTargetAction(moduleName, methodName, async (parser, method) =>
         {
             var ir = parser.ParseMethod(method);
-            var module = new CLSL.Language.IR.Module([ir]);
+            var module = new CLSL.Language.IR.ShaderModule([ir]);
             var code = await module.EmitCode();
             return Ok(code);
         });
@@ -309,18 +309,5 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     private Vector4 TestMethod2()
     {
         return new Vector4(0.0f, 0.1f, 0.2f, 0.3f);
-    }
-
-
-
-    [HttpGet("ast/{name}")]
-    public IActionResult GeneratedAst(string name)
-    {
-        var shaderModule = GetShaderModule(name);
-        if (shaderModule is null)
-        {
-            return NotFound();
-        }
-        return Ok(ILSL.ILSLCompiler.ASTToJson(shaderModule));
     }
 }

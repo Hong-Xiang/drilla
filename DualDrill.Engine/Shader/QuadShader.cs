@@ -24,18 +24,18 @@ public class QuadShaderReflection : ILSL.IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.Module module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.Module module)
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
     }
 }
 
-public struct QuadShader : ILSL.IShaderModule
+public struct QuadShader : ILSL.ISharpShader
 {
 
     [ShaderMethod]

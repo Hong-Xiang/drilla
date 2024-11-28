@@ -3,6 +3,6 @@ using DualDrill.CLSL.Language.IR.Declaration;
 
 namespace DualDrill.CLSL.Language.IR;
 
-public sealed record class Module(ImmutableArray<IDeclaration> Declarations) : IShaderAstNode
+public sealed record class ShaderModule(ImmutableArray<IDeclaration> Declarations) : IShaderAstNode
 {
 }

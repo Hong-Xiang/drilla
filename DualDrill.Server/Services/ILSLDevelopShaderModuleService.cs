@@ -13,7 +13,7 @@ public sealed class ILSLDevelopShaderModuleService
         //[nameof(SimpleUniformShader)] = new SimpleUniformShader(),
     };
 
-    public Dictionary<string, IShaderModule> DemoShaderModules { get; } = new()
+    public Dictionary<string, ISharpShader> DemoShaderModules { get; } = new()
     {
         [nameof(SampleFragmentShader)] = new SampleFragmentShader(),
         [nameof(SimpleUniformShader)] = new SimpleUniformShader(),

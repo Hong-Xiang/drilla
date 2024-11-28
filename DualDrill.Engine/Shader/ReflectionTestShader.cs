@@ -24,7 +24,7 @@ public class ReflectionTestShaderReflection : IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.Module module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
@@ -32,7 +32,7 @@ public class ReflectionTestShaderReflection : IReflection
     public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor() => null;
 }
 
-public struct ReflectionTestShader : IShaderModule
+public struct ReflectionTestShader : ISharpShader
 {
     public struct Vertex
     {

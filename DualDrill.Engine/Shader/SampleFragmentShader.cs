@@ -114,19 +114,19 @@ public class SampleFragmentShaderReflection : ILSL.IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.Module module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.Module module)
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
     }
 }
 
 
-public struct SampleFragmentShader : ILSL.IShaderModule
+public struct SampleFragmentShader : ILSL.ISharpShader
 {
     public struct VertexInput
     {

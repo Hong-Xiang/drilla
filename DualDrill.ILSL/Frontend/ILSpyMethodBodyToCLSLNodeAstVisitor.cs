@@ -12,10 +12,11 @@ using System.Numerics;
 using System.Reflection;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using ICSharpCode.Decompiler.IL;
 
 namespace DualDrill.ILSL.Frontend;
 
-public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclaration> Symbols, Assembly Assembly) : IAstVisitor<IShaderAstNode?>
+public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContext Context, Assembly Assembly) : IAstVisitor<IShaderAstNode?>
 {
     public IShaderAstNode? VisitAccessor(Accessor accessor)
     {
@@ -127,9 +128,7 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
 
     public IShaderAstNode? VisitBlockStatement(BlockStatement blockStatement)
     {
-        var env = Symbols;
         var result = new CompoundStatement([.. blockStatement.Statements.Select(s => s.AcceptVisitor(this)).OfType<IStatement>()]);
-        Symbols = env;
         return result;
     }
 
@@ -422,12 +421,12 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
 
     public IShaderAstNode? VisitIdentifierExpression(IdentifierExpression identifierExpression)
     {
-        var sym = Symbols[identifierExpression.GetChildByRole(Roles.Identifier).Name];
-        return sym switch
+        var v = identifierExpression.Annotation<ILVariable>();
+        return v.Kind switch
         {
-            VariableDeclaration v => SyntaxFactory.Identifier(v),
-            CLSL.Language.IR.Declaration.ParameterDeclaration v => new FormalParameterExpression(v),
-            _ => throw new NotSupportedException()
+            VariableKind.Parameter when v.Index.HasValue => Context.Parameters[v.Index.Value],
+            VariableKind.Local when v.Name is not null => Context.LocalVariables[v.Name],
+            _ => throw new NotSupportedException($"{nameof(VariableIdentifierExpression)} of variable kind {Enum.GetName(v.Kind)}")
         };
     }
 
@@ -492,12 +491,9 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
         if (invocationExpression.Target is MemberReferenceExpression memberReference)
         {
             string functionName = RemoveThisDot(memberReference.ToString());
-            if (Symbols.ContainsKey(functionName))
+            if (Context[functionName] is FunctionDeclaration f)
             {
-                return new FunctionCallExpression(
-                    (FunctionDeclaration)Symbols[functionName],
-                    immutableArgs
-                );
+                return new FunctionCallExpression(f, immutableArgs);
             }
             // special case for vector dot as it's generic type
             switch (functionName)
@@ -688,7 +684,7 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
         if (memberReferenceExpression.Target is ThisReferenceExpression)
         {
             // assume this references to IShaderModule, which is global naming space for shaders
-            return new VariableIdentifierExpression((VariableDeclaration)Symbols[memberReferenceExpression.MemberName]);
+            return new VariableIdentifierExpression((VariableDeclaration)Context[memberReferenceExpression.MemberName]);
         }
         // TODO: check if it's a vector
         var baseExpr = (IExpression)memberReferenceExpression.Target.AcceptVisitor(this);
@@ -741,22 +737,22 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
                                                 .OfType<CLSL.Language.IR.Declaration.ParameterDeclaration>()
                                                 .ToImmutableArray();
         var env = new Dictionary<string, IDeclaration>();
-        foreach (var kv in Symbols)
-        {
-            env.Add(kv.Key, kv.Value);
-        }
-        foreach (var p in parameters)
-        {
-            if (env.ContainsKey(p.Name))
-            {
-                env[p.Name] = p;
-            }
-            else
-            {
-                env.Add(p.Name, p);
-            }
-        }
-        var visitor = new ILSpyASTToModuleVisitor(env.ToImmutableDictionary(), Assembly);
+        //foreach (var kv in Symbols)
+        //{
+        //    env.Add(kv.Key, kv.Value);
+        //}
+        //foreach (var p in parameters)
+        //{
+        //    if (env.ContainsKey(p.Name))
+        //    {
+        //        env[p.Name] = p;
+        //    }
+        //    else
+        //    {
+        //        env.Add(p.Name, p);
+        //    }
+        //}
+        var visitor = new ILSpyMethodBodyToCLSLNodeAstVisitor(Context, Assembly);
         var body = (CompoundStatement)methodDeclaration.Body.AcceptVisitor(visitor);
         // TODO: proper handling of return type
         var rt = methodDeclaration.ReturnType.AcceptVisitor(this);
@@ -887,7 +883,7 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
         };
     }
 
-    public IShaderAstNode? VisitPrimitiveType(PrimitiveType primitiveType)
+    public IShaderAstNode? VisitPrimitiveType(ICSharpCode.Decompiler.CSharp.Syntax.PrimitiveType primitiveType)
     {
         IShaderType t = primitiveType.KnownTypeCode switch
         {
@@ -1008,7 +1004,7 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
         throw new NotImplementedException();
     }
 
-    public IShaderAstNode? VisitSwitchSection(SwitchSection switchSection)
+    public IShaderAstNode? VisitSwitchSection(ICSharpCode.Decompiler.CSharp.Syntax.SwitchSection switchSection)
     {
         throw new NotImplementedException();
     }
@@ -1065,7 +1061,7 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
         var nodes = typeDeclaration.Members.Where(m => !m.Name.StartsWith("ILSLWGSL"))
                                            .Select(m => m.AcceptVisitor(this))
                                            .OfType<FunctionDeclaration>();
-        return new CLSL.Language.IR.Module([.. nodes]);
+        return new CLSL.Language.IR.ShaderModule([.. nodes]);
     }
 
     public IShaderAstNode? VisitTypeOfExpression(TypeOfExpression typeOfExpression)
@@ -1135,11 +1131,11 @@ public sealed class ILSpyASTToModuleVisitor(ImmutableDictionary<string, IDeclara
         // TODO: proper handling of variable type
         var v = variableDeclarationStatement.Variables.Single();
         var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, (IShaderType)variableDeclarationStatement.Type.AcceptVisitor(this), []);
-        Symbols.Add(varDecl.Name, varDecl);
+        var context = Context.WithLocalVariableDeclaration(varDecl.Name, varDecl);
         var c = v.GetChildByRole(Roles.Expression);
         if (c is not null)
         {
-            varDecl.Initializer = (IExpression)c.AcceptVisitor(this);
+            varDecl.Initializer = (IExpression)c.AcceptVisitor(new ILSpyMethodBodyToCLSLNodeAstVisitor(context, Assembly));
         }
         return new VariableOrValueStatement(varDecl);
     }

@@ -23,7 +23,7 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = new CLSL.Language.IR.Module([
+        var module = new CLSL.Language.IR.ShaderModule([
             new VariableDeclaration(
                 DeclarationScope.Module,
                 "data",

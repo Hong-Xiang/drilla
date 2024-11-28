@@ -103,7 +103,7 @@ class SimpleWGSLOutputVisitor(TextWriter Writer) : CSharpOutputVisitor(Writer, F
         if (typeDeclaration.BaseTypes.Any(b => b.Annotation<TypeResolveResult>() is TypeResolveResult
             {
                 Type: { FullName: var fn }
-            } && fn == typeof(IShaderModule).FullName))
+            } && fn == typeof(ISharpShader).FullName))
         {
             typeDeclaration.Members.AcceptVisitor(this);
         }

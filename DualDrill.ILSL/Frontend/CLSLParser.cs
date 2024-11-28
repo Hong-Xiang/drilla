@@ -1,22 +1,25 @@
 ﻿using DotNext.Reflection;
-using DualDrill.Common.Nat;
+using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.IR;
+using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
-using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language;
-using System.Diagnostics;
 
 namespace DualDrill.ILSL.Frontend;
 
-public sealed class MetadataParser
+public sealed record class CLSLParser(IMethodParser MethodParser)
 {
     public ParserContext Context { get; } = ParserContext.Create();
+    HashSet<TypeDeclaration> TypeDeclarations = [];
+    HashSet<FunctionDeclaration> FunctionDeclarations = [];
+
     Dictionary<MethodBase, FunctionDeclaration> NeedParseBody = [];
 
     FrozenDictionary<Type, IShaderType> BuiltinTypeMap = new Dictionary<Type, IShaderType>()
@@ -58,7 +61,7 @@ public sealed class MetadataParser
             return bt;
         }
         // TODO: array type support?
-        if (Context.StructDeclarations.TryGetValue(t, out var ct))
+        if (Context.Types.TryGetValue(t, out var ct))
         {
             //return ct;
             throw new NotImplementedException();
@@ -133,7 +136,7 @@ public sealed class MetadataParser
     }
 
 
-    public CLSL.Language.IR.Module ParseModule(IShaderModule module)
+    public ShaderModule ParseModule(ISharpShader module)
     {
         var moduleType = module.GetType();
         var fieldVars = moduleType.GetFields(TargetVariableBindingFlags)
@@ -156,7 +159,8 @@ public sealed class MetadataParser
                 _ = ParseMethodMetadata(m);
             }
         }
-        return Build();
+        ParseFunctionBodies(MethodParser);
+        return new([.. Context.Vars.Values, .. TypeDeclarations, .. FunctionDeclarations]);
     }
 
     public FunctionDeclaration ParseMethodMetadata(MethodBase method)
@@ -186,6 +190,7 @@ public sealed class MetadataParser
             new FunctionReturn(returnType, returnAttributes),
             ParseAttribute(method)
         );
+        FunctionDeclarations.Add(decl);
         NeedParseBody.Add(method, decl);
         Context.Funcs.Add(method, decl);
 
@@ -218,7 +223,7 @@ public sealed class MetadataParser
         return method.GetInstructions().Select(op => op.Operand).OfType<MethodBase>();
     }
 
-    public void ParseFunctionBodies(IMethodParser methodParser)
+    private void ParseFunctionBodies(IMethodParser methodParser)
     {
         var symbols = new Dictionary<string, IDeclaration>();
         foreach (var d in Context.Vars)
@@ -229,7 +234,7 @@ public sealed class MetadataParser
         {
             symbols.Add(d.Key.Name, d.Value);
         }
-        var staticEnv = symbols.ToImmutableDictionary();
+        var staticEnv = new MethodParseContext(symbols.ToImmutableDictionary());
         foreach (var (m, f) in Context.Funcs)
         {
             if (IsRuntimeMethod(m) || f.Body is not null)
@@ -240,21 +245,16 @@ public sealed class MetadataParser
             var env = staticEnv;
             foreach (var p in f.Parameters)
             {
-                if (env.ContainsKey(p.Name))
+                if (env[p.Name] is not null)
                 {
-                    env = env.SetItem(p.Name, p);
+                    env = env.WithLocalVariableDeclaration(p.Name, p);
                 }
                 else
                 {
-                    env = env.Add(p.Name, p);
+                    env = env.WithLocalVariableDeclaration(p.Name, p);
                 }
             }
             f.Body = methodParser.ParseMethodBody(env, m);
         }
-    }
-
-    public CLSL.Language.IR.Module Build()
-    {
-        return new([.. Context.Vars.Values, .. Context.StructDeclarations.Values, .. Context.Funcs.Values]);
     }
 }

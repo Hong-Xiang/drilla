@@ -12,7 +12,7 @@ public class MetadataParserTests
     [Fact]
     public void Should_Found_Called_Methods()
     {
-        var parser = new MetadataParser();
+        var parser = new CLSLParser(new ILSpyMethodParser(new()));
 
         static int Callee(int a, int b)
         {
@@ -30,7 +30,7 @@ public class MetadataParserTests
     }
 
 
-    sealed class SimpleStructDeclarationShader : IShaderModule
+    sealed class SimpleStructDeclarationShader : ISharpShader
     {
 
 
@@ -65,7 +65,7 @@ public class MetadataParserTests
     [Fact]
     async Task SimpleStructDeclarationParseTest()
     {
-        var parser = new MetadataParser();
+        var parser = new CLSLParser(new ILSpyMethodParser(new()));
         var module = parser.ParseModule(new SimpleStructDeclarationShader());
 
         Assert.Equal(3, module.Declarations.Length);
@@ -90,7 +90,7 @@ public class MetadataParserTests
     }
 
     // https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html
-    sealed class SimpleUniformShader : IShaderModule
+    sealed class SimpleUniformShader : ISharpShader
     {
         public struct OurStruct
         {
@@ -139,7 +139,7 @@ public class MetadataParserTests
     [Fact]
     async Task SimpleUniformDeclarationParseTest()
     {
-        var parser = new MetadataParser();
+        var parser = new CLSLParser(new ILSpyMethodParser(new()));
         var module = parser.ParseModule(new SimpleUniformShader());
 
         Assert.Equal(4, module.Declarations.Length);
