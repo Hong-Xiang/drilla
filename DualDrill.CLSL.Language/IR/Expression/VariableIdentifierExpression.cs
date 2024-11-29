@@ -3,7 +3,15 @@ using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.IR.Expression;
 
-public sealed record class VariableIdentifierExpression(VariableDeclaration Variable) : IExpression
+public interface IVariableIdentifierResolveResult
 {
-    public IShaderType Type => Variable.Type;
+}
+
+public sealed record class VariableIdentifierExpression(IVariableIdentifierResolveResult Variable) : IExpression
+{
+    public IShaderType Type => Variable switch
+    {
+        VariableDeclaration v => v.Type,
+        _ => throw new NotImplementedException()
+    };
 }

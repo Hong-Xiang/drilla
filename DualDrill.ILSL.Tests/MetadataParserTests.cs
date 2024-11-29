@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 using DualDrill.ILSL.Frontend;
 using System.Numerics;
 using System.Reflection;
@@ -26,9 +27,17 @@ public class MetadataParserTests
         })).Method;
         _ = parser.ParseMethodMetadata(caller);
 
-        Assert.Contains(parser.Context.Funcs, c => c.Key.Equals(callee));
+        Assert.Contains(parser.Context.Functions, c => c.Key.Equals(callee));
     }
 
+
+    [Fact]
+    public void ShouldParseVector4AsRuntimeType()
+    {
+        var parser = new CLSLParser(new ILSpyMethodParser(new()));
+        var shaderType = parser.Context.Types[typeof(Vector4)];
+        Assert.Equal(ShaderType.GetVecType(N4.Instance, ShaderType.F32), shaderType);
+    }
 
     sealed class SimpleStructDeclarationShader : ISharpShader
     {

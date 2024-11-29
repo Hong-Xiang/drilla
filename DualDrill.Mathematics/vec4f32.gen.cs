@@ -9,6 +9,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.InteropServices;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 namespace DualDrill.Mathematics;
 using static DMath;
 
@@ -2154,7 +2155,7 @@ public static partial class DMath{
     public static vec4f32 vec4(System.Single x, System.Single y, System.Single z, System.Single w){
         return new vec4f32() { Data = Vector128.Create(x, y, z, w) };
     }
-    
+
     public static vec4f32 vec4(System.Single e) => vec4(e, e, e, e);
     public static vec4f32 vec4(System.Single e0, vec3f32 e1) => vec4(e0, e1.x, e1.y, e1.z);
     public static vec4f32 vec4(vec3f32 e0, System.Single e1) => vec4(e0.x, e0.y, e0.z, e1);

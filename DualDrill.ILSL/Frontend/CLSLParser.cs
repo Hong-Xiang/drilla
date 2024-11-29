@@ -54,28 +54,23 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
     //    return result;
     //}
 
-    IShaderType ParseTypeReference(Type t)
+
+
+    public IShaderType ParseType(Type t)
     {
-        if (BuiltinTypeMap.TryGetValue(t, out var bt))
+        if (Context.Types.TryGetValue(t, out var foundResult))
         {
-            return bt;
-        }
-        // TODO: array type support?
-        if (Context.Types.TryGetValue(t, out var ct))
-        {
-            //return ct;
-            throw new NotImplementedException();
-        }
-        // TODO: may be we should use is value type
-        if (t.IsValueType)
-        {
-            throw new NotImplementedException();
-            //var decl = ParseStructDeclaration(t);
-            //Context.StructDeclarations.Add(t, decl);
-            //return decl;
+            return foundResult;
         }
 
-        throw new NotSupportedException($"{nameof(ParseTypeReference)} does not support {t}");
+        if (t.IsValueType)
+        {
+            var result = ParseStructDeclaration(t);
+            Context.Types.Add(t, result);
+            return result;
+        }
+
+        throw new NotSupportedException($"{nameof(ParseType)} can not support {t}");
     }
 
     StructureDeclaration ParseStructDeclaration(Type t)
@@ -83,8 +78,8 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                       .Where(f => !f.Name.EndsWith("k__BackingField"));
         var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.FieldType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
-        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseTypeReference(f.PropertyType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
+        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseType(f.FieldType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
+        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseType(f.PropertyType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
 
         var result = new StructureDeclaration(t.Name, [
             ..fieldMembers,
@@ -115,22 +110,22 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
 
     VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
     {
-        if (Context.Vars.TryGetValue(info, out var result))
+        if (Context.Variables.TryGetValue(info, out var result))
         {
             return result;
         }
-        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.FieldType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.Vars.Add(info, decl);
+        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseType(info.FieldType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
+        Context.Variables.Add(info, decl);
         return decl;
     }
     VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
     {
-        if (Context.Vars.TryGetValue(info, out var result))
+        if (Context.Variables.TryGetValue(info, out var result))
         {
             return result;
         }
-        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseTypeReference(info.PropertyType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.Vars.Add(info, decl);
+        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseType(info.PropertyType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
+        Context.Variables.Add(info, decl);
         return decl;
 
     }
@@ -159,21 +154,21 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
                 _ = ParseMethodMetadata(m);
             }
         }
-        ParseFunctionBodies(MethodParser);
-        return new([.. Context.Vars.Values, .. TypeDeclarations, .. FunctionDeclarations]);
+        ParseFunctionBodies();
+        return new([.. Context.Variables.Values, .. TypeDeclarations, .. FunctionDeclarations]);
     }
 
     public FunctionDeclaration ParseMethodMetadata(MethodBase method)
     {
-        if (Context.Funcs.TryGetValue(method, out var result))
+        if (Context.Functions.TryGetValue(method, out var result))
         {
             return result;
         }
 
         var returnType = method switch
         {
-            MethodInfo m => ParseTypeReference(m.ReturnType),
-            ConstructorInfo c => ParseTypeReference(c.DeclaringType),
+            MethodInfo m => ParseType(m.ReturnType),
+            ConstructorInfo c => ParseType(c.DeclaringType),
             _ => throw new NotSupportedException($"Unsupported method {method}")
         };
         var returnAttributes = method switch
@@ -186,13 +181,13 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         var decl = new FunctionDeclaration(
             method.Name,
             [.. method.GetParameters()
-                      .Select(p => new ParameterDeclaration(p.Name, ParseTypeReference(p.ParameterType), ParseAttribute(p)))],
+                      .Select(p => new ParameterDeclaration(p.Name, ParseType(p.ParameterType), ParseAttribute(p)))],
             new FunctionReturn(returnType, returnAttributes),
             ParseAttribute(method)
         );
         FunctionDeclarations.Add(decl);
         NeedParseBody.Add(method, decl);
-        Context.Funcs.Add(method, decl);
+        Context.Functions.Add(method, decl);
 
         if (!IsRuntimeMethod(method))
         {
@@ -207,15 +202,7 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
 
     bool IsRuntimeMethod(MethodBase m)
     {
-        if (m.DeclaringType == typeof(DMath))
-        {
-            return true;
-        }
-        if (m.DeclaringType == typeof(Vector4))
-        {
-            return true;
-        }
-        return false;
+        return RuntimeDefinitions.Instance.RuntimeMethods.ContainsKey(m);
     }
 
     IEnumerable<MethodBase> GetCalledMethods(MethodBase method)
@@ -223,38 +210,15 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         return method.GetInstructions().Select(op => op.Operand).OfType<MethodBase>();
     }
 
-    private void ParseFunctionBodies(IMethodParser methodParser)
+    private void ParseFunctionBodies()
     {
-        var symbols = new Dictionary<string, IDeclaration>();
-        foreach (var d in Context.Vars)
-        {
-            symbols.Add(d.Key.Name, d.Value);
-        }
-        foreach (var d in Context.Funcs)
-        {
-            symbols.Add(d.Key.Name, d.Value);
-        }
-        var staticEnv = new MethodParseContext(symbols.ToImmutableDictionary());
-        foreach (var (m, f) in Context.Funcs)
+        foreach (var (m, f) in Context.Functions)
         {
             if (IsRuntimeMethod(m) || f.Body is not null)
             {
                 continue;
             }
-
-            var env = staticEnv;
-            foreach (var p in f.Parameters)
-            {
-                if (env[p.Name] is not null)
-                {
-                    env = env.WithLocalVariableDeclaration(p.Name, p);
-                }
-                else
-                {
-                    env = env.WithLocalVariableDeclaration(p.Name, p);
-                }
-            }
-            f.Body = methodParser.ParseMethodBody(env, m);
+            f.Body = MethodParser.ParseMethodBody(Context.GetMethodContext(m), m);
         }
     }
 }

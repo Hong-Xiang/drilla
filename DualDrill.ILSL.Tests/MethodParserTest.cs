@@ -1,10 +1,14 @@
 ﻿using DualDrill.CLSL.Language.IR;
+using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.IR.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.ILSL.Frontend;
+using System.Collections.Immutable;
 using System.Numerics;
+using System.Reflection;
 
 namespace DualDrill.ILSL.Tests;
 
@@ -13,27 +17,35 @@ public class MethodParserTest
 {
     private IMethodParser Parser { get; } = new ILSpyMethodParser(new() { HotReloadAssemblies = [] });
 
-    [Fact]
-    public void ParseBasicReturnStatementShouldSucceed()
+    IExpression? ParseExpressionBodyMethod(MethodBase m)
     {
-        var result = Parser.ParseMethodBody(MethodParseContext.Empty, static () =>
-        {
-            return 42;
-        });
+        using var methodParser = new ILSpyMethodParser(new());
+        var parser = new CLSLParser(methodParser);
+        parser.Context.GetMethodContext(m);
+        var body = methodParser.ParseMethodBody(parser.Context.GetMethodContext(m), m);
+        Assert.Single(body.Statements);
+        Assert.IsType<ReturnStatement>(body.Statements[0]);
+        return ((ReturnStatement)body.Statements[0]).Expr;
+    }
 
-        Assert.Single(result.Statements);
-        var s = result.Statements[0];
-        Assert.True(s is ReturnStatement
+
+    IExpression ParseExpressionBodyMethod<T>(Func<T> f)
+    {
+        var result = ParseExpressionBodyMethod(f);
+        Assert.NotNull(result);
+        return result;
+    }
+
+    [Fact]
+    public void ParseLiteralExpressionBodyTest()
+    {
+        var expr = ParseExpressionBodyMethod(static () => 42);
+        Assert.Equal(ShaderType.I32, expr.Type);
+        Assert.IsType<LiteralValueExpression>(expr);
+        Assert.True(expr is LiteralValueExpression
         {
-            Expr: LiteralValueExpression
-            {
-                Literal: IntLiteral
-                {
-                    Value: 42
-                },
-                Type: IntType { BitWidth: N32 }
-            }
-        }, "Parse result should be correct return statement");
+            Literal: IntLiteral { Value: 42 }
+        });
     }
 
     [Fact]
@@ -101,6 +113,33 @@ public class MethodParserTest
             }
         }, "Parse result should be correct return statement");
     }
+
+    [Fact]
+    public void BasicMethodInvocationParseTest()
+    {
+        static int Add(int a, int b) => a + b;
+        var method = ((Func<int, int, int>)Add).Method;
+        var decl = new FunctionDeclaration(method.Name, [], new FunctionReturn(ShaderType.I32, []), []);
+        var env = MethodParseContext.Empty with
+        {
+            Methods = new Dictionary<MethodBase, FunctionDeclaration>()
+            {
+                [method] = decl
+            }.ToImmutableDictionary()
+        };
+        using var parser = new ILSpyMethodParser(new ILSpyOption());
+        var parsed = parser.ParseMethodBody(env, static () => Add(1, 2));
+        Assert.Single(parsed.Statements);
+        Assert.True(parsed.Statements[0] is ReturnStatement
+        {
+            Expr: FunctionCallExpression
+            {
+                Callee: var callee,
+                Arguments: { Length: 2 }
+            }
+        } && callee.Equals(decl), "Parse result should be correct return statement");
+    }
+
 
     [Fact]
     public void Vec4DotTest()

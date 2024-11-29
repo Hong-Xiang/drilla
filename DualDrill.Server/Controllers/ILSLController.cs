@@ -45,11 +45,12 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     public IActionResult ParseV3()
     {
         var parser = new ILSpyMethodParser(new ILSpyOption() { HotReloadAssemblies = [typeof(ILSLController).Assembly] });
-        var env = new Dictionary<string, IDeclaration>()
-        {
-            ["a"] = new VariableDeclaration(CLSL.Language.DeclarationScope.Function, "a", ShaderType.I32, [])
-        };
-        var body = parser.ParseMethodBody(new MethodParseContext(env.ToImmutableDictionary()), static (int a) => a * 3);
+
+        var body = parser.ParseMethodBody(
+            MethodParseContext.Empty with
+            {
+                Parameters = [new ParameterDeclaration("a", ShaderType.I32, [])]
+            }, static (int a) => a * 3);
         return Ok(body);
     }
 

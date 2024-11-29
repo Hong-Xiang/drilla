@@ -54,7 +54,7 @@ public sealed class ILSpyMethodParser(ILSpyOption Option) : IDisposable, IMethod
                 _ = ParseMethod(m);
             }
         }
-        return new([.. context.Funcs.Values]);
+        return new([.. context.Functions.Values]);
     }
 
     CSharpDecompiler GetOrCreateDecompiler(Assembly assembly)
@@ -129,7 +129,7 @@ public sealed class ILSpyMethodParser(ILSpyOption Option) : IDisposable, IMethod
     public FunctionDeclaration ParseMethod(MethodBase method, Dictionary<string, IDeclaration>? symbols = default)
     {
         var shouldCache = IsCacheable(method);
-        if (!shouldCache && Context.Funcs.TryGetValue(method, out var existedDecl))
+        if (!shouldCache && Context.Functions.TryGetValue(method, out var existedDecl))
         {
             return existedDecl;
         }
@@ -155,7 +155,7 @@ public sealed class ILSpyMethodParser(ILSpyOption Option) : IDisposable, IMethod
             //{
             //    Attributes = [..result.Attributes, ]
             //};
-            Context.Funcs.TryAdd(method, result);
+            Context.Functions.TryAdd(method, result);
             return result;
         }
     }
@@ -172,7 +172,7 @@ public sealed class ILSpyMethodParser(ILSpyOption Option) : IDisposable, IMethod
     {
         var ast = Decompile(method);
         var body = ast.DescendantNodes().OfType<MethodDeclaration>().First().Body;
-        var result = (CompoundStatement)body.AcceptVisitor(new ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContext.Empty, method.DeclaringType.Assembly));
+        var result = (CompoundStatement)body.AcceptVisitor(new ILSpyMethodBodyToCLSLNodeAstVisitor(env, method.DeclaringType.Assembly));
         return result;
     }
 }

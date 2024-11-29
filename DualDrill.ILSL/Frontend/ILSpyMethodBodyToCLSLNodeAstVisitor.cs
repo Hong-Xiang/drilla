@@ -1,20 +1,29 @@
-﻿using DualDrill.Common.Nat;
+﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.IR;
 using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.IR.Statement;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 using ICSharpCode.Decompiler.CSharp.Syntax;
+using ICSharpCode.Decompiler.IL;
 using ICSharpCode.Decompiler.Semantics;
 using ICSharpCode.Decompiler.TypeSystem;
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
-using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
-using ICSharpCode.Decompiler.IL;
+using System.Reflection.Metadata.Ecma335;
 
 namespace DualDrill.ILSL.Frontend;
+
+public class ILSpyMethodParseException(string message) : Exception(message)
+{
+}
+
+public class ILSpyMethodParseInvocationMethodNotResolvedException()
+{
+}
 
 public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContext Context, Assembly Assembly) : IAstVisitor<IShaderAstNode?>
 {
@@ -473,176 +482,16 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     public IShaderAstNode? VisitInvocationExpression(InvocationExpression invocationExpression)
     {
-        Func<string, string> RemoveThisDot = (expression) =>
+        var callee = invocationExpression.Annotation<InvocationResolveResult>().Member;
+        var entityHandle = callee.MetadataToken;
+        var token = MetadataTokens.GetToken(entityHandle);
+        var methodBase = Assembly.ManifestModule.ResolveMethod(token);
+        if (methodBase is null)
         {
-            if (expression.StartsWith("this."))
-            {
-                return expression.Substring("this.".Length);
-            }
-            return expression;
-        };
-        List<IShaderAstNode> args = new();
-        foreach (var argument in invocationExpression.Arguments)
-        {
-            // For example, you can add it to the 'args' list
-            args.Add(argument.AcceptVisitor(this));
+            throw new NullReferenceException($"Failed to resolve method {callee}");
         }
-        var immutableArgs = args.Cast<IExpression>().ToImmutableArray();
-        if (invocationExpression.Target is MemberReferenceExpression memberReference)
-        {
-            string functionName = RemoveThisDot(memberReference.ToString());
-            if (Context[functionName] is FunctionDeclaration f)
-            {
-                return new FunctionCallExpression(f, immutableArgs);
-            }
-            // special case for vector dot as it's generic type
-            switch (functionName)
-            {
-                //    case "global::System.Numerics.Vector2.Dot":
-                //        ShaderFunction.GetFunction("dot", ShaderType.GetVecType(N2.Instance,  )
-                //        return new FunctionCallExpression(
-                //            VecType<N2, FloatType<N32>>.Dot,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector3.Dot":
-                //        return new FunctionCallExpression(
-                //            VecType<N3, FloatType<N32>>.Dot,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector4.Dot":
-                //        return new FunctionCallExpression(
-                //            VecType<N4, FloatType<N32>>.Dot,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector2.Length":
-                //        return new FunctionCallExpression(
-                //            VecType<N2, FloatType<N32>>.Length,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector3.Length":
-                //        return new FunctionCallExpression(
-                //            VecType<N3, FloatType<N32>>.Length,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector4.Length":
-                //        return new FunctionCallExpression(
-                //            VecType<N4, FloatType<N32>>.Length,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector2.Abs":
-                //        return new FunctionCallExpression(
-                //            VecType<N2, FloatType<N32>>.Abs,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector3.Abs":
-                //        return new FunctionCallExpression(
-                //            VecType<N3, FloatType<N32>>.Abs,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector4.Abs":
-                //        return new FunctionCallExpression(
-                //            VecType<N4, FloatType<N32>>.Abs,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector2.Reflect":
-                //        return new FunctionCallExpression(
-                //            VecType<N2, FloatType<N32>>.Reflect,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector3.Reflect":
-                //        return new FunctionCallExpression(
-                //            VecType<N3, FloatType<N32>>.Reflect,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector4.Reflect":
-                //        return new FunctionCallExpression(
-                //            VecType<N4, FloatType<N32>>.Reflect,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector2.Cross":
-                //        return new FunctionCallExpression(
-                //            VecType<N2, FloatType<N32>>.Cross,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector3.Cross":
-                //        return new FunctionCallExpression(
-                //            VecType<N3, FloatType<N32>>.Cross,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Numerics.Vector4.Cross":
-                //        return new FunctionCallExpression(
-                //            VecType<N4, FloatType<N32>>.Cross,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Cos":
-                //        var res = new FunctionCallExpression(
-                //            FloatType<N32>.Cos,
-                //            immutableArgs
-                //        );
-                //        return res;
-                //    case "global::System.Math.Sin":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Sin,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Sqrt":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Sqrt,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Pow":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Pow,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Log":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Log,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Clamp":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Clamp,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Abs":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Abs,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Max":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Max,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Min":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Min,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Floor":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Floor,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Exp":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Exp,
-                //            immutableArgs
-                //        );
-                //    case "global::System.Math.Sign":
-                //        return new FunctionCallExpression(
-                //            FloatType<N32>.Sign,
-                //            immutableArgs
-                //        );
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-        else
-        {
-            throw new NotImplementedException();
-        }
+        ImmutableArray<IExpression> args = [.. invocationExpression.Arguments.Select(a => a.AcceptVisitor(this)).OfType<IExpression>()];
+        return new FunctionCallExpression(Context.Methods[methodBase], args);
     }
 
     public IShaderAstNode? VisitInvocationType(InvocationAstType invocationType)

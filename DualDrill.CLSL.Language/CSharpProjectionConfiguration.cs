@@ -5,22 +5,11 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language;
 
-public interface ILanguageProjectionConfiguration
-{
-    string NameSpace { get; }
-    string StaticMathTypeName { get; }
-    string OpName(UnaryArithmeticOp op);
-    string OpName(BinaryArithmeticOp op);
-    string ProjectedTypeName(IShaderType type);
-    string ProjectedFullTypeName(IShaderType type);
-    bool IsSimdDataSupported(IShaderType type);
-}
-
 public sealed class CSharpProjectionConfiguration
 {
     public static readonly CSharpProjectionConfiguration Instance = new();
 
-    public string NameSpace { get; } = "DualDrill.Mathematics";
+    public string MathLibNameSpaceName { get; } = "DualDrill.Mathematics";
     public string StaticMathTypeName { get; } = "DMath";
 
     ImmutableDictionary<IShaderType, string> CSharpTypeNameMap { get; }
@@ -62,37 +51,25 @@ public sealed class CSharpProjectionConfiguration
     {
         return (type switch
         {
-            BoolType _ => typeof(bool).FullName,
-            IntType { BitWidth: N8 } => typeof(sbyte).FullName,
-            IntType { BitWidth: N16 } => typeof(short).FullName,
-            IntType { BitWidth: N32 } => typeof(int).FullName,
-            IntType { BitWidth: N64 } => typeof(long).FullName,
+            BoolType _ => typeof(bool).Name,
+            IntType { BitWidth: N8 } => typeof(sbyte).Name,
+            IntType { BitWidth: N16 } => typeof(short).Name,
+            IntType { BitWidth: N32 } => typeof(int).Name,
+            IntType { BitWidth: N64 } => typeof(long).Name,
 
-            UIntType { BitWidth: N8 } => typeof(byte).FullName,
-            UIntType { BitWidth: N16 } => typeof(ushort).FullName,
-            UIntType { BitWidth: N32 } => typeof(uint).FullName,
-            UIntType { BitWidth: N64 } => typeof(ulong).FullName,
+            UIntType { BitWidth: N8 } => typeof(byte).Name,
+            UIntType { BitWidth: N16 } => typeof(ushort).Name,
+            UIntType { BitWidth: N32 } => typeof(uint).Name,
+            UIntType { BitWidth: N64 } => typeof(ulong).Name,
 
-            FloatType { BitWidth: N16 } => typeof(Half).FullName,
-            FloatType { BitWidth: N32 } => typeof(float).FullName,
-            FloatType { BitWidth: N64 } => typeof(double).FullName,
+            FloatType { BitWidth: N16 } => typeof(Half).Name,
+            FloatType { BitWidth: N32 } => typeof(float).Name,
+            FloatType { BitWidth: N64 } => typeof(double).Name,
 
             IVecType t => t.Name,
             MatType m => m.Name,
             _ => throw new NotSupportedException($"C# type map for {type} is undefined")
         })!;
-    }
-
-    public static string ScalarShaderName(IScalarType type)
-    {
-        return type switch
-        {
-            BoolType => "b",
-            FloatType => $"f{type.BitWidth.Value}",
-            IntType => $"i{type.BitWidth.Value}",
-            UIntType => $"u{type.BitWidth.Value}",
-            _ => throw new NotSupportedException($"{nameof(ScalarShaderName)} does not support {type}")
-        };
     }
 
     public string GetCSharpTypeName(IShaderType type) => CSharpTypeNameMap[type];

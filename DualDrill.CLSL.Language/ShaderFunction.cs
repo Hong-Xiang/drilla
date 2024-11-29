@@ -1,4 +1,6 @@
-﻿using DualDrill.CLSL.Language.IR.Declaration;
+﻿using DotNext.Patterns;
+using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
@@ -95,7 +97,7 @@ public enum NumericBuiltinFunctionKind
     TernaryFloatVector // let S = Float Types, T = VecN<S>, T * T * T => T,
 }
 
-public static class ShaderFunction
+public class ShaderFunction : ISingleton<ShaderFunction>
 {
     static NumericBuiltinFunctionKind FunctionKind(NumericBuiltinFunctionName name)
     {
@@ -282,7 +284,7 @@ public static class ShaderFunction
         };
     }
 
-    public static ImmutableArray<FunctionDeclaration> Functions;
+    public ImmutableArray<FunctionDeclaration> Functions;
 
     static IEnumerable<FunctionDeclaration> BuiltinScalarConstructors()
     {
@@ -295,7 +297,67 @@ public static class ShaderFunction
                    []);
     }
 
-    static ShaderFunction()
+
+    static IEnumerable<FunctionDeclaration> VecConstructors()
+    {
+        static IEnumerable<int[]> ValueConstructorParametersPattern(IRank rank)
+        {
+            return rank switch
+            {
+                N3 => [[1, 2], [2, 1]],
+                N4 => [[1, 3], [3, 1], [1, 1, 2], [1, 2, 1], [2, 1, 1], [2, 2]],
+                _ => []
+            };
+        }
+        static ParameterDeclaration PatternToParameter(int pattern, IScalarType s, int i)
+        {
+            var t = pattern switch
+            {
+                1 => new ParameterDeclaration($"e{i}", s, []),
+                2 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N2.Instance, s), []),
+                3 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N3.Instance, s), []),
+                4 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N4.Instance, s), []),
+                _ => throw new NotSupportedException()
+            };
+            return t;
+        }
+
+        return from s in ShaderType.ScalarTypes
+               from r in ShaderType.Ranks
+               let v = ShaderType.GetVecType(r, s)
+               let name = $"vec{r.Value}"
+               let bc = new FunctionDeclaration(
+                            name,
+                            [new ParameterDeclaration("e", s, [])],
+                            new FunctionReturn(v, []),
+                            [new ShaderRuntimeMethodAttribute(), new VecBroadcastConstructorMethodAttribute()])
+               let zc = new FunctionDeclaration(
+                            name,
+                            [],
+                            new FunctionReturn(v, []),
+                            [new ShaderRuntimeMethodAttribute(), new VecZeroConstructorMethodAttribute()])
+               let sc = new FunctionDeclaration(
+                            name,
+                            [.. Enumerable.Range(0, r.Value).Select(i => new ParameterDeclaration($"e{i}", s, []))],
+                            new FunctionReturn(v, []),
+                            [new ShaderRuntimeMethodAttribute(), new VecPositionalValueConstructorMethodAttribute()])
+               let vc = from p in ValueConstructorParametersPattern(r)
+                        select new FunctionDeclaration(
+                            name,
+                            [.. p.Select((pr, i) => PatternToParameter(pr, s, i))],
+                            new FunctionReturn(v, []),
+                            [new ShaderRuntimeMethodAttribute(), new VecPositionalValueConstructorMethodAttribute()])
+               let cc = from ss in ShaderType.ScalarTypes
+                        select new FunctionDeclaration(
+                            name,
+                            [new ParameterDeclaration("v", ShaderType.GetVecType(r, ss), [])],
+                            new FunctionReturn(v, []),
+                            [new ShaderRuntimeMethodAttribute(), new VecConversionConstructorMethodAttribute()])
+               from f in (IEnumerable<FunctionDeclaration>)[bc, zc, .. vc, .. cc]
+               select f;
+    }
+
+    ShaderFunction()
     {
         Functions = [.. from n in Enum.GetValues<NumericBuiltinFunctionName>()
                         from f in CreateFunctionOverloads(n)
@@ -311,24 +373,40 @@ public static class ShaderFunction
         Func3Lookup = (from f in Functions
                        where f.Parameters.Length == 3
                        select KeyValuePair.Create((f.Name, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type), f)).ToDictionary();
+        Func4Lookup = (from f in Functions
+                       where f.Parameters.Length == 4
+                       select KeyValuePair.Create((f.Name, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type, f.Parameters[3].Type), f)).ToDictionary();
+
     }
 
-    static IReadOnlyDictionary<(string, IShaderType), FunctionDeclaration> Func1Lookup { get; }
-    static IReadOnlyDictionary<(string, IShaderType, IShaderType), FunctionDeclaration> Func2Lookup { get; }
-    static IReadOnlyDictionary<(string, IShaderType, IShaderType, IShaderType), FunctionDeclaration> Func3Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType), FunctionDeclaration> Func1Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType, IShaderType), FunctionDeclaration> Func2Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType, IShaderType, IShaderType), FunctionDeclaration> Func3Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType, IShaderType, IShaderType, IShaderType), FunctionDeclaration> Func4Lookup { get; }
 
-    public static FunctionDeclaration GetFunction(string name, IShaderType type)
-    {
-        return Func1Lookup[(name, type)];
-    }
+    public static ShaderFunction Instance => new();
 
-    public static FunctionDeclaration GetFunction(string name, IShaderType t0, IShaderType t1)
+    public FunctionDeclaration GetFunction(string name, params IShaderType[] types)
     {
-        return Func2Lookup[(name, t0, t1)];
-    }
-
-    public static FunctionDeclaration GetFunction(string name, IShaderType t0, IShaderType t1, IShaderType t2)
-    {
-        return Func3Lookup[(name, t0, t1, t2)];
+        return types.Length switch
+        {
+            1 => Func1Lookup[(name, types[0])],
+            2 => Func2Lookup[(name, types[0], types[1])],
+            3 => Func3Lookup[(name, types[0], types[1], types[2])],
+            4 => Func4Lookup[(name, types[0], types[1], types[2], types[3])],
+            _ => Functions.Single(f =>
+            {
+                if (f.Name != name || f.Parameters.Length != types.Length)
+                {
+                    return false;
+                }
+                for (var i = 0; i < types.Length; i++)
+                {
+                    if (f.Parameters[i].Type != types[i])
+                        return false;
+                }
+                return true;
+            })
+        };
     }
 }

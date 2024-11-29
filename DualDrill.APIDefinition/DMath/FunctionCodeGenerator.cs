@@ -11,7 +11,7 @@ internal class FunctionCodeGenerator(CSharpProjectionConfiguration Config, Inden
         Writer.Write($"public static partial class {Config.StaticMathTypeName}");
         using (Writer.IndentedScopeWithBracket())
         {
-            foreach (var f in ShaderFunction.Functions)
+            foreach (var f in ShaderFunction.Instance.Functions)
             {
                 var returnType = f.Return.Type switch
                 {
