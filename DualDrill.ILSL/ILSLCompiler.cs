@@ -1,14 +1,10 @@
-﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.ILSL.Frontend;
-using DualDrill.CLSL.Language.IR.Declaration;
-using ICSharpCode.Decompiler;
-using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.Disassembler;
-using ICSharpCode.Decompiler.TypeSystem;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
-using System.Text.Json.Nodes;
 
 namespace DualDrill.ILSL;
 
@@ -33,7 +29,7 @@ public static class ILSLCompiler
         });
 
         var parser = new CLSLParser(bodyParser);
-        var module = parser.ParseModule(shaderModule);
+        var module = parser.ParseShaderModule(shaderModule);
         var tw = new IndentStringWriter("\t");
         var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
         foreach (var d in module.Declarations.OfType<VariableDeclaration>())
@@ -55,31 +51,33 @@ public static class ILSLCompiler
     public static CLSL.Language.IR.ShaderModule Parse(ISharpShader module)
     {
         var type = module.GetType();
-        using var parser = new ILSpyMethodParser(new ILSpyOption()
+        using var methodParser = new ILSpyMethodParser(new ILSpyOption()
         {
             HotReloadAssemblies = [
                type.Assembly,
                typeof(ILSLCompiler).Assembly
             ]
         });
+        var parser = new CLSLParser(methodParser);
 
-        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
-        List<CLSL.Language.IR.Declaration.FunctionDeclaration> functionDeclarations = [];
-        foreach (var m in methods)
-        {
-            if (m.IsSpecialName)
-            {
-                continue;
-            }
-            if (m.GetCustomAttribute<ShaderMethodAttribute>() is null
-                && m.GetCustomAttribute<VertexAttribute>() is null
-                && m.GetCustomAttribute<FragmentAttribute>() is null)
-            {
-                continue;
-            }
-            functionDeclarations.Add(parser.ParseMethod(m));
-        }
-        return new([.. functionDeclarations]);
+        //var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
+        //List<CLSL.Language.IR.Declaration.FunctionDeclaration> functionDeclarations = [];
+        //foreach (var m in methods)
+        //{
+        //    if (m.IsSpecialName)
+        //    {
+        //        continue;
+        //    }
+        //    if (m.GetCustomAttribute<ShaderMethodAttribute>() is null
+        //        && m.GetCustomAttribute<VertexAttribute>() is null
+        //        && m.GetCustomAttribute<FragmentAttribute>() is null)
+        //    {
+        //        continue;
+        //    }
+        //    functionDeclarations.Add(methodParser.ParseMethod(m));
+        //}
+        //return new([.. functionDeclarations]);
+        return parser.ParseShaderModule(module);
     }
 
     //public static SyntaxTree DecompileMethod(MethodBase shaderModule)

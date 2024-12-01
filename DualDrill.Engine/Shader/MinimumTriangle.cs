@@ -1,6 +1,6 @@
 ﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.ILSL;
-using System.Numerics;
+using DualDrill.Mathematics;
 
 namespace DualDrill.Engine.Shader;
 
@@ -110,43 +110,21 @@ public struct MinimumTriangle : ISharpShader, IILSLDevelopShaderModule
       }
       """;
 
-
-
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    static Vector4 vs(
-        [Builtin(BuiltinBinding.vertex_index)] uint vertexIndex
-    )
+    public static vec4f32 vs([Builtin(BuiltinBinding.vertex_index)] uint vertexIndex)
     {
         // explicit type as a temp workaround for IL treating 1u literal using 1 (int)
-        int c = (int)(vertexIndex - 0u);
-        var x = (float)(1 - c) * 0.5f;
-        var d = (int)(1 & c);
-        var y = (float)(d * 2 - 1) * 0.5f;
-        return new Vector4(x, y, 0.0f, 1.0f);
+        var vi = (int)vertexIndex;
+        var x = (1 - vi) * 0.5f;
+        var y = ((vi & 1) * 2 - 1) * 0.5f;
+        return DMath.vec4(x, y, 0.0f, 1.0f);
     }
 
     [Fragment]
     [return: Location(0)]
-    static Vector4 fs()
+    public static vec4f32 fs()
     {
-        float x = 1.0f;
-        float y = 100.0f;
-
-        for (int i = 0; i < 10; i += 2)
-        {
-            x -= i;
-        }
-
-        for (; ; x += 3.0f)
-        {
-            if (x + y < 100000.0f)
-            {
-                break;
-            }
-        }
-
-        return new Vector4(1.0f);
+        return DMath.vec4(1.0f);
     }
-
 }

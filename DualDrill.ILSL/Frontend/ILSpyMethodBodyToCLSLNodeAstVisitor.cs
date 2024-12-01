@@ -6,6 +6,7 @@ using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.IR.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
+using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 using ICSharpCode.Decompiler.IL;
 using ICSharpCode.Decompiler.Semantics;
@@ -430,7 +431,8 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     public IShaderAstNode? VisitIdentifierExpression(IdentifierExpression identifierExpression)
     {
-        var v = identifierExpression.Annotation<ILVariable>();
+        var vr = identifierExpression.Annotation<ILVariableResolveResult>();
+        var v = vr.Variable;
         return v.Kind switch
         {
             VariableKind.Parameter when v.Index.HasValue => Context.Parameters[v.Index.Value],

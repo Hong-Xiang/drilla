@@ -353,50 +353,67 @@ public class ShaderFunction : ISingleton<ShaderFunction>
                             [new ParameterDeclaration("v", ShaderType.GetVecType(r, ss), [])],
                             new FunctionReturn(v, []),
                             [new ShaderRuntimeMethodAttribute(), new VecConversionConstructorMethodAttribute()])
-               from f in (IEnumerable<FunctionDeclaration>)[bc, zc, .. vc, .. cc]
+               from f in (IEnumerable<FunctionDeclaration>)[bc, zc, sc, .. vc, .. cc]
                select f;
     }
 
     ShaderFunction()
     {
+        FunctionDeclaration[] fs = [.. VecConstructors()];
+        var fsvec2 = fs.Where(f => f.Name == "vec2" && f.Parameters.Length == 1 && f.Return.Type.Equals(ShaderType.GetVecType(N2.Instance, ShaderType.Bool))).ToArray();
+
         Functions = [.. from n in Enum.GetValues<NumericBuiltinFunctionName>()
                         from f in CreateFunctionOverloads(n)
                         select f,
-                     .. BuiltinScalarConstructors()];
+                     .. BuiltinScalarConstructors(),
+                     .. VecConstructors()];
 
+        var fsv2s = Functions.Where(f => f.Name == "vec2" && f.Return.Type is VecType { ElementType: BoolType, Size: N2 }).ToArray();
+        var kvs = from f in Functions
+                  where f.Parameters.Length == 1
+                  select KeyValuePair.Create((f.Name, f.Parameters[0].Type), f);
+        var kvsa = kvs.ToArray();
+        var kvsu = kvs.Distinct().ToArray();
+
+
+
+        Func0Lookup = (from f in Functions
+                       where f.Parameters.Length == 0
+                       select KeyValuePair.Create((f.Name, f.Return.Type), f)).ToDictionary();
         Func1Lookup = (from f in Functions
                        where f.Parameters.Length == 1
-                       select KeyValuePair.Create((f.Name, f.Parameters[0].Type), f)).ToDictionary();
+                       select KeyValuePair.Create((f.Name, f.Return.Type, f.Parameters[0].Type), f)).ToDictionary();
         Func2Lookup = (from f in Functions
                        where f.Parameters.Length == 2
-                       select KeyValuePair.Create((f.Name, f.Parameters[0].Type, f.Parameters[1].Type), f)).ToDictionary();
+                       select KeyValuePair.Create((f.Name, f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type), f)).ToDictionary();
         Func3Lookup = (from f in Functions
                        where f.Parameters.Length == 3
-                       select KeyValuePair.Create((f.Name, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type), f)).ToDictionary();
+                       select KeyValuePair.Create((f.Name, f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type), f)).ToDictionary();
         Func4Lookup = (from f in Functions
                        where f.Parameters.Length == 4
-                       select KeyValuePair.Create((f.Name, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type, f.Parameters[3].Type), f)).ToDictionary();
-
+                       select KeyValuePair.Create((f.Name, f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type, f.Parameters[3].Type), f)).ToDictionary();
     }
 
-    IReadOnlyDictionary<(string, IShaderType), FunctionDeclaration> Func1Lookup { get; }
-    IReadOnlyDictionary<(string, IShaderType, IShaderType), FunctionDeclaration> Func2Lookup { get; }
-    IReadOnlyDictionary<(string, IShaderType, IShaderType, IShaderType), FunctionDeclaration> Func3Lookup { get; }
-    IReadOnlyDictionary<(string, IShaderType, IShaderType, IShaderType, IShaderType), FunctionDeclaration> Func4Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType), FunctionDeclaration> Func0Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType, IShaderType), FunctionDeclaration> Func1Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType, IShaderType, IShaderType), FunctionDeclaration> Func2Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType, IShaderType, IShaderType, IShaderType), FunctionDeclaration> Func3Lookup { get; }
+    IReadOnlyDictionary<(string, IShaderType, IShaderType, IShaderType, IShaderType, IShaderType), FunctionDeclaration> Func4Lookup { get; }
 
-    public static ShaderFunction Instance => new();
+    public static ShaderFunction Instance { get; } = new();
 
-    public FunctionDeclaration GetFunction(string name, params IShaderType[] types)
+    public FunctionDeclaration GetFunction(string name, IShaderType returnType, params IShaderType[] types)
     {
         return types.Length switch
         {
-            1 => Func1Lookup[(name, types[0])],
-            2 => Func2Lookup[(name, types[0], types[1])],
-            3 => Func3Lookup[(name, types[0], types[1], types[2])],
-            4 => Func4Lookup[(name, types[0], types[1], types[2], types[3])],
+            0 => Func0Lookup[(name, returnType)],
+            1 => Func1Lookup[(name, returnType, types[0])],
+            2 => Func2Lookup[(name, returnType, types[0], types[1])],
+            3 => Func3Lookup[(name, returnType, types[0], types[1], types[2])],
+            4 => Func4Lookup[(name, returnType, types[0], types[1], types[2], types[3])],
             _ => Functions.Single(f =>
             {
-                if (f.Name != name || f.Parameters.Length != types.Length)
+                if (f.Name != name || f.Parameters.Length != types.Length || (!f.Return.Type.Equals(returnType)))
                 {
                     return false;
                 }

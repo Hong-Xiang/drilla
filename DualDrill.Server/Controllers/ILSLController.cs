@@ -1,12 +1,9 @@
-﻿using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.Types;
-using DualDrill.Engine.Shader;
+﻿using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
 using DualDrill.ILSL.Frontend;
 using DualDrill.Server.Services;
 using Lokad.ILPack.IL;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
 
@@ -27,31 +24,24 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         return ShaderModules.ShaderModules[name];
     }
 
-    [HttpGet("ParseHotReload")]
-    public IActionResult ParseHotReload()
+    [HttpGet("parse/{name}")]
+    public async Task<IActionResult> ParseModule(string name)
     {
-        var m = ((Func<int, int>)A).Method;
-        var same = LastMethod == m;
-        LastMethod = m;
-        return Ok(m.GetInstructions());
+        var shaderModule = GetShaderModule(name);
+        if (shaderModule is null)
+        {
+            return NotFound();
+        }
+        var ir = ILSL.ILSLCompiler.Parse(shaderModule);
+        return Ok(ir);
     }
 
-    int A(int b)
+    [HttpGet("parse")]
+    public IActionResult ParseDevelopModule()
     {
-        return b + 10;
-    }
-
-    [HttpGet("ParseV3")]
-    public IActionResult ParseV3()
-    {
-        var parser = new ILSpyMethodParser(new ILSpyOption() { HotReloadAssemblies = [typeof(ILSLController).Assembly] });
-
-        var body = parser.ParseMethodBody(
-            MethodParseContext.Empty with
-            {
-                Parameters = [new ParameterDeclaration("a", ShaderType.I32, [])]
-            }, static (int a) => a * 3);
-        return Ok(body);
+        var ht = new MinimumTriangle();
+        var ir = ILSL.ILSLCompiler.Parse(ht);
+        return Ok(ir);
     }
 
     [HttpGet("")]
@@ -129,7 +119,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             });
 
             var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseModule(shaderModule);
+            var module = parser.ParseShaderModule(shaderModule);
             var reflection = new QuadShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -146,7 +136,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             });
 
             var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseModule(shaderModule);
+            var module = parser.ParseShaderModule(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -163,7 +153,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             });
 
             var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseModule(shaderModule);
+            var module = parser.ParseShaderModule(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -187,7 +177,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             });
 
             var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseModule(shaderModule);
+            var module = parser.ParseShaderModule(shaderModule);
             var reflection = new QuadShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
@@ -204,24 +194,13 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             });
 
             var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseModule(shaderModule);
+            var module = parser.ParseShaderModule(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
         return NotFound();
     }
 
-    [HttpGet("parse/{name}")]
-    public async Task<IActionResult> ParseModule(string name)
-    {
-        var shaderModule = GetShaderModule(name);
-        if (shaderModule is null)
-        {
-            return NotFound();
-        }
-        var ir = ILSL.ILSLCompiler.Parse(shaderModule);
-        return Ok(ir);
-    }
 
 
     async Task<IActionResult> MethodTargetAction(string moduleName, string methodName,

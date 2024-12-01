@@ -370,7 +370,12 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
 
     public async ValueTask VisitVariableIdentifierExpression(VariableIdentifierExpression expr)
     {
-        Writer.Write(expr.Variable.Name);
+        if (expr.Variable is VariableDeclaration { Name: var name })
+        {
+            Writer.Write(name);
+            return;
+        }
+        throw new NotSupportedException();
     }
 
     public async ValueTask VisitFormalParameterExpression(FormalParameterExpression expr)

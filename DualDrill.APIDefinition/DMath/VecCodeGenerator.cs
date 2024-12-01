@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using Microsoft.CodeAnalysis;
@@ -219,6 +220,18 @@ public sealed record class VecCodeGenerator
         Writer.Write($"public static partial class {Config.StaticMathTypeName}");
         using (Writer.IndentedScopeWithBracket())
         {
+            var constructors = from f in ShaderFunction.Instance.Functions
+                               where f.Return.Type.Equals(VecType)
+                               where f.Attributes.Any(x => x is IVecConstructorMethodAttribute)
+                               select f;
+            foreach (var f in constructors)
+            {
+                var ca = f.Attributes.Single(a => a is IVecConstructorMethodAttribute);
+                if (ca is VecPositionalValueConstructorMethodAttribute && f.Parameters.Length == VecType.Size.Value)
+                {
+                }
+            }
+
             Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}(");
 
             Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => $"{Config.GetCSharpTypeName(VecType.ElementType)} {m}")]);
@@ -325,7 +338,7 @@ public sealed record class VecCodeGenerator
     public void GenerateSwizzles()
     {
 
-        static IEnumerable<ImmutableArray<string>> MakePerm(int count, IReadOnlyList<string> components)
+        static IEnumerable<ImmutableArray<string>> MakePermutations(int count, IReadOnlyList<string> components)
         {
             if (count <= 0)
             {
@@ -342,7 +355,7 @@ public sealed record class VecCodeGenerator
                 }
                 yield break;
             }
-            var q = from n in MakePerm(count - 1, components)
+            var q = from n in MakePermutations(count - 1, components)
                     from c in components
                     select (string[])[c, .. n];
             foreach (var r in q)
@@ -355,7 +368,7 @@ public sealed record class VecCodeGenerator
         foreach (var rank in (IRank[])[N2.Instance, N3.Instance, N4.Instance])
         {
             var rv = ShaderType.GetVecType(rank, VecType.ElementType);
-            foreach (var sw in MakePerm(rank.Value, components))
+            foreach (var sw in MakePermutations(rank.Value, components))
             {
                 var name = string.Join(string.Empty, sw);
                 Writer.Write($"public {Config.GetCSharpTypeName(rv)} {name} ");

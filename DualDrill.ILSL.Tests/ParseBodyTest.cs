@@ -13,7 +13,7 @@ using System.Reflection;
 namespace DualDrill.ILSL.Tests;
 
 
-public class MethodParserTest
+public class ParseBodyTest
 {
     private IMethodParser Parser { get; } = new ILSpyMethodParser(new() { HotReloadAssemblies = [] });
 
@@ -31,7 +31,14 @@ public class MethodParserTest
 
     IExpression ParseExpressionBodyMethod<T>(Func<T> f)
     {
-        var result = ParseExpressionBodyMethod(f);
+        var result = ParseExpressionBodyMethod(f.Method);
+        Assert.NotNull(result);
+        return result;
+    }
+
+    IExpression ParseExpressionBodyMethod<TA, TB>(Func<TA, TB> f)
+    {
+        var result = ParseExpressionBodyMethod(f.Method);
         Assert.NotNull(result);
         return result;
     }
@@ -51,37 +58,29 @@ public class MethodParserTest
     [Fact]
     public void ParseBasicArgument()
     {
-        var result = Parser.ParseMethodBody(MethodParseContext.Empty, static (int a) =>
-        {
-            return a + 1;
-        });
+        var context = ParserContext.Create();
+        var result = ParseExpressionBodyMethod(static (int a) => a + 1);
 
-        Assert.Single(result.Statements);
-        var s = result.Statements[0];
-        Assert.True(s is ReturnStatement
+        Assert.True(result is BinaryArithmeticExpression
         {
-            Expr: BinaryArithmeticExpression
+            L: VariableIdentifierExpression
             {
-                L: VariableIdentifierExpression
+                Variable: ParameterDeclaration
                 {
-                    Variable:
-                    {
-                        Name: "a",
-                        Type: IntType { BitWidth: N32 }
-                    }
+                    Name: "a"
                 },
-                R: LiteralValueExpression
+            },
+            R: LiteralValueExpression
+            {
+                Literal: IntLiteral
                 {
-                    Literal: IntLiteral
-                    {
-                        Value: 1
-                    },
-                    Type: IntType { BitWidth: N32 }
+                    Value: 1
                 },
-                Op: BinaryArithmeticOp.Addition,
                 Type: IntType { BitWidth: N32 }
-            }
-        }, "Parse result should be correct return statement");
+            },
+            Op: BinaryArithmeticOp.Addition,
+            Type: IntType { BitWidth: N32 }
+        });
     }
 
 

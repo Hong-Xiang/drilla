@@ -4,12 +4,8 @@ using DualDrill.CLSL.Language.IR;
 using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Common.Nat;
-using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
-using System.Collections.Frozen;
 using System.Collections.Immutable;
-using System.Numerics;
 using System.Reflection;
 
 namespace DualDrill.ILSL.Frontend;
@@ -21,40 +17,6 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
     HashSet<FunctionDeclaration> FunctionDeclarations = [];
 
     Dictionary<MethodBase, FunctionDeclaration> NeedParseBody = [];
-
-    FrozenDictionary<Type, IShaderType> BuiltinTypeMap = new Dictionary<Type, IShaderType>()
-    {
-        [typeof(bool)] = ShaderType.Bool,
-        [typeof(int)] = ShaderType.I32,
-        [typeof(uint)] = ShaderType.U32,
-        [typeof(long)] = ShaderType.I64,
-        [typeof(ulong)] = ShaderType.U64,
-        [typeof(Half)] = ShaderType.F16,
-        [typeof(float)] = ShaderType.F32,
-        [typeof(double)] = ShaderType.F64,
-        [typeof(Vector4)] = ShaderType.GetVecType(N4.Instance, ShaderType.F32),
-        [typeof(Vector3)] = ShaderType.GetVecType(N3.Instance, ShaderType.F32),
-        [typeof(Vector2)] = ShaderType.GetVecType(N2.Instance, ShaderType.F32),
-        [typeof(vec4f32)] = ShaderType.GetVecType(N4.Instance, ShaderType.F32),
-        [typeof(vec3f32)] = ShaderType.GetVecType(N3.Instance, ShaderType.F32),
-        [typeof(vec2f32)] = ShaderType.GetVecType(N2.Instance, ShaderType.F32),
-    }.ToFrozenDictionary();
-
-
-    //static Dictionary<MethodBase, FunctionDeclaration> BuiltinMethods()
-    //{
-    //    var result = new Dictionary<MethodBase, FunctionDeclaration>
-    //    {
-    //        {
-    //            typeof(Vector4).GetConstructor(BindingFlags.Public | BindingFlags.Instance, [typeof(float), typeof(float), typeof(float), typeof(float)]),
-    //            VecType<N4, FloatType<N32>>.Constructors[4]
-    //        }
-    //    };
-
-    //    return result;
-    //}
-
-
 
     public IShaderType ParseType(Type t)
     {
@@ -73,6 +35,14 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         throw new NotSupportedException($"{nameof(ParseType)} can not support {t}");
     }
 
+    /// <summary>
+    /// Parse new struct declaration based on relfection APIs
+    /// currently only supports structs
+    /// all access control are ignored (all fields, properties, methods are treated as public)
+    /// basically it will parse all fields (including privates) and properties with automatically generated get, set, init etc.
+    /// </summary>
+    /// <param name="t"></param>
+    /// <returns></returns>
     StructureDeclaration ParseStructDeclaration(Type t)
     {
         var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
@@ -131,32 +101,63 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
     }
 
 
-    public ShaderModule ParseModule(ISharpShader module)
+    public ShaderModule ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
-        var fieldVars = moduleType.GetFields(TargetVariableBindingFlags)
-                                  .Where(f => !f.Name.EndsWith("k__BackingField"));
-        var propVars = moduleType.GetProperties(TargetVariableBindingFlags);
-        foreach (var v in fieldVars)
+
+        var entryMethods = moduleType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
+                                     .Where(m => m.GetCustomAttributes().Any(a => a is IShaderStageAttribute))
+                                     .OrderBy(m => m.Name)
+                                     .ToImmutableArray();
+
+        //var fieldVars = moduleType.GetFields(TargetVariableBindingFlags)
+        //                          .Where(f => !f.Name.EndsWith("k__BackingField"));
+        //var propVars = moduleType.GetProperties(TargetVariableBindingFlags);
+        //foreach (var v in fieldVars)
+        //{
+        //    _ = ParseModuleVariableDeclaration(v);
+        //}
+        //foreach (var v in propVars)
+        //{
+        //    _ = ParseModuleVariableDeclaration(v);
+        //}
+        //var methods = moduleType.GetMethods(TargetMethodBindingFlags);
+        foreach (var m in entryMethods)
         {
-            _ = ParseModuleVariableDeclaration(v);
-        }
-        foreach (var v in propVars)
-        {
-            _ = ParseModuleVariableDeclaration(v);
-        }
-        var methods = moduleType.GetMethods(TargetMethodBindingFlags);
-        foreach (var m in methods)
-        {
-            var shaderStageAttributes = m.GetCustomAttributes().OfType<IShaderStageAttribute>().Any();
-            if (shaderStageAttributes)
-            {
-                _ = ParseMethodMetadata(m);
-            }
+            _ = ParseMethodMetadata(m);
         }
         ParseFunctionBodies();
         return new([.. Context.Variables.Values, .. TypeDeclarations, .. FunctionDeclarations]);
     }
+
+    ParameterDeclaration ParseParameter(ParameterInfo parameter)
+    {
+        return new ParameterDeclaration(
+            parameter.Name ?? throw new NotSupportedException("Can not parse parameter without name"),
+            ParseType(parameter.ParameterType),
+            ParseAttribute(parameter));
+    }
+
+    FunctionReturn ParseReturn(MethodBase method)
+    {
+        var returnType = method switch
+        {
+            MethodInfo m => ParseType(m.ReturnType),
+            ConstructorInfo c => ParseType(c.DeclaringType),
+            _ => throw new NotSupportedException($"Unsupported method {method}")
+        };
+
+        var returnAttributes = method switch
+        {
+            MethodInfo m => ParseAttribute(m.ReturnParameter),
+            ConstructorInfo m => [],
+            _ => throw new NotSupportedException($"Unsupported method {method}")
+        };
+
+        return new FunctionReturn(returnType, returnAttributes);
+    }
+
+
 
     public FunctionDeclaration ParseMethodMetadata(MethodBase method)
     {
@@ -165,39 +166,38 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
             return result;
         }
 
-        var returnType = method switch
-        {
-            MethodInfo m => ParseType(m.ReturnType),
-            ConstructorInfo c => ParseType(c.DeclaringType),
-            _ => throw new NotSupportedException($"Unsupported method {method}")
-        };
-        var returnAttributes = method switch
-        {
-            MethodInfo m => ParseAttribute(m.ReturnParameter),
-            ConstructorInfo m => [],
-            _ => throw new NotSupportedException($"Unsupported method {method}")
-        };
-
         var decl = new FunctionDeclaration(
             method.Name,
-            [.. method.GetParameters()
-                      .Select(p => new ParameterDeclaration(p.Name, ParseType(p.ParameterType), ParseAttribute(p)))],
-            new FunctionReturn(returnType, returnAttributes),
-            ParseAttribute(method)
-        );
+            [.. method.GetParameters().Select(ParseParameter)],
+            ParseReturn(method),
+            ParseAttribute(method));
+
         FunctionDeclarations.Add(decl);
         NeedParseBody.Add(method, decl);
         Context.Functions.Add(method, decl);
 
         if (!IsRuntimeMethod(method))
         {
-            var callees = GetCalledMethods(method);
-            foreach (var callee in callees)
+            var instructions = method.GetInstructions();
+            if (instructions is not null)
             {
-                _ = ParseMethodMetadata(callee);
+                var callees = GetCalledMethods(instructions);
+                foreach (var callee in callees)
+                {
+                    _ = ParseMethodMetadata(callee);
+                }
             }
         }
         return decl;
+    }
+
+    public CLSL.Language.IR.Statement.CompoundStatement ParseMethodBody(MethodBase method)
+    {
+        if (!Context.Functions.ContainsKey(method))
+        {
+            _ = ParseMethodMetadata(method);
+        }
+        return MethodParser.ParseMethodBody(Context.GetMethodContext(method), method);
     }
 
     bool IsRuntimeMethod(MethodBase m)
@@ -205,9 +205,18 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         return RuntimeDefinitions.Instance.RuntimeMethods.ContainsKey(m);
     }
 
-    IEnumerable<MethodBase> GetCalledMethods(MethodBase method)
+    IEnumerable<MethodBase> GetCalledMethods(IReadOnlyList<Instruction> instructions)
     {
-        return method.GetInstructions().Select(op => op.Operand).OfType<MethodBase>();
+        return instructions.Select(op => op.Operand)
+                           .OfType<MethodBase>();
+    }
+
+    IEnumerable<Type> GetReferencedTypes(IReadOnlyList<Instruction> instructions)
+    {
+        return instructions.Select(op => op.Operand)
+                           .OfType<ConstructorInfo>()
+                           .Select(c => c.DeclaringType)
+                           .OfType<Type>();
     }
 
     private void ParseFunctionBodies()

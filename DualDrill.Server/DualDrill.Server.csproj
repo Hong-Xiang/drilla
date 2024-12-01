@@ -9,8 +9,6 @@
 		<RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' AND '$(PackAsTool)' != 'true'">$(NETCoreSdkRuntimeIdentifier)</RuntimeIdentifier>
 	</PropertyGroup>
 
-	<Import Project="..\Silk.NET.Packages.props" />
-
 	<Target Name="PreBuild" BeforeTargets="Build">
 		<Exec Command="echo Running pnpm install" />
 		<Exec Command="pnpm install" WorkingDirectory="..\DualDrill.JS" />
@@ -19,34 +17,44 @@
 	</Target>
 
 	<ItemGroup>
-		<PackageReference Include="AngleSharp" Version="1.1.2" />
-		<PackageReference Include="Autofac" Version="8.0.0" />
-		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
-		<PackageReference Include="HtmlAgilityPack" Version="1.11.65" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2535.41" />
-		<PackageReference Include="pythonnet" Version="3.0.3" />
-		<PackageReference Include="Serilog" Version="4.0.1" />
-		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
-		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.0" />
-		<PackageReference Include="Veldrid" Version="4.9.0" />
-		<PackageReference Include="Veldrid.SPIRV" Version="1.0.15" />
-		<PackageReference Include="Veldrid.Utilities" Version="4.9.0" />
-		<PackageReference Include="Vortice.Vulkan" Version="1.9.4" />
+		<PackageReference Include="AngleSharp" />
+		<PackageReference Include="Autofac" />
+		<PackageReference Include="Autofac.Extensions.DependencyInjection"/>
+		<PackageReference Include="HtmlAgilityPack" />
+		<PackageReference Include="Microsoft.Web.WebView2"/>
+		<PackageReference Include="pythonnet"  />
+		<PackageReference Include="Serilog"  />
+		<PackageReference Include="Serilog.Extensions.Logging"  />
+		<PackageReference Include="Serilog.Sinks.Console" />
+		<PackageReference Include="Swashbuckle.AspNetCore" />
+		<PackageReference Include="Veldrid"  />
+		<PackageReference Include="Veldrid.SPIRV" />
+		<PackageReference Include="Veldrid.Utilities" />
+		<PackageReference Include="Vortice.Vulkan" />
 		<ProjectReference Include="..\DualDrill.APIDefinition\DualDrill.ApiGen.csproj" />
-		<ProjectReference Include="..\DualDrill.Client.Abstraction\DualDrill.Client.Abstraction.csproj" />
-		<ProjectReference Include="..\DualDrill.Common.Abstraction\DualDrill.Common.Abstraction.csproj" />
+		<ProjectReference
+			Include="..\DualDrill.Client.Abstraction\DualDrill.Client.Abstraction.csproj" />
+		<ProjectReference
+			Include="..\DualDrill.Common.Abstraction\DualDrill.Common.Abstraction.csproj" />
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 		<ProjectReference Include="..\DualDrill.Engine\DualDrill.Engine.csproj" />
 		<ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
 		<ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
 		<ProjectReference Include="..\DualDrill.WebView\DualDrill.WebView.csproj" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0-preview.7.24406.2" />
-		<PackageReference Include="SIPSorceryMedia.FFmpeg" Version="1.4.1" />
-		<PackageReference Include="SIPSorcery" Version="6.2.4" />
-		<PackageReference Include="SIPSorceryMedia.Encoders" Version="0.0.13" />
-		<PackageReference Include="System.Reactive" Version="6.0.1" />
-		<PackageReference Include="ICSharpCode.Decompiler" Version="8.2.0.7535" />
-		<PackageReference Update="DotNext.Unsafe" Version="5.12.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
+		<PackageReference Include="SIPSorceryMedia.FFmpeg"/>
+		<PackageReference Include="SIPSorcery" />
+		<PackageReference Include="SIPSorceryMedia.Encoders"/>
+		<PackageReference Include="System.Reactive" />
+		<PackageReference Include="ICSharpCode.Decompiler"  />
+		<PackageReference Update="DotNext.Unsafe" />
+		<PackageReference Update="Silk.NET" />
+		<PackageReference Update="Silk.NET.Core" />
+		<PackageReference Update="Silk.NET.Input" />
+		<PackageReference Update="Silk.NET.Shaderc" />
+		<PackageReference Update="Silk.NET.Shaderc.Native" />
+		<PackageReference Update="Silk.NET.Vulkan" />
+		<PackageReference Update="Silk.NET.Vulkan.Extensions.EXT" />
+		<PackageReference Update="Silk.NET.Windowing" />
 	</ItemGroup>
 </Project>

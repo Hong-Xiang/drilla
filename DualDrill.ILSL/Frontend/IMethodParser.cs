@@ -57,10 +57,3 @@ public static class MethodParserExtension
         return parser.ParseMethodBody(env, f.Method);
     }
 }
-
-/// <summary>
-/// A Method Parser always returns empty body, used for testing metadata parsers
-/// </summary>
-public sealed class EmptyBodyMethodParser()
-{
-}

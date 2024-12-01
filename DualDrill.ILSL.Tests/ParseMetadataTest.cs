@@ -3,18 +3,20 @@ using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.ILSL.Frontend;
+using DualDrill.Mathematics;
+using Silk.NET.Vulkan;
 using System.Numerics;
 using System.Reflection;
 
 namespace DualDrill.ILSL.Tests;
 
-public class MetadataParserTests
+public partial class ParseMetadataTest
 {
-    [Fact]
-    public void Should_Found_Called_Methods()
-    {
-        var parser = new CLSLParser(new ILSpyMethodParser(new()));
+    CLSLParser Parser { get; } = new(new ILSpyMethodParser(new()));
 
+    [Fact]
+    public void ShouldCollectCalledMethodsIntoContext()
+    {
         static int Callee(int a, int b)
         {
             return a + b;
@@ -25,77 +27,56 @@ public class MetadataParserTests
         {
             return Callee(1, 2);
         })).Method;
-        _ = parser.ParseMethodMetadata(caller);
+        _ = Parser.ParseMethodMetadata(caller);
 
-        Assert.Contains(parser.Context.Functions, c => c.Key.Equals(callee));
+        Assert.Contains(Parser.Context.Functions, c => c.Key.Equals(callee));
+    }
+
+    struct StructDeclTest
+    {
+        public static int Value;
+        public int DA { get; set; }
+        public int DB;
+    }
+
+    [Fact]
+    public void ShouldParseSimpleStructDeclaration()
+    {
+        var t = typeof(StructDeclTest);
+        var parsed = Parser.ParseType(t);
+        Assert.IsType<StructureDeclaration>(parsed);
+        var decl = (StructureDeclaration)parsed;
+        Assert.Equal(2, decl.Members.Length);
+        Assert.Contains("DA", decl.Members.Select(m => m.Name));
+        Assert.Contains("DB", decl.Members.Select(m => m.Name));
     }
 
 
     [Fact]
     public void ShouldParseVector4AsRuntimeType()
     {
-        var parser = new CLSLParser(new ILSpyMethodParser(new()));
-        var shaderType = parser.Context.Types[typeof(Vector4)];
+        var shaderType = Parser.Context.Types[typeof(Vector4)];
         Assert.Equal(ShaderType.GetVecType(N4.Instance, ShaderType.F32), shaderType);
     }
 
-    sealed class SimpleStructDeclarationShader : ISharpShader
-    {
-
-
-        public struct VertexOutput
-        {
-            [Builtin(BuiltinBinding.position)]
-            public Vector4 ClipPosition { get; set; }
-
-            [Location(0)]
-            public Vector2 InteropPosition { get; set; }
-        }
-
-        [Vertex]
-        static VertexOutput vs([Builtin(BuiltinBinding.position)] uint in_vertex_index)
-        {
-            VertexOutput result = default;
-            var x = (float)(1 - (int)in_vertex_index) * 0.5f;
-            var y = (float)((int)(in_vertex_index & 1u) * 2 - 1) * 0.5f;
-            result.ClipPosition = new Vector4(x, y, 0.0f, 1.0f);
-            result.InteropPosition = new Vector2(x, y);
-            return result;
-        }
-
-        [Fragment]
-        [return: Location(0)]
-        static Vector4 fs_main(VertexOutput vout)
-        {
-            return new Vector4(vout.InteropPosition.X, vout.InteropPosition.Y, 0.1f, 1.0f);
-        }
-    }
-
     [Fact]
-    async Task SimpleStructDeclarationParseTest()
+    public void ShouldParseMinimumHelloTriangleVertexShader()
     {
-        var parser = new CLSLParser(new ILSpyMethodParser(new()));
-        var module = parser.ParseModule(new SimpleStructDeclarationShader());
+        var vsm = ((Func<uint, vec4f32>)MinimumHelloTriangleShaderModule.vs).Method;
+        var parsed = Parser.ParseMethodMetadata(vsm);
 
-        Assert.Equal(3, module.Declarations.Length);
+        Assert.Single(parsed.Parameters);
+        var p0 = parsed.Parameters[0];
+        Assert.Single(p0.Attributes);
+        var via = p0.Attributes.Single();
+        Assert.IsType<BuiltinAttribute>(via);
+        Assert.Equal(BuiltinBinding.vertex_index, ((BuiltinAttribute)via).Slot);
 
-        var structDecl = module.Declarations.OfType<StructureDeclaration>().Single();
-        Assert.Equal(nameof(SimpleStructDeclarationShader.VertexOutput), structDecl.Name);
-        Assert.Equal(2, structDecl.Members.Length);
-        Assert.Equal("ClipPosition", structDecl.Members[0].Name);
-        Assert.Equal(ShaderType.vec4f32, structDecl.Members[0].Type);
-        Assert.Equal("InteropPosition", structDecl.Members[1].Name);
-        Assert.Equal(ShaderType.vec2f32, structDecl.Members[1].Type);
-
-        var tw = new IndentStringWriter("\t");
-        var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
-        foreach (var d in module.Declarations)
-        {
-            await d.AcceptVisitor(visitor);
-        }
-        var code = tw.ToString();
-        Assert.NotEmpty(code);
-
+        Assert.Equal(ShaderType.GetVecType(N4.Instance, ShaderType.F32), parsed.Return.Type);
+        Assert.Single(parsed.Return.Attributes);
+        var rta = parsed.Return.Attributes.Single();
+        Assert.IsType<BuiltinAttribute>(rta);
+        Assert.Equal(BuiltinBinding.position, ((BuiltinAttribute)rta).Slot);
     }
 
     // https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html
@@ -149,7 +130,7 @@ public class MetadataParserTests
     async Task SimpleUniformDeclarationParseTest()
     {
         var parser = new CLSLParser(new ILSpyMethodParser(new()));
-        var module = parser.ParseModule(new SimpleUniformShader());
+        var module = parser.ParseShaderModule(new SimpleUniformShader());
 
         Assert.Equal(4, module.Declarations.Length);
 
