@@ -2,6 +2,7 @@
 using System.Reflection;
 using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.Statement;
+using DualDrill.CLSL.Language.Types;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 
 namespace DualDrill.ILSL.Frontend;
@@ -15,31 +16,20 @@ public interface IMethodParser
 
 public sealed record class MethodParseContext(
     ImmutableArray<CLSLParameterDeclaration> Parameters,
-    ImmutableDictionary<string, VariableDeclaration> LocalVariables,
-    ImmutableDictionary<MethodBase, FunctionDeclaration> Methods
+    Dictionary<string, VariableDeclaration> LocalVariables,
+    ImmutableDictionary<MethodBase, FunctionDeclaration> Methods,
+    ImmutableDictionary<Type, IShaderType> Types
 )
 {
     public static MethodParseContext Empty => new MethodParseContext(
         [],
-        ImmutableDictionary<string, VariableDeclaration>.Empty,
-        ImmutableDictionary<MethodBase, FunctionDeclaration>.Empty
+        [],
+        ImmutableDictionary<MethodBase, FunctionDeclaration>.Empty,
+        ImmutableDictionary<Type, IShaderType>.Empty
     );
 
     public VariableDeclaration? this[string name] => LocalVariables[name];
     public CLSLParameterDeclaration GetParameter(int position) => Parameters[position];
-
-    public MethodParseContext WithLocalVariableDeclaration(string name, IDeclaration decl)
-    {
-        var v = (VariableDeclaration)decl;
-        if (LocalVariables.ContainsKey(name))
-        {
-            return this with { LocalVariables = LocalVariables.SetItem(name, v) };
-        }
-        else
-        {
-            return this with { LocalVariables = LocalVariables.Add(name, v) };
-        }
-    }
 }
 
 public static class MethodParserExtension

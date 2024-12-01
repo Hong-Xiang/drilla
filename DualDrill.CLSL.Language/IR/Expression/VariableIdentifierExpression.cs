@@ -5,13 +5,11 @@ namespace DualDrill.CLSL.Language.IR.Expression;
 
 public interface IVariableIdentifierResolveResult
 {
+    IShaderType Type { get; }
+    string Name { get; }
 }
 
 public sealed record class VariableIdentifierExpression(IVariableIdentifierResolveResult Variable) : IExpression
 {
-    public IShaderType Type => Variable switch
-    {
-        VariableDeclaration v => v.Type,
-        _ => throw new NotImplementedException()
-    };
+    public IShaderType Type => Variable.Type;
 }

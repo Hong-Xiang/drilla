@@ -142,7 +142,7 @@ public partial class ParseMetadataTest
         Assert.IsType<StructureDeclaration>(uniformDecl.Type);
 
         var tw = new IndentStringWriter("\t");
-        var visitor = new ModuleToCodeVisitor(tw, new WGSLLanguage());
+        var visitor = new ModuleToCodeVisitor(tw);
         foreach (var d in module.Declarations)
         {
             await d.AcceptVisitor(visitor);

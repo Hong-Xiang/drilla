@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.ILSL;
 using System.Numerics;
 
 namespace DualDrill.Engine.Shader;
@@ -9,9 +10,7 @@ struct VertexOutput
     public Vector4 clip_position { get; set; }
 }
 
-public struct VertexOutputShader : IILSLDevelopShaderModule
-{
-    public string ILSLWGSLExpectedCode => """
+[CLSLDevelopExpectedWGPUCode("""
         // Vertex shader
 
         struct VertexOutput {
@@ -35,8 +34,9 @@ public struct VertexOutputShader : IILSLDevelopShaderModule
         fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             return vec4<f32>(0.3, 0.2, 0.1, 1.0);
         }
-        """;
-
+        """)]
+public struct GradientColorTriangleShader : ISharpShader
+{
     [Vertex]
     static VertexOutput vs_main(
         [Builtin(BuiltinBinding.position)]

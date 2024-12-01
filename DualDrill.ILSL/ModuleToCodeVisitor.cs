@@ -1,74 +1,14 @@
-﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
-using DualDrill.Common.Nat;
-using DualDrill.CLSL.Language.IR;
+﻿using DualDrill.CLSL.Language.IR;
 using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.IR.Statement;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.ILSL;
 
-public sealed class WGSLLanguage : ITargetLanguage
-{
-    public string GetLiteralString(ILiteral literal)
-    {
-        return literal switch
-        {
-            BoolLiteral l => l.Value ? "true" : "false",
-            IntLiteral { BitWidth: N32, Value: var value } => value + "i",
-            UIntLiteral { BitWidth: N32, Value: var value } => value + "u",
-            FloatLiteral { BitWidth: N32, Value: var value } => value + "f",
-            _ => throw new NotSupportedException($"{nameof(GetLiteralString)} not support {literal}")
-        };
-    }
-
-    public string GetName(BoolType type) => "bool";
-
-
-    public string GetName(IntType type)
-    {
-        return type switch
-        {
-            IntType { BitWidth: N32 } _ => "i32",
-            _ => throw new NotSupportedException()
-        };
-    }
-
-    public string GetName(UIntType type)
-    {
-        return type switch
-        {
-            UIntType { BitWidth: N32 } => "u32",
-            _ => throw new NotSupportedException()
-        };
-    }
-
-    public string GetName(FloatType type)
-    {
-        return type switch
-        {
-            FloatType { BitWidth: N16 } _ => "f16",
-            FloatType { BitWidth: N32 } _ => "f32",
-            _ => throw new NotSupportedException()
-        };
-    }
-
-    public string GetName(IVecType type)
-    {
-        return type switch
-        {
-            IVecType { Size: N4, ElementType: FloatType { BitWidth: N32 } } => $"vec4<f32>",
-            _ => throw new NotSupportedException()
-        };
-    }
-
-    public string GetName(CLSL.Language.Types.MatType type)
-    {
-        throw new NotImplementedException();
-    }
-}
-
-public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLanguage TargetLanguage)
+public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
     : IDeclarationVisitor<ValueTask>
     , IStatementVisitor<ValueTask>
     , IExpressionVisitor<ValueTask>
@@ -363,19 +303,24 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer, ITargetLangua
         await expr.R.AcceptVisitor(this);
     }
 
+
+
     public async ValueTask VisitLiteralValueExpression(LiteralValueExpression expr)
     {
-        Writer.Write(TargetLanguage.GetLiteralString(expr.Literal));
+        var code = expr.Literal switch
+        {
+            BoolLiteral l => l.Value ? "true" : "false",
+            IntLiteral { BitWidth: N32, Value: var value } => value + "i",
+            UIntLiteral { BitWidth: N32, Value: var value } => value + "u",
+            FloatLiteral { BitWidth: N32, Value: var value } => value + "f",
+            _ => throw new NotSupportedException($"{nameof(VisitLiteralValueExpression)} not support {expr}")
+        };
+        Writer.Write(code);
     }
 
     public async ValueTask VisitVariableIdentifierExpression(VariableIdentifierExpression expr)
     {
-        if (expr.Variable is VariableDeclaration { Name: var name })
-        {
-            Writer.Write(name);
-            return;
-        }
-        throw new NotSupportedException();
+        Writer.Write(expr.Variable.Name);
     }
 
     public async ValueTask VisitFormalParameterExpression(FormalParameterExpression expr)

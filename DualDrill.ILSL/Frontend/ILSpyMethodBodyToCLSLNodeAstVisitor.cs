@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language;
+﻿using DotNext.Collections.Generic;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.IR;
 using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.Expression;
@@ -6,6 +7,7 @@ using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.IR.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
+using DualDrill.Mathematics;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 using ICSharpCode.Decompiler.IL;
@@ -15,6 +17,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
 using System.Reflection.Metadata.Ecma335;
+using System.Runtime.Loader;
 
 namespace DualDrill.ILSL.Frontend;
 
@@ -106,13 +109,21 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     public IShaderAstNode? VisitBinaryOperatorExpression(BinaryOperatorExpression binaryOperatorExpression)
     {
-        var l = (IExpression)binaryOperatorExpression.Left.AcceptVisitor(this);
-        var r = (IExpression)binaryOperatorExpression.Right.AcceptVisitor(this);
+        var lv = binaryOperatorExpression.Left.AcceptVisitor(this);
+        var rv = binaryOperatorExpression.Right.AcceptVisitor(this);
+        var l = (IExpression)lv;
+        var r = (IExpression)rv;
         // TODO: proper expression type handling
-        if (l is LiteralValueExpression { Literal: IntLiteral { Value: var v, BitWidth: var bw } }
-            && r is FormalParameterExpression { Parameter: { Type: UIntType { BitWidth: N32 } } })
+        var rt = Context.Types[GetCSharpType(binaryOperatorExpression.GetResolveResult().Type)];
+
+
+        if (l is LiteralValueExpression { Literal: IntLiteral { Value: var llv } } && rt is UIntType)
         {
-            l = new LiteralValueExpression(SyntaxFactory.Literal((uint)v));
+            l = new LiteralValueExpression(SyntaxFactory.Literal((uint)llv));
+        }
+        if (r is LiteralValueExpression { Literal: IntLiteral { Value: var rlv } } && rt is UIntType)
+        {
+            r = new LiteralValueExpression(SyntaxFactory.Literal((uint)rlv));
         }
         return binaryOperatorExpression.Operator switch
         {
@@ -138,7 +149,15 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     public IShaderAstNode? VisitBlockStatement(BlockStatement blockStatement)
     {
+
+        var locals = new Dictionary<string, VariableDeclaration>(Context.LocalVariables);
         var result = new CompoundStatement([.. blockStatement.Statements.Select(s => s.AcceptVisitor(this)).OfType<IStatement>()]);
+
+        Context.LocalVariables.Clear();
+        foreach (var (k, v) in locals)
+        {
+            Context.LocalVariables.Add(k, v);
+        }
         return result;
     }
 
@@ -152,16 +171,31 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     Type? GetCSharpType(IType t)
     {
-        return Type.GetType(t.FullName);
+        return Context.Types.Single(x => x.Key.FullName == t.FullName).Key;
     }
 
     public IShaderAstNode? VisitCastExpression(CastExpression castExpression)
     {
-        throw new NotImplementedException();
-        //var source = castExpression.Expression.Annotation<ResolveResult>().Type;
-        //var target = castExpression.Type.Annotation<TypeResolveResult>().Type;
-        //var sourceType = GetCSharpType(source);
-        //var targetType = GetCSharpType(target);
+        var source = (IExpression)castExpression.Expression.AcceptVisitor(this);
+        var target = castExpression.Type.Annotation<TypeResolveResult>().Type;
+
+        var targetType = GetCSharpType(target);
+
+        FunctionDeclaration? f = null;
+        if (source.Type is UIntType { BitWidth: N32 } && targetType == typeof(int))
+        {
+            f = Context.Methods[typeof(DMath).GetMethod("i32", [typeof(uint)])];
+        }
+        if (source.Type is IntType { BitWidth: N32 } && targetType == typeof(float))
+        {
+            f = Context.Methods[typeof(DMath).GetMethod("f32", [typeof(int)])];
+        }
+        if (f is null)
+        {
+            throw new NotImplementedException(castExpression.ToString());
+        }
+        return new FunctionCallExpression(f, [source]);
+
 
         //var f = target.FullName switch
         //{
@@ -433,12 +467,13 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
     {
         var vr = identifierExpression.Annotation<ILVariableResolveResult>();
         var v = vr.Variable;
-        return v.Kind switch
+        IVariableIdentifierResolveResult t = v.Kind switch
         {
             VariableKind.Parameter when v.Index.HasValue => Context.Parameters[v.Index.Value],
             VariableKind.Local when v.Name is not null => Context.LocalVariables[v.Name],
             _ => throw new NotSupportedException($"{nameof(VariableIdentifierExpression)} of variable kind {Enum.GetName(v.Kind)}")
         };
+        return new VariableIdentifierExpression(t);
     }
 
     public IShaderAstNode? VisitIfElseStatement(IfElseStatement ifElseStatement)
@@ -485,9 +520,16 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
     public IShaderAstNode? VisitInvocationExpression(InvocationExpression invocationExpression)
     {
         var callee = invocationExpression.Annotation<InvocationResolveResult>().Member;
+
+        var an = callee.ParentModule.FullAssemblyName;
+
+        var asem = AppDomain.CurrentDomain.GetAssemblies().Single(a => a.FullName == an);
+
         var entityHandle = callee.MetadataToken;
         var token = MetadataTokens.GetToken(entityHandle);
-        var methodBase = Assembly.ManifestModule.ResolveMethod(token);
+        var correctAssembly = typeof(DMath).Assembly;
+        var methodBase = asem.ManifestModule.ResolveMethod(token);
+        var methodC = correctAssembly.ManifestModule.ResolveMethod(token);
         if (methodBase is null)
         {
             throw new NullReferenceException($"Failed to resolve method {callee}");
@@ -814,8 +856,9 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
     {
         if (returnStatement.HasChildren)
         {
+            var expr = returnStatement.GetChildByRole(Roles.Expression);
             return SyntaxFactory.Return(
-                (IExpression?)returnStatement.GetChildByRole(Roles.Expression).AcceptVisitor(this)
+                (IExpression?)(expr.AcceptVisitor(this))
             );
         }
         else
@@ -981,12 +1024,12 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         // TODO: handle multiple variable declaration 
         // TODO: proper handling of variable type
         var v = variableDeclarationStatement.Variables.Single();
-        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, (IShaderType)variableDeclarationStatement.Type.AcceptVisitor(this), []);
-        var context = Context.WithLocalVariableDeclaration(varDecl.Name, varDecl);
+        var varDecl = new VariableDeclaration(DeclarationScope.Function, v.Name, ((TypeReference)variableDeclarationStatement.Type.AcceptVisitor(this)).Type, []);
+        Context.LocalVariables.Add(varDecl.Name, varDecl);
         var c = v.GetChildByRole(Roles.Expression);
         if (c is not null)
         {
-            varDecl.Initializer = (IExpression)c.AcceptVisitor(new ILSpyMethodBodyToCLSLNodeAstVisitor(context, Assembly));
+            varDecl.Initializer = (IExpression)c.AcceptVisitor(this);
         }
         return new VariableOrValueStatement(varDecl);
     }

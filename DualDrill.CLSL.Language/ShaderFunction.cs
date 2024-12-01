@@ -382,16 +382,16 @@ public class ShaderFunction : ISingleton<ShaderFunction>
                        select KeyValuePair.Create((f.Name, f.Return.Type), f)).ToDictionary();
         Func1Lookup = (from f in Functions
                        where f.Parameters.Length == 1
-                       select KeyValuePair.Create((f.Name, f.Return.Type, f.Parameters[0].Type), f)).ToDictionary();
+                       select KeyValuePair.Create((f.Name, f.Return.Type, ResolvedType:f.Parameters[0].Type), f)).ToDictionary();
         Func2Lookup = (from f in Functions
                        where f.Parameters.Length == 2
-                       select KeyValuePair.Create((f.Name, f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type), f)).ToDictionary();
+                       select KeyValuePair.Create((f.Name, Type:f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type), f)).ToDictionary();
         Func3Lookup = (from f in Functions
                        where f.Parameters.Length == 3
-                       select KeyValuePair.Create((f.Name, f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type), f)).ToDictionary();
+                       select KeyValuePair.Create((f.Name, Type:f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type), f)).ToDictionary();
         Func4Lookup = (from f in Functions
                        where f.Parameters.Length == 4
-                       select KeyValuePair.Create((f.Name, f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type, f.Parameters[3].Type), f)).ToDictionary();
+                       select KeyValuePair.Create((f.Name, Type:f.Return.Type, f.Parameters[0].Type, f.Parameters[1].Type, f.Parameters[2].Type, f.Parameters[3].Type), f)).ToDictionary();
     }
 
     IReadOnlyDictionary<(string, IShaderType), FunctionDeclaration> Func0Lookup { get; }

@@ -12,14 +12,7 @@ namespace DualDrill.Server.Controllers;
 [Route("[controller]")]
 public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Controller
 {
-
-    static MethodBase? LastMethod = null;
     ISharpShader? GetShaderModule(string name)
-    {
-        return ShaderModules.ShaderModules[name];
-    }
-
-    IILSLDevelopShaderModule? GetDevelopmentShaderModule(string name)
     {
         return ShaderModules.ShaderModules[name];
     }
@@ -44,6 +37,14 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         return Ok(ir);
     }
 
+    [HttpGet("compile")]
+    public async Task<IActionResult> CompileDevelopModule()
+    {
+        var ht = new MinimumTriangle();
+        var ir = ILSL.ILSLCompiler.Parse(ht);
+        var code = await ILSLCompiler.EmitCode(ir);
+        return Ok(code);
+    }
     [HttpGet("")]
     public IActionResult Index()
     {
@@ -53,7 +54,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("wgsl/{name}/expected")]
     public IActionResult ExpectedCode(string name)
     {
-        return Ok(GetDevelopmentShaderModule(name).ILSLWGSLExpectedCode);
+        var shaderModule = GetShaderModule(name);
+        var a = shaderModule.GetType().GetCustomAttribute<CLSLDevelopExpectedWGPUCodeAttribute>();
+        return Ok(a.Code);
     }
 
 

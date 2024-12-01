@@ -148,7 +148,8 @@ public sealed record class ParserContext(
         return MethodParseContext.Empty with
         {
             Parameters = func.Parameters,
-            Methods = Functions.ToImmutableDictionary()
+            Methods = Functions.ToImmutableDictionary(),
+            Types = Types.ToImmutableDictionary()
         };
     }
 }

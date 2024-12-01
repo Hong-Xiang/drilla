@@ -227,7 +227,8 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
             {
                 continue;
             }
-            f.Body = MethodParser.ParseMethodBody(Context.GetMethodContext(m), m);
+            var methodContext = Context.GetMethodContext(m);
+            f.Body = MethodParser.ParseMethodBody(methodContext, m);
         }
     }
 }
