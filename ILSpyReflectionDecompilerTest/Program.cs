@@ -82,20 +82,21 @@ public class DecompilerHelper
 {
     public ILFunction DecompileMethod(MethodBase methodBase)
     {
-        var compilation = new ReflectionCompilation();
-        var typeDefinition = new ReflectionTypeDefinition(methodBase.DeclaringType);
-        ((ReflectionModule)compilation.MainModule).TypeDefinitions.Add(typeDefinition);
+        //var compilation = new ReflectionCompilation();
+        //var typeDefinition = new ReflectionTypeDefinition(methodBase.DeclaringType);
+        //((ReflectionModule)compilation.MainModule).TypeDefinitions.Add(typeDefinition);
 
-        var method = new ReflectionMethod(typeDefinition, methodBase);
+        //var method = new ReflectionMethod(typeDefinition, methodBase);
 
-        // Create the decompiler
-        var decompilerSettings = new DecompilerSettings();
-        var decompiler = new CSharpDecompiler(compilation, decompilerSettings);
+        //// Create the decompiler
+        //var decompilerSettings = new DecompilerSettings();
+        //var decompiler = new CSharpDecompiler(compilation, decompilerSettings);
 
-        // Decompile the method to ILFunction
-        var ilFunction = decompiler.Decompile(method);
+        //// Decompile the method to ILFunction
+        //var ilFunction = decompiler.Decompile(method);
 
-        return ilFunction;
+        //return ilFunction;
+        throw new NotImplementedException();
     }
 }
 
