@@ -278,7 +278,9 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     public IShaderAstNode? VisitDefaultValueExpression(DefaultValueExpression defaultValueExpression)
     {
-        throw new NotImplementedException();
+        var t = GetCSharpType(defaultValueExpression.Type.Annotation<TypeResolveResult>().Type);
+        FunctionDeclaration f = Context.ZeroValueConstructors.TryGetValue(t, out var found) ? found : throw new NotImplementedException();
+        return new FunctionCallExpression(f, []);
     }
 
     public IShaderAstNode? VisitDelegateDeclaration(DelegateDeclaration delegateDeclaration)

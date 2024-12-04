@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.ILSL;
+using DualDrill.Mathematics;
 using System.Numerics;
 
 namespace DualDrill.Engine.Shader;
@@ -7,7 +8,7 @@ namespace DualDrill.Engine.Shader;
 struct VertexOutput
 {
     [Builtin(BuiltinBinding.position)]
-    public Vector4 clip_position { get; set; }
+    public vec4f32 position { get; set; }
 }
 
 [CLSLDevelopExpectedWGPUCode("""
@@ -38,22 +39,22 @@ struct VertexOutput
 public struct GradientColorTriangleShader : ISharpShader
 {
     [Vertex]
-    static VertexOutput vs_main(
-        [Builtin(BuiltinBinding.position)]
+    static VertexOutput vs(
+        [Builtin(BuiltinBinding.vertex_index)]
         uint in_vertex_index
     )
     {
-        VertexOutput result = default;
         var x = (float)(1 - (int)in_vertex_index) * 0.5f;
         var y = (float)((int)(in_vertex_index & 1u) * 2 - 1) * 0.5f;
-        result.clip_position = new Vector4(x, y, 0.0f, 1.0f);
+        VertexOutput result = default;
+        result.position = DMath.vec4(x, y, 0.0f, 1.0f);
         return result;
     }
 
     [Fragment]
     [return: Location(0)]
-    static Vector4 fs_main(VertexOutput vout)
+    static vec4f32 fs(VertexOutput vout)
     {
-        return new Vector4(0.3f, 0.2f, 0.1f, 1.0f);
+        return DMath.vec4(vout.position.xy * 0.001f, 1.0f, 1.0f);
     }
 }

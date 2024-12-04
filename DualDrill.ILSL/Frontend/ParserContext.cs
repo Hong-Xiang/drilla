@@ -122,7 +122,8 @@ sealed class RuntimeDefinitions : ISingleton<RuntimeDefinitions>
 public sealed record class ParserContext(
     Dictionary<Type, IShaderType> Types,
     Dictionary<MethodBase, FunctionDeclaration> Functions,
-    Dictionary<MemberInfo, VariableDeclaration> Variables)
+    Dictionary<MemberInfo, VariableDeclaration> Variables,
+    Dictionary<Type, FunctionDeclaration> ZeroValueConstructors)
 {
     public static ParserContext Create()
     {
@@ -136,7 +137,7 @@ public sealed record class ParserContext(
         {
             funcs.Add(f.Key, f.Value);
         }
-        return new ParserContext(types, funcs, new Dictionary<MemberInfo, VariableDeclaration>());
+        return new ParserContext(types, funcs, new(), new());
     }
 
     public MethodParseContext GetMethodContext(MethodBase method)
@@ -149,7 +150,8 @@ public sealed record class ParserContext(
         {
             Parameters = func.Parameters,
             Methods = Functions.ToImmutableDictionary(),
-            Types = Types.ToImmutableDictionary()
+            Types = Types.ToImmutableDictionary(),
+            ZeroValueConstructors = ZeroValueConstructors.ToImmutableDictionary()
         };
     }
 }

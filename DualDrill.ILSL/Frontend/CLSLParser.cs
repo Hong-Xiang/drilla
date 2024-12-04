@@ -4,16 +4,18 @@ using DualDrill.CLSL.Language.IR;
 using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace DualDrill.ILSL.Frontend;
 
 public sealed record class CLSLParser(IMethodParser MethodParser)
 {
     public ParserContext Context { get; } = ParserContext.Create();
-    HashSet<TypeDeclaration> TypeDeclarations = [];
+    HashSet<StructureDeclaration> TypeDeclarations = [];
     HashSet<FunctionDeclaration> FunctionDeclarations = [];
 
     Dictionary<MethodBase, FunctionDeclaration> NeedParseBody = [];
@@ -55,6 +57,17 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
             ..fieldMembers,
             ..propsMembers
             ], [.. t.GetCustomAttributes().OfType<IShaderAttribute>()]);
+
+        // for custom structs, a new zero-value constructor is added
+
+        Context.ZeroValueConstructors.Add(t, new FunctionDeclaration(
+            result.Name,
+            [],
+            new FunctionReturn(result, []),
+            [new ZeroValueBuiltinFunctionAttribute(), new ShaderRuntimeMethodAttribute()]
+        ));
+        TypeDeclarations.Add(result);
+
         return result;
     }
 
@@ -181,7 +194,7 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
             var instructions = method.GetInstructions();
             if (instructions is not null)
             {
-                var callees = GetCalledMethods(instructions);
+                var callees = GetCalledMethods(instructions).ToArray();
                 foreach (var callee in callees)
                 {
                     _ = ParseMethodMetadata(callee);
@@ -208,7 +221,25 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
     IEnumerable<MethodBase> GetCalledMethods(IReadOnlyList<Instruction> instructions)
     {
         return instructions.Select(op => op.Operand)
-                           .OfType<MethodBase>();
+                           .OfType<MethodBase>()
+                           .Where(m =>
+                           {
+                               // generated getter and setters should not be considered
+                               var t = m.DeclaringType;
+                               if (Context.Types.TryGetValue(t, out var st) && (st is IVecType))
+                               {
+                                   return false;
+                               }
+                               if (m.IsSpecialName && m.CustomAttributes.Any(a => a.AttributeType == typeof(CompilerGeneratedAttribute)))
+                               {
+                                   var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                                   if (props.Any(p => p.GetMethod == m || p.SetMethod == m))
+                                   {
+                                       return false;
+                                   }
+                               }
+                               return true;
+                           });
     }
 
     IEnumerable<Type> GetReferencedTypes(IReadOnlyList<Instruction> instructions)

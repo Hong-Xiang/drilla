@@ -18,14 +18,16 @@ public sealed record class MethodParseContext(
     ImmutableArray<CLSLParameterDeclaration> Parameters,
     Dictionary<string, VariableDeclaration> LocalVariables,
     ImmutableDictionary<MethodBase, FunctionDeclaration> Methods,
-    ImmutableDictionary<Type, IShaderType> Types
+    ImmutableDictionary<Type, IShaderType> Types,
+    ImmutableDictionary<Type, FunctionDeclaration> ZeroValueConstructors
 )
 {
     public static MethodParseContext Empty => new MethodParseContext(
         [],
         [],
         ImmutableDictionary<MethodBase, FunctionDeclaration>.Empty,
-        ImmutableDictionary<Type, IShaderType>.Empty
+        ImmutableDictionary<Type, IShaderType>.Empty,
+        ImmutableDictionary<Type, FunctionDeclaration>.Empty
     );
 
     public VariableDeclaration? this[string name] => LocalVariables[name];

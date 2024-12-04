@@ -68,16 +68,24 @@ export async function BatchRenderMain() {
   //   : "SampleFragmentShader";
   //const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
 
-  const demoShaderName = "SampleFragmentShader";
-  const meshName = "ScreenQuad";
-  const vertexBufferLayoutJson = await (await fetch(`/ilsl/wgsl/vertexbufferlayout/${demoShaderName}`)).text();
-  const vertexBufferLayout = JSON.parse(vertexBufferLayoutJson);
-  const code = await (await fetch(`/ilsl/wgsl/${demoShaderName}`)).text();
-  const meshVertices = await (await fetch(`/api/Mesh/${meshName}/vertex`)).arrayBuffer(); //Quad
-  const meshIndices = await (await fetch(`/api/Mesh/${meshName}/index`)).arrayBuffer();   //Quad
-  const bindGroupLayoutDescriptorJson = await (await fetch(`/ilsl/wgsl/bindgrouplayoutdescriptorbuffer/${demoShaderName}`)).text();
-  const bindGroupLayoutDescriptor = JSON.parse(bindGroupLayoutDescriptorJson);
-  
+  // const demoShaderName = "SampleFragmentShader";
+  // const meshName = "ScreenQuad";
+  // const vertexBufferLayoutJson = await (
+  //   await fetch(`/ilsl/wgsl/vertexbufferlayout/${demoShaderName}`)
+  // ).text();
+  // const vertexBufferLayout = JSON.parse(vertexBufferLayoutJson);
+  // const code = await (await fetch(`/ilsl/wgsl/${demoShaderName}`)).text();
+  // const meshVertices = await (
+  //   await fetch(`/api/Mesh/${meshName}/vertex`)
+  // ).arrayBuffer(); //Quad
+  // const meshIndices = await (
+  //   await fetch(`/api/Mesh/${meshName}/index`)
+  // ).arrayBuffer(); //Quad
+  // const bindGroupLayoutDescriptorJson = await (
+  //   await fetch(`/ilsl/wgsl/bindgrouplayoutdescriptorbuffer/${demoShaderName}`)
+  // ).text();
+  // const bindGroupLayoutDescriptor = JSON.parse(bindGroupLayoutDescriptorJson);
+
   const targetCode = `struct VertexInput {
   @location(0) position: vec2<f32>
 };
@@ -360,27 +368,30 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
   const time = new Float32Array([0]);
   device.queue.writeBuffer(timeBuffer, 0, time);
 
-  // Vertex Buffer
-  const verticesBufferSize = meshVertices.byteLength;
-  const vertexBuffer = device.createBuffer({
-    size: verticesBufferSize,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-  });
-  const vertices = new Float32Array(meshVertices);
-  device.queue.writeBuffer(vertexBuffer, 0, vertices);
+  // // Vertex Buffer
+  // const verticesBufferSize = meshVertices.byteLength;
+  // const vertexBuffer = device.createBuffer({
+  //   size: verticesBufferSize,
+  //   usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  // });
+  // const vertices = new Float32Array(meshVertices);
+  // device.queue.writeBuffer(vertexBuffer, 0, vertices);
 
-  // Index Buffer
-  const indexBufferSize = meshIndices.byteLength;
-  const indexBuffer = device.createBuffer({
-    size: indexBufferSize,
-    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
-  });
-  const indices = new Uint16Array(meshIndices);
-  device.queue.writeBuffer(indexBuffer, 0, indices);
+  // // Index Buffer
+  // const indexBufferSize = meshIndices.byteLength;
+  // const indexBuffer = device.createBuffer({
+  //   size: indexBufferSize,
+  //   usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+  // });
+  // const indices = new Uint16Array(meshIndices);
+  // device.queue.writeBuffer(indexBuffer, 0, indices);
+
+  const minimumTriangleCode = await (await fetch("/ilsl/compile")).text();
 
   const module = device.createShaderModule({
     label: "our hardcoded red triangle shaders",
-    code,
+    // code,
+    code: minimumTriangleCode,
     //     code: `
     // @vertex
     // fn vs (@builtin (vertex_index) vertexIndex:u32) -> @builtin(position) vec4<f32>
@@ -412,25 +423,27 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
     // `,
   });
 
+  // const bindGroupLayout = device.createBindGroupLayout(
+  //   bindGroupLayoutDescriptor
+  // );
+  // const bindGroup = device.createBindGroup({
+  //   layout: bindGroupLayout,
+  //   entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
+  // });
 
-  const bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDescriptor);
-  const bindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: timeBuffer } }]
-  })
-
-  const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [
-      bindGroupLayout, // @group(0)
-    ]
-  });
+  // const pipelineLayout = device.createPipelineLayout({
+  //   bindGroupLayouts: [
+  //     bindGroupLayout, // @group(0)
+  //   ],
+  // });
 
   const pipeline = device.createRenderPipeline({
-    layout: pipelineLayout,
+    // layout: pipelineLayout,
+    layout: "auto",
     vertex: {
       module: module,
       entryPoint: "vs",
-      buffers: vertexBufferLayout
+      // buffers: vertexBufferLayout,
     },
     fragment: {
       module,
@@ -475,10 +488,11 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
     device.queue.writeBuffer(timeBuffer, 0, time);
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup!);
-    pass.setVertexBuffer(0, vertexBuffer);
-    pass.setIndexBuffer(indexBuffer, "uint16");
-    pass.drawIndexed(indices.length);
+    // pass.setBindGroup(0, bindGroup!);
+    // pass.setVertexBuffer(0, vertexBuffer);
+    // pass.setIndexBuffer(indexBuffer, "uint16");
+    // pass.drawIndexed(indices.length);
+    pass.draw(3);
     pass.end();
 
     device.queue.submit([encoder.finish()]);

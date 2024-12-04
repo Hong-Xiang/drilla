@@ -32,7 +32,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("parse")]
     public IActionResult ParseDevelopModule()
     {
-        var ht = new MinimumTriangle();
+        var ht = new GradientColorTriangleShader();
         var ir = ILSL.ILSLCompiler.Parse(ht);
         return Ok(ir);
     }
@@ -40,7 +40,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("compile")]
     public async Task<IActionResult> CompileDevelopModule()
     {
-        var ht = new MinimumTriangle();
+        var ht = new GradientColorTriangleShader();
         var ir = ILSL.ILSLCompiler.Parse(ht);
         var code = await ILSLCompiler.EmitCode(ir);
         return Ok(code);

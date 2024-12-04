@@ -449,7 +449,14 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
 
     public async ValueTask VisitTypeReference(IShaderType type)
     {
-        Writer.Write(type.Name);
+        if (type is VecType { Size: var size, ElementType: var e })
+        {
+            Writer.Write($"vec{size.Value}<{e.Name}>");
+        }
+        else
+        {
+            Writer.Write(type.Name);
+        }
     }
 
     public async ValueTask VisitNamedComponentExpression(NamedComponentExpression expr)
