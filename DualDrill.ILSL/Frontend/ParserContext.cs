@@ -114,6 +114,14 @@ sealed class RuntimeDefinitions : ISingleton<RuntimeDefinitions>
             result.Add(c, f);
         }
 
+        foreach (var m in typeof(Vector4).GetMethods())
+        {
+            if (m.Name == "Dot")
+            {
+                result.Add(m, ShaderFunction.Instance.GetFunction("dot", ShaderType.F32, [vec4f32t, vec4f32t]));
+            }
+        }
+
         return result;
     }
     public static RuntimeDefinitions Instance { get; } = new RuntimeDefinitions();

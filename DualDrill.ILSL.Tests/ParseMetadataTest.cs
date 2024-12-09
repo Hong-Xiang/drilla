@@ -12,7 +12,7 @@ namespace DualDrill.ILSL.Tests;
 
 public partial class ParseMetadataTest
 {
-    CLSLParser Parser { get; } = new(new ILSpyMethodParser(new()));
+    CLSLParser Parser { get; } = new(new RelooperMethodParser());
 
     [Fact]
     public void ShouldCollectCalledMethodsIntoContext()

@@ -120,11 +120,11 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
         if (l is LiteralValueExpression { Literal: IntLiteral { Value: var llv } } && rt is UIntType)
         {
-            l = new LiteralValueExpression(SyntaxFactory.Literal((uint)llv));
+            l = SyntaxFactory.Literal((uint)llv);
         }
         if (r is LiteralValueExpression { Literal: IntLiteral { Value: var rlv } } && rt is UIntType)
         {
-            r = new LiteralValueExpression(SyntaxFactory.Literal((uint)rlv));
+            r = SyntaxFactory.Literal((uint)rlv);
         }
         return binaryOperatorExpression.Operator switch
         {
@@ -770,11 +770,11 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         var value = primitiveExpression.Value;
         return value switch
         {
-            float v => new LiteralValueExpression(SyntaxFactory.Literal(v)),
-            double v => new LiteralValueExpression(SyntaxFactory.Literal(v)),
-            int v => new LiteralValueExpression(SyntaxFactory.Literal(v)),
-            uint v => new LiteralValueExpression(SyntaxFactory.Literal(v)),
-            bool v => new LiteralValueExpression(SyntaxFactory.Literal(v)),
+            float v => SyntaxFactory.Literal(v),
+            double v => SyntaxFactory.Literal(v),
+            int v => SyntaxFactory.Literal(v),
+            uint v => SyntaxFactory.Literal(v),
+            bool v => SyntaxFactory.Literal(v),
             _ => throw new NotSupportedException($"{nameof(VisitPrimitiveExpression)} does not support {primitiveExpression}")
         };
     }

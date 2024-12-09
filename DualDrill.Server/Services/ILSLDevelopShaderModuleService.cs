@@ -10,7 +10,7 @@ public sealed class ILSLDevelopShaderModuleService
         //[nameof(SampleFragmentShader)] = new SampleFragmentShader(),
         [nameof(GradientColorTriangleShader)] = new GradientColorTriangleShader(),
         //[nameof(SimpleUniformShader)] = new SimpleUniformShader(),
-        [nameof(SampleFragmentShader)] = new SampleFragmentShader(),
+        [nameof(MandelbrotDistanceShader)] = new MandelbrotDistanceShader(),
         [nameof(SimpleUniformShader)] = new SimpleUniformShader(),
         [nameof(QuadShader)] = new QuadShader(),
     };

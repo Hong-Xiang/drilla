@@ -29,10 +29,23 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         return Ok(ir);
     }
 
+    [HttpGet("mothod/parse")]
+    public IActionResult ParseDevelopMethod()
+    {
+        var methodParser = new RelooperMethodParser();
+        var parser = new CLSLParser(methodParser);
+        var ht = new MandelbrotDistanceShader();
+
+        var ir = ILSL.ILSLCompiler.Parse(ht);
+        return Ok(ir);
+    }
+
+
+
     [HttpGet("parse")]
     public IActionResult ParseDevelopModule()
     {
-        var ht = new GradientColorTriangleShader();
+        var ht = new MandelbrotDistanceShader();
         var ir = ILSL.ILSLCompiler.Parse(ht);
         return Ok(ir);
     }
@@ -40,7 +53,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("compile")]
     public async Task<IActionResult> CompileDevelopModule()
     {
-        var ht = new GradientColorTriangleShader();
+        var ht = new MandelbrotDistanceShader();
         var ir = ILSL.ILSLCompiler.Parse(ht);
         var code = await ILSLCompiler.EmitCode(ir);
         return Ok(code);
@@ -67,9 +80,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return Ok(await ILSLCompiler.CompileV2(new SimpleUniformShader()));
         }
-        if (name == nameof(SampleFragmentShader))
+        if (name == nameof(MandelbrotDistanceShader))
         {
-            return Ok(await ILSLCompiler.CompileV2(new SampleFragmentShader()));
+            return Ok(await ILSLCompiler.CompileV2(new MandelbrotDistanceShader()));
         }
         if (name == nameof(QuadShader))
         {
@@ -98,7 +111,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             var reflection = new ReflectionTestShaderReflection();
             return Ok(reflection.GetVertexBufferLayout());
         }
-        else if (name == nameof(SampleFragmentShader))
+        else if (name == nameof(MandelbrotDistanceShader))
         {
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetVertexBufferLayout());
@@ -126,9 +139,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             var reflection = new QuadShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
-        else if (name == nameof(SampleFragmentShader))
+        else if (name == nameof(MandelbrotDistanceShader))
         {
-            var shaderModule = new SampleFragmentShader();
+            var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
             using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
@@ -143,9 +156,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
-        else if (name == nameof(SampleFragmentShader))
+        else if (name == nameof(MandelbrotDistanceShader))
         {
-            var shaderModule = new SampleFragmentShader();
+            var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
             using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
@@ -184,9 +197,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             var reflection = new QuadShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
-        else if (name == nameof(SampleFragmentShader))
+        else if (name == nameof(MandelbrotDistanceShader))
         {
-            var shaderModule = new SampleFragmentShader();
+            var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
             using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {

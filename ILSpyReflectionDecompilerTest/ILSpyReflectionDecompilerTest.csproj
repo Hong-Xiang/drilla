@@ -9,6 +9,11 @@
 
   <ItemGroup>
     <PackageReference Include="ICSharpCode.Decompiler" />
+    <PackageReference Include="Lokad.ILPack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj" />
   </ItemGroup>
 
 </Project>

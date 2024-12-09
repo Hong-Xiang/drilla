@@ -4,7 +4,6 @@ using DualDrill.CLSL.Language.IR;
 using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
 using System.Reflection;
@@ -17,8 +16,6 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
     public ParserContext Context { get; } = ParserContext.Create();
     HashSet<StructureDeclaration> TypeDeclarations = [];
     HashSet<FunctionDeclaration> FunctionDeclarations = [];
-
-    Dictionary<MethodBase, FunctionDeclaration> NeedParseBody = [];
 
     public IShaderType ParseType(Type t)
     {
@@ -34,7 +31,7 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
             return result;
         }
 
-        throw new NotSupportedException($"{nameof(ParseType)} can not support {t}");
+        return new OpaqueType(t);
     }
 
     /// <summary>
@@ -110,9 +107,7 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseType(info.PropertyType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
         Context.Variables.Add(info, decl);
         return decl;
-
     }
-
 
     public ShaderModule ParseShaderModule(ISharpShader module)
     {
@@ -123,18 +118,6 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
                                      .OrderBy(m => m.Name)
                                      .ToImmutableArray();
 
-        //var fieldVars = moduleType.GetFields(TargetVariableBindingFlags)
-        //                          .Where(f => !f.Name.EndsWith("k__BackingField"));
-        //var propVars = moduleType.GetProperties(TargetVariableBindingFlags);
-        //foreach (var v in fieldVars)
-        //{
-        //    _ = ParseModuleVariableDeclaration(v);
-        //}
-        //foreach (var v in propVars)
-        //{
-        //    _ = ParseModuleVariableDeclaration(v);
-        //}
-        //var methods = moduleType.GetMethods(TargetMethodBindingFlags);
         foreach (var m in entryMethods)
         {
             _ = ParseMethodMetadata(m);
@@ -181,12 +164,12 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
 
         var decl = new FunctionDeclaration(
             method.Name,
-            [.. method.GetParameters().Select(ParseParameter)],
+            method.IsStatic ? [.. method.GetParameters().Select(ParseParameter)]
+                            : [new ParameterDeclaration("this", ParseType(method.ReflectedType), []), .. method.GetParameters().Select(ParseParameter)],
             ParseReturn(method),
             ParseAttribute(method));
 
         FunctionDeclarations.Add(decl);
-        NeedParseBody.Add(method, decl);
         Context.Functions.Add(method, decl);
 
         if (!IsRuntimeMethod(method))
@@ -216,6 +199,13 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
     bool IsRuntimeMethod(MethodBase m)
     {
         return RuntimeDefinitions.Instance.RuntimeMethods.ContainsKey(m);
+    }
+
+    IEnumerable<PropertyInfo> GetReferencedProperties(IReadOnlyList<Instruction> instructions)
+    {
+        var operands = instructions.Select(op => op.Operand).ToArray();
+        return instructions.Select(op => op.Operand)
+                           .OfType<PropertyInfo>();
     }
 
     IEnumerable<MethodBase> GetCalledMethods(IReadOnlyList<Instruction> instructions)
