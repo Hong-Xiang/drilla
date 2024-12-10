@@ -32,6 +32,28 @@ public class SampleFragmentShaderReflection : ILSL.IReflection
 }
 
 
+public struct BasicConditionShader : ILSL.ISharpShader
+{
+    static bool Pred(int a, int b)
+    {
+        return a >= b;
+    }
+
+
+    [Vertex]
+    public static int vs(int a, int b)
+    {
+        if (Pred(a, b))
+        {
+            return a;
+        }
+        else
+        {
+            return b;
+        }
+    }
+}
+
 public struct MandelbrotDistanceShader : ILSL.ISharpShader
 {
     public struct VertexInput

@@ -121,6 +121,8 @@ public class ParseBodyTest
                 return b;
             }
         }));
+        Assert.Equal(4, stmts.Count);
+        Assert.IsType<LoopStatement>(stmts[3]);
     }
 
     [Fact]

@@ -171,23 +171,23 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
 
     public async ValueTask VisitIf(IfStatement stmt)
     {
-        var ifClause = stmt.IfClause;
-        Writer.Write("if ");
-        await ifClause.Expr.AcceptVisitor(this);
-        Writer.WriteLine();
-        await ifClause.Body.AcceptVisitor(this);
-        foreach (var elseIfClause in stmt.ElseIfClause)
+        Writer.Write("if (");
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.WriteLine(") {");
+        if (stmt.TrueBody.Statements.Length > 0)
         {
-            Writer.Write("else if ");
-            await elseIfClause.Expr.AcceptVisitor(this);
-            Writer.WriteLine();
-            await elseIfClause.Body.AcceptVisitor(this);
+            Writer.Indent();
+            await stmt.TrueBody.AcceptVisitor(this);
+            Writer.Unindent();
         }
-        if (stmt.Else is not null)
+        Writer.WriteLine("} else {");
+        if (stmt.FalseBody.Statements.Length > 0)
         {
-            Writer.WriteLine("else");
-            await stmt.Else.AcceptVisitor(this);
+            Writer.Indent();
+            await stmt.FalseBody.AcceptVisitor(this);
+            Writer.Unindent();
         }
+        Writer.WriteLine("}");
     }
 
     public async ValueTask VisitWhile(WhileStatement stmt)
@@ -287,7 +287,9 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
 
     public async ValueTask VisitBinaryArithmeticExpression(BinaryArithmeticExpression expr)
     {
+        Writer.Write("( ");
         await expr.L.AcceptVisitor(this);
+        Writer.Write(") ");
         var op = expr.Op switch
         {
             BinaryArithmeticOp.Addition => "+",
@@ -297,10 +299,10 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
             BinaryArithmeticOp.Remainder => "%",
             _ => throw new NotSupportedException()
         };
-        Writer.Write(' ');
         Writer.Write(op);
-        Writer.Write(' ');
+        Writer.Write("( ");
         await expr.R.AcceptVisitor(this);
+        Writer.Write(")");
     }
 
 
@@ -386,7 +388,9 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
             _ => throw new NotSupportedException()
         };
         Writer.Write(op);
+        Writer.Write("(");
         await expr.Expr.AcceptVisitor(this);
+        Writer.Write(")");
     }
 
     public async ValueTask VisitUnaryArithmeticExpression(UnaryArithmeticExpression expr)
@@ -464,5 +468,40 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
         await expr.Base.AcceptVisitor(this);
         Writer.Write(".");
         Writer.Write(expr.ComponentName);
+    }
+
+    public async ValueTask VisitLoop(LoopStatement stmt)
+    {
+        Writer.WriteLine("loop {");
+        Writer.Indent();
+        await stmt.Body.AcceptVisitor(this);
+        Writer.Unindent();
+        Writer.WriteLine("}");
+    }
+
+    public async ValueTask VisitSwitch(SwitchStatement stmt)
+    {
+        Writer.Write("switch (");
+        await stmt.Expr.AcceptVisitor(this);
+        Writer.WriteLine(") {");
+        Writer.Indent();
+        foreach (var c in stmt.Cases)
+        {
+            Writer.Write("case ");
+            await c.Label.AcceptVisitor(this);
+            Writer.WriteLine(" : {");
+            Writer.Indent();
+            await c.Body.AcceptVisitor(this);
+            Writer.Unindent();
+            Writer.WriteLine("}");
+        }
+        Writer.Unindent();
+        Writer.WriteLine("}");
+    }
+
+    public ValueTask VisitContinue(ContinueStatement stmt)
+    {
+        Writer.WriteLine("continue;");
+        return ValueTask.CompletedTask;
     }
 }

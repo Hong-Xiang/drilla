@@ -4,16 +4,12 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.IR.Statement;
 
-// attribute* if_clause else_if_clause* else_clause?
 public sealed record class IfStatement(
-    ImmutableHashSet<ShaderAttribute.IShaderAttribute> Attributes,
-    IfClause IfClause,
-    ImmutableArray<IfClause> ElseIfClause
+    IExpression Expr,
+    CompoundStatement TrueBody,
+    CompoundStatement FalseBody,
+    ImmutableHashSet<IShaderAttribute> Attributes
 ) : IStatement
 {
-    public CompoundStatement? Else { get; set; } = null;
 }
 
-public readonly record struct IfClause(IExpression Expr, CompoundStatement Body)
-{
-}

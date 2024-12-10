@@ -1,9 +1,10 @@
 ﻿using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.Expression;
 using DualDrill.CLSL.Language.IR.Statement;
+using DualDrill.CLSL.Language.Types;
 using Lokad.ILPack.IL;
+using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Reflection;
 using System.Reflection.Metadata;
 
@@ -13,9 +14,7 @@ public sealed class RelooperMethodParser : IMethodParser
 {
     public CompoundStatement ParseMethodBody(MethodParseContext env, MethodBase method)
     {
-        var instructions = method.GetInstructions();
-        var compiler = new MethodCompiler(env, method, instructions);
-        var cfg = compiler.GetBasicBlocks();
+        var compiler = new MethodCompilation(env, method);
         return new([.. compiler.Compile()]);
     }
 }
@@ -34,43 +33,89 @@ sealed record class Block(int Index, int Depth)
 
 
 
-sealed class MethodCompiler(
-    MethodParseContext Context,
-    MethodBase Method,
-    IReadOnlyList<Instruction> Instructions
-)
+sealed class MethodCompilation
 {
+    MethodParseContext Context { get; }
+    MethodBase Method { get; }
+    ImmutableArray<Instruction> Instructions { get; }
+
+    MethodBody MethodBody { get; }
+
+    IReadOnlyDictionary<LocalVariableInfo, VariableDeclaration> LocalVariables { get; }
+
+    IReadOnlyList<LocalVariableInfo> LocalVariableInfo { get; }
+    IReadOnlyList<BasicBlock> BasicBlocks { get; }
+    Stack<IExpression>?[] Stacks { get; }
+    IReadOnlyList<int> InstructionToBasicBlockLookUp { get; }
+
+
+    public MethodCompilation(MethodParseContext context, MethodBase method)
+    {
+        Context = context;
+        Method = method;
+        MethodBody = method.GetMethodBody() ?? throw new ArgumentException("Method body can not be null", nameof(method));
+        Instructions = [.. method.GetInstructions()];
+        BasicBlocks = GetBasicBlocks();
+        InstructionToBasicBlockLookUp = GetInstructionToBasicBlockLookup();
+        LocalVariables = CreateLocalVariableDeclarations();
+        LocalVariableInfo = [.. MethodBody.LocalVariables];
+        Stacks = new Stack<IExpression>?[BasicBlocks.Count];
+    }
+
+    IReadOnlyList<int> GetInstructionToBasicBlockLookup()
+    {
+        var result = new int[Instructions.Length];
+        for (var ib = 0; ib < BasicBlocks.Count; ib++)
+        {
+            var b = BasicBlocks[ib];
+            for (var i = b.Index; i < b.Index + b.Length; i++)
+            {
+                result[i] = ib;
+            }
+        }
+        return result;
+    }
+
     public IReadOnlyList<BasicBlock> GetBasicBlocks()
     {
-        Debug.Assert(Instructions.Count > 0);
-        var isLeader = new bool[Instructions.Count];
-        var hasLoopJump = new bool[Instructions.Count];
+        Debug.Assert(Instructions.Length > 0);
+        var isLeader = new bool[Instructions.Length];
+        var hasLoopJump = new bool[Instructions.Length];
         isLeader[0] = true;
 
-        for (var i = 0; i < Instructions.Count; i++)
+        for (var i = 0; i < Instructions.Length; i++)
         {
             var inst = Instructions[i];
+            var offset = 0;
             switch (inst.OpCode.ToILOpCode())
             {
-                case ILOpCode.Br:
                 case ILOpCode.Br_s:
+                case ILOpCode.Brtrue_s:
+                case ILOpCode.Brfalse_s:
                     {
-                        var offset = (int)(sbyte)inst.Operand;
-                        var target = i + offset + 1;
-                        isLeader[target] = true;
-                        if (offset < 0)
-                        {
-                            hasLoopJump[target] = true;
-                        }
+                        offset = (sbyte)inst.Operand;
                         break;
                     }
+                case ILOpCode.Br:
                 case ILOpCode.Brtrue:
-                case ILOpCode.Brtrue_s:
                 case ILOpCode.Brfalse:
-                case ILOpCode.Brfalse_s:
                 case ILOpCode.Switch:
-                    hasLoopJump[i] = true;
+                    {
+                        offset = (int)inst.Operand;
+                    }
                     break;
+                default:
+                    continue;
+            }
+            if (i + 1 < Instructions.Length)
+            {
+                isLeader[i + 1] = true;
+            }
+            var target = i + (offset == 0 ? 1 : offset);
+            isLeader[target] = true;
+            if (offset < 0)
+            {
+                hasLoopJump[target] = true;
             }
         }
         var labelCount = isLeader.Count(x => x);
@@ -79,7 +124,7 @@ sealed class MethodCompiler(
         {
             var bbIndex = 0;
             var bbLength = 0;
-            for (var i = 0; i < Instructions.Count; i++)
+            for (var i = 0; i < Instructions.Length; i++)
             {
                 if (isLeader[i])
                 {
@@ -95,7 +140,7 @@ sealed class MethodCompiler(
             length[bbIndex - 1] = bbLength;
 
             bbIndex = 0;
-            for (var i = 0; i < Instructions.Count; i++)
+            for (var i = 0; i < Instructions.Length; i++)
             {
                 if (isLeader[i])
                 {
@@ -109,24 +154,67 @@ sealed class MethodCompiler(
 
     public IEnumerable<IStatement> Compile()
     {
-        var locals = new List<VariableDeclaration>();
-
-        var mb = Method.GetMethodBody();
-        var li = 0;
-        foreach (var v in mb.LocalVariables)
+        foreach (var v in MethodBody.LocalVariables)
         {
-            var type = Context.Types[v.LocalType];
-            var name = $"clsl_local_{li}";
-            li++;
-            var decl = new VariableDeclaration(CLSL.Language.DeclarationScope.Function, name, type, []);
-            locals.Add(decl);
-            Context.LocalVariables[name] = decl;
+            var decl = LocalVariables[v];
+            if (decl.Type is OpaqueType)
+            {
+                continue;
+            }
+            yield return SyntaxFactory.VarDeclaration(decl);
         }
 
-        var stack = new Stack<IExpression>();
-        for (var i = 0; i < Instructions.Count; i++)
+        if (BasicBlocks.Count == 1)
         {
-            var inst = Instructions[i];
+            foreach (var s in CompileBasicBlock(null, new Stack<IExpression>(), BasicBlocks[0]))
+            {
+                yield return s;
+            }
+            yield break;
+        }
+        var bp = new VariableDeclaration(CLSL.Language.DeclarationScope.Function, "clsl_next", ShaderType.I32, []);
+        yield return SyntaxFactory.VarDeclaration(bp);
+        var cases = new List<SwitchCase>();
+        for (var ib = 0; ib < BasicBlocks.Count(); ib++)
+        {
+            var bb = BasicBlocks[ib];
+            cases.Add(new SwitchCase(
+                SyntaxFactory.Literal(bb.Index),
+                new([.. CompileBasicBlock(bp, Stacks[ib] ??= new Stack<IExpression>(), bb)])
+            ));
+        }
+        yield return new LoopStatement(
+            new CompoundStatement([
+            new SwitchStatement(SyntaxFactory.VarIdentifier(bp), [.. cases], new CompoundStatement([])) ]));
+    }
+    public IReadOnlyDictionary<LocalVariableInfo, VariableDeclaration> CreateLocalVariableDeclarations()
+    {
+        var li = 0;
+        var result = new Dictionary<LocalVariableInfo, VariableDeclaration>();
+        foreach (var v in MethodBody.LocalVariables)
+        {
+            var type = Context.Types[v.LocalType];
+            var name = $"clsl__v{li}";
+            li++;
+            var decl = new VariableDeclaration(CLSL.Language.DeclarationScope.Function, name, type, []);
+            result.Add(v, decl);
+        }
+        return result;
+    }
+
+
+    IExpression LocalVariableRef(int index)
+           => SyntaxFactory.VarIdentifier(LocalVariables[LocalVariableInfo[index]]);
+
+
+    IEnumerable<IStatement> CompileBasicBlock(VariableDeclaration? bp, Stack<IExpression> stack, BasicBlock bb)
+    {
+        var ip = bb.Index - 1;
+        var maxIp = bb.Index + bb.Length;
+        while (ip < maxIp - 1)
+        {
+            ip++;
+            var inst = Instructions[ip];
             switch (inst.OpCode.ToILOpCode())
             {
                 case ILOpCode.Nop:
@@ -179,6 +267,10 @@ sealed class MethodCompiler(
                 case ILOpCode.Ldstr:
                     throw new NotSupportedException();
                 case ILOpCode.Ldarg_0:
+                    if (Context.Parameters[0].Type is OpaqueType)
+                    {
+                        break;
+                    }
                     stack.Push(new VariableIdentifierExpression(Context.Parameters[0]));
                     break;
                 case ILOpCode.Ldarg_1:
@@ -231,7 +323,7 @@ sealed class MethodCompiler(
                 case ILOpCode.Stloc:
                     {
                         yield return new SimpleAssignmentStatement(
-                            new VariableIdentifierExpression(locals[(int)inst.Operand]),
+                            LocalVariableRef((int)inst.Operand),
                             stack.Pop(),
                             AssignmentOp.Assign
                         );
@@ -240,25 +332,111 @@ sealed class MethodCompiler(
                 case ILOpCode.Stloc_0:
                     {
                         yield return new SimpleAssignmentStatement(
-                            new VariableIdentifierExpression(locals[0]),
+                            LocalVariableRef(0),
                             stack.Pop(),
                             AssignmentOp.Assign
                         );
                         break;
                     }
-                case ILOpCode.Ldloc_0:
+                case ILOpCode.Stloc_1:
                     {
-                        stack.Push(new VariableIdentifierExpression(locals[0]));
+                        yield return new SimpleAssignmentStatement(
+                            LocalVariableRef(1),
+                            stack.Pop(),
+                            AssignmentOp.Assign
+                        );
                         break;
                     }
+
+                case ILOpCode.Ldloc_0:
+                    {
+                        stack.Push(LocalVariableRef(0));
+                        break;
+                    }
+                case ILOpCode.Ldloc_1:
+                    {
+                        stack.Push(LocalVariableRef(1));
+                        break;
+                    }
+
                 case ILOpCode.Br_s:
                     {
-                        // TODO: actual implementation
+                        if (bp is null)
+                        {
+                            throw new NotSupportedException();
+                        }
+                        var target = ip + Math.Max((int)(sbyte)inst.Operand, 1);
+                        yield return new SimpleAssignmentStatement(
+                            SyntaxFactory.VarIdentifier(bp),
+                            SyntaxFactory.Literal(target),
+                            AssignmentOp.Assign
+                        );
+                        yield return SyntaxFactory.Continue();
+                        var ib = InstructionToBasicBlockLookUp[target];
+                        Stacks[ib] ??= new Stack<IExpression>(stack);
+                        break;
+                    }
+                case ILOpCode.Brfalse_s:
+                    {
+                        if (bp is null)
+                        {
+                            throw new NotSupportedException();
+                        }
+                        var target = ip + Math.Max((int)(sbyte)inst.Operand, 1);
+                        yield return new IfStatement(
+                            stack.Pop(),
+                            new([
+                                new SimpleAssignmentStatement(
+                                    SyntaxFactory.VarIdentifier(bp),
+                                    SyntaxFactory.Literal(ip + 1),
+                                    AssignmentOp.Assign
+                                ),
+                                SyntaxFactory.Continue()
+
+                                ]),
+                            new([
+                                new SimpleAssignmentStatement(
+                                    SyntaxFactory.VarIdentifier(bp),
+                                    SyntaxFactory.Literal(target),
+                                    AssignmentOp.Assign
+                                ),
+                                SyntaxFactory.Continue()
+                                ]),
+                            []
+                        );
+
+                        var ib = InstructionToBasicBlockLookUp[target];
+                        Stacks[ib] ??= new Stack<IExpression>(stack);
                         break;
                     }
                 case ILOpCode.Ret:
-                    yield return new ReturnStatement(stack.Pop());
+                    if (stack.Count != 0)
+                    {
+                        yield return new ReturnStatement(stack.Pop());
+                    }
+                    else
+                    {
+                        yield return SyntaxFactory.Return(null);
+                    }
                     break;
+                case ILOpCode.Clt:
+                    {
+                        var insts = Instructions.AsSpan();
+                        if (Instructions[(ip + 1)..Math.Min((ip + 3), maxIp)] is
+                        [
+                            var op0, var op1
+                        ] && op0.OpCode.ToILOpCode() == ILOpCode.Ldc_i4_0
+                          && op1.OpCode.ToILOpCode() == ILOpCode.Ceq)
+                        {
+                        }
+                        var r = stack.Pop();
+                        var l = stack.Pop();
+                        stack.Push(new UnaryLogicalExpression(new BinaryRelationalExpression(l, r, BinaryRelationalOp.LessThan), UnaryLogicalOp.Not));
+                        ip += 2;
+                        break;
+                        throw new NotSupportedException();
+                    }
+
                 default:
                     throw new NotSupportedException($"Unsupported OpCode: {inst.OpCode}");
             }

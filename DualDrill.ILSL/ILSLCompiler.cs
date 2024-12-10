@@ -20,17 +20,18 @@ public static class ILSLCompiler
     public static async ValueTask<string> CompileV2(ISharpShader shaderModule)
     {
         var type = shaderModule.GetType();
-        using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
-        {
-            HotReloadAssemblies = [
-               type.Assembly,
-               typeof(ILSLCompiler).Assembly
-            ]
-        });
+        //using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
+        //{
+        //    HotReloadAssemblies = [
+        //       type.Assembly,
+        //       typeof(ILSLCompiler).Assembly
+        //    ]
+        //});
+        var bodyParser = new RelooperMethodParser();
 
         var parser = new CLSLParser(bodyParser);
         var module = parser.ParseShaderModule(shaderModule);
-        var tw = new IndentStringWriter("\t");
+        var tw = new IndentStringWriter("  ");
         var visitor = new ModuleToCodeVisitor(tw);
         foreach (var d in module.Declarations.OfType<VariableDeclaration>())
         {

@@ -49,24 +49,21 @@ public static class SyntaxFactory
 
 
 
-    public static IExpression Argument(ParameterDeclaration parameter) => new FormalParameterExpression(parameter);
     public static IExpression Call(FunctionDeclaration callee, params IExpression[] arguments) => new FunctionCallExpression(callee, [.. arguments]);
-    public static IExpression Literal(float value) => new LiteralValueExpression(new FloatLiteral(N32.Instance, value));
-    public static IExpression Literal(double value) => new LiteralValueExpression(new FloatLiteral(N64.Instance, value));
-    public static IExpression Literal(int value) => new LiteralValueExpression(new IntLiteral(N32.Instance, value));
-    public static IExpression Literal(uint value) => new LiteralValueExpression(new UIntLiteral(N32.Instance, value));
-    public static IExpression Literal(bool value) => new LiteralValueExpression(new BoolLiteral(value));
-    public static IStatement Return(IExpression? Expr) => new ReturnStatement(Expr);
-    public static IStatement Break() => new BreakStatement();
-    public static IStatement Declare(VariableDeclaration variable) => new VariableOrValueStatement(variable);
-    public static IExpression Reference(VariableDeclaration variable) => new VariableIdentifierExpression(variable);
-    public static IStatement IfElse(IExpression expr, CompoundStatement ifBranch, CompoundStatement elseBranch) => new IfStatement(
-        Attributes: [],
-        new IfClause(expr, ifBranch),
-        ElseIfClause: []
-    )
-    {
-        Else = elseBranch
-    };
+    public static LiteralValueExpression Literal(float value) => new(new FloatLiteral(N32.Instance, value));
+    public static LiteralValueExpression Literal(double value) => new(new FloatLiteral(N64.Instance, value));
+    public static LiteralValueExpression Literal(int value) => new(new IntLiteral(N32.Instance, value));
+    public static LiteralValueExpression Literal(uint value) => new(new UIntLiteral(N32.Instance, value));
+    public static LiteralValueExpression Literal(bool value) => new(new BoolLiteral(value));
+
+    public static VariableIdentifierExpression VarIdentifier(VariableDeclaration variable) => new(variable);
+    public static FormalParameterExpression ArgIdentifier(ParameterDeclaration parameter) => new(parameter);
+
+    public static ReturnStatement Return(IExpression? Expr) => new(Expr);
+    public static BreakStatement Break() => new();
+    public static ContinueStatement Continue() => new();
+    public static VariableOrValueStatement VarDeclaration(VariableDeclaration variable) => new(variable);
+    public static IfStatement If(IExpression expr, CompoundStatement trueBody, CompoundStatement falseBody) => new(expr, trueBody, falseBody, []);
+
 
 }

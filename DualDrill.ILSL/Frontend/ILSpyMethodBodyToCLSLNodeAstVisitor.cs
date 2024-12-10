@@ -30,7 +30,8 @@ public class ILSpyMethodParseInvocationMethodNotResolvedException()
 {
 }
 
-public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContext Context, Assembly Assembly) : IAstVisitor<IShaderAstNode?>
+public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContext Context, Assembly Assembly)
+    : IAstVisitor<IShaderAstNode?>
 {
     public IShaderAstNode? VisitAccessor(Accessor accessor)
     {
@@ -256,7 +257,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         throw new NotImplementedException();
     }
 
-    public IShaderAstNode? VisitContinueStatement(ContinueStatement continueStatement)
+    public IShaderAstNode? VisitContinueStatement(ICSharpCode.Decompiler.CSharp.Syntax.ContinueStatement continueStatement)
     {
         throw new NotImplementedException();
     }
@@ -354,17 +355,11 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
     {
         if (expr is ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression { Expression: ConditionalExpression cond })
         {
-            return new IfStatement(
-                Attributes: [],
-                new IfClause(
+            return SyntaxFactory.If(
                     (IExpression)cond.Condition.AcceptVisitor(this)!,
-                    MapCompoundStatement(UnwrapConditionalAssignment(lhs, cond.TrueExpression, op))!
-                ),
-                ElseIfClause: []
-            )
-            {
-                Else = MapCompoundStatement(UnwrapConditionalAssignment(lhs, cond.FalseExpression, op))
-            };
+                    MapCompoundStatement(UnwrapConditionalAssignment(lhs, cond.TrueExpression, op))!,
+                    MapCompoundStatement(UnwrapConditionalAssignment(lhs, cond.FalseExpression, op)));
+
         }
 
         return new SimpleAssignmentStatement(lhs, (IExpression)expr.AcceptVisitor(this)!, op);
@@ -482,17 +477,11 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
     public IShaderAstNode? VisitIfElseStatement(IfElseStatement ifElseStatement)
     {
         // if time, expand nested if/else into list of else if clauses
-        return new IfStatement(
-            Attributes: [],
-            new IfClause(
-                (IExpression)ifElseStatement.Condition.AcceptVisitor(this)!,
-                MapCompoundStatement((IStatement?)ifElseStatement.TrueStatement.AcceptVisitor(this))!
-            ),
-            ElseIfClause: []
-        )
-        {
-            Else = MapCompoundStatement((IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this))
-        };
+        return SyntaxFactory.If(
+            (IExpression)ifElseStatement.Condition.AcceptVisitor(this)!,
+            MapCompoundStatement((IStatement?)ifElseStatement.TrueStatement.AcceptVisitor(this))!,
+            MapCompoundStatement((IStatement?)ifElseStatement.FalseStatement.AcceptVisitor(this))
+        );
     }
 
     public IShaderAstNode? VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration)
@@ -906,7 +895,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         throw new NotImplementedException();
     }
 
-    public IShaderAstNode? VisitSwitchStatement(SwitchStatement switchStatement)
+    public IShaderAstNode? VisitSwitchStatement(ICSharpCode.Decompiler.CSharp.Syntax.SwitchStatement switchStatement)
     {
         throw new NotImplementedException();
     }
@@ -1072,7 +1061,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         {
             CompoundStatement s => s,
             not null => new CompoundStatement([stmt]),
-            null => null
+            null => new([])
         };
     }
 

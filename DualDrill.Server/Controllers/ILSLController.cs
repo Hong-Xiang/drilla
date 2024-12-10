@@ -1,4 +1,8 @@
-﻿using DualDrill.Engine.Shader;
+﻿using DualDrill.CLSL.Language.IR;
+using DualDrill.CLSL.Language.IR.Declaration;
+using DualDrill.CLSL.Language.IR.Expression;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
 using DualDrill.ILSL.Frontend;
 using DualDrill.Server.Services;
@@ -53,11 +57,30 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("compile")]
     public async Task<IActionResult> CompileDevelopModule()
     {
-        var ht = new MandelbrotDistanceShader();
-        var ir = ILSL.ILSLCompiler.Parse(ht);
+        var sm = new MandelbrotDistanceShader();
+        //var sm = new BasicConditionShader();
+        //var ir = ILSL.ILSLCompiler.Parse(sm);
+        //var code = await ILSLCompiler.EmitCode(ir);
+        var code = await ILSLCompiler.CompileV2(sm);
+        return Ok(code);
+    }
+
+    [HttpGet("emit")]
+    public async Task<IActionResult> EmitDevelopModule()
+    {
+        var module = new ShaderModule([
+            new FunctionDeclaration("foo", [], new FunctionReturn(ShaderType.I32, []), []){
+                Body = new([
+                ])
+            }
+        ]);
+        //var ht = new MandelbrotDistanceShader();
+        var sm = new BasicConditionShader();
+        var ir = ILSL.ILSLCompiler.Parse(sm);
         var code = await ILSLCompiler.EmitCode(ir);
         return Ok(code);
     }
+
     [HttpGet("")]
     public IActionResult Index()
     {
