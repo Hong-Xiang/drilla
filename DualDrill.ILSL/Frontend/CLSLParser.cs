@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.IR;
 using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
 using System.Reflection;
@@ -19,6 +20,10 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
 
     public IShaderType ParseType(Type t)
     {
+        if(t == typeof(vec2f32))
+        {
+            Console.WriteLine();
+        }
         if (Context.Types.TryGetValue(t, out var foundResult))
         {
             return foundResult;

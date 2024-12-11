@@ -64,7 +64,7 @@ public struct MandelbrotDistanceShader : ILSL.ISharpShader
     [Uniform]
     [Group(0)]
     [Binding(0)]
-    float iTime;
+    static float iTime;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
@@ -75,7 +75,7 @@ public struct MandelbrotDistanceShader : ILSL.ISharpShader
 
     [Fragment]
     [return: Location(0)]
-    public vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 fragCoord)
+    public static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 fragCoord)
     {
         // Courtesy https://www.shadertoy.com/view/lsX3W4
         var iResolution = vec2(800.0f, 600.0f);

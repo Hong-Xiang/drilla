@@ -12,7 +12,7 @@ public enum SwizzleComponent
     r,
     g,
     b,
-    a
+    a,
 }
 
 public sealed record class VectorSwizzleAccessExpression(IExpression Base, ImmutableArray<SwizzleComponent> Components) : IExpression

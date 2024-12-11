@@ -47,7 +47,7 @@ sealed class MethodCompilation
     IReadOnlyList<BasicBlock> BasicBlocks { get; }
     Stack<IExpression>?[] Stacks { get; }
     IReadOnlyList<int> InstructionToBasicBlockLookUp { get; }
-
+    ImmutableArray<int> OffsetToInstructionIndex { get; }
 
     public MethodCompilation(MethodParseContext context, MethodBase method)
     {
@@ -55,11 +55,19 @@ sealed class MethodCompilation
         Method = method;
         MethodBody = method.GetMethodBody() ?? throw new ArgumentException("Method body can not be null", nameof(method));
         Instructions = [.. method.GetInstructions()];
+        Span<int> offsetToInstructionIndex = new int[Instructions[^1].Offset + Instructions[^1].OpCode.Size];
+        foreach ((var index, var inst) in Instructions.Index())
+        {
+            offsetToInstructionIndex[inst.Offset..(inst.Offset + inst.OpCode.Size)].Fill(index);
+        }
+        OffsetToInstructionIndex = [.. offsetToInstructionIndex];
+
         BasicBlocks = GetBasicBlocks();
         InstructionToBasicBlockLookUp = GetInstructionToBasicBlockLookup();
         LocalVariables = CreateLocalVariableDeclarations();
         LocalVariableInfo = [.. MethodBody.LocalVariables];
         Stacks = new Stack<IExpression>?[BasicBlocks.Count];
+
     }
 
     IReadOnlyList<int> GetInstructionToBasicBlockLookup()
@@ -80,6 +88,8 @@ sealed class MethodCompilation
     {
         Debug.Assert(Instructions.Length > 0);
         var isLeader = new bool[Instructions.Length];
+
+
         var hasLoopJump = new bool[Instructions.Length];
         isLeader[0] = true;
 
@@ -99,19 +109,23 @@ sealed class MethodCompilation
                 case ILOpCode.Br:
                 case ILOpCode.Brtrue:
                 case ILOpCode.Brfalse:
-                case ILOpCode.Switch:
                     {
                         offset = (int)inst.Operand;
+                        break;
                     }
-                    break;
+                case ILOpCode.Switch:
+                    {
+                        throw new NotSupportedException();
+                    }
                 default:
                     continue;
             }
+            var targetOffset = inst.Offset + offset + inst.OpCode.Size;
+            var target = OffsetToInstructionIndex[targetOffset];
             if (i + 1 < Instructions.Length)
             {
                 isLeader[i + 1] = true;
             }
-            var target = i + (offset == 0 ? 1 : offset);
             isLeader[target] = true;
             if (offset < 0)
             {
@@ -281,6 +295,7 @@ sealed class MethodCompilation
                     break;
                 case ILOpCode.Add:
                     {
+                        Debug.Assert(stack.Count >= 2);
                         var r = stack.Pop();
                         var l = stack.Pop();
                         stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Addition));
@@ -293,9 +308,39 @@ sealed class MethodCompilation
                         stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Subtraction));
                         break;
                     }
+                case ILOpCode.Mul:
+                    {
+                        var r = stack.Pop();
+                        var l = stack.Pop();
+                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Multiplication));
+                        break;
+                    }
+                case ILOpCode.Div:
+                    {
+                        var r = stack.Pop();
+                        var l = stack.Pop();
+                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Division));
+                        break;
+                    }
                 case ILOpCode.Call:
                     {
                         var methodInfo = (MethodInfo)inst.Operand;
+                        if (TryGetVectorSwizzle(methodInfo, out var swizzles))
+                        {
+                            stack.Push(
+                                new VectorSwizzleAccessExpression(stack.Pop(), swizzles)
+                            );
+                            break;
+                        }
+                        if (TryGetOp(methodInfo, out var op))
+                        {
+                            var r = stack.Pop();
+                            var l = stack.Pop();
+                            stack.Push(
+                                new BinaryArithmeticExpression(l, r, op)
+                            );
+                            break;
+                        }
                         var callee = Context.Methods[methodInfo];
                         var parameters = callee.Parameters;
                         var args = new IExpression[parameters.Length];
@@ -347,7 +392,35 @@ sealed class MethodCompilation
                         );
                         break;
                     }
-
+                case ILOpCode.Stloc_2:
+                    {
+                        yield return new SimpleAssignmentStatement(
+                            LocalVariableRef(2),
+                            stack.Pop(),
+                            AssignmentOp.Assign
+                        );
+                        break;
+                    }
+                case ILOpCode.Stloc_3:
+                    {
+                        yield return new SimpleAssignmentStatement(
+                            LocalVariableRef(3),
+                            stack.Pop(),
+                            AssignmentOp.Assign
+                        );
+                        break;
+                    }
+                case ILOpCode.Stloc_s:
+                    {
+                        var info = (LocalVariableInfo)inst.Operand;
+                        yield return new SimpleAssignmentStatement(
+                            LocalVariableRef(info.LocalIndex),
+                            //SyntaxFactory.VarIdentifier(LocalVariables[info]),
+                            stack.Pop(),
+                            AssignmentOp.Assign
+                        );
+                        break;
+                    }
                 case ILOpCode.Ldloc_0:
                     {
                         stack.Push(LocalVariableRef(0));
@@ -358,14 +431,31 @@ sealed class MethodCompilation
                         stack.Push(LocalVariableRef(1));
                         break;
                     }
-
+                case ILOpCode.Ldloc_2:
+                    {
+                        stack.Push(LocalVariableRef(2));
+                        break;
+                    }
+                case ILOpCode.Ldloc_3:
+                    {
+                        stack.Push(LocalVariableRef(3));
+                        break;
+                    }
+                case ILOpCode.Ldloc_s:
+                    {
+                        var info = (LocalVariableInfo)inst.Operand;
+                        //stack.Push(SyntaxFactory.VarIdentifier(LocalVariables[info]));
+                        stack.Push(LocalVariableRef(info.LocalIndex));
+                        break;
+                    }
                 case ILOpCode.Br_s:
                     {
                         if (bp is null)
                         {
                             throw new NotSupportedException();
                         }
-                        var target = ip + Math.Max((int)(sbyte)inst.Operand, 1);
+                        var targetOffset = inst.Offset + (int)inst.Operand + inst.OpCode.Size;
+                        var target = OffsetToInstructionIndex[targetOffset];
                         yield return new SimpleAssignmentStatement(
                             SyntaxFactory.VarIdentifier(bp),
                             SyntaxFactory.Literal(target),
@@ -376,13 +466,32 @@ sealed class MethodCompilation
                         Stacks[ib] ??= new Stack<IExpression>(stack);
                         break;
                     }
+                case ILOpCode.Br:
+                    {
+                        if (bp is null)
+                        {
+                            throw new NotSupportedException();
+                        }
+                        var targetOffset = inst.Offset + (int)inst.Operand + inst.OpCode.Size;
+                        var target = OffsetToInstructionIndex[targetOffset];
+                        yield return new SimpleAssignmentStatement(
+                            SyntaxFactory.VarIdentifier(bp),
+                            SyntaxFactory.Literal(target),
+                            AssignmentOp.Assign
+                        );
+                        yield return SyntaxFactory.Continue();
+                        var ib = InstructionToBasicBlockLookUp[target];
+                        Stacks[ib] ??= new Stack<IExpression>(stack);
+                        break;
+                    }
+
                 case ILOpCode.Brfalse_s:
                     {
                         if (bp is null)
                         {
                             throw new NotSupportedException();
                         }
-                        var target = ip + Math.Max((int)(sbyte)inst.Operand, 1);
+                        var target = ip + (sbyte)inst.Operand + inst.OpCode.Size;
                         yield return new IfStatement(
                             stack.Pop(),
                             new([
@@ -436,11 +545,127 @@ sealed class MethodCompilation
                         break;
                         throw new NotSupportedException();
                     }
+                case ILOpCode.Cgt:
+                    {
+                        var insts = Instructions.AsSpan();
+                        if (Instructions[(ip + 1)..Math.Min((ip + 3), maxIp)] is
+                        [
+                            var op0, var op1
+                        ] && op0.OpCode.ToILOpCode() == ILOpCode.Ldc_i4_0
+                          && op1.OpCode.ToILOpCode() == ILOpCode.Ceq)
+                        {
+                        }
+                        var r = stack.Pop();
+                        var l = stack.Pop();
+                        stack.Push(new UnaryLogicalExpression(new BinaryRelationalExpression(l, r, BinaryRelationalOp.GreaterThan), UnaryLogicalOp.Not));
+                        ip += 2;
+                        break;
+                        throw new NotSupportedException();
+                    }
 
+                case ILOpCode.Ldarga_s:
+                    {
+                        var paraInfo = (ParameterInfo)inst.Operand;
+                        if (ip + 1 < Instructions.Length)
+                        {
+                            var next = Instructions[ip + 1];
+                            if (next.OpCode.ToILOpCode() == ILOpCode.Call)
+                            {
+                                var f = (MethodInfo)next.Operand;
+                                // TODO: add attribute for this hack
+                                if (TryGetVectorSwizzle(f, out var swizzles))
+                                {
+                                    stack.Push(new VectorSwizzleAccessExpression(
+                                        SyntaxFactory.ArgIdentifier(Context.Parameters[paraInfo.Position]),
+                                        swizzles));
+                                    ip++;
+                                    break;
+                                }
+                            }
+                        }
+                        throw new NotSupportedException();
+                    }
+                case ILOpCode.Ldloca_s:
+                    {
+                        var info = (LocalVariableInfo)inst.Operand;
+                        if (ip + 1 < Instructions.Length)
+                        {
+                            var next = Instructions[ip + 1];
+                            if (next.OpCode.ToILOpCode() == ILOpCode.Call)
+                            {
+                                var f = (MethodInfo)next.Operand;
+                                // TODO: add attribute for this hack
+                                if (TryGetVectorSwizzle(f, out var swizzles))
+                                {
+                                    stack.Push(new VectorSwizzleAccessExpression(
+                                        (LocalVariableRef(info.LocalIndex)),
+                                        swizzles));
+                                    ip++;
+                                    break;
+                                }
+                            }
+                        }
+                        throw new NotSupportedException();
+                    }
+
+                case ILOpCode.Ldsfld:
+                    {
+                        var info = (FieldInfo)inst.Operand;
+                        // TODO: better handling other than this ad hoc one
+                        if (info.GetCustomAttribute<CLSL.Language.IR.ShaderAttribute.UniformAttribute>() is not null)
+                        {
+                            stack.Push(SyntaxFactory.VarIdentifier(
+                                new VariableDeclaration(CLSL.Language.DeclarationScope.Module,
+                                info.Name,
+                                Context.Types[info.FieldType],
+                                []
+                            )));
+                            break;
+                        }
+                        throw new NotImplementedException();
+                    }
                 default:
-                    throw new NotSupportedException($"Unsupported OpCode: {inst.OpCode}");
+                    throw new NotSupportedException($"Unsupported OpCode: {inst.OpCode}@{inst.Offset:X} {inst.Operand} - Method {Method.DeclaringType.Name}.{Method.Name}");
             }
         }
+    }
+
+    bool TryGetOp(MethodInfo f, out BinaryArithmeticOp op)
+    {
+        switch (f.Name)
+        {
+            case "op_Addition":
+                op = BinaryArithmeticOp.Addition;
+                return true;
+            case "op_Subtraction":
+                op = BinaryArithmeticOp.Subtraction;
+                return true;
+            case "op_Multiply":
+                op = BinaryArithmeticOp.Multiplication;
+                return true;
+            case "op_Division":
+                op = BinaryArithmeticOp.Division;
+                return true;
+            case "op_Modulus":
+                op = BinaryArithmeticOp.Remainder;
+                return true;
+            default:
+                op = default;
+                return false;
+        }
+    }
+    bool TryGetVectorSwizzle(MethodInfo f, out ImmutableArray<SwizzleComponent> swizzles)
+    {
+        if (f.DeclaringType.Namespace.StartsWith("DualDrill.Mathematics"))
+        {
+            if (f.Name.StartsWith("get_"))
+            {
+                swizzles = [.. f.Name.Substring(4).Select(c => Enum.Parse<SwizzleComponent>(c.ToString()))];
+                return true;
+            }
+        }
+        swizzles = default;
+        return false;
     }
 }
 
