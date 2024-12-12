@@ -6,6 +6,7 @@ public sealed record class IndexingExpression(IExpression Base, IExpression Inde
 {
     public IShaderType Type => Base.Type switch
     {
+        IVecType vecType => vecType.ElementType,
         _ => throw new InvalidExpressionTypeException(nameof(IndexingExpression))
     };
 }

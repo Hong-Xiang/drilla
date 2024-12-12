@@ -2,7 +2,7 @@
 using DualDrill.Common.Nat;
 using System.Text.Json.Serialization;
 
-namespace DualDrill.CLSL.Language.AbstractSyntaxTree;
+namespace DualDrill.CLSL.Language.Literal;
 
 [JsonDerivedType(typeof(BoolLiteral), nameof(BoolLiteral))]
 [JsonDerivedType(typeof(FloatLiteral), nameof(FloatLiteral))]

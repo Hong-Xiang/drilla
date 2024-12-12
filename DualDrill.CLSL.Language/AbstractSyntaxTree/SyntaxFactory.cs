@@ -1,8 +1,12 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
+using System.Diagnostics;
 
-namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+namespace DualDrill.CLSL.Language.AbstractSyntaxTree;
 
 public static class SyntaxFactory
 {
@@ -65,5 +69,9 @@ public static class SyntaxFactory
     public static VariableOrValueStatement VarDeclaration(VariableDeclaration variable) => new(variable);
     public static IfStatement If(IExpression expr, CompoundStatement trueBody, CompoundStatement falseBody) => new(expr, trueBody, falseBody, []);
 
-
+    public static IExpression Not(IExpression e)
+    {
+        Debug.Assert(e.Type is BoolType);
+        return new UnaryLogicalExpression(e, UnaryLogicalOp.Not);
+    }
 }

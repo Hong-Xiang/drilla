@@ -4,7 +4,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="DotNext" ></PackageReference>
+	<PackageReference Include="DotNext"></PackageReference>
     <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
   </ItemGroup>
 

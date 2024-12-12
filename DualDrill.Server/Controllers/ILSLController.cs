@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
@@ -67,7 +68,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("emit")]
     public async Task<IActionResult> EmitDevelopModule()
     {
-        var module = new ShaderModule([
+        var module = new ShaderModuleDeclaration([
             new FunctionDeclaration("foo", [], new FunctionReturn(ShaderType.I32, []), []){
                 Body = new([
                 ])
@@ -292,7 +293,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         return await MethodTargetAction(moduleName, methodName, async (parser, method) =>
         {
             var ir = parser.ParseMethod(method);
-            var module = new ShaderModule([ir]);
+            var module = new ShaderModuleDeclaration([ir]);
             var code = await module.EmitCode();
             return Ok(code);
         });

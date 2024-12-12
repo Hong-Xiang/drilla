@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+using DualDrill.CLSL.Language.Declaration;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
 

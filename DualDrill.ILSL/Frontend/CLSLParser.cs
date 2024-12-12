@@ -1,9 +1,8 @@
 ﻿using DotNext.Reflection;
-using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
@@ -115,7 +114,7 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         return decl;
     }
 
-    public ShaderModule ParseShaderModule(ISharpShader module)
+    public ShaderModuleDeclaration ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
 

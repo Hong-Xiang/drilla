@@ -6,13 +6,13 @@ using System.Numerics;
 using System.Reflection;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
-using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.Declaration;
 namespace DualDrill.ILSL;
 
 public interface IShaderModuleReflection
 {
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(ShaderModule module);
-    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(ShaderModule module);
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module);
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(ShaderModuleDeclaration module);
     public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>();
     public IVertexBufferLayoutBuilder<TGPULayout> GetVertexBufferLayoutBuilder<TGPULayout>() where TGPULayout : struct;
 }
@@ -264,7 +264,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         };
     }
 
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(ShaderModule module)
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module)
     {
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntry>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
@@ -291,7 +291,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         return gpuBindGroupDescriptor;
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(ShaderModule module)
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(ShaderModuleDeclaration module)
     {
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntryBuffer>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())

@@ -1,4 +1,4 @@
-﻿namespace DualDrill.CLSL.Language;
+﻿namespace DualDrill.CLSL.Language.Declaration;
 
 public enum ValueDeclarationKind
 {

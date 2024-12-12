@@ -1,6 +1,8 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
@@ -176,7 +178,7 @@ sealed class MethodCompilation
             }
             yield break;
         }
-        var bp = new VariableDeclaration(CLSL.Language.DeclarationScope.Function, "clsl_next", ShaderType.I32, []);
+        var bp = new VariableDeclaration(DeclarationScope.Function, "clsl_next", ShaderType.I32, []);
         yield return SyntaxFactory.VarDeclaration(bp);
         var cases = new List<SwitchCase>();
         for (var ib = 0; ib < BasicBlocks.Count(); ib++)
@@ -200,7 +202,7 @@ sealed class MethodCompilation
             var type = Context.Types[v.LocalType];
             var name = $"clsl__v{li}";
             li++;
-            var decl = new VariableDeclaration(CLSL.Language.DeclarationScope.Function, name, type, []);
+            var decl = new VariableDeclaration(DeclarationScope.Function, name, type, []);
             result.Add(v, decl);
         }
         return result;
@@ -605,7 +607,7 @@ sealed class MethodCompilation
                         if (info.GetCustomAttribute<CLSL.Language.AbstractSyntaxTree.ShaderAttribute.UniformAttribute>() is not null)
                         {
                             stack.Push(SyntaxFactory.VarIdentifier(
-                                new VariableDeclaration(CLSL.Language.DeclarationScope.Module,
+                                new VariableDeclaration(DeclarationScope.Module,
                                 info.Name,
                                 Context.Types[info.FieldType],
                                 []
