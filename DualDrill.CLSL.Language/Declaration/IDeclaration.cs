@@ -1,8 +1,9 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
-namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+namespace DualDrill.CLSL.Language.Declaration;
 
 [JsonDerivedType(typeof(FunctionDeclaration), nameof(FunctionDeclaration))]
 [JsonDerivedType(typeof(ParameterDeclaration), nameof(ParameterDeclaration))]

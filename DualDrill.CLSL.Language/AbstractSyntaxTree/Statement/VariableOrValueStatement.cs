@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+﻿using DualDrill.CLSL.Language.Declaration;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 

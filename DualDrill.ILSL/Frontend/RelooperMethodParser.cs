@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
@@ -604,7 +603,7 @@ sealed class MethodCompilation
                     {
                         var info = (FieldInfo)inst.Operand;
                         // TODO: better handling other than this ad hoc one
-                        if (info.GetCustomAttribute<CLSL.Language.AbstractSyntaxTree.ShaderAttribute.UniformAttribute>() is not null)
+                        if (info.GetCustomAttribute<CLSL.Language.ShaderAttribute.UniformAttribute>() is not null)
                         {
                             stack.Push(SyntaxFactory.VarIdentifier(
                                 new VariableDeclaration(DeclarationScope.Module,

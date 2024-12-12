@@ -1,4 +1,4 @@
-﻿namespace DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+﻿namespace DualDrill.CLSL.Language.ShaderAttribute;
 
 public sealed class ZeroValueBuiltinFunctionAttribute() : IShaderAttribute
 {

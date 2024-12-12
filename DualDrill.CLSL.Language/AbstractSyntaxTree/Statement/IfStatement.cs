@@ -1,5 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;

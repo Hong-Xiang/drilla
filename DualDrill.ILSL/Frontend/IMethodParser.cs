@@ -1,12 +1,12 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 using System.Reflection;
 
 namespace DualDrill.ILSL.Frontend;
 
-using CLSLParameterDeclaration = CLSL.Language.AbstractSyntaxTree.Declaration.ParameterDeclaration;
+using CLSLParameterDeclaration = ParameterDeclaration;
 
 public interface IMethodParser
 {

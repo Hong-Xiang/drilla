@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.ILSL;
 using DualDrill.Mathematics;
 

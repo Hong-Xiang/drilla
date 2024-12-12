@@ -1,6 +1,6 @@
 ﻿using DualDrill.CLSL.Language.Types;
 
-namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+namespace DualDrill.CLSL.Language.Declaration;
 
 public interface IDeclarationVisitor<T>
 {

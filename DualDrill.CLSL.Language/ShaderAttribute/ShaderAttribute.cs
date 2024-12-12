@@ -1,4 +1,6 @@
-﻿namespace DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+
+namespace DualDrill.CLSL.Language.ShaderAttribute;
 
 public interface IShaderAttribute : IShaderAstNode { }
 public interface IShaderStageAttribute : IShaderAttribute { }

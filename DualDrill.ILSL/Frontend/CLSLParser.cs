@@ -1,8 +1,7 @@
 ﻿using DotNext.Reflection;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Mathematics;
 using Lokad.ILPack.IL;

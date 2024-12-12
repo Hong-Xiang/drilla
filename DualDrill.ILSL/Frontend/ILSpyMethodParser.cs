@@ -1,7 +1,6 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;

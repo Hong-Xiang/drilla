@@ -139,7 +139,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                 {
                     channel.onmessage += (dc, protocol, data) =>
                     {
-                        var e = JsonSerializer.Deserialize<PointerEvent>(data, CustomJsonOption.Web);
+                        var e = JsonSerializer.Deserialize<PointerEvent>(data, JsonSerializerOptions.Web);
                         if (e is not null)
                         {
                             PointerEventPublisher.Publish(new ClientEvent<PointerEvent>(clientId, e));
@@ -154,7 +154,7 @@ public sealed partial class SIPSorceryRTCPeerConnectionProviderService(
                 {
                     channel.onmessage += (dc, protocol, data) =>
                     {
-                        var e = JsonSerializer.Deserialize<ScaleEvent>(data, CustomJsonOption.Web);
+                        var e = JsonSerializer.Deserialize<ScaleEvent>(data, JsonSerializerOptions.Web);
                         if (e is not null)
                         {
                             ScaleEventPublisher.Publish(new ClientEvent<ScaleEvent>(clientId, e));

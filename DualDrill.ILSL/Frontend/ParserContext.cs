@@ -1,6 +1,6 @@
 ﻿using DotNext.Patterns;
 using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
