@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace DualDrill.Interop;
+namespace DualDrill.Common.Interop;
 
 public unsafe readonly struct PinnedNullTerminatedUtf8String : IDisposable
 {

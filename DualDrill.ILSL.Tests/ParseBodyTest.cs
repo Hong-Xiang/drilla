@@ -1,10 +1,11 @@
-﻿using DualDrill.CLSL.Language.IR;
-using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.Expression;
-using DualDrill.CLSL.Language.IR.Statement;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.ILSL.Frontend;
+using DualDrill.Mathematics;
 using System.Numerics;
 using System.Reflection;
 
@@ -62,10 +63,10 @@ public class ParseBodyTest
                 {
                     Value: 1
                 },
-                Type: IntType { BitWidth: N32 }
+                Type: IIntType { BitWidth: N32 }
             },
             Op: BinaryArithmeticOp.Addition,
-            Type: IntType { BitWidth: N32 }
+            Type: IIntType { BitWidth: N32 }
         });
     }
 
@@ -123,6 +124,31 @@ public class ParseBodyTest
         }));
         Assert.Equal(4, stmts.Count);
         Assert.IsType<LoopStatement>(stmts[3]);
+    }
+
+    [Fact]
+    public void VectorSwizzleGetterTest()
+    {
+        var expr = ParseExpressionBodyMethod(MethodHelper.GetMethod(static (vec4f32 v) => v.xyx));
+        Assert.True(expr is VectorSwizzleAccessExpression
+        {
+            Base: VariableIdentifierExpression
+            {
+                Variable: ParameterDeclaration { },
+                Type: IVecType { Size: N4, ElementType: FloatType { BitWidth: N32 } }
+            },
+            Components: [SwizzleComponent.x, SwizzleComponent.y, SwizzleComponent.x]
+        });
+    }
+
+    [Fact]
+    public void VectorSwizzleSetterTest()
+    {
+        var stmt = ParseStatementsMethod(MethodHelper.GetMethod(static (vec4f32 v4, vec2f32 v2) =>
+        {
+            v4.xy = v2;
+            return v4;
+        }));
     }
 
     [Fact]

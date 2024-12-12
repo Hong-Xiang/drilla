@@ -1,6 +1,7 @@
-﻿using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
-using DualDrill.CLSL.Language.IR.Statement;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;
@@ -41,7 +42,7 @@ public sealed class ILSpyMethodParser(ILSpyOption Option) : IDisposable, IMethod
 
     static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
 
-    public CLSL.Language.IR.ShaderModule ParseModule(ISharpShader module)
+    public ShaderModule ParseModule(ISharpShader module)
     {
         var moduleType = module.GetType();
         var methods = moduleType.GetMethods(TargetMethodBindingFlags);

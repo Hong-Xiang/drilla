@@ -1,11 +1,9 @@
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.Graphics;
-using ICSharpCode.Decompiler.CSharp.Syntax;
-using Silk.NET.Maths;
 using Silk.NET.SDL;
 using System.Collections.Immutable;
 using System.Numerics;
-using static ICSharpCode.Decompiler.TypeSystem.ReflectionHelper;
 
 namespace DualDrill.Engine.Shader;
 
@@ -24,12 +22,12 @@ public class QuadShaderReflection : ILSL.IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.ShaderModule module)
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
     }

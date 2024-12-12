@@ -1,17 +1,18 @@
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
 using DualDrill.Graphics;
-using DualDrill.CLSL.Language.IR.Declaration;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
 namespace DualDrill.ILSL;
 
 public interface IShaderModuleReflection
 {
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module);
-    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.ShaderModule module);
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(ShaderModule module);
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(ShaderModule module);
     public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout, THostLayout>();
     public IVertexBufferLayoutBuilder<TGPULayout> GetVertexBufferLayoutBuilder<TGPULayout>() where TGPULayout : struct;
 }
@@ -263,7 +264,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         };
     }
 
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module)
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(ShaderModule module)
     {
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntry>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
@@ -290,7 +291,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         return gpuBindGroupDescriptor;
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.ShaderModule module)
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(ShaderModule module)
     {
         var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntryBuffer>();
         foreach (var decl in module.Declarations.OfType<VariableDeclaration>())

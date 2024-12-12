@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.IR.Expression;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
@@ -52,10 +52,10 @@ public sealed class CSharpProjectionConfiguration
         return (type switch
         {
             BoolType _ => typeof(bool).Name,
-            IntType { BitWidth: N8 } => typeof(sbyte).Name,
-            IntType { BitWidth: N16 } => typeof(short).Name,
-            IntType { BitWidth: N32 } => typeof(int).Name,
-            IntType { BitWidth: N64 } => typeof(long).Name,
+            IIntType { BitWidth: N8 } => typeof(sbyte).Name,
+            IIntType { BitWidth: N16 } => typeof(short).Name,
+            IIntType { BitWidth: N32 } => typeof(int).Name,
+            IIntType { BitWidth: N64 } => typeof(long).Name,
 
             UIntType { BitWidth: N8 } => typeof(byte).Name,
             UIntType { BitWidth: N16 } => typeof(ushort).Name,

@@ -1,8 +1,5 @@
-﻿using DualDrill.Graphics;
-using DualDrill.CLSL;
-using System.Collections.Immutable;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using System.Numerics;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
 
 namespace DualDrill.Engine.Shader;
 

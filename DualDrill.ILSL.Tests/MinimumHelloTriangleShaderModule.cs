@@ -1,5 +1,6 @@
-﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.Mathematics;
+using static DualDrill.Mathematics.DMath;
 
 namespace DualDrill.ILSL.Tests;
 
@@ -17,13 +18,10 @@ sealed class MinimumHelloTriangleShaderModule : ISharpShader
         var vi = (int)vertex_index;
         var x = (1 - vi) * (1 - vi & 1) * 0.5f;
         var y = ((vi & 1) * 2 - 1) * 0.5f;
-        return DMath.vec4(x, y, 0.0f, 1.0f);
+        return vec4(x, y, 0.0f, 1.0f);
     }
 
     [Fragment]
     [return: Location(0)]
-    public static vec4f32 fs()
-    {
-        return DMath.vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    }
+    public static vec4f32 fs() => vec4(1.0f, 1.0f, 1.0f, 1.0f);
 }

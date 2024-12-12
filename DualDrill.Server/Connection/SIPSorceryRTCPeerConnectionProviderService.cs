@@ -2,6 +2,7 @@
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Event;
 using DualDrill.Engine.Media;
+using DualDrill.Server.Connection;
 using MessagePipe;
 using R3;
 using SIPSorcery.Net;

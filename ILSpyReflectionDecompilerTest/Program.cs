@@ -7,7 +7,7 @@ using ICSharpCode.Decompiler.IL;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 using System.Text.Json;
-using DualDrill.CLSL.Language.IR.Statement;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
 namespace ILSpyReflectionDecompilerTest;
 

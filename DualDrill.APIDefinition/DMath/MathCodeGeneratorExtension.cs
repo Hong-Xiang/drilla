@@ -21,7 +21,7 @@ internal static class MathCodeGeneratorExtension
     {
         BoolType _ => $"b",
         FloatType t => $"f{t.BitWidth.Value}",
-        IntType t => $"i{t.BitWidth.Value}",
+        IIntType t => $"i{t.BitWidth.Value}",
         UIntType t => $"u{t.BitWidth.Value}",
         _ => throw new NotSupportedException($"{nameof(ElementName)} does not support {type}")
     };
@@ -31,10 +31,10 @@ internal static class MathCodeGeneratorExtension
         return t switch
         {
             BoolType _ => typeof(bool),
-            IntType { BitWidth: N8 } => typeof(sbyte),
-            IntType { BitWidth: N16 } => typeof(short),
-            IntType { BitWidth: N32 } => typeof(int),
-            IntType { BitWidth: N64 } => typeof(long),
+            IIntType { BitWidth: N8 } => typeof(sbyte),
+            IIntType { BitWidth: N16 } => typeof(short),
+            IIntType { BitWidth: N32 } => typeof(int),
+            IIntType { BitWidth: N64 } => typeof(long),
 
             UIntType { BitWidth: N8 } => typeof(byte),
             UIntType { BitWidth: N16 } => typeof(ushort),

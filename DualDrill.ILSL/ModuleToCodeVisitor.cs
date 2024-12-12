@@ -1,8 +1,8 @@
-﻿using DualDrill.CLSL.Language.IR;
-using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.Expression;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
-using DualDrill.CLSL.Language.IR.Statement;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 

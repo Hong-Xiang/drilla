@@ -1,6 +1,6 @@
-﻿using DualDrill.CLSL.Language.IR;
-using DualDrill.CLSL.Language.IR.Expression;
-using DualDrill.CLSL.Language.IR.Statement;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.Common.Nat;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;

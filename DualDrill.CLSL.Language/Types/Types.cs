@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
@@ -30,6 +30,11 @@ public interface IPlainType : IShaderType
 public interface IScalarType : IPlainType, IStorableType, ICreationFixedFootprintType
 {
     IBitWidth BitWidth { get; }
+}
+
+public interface IScalarType<TSelf> : IScalarType, ISingleton<TSelf>
+    where TSelf : class, IScalarType<TSelf>
+{
 }
 
 public interface IIntegerType : IScalarType { }

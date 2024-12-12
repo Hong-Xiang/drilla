@@ -1,6 +1,6 @@
 ﻿using DotNext.Patterns;
-using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;

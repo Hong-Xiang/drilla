@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.Graphics;
 using DualDrill.Mathematics;
 using System.Collections.Immutable;
@@ -20,12 +21,12 @@ public class SampleFragmentShaderReflection : ILSL.IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(CLSL.Language.IR.ShaderModule module)
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(ShaderModule module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
     }

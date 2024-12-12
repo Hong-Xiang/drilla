@@ -9,7 +9,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.InteropServices;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
 namespace DualDrill.Mathematics;
 using static DMath;
 

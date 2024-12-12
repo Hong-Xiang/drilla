@@ -1,6 +1,5 @@
-﻿using DualDrill.CLSL.Language.IR;
-using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.Expression;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
@@ -293,7 +292,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         return await MethodTargetAction(moduleName, methodName, async (parser, method) =>
         {
             var ir = parser.ParseMethod(method);
-            var module = new CLSL.Language.IR.ShaderModule([ir]);
+            var module = new ShaderModule([ir]);
             var code = await module.EmitCode();
             return Ok(code);
         });

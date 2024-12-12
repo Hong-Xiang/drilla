@@ -1,6 +1,6 @@
-﻿using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.Expression;
-using DualDrill.CLSL.Language.IR.Statement;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Types;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
@@ -22,16 +22,6 @@ public sealed class RelooperMethodParser : IMethodParser
 sealed record class BasicBlock(int Index, int Length, bool HasLoopJump)
 {
 }
-
-sealed record class Loop(int Index, int Depth)
-{
-}
-
-sealed record class Block(int Index, int Depth)
-{
-}
-
-
 
 sealed class MethodCompilation
 {
@@ -612,7 +602,7 @@ sealed class MethodCompilation
                     {
                         var info = (FieldInfo)inst.Operand;
                         // TODO: better handling other than this ad hoc one
-                        if (info.GetCustomAttribute<CLSL.Language.IR.ShaderAttribute.UniformAttribute>() is not null)
+                        if (info.GetCustomAttribute<CLSL.Language.AbstractSyntaxTree.ShaderAttribute.UniformAttribute>() is not null)
                         {
                             stack.Push(SyntaxFactory.VarIdentifier(
                                 new VariableDeclaration(CLSL.Language.DeclarationScope.Module,

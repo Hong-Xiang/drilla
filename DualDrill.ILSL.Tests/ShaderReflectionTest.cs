@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Graphics;
 using System.Collections.Immutable;
@@ -23,7 +24,7 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = new CLSL.Language.IR.ShaderModule([
+        var module = new ShaderModule([
             new VariableDeclaration(
                 DeclarationScope.Module,
                 "data",

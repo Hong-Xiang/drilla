@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.IR.Expression;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
 namespace DualDrill.CLSL.Language.Types;
 

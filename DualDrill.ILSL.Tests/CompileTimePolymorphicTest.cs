@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using Silk.NET.Maths;
 using System.Numerics;
 

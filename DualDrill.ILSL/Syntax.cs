@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.IR.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.Graphics;
 using Silk.NET.Maths;
 using System.Collections.Immutable;
@@ -36,7 +37,7 @@ public interface ISharpShader
 public interface IReflection
 {
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(CLSL.Language.IR.ShaderModule module);
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModule module);
 }
 
 public interface ISampler

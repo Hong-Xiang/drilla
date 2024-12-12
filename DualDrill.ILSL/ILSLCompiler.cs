@@ -1,5 +1,6 @@
-﻿using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.ILSL.Frontend;
 using ICSharpCode.Decompiler.Disassembler;
 using System.Reflection;
@@ -49,7 +50,7 @@ public static class ILSLCompiler
         return code;
     }
 
-    public static CLSL.Language.IR.ShaderModule Parse(ISharpShader module)
+    public static ShaderModule Parse(ISharpShader module)
     {
         var type = module.GetType();
         using var methodParser = new ILSpyMethodParser(new ILSpyOption()
@@ -63,7 +64,7 @@ public static class ILSLCompiler
         return parser.ParseShaderModule(module);
     }
 
-    public static async ValueTask<string> EmitCode(this CLSL.Language.IR.ShaderModule module)
+    public static async ValueTask<string> EmitCode(this ShaderModule module)
     {
         var tw = new IndentStringWriter("\t");
         var wgslVisitor = new ModuleToCodeVisitor(tw);

@@ -1,5 +1,5 @@
 ﻿using DotNext;
-using DualDrill.Interop;
+using DualDrill.Common.Interop;
 using Evergine.Bindings.WebGPU;
 using Silk.NET.SDL;
 using System.Globalization;

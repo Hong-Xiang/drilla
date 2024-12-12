@@ -1,10 +1,9 @@
-﻿using DotNext.Collections.Generic;
-using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.IR;
-using DualDrill.CLSL.Language.IR.Declaration;
-using DualDrill.CLSL.Language.IR.Expression;
-using DualDrill.CLSL.Language.IR.ShaderAttribute;
-using DualDrill.CLSL.Language.IR.Statement;
+﻿using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
@@ -13,12 +12,10 @@ using ICSharpCode.Decompiler.CSharp.Syntax;
 using ICSharpCode.Decompiler.IL;
 using ICSharpCode.Decompiler.Semantics;
 using ICSharpCode.Decompiler.TypeSystem;
-using ICSharpCode.Decompiler.TypeSystem.Implementation;
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
 using System.Reflection.Metadata.Ecma335;
-using System.Runtime.Loader;
 
 namespace DualDrill.ILSL.Frontend;
 
@@ -188,7 +185,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         {
             f = Context.Methods[typeof(DMath).GetMethod("i32", [typeof(uint)])];
         }
-        if (source.Type is IntType { BitWidth: N32 } && targetType == typeof(float))
+        if (source.Type is IIntType { BitWidth: N32 } && targetType == typeof(float))
         {
             f = Context.Methods[typeof(DMath).GetMethod("f32", [typeof(int)])];
         }
@@ -424,7 +421,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
             throw new NotImplementedException("ForStatement only accepts 1 iterator statement");
         }
 
-        return new CLSL.Language.IR.Statement.ForStatement(
+        return new CLSL.Language.AbstractSyntaxTree.Statement.ForStatement(
             Attributes: [],
             new ForHeader()
             {
@@ -619,7 +616,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
                                                 .OfType<IShaderAttribute>();
         var parameters = methodDeclaration.Parameters
                                                 .Select(p => p.AcceptVisitor(this))
-                                                .OfType<CLSL.Language.IR.Declaration.ParameterDeclaration>()
+                                                .OfType<CLSL.Language.AbstractSyntaxTree.Declaration.ParameterDeclaration>()
                                                 .ToImmutableArray();
         var env = new Dictionary<string, IDeclaration>();
         //foreach (var kv in Symbols)
@@ -722,7 +719,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     public IShaderAstNode? VisitParameterDeclaration(ICSharpCode.Decompiler.CSharp.Syntax.ParameterDeclaration parameterDeclaration)
     {
-        return new CLSL.Language.IR.Declaration.ParameterDeclaration(
+        return new CLSL.Language.AbstractSyntaxTree.Declaration.ParameterDeclaration(
             parameterDeclaration.Name,
             (IShaderType)parameterDeclaration.Type.AcceptVisitor(this) ?? ShaderType.Unit,
             [.. parameterDeclaration.Attributes.SelectMany(sec => sec.Attributes).Select(a => a.AcceptVisitor(this)).OfType<IShaderAttribute>()]
@@ -731,7 +728,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     public IShaderAstNode? VisitParenthesizedExpression(ICSharpCode.Decompiler.CSharp.Syntax.ParenthesizedExpression parenthesizedExpression)
     {
-        return new CLSL.Language.IR.Expression.ParenthesizedExpression((IExpression)parenthesizedExpression.Expression.AcceptVisitor(this));
+        return new CLSL.Language.AbstractSyntaxTree.Expression.ParenthesizedExpression((IExpression)parenthesizedExpression.Expression.AcceptVisitor(this));
     }
 
     public IShaderAstNode? VisitParenthesizedVariableDesignation(ParenthesizedVariableDesignation parenthesizedVariableDesignation)
@@ -947,7 +944,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         var nodes = typeDeclaration.Members.Where(m => !m.Name.StartsWith("ILSLWGSL"))
                                            .Select(m => m.AcceptVisitor(this))
                                            .OfType<FunctionDeclaration>();
-        return new CLSL.Language.IR.ShaderModule([.. nodes]);
+        return new CLSL.Language.AbstractSyntaxTree.ShaderModule([.. nodes]);
     }
 
     public IShaderAstNode? VisitTypeOfExpression(TypeOfExpression typeOfExpression)
@@ -1033,7 +1030,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
 
     public IShaderAstNode? VisitWhileStatement(ICSharpCode.Decompiler.CSharp.Syntax.WhileStatement whileStatement)
     {
-        return new CLSL.Language.IR.Statement.WhileStatement(
+        return new CLSL.Language.AbstractSyntaxTree.Statement.WhileStatement(
             Attributes: [],
             (IExpression)whileStatement.Condition.AcceptVisitor(this)!,
             (IStatement)whileStatement.EmbeddedStatement.AcceptVisitor(this)!
