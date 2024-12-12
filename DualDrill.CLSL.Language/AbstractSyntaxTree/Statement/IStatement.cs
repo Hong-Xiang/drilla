@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 

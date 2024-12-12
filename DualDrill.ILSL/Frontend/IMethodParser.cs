@@ -1,9 +1,8 @@
-﻿using System.Collections.Immutable;
-using System.Reflection;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Types;
-using ICSharpCode.Decompiler.CSharp.Syntax;
+using System.Collections.Immutable;
+using System.Reflection;
 
 namespace DualDrill.ILSL.Frontend;
 

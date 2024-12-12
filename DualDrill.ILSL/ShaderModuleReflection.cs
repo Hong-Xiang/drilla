@@ -1,12 +1,12 @@
-using DualDrill.Graphics;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Graphics;
 using System.Collections.Immutable;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
-using DualDrill.CLSL.Language.Declaration;
 namespace DualDrill.ILSL;
 
 public interface IShaderModuleReflection

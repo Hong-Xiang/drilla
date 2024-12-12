@@ -1,13 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using ICSharpCode.Decompiler;
-using ICSharpCode.Decompiler.TypeSystem;
-using ICSharpCode.Decompiler.IL;
-using ICSharpCode.Decompiler.CSharp;
-using ICSharpCode.Decompiler.CSharp.Syntax;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using System.Text.Json;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
 namespace ILSpyReflectionDecompilerTest;
 

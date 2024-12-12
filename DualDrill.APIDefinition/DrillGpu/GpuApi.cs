@@ -1,11 +1,7 @@
-﻿using DualDrill.ApiGen.DrillLang;
-using DualDrill.ApiGen.DrillLang.Declaration;
+﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.DrillLang.Types;
 using DualDrill.ApiGen.WebIDL;
-using DualDrill.Common;
-using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Text.Json;
 
 namespace DualDrill.ApiGen.DrillGpu;
 

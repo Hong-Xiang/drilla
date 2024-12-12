@@ -1,5 +1,4 @@
-﻿using DotNext.Patterns;
-using DualDrill.Common.Nat;
+﻿using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Types;
 

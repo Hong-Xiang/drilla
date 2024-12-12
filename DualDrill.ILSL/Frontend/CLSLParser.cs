@@ -20,7 +20,7 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
 
     public IShaderType ParseType(Type t)
     {
-        if(t == typeof(vec2f32))
+        if (t == typeof(vec2f32))
         {
             Console.WriteLine();
         }

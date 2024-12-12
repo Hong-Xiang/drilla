@@ -4,9 +4,7 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.ILSL.Frontend;
 using DualDrill.Mathematics;
-using Silk.NET.Vulkan;
 using System.Numerics;
-using System.Reflection;
 
 namespace DualDrill.ILSL.Tests;
 

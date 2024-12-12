@@ -52,7 +52,7 @@ public class Program
         builder.Services.AddHealthChecks();
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
-            //.AddInteractiveWebAssemblyComponents();
+        //.AddInteractiveWebAssemblyComponents();
 
         //builder.Services.AddOpenApi();
 

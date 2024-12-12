@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
-using DualDrill.ILSL.Frontend;
 using DualDrill.Mathematics;
 
 namespace DualDrill.ILSL.Tests;

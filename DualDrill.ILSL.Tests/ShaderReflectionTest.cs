@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Declaration;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.ShaderAttribute;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
