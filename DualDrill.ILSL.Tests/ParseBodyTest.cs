@@ -27,8 +27,8 @@ public class ParseBodyTest
         var methodParser = new RelooperMethodParser();
         var parser = new CLSLParser(methodParser);
         parser.ParseMethodMetadata(m);
-        parser.Context.GetMethodContext(m);
-        var body = methodParser.ParseMethodBody(parser.Context.GetMethodContext(m), m);
+        var methodContext = parser.Context.GetMethodContext(m);
+        var body = methodParser.ParseMethodBody(methodContext, m);
         return body.Statements;
     }
 
@@ -40,7 +40,7 @@ public class ParseBodyTest
         Assert.IsType<LiteralValueExpression>(expr);
         Assert.True(expr is LiteralValueExpression
         {
-            Literal: IntLiteral { Value: 42 }
+            Literal: I32Literal { Value: 42 }
         });
     }
 
@@ -50,22 +50,23 @@ public class ParseBodyTest
         var expr = ParseExpressionBodyMethod(MethodHelper.GetMethod(static (int a) => a + 1));
         Assert.True(expr is BinaryArithmeticExpression
         {
-            L: VariableIdentifierExpression
+            L: FormalParameterExpression
             {
-                Variable: ParameterDeclaration
+                Parameter:
                 {
-                    Name: "a"
-                },
+                    Name: "a",
+                    Type: IntType<N32>
+                }
             },
             R: LiteralValueExpression
             {
-                Literal: IntLiteral
+                Literal: I32Literal
                 {
                     Value: 1
                 },
                 Type: IIntType { BitWidth: N32 }
             },
-            Op: BinaryArithmeticOp.Addition,
+            Op: BinaryArithmetic.Op.Addition,
             Type: IIntType { BitWidth: N32 }
         });
     }
@@ -77,17 +78,10 @@ public class ParseBodyTest
         var expr = ParseExpressionBodyMethod(MethodHelper.GetMethod(() => new Vector4(0.5f, 0.0f, 1.0f, 1.0f)));
         Assert.True(expr is FunctionCallExpression
         {
-            Arguments: { Length: 4 },
+            Arguments.Length: 4,
             Callee:
             {
-                Name: "vec4", Return:
-                {
-                    Type: VecType
-                    {
-                        ElementType: FloatType { BitWidth: N32 },
-                        Size: N4
-                    }
-                }
+                Name: "vec4", Return.Type: VecType<N4, FloatType<N32>>
             }
         }, "Parse result should be correct return statement");
     }
@@ -103,8 +97,8 @@ public class ParseBodyTest
         Assert.True(parsed is FunctionCallExpression
         {
             Callee: var callee,
-            Arguments: [LiteralValueExpression { Literal: IntLiteral { Value: 1 } },
-                        LiteralValueExpression { Literal: IntLiteral { Value: 2 } }]
+            Arguments: [LiteralValueExpression { Literal: I32Literal { Value: 1 } },
+                        LiteralValueExpression { Literal: I32Literal { Value: 2 } }]
         } && callee.Name.Equals(method.Name), "Parse result should be correct return statement");
     }
 
@@ -132,10 +126,10 @@ public class ParseBodyTest
         var expr = ParseExpressionBodyMethod(MethodHelper.GetMethod(static (vec4f32 v) => v.xyx));
         Assert.True(expr is VectorSwizzleAccessExpression
         {
-            Base: VariableIdentifierExpression
+            Base: FormalParameterExpression
             {
-                Variable: ParameterDeclaration { },
-                Type: IVecType { Size: N4, ElementType: FloatType { BitWidth: N32 } }
+                Parameter.Name: "v",
+                Type: VecType<N4, FloatType<N32>>
             },
             Components: [SwizzleComponent.x, SwizzleComponent.y, SwizzleComponent.x]
         });
@@ -158,46 +152,23 @@ public class ParseBodyTest
         {
             return Vector4.Dot(a, b);
         }));
-        Assert.True(stmt[0] is SimpleAssignmentStatement
+        var value = Assert.IsType<SimpleAssignmentStatement>(stmt[1]);
+        var fc = Assert.IsType<FunctionCallExpression>(value.R);
+        Assert.Equal("dot", fc.Callee.Name);
+        Assert.Equal(2, fc.Arguments.Length);
+        Assert.True(fc.Arguments[0] is FormalParameterExpression
         {
-            R: FunctionCallExpression
-            {
-                Callee: { Name: "dot" },
-                Arguments:
-            [
-                VariableIdentifierExpression
-            {
-                Variable: ParameterDeclaration
-                {
-                    Type: IVecType
-                    {
-                        Size: N4,
-                        ElementType: FloatType
-                    },
-                    Name: "a"
-                }
-            },
-                VariableIdentifierExpression
-            {
-                Variable: ParameterDeclaration
-                {
-                    Type: IVecType
-                    {
-                        Size: N4,
-                        ElementType: FloatType
-                    },
-                    Name: "b"
-                }
-            },
-            ]
-            }
+            Type: VecType<N4, FloatType<N32>>,
+            Parameter.Name: "a"
         });
-        Assert.True(stmt[1] is ReturnStatement
+        Assert.True(fc.Arguments[1] is FormalParameterExpression
         {
-            Expr:
-            {
-                Type: FloatType
-            }
+            Type: VecType<N4, FloatType<N32>>,
+            Parameter.Name: "b"
+        });
+        Assert.True(stmt[2] is ReturnStatement
+        {
+            Expr.Type: FloatType<N32>
         });
     }
 }

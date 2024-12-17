@@ -1,4 +1,6 @@
-﻿using DualDrill.Common.Nat;
+﻿using DotNext.Patterns;
+using DualDrill.Common.Nat;
+using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -8,11 +10,15 @@ public interface IVecType : IShaderType
     public IRank Size { get; }
 }
 
-public sealed record class VecType(
-    IScalarType ElementType,
-    IRank Size
-) : IVecType
+public sealed class VecType<TRank, TElement> : IVecType,
+    ISingleton<VecType<TRank, TElement>>,
+    ISingletonShaderType<VecType<TRank, TElement>>
+    where TRank : class, IRank<TRank>
+    where TElement : class, IScalarType<TElement>
 {
+    private VecType() { }
+    public static VecType<TRank, TElement> Instance { get; } = new();
+
     //public static readonly ImmutableArray<FunctionDeclaration> Constructors =
     //    [
     //      new FunctionDeclaration(
@@ -29,7 +35,7 @@ public sealed record class VecType(
     //        []
     //    ))];
 
-    public string Name { get; } = $"vec{Size.Value}{ElementType.ElementName()}";
+    public string Name => $"vec{Size.Value}{ElementType.ElementName()}";
 
     //public static readonly FunctionDeclaration Dot =
     //    new FunctionDeclaration("dot",
@@ -66,20 +72,36 @@ public sealed record class VecType(
     //            new FunctionReturn(new VecType<TSize, TElement>(), []),
     //            []);
     public int ByteSize => Size.Value * ElementType.ByteSize;
+
+    public IScalarType ElementType => TElement.Instance;
+
+    public IRank Size => TRank.Instance;
+
+    public IRefType RefType => throw new NotImplementedException();
+
+    public IPtrType PtrType => throw new NotImplementedException();
 }
 
 public static partial class ShaderType
 {
-    static IReadOnlyDictionary<(IRank, IScalarType), IVecType> VecTypesLookup { get; }
-    static ShaderType()
-    {
-        VecTypesLookup = (from r in Ranks
-                          from e in ScalarTypes
-                          select KeyValuePair.Create((r, e), (IVecType)new VecType(e, r))).ToDictionary();
-    }
-    public static IEnumerable<IVecType> GetVecTypes() => VecTypesLookup.Values;
+    public static IEnumerable<IVecType> GetVecTypes() =>
+        [..from r in Ranks
+           from e in ScalarTypes
+           select GetVecType(r, e)];
     public static IVecType GetVecType(IRank size, IScalarType elementType)
+        => elementType.Accept<IVecType, VecTypeBuilder>(new(size));
+
+    private struct VecTypeBuilder(IRank Size) : IScalarType.IGenericVisitor<IVecType>
     {
-        return VecTypesLookup[(size, elementType)];
+        private struct Builder<TScalarType> : IRank.IVisitor<IVecType>
+                where TScalarType : class, IScalarType<TScalarType>
+        {
+            readonly IVecType IRank.IVisitor<IVecType>.Visit<TRank>() => VecType<TRank, TScalarType>.Instance;
+        }
+
+        readonly IVecType IScalarType.IGenericVisitor<IVecType>.Visit<TScalarType>(TScalarType scalarType)
+                    => Size.Accept(new Builder<TScalarType>());
     }
+
+
 }

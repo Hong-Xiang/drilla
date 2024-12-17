@@ -30,7 +30,6 @@ public sealed record class MethodParseContext(
     );
 
     public VariableDeclaration? this[string name] => LocalVariables[name];
-    public CLSLParameterDeclaration GetParameter(int position) => Parameters[position];
 }
 
 public static class MethodParserExtension

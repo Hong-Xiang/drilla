@@ -10,4 +10,7 @@ public sealed record class StructureDeclaration(
     ImmutableHashSet<IShaderAttribute> Attributes
 ) : IShaderType, IDeclaration
 {
+    public IRefType RefType => throw new NotImplementedException();
+
+    public IPtrType PtrType => throw new NotImplementedException();
 }

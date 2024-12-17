@@ -20,9 +20,9 @@ internal static class MathCodeGeneratorExtension
     public static string ElementName(this IScalarType type) => type switch
     {
         BoolType _ => $"b",
-        FloatType t => $"f{t.BitWidth.Value}",
+        IFloatType t => $"f{t.BitWidth.Value}",
         IIntType t => $"i{t.BitWidth.Value}",
-        UIntType t => $"u{t.BitWidth.Value}",
+        IUIntType t => $"u{t.BitWidth.Value}",
         _ => throw new NotSupportedException($"{nameof(ElementName)} does not support {type}")
     };
 
@@ -36,14 +36,14 @@ internal static class MathCodeGeneratorExtension
             IIntType { BitWidth: N32 } => typeof(int),
             IIntType { BitWidth: N64 } => typeof(long),
 
-            UIntType { BitWidth: N8 } => typeof(byte),
-            UIntType { BitWidth: N16 } => typeof(ushort),
-            UIntType { BitWidth: N32 } => typeof(uint),
-            UIntType { BitWidth: N64 } => typeof(ulong),
+            IUIntType { BitWidth: N8 } => typeof(byte),
+            IUIntType { BitWidth: N16 } => typeof(ushort),
+            IUIntType { BitWidth: N32 } => typeof(uint),
+            IUIntType { BitWidth: N64 } => typeof(ulong),
 
-            FloatType { BitWidth: N16 } => typeof(Half),
-            FloatType { BitWidth: N32 } => typeof(float),
-            FloatType { BitWidth: N64 } => typeof(double),
+            IFloatType { BitWidth: N16 } => typeof(Half),
+            IFloatType { BitWidth: N32 } => typeof(float),
+            IFloatType { BitWidth: N64 } => typeof(double),
             _ => throw new NotSupportedException($"Primitive CSharp Type is not defined for {t}")
         };
     }

@@ -17,7 +17,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Update="DotNext.Unsafe"/>
+	  <PackageReference Update="DotNext.Unsafe" />
 	</ItemGroup>
 
 </Project>

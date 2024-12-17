@@ -21,6 +21,9 @@ public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
 
     public string Name => $"i{BitWidth.Value}";
     public int ByteSize => BitWidth.Value / 8;
+
+    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
+        => visitor.Visit(this);
 }
 
 public static partial class ShaderType

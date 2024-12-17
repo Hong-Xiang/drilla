@@ -116,21 +116,21 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         var rt = Context.Types[GetCSharpType(binaryOperatorExpression.GetResolveResult().Type)];
 
 
-        if (l is LiteralValueExpression { Literal: IntLiteral { Value: var llv } } && rt is UIntType)
+        if (l is LiteralValueExpression { Literal: I32Literal { Value: var llv } } && rt is IUIntType)
         {
             l = SyntaxFactory.Literal((uint)llv);
         }
-        if (r is LiteralValueExpression { Literal: IntLiteral { Value: var rlv } } && rt is UIntType)
+        if (r is LiteralValueExpression { Literal: I32Literal { Value: var rlv } } && rt is IUIntType)
         {
             r = SyntaxFactory.Literal((uint)rlv);
         }
         return binaryOperatorExpression.Operator switch
         {
-            BinaryOperatorType.Add => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Addition),
-            BinaryOperatorType.Subtract => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Subtraction),
-            BinaryOperatorType.Multiply => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Multiplication),
-            BinaryOperatorType.Divide => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Division),
-            BinaryOperatorType.Modulus => new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Remainder),
+            BinaryOperatorType.Add => new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Addition),
+            BinaryOperatorType.Subtract => new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Subtraction),
+            BinaryOperatorType.Multiply => new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Multiplication),
+            BinaryOperatorType.Divide => new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Division),
+            BinaryOperatorType.Modulus => new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Remainder),
             BinaryOperatorType.BitwiseAnd => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseAnd),
             BinaryOperatorType.BitwiseOr => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseOr),
             BinaryOperatorType.ExclusiveOr => new BinaryBitwiseExpression(l, r, BinaryBitwiseOp.BitwiseExclusiveOr),
@@ -181,7 +181,7 @@ public sealed record class ILSpyMethodBodyToCLSLNodeAstVisitor(MethodParseContex
         var targetType = GetCSharpType(target);
 
         FunctionDeclaration? f = null;
-        if (source.Type is UIntType { BitWidth: N32 } && targetType == typeof(int))
+        if (source.Type is IUIntType { BitWidth: N32 } && targetType == typeof(int))
         {
             f = Context.Methods[typeof(DMath).GetMethod("i32", [typeof(uint)])];
         }

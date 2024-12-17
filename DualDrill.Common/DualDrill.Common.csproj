@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="DotNext" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Nat\Nats.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Nats.cs</LastGenOutput>

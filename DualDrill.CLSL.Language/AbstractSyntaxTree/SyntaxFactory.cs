@@ -54,14 +54,16 @@ public static class SyntaxFactory
 
 
     public static IExpression Call(FunctionDeclaration callee, params IExpression[] arguments) => new FunctionCallExpression(callee, [.. arguments]);
-    public static LiteralValueExpression Literal(float value) => new(new FloatLiteral(N32.Instance, value));
-    public static LiteralValueExpression Literal(double value) => new(new FloatLiteral(N64.Instance, value));
-    public static LiteralValueExpression Literal(int value) => new(new IntLiteral(N32.Instance, value));
-    public static LiteralValueExpression Literal(uint value) => new(new UIntLiteral(N32.Instance, value));
+    public static LiteralValueExpression Literal(float value) => new(new F32Literal(value));
+    public static LiteralValueExpression Literal(double value) => new(new F64Literal(value));
+    public static LiteralValueExpression Literal(int value) => new(new I32Literal(value));
+    public static LiteralValueExpression Literal(uint value) => new(new U32Literal(value));
     public static LiteralValueExpression Literal(bool value) => new(new BoolLiteral(value));
 
     public static VariableIdentifierExpression VarIdentifier(VariableDeclaration variable) => new(variable);
     public static FormalParameterExpression ArgIdentifier(ParameterDeclaration parameter) => new(parameter);
+
+    public static AddressOfExpression AddressOf(IExpression expr) => new AddressOfExpression(expr);
 
     public static ReturnStatement Return(IExpression? Expr) => new(Expr);
     public static BreakStatement Break() => new();

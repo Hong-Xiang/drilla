@@ -290,16 +290,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
         Writer.Write("( ");
         await expr.L.AcceptVisitor(this);
         Writer.Write(") ");
-        var op = expr.Op switch
-        {
-            BinaryArithmeticOp.Addition => "+",
-            BinaryArithmeticOp.Subtraction => "-",
-            BinaryArithmeticOp.Multiplication => "*",
-            BinaryArithmeticOp.Division => "/",
-            BinaryArithmeticOp.Remainder => "%",
-            _ => throw new NotSupportedException()
-        };
-        Writer.Write(op);
+        Writer.Write(BinaryArithmetic.GetInstance(expr.Op).Name);
         Writer.Write("( ");
         await expr.R.AcceptVisitor(this);
         Writer.Write(")");
@@ -312,9 +303,12 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
         var code = expr.Literal switch
         {
             BoolLiteral l => l.Value ? "true" : "false",
-            IntLiteral { BitWidth: N32, Value: var value } => value + "i",
-            UIntLiteral { BitWidth: N32, Value: var value } => value + "u",
-            FloatLiteral { BitWidth: N32, Value: var value } => value + "f",
+            I32Literal { Value: var value } => value + "i",
+            I64Literal { Value: var value } => value + "i",
+            U32Literal { Value: var value } => value + "u",
+            U64Literal { Value: var value } => value + "u",
+            F32Literal { Value: var value } => value + "f",
+            F64Literal { Value: var value } => value + "f",
             _ => throw new NotSupportedException($"{nameof(VisitLiteralValueExpression)} not support {expr}")
         };
         Writer.Write(code);
@@ -453,7 +447,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
 
     public async ValueTask VisitTypeReference(IShaderType type)
     {
-        if (type is VecType { Size: var size, ElementType: var e })
+        if (type is IVecType { Size: var size, ElementType: var e })
         {
             Writer.Write($"vec{size.Value}<{e.Name}>");
         }

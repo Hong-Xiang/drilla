@@ -2,9 +2,8 @@
 
 namespace DualDrill.CLSL.Language.Types;
 
-public sealed record class BoolType : IScalarType, IBasicPrimitiveType<BoolType>
+public sealed class BoolType : IScalarType<BoolType>, IBasicPrimitiveType<BoolType>
 {
-    BoolType() { }
     public static BoolType Instance { get; } = new();
 
     public string Name => "bool";
@@ -12,5 +11,6 @@ public sealed record class BoolType : IScalarType, IBasicPrimitiveType<BoolType>
 
     public IBitWidth BitWidth { get; } = N8.Instance;
 
-    public string ElementTypeName => "b";
+    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
+        => visitor.Visit(this);
 }

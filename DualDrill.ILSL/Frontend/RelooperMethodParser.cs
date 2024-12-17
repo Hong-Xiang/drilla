@@ -2,12 +2,15 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.ILSL.LinearIR;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Metadata;
+using static DualDrill.CLSL.Language.Types.Signedness;
 
 namespace DualDrill.ILSL.Frontend;
 
@@ -16,12 +19,8 @@ public sealed class RelooperMethodParser : IMethodParser
     public CompoundStatement ParseMethodBody(MethodParseContext env, MethodBase method)
     {
         var compiler = new MethodCompilation(env, method);
-        return new([.. compiler.Compile()]);
+        return new([.. compiler.CompileBody()]);
     }
-}
-
-sealed record class BasicBlock(int Index, int Length, bool HasLoopJump)
-{
 }
 
 sealed class MethodCompilation
@@ -32,76 +31,66 @@ sealed class MethodCompilation
 
     MethodBody MethodBody { get; }
 
-    IReadOnlyDictionary<LocalVariableInfo, VariableDeclaration> LocalVariables { get; }
-
+    IReadOnlyList<VariableDeclaration> LocalVariables { get; }
     IReadOnlyList<LocalVariableInfo> LocalVariableInfo { get; }
     IReadOnlyList<BasicBlock> BasicBlocks { get; }
     Stack<IExpression>?[] Stacks { get; }
-    IReadOnlyList<int> InstructionToBasicBlockLookUp { get; }
-    ImmutableArray<int> OffsetToInstructionIndex { get; }
+    int CodeSize { get; }
+    IReadOnlyList<int> NextInstructionOffset { get; }
 
     public MethodCompilation(MethodParseContext context, MethodBase method)
     {
         Context = context;
         Method = method;
         MethodBody = method.GetMethodBody() ?? throw new ArgumentException("Method body can not be null", nameof(method));
+        LocalVariableInfo = [.. MethodBody.LocalVariables];
         Instructions = [.. method.GetInstructions()];
-        Span<int> offsetToInstructionIndex = new int[Instructions[^1].Offset + Instructions[^1].OpCode.Size];
-        foreach ((var index, var inst) in Instructions.Index())
+        CodeSize = MethodBody.GetILAsByteArray().Length;
+
+        var nextOffset = new int[Instructions.Length];
+        foreach (var (instIndex, inst) in Instructions.Index())
         {
-            offsetToInstructionIndex[inst.Offset..(inst.Offset + inst.OpCode.Size)].Fill(index);
+            nextOffset[instIndex] = instIndex == Instructions.Length - 1 ? CodeSize : Instructions[instIndex + 1].Offset;
         }
-        OffsetToInstructionIndex = [.. offsetToInstructionIndex];
+        NextInstructionOffset = nextOffset;
+
 
         BasicBlocks = GetBasicBlocks();
-        InstructionToBasicBlockLookUp = GetInstructionToBasicBlockLookup();
         LocalVariables = CreateLocalVariableDeclarations();
-        LocalVariableInfo = [.. MethodBody.LocalVariables];
         Stacks = new Stack<IExpression>?[BasicBlocks.Count];
-
     }
 
-    IReadOnlyList<int> GetInstructionToBasicBlockLookup()
-    {
-        var result = new int[Instructions.Length];
-        for (var ib = 0; ib < BasicBlocks.Count; ib++)
-        {
-            var b = BasicBlocks[ib];
-            for (var i = b.Index; i < b.Index + b.Length; i++)
-            {
-                result[i] = ib;
-            }
-        }
-        return result;
-    }
 
     public IReadOnlyList<BasicBlock> GetBasicBlocks()
     {
         Debug.Assert(Instructions.Length > 0);
-        var isLeader = new bool[Instructions.Length];
-
-
-        var hasLoopJump = new bool[Instructions.Length];
-        isLeader[0] = true;
-
-        for (var i = 0; i < Instructions.Length; i++)
+        var lastInst = Instructions[^1];
+        var blocks = new BasicBlock?[CodeSize];
+        var shouldSkip = new bool[CodeSize];
+        blocks[0] = new BasicBlock(0);
+        foreach (var (instIndex, inst) in Instructions.Index())
         {
-            var inst = Instructions[i];
-            var offset = 0;
+            var nextOffset = NextInstructionOffset[instIndex];
+            var jump = 0;
             switch (inst.OpCode.ToILOpCode())
             {
                 case ILOpCode.Br_s:
                 case ILOpCode.Brtrue_s:
                 case ILOpCode.Brfalse_s:
                     {
-                        offset = (sbyte)inst.Operand;
+                        jump = (sbyte)inst.Operand;
+                        if (jump == 0)
+                        {
+                            shouldSkip[inst.Offset] = true;
+                            continue;
+                        }
                         break;
                     }
                 case ILOpCode.Br:
                 case ILOpCode.Brtrue:
                 case ILOpCode.Brfalse:
                     {
-                        offset = (int)inst.Operand;
+                        jump = (int)inst.Operand;
                         break;
                     }
                 case ILOpCode.Switch:
@@ -111,57 +100,238 @@ sealed class MethodCompilation
                 default:
                     continue;
             }
-            var targetOffset = inst.Offset + offset + inst.OpCode.Size;
-            var target = OffsetToInstructionIndex[targetOffset];
-            if (i + 1 < Instructions.Length)
+            //var nextOffset = inst.Offset + inst.OpCode.Size + inst.OpCode.OperandType;
+            var jumpOffset = nextOffset + jump;
+            if (nextOffset < blocks.Length)
             {
-                isLeader[i + 1] = true;
+                blocks[nextOffset] ??= new BasicBlock(nextOffset);
             }
-            isLeader[target] = true;
-            if (offset < 0)
-            {
-                hasLoopJump[target] = true;
-            }
+            blocks[jumpOffset] ??= new BasicBlock(jumpOffset);
         }
-        var labelCount = isLeader.Count(x => x);
-        var length = new int[labelCount];
-        var results = new BasicBlock[labelCount];
         {
-            var bbIndex = 0;
-            var bbLength = 0;
-            for (var i = 0; i < Instructions.Length; i++)
+            BasicBlock? bb = null;
+            List<IInstruction>? instructions = null;
+            foreach (var (ip, inst) in Instructions.Index())
             {
-                if (isLeader[i])
+                if (inst.Offset == 11)
                 {
-                    if (bbIndex > 0)
+                }
+                if (blocks[inst.Offset] is { } v)
+                {
+                    if (bb is not null)
                     {
-                        length[bbIndex - 1] = bbLength;
+                        bb.Instructions = [.. instructions];
                     }
-                    bbLength = 0;
-                    bbIndex++;
+                    bb = v;
+                    instructions = [];
                 }
-                bbLength++;
-            }
-            length[bbIndex - 1] = bbLength;
-
-            bbIndex = 0;
-            for (var i = 0; i < Instructions.Length; i++)
-            {
-                if (isLeader[i])
+                if (shouldSkip[inst.Offset])
                 {
-                    results[bbIndex] = new BasicBlock(i, length[bbIndex], hasLoopJump[i]);
-                    bbIndex++;
+                    continue;
                 }
+                Debug.Assert(instructions is not null);
+                instructions.Add(CompileInstruction(inst, NextInstructionOffset[ip], blocks));
             }
+            bb.Instructions = [.. instructions];
         }
-        return results;
+        IReadOnlyList<BasicBlock> result = [.. blocks.OfType<BasicBlock>()];
+        foreach (var (index, bb) in result.Index())
+        {
+            bb.Index = index;
+        }
+        return result;
     }
 
-    public IEnumerable<IStatement> Compile()
+    IInstruction CompileInstruction(Instruction inst, int nextOffset, IReadOnlyList<BasicBlock?> blocks)
     {
-        foreach (var v in MethodBody.LocalVariables)
+        IInstruction Branch<TCondition>(int offset)
+            where TCondition : IBranchCondition
         {
-            var decl = LocalVariables[v];
+            var target = blocks[nextOffset + offset] ?? throw new NullReferenceException("Target block is null");
+            return new BranchInstruction<TCondition>(target);
+        }
+
+        var argumentPositionBase = Method.IsStatic ? 0 : 1; // ParameterInfo.Position need + 1 for hidden this parameter
+
+        switch (inst.OpCode.ToILOpCode())
+        {
+            case ILOpCode.Nop:
+                return new NopInstruction();
+            case ILOpCode.Beq:
+                return Branch<Condition.Eq>((int)inst.Operand);
+            case ILOpCode.Beq_s:
+                return Branch<Condition.Eq>((sbyte)inst.Operand);
+            case ILOpCode.Bge:
+                return Branch<Condition.Ge<S>>((int)inst.Operand);
+            case ILOpCode.Bge_s:
+                return Branch<Condition.Ge<S>>((sbyte)inst.Operand);
+            case ILOpCode.Bge_un:
+                return Branch<Condition.Ge<U>>((int)inst.Operand);
+            case ILOpCode.Bge_un_s:
+                return Branch<Condition.Ge<U>>((sbyte)inst.Operand);
+            case ILOpCode.Bgt:
+                return Branch<Condition.Gt<S>>((int)inst.Operand);
+            case ILOpCode.Bgt_s:
+                return Branch<Condition.Gt<S>>((sbyte)inst.Operand);
+            case ILOpCode.Bgt_un:
+                return Branch<Condition.Gt<U>>((int)inst.Operand);
+            case ILOpCode.Bgt_un_s:
+                return Branch<Condition.Gt<U>>((sbyte)inst.Operand);
+            case ILOpCode.Ble:
+                return Branch<Condition.Le<S>>((int)inst.Operand);
+            case ILOpCode.Ble_s:
+                return Branch<Condition.Le<S>>((sbyte)inst.Operand);
+            case ILOpCode.Ble_un:
+                return Branch<Condition.Le<U>>((int)inst.Operand);
+            case ILOpCode.Ble_un_s:
+                return Branch<Condition.Le<U>>((sbyte)inst.Operand);
+            case ILOpCode.Blt:
+                return Branch<Condition.Lt<S>>((int)inst.Operand);
+            case ILOpCode.Blt_s:
+                return Branch<Condition.Lt<S>>((sbyte)inst.Operand);
+            case ILOpCode.Blt_un:
+                return Branch<Condition.Lt<U>>((int)inst.Operand);
+            case ILOpCode.Blt_un_s:
+                return Branch<Condition.Lt<U>>((sbyte)inst.Operand);
+            case ILOpCode.Bne_un:
+                return Branch<Condition.Ne>((int)inst.Operand);
+            case ILOpCode.Bne_un_s:
+                return Branch<Condition.Ne>((sbyte)inst.Operand);
+            case ILOpCode.Br:
+                return Branch<Condition.Unconditional>((int)inst.Operand);
+            case ILOpCode.Br_s:
+                return Branch<Condition.Unconditional>((sbyte)inst.Operand);
+            case ILOpCode.Brfalse:
+                return Branch<Condition.False>((int)inst.Operand);
+            case ILOpCode.Brfalse_s:
+                return Branch<Condition.False>((sbyte)inst.Operand);
+            case ILOpCode.Brtrue:
+                return Branch<Condition.True>((int)inst.Operand);
+            case ILOpCode.Brtrue_s:
+                return Branch<Condition.True>((sbyte)inst.Operand);
+            case ILOpCode.Switch:
+                throw new NotImplementedException("compile switch instruction is not implemented yet");
+
+            case ILOpCode.Ceq:
+                return new ConditionValueInstruction<Condition.Eq>();
+
+            case ILOpCode.Ldc_i4:
+                return new LoadConstantInstruction<I32Literal>(new((int)inst.Operand));
+            case ILOpCode.Ldc_i4_0:
+                return new LoadConstantInstruction<I32Literal>(new(0));
+            case ILOpCode.Ldc_i4_1:
+                return new LoadConstantInstruction<I32Literal>(new(1));
+            case ILOpCode.Ldc_i4_2:
+                return new LoadConstantInstruction<I32Literal>(new(2));
+            case ILOpCode.Ldc_i4_3:
+                return new LoadConstantInstruction<I32Literal>(new(3));
+            case ILOpCode.Ldc_i4_4:
+                return new LoadConstantInstruction<I32Literal>(new(4));
+            case ILOpCode.Ldc_i4_5:
+                return new LoadConstantInstruction<I32Literal>(new(5));
+            case ILOpCode.Ldc_i4_6:
+                return new LoadConstantInstruction<I32Literal>(new(6));
+            case ILOpCode.Ldc_i4_7:
+                return new LoadConstantInstruction<I32Literal>(new(7));
+            case ILOpCode.Ldc_i4_8:
+                return new LoadConstantInstruction<I32Literal>(new(8));
+            case ILOpCode.Ldc_i4_m1:
+                return new LoadConstantInstruction<I32Literal>(new(-1));
+            case ILOpCode.Ldc_i4_s:
+                return new LoadConstantInstruction<I32Literal>(new((sbyte)inst.Operand));
+            case ILOpCode.Ldc_i8:
+                return new LoadConstantInstruction<I64Literal>(new((long)inst.Operand));
+            case ILOpCode.Ldc_r4:
+                return new LoadConstantInstruction<F32Literal>(new((float)inst.Operand));
+            case ILOpCode.Ldc_r8:
+                return new LoadConstantInstruction<F64Literal>(new((double)inst.Operand));
+
+            case ILOpCode.Ldarg:
+                return new LoadArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
+            case ILOpCode.Ldarg_0:
+                return new LoadArgumentInstruction(0);
+            case ILOpCode.Ldarg_1:
+                return new LoadArgumentInstruction(1);
+            case ILOpCode.Ldarg_2:
+                return new LoadArgumentInstruction(2);
+            case ILOpCode.Ldarg_3:
+                return new LoadArgumentInstruction(3);
+            case ILOpCode.Ldarg_s:
+                return new LoadArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
+            case ILOpCode.Ldarga:
+                return new LoadArgumentAddressInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
+            case ILOpCode.Ldarga_s:
+                return new LoadArgumentAddressInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
+
+            case ILOpCode.Ldloc_0:
+                return new LoadLocalInstruction(LocalVariableInfo[0]);
+            case ILOpCode.Ldloc_1:
+                return new LoadLocalInstruction(LocalVariableInfo[1]);
+            case ILOpCode.Ldloc_2:
+                return new LoadLocalInstruction(LocalVariableInfo[2]);
+            case ILOpCode.Ldloc_3:
+                return new LoadLocalInstruction(LocalVariableInfo[3]);
+            case ILOpCode.Ldloc:
+            case ILOpCode.Ldloc_s:
+                return new LoadLocalInstruction((LocalVariableInfo)inst.Operand);
+            case ILOpCode.Stloc_0:
+                return new StoreLocalInstruction(LocalVariableInfo[0]);
+            case ILOpCode.Stloc_1:
+                return new StoreLocalInstruction(LocalVariableInfo[1]);
+            case ILOpCode.Stloc_2:
+                return new StoreLocalInstruction(LocalVariableInfo[2]);
+            case ILOpCode.Stloc_3:
+                return new StoreLocalInstruction(LocalVariableInfo[3]);
+            case ILOpCode.Stloc:
+                return new StoreLocalInstruction(((LocalVariableInfo)inst.Operand));
+            case ILOpCode.Stloc_s:
+                return new StoreLocalInstruction((LocalVariableInfo)inst.Operand);
+            case ILOpCode.Ldloca:
+                return new LoadLocalAddressInstruction((LocalVariableInfo)inst.Operand);
+            case ILOpCode.Ldloca_s:
+                return new LoadLocalAddressInstruction((LocalVariableInfo)inst.Operand);
+            case ILOpCode.Add:
+                return new BinaryArithmeticInstruction<BinaryArithmetic.Add>();
+            case ILOpCode.Sub:
+                return new BinaryArithmeticInstruction<BinaryArithmetic.Sub>();
+            case ILOpCode.Mul:
+                return new BinaryArithmeticInstruction<BinaryArithmetic.Mul>();
+            case ILOpCode.Div:
+                return new BinaryArithmeticInstruction<BinaryArithmetic.Div>();
+            case ILOpCode.Rem:
+                return new BinaryArithmeticInstruction<BinaryArithmetic.Rem>();
+
+            case ILOpCode.Call:
+                return new CallInstruction((MethodInfo)inst.Operand);
+            case ILOpCode.Newobj:
+                return new NewObjInstruction((ConstructorInfo)inst.Operand);
+
+            case ILOpCode.Ret:
+                return new ReturnInstruction();
+
+            case ILOpCode.Ldsfld:
+                return new LoadStaticFieldInstruction((FieldInfo)inst.Operand);
+            case ILOpCode.Ldfld:
+                return new LoadInstanceFieldInstruction((FieldInfo)inst.Operand);
+            case ILOpCode.Ldflda:
+                return new LoadInstanceFieldAddressInstruction((FieldInfo)inst.Operand);
+            case ILOpCode.Clt:
+                return new ConditionValueInstruction<Condition.Lt<S>>();
+            case ILOpCode.Clt_un:
+                return new ConditionValueInstruction<Condition.Lt<U>>();
+            case ILOpCode.Cgt:
+                return new ConditionValueInstruction<Condition.Gt<S>>();
+            case ILOpCode.Cgt_un:
+                return new ConditionValueInstruction<Condition.Gt<U>>();
+            default:
+                throw new NotSupportedException($"Compile {inst.OpCode}@{inst.Offset} is not supported");
+        }
+    }
+
+    public IEnumerable<IStatement> CompileBody()
+    {
+        foreach (var decl in LocalVariables)
+        {
             if (decl.Type is OpaqueType)
             {
                 continue;
@@ -192,135 +362,83 @@ sealed class MethodCompilation
             new CompoundStatement([
             new SwitchStatement(SyntaxFactory.VarIdentifier(bp), [.. cases], new CompoundStatement([])) ]));
     }
-    public IReadOnlyDictionary<LocalVariableInfo, VariableDeclaration> CreateLocalVariableDeclarations()
+    public IReadOnlyList<VariableDeclaration> CreateLocalVariableDeclarations()
     {
         var li = 0;
-        var result = new Dictionary<LocalVariableInfo, VariableDeclaration>();
+        var result = new List<VariableDeclaration>(MethodBody.LocalVariables.Count);
         foreach (var v in MethodBody.LocalVariables)
         {
             var type = Context.Types[v.LocalType];
             var name = $"clsl__v{li}";
             li++;
             var decl = new VariableDeclaration(DeclarationScope.Function, name, type, []);
-            result.Add(v, decl);
+            result.Add(decl);
         }
         return result;
     }
 
 
     IExpression LocalVariableRef(int index)
-           => SyntaxFactory.VarIdentifier(LocalVariables[LocalVariableInfo[index]]);
+           => SyntaxFactory.VarIdentifier(LocalVariables[index]);
 
 
-    IEnumerable<IStatement> CompileBasicBlock(VariableDeclaration? bp, Stack<IExpression> stack, BasicBlock bb)
+    IEnumerable<IStatement> CompileBasicBlock(VariableDeclaration? bp, Stack<IExpression> stack, BasicBlock basicBlock)
     {
-        var ip = bb.Index - 1;
-        var maxIp = bb.Index + bb.Length;
-        while (ip < maxIp - 1)
+        foreach (var inst in basicBlock.Instructions)
         {
-            ip++;
-            var inst = Instructions[ip];
-            switch (inst.OpCode.ToILOpCode())
+            switch (inst)
             {
-                case ILOpCode.Nop:
+                case NopInstruction:
                     break;
-                case ILOpCode.Ldc_i4:
-                    stack.Push(SyntaxFactory.Literal((int)inst.Operand));
+                case ILoadConstantInstruction { Literal: var literal }:
+                    stack.Push(new LiteralValueExpression(literal));
                     break;
-                case ILOpCode.Ldc_i4_0:
-                    stack.Push(SyntaxFactory.Literal(0));
+                case LoadArgumentInstruction { Index: var index }:
+                    stack.Push(SyntaxFactory.ArgIdentifier(Context.Parameters[index]));
                     break;
-                case ILOpCode.Ldc_i4_1:
-                    stack.Push(SyntaxFactory.Literal(1));
-                    break;
-                case ILOpCode.Ldc_i4_2:
-                    stack.Push(SyntaxFactory.Literal(2));
-                    break;
-                case ILOpCode.Ldc_i4_3:
-                    stack.Push(SyntaxFactory.Literal(3));
-                    break;
-                case ILOpCode.Ldc_i4_4:
-                    stack.Push(SyntaxFactory.Literal(4));
-                    break;
-                case ILOpCode.Ldc_i4_5:
-                    stack.Push(SyntaxFactory.Literal(5));
-                    break;
-                case ILOpCode.Ldc_i4_6:
-                    stack.Push(SyntaxFactory.Literal(6));
-                    break;
-                case ILOpCode.Ldc_i4_7:
-                    stack.Push(SyntaxFactory.Literal(7));
-                    break;
-                case ILOpCode.Ldc_i4_8:
-                    stack.Push(SyntaxFactory.Literal(8));
-                    break;
-                case ILOpCode.Ldc_i4_m1:
-                    stack.Push(SyntaxFactory.Literal(-1));
-                    break;
-                case ILOpCode.Ldc_i4_s:
-                    stack.Push(SyntaxFactory.Literal((int)(sbyte)inst.Operand));
-                    break;
-                case ILOpCode.Ldc_i8:
-                    stack.Push(SyntaxFactory.Literal((long)inst.Operand));
-                    break;
-                case ILOpCode.Ldc_r4:
-                    stack.Push(SyntaxFactory.Literal((float)inst.Operand));
-                    break;
-                case ILOpCode.Ldc_r8:
-                    stack.Push(SyntaxFactory.Literal((double)inst.Operand));
-                    break;
-                case ILOpCode.Ldstr:
-                    throw new NotSupportedException();
-                case ILOpCode.Ldarg_0:
-                    if (Context.Parameters[0].Type is OpaqueType)
-                    {
-                        break;
-                    }
-                    stack.Push(new VariableIdentifierExpression(Context.Parameters[0]));
-                    break;
-                case ILOpCode.Ldarg_1:
-                    stack.Push(new VariableIdentifierExpression(Context.Parameters[1]));
-                    break;
-                case ILOpCode.Ldarg_2:
-                    stack.Push(new VariableIdentifierExpression(Context.Parameters[2]));
-                    break;
-                case ILOpCode.Add:
+                case IBinaryArithmeticInstruction binst:
                     {
                         Debug.Assert(stack.Count >= 2);
                         var r = stack.Pop();
                         var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Addition));
+                        stack.Push(binst.CreateExpression(l, r));
                         break;
                     }
-                case ILOpCode.Sub:
+                case CallInstruction { Callee: var methodInfo }:
                     {
-                        var r = stack.Pop();
-                        var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Subtraction));
-                        break;
-                    }
-                case ILOpCode.Mul:
-                    {
-                        var r = stack.Pop();
-                        var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Multiplication));
-                        break;
-                    }
-                case ILOpCode.Div:
-                    {
-                        var r = stack.Pop();
-                        var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Division));
-                        break;
-                    }
-                case ILOpCode.Call:
-                    {
-                        var methodInfo = (MethodInfo)inst.Operand;
-                        if (TryGetVectorSwizzle(methodInfo, out var swizzles))
+                        if (TryGetVectorSwizzle(methodInfo, out var swizzles, out var isSetter))
                         {
-                            stack.Push(
-                                new VectorSwizzleAccessExpression(stack.Pop(), swizzles)
-                            );
+                            if (isSetter)
+                            {
+                                var value = stack.Pop();
+                                var v = stack.Pop();
+                                if (v is AddressOfExpression { Base: var bv })
+                                {
+                                    yield return new SimpleAssignmentStatement(
+                                            new VectorSwizzleAccessExpression(bv, swizzles),
+                                            value,
+                                            AssignmentOp.Assign);
+                                }
+                                else
+                                {
+                                    throw new NotSupportedException("Swizzle argument should be pointer type");
+                                }
+                            }
+                            else
+                            {
+                                var v = stack.Pop();
+                                if (v is AddressOfExpression { Base: var bv })
+                                {
+                                    stack.Push(
+                                        new VectorSwizzleAccessExpression(bv, swizzles)
+                                    );
+                                }
+                                else
+                                {
+                                    throw new NotSupportedException("Swizzle argument should be pointer type");
+                                }
+                            }
+
                             break;
                         }
                         if (TryGetOp(methodInfo, out var op))
@@ -342,9 +460,8 @@ sealed class MethodCompilation
                         stack.Push(new FunctionCallExpression(callee, [.. args.Reverse()]));
                         break;
                     }
-                case ILOpCode.Newobj:
+                case NewObjInstruction { Constructor: MethodBase ctorInfo }:
                     {
-                        var ctorInfo = (ConstructorInfo)inst.Operand;
                         var callee = Context.Methods[ctorInfo];
                         var parameters = callee.Parameters;
                         var args = new IExpression[parameters.Length];
@@ -353,255 +470,142 @@ sealed class MethodCompilation
                             args[j] = stack.Pop();
                         }
                         stack.Push(new FunctionCallExpression(callee, [.. args.Reverse()]));
-
                         break;
                     }
-                case ILOpCode.Stloc:
+                case StoreLocalInstruction { Info.LocalIndex: var index }:
                     {
                         yield return new SimpleAssignmentStatement(
-                            LocalVariableRef((int)inst.Operand),
+                            LocalVariableRef(index),
                             stack.Pop(),
                             AssignmentOp.Assign
                         );
                         break;
                     }
-                case ILOpCode.Stloc_0:
-                    {
-                        yield return new SimpleAssignmentStatement(
-                            LocalVariableRef(0),
-                            stack.Pop(),
-                            AssignmentOp.Assign
-                        );
-                        break;
-                    }
-                case ILOpCode.Stloc_1:
-                    {
-                        yield return new SimpleAssignmentStatement(
-                            LocalVariableRef(1),
-                            stack.Pop(),
-                            AssignmentOp.Assign
-                        );
-                        break;
-                    }
-                case ILOpCode.Stloc_2:
-                    {
-                        yield return new SimpleAssignmentStatement(
-                            LocalVariableRef(2),
-                            stack.Pop(),
-                            AssignmentOp.Assign
-                        );
-                        break;
-                    }
-                case ILOpCode.Stloc_3:
-                    {
-                        yield return new SimpleAssignmentStatement(
-                            LocalVariableRef(3),
-                            stack.Pop(),
-                            AssignmentOp.Assign
-                        );
-                        break;
-                    }
-                case ILOpCode.Stloc_s:
-                    {
-                        var info = (LocalVariableInfo)inst.Operand;
-                        yield return new SimpleAssignmentStatement(
-                            LocalVariableRef(info.LocalIndex),
-                            //SyntaxFactory.VarIdentifier(LocalVariables[info]),
-                            stack.Pop(),
-                            AssignmentOp.Assign
-                        );
-                        break;
-                    }
-                case ILOpCode.Ldloc_0:
-                    {
-                        stack.Push(LocalVariableRef(0));
-                        break;
-                    }
-                case ILOpCode.Ldloc_1:
-                    {
-                        stack.Push(LocalVariableRef(1));
-                        break;
-                    }
-                case ILOpCode.Ldloc_2:
-                    {
-                        stack.Push(LocalVariableRef(2));
-                        break;
-                    }
-                case ILOpCode.Ldloc_3:
-                    {
-                        stack.Push(LocalVariableRef(3));
-                        break;
-                    }
-                case ILOpCode.Ldloc_s:
-                    {
-                        var info = (LocalVariableInfo)inst.Operand;
-                        //stack.Push(SyntaxFactory.VarIdentifier(LocalVariables[info]));
-                        stack.Push(LocalVariableRef(info.LocalIndex));
-                        break;
-                    }
-                case ILOpCode.Br_s:
+                case LoadLocalInstruction { Info.LocalIndex: var index }:
+                    stack.Push(LocalVariableRef(index));
+                    break;
+                case BranchInstruction<Condition.Unconditional> { Target: var target }:
                     {
                         if (bp is null)
                         {
                             throw new NotSupportedException();
                         }
-                        var targetOffset = inst.Offset + (int)inst.Operand + inst.OpCode.Size;
-                        var target = OffsetToInstructionIndex[targetOffset];
                         yield return new SimpleAssignmentStatement(
                             SyntaxFactory.VarIdentifier(bp),
-                            SyntaxFactory.Literal(target),
+                            SyntaxFactory.Literal(target.Index),
                             AssignmentOp.Assign
                         );
                         yield return SyntaxFactory.Continue();
-                        var ib = InstructionToBasicBlockLookUp[target];
-                        Stacks[ib] ??= new Stack<IExpression>(stack);
+                        Stacks[target.Index] ??= new Stack<IExpression>(stack);
                         break;
                     }
-                case ILOpCode.Br:
+                case BranchInstruction<Condition.True> { Target: var target }:
                     {
                         if (bp is null)
                         {
                             throw new NotSupportedException();
                         }
-                        var targetOffset = inst.Offset + (int)inst.Operand + inst.OpCode.Size;
-                        var target = OffsetToInstructionIndex[targetOffset];
-                        yield return new SimpleAssignmentStatement(
-                            SyntaxFactory.VarIdentifier(bp),
-                            SyntaxFactory.Literal(target),
-                            AssignmentOp.Assign
-                        );
-                        yield return SyntaxFactory.Continue();
-                        var ib = InstructionToBasicBlockLookUp[target];
-                        Stacks[ib] ??= new Stack<IExpression>(stack);
-                        break;
-                    }
-
-                case ILOpCode.Brfalse_s:
-                    {
-                        if (bp is null)
-                        {
-                            throw new NotSupportedException();
-                        }
-                        var target = ip + (sbyte)inst.Operand + inst.OpCode.Size;
                         yield return new IfStatement(
                             stack.Pop(),
                             new([
                                 new SimpleAssignmentStatement(
                                     SyntaxFactory.VarIdentifier(bp),
-                                    SyntaxFactory.Literal(ip + 1),
+                                    SyntaxFactory.Literal(target.Index),
                                     AssignmentOp.Assign
                                 ),
                                 SyntaxFactory.Continue()
-
                                 ]),
                             new([
                                 new SimpleAssignmentStatement(
                                     SyntaxFactory.VarIdentifier(bp),
-                                    SyntaxFactory.Literal(target),
+                                    SyntaxFactory.Literal(BasicBlocks[basicBlock.Index + 1].Index),
                                     AssignmentOp.Assign
                                 ),
                                 SyntaxFactory.Continue()
                                 ]),
                             []
                         );
-
-                        var ib = InstructionToBasicBlockLookUp[target];
-                        Stacks[ib] ??= new Stack<IExpression>(stack);
+                        Stacks[target.Index] ??= new Stack<IExpression>(stack);
                         break;
                     }
-                case ILOpCode.Ret:
+                case BranchInstruction<Condition.False> { Target: var target }:
+                    {
+                        if (bp is null)
+                        {
+                            throw new NotSupportedException();
+                        }
+                        yield return new IfStatement(
+                            stack.Pop(),
+                            new([
+                                new SimpleAssignmentStatement(
+                                    SyntaxFactory.VarIdentifier(bp),
+                                    SyntaxFactory.Literal(BasicBlocks[basicBlock.Index + 1].Index),
+                                    AssignmentOp.Assign
+                                ),
+                                SyntaxFactory.Continue()
+                                ]),
+                            new([
+                                new SimpleAssignmentStatement(
+                                    SyntaxFactory.VarIdentifier(bp),
+                                    SyntaxFactory.Literal(target.Index),
+                                    AssignmentOp.Assign
+                                ),
+                                SyntaxFactory.Continue()
+                                ]),
+                            []
+                        );
+                        Stacks[target.Index] ??= new Stack<IExpression>(stack);
+                        break;
+                    }
+                case ReturnInstruction:
                     if (stack.Count != 0)
                     {
-                        yield return new ReturnStatement(stack.Pop());
+                        yield return SyntaxFactory.Return(stack.Pop());
                     }
                     else
                     {
                         yield return SyntaxFactory.Return(null);
                     }
                     break;
-                case ILOpCode.Clt:
+                case IConditionValueInstruction cinst:
                     {
-                        var insts = Instructions.AsSpan();
-                        if (Instructions[(ip + 1)..Math.Min((ip + 3), maxIp)] is
-                        [
-                            var op0, var op1
-                        ] && op0.OpCode.ToILOpCode() == ILOpCode.Ldc_i4_0
-                          && op1.OpCode.ToILOpCode() == ILOpCode.Ceq)
-                        {
-                        }
                         var r = stack.Pop();
                         var l = stack.Pop();
-                        stack.Push(new UnaryLogicalExpression(new BinaryRelationalExpression(l, r, BinaryRelationalOp.LessThan), UnaryLogicalOp.Not));
-                        ip += 2;
+                        stack.Push(cinst.CreateExpression(l, r));
                         break;
-                        throw new NotSupportedException();
                     }
-                case ILOpCode.Cgt:
+                case LoadArgumentAddressInstruction { Index: var index }:
                     {
-                        var insts = Instructions.AsSpan();
-                        if (Instructions[(ip + 1)..Math.Min((ip + 3), maxIp)] is
-                        [
-                            var op0, var op1
-                        ] && op0.OpCode.ToILOpCode() == ILOpCode.Ldc_i4_0
-                          && op1.OpCode.ToILOpCode() == ILOpCode.Ceq)
-                        {
-                        }
-                        var r = stack.Pop();
-                        var l = stack.Pop();
-                        stack.Push(new UnaryLogicalExpression(new BinaryRelationalExpression(l, r, BinaryRelationalOp.GreaterThan), UnaryLogicalOp.Not));
-                        ip += 2;
+                        stack.Push(SyntaxFactory.AddressOf(SyntaxFactory.ArgIdentifier(Context.Parameters[index])));
                         break;
-                        throw new NotSupportedException();
+                    }
+                case LoadLocalAddressInstruction { Info: var info }:
+                    {
+                        //var info = (LocalVariableInfo)inst.Operand;
+                        //if (ip + 1 < Instructions.Length)
+                        //{
+                        //    var next = Instructions[ip + 1];
+                        //    if (next.OpCode.ToILOpCode() == ILOpCode.Call)
+                        //    {
+                        //        var f = (MethodInfo)next.Operand;
+                        //        // TODO: add attribute for this hack
+                        //        if (TryGetVectorSwizzle(f, out var swizzles))
+                        //        {
+                        //            stack.Push(new VectorSwizzleAccessExpression(
+                        //                (LocalVariableRef(info.LocalIndex)),
+                        //                swizzles));
+                        //            ip++;
+                        //            break;
+                        //        }
+                        //    }
+                        //}
+                        //throw new NotSupportedException();
+                        stack.Push(SyntaxFactory.AddressOf(SyntaxFactory.VarIdentifier(LocalVariables[info.LocalIndex])));
+                        break;
                     }
 
-                case ILOpCode.Ldarga_s:
+                case LoadStaticFieldInstruction { Field: var info }:
                     {
-                        var paraInfo = (ParameterInfo)inst.Operand;
-                        if (ip + 1 < Instructions.Length)
-                        {
-                            var next = Instructions[ip + 1];
-                            if (next.OpCode.ToILOpCode() == ILOpCode.Call)
-                            {
-                                var f = (MethodInfo)next.Operand;
-                                // TODO: add attribute for this hack
-                                if (TryGetVectorSwizzle(f, out var swizzles))
-                                {
-                                    stack.Push(new VectorSwizzleAccessExpression(
-                                        SyntaxFactory.ArgIdentifier(Context.Parameters[paraInfo.Position]),
-                                        swizzles));
-                                    ip++;
-                                    break;
-                                }
-                            }
-                        }
-                        throw new NotSupportedException();
-                    }
-                case ILOpCode.Ldloca_s:
-                    {
-                        var info = (LocalVariableInfo)inst.Operand;
-                        if (ip + 1 < Instructions.Length)
-                        {
-                            var next = Instructions[ip + 1];
-                            if (next.OpCode.ToILOpCode() == ILOpCode.Call)
-                            {
-                                var f = (MethodInfo)next.Operand;
-                                // TODO: add attribute for this hack
-                                if (TryGetVectorSwizzle(f, out var swizzles))
-                                {
-                                    stack.Push(new VectorSwizzleAccessExpression(
-                                        (LocalVariableRef(info.LocalIndex)),
-                                        swizzles));
-                                    ip++;
-                                    break;
-                                }
-                            }
-                        }
-                        throw new NotSupportedException();
-                    }
-
-                case ILOpCode.Ldsfld:
-                    {
-                        var info = (FieldInfo)inst.Operand;
                         // TODO: better handling other than this ad hoc one
                         if (info.GetCustomAttribute<CLSL.Language.ShaderAttribute.UniformAttribute>() is not null)
                         {
@@ -615,46 +619,75 @@ sealed class MethodCompilation
                         }
                         throw new NotImplementedException();
                     }
+                case LoadInstanceFieldInstruction { Field: var info }:
+                    {
+                        var obj = stack.Pop();
+                        stack.Push(new NamedComponentExpression(obj, info.Name));
+                        break;
+                    }
+                case LoadInstanceFieldAddressInstruction { Field: var info }:
+                    {
+                        var obj = stack.Pop();
+                        if (obj is AddressOfExpression { Base: var b })
+                        {
+                            stack.Push(SyntaxFactory.AddressOf(new NamedComponentExpression(b, info.Name)));
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
+                        break;
+                    }
                 default:
-                    throw new NotSupportedException($"Unsupported OpCode: {inst.OpCode}@{inst.Offset:X} {inst.Operand} - Method {Method.DeclaringType.Name}.{Method.Name}");
+                    //throw new NotSupportedException($"Unsupported OpCode: {inst.OpCode}@{inst.Offset:X} {inst.Operand} - Method {Method.DeclaringType.Name}.{Method.Name}");
+                    throw new NotSupportedException($"Unsupported OpCode: {inst}({inst.GetType().Name}) - Method {Method.DeclaringType.Name}.{Method.Name}");
             }
         }
     }
 
-    bool TryGetOp(MethodInfo f, out BinaryArithmeticOp op)
+    bool TryGetOp(MethodInfo f, out BinaryArithmetic.Op op)
     {
         switch (f.Name)
         {
             case "op_Addition":
-                op = BinaryArithmeticOp.Addition;
+                op = BinaryArithmetic.Op.Addition;
                 return true;
             case "op_Subtraction":
-                op = BinaryArithmeticOp.Subtraction;
+                op = BinaryArithmetic.Op.Subtraction;
                 return true;
             case "op_Multiply":
-                op = BinaryArithmeticOp.Multiplication;
+                op = BinaryArithmetic.Op.Multiplication;
                 return true;
             case "op_Division":
-                op = BinaryArithmeticOp.Division;
+                op = BinaryArithmetic.Op.Division;
                 return true;
             case "op_Modulus":
-                op = BinaryArithmeticOp.Remainder;
+                op = BinaryArithmetic.Op.Remainder;
                 return true;
             default:
                 op = default;
                 return false;
         }
     }
-    bool TryGetVectorSwizzle(MethodInfo f, out ImmutableArray<SwizzleComponent> swizzles)
+    bool TryGetVectorSwizzle(MethodInfo f, out ImmutableArray<SwizzleComponent> swizzles, out bool isSet)
     {
+        // TODO: use explicit attribute for swizzles
         if (f.DeclaringType.Namespace.StartsWith("DualDrill.Mathematics"))
         {
             if (f.Name.StartsWith("get_"))
             {
                 swizzles = [.. f.Name.Substring(4).Select(c => Enum.Parse<SwizzleComponent>(c.ToString()))];
+                isSet = false;
+                return true;
+            }
+            if (f.Name.StartsWith("set_"))
+            {
+                swizzles = [.. f.Name.Substring(4).Select(c => Enum.Parse<SwizzleComponent>(c.ToString()))];
+                isSet = true;
                 return true;
             }
         }
+        isSet = false;
         swizzles = default;
         return false;
     }

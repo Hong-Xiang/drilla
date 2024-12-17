@@ -12,7 +12,7 @@ public sealed record class UnaryArithmeticOperatorDefinition(
 }
 
 public sealed record class BinaryArithmeticOperatorDefinition(
-    BinaryArithmeticOp Op,
+    BinaryArithmetic.Op Op,
     IShaderType Left,
     IShaderType Right,
     IShaderType Result)
@@ -32,11 +32,11 @@ public static class ShaderOperator
     ];
 
     public static readonly ImmutableArray<BinaryArithmeticOperatorDefinition> BinaryArithmeticOperatorDefinitions = [
-        ..from o in Enum.GetValues<BinaryArithmeticOp>()
+        ..from o in Enum.GetValues<BinaryArithmetic.Op>()
           from s in ShaderType.NumericScalarTypes
           from t in ShaderType.GetScalarOrVectorTypes(s)
           select new BinaryArithmeticOperatorDefinition(o, t, t, t),
-        ..from o in Enum.GetValues<BinaryArithmeticOp>()
+        ..from o in Enum.GetValues<BinaryArithmetic.Op>()
           from s in ShaderType.NumericScalarTypes
           from v in ShaderType.GetVecTypes(s)
           from d in (BinaryArithmeticOperatorDefinition[])[

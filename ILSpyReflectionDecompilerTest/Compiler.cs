@@ -49,7 +49,7 @@ internal sealed class Compiler
                     {
                         // Load integer constant onto the stack
                         int value = inst.Operand is sbyte v ? v : (int)inst.Operand;
-                        stack.Push(new LiteralValueExpression(new IntLiteral(N32.Instance, value)));
+                        stack.Push(new LiteralValueExpression(new I32Literal(value)));
                         break;
                     }
 
@@ -59,14 +59,14 @@ internal sealed class Compiler
                     {
                         var r = stack.Pop();
                         var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Addition));
+                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Addition));
                         break;
                     }
                 case ILOpCode.Sub:
                     {
                         var r = stack.Pop();
                         var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmeticOp.Subtraction));
+                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Subtraction));
                         break;
                     }
                 case ILOpCode.Call:

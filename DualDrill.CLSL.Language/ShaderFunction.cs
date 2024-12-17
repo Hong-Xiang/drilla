@@ -360,7 +360,7 @@ public class ShaderFunction : ISingleton<ShaderFunction>
     ShaderFunction()
     {
         FunctionDeclaration[] fs = [.. VecConstructors()];
-        var fsvec2 = fs.Where(f => f.Name == "vec2" && f.Parameters.Length == 1 && f.Return.Type.Equals(ShaderType.GetVecType(N2.Instance, ShaderType.Bool))).ToArray();
+        var fsvec2 = fs.Where(f => f.Name == "vec2" && f.Parameters.Length == 1 && f.Return.Type is VecType<N2, BoolType>).ToArray();
 
         Functions = [.. from n in Enum.GetValues<NumericBuiltinFunctionName>()
                         from f in CreateFunctionOverloads(n)
@@ -368,7 +368,7 @@ public class ShaderFunction : ISingleton<ShaderFunction>
                      .. BuiltinScalarConstructors(),
                      .. VecConstructors()];
 
-        var fsv2s = Functions.Where(f => f.Name == "vec2" && f.Return.Type is VecType { ElementType: BoolType, Size: N2 }).ToArray();
+        var fsv2s = Functions.Where(f => f.Name == "vec2" && f.Return.Type is VecType<N2, BoolType>).ToArray();
         var kvs = from f in Functions
                   where f.Parameters.Length == 1
                   select KeyValuePair.Create((f.Name, f.Parameters[0].Type), f);

@@ -35,15 +35,15 @@ public sealed class CSharpProjectionConfiguration
             _ => throw new NotSupportedException($"Unary arithmetic operator {op} is not supported")
         };
     }
-    public string OpName(BinaryArithmeticOp op)
+    public string OpName(BinaryArithmetic.Op op)
     {
         return op switch
         {
-            BinaryArithmeticOp.Addition => "+",
-            BinaryArithmeticOp.Subtraction => "-",
-            BinaryArithmeticOp.Multiplication => "*",
-            BinaryArithmeticOp.Division => "/",
-            BinaryArithmeticOp.Remainder => "%",
+            BinaryArithmetic.Op.Addition => "+",
+            BinaryArithmetic.Op.Subtraction => "-",
+            BinaryArithmetic.Op.Multiplication => "*",
+            BinaryArithmetic.Op.Division => "/",
+            BinaryArithmetic.Op.Remainder => "%",
             _ => throw new NotSupportedException($"Binary arithmetic operator {op} is not supported")
         };
     }
@@ -57,14 +57,14 @@ public sealed class CSharpProjectionConfiguration
             IIntType { BitWidth: N32 } => typeof(int).Name,
             IIntType { BitWidth: N64 } => typeof(long).Name,
 
-            UIntType { BitWidth: N8 } => typeof(byte).Name,
-            UIntType { BitWidth: N16 } => typeof(ushort).Name,
-            UIntType { BitWidth: N32 } => typeof(uint).Name,
-            UIntType { BitWidth: N64 } => typeof(ulong).Name,
+            IUIntType { BitWidth: N8 } => typeof(byte).Name,
+            IUIntType { BitWidth: N16 } => typeof(ushort).Name,
+            IUIntType { BitWidth: N32 } => typeof(uint).Name,
+            IUIntType { BitWidth: N64 } => typeof(ulong).Name,
 
-            FloatType { BitWidth: N16 } => typeof(Half).Name,
-            FloatType { BitWidth: N32 } => typeof(float).Name,
-            FloatType { BitWidth: N64 } => typeof(double).Name,
+            IFloatType { BitWidth: N16 } => typeof(Half).Name,
+            IFloatType { BitWidth: N32 } => typeof(float).Name,
+            IFloatType { BitWidth: N64 } => typeof(double).Name,
 
             IVecType t => t.Name,
             MatType m => m.Name,

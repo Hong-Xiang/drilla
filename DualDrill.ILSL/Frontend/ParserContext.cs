@@ -25,7 +25,7 @@ sealed class RuntimeDefinitions : ISingleton<RuntimeDefinitions>
     {
         var result = new Dictionary<Type, IShaderType>()
         {
-            [typeof(bool)] = ShaderType.Bool,
+            [typeof(bool)] = BoolType.Instance,
             [typeof(int)] = ShaderType.I32,
             [typeof(uint)] = ShaderType.U32,
             [typeof(long)] = ShaderType.I64,
@@ -33,9 +33,9 @@ sealed class RuntimeDefinitions : ISingleton<RuntimeDefinitions>
             [typeof(Half)] = ShaderType.F16,
             [typeof(float)] = ShaderType.F32,
             [typeof(double)] = ShaderType.F64,
-            [typeof(Vector4)] = ShaderType.GetVecType(N4.Instance, ShaderType.F32),
-            [typeof(Vector3)] = ShaderType.GetVecType(N3.Instance, ShaderType.F32),
-            [typeof(Vector2)] = ShaderType.GetVecType(N2.Instance, ShaderType.F32),
+            [typeof(Vector4)] = VecType<N4, FloatType<N32>>.Instance,
+            [typeof(Vector3)] = VecType<N3, FloatType<N32>>.Instance,
+            [typeof(Vector2)] = VecType<N2, FloatType<N32>>.Instance,
         };
         var config = CSharpProjectionConfiguration.Instance;
 
@@ -89,7 +89,7 @@ sealed class RuntimeDefinitions : ISingleton<RuntimeDefinitions>
                     {
                         var parameterDecls = paramTypes.Select(t => new ParameterDeclaration(t.Name, runtimeTypes[t], []));
                         var parameterTypes = parameterDecls.Select(p => p.Type).ToArray();
-                        if (m.Name == "vec2" && parameterTypes.Length == 2 && rt is VecType { ElementType: BoolType, Size: N2 })
+                        if (m.Name == "vec2" && parameterTypes.Length == 2 && rt is VecType<N2, BoolType>)
                         {
                             var fl = ShaderFunction.Instance.GetFunction(m.Name, rt, parameterTypes);
                         }

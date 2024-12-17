@@ -160,7 +160,7 @@ internal sealed record class VectorSimdCodeGenerator(
 
     public void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op)
     {
-        if (op.Op != BinaryArithmeticOp.Remainder)
+        if (op.Op != BinaryArithmetic.Op.Remainder)
         {
             var l = op.Left is IScalarType ? $"{SimdStaticDataTypeName}.Create(left)" : "left.Data";
             var r = op.Right is IScalarType ? $"{SimdStaticDataTypeName}.Create(right)" : "right.Data";
@@ -196,7 +196,7 @@ public sealed record class VecCodeGenerator
         return vecType switch
         {
             IVecType { ElementType: BoolType } => false,
-            IVecType { ElementType: FloatType { BitWidth: N16 } } => false,
+            IVecType { ElementType: IFloatType { BitWidth: N16 } } => false,
             IVecType { ElementType: var e, Size: N3 } when e.BitWidth.Value * 4 >= 64 => true,
             IVecType { ElementType: var e, Size: var s } when e.BitWidth.Value * s.Value >= 64 => true,
             _ => false
