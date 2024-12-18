@@ -6,7 +6,13 @@ public sealed record class RefType<TShaderType>(TShaderType BaseType) : IRefType
 {
     public string Name => $"ref<{BaseType.Name}>";
 
-    public IPtrType PtrType => throw new NotImplementedException();
+    public IPtrType GetPtrType()
+    {
+        throw new NotImplementedException();
+    }
 
-    IRefType IShaderType.RefType => throw new NotImplementedException();
+    public IRefType GetRefType()
+    {
+        throw new NotImplementedException();
+    }
 }

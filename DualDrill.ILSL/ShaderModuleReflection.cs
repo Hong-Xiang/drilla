@@ -2,6 +2,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Graphics;
+using DualDrill.Mathematics;
 using System.Collections.Immutable;
 using System.Linq.Expressions;
 using System.Numerics;
@@ -85,6 +86,10 @@ public class VertexBufferLayoutHelper
         {
             return 4;
         }
+        else if (type == typeof(vec2f32))
+        {
+            return 8;
+        }
         else
         {
             throw new Exception("Not in the ILSL typs");
@@ -113,6 +118,10 @@ public class VertexBufferLayoutHelper
         else if (type == typeof(int))
         {
             return GPUVertexFormat.Sint32;
+        }
+        else if (type == typeof(vec2f32))
+        {
+            return GPUVertexFormat.Float32x2;
         }
         else
         {
@@ -273,7 +282,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
             gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntry()
             {
                 Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
-                Visibility = (decl.Attributes.OfType<StageAttribute>().Count() != 0) ? decl.Attributes.OfType<StageAttribute>().First().Stage : (GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute),
+                Visibility = (decl.Attributes.OfType<IShaderStageAttribute>().Count() != 0) ? decl.Attributes.OfType<IShaderStageAttribute>().First().Stage : (GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute),
                 Buffer = new GPUBufferBindingLayout()
                 {
                     Type = GPUBufferBindingType.Uniform,
@@ -300,7 +309,7 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
             gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntryBuffer()
             {
                 Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
-                Visibility = (decl.Attributes.OfType<StageAttribute>().Count() != 0) ? decl.Attributes.OfType<StageAttribute>().First().Stage : (GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute),
+                Visibility = (decl.Attributes.OfType<IShaderStageAttribute>().Count() != 0) ? decl.Attributes.OfType<IShaderStageAttribute>().First().Stage : (GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute),
                 Buffer = new GPUBufferBindingLayout()
                 {
                     Type = GPUBufferBindingType.Uniform,

@@ -8,7 +8,13 @@ public sealed record class OpaqueType(Type? Type) : IShaderType
 {
     public string Name => $"<OpaqueType:{Type?.Name ?? nameof(OpaqueType)}>";
 
-    public IRefType RefType => throw new NotSupportedException();
+    public IRefType GetRefType()
+    {
+        throw new NotSupportedException();
+    }
 
-    public IPtrType PtrType => throw new NotSupportedException();
+    public IPtrType GetPtrType()
+    {
+        throw new NotSupportedException();
+    }
 }

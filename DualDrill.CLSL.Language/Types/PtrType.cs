@@ -11,9 +11,15 @@ public sealed record class PtrType(IShaderType BaseType) : IPtrType
 {
     public string Name => $"ptr<{BaseType.Name}>";
 
-    public IRefType RefType => throw new NotImplementedException();
+    public IRefType GetRefType()
+    {
+        throw new NotImplementedException();
+    }
 
-    IPtrType IShaderType.PtrType => throw new NotImplementedException();
+    public IPtrType GetPtrType()
+    {
+        throw new NotImplementedException();
+    }
 }
 
 
@@ -24,16 +30,15 @@ sealed class SingletonPtrType<TBaseType>() : IPtrType, ISingleton<SingletonPtrTy
     public IShaderType BaseType => TBaseType.Instance;
     public string Name => $"ptr<{TBaseType.Instance.Name}>";
 
-    public IRefType RefType
+    public IRefType GetRefType()
     {
-        get
-        {
-            throw new NotSupportedException();
-        }
+        throw new NotSupportedException();
     }
 
-    public IPtrType PtrType => SingletonPtrType<SingletonPtrType<TBaseType>>.Instance;
-
+    public IPtrType GetPtrType()
+    {
+        return SingletonPtrType<SingletonPtrType<TBaseType>>.Instance;
+    }
 }
 
 

@@ -14,68 +14,44 @@ namespace DualDrill.Server.Controllers;
 [Route("[controller]")]
 public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Controller
 {
-    ISharpShader? GetShaderModule(string name)
+    ISharpShader? GetShader(string name)
     {
-        return ShaderModules.ShaderModules[name];
+        if (ShaderModules.ShaderModules.TryGetValue(name, out var shader))
+        {
+            return shader;
+        }
+        else
+        {
+            return null;
+        }
     }
 
-    [HttpGet("parse/{name}")]
-    public async Task<IActionResult> ParseModule(string name)
+    [HttpGet("compile/{name}/ir")]
+    public IActionResult ParseDevelopModule(string name)
     {
-        var shaderModule = GetShaderModule(name);
-        if (shaderModule is null)
+        var shader = GetShader(name);
+        if (shader is null)
         {
             return NotFound();
         }
-        var ir = ILSL.ILSLCompiler.Parse(shaderModule);
+        var ir = ILSL.ILSLCompiler.Parse(shader);
         return Ok(ir);
     }
 
-    [HttpGet("mothod/parse")]
-    public IActionResult ParseDevelopMethod()
+    [HttpGet("compile/{name}/wgsl")]
+    public async Task<IActionResult> CompileDevelopModule(string name)
     {
-        var methodParser = new RelooperMethodParser();
-        var parser = new CLSLParser(methodParser);
-        var ht = new MandelbrotDistanceShader();
-
-        var ir = ILSL.ILSLCompiler.Parse(ht);
-        return Ok(ir);
-    }
-
-
-
-    [HttpGet("parse")]
-    public IActionResult ParseDevelopModule()
-    {
-        var ht = new MandelbrotDistanceShader();
-        var ir = ILSL.ILSLCompiler.Parse(ht);
-        return Ok(ir);
-    }
-
-    [HttpGet("compile")]
-    public async Task<IActionResult> CompileDevelopModule()
-    {
-        var sm = new MandelbrotDistanceShader();
+        var shader = GetShader(name);
+        if (shader is null)
+        {
+            return NotFound();
+        }
+        //var sm = new MandelbrotDistanceShader();
+        //var sm = new MinimumTriangle();
         //var sm = new BasicConditionShader();
         //var ir = ILSL.ILSLCompiler.Parse(sm);
         //var code = await ILSLCompiler.EmitCode(ir);
-        var code = await ILSLCompiler.CompileV2(sm);
-        return Ok(code);
-    }
-
-    [HttpGet("emit")]
-    public async Task<IActionResult> EmitDevelopModule()
-    {
-        var module = new ShaderModuleDeclaration([
-            new FunctionDeclaration("foo", [], new FunctionReturn(ShaderType.I32, []), []){
-                Body = new([
-                ])
-            }
-        ]);
-        //var ht = new MandelbrotDistanceShader();
-        var sm = new BasicConditionShader();
-        var ir = ILSL.ILSLCompiler.Parse(sm);
-        var code = await ILSLCompiler.EmitCode(ir);
+        var code = await ILSLCompiler.CompileV2(shader);
         return Ok(code);
     }
 
@@ -85,39 +61,6 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         return View();
     }
 
-    [HttpGet("wgsl/{name}/expected")]
-    public IActionResult ExpectedCode(string name)
-    {
-        var shaderModule = GetShaderModule(name);
-        var a = shaderModule.GetType().GetCustomAttribute<CLSLDevelopExpectedWGPUCodeAttribute>();
-        return Ok(a.Code);
-    }
-
-
-    [HttpGet("wgsl/{name}")]
-    public async Task<IActionResult> CompileModule(string name)
-    {
-        if (name == nameof(SimpleUniformShader))
-        {
-            return Ok(await ILSLCompiler.CompileV2(new SimpleUniformShader()));
-        }
-        if (name == nameof(MandelbrotDistanceShader))
-        {
-            return Ok(await ILSLCompiler.CompileV2(new MandelbrotDistanceShader()));
-        }
-        if (name == nameof(QuadShader))
-        {
-            return Ok(await ILSLCompiler.CompileV2(new QuadShader()));
-        }
-
-        var shaderModule = GetShaderModule(name);
-        if (shaderModule is null)
-        {
-            return NotFound();
-        }
-
-        return Ok(await ILSLCompiler.Compile(shaderModule));
-    }
 
     [HttpGet("wgsl/vertexbufferlayout/{name}")]
     public async Task<IActionResult> GetVertexBufferLayout(string name)
@@ -172,8 +115,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
                 ]
             });
 
-            var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseShaderModule(shaderModule);
+            //var parser = new CLSLParser(bodyParser);
+            //var module = parser.ParseShaderModule(shaderModule);
+            var module = ILSL.ILSLCompiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -230,8 +174,8 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
                 ]
             });
 
-            var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseShaderModule(shaderModule);
+            //var parser = new CLSLParser(bodyParser);
+            var module = ILSL.ILSLCompiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
@@ -243,7 +187,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     async Task<IActionResult> MethodTargetAction(string moduleName, string methodName,
             Func<ILSpyMethodParser, MethodBase, Task<IActionResult>> next)
     {
-        var shaderModule = GetShaderModule(moduleName);
+        var shaderModule = GetShader(moduleName);
         if (shaderModule is null)
         {
             return NotFound($"Module {moduleName} not found");

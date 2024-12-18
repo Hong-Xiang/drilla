@@ -9,7 +9,13 @@ public sealed class UnitType : ISingletonShaderType<UnitType>, ISingleton<UnitTy
 
     public string Name => "Unit";
 
-    public IRefType RefType => throw new NotSupportedException();
+    public IRefType GetRefType()
+    {
+        throw new NotSupportedException();
+    }
 
-    public IPtrType PtrType => throw new NotSupportedException();
+    public IPtrType GetPtrType()
+    {
+        throw new NotSupportedException();
+    }
 }

@@ -1,6 +1,5 @@
 ﻿using DotNext.Patterns;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
 
@@ -10,15 +9,16 @@ public interface IShaderType
 {
     string Name { get; }
 
-    IRefType RefType { get; }
-    IPtrType PtrType { get; }
+    IRefType GetRefType();
+
+    IPtrType GetPtrType();
 }
 
 public interface ISingletonShaderType<TSelf> : IShaderType
     where TSelf : class, ISingletonShaderType<TSelf>, ISingleton<TSelf>
 {
-    IPtrType IShaderType.PtrType => SingletonPtrType<TSelf>.Instance;
-    IRefType IShaderType.RefType => throw new NotImplementedException();
+    IPtrType IShaderType.GetPtrType() => new PtrType(TSelf.Instance);
+    IRefType IShaderType.GetRefType() => throw new NotImplementedException();
 }
 
 /// <summary>
@@ -54,8 +54,6 @@ public interface IScalarType : IPlainType, IStorableType, ICreationFixedFootprin
 public interface IScalarType<TSelf> : IScalarType, ISingletonShaderType<TSelf>, ISingleton<TSelf>
     where TSelf : class, IScalarType<TSelf>
 {
-    IPtrType IShaderType.PtrType => SingletonPtrType<TSelf>.Instance;
-    IRefType IShaderType.RefType => throw new NotImplementedException();
 }
 
 public interface IIntegerType : IScalarType { }

@@ -23,10 +23,10 @@ public sealed class UIntType<TBitWidth> : IUIntType, IScalarType<UIntType<TBitWi
 
 public static partial class ShaderType
 {
-    public static IUIntType U8 { get; } = UIntType<N8>.Instance;
-    public static IUIntType U16 { get; } = UIntType<N16>.Instance;
-    public static IUIntType U32 { get; } = UIntType<N32>.Instance;
-    public static IUIntType U64 { get; } = UIntType<N64>.Instance;
+    public static IUIntType U8 => UIntType<N8>.Instance;
+    public static IUIntType U16 => UIntType<N16>.Instance;
+    public static IUIntType U32 => UIntType<N32>.Instance;
+    public static IUIntType U64 => UIntType<N64>.Instance;
 
     public static IUIntType GetUIntType(IBitWidth bitWidth)
     {

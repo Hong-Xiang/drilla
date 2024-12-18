@@ -1,3 +1,8 @@
-﻿namespace DualDrill.CLSL.Language.ShaderAttribute;
+﻿using DualDrill.Graphics;
 
-public sealed class VertexAttribute() : Attribute, IShaderStageAttribute { }
+namespace DualDrill.CLSL.Language.ShaderAttribute;
+
+public sealed class VertexAttribute() : Attribute, IShaderStageAttribute
+{
+    public GPUShaderStage Stage => GPUShaderStage.Vertex;
+}

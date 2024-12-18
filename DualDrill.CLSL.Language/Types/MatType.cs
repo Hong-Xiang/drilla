@@ -12,7 +12,13 @@ public sealed record class MatType(
 
     public int ByteSize => Row.Value * Column.Value * ElementType.ByteSize;
 
-    public IRefType RefType => throw new NotImplementedException();
+    public IRefType GetRefType()
+    {
+        throw new NotImplementedException();
+    }
 
-    public IPtrType PtrType => throw new NotImplementedException();
+    public IPtrType GetPtrType()
+    {
+        throw new NotImplementedException();
+    }
 }

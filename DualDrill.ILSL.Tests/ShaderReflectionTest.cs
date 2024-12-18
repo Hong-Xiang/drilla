@@ -30,7 +30,7 @@ public class ShaderReflectionTest
                 [
                     new GroupAttribute(0),
                     new BindingAttribute(0),
-                    new StageAttribute(GPUShaderStage.Vertex),
+                    new VertexAttribute(),
                     new UniformAttribute()
                 ]
             )

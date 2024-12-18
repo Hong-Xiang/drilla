@@ -77,9 +77,15 @@ public sealed class VecType<TRank, TElement> : IVecType,
 
     public IRank Size => TRank.Instance;
 
-    public IRefType RefType => throw new NotImplementedException();
+    public IRefType GetRefType()
+    {
+        throw new NotImplementedException();
+    }
 
-    public IPtrType PtrType => throw new NotImplementedException();
+    public IPtrType GetPtrType()
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public static partial class ShaderType

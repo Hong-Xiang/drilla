@@ -115,6 +115,15 @@ interface IConditionValueInstruction : IInstruction
 {
     IExpression CreateExpression(IExpression l, IExpression r);
 }
+
+sealed record class BinaryBitwiseInstruction(BinaryBitwiseOp Op) : IInstruction
+{
+}
+
+sealed record class ConvertInstruction(IShaderType Target) : IInstruction 
+{ 
+}
+
 sealed record class ConditionValueInstruction<TCondition> : IConditionValueInstruction
     where TCondition : IConditionValueCondition
 {

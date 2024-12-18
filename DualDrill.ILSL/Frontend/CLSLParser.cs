@@ -113,6 +113,13 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         return decl;
     }
 
+    IReadOnlyList<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
+    {
+        var fields = moduleType.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        fields = [.. fields.Where(f => f.GetCustomAttributes().Any(a => a is IShaderAttribute))];
+        return [.. fields.Select(ParseModuleVariableDeclaration)];
+    }
+
     public ShaderModuleDeclaration ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -121,6 +128,8 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
                                      .Where(m => m.GetCustomAttributes().Any(a => a is IShaderStageAttribute))
                                      .OrderBy(m => m.Name)
                                      .ToImmutableArray();
+
+        ParseAllModuleVariableDeclarations(moduleType);
 
         foreach (var m in entryMethods)
         {

@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -10,7 +11,13 @@ public sealed record class StructureDeclaration(
     ImmutableHashSet<IShaderAttribute> Attributes
 ) : IShaderType, IDeclaration
 {
-    public IRefType RefType => throw new NotImplementedException();
+    public IRefType GetRefType()
+    {
+        throw new NotImplementedException();
+    }
 
-    public IPtrType PtrType => throw new NotImplementedException();
+    public IPtrType GetPtrType()
+    {
+        throw new NotImplementedException();
+    }
 }

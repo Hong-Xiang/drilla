@@ -28,10 +28,10 @@ public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
 
 public static partial class ShaderType
 {
-    public static IIntType I8 { get; } = IntType<N8>.Instance;
-    public static IIntType I16 { get; } = IntType<N16>.Instance;
-    public static IIntType I32 { get; } = IntType<N32>.Instance;
-    public static IIntType I64 { get; } = IntType<N64>.Instance;
+    public static IIntType I8 => IntType<N8>.Instance;
+    public static IIntType I16 => IntType<N16>.Instance;
+    public static IIntType I32 => IntType<N32>.Instance;
+    public static IIntType I64 => IntType<N64>.Instance;
 
     public static IIntType GetIntType(IBitWidth bitWidth)
     {

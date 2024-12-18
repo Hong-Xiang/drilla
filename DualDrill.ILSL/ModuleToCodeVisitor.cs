@@ -121,8 +121,6 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
                 case UniformAttribute u:
                     Writer.Write("var<uniform> ");
                     break;
-                case StageAttribute _:
-                    break;
                 default:
                     throw new NotSupportedException($"VisitVariableDeclaration attribute {a} not support ");
             }
@@ -489,6 +487,11 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
             Writer.Unindent();
             Writer.WriteLine("}");
         }
+        Writer.Write("default : {");
+        Writer.Indent();
+        await stmt.DefaultCase.AcceptVisitor(this);
+        Writer.Unindent();
+        Writer.Write("}");
         Writer.Unindent();
         Writer.WriteLine("}");
     }

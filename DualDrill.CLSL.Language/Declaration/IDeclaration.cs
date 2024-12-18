@@ -9,10 +9,9 @@ namespace DualDrill.CLSL.Language.Declaration;
 [JsonDerivedType(typeof(ParameterDeclaration), nameof(ParameterDeclaration))]
 [JsonDerivedType(typeof(StructureDeclaration), nameof(StructureDeclaration))]
 [JsonDerivedType(typeof(MemberDeclaration), nameof(MemberDeclaration))]
-//TODO: find property of serialization of IType
-//[JsonDerivedType(typeof(IType), nameof(IType))]
-//[JsonDerivedType(typeof(TypeDeclaration), nameof(TypeDeclaration))]
+[JsonDerivedType(typeof(VariableDeclaration), nameof(VariableDeclaration))]
 [JsonDerivedType(typeof(ValueDeclaration), nameof(ValueDeclaration))]
+[JsonDerivedType(typeof(ShaderModuleDeclaration), nameof(ShaderModuleDeclaration))]
 public interface IDeclaration : IShaderAstNode
 {
     string Name { get; }

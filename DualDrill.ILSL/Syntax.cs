@@ -7,27 +7,27 @@ using System.Numerics;
 
 namespace DualDrill.ILSL;
 
-public sealed class ShaderMethodAttribute() : Attribute, IShaderStageAttribute
-{
-}
+//public sealed class ShaderMethodAttribute() : Attribute, IShaderStageAttribute
+//{
+//}
 
-public sealed class BindingAttribute(int Binding, bool HasDynamicOffset = false) : Attribute, IShaderAttribute
-{
-    public int Binding { get; } = Binding;
-    public bool HasDynamicOffset { get; } = HasDynamicOffset;
-}
+//public sealed class BindingAttribute(int Binding, bool HasDynamicOffset = false) : Attribute, IShaderAttribute
+//{
+//    public int Binding { get; } = Binding;
+//    public bool HasDynamicOffset { get; } = HasDynamicOffset;
+//}
 
-public sealed class UniformAttribute() : Attribute, IShaderAttribute { }
-public sealed class ReadAttribute() : Attribute, IShaderAttribute { }
-public sealed class ReadWriteAttribute() : Attribute, IShaderAttribute { }
-public sealed class StageAttribute(GPUShaderStage stage) : Attribute, IShaderAttribute
-{
-    public GPUShaderStage Stage { get; } = stage;
-}
-public sealed class VertexStepModeAttribute(GPUVertexStepMode StepMode) : Attribute
-{
-    public GPUVertexStepMode StepMode { get; } = StepMode;
-}
+//public sealed class UniformAttribute() : Attribute, IShaderAttribute { }
+//public sealed class ReadAttribute() : Attribute, IShaderAttribute { }
+//public sealed class ReadWriteAttribute() : Attribute, IShaderAttribute { }
+//public sealed class StageAttribute(GPUShaderStage stage) : Attribute, IShaderAttribute
+//{
+//    public GPUShaderStage Stage { get; } = stage;
+//}
+//public sealed class VertexStepModeAttribute(GPUVertexStepMode StepMode) : Attribute
+//{
+//    public GPUVertexStepMode StepMode { get; } = StepMode;
+//}
 
 
 public interface ISharpShader

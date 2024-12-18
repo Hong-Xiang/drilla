@@ -100,7 +100,7 @@ public struct MinimumTriangle : ISharpShader
     [return: Builtin(BuiltinBinding.position)]
     public static vec4f32 vs([Builtin(BuiltinBinding.vertex_index)] uint vertexIndex)
     {
-        var vi = (int)vertexIndex;
+        var vi = DMath.i32(vertexIndex);
         var x = (1 - vi) * 0.5f;
         var y = ((vi & 1) * 2 - 1) * 0.5f;
         return DMath.vec4(x, y, 0.0f, 1.0f);

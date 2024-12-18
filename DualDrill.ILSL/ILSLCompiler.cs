@@ -51,14 +51,14 @@ public static class ILSLCompiler
     public static ShaderModuleDeclaration Parse(ISharpShader module)
     {
         var type = module.GetType();
-        using var methodParser = new ILSpyMethodParser(new ILSpyOption()
-        {
-            HotReloadAssemblies = [
-               type.Assembly,
-               typeof(ILSLCompiler).Assembly
-            ]
-        });
-        var parser = new CLSLParser(methodParser);
+        //using var methodParser = new ILSpyMethodParser(new ILSpyOption()
+        //{
+        //    HotReloadAssemblies = [
+        //       type.Assembly,
+        //       typeof(ILSLCompiler).Assembly
+        //    ]
+        //});
+        var parser = new CLSLParser(new RelooperMethodParser());
         return parser.ParseShaderModule(module);
     }
 

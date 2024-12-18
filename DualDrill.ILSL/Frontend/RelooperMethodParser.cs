@@ -1,9 +1,11 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+﻿using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 using DualDrill.ILSL.LinearIR;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
@@ -215,6 +217,13 @@ sealed class MethodCompilation
             case ILOpCode.Ceq:
                 return new ConditionValueInstruction<Condition.Eq>();
 
+            case ILOpCode.And:
+                return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseAnd);
+            case ILOpCode.Or:
+                return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseOr);
+            case ILOpCode.Xor:
+                return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseExclusiveOr);
+
             case ILOpCode.Ldc_i4:
                 return new LoadConstantInstruction<I32Literal>(new((int)inst.Operand));
             case ILOpCode.Ldc_i4_0:
@@ -323,6 +332,13 @@ sealed class MethodCompilation
                 return new ConditionValueInstruction<Condition.Gt<S>>();
             case ILOpCode.Cgt_un:
                 return new ConditionValueInstruction<Condition.Gt<U>>();
+
+            case ILOpCode.Conv_r4:
+                return new ConvertInstruction(ShaderType.F32);
+            case ILOpCode.Conv_r8:
+                return new ConvertInstruction(ShaderType.F64);
+
+
             default:
                 throw new NotSupportedException($"Compile {inst.OpCode}@{inst.Offset} is not supported");
         }
@@ -360,7 +376,9 @@ sealed class MethodCompilation
         }
         yield return new LoopStatement(
             new CompoundStatement([
-            new SwitchStatement(SyntaxFactory.VarIdentifier(bp), [.. cases], new CompoundStatement([])) ]));
+            new SwitchStatement(SyntaxFactory.VarIdentifier(bp), [.. cases], new CompoundStatement([
+                //SyntaxFactory.Break()
+                ])) ]));
     }
     public IReadOnlyList<VariableDeclaration> CreateLocalVariableDeclarations()
     {
@@ -472,6 +490,14 @@ sealed class MethodCompilation
                         stack.Push(new FunctionCallExpression(callee, [.. args.Reverse()]));
                         break;
                     }
+                case ConvertInstruction { Target: var targetType }:
+                    {
+                        var source = stack.Pop();
+                        var f = ShaderFunction.Instance.GetFunction(targetType.Name, targetType, [source.Type]);
+                        stack.Push(SyntaxFactory.Call(f, [source]));
+                        break;
+                        throw new NotImplementedException();
+                    }
                 case StoreLocalInstruction { Info.LocalIndex: var index }:
                     {
                         yield return new SimpleAssignmentStatement(
@@ -555,6 +581,13 @@ sealed class MethodCompilation
                             []
                         );
                         Stacks[target.Index] ??= new Stack<IExpression>(stack);
+                        break;
+                    }
+                case BinaryBitwiseInstruction { Op: var op }:
+                    {
+                        var r = stack.Pop();
+                        var l = stack.Pop();
+                        stack.Push(new BinaryBitwiseExpression(l, r, op));
                         break;
                     }
                 case ReturnInstruction:
@@ -642,6 +675,15 @@ sealed class MethodCompilation
                     //throw new NotSupportedException($"Unsupported OpCode: {inst.OpCode}@{inst.Offset:X} {inst.Operand} - Method {Method.DeclaringType.Name}.{Method.Name}");
                     throw new NotSupportedException($"Unsupported OpCode: {inst}({inst.GetType().Name}) - Method {Method.DeclaringType.Name}.{Method.Name}");
             }
+        }
+        if (basicBlock.Index + 1 < BasicBlocks.Count)
+        {
+            yield return new SimpleAssignmentStatement(
+                 SyntaxFactory.VarIdentifier(bp),
+                 SyntaxFactory.Literal(BasicBlocks[basicBlock.Index + 1].Index),
+                 AssignmentOp.Assign
+             );
+            yield return SyntaxFactory.Continue();
         }
     }
 

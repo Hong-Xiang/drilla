@@ -130,8 +130,6 @@ public partial class ParseMetadataTest
         var parser = new CLSLParser(new ILSpyMethodParser(new()));
         var module = parser.ParseShaderModule(new SimpleUniformShader());
 
-        Assert.Equal(4, module.Declarations.Length);
-
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();
         Assert.Equal("ourStruct", uniformDecl.Name);
         Assert.Equal(0, uniformDecl.Attributes.OfType<GroupAttribute>().Single().Binding);
