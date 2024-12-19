@@ -402,8 +402,10 @@ sealed class MethodCompilation
 
     IEnumerable<IStatement> CompileBasicBlock(VariableDeclaration? bp, Stack<IExpression> stack, BasicBlock basicBlock)
     {
+        var isUnconditionalBranchedOut = false;
         foreach (var inst in basicBlock.Instructions)
         {
+            isUnconditionalBranchedOut = false;
             switch (inst)
             {
                 case NopInstruction:
@@ -523,6 +525,7 @@ sealed class MethodCompilation
                         );
                         yield return SyntaxFactory.Continue();
                         Stacks[target.Index] ??= new Stack<IExpression>(stack);
+                        isUnconditionalBranchedOut = true;
                         break;
                     }
                 case BranchInstruction<Condition.True> { Target: var target }:
@@ -541,14 +544,7 @@ sealed class MethodCompilation
                                 ),
                                 SyntaxFactory.Continue()
                                 ]),
-                            new([
-                                new SimpleAssignmentStatement(
-                                    SyntaxFactory.VarIdentifier(bp),
-                                    SyntaxFactory.Literal(BasicBlocks[basicBlock.Index + 1].Index),
-                                    AssignmentOp.Assign
-                                ),
-                                SyntaxFactory.Continue()
-                                ]),
+                            new([]),
                             []
                         );
                         Stacks[target.Index] ??= new Stack<IExpression>(stack);
@@ -562,14 +558,7 @@ sealed class MethodCompilation
                         }
                         yield return new IfStatement(
                             stack.Pop(),
-                            new([
-                                new SimpleAssignmentStatement(
-                                    SyntaxFactory.VarIdentifier(bp),
-                                    SyntaxFactory.Literal(BasicBlocks[basicBlock.Index + 1].Index),
-                                    AssignmentOp.Assign
-                                ),
-                                SyntaxFactory.Continue()
-                                ]),
+                            new([]),
                             new([
                                 new SimpleAssignmentStatement(
                                     SyntaxFactory.VarIdentifier(bp),
@@ -676,14 +665,14 @@ sealed class MethodCompilation
                     throw new NotSupportedException($"Unsupported OpCode: {inst}({inst.GetType().Name}) - Method {Method.DeclaringType.Name}.{Method.Name}");
             }
         }
-        if (basicBlock.Index + 1 < BasicBlocks.Count)
+
+        if (!isUnconditionalBranchedOut && (basicBlock.Index + 1 < BasicBlocks.Count))
         {
             yield return new SimpleAssignmentStatement(
                  SyntaxFactory.VarIdentifier(bp),
                  SyntaxFactory.Literal(BasicBlocks[basicBlock.Index + 1].Index),
                  AssignmentOp.Assign
              );
-            yield return SyntaxFactory.Continue();
         }
     }
 

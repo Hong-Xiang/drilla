@@ -91,8 +91,8 @@ public struct MandelbrotDistanceShader : ILSL.ISharpShader
         var z = vec2(0.0f, 0.0f);
         var m2 = 0.0f;
         var dz = vec2(0.0f);
-        //for (int i = 0; i < 300; i++)
-        //{
+        for (int i = 0; i < 300; i++)
+        {
             if (m2 > 1024.0f)
             {
                 di = 0.0f;
@@ -103,7 +103,7 @@ public struct MandelbrotDistanceShader : ILSL.ISharpShader
             // Z -> Z² + c
             z = vec2(z.x * z.x - z.y * z.y, 2.0f * z.x * z.y) + c;
             m2 = dot(z, z);
-        //}
+        }
         // distance
         // d(c) = |Z|·log|Z|/|Z'|
         var d = 0.5f * sqrt(dot(z, z) / dot(dz, dz)) * log(dot(z, z));
