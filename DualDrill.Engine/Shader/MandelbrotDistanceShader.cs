@@ -96,7 +96,7 @@ public struct MandelbrotDistanceShader : ILSL.ISharpShader
             if (m2 > 1024.0f)
             {
                 di = 0.0f;
-                //break;
+                break;
             }
             // Z' -> 2·Z·Z' + 1
             dz = 2.0f * vec2(z.x * dz.x - z.y * dz.y, z.x * dz.y + z.y * dz.x) + vec2(1.0f, 0.0f);
