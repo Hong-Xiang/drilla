@@ -138,7 +138,7 @@ public class ShaderFunction : ISingleton<ShaderFunction>
             NumericBuiltinFunctionName.insertBits => NumericBuiltinFunctionKind.Unknown,
             NumericBuiltinFunctionName.inverseSqrt => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
             NumericBuiltinFunctionName.ldexp => NumericBuiltinFunctionKind.Unknown,
-            NumericBuiltinFunctionName.length => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
+            NumericBuiltinFunctionName.length => NumericBuiltinFunctionKind.Unknown,
             NumericBuiltinFunctionName.log => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
             NumericBuiltinFunctionName.log2 => NumericBuiltinFunctionKind.UnaryFloatScalarOrVector,
             NumericBuiltinFunctionName.max => NumericBuiltinFunctionKind.BinaryScalarOrVector,
@@ -230,6 +230,10 @@ public class ShaderFunction : ISingleton<ShaderFunction>
                 from s in ShaderType.FloatTypes
                 let v = ShaderType.GetVecType(N3.Instance, s)
                 select new FunctionDeclaration(fn, [new ParameterDeclaration("e1", v, []), new ParameterDeclaration("e2", v, [])], new FunctionReturn(v, []), []),
+            (_, NumericBuiltinFunctionName.length) =>
+                from s in ShaderType.FloatTypes
+                from t in ShaderType.GetScalarOrVectorTypes(s)
+                select new FunctionDeclaration(fn, [new ParameterDeclaration("e", t, [])], new FunctionReturn(s, []), []),
             (_, NumericBuiltinFunctionName.determinant) => [], // TODO: add mat types and fix this
             (_, NumericBuiltinFunctionName.dot4U8Packed) => [
                 new FunctionDeclaration(

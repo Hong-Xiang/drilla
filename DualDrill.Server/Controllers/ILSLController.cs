@@ -1,12 +1,9 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Types;
 using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
 using DualDrill.ILSL.Frontend;
 using DualDrill.Server.Services;
-using Lokad.ILPack.IL;
 using Microsoft.AspNetCore.Mvc;
-using System.Numerics;
 using System.Reflection;
 
 namespace DualDrill.Server.Controllers;
@@ -46,12 +43,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return NotFound();
         }
-        //var sm = new MandelbrotDistanceShader();
-        //var sm = new MinimumTriangle();
-        //var sm = new BasicConditionShader();
-        //var ir = ILSL.ILSLCompiler.Parse(sm);
-        //var code = await ILSLCompiler.EmitCode(ir);
-        var code = await ILSLCompiler.CompileV2(shader);
+        var code = await ILSLCompiler.Compile(shader);
         return Ok(code);
     }
 
@@ -65,9 +57,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("wgsl/vertexbufferlayout/{name}")]
     public async Task<IActionResult> GetVertexBufferLayout(string name)
     {
-        if (name == nameof(QuadShader))
+        if (name == nameof(RaymarchingPrimitiveShader))
         {
-            var reflection = new QuadShaderReflection();
+            var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetVertexBufferLayout());
         }
         else if (name == nameof(ReflectionTestShader))
@@ -86,9 +78,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("wgsl/bindgrouplayoutdescriptor/{name}")]
     public async Task<IActionResult> GetBindGroupLayoutDescriptor(string name)
     {
-        if (name == nameof(QuadShader))
+        if (name == nameof(RaymarchingPrimitiveShader))
         {
-            var shaderModule = new QuadShader();
+            var shaderModule = new RaymarchingPrimitiveShader();
             var type = shaderModule.GetType();
             using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
@@ -100,7 +92,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
 
             var parser = new CLSLParser(bodyParser);
             var module = parser.ParseShaderModule(shaderModule);
-            var reflection = new QuadShaderReflection();
+            var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
         else if (name == nameof(MandelbrotDistanceShader))
@@ -145,9 +137,9 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     [HttpGet("wgsl/bindgrouplayoutdescriptorbuffer/{name}")]
     public async Task<IActionResult> GetBindGroupLayoutDescriptorBuffer(string name)
     {
-        if (name == nameof(QuadShader))
+        if (name == nameof(RaymarchingPrimitiveShader))
         {
-            var shaderModule = new QuadShader();
+            var shaderModule = new RaymarchingPrimitiveShader();
             var type = shaderModule.GetType();
             using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
             {
@@ -159,7 +151,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
 
             var parser = new CLSLParser(bodyParser);
             var module = parser.ParseShaderModule(shaderModule);
-            var reflection = new QuadShaderReflection();
+            var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
         else if (name == nameof(MandelbrotDistanceShader))
@@ -239,36 +231,5 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             var code = await module.EmitCode();
             return Ok(code);
         });
-    }
-
-    [HttpGet("ilreader")]
-    public IActionResult ILReaderTest()
-    {
-
-        var method = typeof(ILSLController).GetMethod(nameof(TestMethod2), BindingFlags.NonPublic | BindingFlags.Instance);
-        if (method is null)
-        {
-            return NotFound("method not found");
-        }
-        var ops = ILSLCompiler.ILReader(method);
-        //return Ok(ops);
-        var insts = method.GetInstructions();
-        return Ok(insts.Select(s =>
-        new
-        {
-            offset = s.Offset,
-            opCode = s.OpCode,
-            operand = s.Operand?.ToString()
-        }));
-    }
-
-    private int TestMethod(int a, int b)
-    {
-        return a + b;
-    }
-
-    private Vector4 TestMethod2()
-    {
-        return new Vector4(0.0f, 0.1f, 0.2f, 0.3f);
     }
 }
