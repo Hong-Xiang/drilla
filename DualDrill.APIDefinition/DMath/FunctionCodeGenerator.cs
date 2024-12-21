@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using System.CodeDom.Compiler;
 
@@ -15,11 +16,24 @@ internal class FunctionCodeGenerator(CSharpProjectionConfiguration Config, Inden
             {
                 var returnType = f.Return.Type switch
                 {
-                    null => "void",
+                    null => throw new NotSupportedException("null type should be replaced with unit type"),
                     UnitType => "void",
                     _ => Config.GetCSharpTypeName(f.Return.Type)
                 };
                 Writer.WriteAggressiveInlining();
+                foreach (var a in f.Attributes)
+                {
+                    if (a is IShaderMetadataAttribute sma)
+                    {
+                        Writer.WriteLine($"[{sma.GetCSharpUsageCode()}]");
+                        //if (a.Parameters.Length > 0)
+                        //{
+                        //    Writer.Write("(");
+                        //    Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, a.Parameters);
+                        //    Writer.Write(")");
+                        //}
+                    }
+                }
                 Writer.Write($"public static {returnType} {f.Name}(");
                 List<string> parameters = [];
                 foreach (var p in f.Parameters)

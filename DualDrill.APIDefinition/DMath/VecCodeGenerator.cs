@@ -28,7 +28,18 @@ internal sealed record class VectorComponentCodeGenerator(
         foreach (var m in VecType.Size.Components())
         {
             Writer.Write($"public {Config.GetCSharpTypeName(VecType.ElementType)} {m} ");
-            Writer.WriteLine("{ get; set; }");
+            Writer.WriteLine("{");
+            using (Writer.IndentedScope())
+            {
+                Writer.WriteAggressiveInlining();
+                Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m)]).GetCSharpUsageCode()}]");
+                Writer.WriteLine("get;");
+                Writer.WriteAggressiveInlining();
+                Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m)]).GetCSharpUsageCode()}]");
+                Writer.WriteLine("set;");
+            }
+            Writer.WriteLine();
+            Writer.WriteLine("}");
         }
     }
 
@@ -92,10 +103,12 @@ internal sealed record class VectorSimdCodeGenerator(
 
             //getter
             Writer.WriteAggressiveInlining();
+            Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m)]).GetCSharpUsageCode()}]");
             Writer.WriteLine($"get => Data[{i}];");
             Writer.WriteLine();
 
             Writer.WriteAggressiveInlining();
+            Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute([Enum.Parse<SwizzleComponent>(m)]).GetCSharpUsageCode()}]");
             Writer.WriteLine("set {");
             Writer.Indent++;
             Writer.Write($"Data = Vector{SimdDataBitWidth}.Create(");
@@ -215,89 +228,82 @@ public sealed record class VecCodeGenerator
             : new VectorComponentCodeGenerator(VecType, Config, Writer);
     }
 
-    public void GenerateStaticMethods()
-    {
-        Writer.Write($"public static partial class {Config.StaticMathTypeName}");
-        using (Writer.IndentedScopeWithBracket())
-        {
-            var constructors = from f in ShaderFunction.Instance.Functions
-                               where f.Return.Type.Equals(VecType)
-                               where f.Attributes.Any(x => x is IVecConstructorMethodAttribute)
-                               select f;
-            foreach (var f in constructors)
-            {
-                var ca = f.Attributes.Single(a => a is IVecConstructorMethodAttribute);
-                if (ca is VecPositionalValueConstructorMethodAttribute && f.Parameters.Length == VecType.Size.Value)
-                {
-                }
-            }
+    //public void GenerateStaticMethods()
+    //{
+    //    Writer.Write($"public static partial class {Config.StaticMathTypeName}");
+    //    using (Writer.IndentedScopeWithBracket())
+    //    {
+    //        var constructors = from f in ShaderFunction.Instance.Functions
+    //                           where f.Return.Type.Equals(VecType)
+    //                           where f.Attributes.Any(x => x is IVecConstructorMethodAttribute)
+    //                           select f;
 
-            Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}(");
+    //        Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}(");
 
-            Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => $"{Config.GetCSharpTypeName(VecType.ElementType)} {m}")]);
-            Writer.Write(')');
+    //        Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => $"{Config.GetCSharpTypeName(VecType.ElementType)} {m}")]);
+    //        Writer.Write(')');
 
-            using (Writer.IndentedScopeWithBracket())
-            {
-                DetailCodeGenerator.GeneratePrimaryFactoryMethodBody();
-            }
+    //        using (Writer.IndentedScopeWithBracket())
+    //        {
+    //            DetailCodeGenerator.GeneratePrimaryFactoryMethodBody();
+    //        }
 
 
-            Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}({Config.GetCSharpTypeName(VecType.ElementType)} e) => vec{VecType.Size.Value}(");
-            Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(_ => "e")]);
-            Writer.WriteLine(");");
+    //        Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}({Config.GetCSharpTypeName(VecType.ElementType)} e) => vec{VecType.Size.Value}(");
+    //        Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(_ => "e")]);
+    //        Writer.WriteLine(");");
 
-            {
-                var v2t = ShaderType.GetVecType(N2.Instance, VecType.ElementType);
-                var v3t = ShaderType.GetVecType(N3.Instance, VecType.ElementType);
+    //        {
+    //            var v2t = ShaderType.GetVecType(N2.Instance, VecType.ElementType);
+    //            var v3t = ShaderType.GetVecType(N3.Instance, VecType.ElementType);
 
-                int[][] patterns = VecType.Size switch
-                {
-                    N3 => [[1, 2], [2, 1]],
-                    N4 => [[1, 3], [3, 1], [1, 1, 2], [1, 2, 1], [2, 1, 1], [2, 2]],
-                    _ => []
-                };
-                string[] components = [.. VecType.Size.Components()];
-                foreach (var ptn in patterns)
-                {
-                    Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}(");
-                    var ps = ptn.Select((d, i) => d switch
-                    {
-                        1 => Config.GetCSharpTypeName(VecType.ElementType),
-                        2 => Config.GetCSharpTypeName(v2t),
-                        3 => Config.GetCSharpTypeName(v3t),
-                        _ => throw new NotImplementedException()
-                    } + $" e{i}");
-                    Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. ps]);
-                    Writer.Write($") => vec{VecType.Size.Value}(");
-                    List<string> args = [];
-                    foreach (var (p, i) in ptn.Select((p, i) => (p, i)))
-                    {
-                        var name = $"e{i}";
-                        switch (p)
-                        {
-                            case 1:
-                                args.Add(name);
-                                break;
-                            case 2:
-                                args.Add($"{name}.x");
-                                args.Add($"{name}.y");
-                                break;
-                            case 3:
-                                args.Add($"{name}.x");
-                                args.Add($"{name}.y");
-                                args.Add($"{name}.z");
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. args]);
-                    Writer.WriteLine(");");
-                }
-            }
-        }
-    }
+    //            int[][] patterns = VecType.Size switch
+    //            {
+    //                N3 => [[1, 2], [2, 1]],
+    //                N4 => [[1, 3], [3, 1], [1, 1, 2], [1, 2, 1], [2, 1, 1], [2, 2]],
+    //                _ => []
+    //            };
+    //            string[] components = [.. VecType.Size.Components()];
+    //            foreach (var ptn in patterns)
+    //            {
+    //                Writer.Write($"public static {Config.GetCSharpTypeName(VecType)} vec{VecType.Size.Value}(");
+    //                var ps = ptn.Select((d, i) => d switch
+    //                {
+    //                    1 => Config.GetCSharpTypeName(VecType.ElementType),
+    //                    2 => Config.GetCSharpTypeName(v2t),
+    //                    3 => Config.GetCSharpTypeName(v3t),
+    //                    _ => throw new NotImplementedException()
+    //                } + $" e{i}");
+    //                Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. ps]);
+    //                Writer.Write($") => vec{VecType.Size.Value}(");
+    //                List<string> args = [];
+    //                foreach (var (p, i) in ptn.Select((p, i) => (p, i)))
+    //                {
+    //                    var name = $"e{i}";
+    //                    switch (p)
+    //                    {
+    //                        case 1:
+    //                            args.Add(name);
+    //                            break;
+    //                        case 2:
+    //                            args.Add($"{name}.x");
+    //                            args.Add($"{name}.y");
+    //                            break;
+    //                        case 3:
+    //                            args.Add($"{name}.x");
+    //                            args.Add($"{name}.y");
+    //                            args.Add($"{name}.z");
+    //                            break;
+    //                        default:
+    //                            break;
+    //                    }
+    //                }
+    //                Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. args]);
+    //                Writer.WriteLine(");");
+    //            }
+    //        }
+    //    }
+    //}
 
 
     public void GenerateDeclaration()
@@ -305,7 +311,6 @@ public sealed record class VecCodeGenerator
 
         Writer.WriteStructLayout();
         var csharpName = Config.GetCSharpTypeName(VecType);
-        Writer.Write($"[CLSLMathematicsType({csharpName})]");
         Writer.Write("public partial struct ");
         Writer.Write(csharpName);
         using (Writer.IndentedScopeWithBracket())
@@ -372,9 +377,11 @@ public sealed record class VecCodeGenerator
             {
                 var name = string.Join(string.Empty, sw);
                 Writer.Write($"public {Config.GetCSharpTypeName(rv)} {name} ");
+                var cps = sw.Select(Enum.Parse<SwizzleComponent>).ToArray();
                 using (Writer.IndentedScopeWithBracket())
                 {
                     Writer.WriteAggressiveInlining();
+                    Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute(cps).GetCSharpUsageCode()}]");
                     Writer.Write($"get => vec{rank.Value}(");
                     Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. sw]);
                     Writer.WriteLine(");");
@@ -383,6 +390,7 @@ public sealed record class VecCodeGenerator
                     {
                         Writer.WriteLine();
                         Writer.WriteAggressiveInlining();
+                        Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute(cps).GetCSharpUsageCode()}]");
                         Writer.WriteLine("set ");
                         using (Writer.IndentedScopeWithBracket())
                         {
@@ -401,7 +409,7 @@ public sealed record class VecCodeGenerator
     public void Generate()
     {
         GenerateDeclaration();
-        GenerateStaticMethods();
+        //GenerateStaticMethods();
     }
 }
 

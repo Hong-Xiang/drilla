@@ -1,5 +1,5 @@
 ﻿namespace DualDrill.CLSL.Language.ShaderAttribute;
 
-public sealed class ShaderPrimitiveTypeAttribute : Attribute, IShaderMetadataAttribute
+public sealed class ShaderPrimitiveTypeAttribute : Attribute, INoArgumentShaderMetadataAttribute
 {
 }

@@ -35,6 +35,7 @@ public sealed class MathCodeGenerator
         Writer.WriteLine("using System.Runtime.CompilerServices;");
         Writer.WriteLine("using System.Runtime.Intrinsics;");
         Writer.WriteLine("using System.Runtime.InteropServices;");
+        Writer.WriteLine("using DualDrill.CLSL.Language.ShaderAttribute;");
         Writer.WriteLine($"namespace {Config.MathLibNameSpaceName};");
         Writer.WriteLine($"using static {Config.StaticMathTypeName};");
         Writer.WriteLine();

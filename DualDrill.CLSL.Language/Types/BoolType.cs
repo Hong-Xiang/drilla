@@ -1,7 +1,9 @@
 ﻿using DualDrill.Common.Nat;
+using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
 
+[DebuggerDisplay("{Name}")]
 public sealed class BoolType : IScalarType<BoolType>, IBasicPrimitiveType<BoolType>
 {
     public static BoolType Instance { get; } = new();

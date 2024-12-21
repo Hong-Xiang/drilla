@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DualDrill.Mathematics.CodeGen": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\Xiang\\Documents\\drilla\\DualDrill.Mathematics"
+    }
+  }
+}

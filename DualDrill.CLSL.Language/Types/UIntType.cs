@@ -1,8 +1,11 @@
 ﻿using DualDrill.Common.Nat;
+using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
 
 public interface IUIntType : IIntegerType, IScalarType { }
+
+[DebuggerDisplay("{Name}")]
 public sealed class UIntType<TBitWidth> : IUIntType, IScalarType<UIntType<TBitWidth>>
     where TBitWidth : IBitWidth
 {

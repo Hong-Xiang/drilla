@@ -1,7 +1,9 @@
 ﻿using DotNext.Patterns;
+using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
 
+[DebuggerDisplay("{Name}")]
 public sealed class UnitType : ISingletonShaderType<UnitType>, ISingleton<UnitType>
 {
     private UnitType() { }

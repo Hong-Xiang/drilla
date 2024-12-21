@@ -180,7 +180,7 @@ public class ShaderFunction : ISingleton<ShaderFunction>
         };
     }
 
-    static IEnumerable<FunctionDeclaration> CreateFunctionOverloads(NumericBuiltinFunctionName name)
+    static IEnumerable<FunctionDeclaration> CreateKnownNumericFunctionOverloads(NumericBuiltinFunctionName name)
     {
         var kind = FunctionKind(name);
         var fn = Enum.GetName(name) ?? throw new InvalidEnumArgumentException(nameof(name), (int)name, typeof(NumericBuiltinFunctionName));
@@ -297,8 +297,8 @@ public class ShaderFunction : ISingleton<ShaderFunction>
                select new FunctionDeclaration(
                    s.Name,
                    [new ParameterDeclaration("e", t, [])],
-                   new FunctionReturn(s, []),
-                   []);
+                    new FunctionReturn(s, []),
+                   [new ShaderRuntimeMethodAttribute(), new ConversionMethodAttribute()]);
     }
 
 
@@ -334,29 +334,29 @@ public class ShaderFunction : ISingleton<ShaderFunction>
                             name,
                             [new ParameterDeclaration("e", s, [])],
                             new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute(), new VecBroadcastConstructorMethodAttribute()])
+                            [new ShaderRuntimeMethodAttribute()])
                let zc = new FunctionDeclaration(
-                            name,
+                            v.Name,
                             [],
                             new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute(), new VecZeroConstructorMethodAttribute()])
+                            [new ShaderRuntimeMethodAttribute(), new ZeroConstructorMethodAttribute(), new VecMethodRenamedForOverloadAttribute()])
                let sc = new FunctionDeclaration(
                             name,
                             [.. Enumerable.Range(0, r.Value).Select(i => new ParameterDeclaration($"e{i}", s, []))],
                             new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute(), new VecPositionalValueConstructorMethodAttribute()])
+                            [new ShaderRuntimeMethodAttribute()])
                let vc = from p in ValueConstructorParametersPattern(r)
                         select new FunctionDeclaration(
                             name,
                             [.. p.Select((pr, i) => PatternToParameter(pr, s, i))],
                             new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute(), new VecPositionalValueConstructorMethodAttribute()])
+                            [new ShaderRuntimeMethodAttribute()])
                let cc = from ss in ShaderType.ScalarTypes
                         select new FunctionDeclaration(
-                            name,
+                            v.Name,
                             [new ParameterDeclaration("v", ShaderType.GetVecType(r, ss), [])],
                             new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute(), new VecConversionConstructorMethodAttribute()])
+                            [new ShaderRuntimeMethodAttribute(), new ConversionMethodAttribute(), new VecMethodRenamedForOverloadAttribute()])
                from f in (IEnumerable<FunctionDeclaration>)[bc, zc, sc, .. vc, .. cc]
                select f;
     }
@@ -367,19 +367,10 @@ public class ShaderFunction : ISingleton<ShaderFunction>
         var fsvec2 = fs.Where(f => f.Name == "vec2" && f.Parameters.Length == 1 && f.Return.Type is VecType<N2, BoolType>).ToArray();
 
         Functions = [.. from n in Enum.GetValues<NumericBuiltinFunctionName>()
-                        from f in CreateFunctionOverloads(n)
+                        from f in CreateKnownNumericFunctionOverloads(n)
                         select f,
                      .. BuiltinScalarConstructors(),
                      .. VecConstructors()];
-
-        var fsv2s = Functions.Where(f => f.Name == "vec2" && f.Return.Type is VecType<N2, BoolType>).ToArray();
-        var kvs = from f in Functions
-                  where f.Parameters.Length == 1
-                  select KeyValuePair.Create((f.Name, f.Parameters[0].Type), f);
-        var kvsa = kvs.ToArray();
-        var kvsu = kvs.Distinct().ToArray();
-
-
 
         Func0Lookup = (from f in Functions
                        where f.Parameters.Length == 0

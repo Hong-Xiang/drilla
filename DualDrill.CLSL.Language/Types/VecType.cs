@@ -1,6 +1,7 @@
 ﻿using DotNext.Patterns;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -10,6 +11,7 @@ public interface IVecType : IShaderType
     public IRank Size { get; }
 }
 
+[DebuggerDisplay("{Name}")]
 public sealed class VecType<TRank, TElement> : IVecType,
     ISingleton<VecType<TRank, TElement>>,
     ISingletonShaderType<VecType<TRank, TElement>>

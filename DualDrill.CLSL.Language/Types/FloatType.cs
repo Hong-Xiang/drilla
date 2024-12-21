@@ -1,4 +1,5 @@
 ﻿using DualDrill.Common.Nat;
+using System.Diagnostics;
 namespace DualDrill.CLSL.Language.Types;
 
 public interface IFloatType : IScalarType
@@ -9,6 +10,7 @@ public interface IFloatType<TSelf> : IFloatType, IScalarType<TSelf>
 {
 }
 
+[DebuggerDisplay("{Name}")]
 public sealed record class FloatType<TBitWidth> : IFloatType<FloatType<TBitWidth>>
     where TBitWidth : IBitWidth
 {
