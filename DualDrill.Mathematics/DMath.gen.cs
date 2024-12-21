@@ -9,12 +9,13 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.InteropServices;
+using DualDrill.CLSL.Language.ShaderAttribute;
 namespace DualDrill.Mathematics;
 using static DMath;
 
 public static partial class DMath{
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte abs(System.SByte e){
+    public static SByte abs(SByte e){
         throw new NotImplementedException();
     }
     
@@ -34,7 +35,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 abs(System.Int16 e){
+    public static Int16 abs(Int16 e){
         throw new NotImplementedException();
     }
     
@@ -54,7 +55,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 abs(System.Int32 e){
+    public static Int32 abs(Int32 e){
         throw new NotImplementedException();
     }
     
@@ -74,7 +75,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 abs(System.Int64 e){
+    public static Int64 abs(Int64 e){
         throw new NotImplementedException();
     }
     
@@ -94,7 +95,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte abs(System.Byte e){
+    public static Byte abs(Byte e){
         throw new NotImplementedException();
     }
     
@@ -114,7 +115,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 abs(System.UInt16 e){
+    public static UInt16 abs(UInt16 e){
         throw new NotImplementedException();
     }
     
@@ -134,7 +135,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 abs(System.UInt32 e){
+    public static UInt32 abs(UInt32 e){
         throw new NotImplementedException();
     }
     
@@ -154,7 +155,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 abs(System.UInt64 e){
+    public static UInt64 abs(UInt64 e){
         throw new NotImplementedException();
     }
     
@@ -174,7 +175,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half abs(System.Half e){
+    public static Half abs(Half e){
         throw new NotImplementedException();
     }
     
@@ -194,7 +195,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single abs(System.Single e){
+    public static Single abs(Single e){
         throw new NotImplementedException();
     }
     
@@ -214,7 +215,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double abs(System.Double e){
+    public static Double abs(Double e){
         throw new NotImplementedException();
     }
     
@@ -234,7 +235,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half acos(System.Half e){
+    public static Half acos(Half e){
         throw new NotImplementedException();
     }
     
@@ -254,7 +255,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single acos(System.Single e){
+    public static Single acos(Single e){
         throw new NotImplementedException();
     }
     
@@ -274,7 +275,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double acos(System.Double e){
+    public static Double acos(Double e){
         throw new NotImplementedException();
     }
     
@@ -294,7 +295,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half acosh(System.Half e){
+    public static Half acosh(Half e){
         throw new NotImplementedException();
     }
     
@@ -314,7 +315,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single acosh(System.Single e){
+    public static Single acosh(Single e){
         throw new NotImplementedException();
     }
     
@@ -334,7 +335,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double acosh(System.Double e){
+    public static Double acosh(Double e){
         throw new NotImplementedException();
     }
     
@@ -354,7 +355,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half asin(System.Half e){
+    public static Half asin(Half e){
         throw new NotImplementedException();
     }
     
@@ -374,7 +375,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single asin(System.Single e){
+    public static Single asin(Single e){
         throw new NotImplementedException();
     }
     
@@ -394,7 +395,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double asin(System.Double e){
+    public static Double asin(Double e){
         throw new NotImplementedException();
     }
     
@@ -414,7 +415,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half asinh(System.Half e){
+    public static Half asinh(Half e){
         throw new NotImplementedException();
     }
     
@@ -434,7 +435,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single asinh(System.Single e){
+    public static Single asinh(Single e){
         throw new NotImplementedException();
     }
     
@@ -454,7 +455,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double asinh(System.Double e){
+    public static Double asinh(Double e){
         throw new NotImplementedException();
     }
     
@@ -474,7 +475,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half atan(System.Half e){
+    public static Half atan(Half e){
         throw new NotImplementedException();
     }
     
@@ -494,7 +495,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single atan(System.Single e){
+    public static Single atan(Single e){
         throw new NotImplementedException();
     }
     
@@ -514,7 +515,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double atan(System.Double e){
+    public static Double atan(Double e){
         throw new NotImplementedException();
     }
     
@@ -534,7 +535,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half atanh(System.Half e){
+    public static Half atanh(Half e){
         throw new NotImplementedException();
     }
     
@@ -554,7 +555,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single atanh(System.Single e){
+    public static Single atanh(Single e){
         throw new NotImplementedException();
     }
     
@@ -574,7 +575,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double atanh(System.Double e){
+    public static Double atanh(Double e){
         throw new NotImplementedException();
     }
     
@@ -594,7 +595,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half atan2(System.Half e1, System.Half e2){
+    public static Half atan2(Half e1, Half e2){
         throw new NotImplementedException();
     }
     
@@ -614,7 +615,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single atan2(System.Single e1, System.Single e2){
+    public static Single atan2(Single e1, Single e2){
         throw new NotImplementedException();
     }
     
@@ -634,7 +635,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double atan2(System.Double e1, System.Double e2){
+    public static Double atan2(Double e1, Double e2){
         throw new NotImplementedException();
     }
     
@@ -654,7 +655,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half ceil(System.Half e){
+    public static Half ceil(Half e){
         throw new NotImplementedException();
     }
     
@@ -674,7 +675,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single ceil(System.Single e){
+    public static Single ceil(Single e){
         throw new NotImplementedException();
     }
     
@@ -694,7 +695,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double ceil(System.Double e){
+    public static Double ceil(Double e){
         throw new NotImplementedException();
     }
     
@@ -714,7 +715,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half clamp(System.Half e1, System.Half e2, System.Half e3){
+    public static Half clamp(Half e1, Half e2, Half e3){
         throw new NotImplementedException();
     }
     
@@ -734,7 +735,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single clamp(System.Single e1, System.Single e2, System.Single e3){
+    public static Single clamp(Single e1, Single e2, Single e3){
         throw new NotImplementedException();
     }
     
@@ -754,7 +755,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double clamp(System.Double e1, System.Double e2, System.Double e3){
+    public static Double clamp(Double e1, Double e2, Double e3){
         throw new NotImplementedException();
     }
     
@@ -774,7 +775,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half cos(System.Half e){
+    public static Half cos(Half e){
         throw new NotImplementedException();
     }
     
@@ -794,7 +795,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single cos(System.Single e){
+    public static Single cos(Single e){
         throw new NotImplementedException();
     }
     
@@ -814,7 +815,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double cos(System.Double e){
+    public static Double cos(Double e){
         throw new NotImplementedException();
     }
     
@@ -834,7 +835,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half cosh(System.Half e){
+    public static Half cosh(Half e){
         throw new NotImplementedException();
     }
     
@@ -854,7 +855,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single cosh(System.Single e){
+    public static Single cosh(Single e){
         throw new NotImplementedException();
     }
     
@@ -874,7 +875,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double cosh(System.Double e){
+    public static Double cosh(Double e){
         throw new NotImplementedException();
     }
     
@@ -1089,7 +1090,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half degrees(System.Half e){
+    public static Half degrees(Half e){
         throw new NotImplementedException();
     }
     
@@ -1109,7 +1110,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single degrees(System.Single e){
+    public static Single degrees(Single e){
         throw new NotImplementedException();
     }
     
@@ -1129,7 +1130,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double degrees(System.Double e){
+    public static Double degrees(Double e){
         throw new NotImplementedException();
     }
     
@@ -1149,7 +1150,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half distance(System.Half e1, System.Half e2){
+    public static Half distance(Half e1, Half e2){
         throw new NotImplementedException();
     }
     
@@ -1169,7 +1170,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single distance(System.Single e1, System.Single e2){
+    public static Single distance(Single e1, Single e2){
         throw new NotImplementedException();
     }
     
@@ -1189,7 +1190,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double distance(System.Double e1, System.Double e2){
+    public static Double distance(Double e1, Double e2){
         throw new NotImplementedException();
     }
     
@@ -1209,182 +1210,182 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte dot(vec2i8 e1, vec2i8 e2){
+    public static SByte dot(vec2i8 e1, vec2i8 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte dot(vec3i8 e1, vec3i8 e2){
+    public static SByte dot(vec3i8 e1, vec3i8 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte dot(vec4i8 e1, vec4i8 e2){
+    public static SByte dot(vec4i8 e1, vec4i8 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 dot(vec2i16 e1, vec2i16 e2){
+    public static Int16 dot(vec2i16 e1, vec2i16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 dot(vec3i16 e1, vec3i16 e2){
+    public static Int16 dot(vec3i16 e1, vec3i16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 dot(vec4i16 e1, vec4i16 e2){
+    public static Int16 dot(vec4i16 e1, vec4i16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 dot(vec2i32 e1, vec2i32 e2){
+    public static Int32 dot(vec2i32 e1, vec2i32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 dot(vec3i32 e1, vec3i32 e2){
+    public static Int32 dot(vec3i32 e1, vec3i32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 dot(vec4i32 e1, vec4i32 e2){
+    public static Int32 dot(vec4i32 e1, vec4i32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 dot(vec2i64 e1, vec2i64 e2){
+    public static Int64 dot(vec2i64 e1, vec2i64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 dot(vec3i64 e1, vec3i64 e2){
+    public static Int64 dot(vec3i64 e1, vec3i64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 dot(vec4i64 e1, vec4i64 e2){
+    public static Int64 dot(vec4i64 e1, vec4i64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte dot(vec2u8 e1, vec2u8 e2){
+    public static Byte dot(vec2u8 e1, vec2u8 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte dot(vec3u8 e1, vec3u8 e2){
+    public static Byte dot(vec3u8 e1, vec3u8 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte dot(vec4u8 e1, vec4u8 e2){
+    public static Byte dot(vec4u8 e1, vec4u8 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 dot(vec2u16 e1, vec2u16 e2){
+    public static UInt16 dot(vec2u16 e1, vec2u16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 dot(vec3u16 e1, vec3u16 e2){
+    public static UInt16 dot(vec3u16 e1, vec3u16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 dot(vec4u16 e1, vec4u16 e2){
+    public static UInt16 dot(vec4u16 e1, vec4u16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 dot(vec2u32 e1, vec2u32 e2){
+    public static UInt32 dot(vec2u32 e1, vec2u32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 dot(vec3u32 e1, vec3u32 e2){
+    public static UInt32 dot(vec3u32 e1, vec3u32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 dot(vec4u32 e1, vec4u32 e2){
+    public static UInt32 dot(vec4u32 e1, vec4u32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 dot(vec2u64 e1, vec2u64 e2){
+    public static UInt64 dot(vec2u64 e1, vec2u64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 dot(vec3u64 e1, vec3u64 e2){
+    public static UInt64 dot(vec3u64 e1, vec3u64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 dot(vec4u64 e1, vec4u64 e2){
+    public static UInt64 dot(vec4u64 e1, vec4u64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dot(vec2f16 e1, vec2f16 e2){
+    public static Half dot(vec2f16 e1, vec2f16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dot(vec3f16 e1, vec3f16 e2){
+    public static Half dot(vec3f16 e1, vec3f16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dot(vec4f16 e1, vec4f16 e2){
+    public static Half dot(vec4f16 e1, vec4f16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dot(vec2f32 e1, vec2f32 e2){
+    public static Single dot(vec2f32 e1, vec2f32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dot(vec3f32 e1, vec3f32 e2){
+    public static Single dot(vec3f32 e1, vec3f32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dot(vec4f32 e1, vec4f32 e2){
+    public static Single dot(vec4f32 e1, vec4f32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dot(vec2f64 e1, vec2f64 e2){
+    public static Double dot(vec2f64 e1, vec2f64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dot(vec3f64 e1, vec3f64 e2){
+    public static Double dot(vec3f64 e1, vec3f64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dot(vec4f64 e1, vec4f64 e2){
+    public static Double dot(vec4f64 e1, vec4f64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 dot4U8Packed(System.UInt32 e1, System.UInt32 e2){
+    public static UInt32 dot4U8Packed(UInt32 e1, UInt32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 dot4I8Packed(System.UInt32 e1, System.UInt32 e2){
+    public static Int32 dot4I8Packed(UInt32 e1, UInt32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half exp(System.Half e){
+    public static Half exp(Half e){
         throw new NotImplementedException();
     }
     
@@ -1404,7 +1405,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single exp(System.Single e){
+    public static Single exp(Single e){
         throw new NotImplementedException();
     }
     
@@ -1424,7 +1425,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double exp(System.Double e){
+    public static Double exp(Double e){
         throw new NotImplementedException();
     }
     
@@ -1444,7 +1445,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half exp2(System.Half e){
+    public static Half exp2(Half e){
         throw new NotImplementedException();
     }
     
@@ -1464,7 +1465,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single exp2(System.Single e){
+    public static Single exp2(Single e){
         throw new NotImplementedException();
     }
     
@@ -1484,7 +1485,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double exp2(System.Double e){
+    public static Double exp2(Double e){
         throw new NotImplementedException();
     }
     
@@ -1504,42 +1505,42 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 extractBits(System.Int32 e, System.UInt32 offset, System.UInt32 count){
+    public static Int32 extractBits(Int32 e, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec2i32 extractBits(vec2i32 e, System.UInt32 offset, System.UInt32 count){
+    public static vec2i32 extractBits(vec2i32 e, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec3i32 extractBits(vec3i32 e, System.UInt32 offset, System.UInt32 count){
+    public static vec3i32 extractBits(vec3i32 e, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec4i32 extractBits(vec4i32 e, System.UInt32 offset, System.UInt32 count){
+    public static vec4i32 extractBits(vec4i32 e, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 extractBits(System.UInt32 e, System.UInt32 offset, System.UInt32 count){
+    public static UInt32 extractBits(UInt32 e, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec2u32 extractBits(vec2u32 e, System.UInt32 offset, System.UInt32 count){
+    public static vec2u32 extractBits(vec2u32 e, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec3u32 extractBits(vec3u32 e, System.UInt32 offset, System.UInt32 count){
+    public static vec3u32 extractBits(vec3u32 e, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec4u32 extractBits(vec4u32 e, System.UInt32 offset, System.UInt32 count){
+    public static vec4u32 extractBits(vec4u32 e, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
@@ -1709,7 +1710,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half floor(System.Half e){
+    public static Half floor(Half e){
         throw new NotImplementedException();
     }
     
@@ -1729,7 +1730,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single floor(System.Single e){
+    public static Single floor(Single e){
         throw new NotImplementedException();
     }
     
@@ -1749,7 +1750,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double floor(System.Double e){
+    public static Double floor(Double e){
         throw new NotImplementedException();
     }
     
@@ -1769,7 +1770,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half fma(System.Half e1, System.Half e2, System.Half e3){
+    public static Half fma(Half e1, Half e2, Half e3){
         throw new NotImplementedException();
     }
     
@@ -1789,7 +1790,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single fma(System.Single e1, System.Single e2, System.Single e3){
+    public static Single fma(Single e1, Single e2, Single e3){
         throw new NotImplementedException();
     }
     
@@ -1809,7 +1810,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double fma(System.Double e1, System.Double e2, System.Double e3){
+    public static Double fma(Double e1, Double e2, Double e3){
         throw new NotImplementedException();
     }
     
@@ -1829,7 +1830,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half fract(System.Half e){
+    public static Half fract(Half e){
         throw new NotImplementedException();
     }
     
@@ -1849,7 +1850,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single fract(System.Single e){
+    public static Single fract(Single e){
         throw new NotImplementedException();
     }
     
@@ -1869,7 +1870,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double fract(System.Double e){
+    public static Double fract(Double e){
         throw new NotImplementedException();
     }
     
@@ -1889,47 +1890,47 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 insertBits(System.Int32 e, System.Int32 newBits, System.UInt32 offset, System.UInt32 count){
+    public static Int32 insertBits(Int32 e, Int32 newBits, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec2i32 insertBits(vec2i32 e, vec2i32 newBits, System.UInt32 offset, System.UInt32 count){
+    public static vec2i32 insertBits(vec2i32 e, vec2i32 newBits, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec3i32 insertBits(vec3i32 e, vec3i32 newBits, System.UInt32 offset, System.UInt32 count){
+    public static vec3i32 insertBits(vec3i32 e, vec3i32 newBits, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec4i32 insertBits(vec4i32 e, vec4i32 newBits, System.UInt32 offset, System.UInt32 count){
+    public static vec4i32 insertBits(vec4i32 e, vec4i32 newBits, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 insertBits(System.UInt32 e, System.UInt32 newBits, System.UInt32 offset, System.UInt32 count){
+    public static UInt32 insertBits(UInt32 e, UInt32 newBits, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec2u32 insertBits(vec2u32 e, vec2u32 newBits, System.UInt32 offset, System.UInt32 count){
+    public static vec2u32 insertBits(vec2u32 e, vec2u32 newBits, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec3u32 insertBits(vec3u32 e, vec3u32 newBits, System.UInt32 offset, System.UInt32 count){
+    public static vec3u32 insertBits(vec3u32 e, vec3u32 newBits, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec4u32 insertBits(vec4u32 e, vec4u32 newBits, System.UInt32 offset, System.UInt32 count){
+    public static vec4u32 insertBits(vec4u32 e, vec4u32 newBits, UInt32 offset, UInt32 count){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half inverseSqrt(System.Half e){
+    public static Half inverseSqrt(Half e){
         throw new NotImplementedException();
     }
     
@@ -1949,7 +1950,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single inverseSqrt(System.Single e){
+    public static Single inverseSqrt(Single e){
         throw new NotImplementedException();
     }
     
@@ -1969,7 +1970,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double inverseSqrt(System.Double e){
+    public static Double inverseSqrt(Double e){
         throw new NotImplementedException();
     }
     
@@ -1989,7 +1990,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half ldexp(System.Half e1, System.Int32 e2){
+    public static Half ldexp(Half e1, Int32 e2){
         throw new NotImplementedException();
     }
     
@@ -2009,7 +2010,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single ldexp(System.Single e1, System.Int32 e2){
+    public static Single ldexp(Single e1, Int32 e2){
         throw new NotImplementedException();
     }
     
@@ -2029,7 +2030,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double ldexp(System.Double e1, System.Int32 e2){
+    public static Double ldexp(Double e1, Int32 e2){
         throw new NotImplementedException();
     }
     
@@ -2049,67 +2050,67 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half length(System.Half e){
+    public static Half length(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec2f16 length(vec2f16 e){
+    public static Half length(vec2f16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec3f16 length(vec3f16 e){
+    public static Half length(vec3f16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec4f16 length(vec4f16 e){
+    public static Half length(vec4f16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single length(System.Single e){
+    public static Single length(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec2f32 length(vec2f32 e){
+    public static Single length(vec2f32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec3f32 length(vec3f32 e){
+    public static Single length(vec3f32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec4f32 length(vec4f32 e){
+    public static Single length(vec4f32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double length(System.Double e){
+    public static Double length(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec2f64 length(vec2f64 e){
+    public static Double length(vec2f64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec3f64 length(vec3f64 e){
+    public static Double length(vec3f64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static vec4f64 length(vec4f64 e){
+    public static Double length(vec4f64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half log(System.Half e){
+    public static Half log(Half e){
         throw new NotImplementedException();
     }
     
@@ -2129,7 +2130,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single log(System.Single e){
+    public static Single log(Single e){
         throw new NotImplementedException();
     }
     
@@ -2149,7 +2150,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double log(System.Double e){
+    public static Double log(Double e){
         throw new NotImplementedException();
     }
     
@@ -2169,7 +2170,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half log2(System.Half e){
+    public static Half log2(Half e){
         throw new NotImplementedException();
     }
     
@@ -2189,7 +2190,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single log2(System.Single e){
+    public static Single log2(Single e){
         throw new NotImplementedException();
     }
     
@@ -2209,7 +2210,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double log2(System.Double e){
+    public static Double log2(Double e){
         throw new NotImplementedException();
     }
     
@@ -2229,7 +2230,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte max(System.SByte e1, System.SByte e2){
+    public static SByte max(SByte e1, SByte e2){
         throw new NotImplementedException();
     }
     
@@ -2249,7 +2250,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 max(System.Int16 e1, System.Int16 e2){
+    public static Int16 max(Int16 e1, Int16 e2){
         throw new NotImplementedException();
     }
     
@@ -2269,7 +2270,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 max(System.Int32 e1, System.Int32 e2){
+    public static Int32 max(Int32 e1, Int32 e2){
         throw new NotImplementedException();
     }
     
@@ -2289,7 +2290,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 max(System.Int64 e1, System.Int64 e2){
+    public static Int64 max(Int64 e1, Int64 e2){
         throw new NotImplementedException();
     }
     
@@ -2309,7 +2310,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte max(System.Byte e1, System.Byte e2){
+    public static Byte max(Byte e1, Byte e2){
         throw new NotImplementedException();
     }
     
@@ -2329,7 +2330,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 max(System.UInt16 e1, System.UInt16 e2){
+    public static UInt16 max(UInt16 e1, UInt16 e2){
         throw new NotImplementedException();
     }
     
@@ -2349,7 +2350,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 max(System.UInt32 e1, System.UInt32 e2){
+    public static UInt32 max(UInt32 e1, UInt32 e2){
         throw new NotImplementedException();
     }
     
@@ -2369,7 +2370,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 max(System.UInt64 e1, System.UInt64 e2){
+    public static UInt64 max(UInt64 e1, UInt64 e2){
         throw new NotImplementedException();
     }
     
@@ -2389,7 +2390,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half max(System.Half e1, System.Half e2){
+    public static Half max(Half e1, Half e2){
         throw new NotImplementedException();
     }
     
@@ -2409,7 +2410,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single max(System.Single e1, System.Single e2){
+    public static Single max(Single e1, Single e2){
         throw new NotImplementedException();
     }
     
@@ -2429,7 +2430,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double max(System.Double e1, System.Double e2){
+    public static Double max(Double e1, Double e2){
         throw new NotImplementedException();
     }
     
@@ -2449,7 +2450,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte min(System.SByte e1, System.SByte e2){
+    public static SByte min(SByte e1, SByte e2){
         throw new NotImplementedException();
     }
     
@@ -2469,7 +2470,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 min(System.Int16 e1, System.Int16 e2){
+    public static Int16 min(Int16 e1, Int16 e2){
         throw new NotImplementedException();
     }
     
@@ -2489,7 +2490,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 min(System.Int32 e1, System.Int32 e2){
+    public static Int32 min(Int32 e1, Int32 e2){
         throw new NotImplementedException();
     }
     
@@ -2509,7 +2510,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 min(System.Int64 e1, System.Int64 e2){
+    public static Int64 min(Int64 e1, Int64 e2){
         throw new NotImplementedException();
     }
     
@@ -2529,7 +2530,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte min(System.Byte e1, System.Byte e2){
+    public static Byte min(Byte e1, Byte e2){
         throw new NotImplementedException();
     }
     
@@ -2549,7 +2550,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 min(System.UInt16 e1, System.UInt16 e2){
+    public static UInt16 min(UInt16 e1, UInt16 e2){
         throw new NotImplementedException();
     }
     
@@ -2569,7 +2570,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 min(System.UInt32 e1, System.UInt32 e2){
+    public static UInt32 min(UInt32 e1, UInt32 e2){
         throw new NotImplementedException();
     }
     
@@ -2589,7 +2590,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 min(System.UInt64 e1, System.UInt64 e2){
+    public static UInt64 min(UInt64 e1, UInt64 e2){
         throw new NotImplementedException();
     }
     
@@ -2609,7 +2610,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half min(System.Half e1, System.Half e2){
+    public static Half min(Half e1, Half e2){
         throw new NotImplementedException();
     }
     
@@ -2629,7 +2630,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single min(System.Single e1, System.Single e2){
+    public static Single min(Single e1, Single e2){
         throw new NotImplementedException();
     }
     
@@ -2649,7 +2650,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double min(System.Double e1, System.Double e2){
+    public static Double min(Double e1, Double e2){
         throw new NotImplementedException();
     }
     
@@ -2669,7 +2670,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half mix(System.Half e1, System.Half e2, System.Half e3){
+    public static Half mix(Half e1, Half e2, Half e3){
         throw new NotImplementedException();
     }
     
@@ -2689,7 +2690,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single mix(System.Single e1, System.Single e2, System.Single e3){
+    public static Single mix(Single e1, Single e2, Single e3){
         throw new NotImplementedException();
     }
     
@@ -2709,7 +2710,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double mix(System.Double e1, System.Double e2, System.Double e3){
+    public static Double mix(Double e1, Double e2, Double e3){
         throw new NotImplementedException();
     }
     
@@ -2774,7 +2775,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half pow(System.Half e1, System.Half e2){
+    public static Half pow(Half e1, Half e2){
         throw new NotImplementedException();
     }
     
@@ -2794,7 +2795,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single pow(System.Single e1, System.Single e2){
+    public static Single pow(Single e1, Single e2){
         throw new NotImplementedException();
     }
     
@@ -2814,7 +2815,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double pow(System.Double e1, System.Double e2){
+    public static Double pow(Double e1, Double e2){
         throw new NotImplementedException();
     }
     
@@ -2834,7 +2835,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single quantizeToF16(System.Single e){
+    public static Single quantizeToF16(Single e){
         throw new NotImplementedException();
     }
     
@@ -2854,7 +2855,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half radians(System.Half e){
+    public static Half radians(Half e){
         throw new NotImplementedException();
     }
     
@@ -2874,7 +2875,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single radians(System.Single e){
+    public static Single radians(Single e){
         throw new NotImplementedException();
     }
     
@@ -2894,7 +2895,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double radians(System.Double e){
+    public static Double radians(Double e){
         throw new NotImplementedException();
     }
     
@@ -2959,7 +2960,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half refract(System.Half e1, System.Half e2, System.Half e3){
+    public static Half refract(Half e1, Half e2, Half e3){
         throw new NotImplementedException();
     }
     
@@ -2979,7 +2980,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single refract(System.Single e1, System.Single e2, System.Single e3){
+    public static Single refract(Single e1, Single e2, Single e3){
         throw new NotImplementedException();
     }
     
@@ -2999,7 +3000,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double refract(System.Double e1, System.Double e2, System.Double e3){
+    public static Double refract(Double e1, Double e2, Double e3){
         throw new NotImplementedException();
     }
     
@@ -3079,7 +3080,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half round(System.Half e){
+    public static Half round(Half e){
         throw new NotImplementedException();
     }
     
@@ -3099,7 +3100,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single round(System.Single e){
+    public static Single round(Single e){
         throw new NotImplementedException();
     }
     
@@ -3119,7 +3120,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double round(System.Double e){
+    public static Double round(Double e){
         throw new NotImplementedException();
     }
     
@@ -3139,7 +3140,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half saturate(System.Half e){
+    public static Half saturate(Half e){
         throw new NotImplementedException();
     }
     
@@ -3159,7 +3160,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single saturate(System.Single e){
+    public static Single saturate(Single e){
         throw new NotImplementedException();
     }
     
@@ -3179,7 +3180,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double saturate(System.Double e){
+    public static Double saturate(Double e){
         throw new NotImplementedException();
     }
     
@@ -3199,7 +3200,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte sign(System.SByte e){
+    public static SByte sign(SByte e){
         throw new NotImplementedException();
     }
     
@@ -3219,7 +3220,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 sign(System.Int16 e){
+    public static Int16 sign(Int16 e){
         throw new NotImplementedException();
     }
     
@@ -3239,7 +3240,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 sign(System.Int32 e){
+    public static Int32 sign(Int32 e){
         throw new NotImplementedException();
     }
     
@@ -3259,7 +3260,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 sign(System.Int64 e){
+    public static Int64 sign(Int64 e){
         throw new NotImplementedException();
     }
     
@@ -3279,7 +3280,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte sign(System.Byte e){
+    public static Byte sign(Byte e){
         throw new NotImplementedException();
     }
     
@@ -3299,7 +3300,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 sign(System.UInt16 e){
+    public static UInt16 sign(UInt16 e){
         throw new NotImplementedException();
     }
     
@@ -3319,7 +3320,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 sign(System.UInt32 e){
+    public static UInt32 sign(UInt32 e){
         throw new NotImplementedException();
     }
     
@@ -3339,7 +3340,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 sign(System.UInt64 e){
+    public static UInt64 sign(UInt64 e){
         throw new NotImplementedException();
     }
     
@@ -3359,7 +3360,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half sign(System.Half e){
+    public static Half sign(Half e){
         throw new NotImplementedException();
     }
     
@@ -3379,7 +3380,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single sign(System.Single e){
+    public static Single sign(Single e){
         throw new NotImplementedException();
     }
     
@@ -3399,7 +3400,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double sign(System.Double e){
+    public static Double sign(Double e){
         throw new NotImplementedException();
     }
     
@@ -3419,7 +3420,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half sin(System.Half e){
+    public static Half sin(Half e){
         throw new NotImplementedException();
     }
     
@@ -3439,7 +3440,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single sin(System.Single e){
+    public static Single sin(Single e){
         throw new NotImplementedException();
     }
     
@@ -3459,7 +3460,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double sin(System.Double e){
+    public static Double sin(Double e){
         throw new NotImplementedException();
     }
     
@@ -3479,7 +3480,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half sinh(System.Half e){
+    public static Half sinh(Half e){
         throw new NotImplementedException();
     }
     
@@ -3499,7 +3500,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single sinh(System.Single e){
+    public static Single sinh(Single e){
         throw new NotImplementedException();
     }
     
@@ -3519,7 +3520,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double sinh(System.Double e){
+    public static Double sinh(Double e){
         throw new NotImplementedException();
     }
     
@@ -3539,7 +3540,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half smoothstep(System.Half e1, System.Half e2, System.Half e3){
+    public static Half smoothstep(Half e1, Half e2, Half e3){
         throw new NotImplementedException();
     }
     
@@ -3559,7 +3560,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single smoothstep(System.Single e1, System.Single e2, System.Single e3){
+    public static Single smoothstep(Single e1, Single e2, Single e3){
         throw new NotImplementedException();
     }
     
@@ -3579,7 +3580,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double smoothstep(System.Double e1, System.Double e2, System.Double e3){
+    public static Double smoothstep(Double e1, Double e2, Double e3){
         throw new NotImplementedException();
     }
     
@@ -3599,7 +3600,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half sqrt(System.Half e){
+    public static Half sqrt(Half e){
         throw new NotImplementedException();
     }
     
@@ -3619,7 +3620,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single sqrt(System.Single e){
+    public static Single sqrt(Single e){
         throw new NotImplementedException();
     }
     
@@ -3639,7 +3640,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double sqrt(System.Double e){
+    public static Double sqrt(Double e){
         throw new NotImplementedException();
     }
     
@@ -3659,7 +3660,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half step(System.Half e1, System.Half e2){
+    public static Half step(Half e1, Half e2){
         throw new NotImplementedException();
     }
     
@@ -3679,7 +3680,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single step(System.Single e1, System.Single e2){
+    public static Single step(Single e1, Single e2){
         throw new NotImplementedException();
     }
     
@@ -3699,7 +3700,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double step(System.Double e1, System.Double e2){
+    public static Double step(Double e1, Double e2){
         throw new NotImplementedException();
     }
     
@@ -3719,7 +3720,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half tan(System.Half e){
+    public static Half tan(Half e){
         throw new NotImplementedException();
     }
     
@@ -3739,7 +3740,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single tan(System.Single e){
+    public static Single tan(Single e){
         throw new NotImplementedException();
     }
     
@@ -3759,7 +3760,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double tan(System.Double e){
+    public static Double tan(Double e){
         throw new NotImplementedException();
     }
     
@@ -3779,7 +3780,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half tanh(System.Half e){
+    public static Half tanh(Half e){
         throw new NotImplementedException();
     }
     
@@ -3799,7 +3800,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single tanh(System.Single e){
+    public static Single tanh(Single e){
         throw new NotImplementedException();
     }
     
@@ -3819,7 +3820,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double tanh(System.Double e){
+    public static Double tanh(Double e){
         throw new NotImplementedException();
     }
     
@@ -3839,7 +3840,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half trunc(System.Half e){
+    public static Half trunc(Half e){
         throw new NotImplementedException();
     }
     
@@ -3859,7 +3860,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single trunc(System.Single e){
+    public static Single trunc(Single e){
         throw new NotImplementedException();
     }
     
@@ -3879,7 +3880,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double trunc(System.Double e){
+    public static Double trunc(Double e){
         throw new NotImplementedException();
     }
     
@@ -3899,7 +3900,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dpdx(System.Half e){
+    public static Half dpdx(Half e){
         throw new NotImplementedException();
     }
     
@@ -3919,7 +3920,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dpdx(System.Single e){
+    public static Single dpdx(Single e){
         throw new NotImplementedException();
     }
     
@@ -3939,7 +3940,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dpdx(System.Double e){
+    public static Double dpdx(Double e){
         throw new NotImplementedException();
     }
     
@@ -3959,7 +3960,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dpdxCoarse(System.Half e){
+    public static Half dpdxCoarse(Half e){
         throw new NotImplementedException();
     }
     
@@ -3979,7 +3980,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dpdxCoarse(System.Single e){
+    public static Single dpdxCoarse(Single e){
         throw new NotImplementedException();
     }
     
@@ -3999,7 +4000,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dpdxCoarse(System.Double e){
+    public static Double dpdxCoarse(Double e){
         throw new NotImplementedException();
     }
     
@@ -4019,7 +4020,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dpdxFine(System.Half e){
+    public static Half dpdxFine(Half e){
         throw new NotImplementedException();
     }
     
@@ -4039,7 +4040,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dpdxFine(System.Single e){
+    public static Single dpdxFine(Single e){
         throw new NotImplementedException();
     }
     
@@ -4059,7 +4060,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dpdxFine(System.Double e){
+    public static Double dpdxFine(Double e){
         throw new NotImplementedException();
     }
     
@@ -4079,7 +4080,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dpdy(System.Half e){
+    public static Half dpdy(Half e){
         throw new NotImplementedException();
     }
     
@@ -4099,7 +4100,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dpdy(System.Single e){
+    public static Single dpdy(Single e){
         throw new NotImplementedException();
     }
     
@@ -4119,7 +4120,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dpdy(System.Double e){
+    public static Double dpdy(Double e){
         throw new NotImplementedException();
     }
     
@@ -4139,7 +4140,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dpdyCoarse(System.Half e){
+    public static Half dpdyCoarse(Half e){
         throw new NotImplementedException();
     }
     
@@ -4159,7 +4160,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dpdyCoarse(System.Single e){
+    public static Single dpdyCoarse(Single e){
         throw new NotImplementedException();
     }
     
@@ -4179,7 +4180,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dpdyCoarse(System.Double e){
+    public static Double dpdyCoarse(Double e){
         throw new NotImplementedException();
     }
     
@@ -4199,7 +4200,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half dpdyFine(System.Half e){
+    public static Half dpdyFine(Half e){
         throw new NotImplementedException();
     }
     
@@ -4219,7 +4220,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single dpdyFine(System.Single e){
+    public static Single dpdyFine(Single e){
         throw new NotImplementedException();
     }
     
@@ -4239,7 +4240,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double dpdyFine(System.Double e){
+    public static Double dpdyFine(Double e){
         throw new NotImplementedException();
     }
     
@@ -4259,7 +4260,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half fwidth(System.Half e){
+    public static Half fwidth(Half e){
         throw new NotImplementedException();
     }
     
@@ -4279,7 +4280,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single fwidth(System.Single e){
+    public static Single fwidth(Single e){
         throw new NotImplementedException();
     }
     
@@ -4299,7 +4300,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double fwidth(System.Double e){
+    public static Double fwidth(Double e){
         throw new NotImplementedException();
     }
     
@@ -4319,7 +4320,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half fwidthCoarse(System.Half e){
+    public static Half fwidthCoarse(Half e){
         throw new NotImplementedException();
     }
     
@@ -4339,7 +4340,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single fwidthCoarse(System.Single e){
+    public static Single fwidthCoarse(Single e){
         throw new NotImplementedException();
     }
     
@@ -4359,7 +4360,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double fwidthCoarse(System.Double e){
+    public static Double fwidthCoarse(Double e){
         throw new NotImplementedException();
     }
     
@@ -4379,7 +4380,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half fwidthFine(System.Half e){
+    public static Half fwidthFine(Half e){
         throw new NotImplementedException();
     }
     
@@ -4399,7 +4400,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single fwidthFine(System.Single e){
+    public static Single fwidthFine(Single e){
         throw new NotImplementedException();
     }
     
@@ -4419,7 +4420,7 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double fwidthFine(System.Double e){
+    public static Double fwidthFine(Double e){
         throw new NotImplementedException();
     }
     
@@ -4439,607 +4440,5601 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.SByte i8(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static SByte i8(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int16 i16(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int16 i16(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int32 i32(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int32 i32(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Int64 i64(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Int64 i64(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Byte u8(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Byte u8(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt16 u16(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt16 u16(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt32 u32(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt32 u32(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.UInt64 u64(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static UInt64 u64(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Half f16(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Half f16(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Single f32(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Single f32(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.SByte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.Int16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.Int32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.Int64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.Byte e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.UInt16 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.UInt32 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.UInt64 e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.Half e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.Single e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static System.Double f64(System.Double e){
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    public static Double f64(Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2b vec2(Boolean e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2b vec2(Boolean e0, Boolean e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2b vec2b(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3b vec3(Boolean e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3b vec3(Boolean e0, Boolean e1, Boolean e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3b vec3(Boolean e0, vec2b e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3b vec3(vec2b e0, Boolean e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3b vec3b(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4b vec4(Boolean e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4b vec4(Boolean e0, Boolean e1, Boolean e2, Boolean e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4b vec4(Boolean e0, vec3b e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4b vec4(vec3b e0, Boolean e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4b vec4(Boolean e0, Boolean e1, vec2b e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4b vec4(Boolean e0, vec2b e1, Boolean e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4b vec4(vec2b e0, Boolean e1, Boolean e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4b vec4(vec2b e0, vec2b e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4b vec4b(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2i8 vec2(SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2i8 vec2(SByte e0, SByte e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i8 vec2i8(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i8 vec3(SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i8 vec3(SByte e0, SByte e1, SByte e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i8 vec3(SByte e0, vec2i8 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i8 vec3(vec2i8 e0, SByte e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i8 vec3i8(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i8 vec4(SByte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i8 vec4(SByte e0, SByte e1, SByte e2, SByte e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i8 vec4(SByte e0, vec3i8 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i8 vec4(vec3i8 e0, SByte e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i8 vec4(SByte e0, SByte e1, vec2i8 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i8 vec4(SByte e0, vec2i8 e1, SByte e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i8 vec4(vec2i8 e0, SByte e1, SByte e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i8 vec4(vec2i8 e0, vec2i8 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i8 vec4i8(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2i16 vec2(Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2i16 vec2(Int16 e0, Int16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i16 vec2i16(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i16 vec3(Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i16 vec3(Int16 e0, Int16 e1, Int16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i16 vec3(Int16 e0, vec2i16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i16 vec3(vec2i16 e0, Int16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i16 vec3i16(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i16 vec4(Int16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i16 vec4(Int16 e0, Int16 e1, Int16 e2, Int16 e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i16 vec4(Int16 e0, vec3i16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i16 vec4(vec3i16 e0, Int16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i16 vec4(Int16 e0, Int16 e1, vec2i16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i16 vec4(Int16 e0, vec2i16 e1, Int16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i16 vec4(vec2i16 e0, Int16 e1, Int16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i16 vec4(vec2i16 e0, vec2i16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i16 vec4i16(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2i32 vec2(Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2i32 vec2(Int32 e0, Int32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i32 vec2i32(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i32 vec3(Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i32 vec3(Int32 e0, Int32 e1, Int32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i32 vec3(Int32 e0, vec2i32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i32 vec3(vec2i32 e0, Int32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i32 vec3i32(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i32 vec4(Int32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i32 vec4(Int32 e0, Int32 e1, Int32 e2, Int32 e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i32 vec4(Int32 e0, vec3i32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i32 vec4(vec3i32 e0, Int32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i32 vec4(Int32 e0, Int32 e1, vec2i32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i32 vec4(Int32 e0, vec2i32 e1, Int32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i32 vec4(vec2i32 e0, Int32 e1, Int32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i32 vec4(vec2i32 e0, vec2i32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i32 vec4i32(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2i64 vec2(Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2i64 vec2(Int64 e0, Int64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2i64 vec2i64(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i64 vec3(Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i64 vec3(Int64 e0, Int64 e1, Int64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i64 vec3(Int64 e0, vec2i64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3i64 vec3(vec2i64 e0, Int64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3i64 vec3i64(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i64 vec4(Int64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i64 vec4(Int64 e0, Int64 e1, Int64 e2, Int64 e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i64 vec4(Int64 e0, vec3i64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i64 vec4(vec3i64 e0, Int64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i64 vec4(Int64 e0, Int64 e1, vec2i64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i64 vec4(Int64 e0, vec2i64 e1, Int64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i64 vec4(vec2i64 e0, Int64 e1, Int64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4i64 vec4(vec2i64 e0, vec2i64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4i64 vec4i64(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2u8 vec2(Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2u8 vec2(Byte e0, Byte e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u8 vec2u8(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u8 vec3(Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u8 vec3(Byte e0, Byte e1, Byte e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u8 vec3(Byte e0, vec2u8 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u8 vec3(vec2u8 e0, Byte e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u8 vec3u8(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u8 vec4(Byte e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u8 vec4(Byte e0, Byte e1, Byte e2, Byte e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u8 vec4(Byte e0, vec3u8 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u8 vec4(vec3u8 e0, Byte e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u8 vec4(Byte e0, Byte e1, vec2u8 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u8 vec4(Byte e0, vec2u8 e1, Byte e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u8 vec4(vec2u8 e0, Byte e1, Byte e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u8 vec4(vec2u8 e0, vec2u8 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u8 vec4u8(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2u16 vec2(UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2u16 vec2(UInt16 e0, UInt16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u16 vec2u16(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u16 vec3(UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u16 vec3(UInt16 e0, UInt16 e1, UInt16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u16 vec3(UInt16 e0, vec2u16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u16 vec3(vec2u16 e0, UInt16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u16 vec3u16(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u16 vec4(UInt16 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u16 vec4(UInt16 e0, UInt16 e1, UInt16 e2, UInt16 e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u16 vec4(UInt16 e0, vec3u16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u16 vec4(vec3u16 e0, UInt16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u16 vec4(UInt16 e0, UInt16 e1, vec2u16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u16 vec4(UInt16 e0, vec2u16 e1, UInt16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u16 vec4(vec2u16 e0, UInt16 e1, UInt16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u16 vec4(vec2u16 e0, vec2u16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u16 vec4u16(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2u32 vec2(UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2u32 vec2(UInt32 e0, UInt32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u32 vec2u32(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u32 vec3(UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u32 vec3(UInt32 e0, UInt32 e1, UInt32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u32 vec3(UInt32 e0, vec2u32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u32 vec3(vec2u32 e0, UInt32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u32 vec3u32(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u32 vec4(UInt32 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u32 vec4(UInt32 e0, UInt32 e1, UInt32 e2, UInt32 e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u32 vec4(UInt32 e0, vec3u32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u32 vec4(vec3u32 e0, UInt32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u32 vec4(UInt32 e0, UInt32 e1, vec2u32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u32 vec4(UInt32 e0, vec2u32 e1, UInt32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u32 vec4(vec2u32 e0, UInt32 e1, UInt32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u32 vec4(vec2u32 e0, vec2u32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u32 vec4u32(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2u64 vec2(UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2u64 vec2(UInt64 e0, UInt64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2u64 vec2u64(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u64 vec3(UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u64 vec3(UInt64 e0, UInt64 e1, UInt64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u64 vec3(UInt64 e0, vec2u64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3u64 vec3(vec2u64 e0, UInt64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3u64 vec3u64(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u64 vec4(UInt64 e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u64 vec4(UInt64 e0, UInt64 e1, UInt64 e2, UInt64 e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u64 vec4(UInt64 e0, vec3u64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u64 vec4(vec3u64 e0, UInt64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u64 vec4(UInt64 e0, UInt64 e1, vec2u64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u64 vec4(UInt64 e0, vec2u64 e1, UInt64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u64 vec4(vec2u64 e0, UInt64 e1, UInt64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4u64 vec4(vec2u64 e0, vec2u64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4u64 vec4u64(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2f16 vec2(Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2f16 vec2(Half e0, Half e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f16 vec2f16(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f16 vec3(Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f16 vec3(Half e0, Half e1, Half e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f16 vec3(Half e0, vec2f16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f16 vec3(vec2f16 e0, Half e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f16 vec3f16(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f16 vec4(Half e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f16 vec4(Half e0, Half e1, Half e2, Half e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f16 vec4(Half e0, vec3f16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f16 vec4(vec3f16 e0, Half e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f16 vec4(Half e0, Half e1, vec2f16 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f16 vec4(Half e0, vec2f16 e1, Half e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f16 vec4(vec2f16 e0, Half e1, Half e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f16 vec4(vec2f16 e0, vec2f16 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f16 vec4f16(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2f32 vec2(Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2f32 vec2(Single e0, Single e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f32 vec2f32(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f32 vec3(Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f32 vec3(Single e0, Single e1, Single e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f32 vec3(Single e0, vec2f32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f32 vec3(vec2f32 e0, Single e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f32 vec3f32(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f32 vec4(Single e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f32 vec4(Single e0, Single e1, Single e2, Single e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f32 vec4(Single e0, vec3f32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f32 vec4(vec3f32 e0, Single e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f32 vec4(Single e0, Single e1, vec2f32 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f32 vec4(Single e0, vec2f32 e1, Single e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f32 vec4(vec2f32 e0, Single e1, Single e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f32 vec4(vec2f32 e0, vec2f32 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f32 vec4f32(vec4f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2f64 vec2(Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec2f64 vec2(Double e0, Double e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec2f64 vec2f64(vec2f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f64 vec3(Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f64 vec3(Double e0, Double e1, Double e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f64 vec3(Double e0, vec2f64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec3f64 vec3(vec2f64 e0, Double e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec3f64 vec3f64(vec3f64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f64 vec4(Double e){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ZeroConstructorMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f64 vec4(Double e0, Double e1, Double e2, Double e3){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f64 vec4(Double e0, vec3f64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f64 vec4(vec3f64 e0, Double e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f64 vec4(Double e0, Double e1, vec2f64 e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f64 vec4(Double e0, vec2f64 e1, Double e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f64 vec4(vec2f64 e0, Double e1, Double e2){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    public static vec4f64 vec4(vec2f64 e0, vec2f64 e1){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4b v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4i8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4i16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4i32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4i64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4u8 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4u16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4u32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4u64 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4f16 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4f32 v){
+        throw new NotImplementedException();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [ShaderRuntimeMethodAttribute]
+    [ConversionMethodAttribute]
+    [VecMethodRenamedForOverloadAttribute]
+    public static vec4f64 vec4f64(vec4f64 v){
         throw new NotImplementedException();
     }
     
