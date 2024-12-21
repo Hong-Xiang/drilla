@@ -12,6 +12,6 @@ public sealed class ILSLDevelopShaderModuleService
         //[nameof(SimpleUniformShader)] = new SimpleUniformShader(),
         [nameof(MandelbrotDistanceShader)] = new MandelbrotDistanceShader(),
         [nameof(SimpleUniformShader)] = new SimpleUniformShader(),
-        [nameof(QuadShader)] = new QuadShader(),
+        [nameof(RaymarchingPrimitiveShader)] = new RaymarchingPrimitiveShader(),
     };
 }

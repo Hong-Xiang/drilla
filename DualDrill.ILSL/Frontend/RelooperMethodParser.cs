@@ -79,6 +79,13 @@ sealed class MethodCompilation
                 case ILOpCode.Br_s:
                 case ILOpCode.Brtrue_s:
                 case ILOpCode.Brfalse_s:
+                case ILOpCode.Bge_un_s:
+                case ILOpCode.Beq_s:
+                case ILOpCode.Bge_s:
+                case ILOpCode.Bgt_s:
+                case ILOpCode.Ble_s:
+                case ILOpCode.Blt_s:
+                case ILOpCode.Bne_un_s:
                     {
                         jump = (sbyte)inst.Operand;
                         if (jump == 0)
@@ -91,6 +98,13 @@ sealed class MethodCompilation
                 case ILOpCode.Br:
                 case ILOpCode.Brtrue:
                 case ILOpCode.Brfalse:
+                case ILOpCode.Bge_un:
+                case ILOpCode.Beq:
+                case ILOpCode.Bge:
+                case ILOpCode.Bgt:
+                case ILOpCode.Ble:
+                case ILOpCode.Blt:
+                case ILOpCode.Bne_un:
                     {
                         jump = (int)inst.Operand;
                         break;
@@ -256,6 +270,7 @@ sealed class MethodCompilation
                 return new LoadConstantInstruction<F64Literal>(new((double)inst.Operand));
 
             case ILOpCode.Ldarg:
+            case ILOpCode.Ldarg_s:
                 return new LoadArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
             case ILOpCode.Ldarg_0:
                 return new LoadArgumentInstruction(0);
@@ -265,12 +280,12 @@ sealed class MethodCompilation
                 return new LoadArgumentInstruction(2);
             case ILOpCode.Ldarg_3:
                 return new LoadArgumentInstruction(3);
-            case ILOpCode.Ldarg_s:
-                return new LoadArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
             case ILOpCode.Ldarga:
-                return new LoadArgumentAddressInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
             case ILOpCode.Ldarga_s:
                 return new LoadArgumentAddressInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
+            case ILOpCode.Starg:
+            case ILOpCode.Starg_s:
+                return new StoreArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
 
             case ILOpCode.Ldloc_0:
                 return new LoadLocalInstruction(LocalVariableInfo[0]);
@@ -338,9 +353,11 @@ sealed class MethodCompilation
             case ILOpCode.Conv_r8:
                 return new ConvertInstruction(ShaderType.F64);
 
+            case ILOpCode.Neg:
+                return new NegateInstruction();
 
             default:
-                throw new NotSupportedException($"Compile {inst.OpCode}@{inst.Offset} is not supported");
+                throw new NotSupportedException($"Compile {inst.OpCode}@{inst.Offset} of {Method.Name} is not supported");
         }
     }
 
@@ -366,12 +383,20 @@ sealed class MethodCompilation
         var bp = new VariableDeclaration(DeclarationScope.Function, "clsl_next", ShaderType.I32, []);
         yield return SyntaxFactory.VarDeclaration(bp);
         var cases = new List<SwitchCase>();
-        for (var ib = 0; ib < BasicBlocks.Count(); ib++)
+        var phiLocals = new List<VariableDeclaration>[BasicBlocks.Count];
+        foreach (var (ib, bb) in BasicBlocks.Index())
         {
-            var bb = BasicBlocks[ib];
+            Stacks[ib] ??= new Stack<IExpression>();
+            var stack = Stacks[ib];
+            var stmts = CompileBasicBlock(bp, stack, bb).ToList();
+            foreach (var s in stmts)
+            {
+                Console.WriteLine(s);
+            }
+            Console.WriteLine();
             cases.Add(new SwitchCase(
                 SyntaxFactory.Literal(bb.Index),
-                new([.. CompileBasicBlock(bp, Stacks[ib] ??= new Stack<IExpression>(), bb)])
+                new([.. stmts])
             ));
         }
         yield return new LoopStatement(
@@ -415,6 +440,16 @@ sealed class MethodCompilation
                     break;
                 case LoadArgumentInstruction { Index: var index }:
                     stack.Push(SyntaxFactory.ArgIdentifier(Context.Parameters[index]));
+                    break;
+                case StoreArgumentInstruction { Index: var index }:
+                    {
+                        var value = stack.Pop();
+                        yield return new SimpleAssignmentStatement(
+                            SyntaxFactory.ArgIdentifier(Context.Parameters[index]),
+                            value,
+                            AssignmentOp.Assign
+                        );
+                    }
                     break;
                 case IBinaryArithmeticInstruction binst:
                     {
@@ -572,6 +607,82 @@ sealed class MethodCompilation
                         Stacks[target.Index] ??= new Stack<IExpression>(stack);
                         break;
                     }
+                case BranchInstruction<Condition.Gt<S>> { Target: var target }:
+                    {
+                        if (bp is null)
+                        {
+                            throw new NotSupportedException();
+                        }
+                        var r = stack.Pop();
+                        var l = stack.Pop();
+                        yield return new IfStatement(
+                            new BinaryRelationalExpression(
+                                l, r,
+                                BinaryRelationalOp.GreaterThan
+                            ),
+                            new([
+                                new SimpleAssignmentStatement(
+                                    SyntaxFactory.VarIdentifier(bp),
+                                    SyntaxFactory.Literal(target.Index),
+                                    AssignmentOp.Assign )
+                                ]),
+                            new([]),
+                            []
+                        );
+                        Stacks[target.Index] ??= new Stack<IExpression>(stack);
+                        break;
+                    }
+                case BranchInstruction<Condition.Lt<S>> { Target: var target }:
+                    {
+                        if (bp is null)
+                        {
+                            throw new NotSupportedException();
+                        }
+                        var r = stack.Pop();
+                        var l = stack.Pop();
+                        yield return new IfStatement(
+                            new BinaryRelationalExpression(
+                                l, r,
+                                BinaryRelationalOp.LessThan
+                            ),
+                            new([
+                                new SimpleAssignmentStatement(
+                                    SyntaxFactory.VarIdentifier(bp),
+                                    SyntaxFactory.Literal(target.Index),
+                                    AssignmentOp.Assign )
+                                ]),
+                            new([]),
+                            []
+                        );
+                        Stacks[target.Index] ??= new Stack<IExpression>(stack);
+                        break;
+                    }
+                case BranchInstruction<Condition.Le<S>> { Target: var target }:
+                    {
+                        if (bp is null)
+                        {
+                            throw new NotSupportedException();
+                        }
+                        var r = stack.Pop();
+                        var l = stack.Pop();
+                        yield return new IfStatement(
+                            new BinaryRelationalExpression(
+                                l, r,
+                                BinaryRelationalOp.LessThanEqual
+                            ),
+                            new([
+                                new SimpleAssignmentStatement(
+                                    SyntaxFactory.VarIdentifier(bp),
+                                    SyntaxFactory.Literal(target.Index),
+                                    AssignmentOp.Assign )
+                                ]),
+                            new([]),
+                            []
+                        );
+                        Stacks[target.Index] ??= new Stack<IExpression>(stack);
+                        break;
+                    }
+
                 case BinaryBitwiseInstruction { Op: var op }:
                     {
                         var r = stack.Pop();
@@ -645,6 +756,19 @@ sealed class MethodCompilation
                     {
                         var obj = stack.Pop();
                         stack.Push(new NamedComponentExpression(obj, info.Name));
+                        break;
+                    }
+                case NegateInstruction:
+                    {
+                        var value = stack.Pop();
+                        if (value.Type is BoolType)
+                        {
+                            stack.Push(new UnaryLogicalExpression(value, UnaryLogicalOp.Not));
+                        }
+                        else
+                        {
+                            stack.Push(new UnaryArithmeticExpression(value, UnaryArithmeticOp.Minus));
+                        }
                         break;
                     }
                 case LoadInstanceFieldAddressInstruction { Field: var info }:

@@ -23,7 +23,10 @@ interface IBranchCondition
 sealed record class BranchInstruction<TCondition>(BasicBlock Target) : IBranchInstruction
    where TCondition : IBranchCondition
 {
-
+    public override string ToString()
+    {
+        return $"branch.{typeof(TCondition).Name}({Target.Index}@{Target.Offset})";
+    }
 }
 
 
@@ -71,7 +74,9 @@ sealed record class NewObjInstruction(ConstructorInfo Constructor) : IInstructio
 sealed record class LoadArgumentInstruction(int Index) : IInstruction
 {
 }
-
+sealed record class StoreArgumentInstruction(int Index) : IInstruction
+{
+}
 sealed record class LoadArgumentAddressInstruction(int Index) : IInstruction { }
 
 interface ILoadConstantInstruction : IInstruction
@@ -120,8 +125,8 @@ sealed record class BinaryBitwiseInstruction(BinaryBitwiseOp Op) : IInstruction
 {
 }
 
-sealed record class ConvertInstruction(IShaderType Target) : IInstruction 
-{ 
+sealed record class ConvertInstruction(IShaderType Target) : IInstruction
+{
 }
 
 sealed record class ConditionValueInstruction<TCondition> : IConditionValueInstruction
@@ -177,3 +182,5 @@ sealed record class LoadInstanceFieldInstruction(FieldInfo Field) : IInstruction
 sealed record class LoadInstanceFieldAddressInstruction(FieldInfo Field) : IInstruction
 {
 }
+
+sealed record class NegateInstruction : IInstruction { }

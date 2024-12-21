@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Engine.Shader;
 using DualDrill.ILSL;
 using DualDrill.ILSL.Frontend;
@@ -22,6 +23,27 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             return null;
         }
     }
+
+
+    struct DevelopShader : ISharpShader
+    {
+        [Vertex]
+        public static float Test(float a, float b, float c)
+        {
+            return c <= 0 ? a : b;
+        }
+    }
+
+    [HttpGet("compile/develop")]
+    public async Task<IActionResult> CompileDevelop()
+    {
+        var shader = new DevelopShader();
+        var ir = await ILSL.ILSLCompiler.Compile(shader);
+        return Ok(ir);
+    }
+
+
+
 
     [HttpGet("compile/{name}/ir")]
     public IActionResult ParseDevelopModule(string name)

@@ -171,4 +171,14 @@ public class ParseBodyTest
             Expr.Type: FloatType<N32>
         });
     }
+
+    [Fact]
+    public void CompileTaneryConditionalExpressionTest()
+    {
+        var stmt = ParseStatementsMethod(MethodHelper.GetMethod(static (float a, float b, float c) =>
+        {
+            return c <= 0 ? a : b;
+        }));
+        Assert.Equal(3, stmt.Count);
+    }
 }
