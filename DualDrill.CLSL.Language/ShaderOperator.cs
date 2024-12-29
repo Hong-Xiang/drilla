@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 

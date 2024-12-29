@@ -1,28 +1,34 @@
 ﻿using DotNext.Reflection;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Mathematics;
+using DualDrill.ILSL.Compiler;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace DualDrill.ILSL.Frontend;
-
-public sealed record class CLSLParser(IMethodParser MethodParser)
+public sealed record class DeclarationsContext(
+     List<StructureDeclaration> Types,
+     List<VariableDeclaration> ModuleVariables,
+     List<FunctionDeclaration> Functions
+)
 {
-    public ParserContext Context { get; } = ParserContext.Create();
-    HashSet<StructureDeclaration> TypeDeclarations = [];
-    HashSet<FunctionDeclaration> FunctionDeclarations = [];
+    public static DeclarationsContext Empty => new([], [], []);
+}
+
+
+public sealed record class ShaderModuleParser(CompilationContext Context, DeclarationsContext Declarations)
+{
+
+
+    //public ShaderModuleCompilationContext Context { get; } = ShaderModuleCompilationContext.Create();
+
 
     public IShaderType ParseType(Type t)
     {
-        if (t == typeof(vec2f32))
-        {
-            Console.WriteLine();
-        }
         if (Context.Types.TryGetValue(t, out var foundResult))
         {
             return foundResult;
@@ -59,16 +65,17 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
             ..propsMembers
             ], [.. t.GetCustomAttributes().OfType<IShaderAttribute>()]);
 
-        // for custom structs, a new zero-value constructor is added
 
-        Context.ZeroValueConstructors.Add(t, new FunctionDeclaration(
+
+        Declarations.Types.Add(result);
+
+        // for custom structs, a new zero-value constructor runtime method is added
+        Context.ZeroValueConstructors.Add(result, new FunctionDeclaration(
             result.Name,
             [],
             new FunctionReturn(result, []),
             [new ZeroValueBuiltinFunctionAttribute(), new ShaderRuntimeMethodAttribute()]
         ));
-        TypeDeclarations.Add(result);
-
         return result;
     }
 
@@ -89,37 +96,40 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
     }
 
 
-    static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
-    static readonly BindingFlags TargetVariableBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
     VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
     {
-        if (Context.Variables.TryGetValue(info, out var result))
+        if (Context.FieldVariables.TryGetValue(info, out var result))
         {
             return result;
         }
-        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseType(info.FieldType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.Variables.Add(info, decl);
+        var decl = new VariableDeclaration(DeclarationScope.Module, Declarations.ModuleVariables.Count, info.Name, ParseType(info.FieldType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
+        Declarations.ModuleVariables.Add(decl);
+        Context.FieldVariables.Add(info, decl);
         return decl;
     }
     VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
     {
-        if (Context.Variables.TryGetValue(info, out var result))
+        var getter = info.GetGetMethod() ?? throw new NotSupportedException("Properties without getter is not supported");
+        if (Context.PropertyGetterVariables.TryGetValue(getter, out var result))
         {
             return result;
         }
-        var decl = new VariableDeclaration(DeclarationScope.Module, info.Name, ParseType(info.PropertyType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.Variables.Add(info, decl);
+        var decl = new VariableDeclaration(DeclarationScope.Module, -1, info.Name, ParseType(info.PropertyType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
+        Context.PropertyGetterVariables.Add(getter, decl);
         return decl;
     }
 
+    // TODO static binding flags should not be used, add code to proper handle static readonly value
+    static readonly BindingFlags VariableBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
     IReadOnlyList<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
     {
-        var fields = moduleType.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        var fields = moduleType.GetFields(VariableBindingFlags);
         fields = [.. fields.Where(f => f.GetCustomAttributes().Any(a => a is IShaderAttribute))];
         return [.. fields.Select(ParseModuleVariableDeclaration)];
     }
 
+    static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
     public ShaderModuleDeclaration ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -135,8 +145,12 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         {
             _ = ParseMethodMetadata(m);
         }
-        ParseFunctionBodies();
-        return new([.. Context.Variables.Values, .. TypeDeclarations, .. FunctionDeclarations]);
+        var functionBodies = Declarations.Functions
+            .Select(f => KeyValuePair.Create(f, (IFunctionBody)new EmptyFunctionBody()))
+            .ToImmutableDictionary();
+        return new(
+            [.. Declarations.Types, .. Declarations.ModuleVariables, .. Declarations.Functions],
+            functionBodies);
     }
 
     ParameterDeclaration ParseParameter(ParameterInfo parameter)
@@ -182,7 +196,7 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
             ParseReturn(method),
             ParseAttribute(method));
 
-        FunctionDeclarations.Add(decl);
+        Declarations.Functions.Add(decl);
         Context.Functions.Add(method, decl);
 
         if (!IsRuntimeMethod(method))
@@ -200,18 +214,9 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
         return decl;
     }
 
-    public CompoundStatement ParseMethodBody(MethodBase method)
-    {
-        if (!Context.Functions.ContainsKey(method))
-        {
-            _ = ParseMethodMetadata(method);
-        }
-        return MethodParser.ParseMethodBody(Context.GetMethodContext(method), method);
-    }
-
     bool IsRuntimeMethod(MethodBase m)
     {
-        return RuntimeDefinitions.Instance.RuntimeMethods.ContainsKey(m);
+        return RuntimeCompilationContext.Instance.RuntimeMethods.ContainsKey(m);
     }
 
     IEnumerable<PropertyInfo> GetReferencedProperties(IReadOnlyList<Instruction> instructions)
@@ -253,16 +258,4 @@ public sealed record class CLSLParser(IMethodParser MethodParser)
                            .OfType<Type>();
     }
 
-    private void ParseFunctionBodies()
-    {
-        foreach (var (m, f) in Context.Functions)
-        {
-            if (IsRuntimeMethod(m) || f.Body is not null)
-            {
-                continue;
-            }
-            var methodContext = Context.GetMethodContext(m);
-            f.Body = MethodParser.ParseMethodBody(methodContext, m);
-        }
-    }
 }

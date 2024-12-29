@@ -10,7 +10,7 @@ using System.Reflection;
 namespace DualDrill.Server.Controllers;
 
 [Route("[controller]")]
-public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Controller
+public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLService Compiler) : Controller
 {
     ISharpShader? GetShader(string name)
     {
@@ -38,12 +38,17 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
     public async Task<IActionResult> CompileDevelop()
     {
         var shader = new DevelopShader();
-        var ir = await ILSL.ILSLCompiler.Compile(shader);
-        return Ok(ir);
+        //ShaderModuleDeclaration ir = await Compiler.ParseAsync(shader);
+        //var pass0 = ShaderModuleCompilationPass.Create(new DotNetInstructionPass());
+        //ir = pass0.Compile(ir);
+        //var pass1 = ShaderModuleCompilationPass.Create(new ControlFlowGraphDotNetInstructionPass());
+        //ir = pass1.Compile(ir);
+        //var context = ShaderModuleCompilationContext.Create();
+        //var methodContext = context.GetMethodContext(MethodHelper.GetMethod<float, float, float, float>(DevelopShader.Test));
+        //var pass2 = ShaderModuleCompilationPass.Create(new ControlFlowGraphPass(methodContext));
+        var code = await Compiler.EmitWGSL(shader);
+        return Ok(code);
     }
-
-
-
 
     [HttpGet("compile/{name}/ir")]
     public IActionResult ParseDevelopModule(string name)
@@ -53,7 +58,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return NotFound();
         }
-        var ir = ILSL.ILSLCompiler.Parse(shader);
+        var ir = Compiler.Compile(shader);
         return Ok(ir);
     }
 
@@ -65,7 +70,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return NotFound();
         }
-        var code = await ILSLCompiler.Compile(shader);
+        var code = Compiler.EmitWGSL(shader);
         return Ok(code);
     }
 
@@ -104,16 +109,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new RaymarchingPrimitiveShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
-            {
-                HotReloadAssemblies = [
-                   type.Assembly,
-               typeof(ILSLCompiler).Assembly
-                ]
-            });
-
-            var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseShaderModule(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -121,34 +117,14 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
-            {
-                HotReloadAssemblies = [
-                    type.Assembly,
-            typeof(ILSLCompiler).Assembly
-                ]
-            });
-
-            //var parser = new CLSLParser(bodyParser);
-            //var module = parser.ParseShaderModule(shaderModule);
-            var module = ILSL.ILSLCompiler.Parse(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
         else if (name == nameof(MandelbrotDistanceShader))
         {
             var shaderModule = new MandelbrotDistanceShader();
-            var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
-            {
-                HotReloadAssemblies = [
-                    type.Assembly,
-            typeof(ILSLCompiler).Assembly
-                ]
-            });
-
-            var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseShaderModule(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -163,16 +139,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new RaymarchingPrimitiveShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
-            {
-                HotReloadAssemblies = [
-                   type.Assembly,
-               typeof(ILSLCompiler).Assembly
-                ]
-            });
-
-            var parser = new CLSLParser(bodyParser);
-            var module = parser.ParseShaderModule(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
@@ -180,16 +147,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
-            using var bodyParser = new ILSpyMethodParser(new ILSpyOption()
-            {
-                HotReloadAssemblies = [
-                   type.Assembly,
-               typeof(ILSLCompiler).Assembly
-                ]
-            });
-
-            //var parser = new CLSLParser(bodyParser);
-            var module = ILSL.ILSLCompiler.Parse(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
@@ -199,7 +157,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
 
 
     async Task<IActionResult> MethodTargetAction(string moduleName, string methodName,
-            Func<ILSpyMethodParser, MethodBase, Task<IActionResult>> next)
+            Func<MethodBase, Task<IActionResult>> next)
     {
         var shaderModule = GetShader(moduleName);
         if (shaderModule is null)
@@ -216,42 +174,6 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         {
             return NotFound($"Method {methodName} not found");
         }
-        var parser = new ILSpyMethodParser(new ILSpyOption
-        {
-            HotReloadAssemblies = [shaderModuleType.Assembly]
-        });
-        return await next(parser, method);
-    }
-
-    [HttpGet("decompile/{moduleName}/method/{methodName}")]
-    public async Task<IActionResult> DecompileMethodAsync(string moduleName, string methodName)
-    {
-        return await MethodTargetAction(moduleName, methodName, async (parser, method) =>
-        {
-            var ast = parser.Decompile(method);
-            return Ok(ast.ToString());
-        });
-    }
-
-    [HttpGet("parse/{moduleName}/method/{methodName}")]
-    public async Task<IActionResult> ParseMethodAsync(string moduleName, string methodName)
-    {
-        return await MethodTargetAction(moduleName, methodName, async (parser, method) =>
-        {
-            var ir = parser.ParseMethod(method);
-            return Ok(ir);
-        });
-    }
-
-    [HttpGet("compile/{moduleName}/method/{methodName}")]
-    public async Task<IActionResult> CompileMethodAsync(string moduleName, string methodName)
-    {
-        return await MethodTargetAction(moduleName, methodName, async (parser, method) =>
-        {
-            var ir = parser.ParseMethod(method);
-            var module = new ShaderModuleDeclaration([ir]);
-            var code = await module.EmitCode();
-            return Ok(code);
-        });
+        return await next(method);
     }
 }

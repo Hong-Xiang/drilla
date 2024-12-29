@@ -1,43 +1,53 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
-using Lokad.ILPack.IL;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
-namespace DualDrill.ILSL.LinearIR;
+namespace DualDrill.CLSL.LinearInstruction;
 
 public interface IInstruction
 {
 }
 
-interface IBranchInstruction : IInstruction
+public interface ILabel
 {
-    BasicBlock Target { get; }
+    public int Index { get; }
 }
 
-interface IBranchCondition
+public sealed record class Br { }
+
+public sealed record class BrIf { }
+
+public interface IBranchInstruction : IInstruction
+{
+    ILabel Target { get; }
+}
+
+public interface IBranchCondition
 {
 }
 
-sealed record class BranchInstruction<TCondition>(BasicBlock Target) : IBranchInstruction
+public sealed record class BranchInstruction<TCondition>(ILabel Target) : IBranchInstruction
    where TCondition : IBranchCondition
 {
     public override string ToString()
     {
-        return $"branch.{typeof(TCondition).Name}({Target.Index}@{Target.Offset})";
+        return $"branch.{typeof(TCondition).Name}({Target})";
     }
 }
 
 
-static class Condition
+public static class Condition
 {
     public struct Unconditional : IBranchCondition { }
     public struct True : IBranchCondition { }
     public struct False : IBranchCondition { }
     public struct Eq : IBranchCondition, IConditionValueCondition
     {
-        public static BinaryRelationalOp BinaryRelationalOp => BinaryRelationalOp.Equal;
+        public static BinaryRelation.Op BinaryRelationalOp => BinaryRelation.Op.eq;
     }
     public struct Ge<TSign> : IBranchCondition
         where TSign : ISignedness
@@ -45,7 +55,7 @@ static class Condition
     public struct Gt<TSign> : IBranchCondition, IConditionValueCondition
         where TSign : ISignedness
     {
-        public static BinaryRelationalOp BinaryRelationalOp => BinaryRelationalOp.GreaterThan;
+        public static BinaryRelation.Op BinaryRelationalOp => BinaryRelation.Op.gt;
     }
     public struct Le<TSign> : IBranchCondition
         where TSign : ISignedness
@@ -53,57 +63,58 @@ static class Condition
     public struct Lt<TSign> : IBranchCondition, IConditionValueCondition
         where TSign : ISignedness
     {
-        public static BinaryRelationalOp BinaryRelationalOp => BinaryRelationalOp.LessThan;
+        public static BinaryRelation.Op BinaryRelationalOp => BinaryRelation.Op.lt;
     }
     public struct Inst : IBranchCondition { }
     public struct Null : IBranchCondition { }
     public struct Ne : IBranchCondition { }
 }
 
-sealed record class NopInstruction : IInstruction { }
-sealed record class ReturnInstruction : IInstruction { }
+public sealed record class NopInstruction : IInstruction { }
+public sealed record class ReturnInstruction : IInstruction { }
 
-sealed record class CallInstruction(MethodInfo Callee) : IInstruction
+public sealed record class CallInstruction(MethodInfo Callee) : IInstruction
 {
 }
 
-sealed record class NewObjInstruction(ConstructorInfo Constructor) : IInstruction
+public sealed record class NewObjInstruction(ConstructorInfo Constructor) : IInstruction
 {
 }
 
-sealed record class LoadArgumentInstruction(int Index) : IInstruction
+public sealed record class LoadArgumentInstruction(int Index) : IInstruction
 {
 }
-sealed record class StoreArgumentInstruction(int Index) : IInstruction
-{
-}
-sealed record class LoadArgumentAddressInstruction(int Index) : IInstruction { }
 
-interface ILoadConstantInstruction : IInstruction
+public sealed record class StoreArgumentInstruction(int Index) : IInstruction
+{
+}
+public sealed record class LoadArgumentAddressInstruction(int Index) : IInstruction { }
+
+public interface IConstInstruction : IInstruction
 {
     ILiteral Literal { get; }
 }
-sealed record class LoadConstantInstruction<TLiteral>(TLiteral Literal) : ILoadConstantInstruction
+public sealed record class Const<TLiteral>(TLiteral Literal) : IConstInstruction
     where TLiteral : ILiteral
 {
-    ILiteral ILoadConstantInstruction.Literal => Literal;
+    ILiteral IConstInstruction.Literal => Literal;
 }
 
-sealed record class LoadLocalInstruction(LocalVariableInfo Info) : IInstruction { }
+public sealed record class LoadLocalInstruction(VariableDeclaration Source) : IInstruction { }
 
-sealed record class StoreLocalInstruction(LocalVariableInfo Info) : IInstruction { }
+public sealed record class StoreLocalInstruction(VariableDeclaration Target) : IInstruction { }
 
-sealed record class LoadLocalAddressInstruction(LocalVariableInfo Info) : IInstruction { }
+public sealed record class LoadLocalAddressInstruction(VariableDeclaration Source) : IInstruction { }
 
 
-interface IBinaryArithmeticInstruction : IInstruction
+public interface IBinaryArithmeticInstruction : IInstruction
 {
     public IExpression CreateExpression(IExpression l, IExpression r);
 
 }
 
-sealed record class BinaryArithmeticInstruction<TOp> : IBinaryArithmeticInstruction
-    where TOp : BinaryArithmetic.IOp
+public sealed record class BinaryArithmeticInstruction<TOp> : IBinaryArithmeticInstruction
+    where TOp : class, BinaryArithmetic.IOp<TOp>
 {
     public IExpression CreateExpression(IExpression l, IExpression r)
     {
@@ -111,25 +122,25 @@ sealed record class BinaryArithmeticInstruction<TOp> : IBinaryArithmeticInstruct
     }
 }
 
-interface IConditionValueCondition
+public interface IConditionValueCondition
 {
-    static abstract BinaryRelationalOp BinaryRelationalOp { get; }
+    static abstract BinaryRelation.Op BinaryRelationalOp { get; }
 }
 
-interface IConditionValueInstruction : IInstruction
+public interface IConditionValueInstruction : IInstruction
 {
     IExpression CreateExpression(IExpression l, IExpression r);
 }
 
-sealed record class BinaryBitwiseInstruction(BinaryBitwiseOp Op) : IInstruction
+public sealed record class BinaryBitwiseInstruction(BinaryBitwiseOp Op) : IInstruction
 {
 }
 
-sealed record class ConvertInstruction(IShaderType Target) : IInstruction
+public sealed record class ConvertInstruction(IShaderType Target) : IInstruction
 {
 }
 
-sealed record class ConditionValueInstruction<TCondition> : IConditionValueInstruction
+public sealed record class ConditionValueInstruction<TCondition> : IConditionValueInstruction
     where TCondition : IConditionValueCondition
 {
     bool TryConvertToBoolExpression(IExpression source, [NotNullWhen(true)] out IExpression? result)
@@ -171,16 +182,16 @@ sealed record class ConditionValueInstruction<TCondition> : IConditionValueInstr
     }
 }
 
-sealed record class LoadStaticFieldInstruction(FieldInfo Field) : IInstruction
+public sealed record class LoadStaticFieldInstruction(FieldInfo Field) : IInstruction
 {
 }
 
-sealed record class LoadInstanceFieldInstruction(FieldInfo Field) : IInstruction
+public sealed record class LoadInstanceFieldInstruction(FieldInfo Field) : IInstruction
 {
 }
 
-sealed record class LoadInstanceFieldAddressInstruction(FieldInfo Field) : IInstruction
+public sealed record class LoadInstanceFieldAddressInstruction(FieldInfo Field) : IInstruction
 {
 }
 
-sealed record class NegateInstruction : IInstruction { }
+public sealed record class NegateInstruction : IInstruction { }

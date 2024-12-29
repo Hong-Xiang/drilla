@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
@@ -39,11 +40,11 @@ public sealed class CSharpProjectionConfiguration
     {
         return op switch
         {
-            BinaryArithmetic.Op.Addition => "+",
-            BinaryArithmetic.Op.Subtraction => "-",
-            BinaryArithmetic.Op.Multiplication => "*",
-            BinaryArithmetic.Op.Division => "/",
-            BinaryArithmetic.Op.Remainder => "%",
+            BinaryArithmetic.Op.add => "+",
+            BinaryArithmetic.Op.sub => "-",
+            BinaryArithmetic.Op.mul => "*",
+            BinaryArithmetic.Op.div => "/",
+            BinaryArithmetic.Op.rem => "%",
             _ => throw new NotSupportedException($"Binary arithmetic operator {op} is not supported")
         };
     }

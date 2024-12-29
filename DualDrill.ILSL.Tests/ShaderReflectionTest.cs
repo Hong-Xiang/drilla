@@ -22,9 +22,10 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = new ShaderModuleDeclaration([
+        var module = ShaderModuleDeclaration.CreateMetadataModule([
             new VariableDeclaration(
                 DeclarationScope.Module,
+                -1,
                 "data",
                 ShaderType.vec2f32,
                 [

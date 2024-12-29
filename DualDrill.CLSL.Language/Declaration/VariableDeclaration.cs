@@ -7,6 +7,7 @@ namespace DualDrill.CLSL.Language.Declaration;
 
 public sealed record class VariableDeclaration(
     DeclarationScope DeclarationScope,
+    int LocalIndex,
     string Name,
     IShaderType Type,
     ImmutableHashSet<IShaderAttribute> Attributes

@@ -1,12 +1,12 @@
-﻿using DualDrill.CLSL.Language;
+﻿using DualDrill.CLSL.ControlFlowGraph;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Common.Nat;
-using DualDrill.ILSL.LinearIR;
+using DualDrill.CLSL.LinearInstruction;
 using Lokad.ILPack.IL;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -16,18 +16,9 @@ using static DualDrill.CLSL.Language.Types.Signedness;
 
 namespace DualDrill.ILSL.Frontend;
 
-public sealed class RelooperMethodParser : IMethodParser
-{
-    public CompoundStatement ParseMethodBody(MethodParseContext env, MethodBase method)
-    {
-        var compiler = new MethodCompilation(env, method);
-        return new([.. compiler.CompileBody()]);
-    }
-}
-
 sealed class MethodCompilation
 {
-    MethodParseContext Context { get; }
+    MethodCompilationContext Context { get; }
     MethodBase Method { get; }
     ImmutableArray<Instruction> Instructions { get; }
 
@@ -40,7 +31,7 @@ sealed class MethodCompilation
     int CodeSize { get; }
     IReadOnlyList<int> NextInstructionOffset { get; }
 
-    public MethodCompilation(MethodParseContext context, MethodBase method)
+    public MethodCompilation(MethodCompilationContext context, MethodBase method)
     {
         Context = context;
         Method = method;
@@ -160,205 +151,206 @@ sealed class MethodCompilation
 
     IInstruction CompileInstruction(Instruction inst, int nextOffset, IReadOnlyList<BasicBlock?> blocks)
     {
-        IInstruction Branch<TCondition>(int offset)
-            where TCondition : IBranchCondition
-        {
-            var target = blocks[nextOffset + offset] ?? throw new NullReferenceException("Target block is null");
-            return new BranchInstruction<TCondition>(target);
-        }
+        throw new NotImplementedException();
+        //IInstruction Branch<TCondition>(int offset)
+        //    where TCondition : IBranchCondition
+        //{
+        //    var target = blocks[nextOffset + offset] ?? throw new NullReferenceException("Target block is null");
+        //    return new BranchInstruction<TCondition>(target);
+        //}
 
-        var argumentPositionBase = Method.IsStatic ? 0 : 1; // ParameterInfo.Position need + 1 for hidden this parameter
+        //var argumentPositionBase = Method.IsStatic ? 0 : 1; // ParameterInfo.Position need + 1 for hidden this parameter
 
-        switch (inst.OpCode.ToILOpCode())
-        {
-            case ILOpCode.Nop:
-                return new NopInstruction();
-            case ILOpCode.Beq:
-                return Branch<Condition.Eq>((int)inst.Operand);
-            case ILOpCode.Beq_s:
-                return Branch<Condition.Eq>((sbyte)inst.Operand);
-            case ILOpCode.Bge:
-                return Branch<Condition.Ge<S>>((int)inst.Operand);
-            case ILOpCode.Bge_s:
-                return Branch<Condition.Ge<S>>((sbyte)inst.Operand);
-            case ILOpCode.Bge_un:
-                return Branch<Condition.Ge<U>>((int)inst.Operand);
-            case ILOpCode.Bge_un_s:
-                return Branch<Condition.Ge<U>>((sbyte)inst.Operand);
-            case ILOpCode.Bgt:
-                return Branch<Condition.Gt<S>>((int)inst.Operand);
-            case ILOpCode.Bgt_s:
-                return Branch<Condition.Gt<S>>((sbyte)inst.Operand);
-            case ILOpCode.Bgt_un:
-                return Branch<Condition.Gt<U>>((int)inst.Operand);
-            case ILOpCode.Bgt_un_s:
-                return Branch<Condition.Gt<U>>((sbyte)inst.Operand);
-            case ILOpCode.Ble:
-                return Branch<Condition.Le<S>>((int)inst.Operand);
-            case ILOpCode.Ble_s:
-                return Branch<Condition.Le<S>>((sbyte)inst.Operand);
-            case ILOpCode.Ble_un:
-                return Branch<Condition.Le<U>>((int)inst.Operand);
-            case ILOpCode.Ble_un_s:
-                return Branch<Condition.Le<U>>((sbyte)inst.Operand);
-            case ILOpCode.Blt:
-                return Branch<Condition.Lt<S>>((int)inst.Operand);
-            case ILOpCode.Blt_s:
-                return Branch<Condition.Lt<S>>((sbyte)inst.Operand);
-            case ILOpCode.Blt_un:
-                return Branch<Condition.Lt<U>>((int)inst.Operand);
-            case ILOpCode.Blt_un_s:
-                return Branch<Condition.Lt<U>>((sbyte)inst.Operand);
-            case ILOpCode.Bne_un:
-                return Branch<Condition.Ne>((int)inst.Operand);
-            case ILOpCode.Bne_un_s:
-                return Branch<Condition.Ne>((sbyte)inst.Operand);
-            case ILOpCode.Br:
-                return Branch<Condition.Unconditional>((int)inst.Operand);
-            case ILOpCode.Br_s:
-                return Branch<Condition.Unconditional>((sbyte)inst.Operand);
-            case ILOpCode.Brfalse:
-                return Branch<Condition.False>((int)inst.Operand);
-            case ILOpCode.Brfalse_s:
-                return Branch<Condition.False>((sbyte)inst.Operand);
-            case ILOpCode.Brtrue:
-                return Branch<Condition.True>((int)inst.Operand);
-            case ILOpCode.Brtrue_s:
-                return Branch<Condition.True>((sbyte)inst.Operand);
-            case ILOpCode.Switch:
-                throw new NotImplementedException("compile switch instruction is not implemented yet");
+        //switch (inst.OpCode.ToILOpCode())
+        //{
+        //    case ILOpCode.Nop:
+        //        return new NopInstruction();
+        //    case ILOpCode.Beq:
+        //        return Branch<Condition.Eq>((int)inst.Operand);
+        //    case ILOpCode.Beq_s:
+        //        return Branch<Condition.Eq>((sbyte)inst.Operand);
+        //    case ILOpCode.Bge:
+        //        return Branch<Condition.Ge<S>>((int)inst.Operand);
+        //    case ILOpCode.Bge_s:
+        //        return Branch<Condition.Ge<S>>((sbyte)inst.Operand);
+        //    case ILOpCode.Bge_un:
+        //        return Branch<Condition.Ge<U>>((int)inst.Operand);
+        //    case ILOpCode.Bge_un_s:
+        //        return Branch<Condition.Ge<U>>((sbyte)inst.Operand);
+        //    case ILOpCode.Bgt:
+        //        return Branch<Condition.Gt<S>>((int)inst.Operand);
+        //    case ILOpCode.Bgt_s:
+        //        return Branch<Condition.Gt<S>>((sbyte)inst.Operand);
+        //    case ILOpCode.Bgt_un:
+        //        return Branch<Condition.Gt<U>>((int)inst.Operand);
+        //    case ILOpCode.Bgt_un_s:
+        //        return Branch<Condition.Gt<U>>((sbyte)inst.Operand);
+        //    case ILOpCode.Ble:
+        //        return Branch<Condition.Le<S>>((int)inst.Operand);
+        //    case ILOpCode.Ble_s:
+        //        return Branch<Condition.Le<S>>((sbyte)inst.Operand);
+        //    case ILOpCode.Ble_un:
+        //        return Branch<Condition.Le<U>>((int)inst.Operand);
+        //    case ILOpCode.Ble_un_s:
+        //        return Branch<Condition.Le<U>>((sbyte)inst.Operand);
+        //    case ILOpCode.Blt:
+        //        return Branch<Condition.Lt<S>>((int)inst.Operand);
+        //    case ILOpCode.Blt_s:
+        //        return Branch<Condition.Lt<S>>((sbyte)inst.Operand);
+        //    case ILOpCode.Blt_un:
+        //        return Branch<Condition.Lt<U>>((int)inst.Operand);
+        //    case ILOpCode.Blt_un_s:
+        //        return Branch<Condition.Lt<U>>((sbyte)inst.Operand);
+        //    case ILOpCode.Bne_un:
+        //        return Branch<Condition.Ne>((int)inst.Operand);
+        //    case ILOpCode.Bne_un_s:
+        //        return Branch<Condition.Ne>((sbyte)inst.Operand);
+        //    case ILOpCode.Br:
+        //        return Branch<Condition.Unconditional>((int)inst.Operand);
+        //    case ILOpCode.Br_s:
+        //        return Branch<Condition.Unconditional>((sbyte)inst.Operand);
+        //    case ILOpCode.Brfalse:
+        //        return Branch<Condition.False>((int)inst.Operand);
+        //    case ILOpCode.Brfalse_s:
+        //        return Branch<Condition.False>((sbyte)inst.Operand);
+        //    case ILOpCode.Brtrue:
+        //        return Branch<Condition.True>((int)inst.Operand);
+        //    case ILOpCode.Brtrue_s:
+        //        return Branch<Condition.True>((sbyte)inst.Operand);
+        //    case ILOpCode.Switch:
+        //        throw new NotImplementedException("compile switch instruction is not implemented yet");
 
-            case ILOpCode.Ceq:
-                return new ConditionValueInstruction<Condition.Eq>();
+        //    case ILOpCode.Ceq:
+        //        return new ConditionValueInstruction<Condition.Eq>();
 
-            case ILOpCode.And:
-                return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseAnd);
-            case ILOpCode.Or:
-                return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseOr);
-            case ILOpCode.Xor:
-                return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseExclusiveOr);
+        //    case ILOpCode.And:
+        //        return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseAnd);
+        //    case ILOpCode.Or:
+        //        return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseOr);
+        //    case ILOpCode.Xor:
+        //        return new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseExclusiveOr);
 
-            case ILOpCode.Ldc_i4:
-                return new LoadConstantInstruction<I32Literal>(new((int)inst.Operand));
-            case ILOpCode.Ldc_i4_0:
-                return new LoadConstantInstruction<I32Literal>(new(0));
-            case ILOpCode.Ldc_i4_1:
-                return new LoadConstantInstruction<I32Literal>(new(1));
-            case ILOpCode.Ldc_i4_2:
-                return new LoadConstantInstruction<I32Literal>(new(2));
-            case ILOpCode.Ldc_i4_3:
-                return new LoadConstantInstruction<I32Literal>(new(3));
-            case ILOpCode.Ldc_i4_4:
-                return new LoadConstantInstruction<I32Literal>(new(4));
-            case ILOpCode.Ldc_i4_5:
-                return new LoadConstantInstruction<I32Literal>(new(5));
-            case ILOpCode.Ldc_i4_6:
-                return new LoadConstantInstruction<I32Literal>(new(6));
-            case ILOpCode.Ldc_i4_7:
-                return new LoadConstantInstruction<I32Literal>(new(7));
-            case ILOpCode.Ldc_i4_8:
-                return new LoadConstantInstruction<I32Literal>(new(8));
-            case ILOpCode.Ldc_i4_m1:
-                return new LoadConstantInstruction<I32Literal>(new(-1));
-            case ILOpCode.Ldc_i4_s:
-                return new LoadConstantInstruction<I32Literal>(new((sbyte)inst.Operand));
-            case ILOpCode.Ldc_i8:
-                return new LoadConstantInstruction<I64Literal>(new((long)inst.Operand));
-            case ILOpCode.Ldc_r4:
-                return new LoadConstantInstruction<F32Literal>(new((float)inst.Operand));
-            case ILOpCode.Ldc_r8:
-                return new LoadConstantInstruction<F64Literal>(new((double)inst.Operand));
+        //    case ILOpCode.Ldc_i4:
+        //        return new Const<I32Literal>(new((int)inst.Operand));
+        //    case ILOpCode.Ldc_i4_0:
+        //        return new Const<I32Literal>(new(0));
+        //    case ILOpCode.Ldc_i4_1:
+        //        return new Const<I32Literal>(new(1));
+        //    case ILOpCode.Ldc_i4_2:
+        //        return new Const<I32Literal>(new(2));
+        //    case ILOpCode.Ldc_i4_3:
+        //        return new Const<I32Literal>(new(3));
+        //    case ILOpCode.Ldc_i4_4:
+        //        return new Const<I32Literal>(new(4));
+        //    case ILOpCode.Ldc_i4_5:
+        //        return new Const<I32Literal>(new(5));
+        //    case ILOpCode.Ldc_i4_6:
+        //        return new Const<I32Literal>(new(6));
+        //    case ILOpCode.Ldc_i4_7:
+        //        return new Const<I32Literal>(new(7));
+        //    case ILOpCode.Ldc_i4_8:
+        //        return new Const<I32Literal>(new(8));
+        //    case ILOpCode.Ldc_i4_m1:
+        //        return new Const<I32Literal>(new(-1));
+        //    case ILOpCode.Ldc_i4_s:
+        //        return new Const<I32Literal>(new((sbyte)inst.Operand));
+        //    case ILOpCode.Ldc_i8:
+        //        return new Const<I64Literal>(new((long)inst.Operand));
+        //    case ILOpCode.Ldc_r4:
+        //        return new Const<F32Literal>(new((float)inst.Operand));
+        //    case ILOpCode.Ldc_r8:
+        //        return new Const<F64Literal>(new((double)inst.Operand));
 
-            case ILOpCode.Ldarg:
-            case ILOpCode.Ldarg_s:
-                return new LoadArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
-            case ILOpCode.Ldarg_0:
-                return new LoadArgumentInstruction(0);
-            case ILOpCode.Ldarg_1:
-                return new LoadArgumentInstruction(1);
-            case ILOpCode.Ldarg_2:
-                return new LoadArgumentInstruction(2);
-            case ILOpCode.Ldarg_3:
-                return new LoadArgumentInstruction(3);
-            case ILOpCode.Ldarga:
-            case ILOpCode.Ldarga_s:
-                return new LoadArgumentAddressInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
-            case ILOpCode.Starg:
-            case ILOpCode.Starg_s:
-                return new StoreArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
+        //    case ILOpCode.Ldarg:
+        //    case ILOpCode.Ldarg_s:
+        //        return new LoadArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
+        //    case ILOpCode.Ldarg_0:
+        //        return new LoadArgumentInstruction(0);
+        //    case ILOpCode.Ldarg_1:
+        //        return new LoadArgumentInstruction(1);
+        //    case ILOpCode.Ldarg_2:
+        //        return new LoadArgumentInstruction(2);
+        //    case ILOpCode.Ldarg_3:
+        //        return new LoadArgumentInstruction(3);
+        //    case ILOpCode.Ldarga:
+        //    case ILOpCode.Ldarga_s:
+        //        return new LoadArgumentAddressInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
+        //    case ILOpCode.Starg:
+        //    case ILOpCode.Starg_s:
+        //        return new StoreArgumentInstruction(((ParameterInfo)inst.Operand).Position + argumentPositionBase);
 
-            case ILOpCode.Ldloc_0:
-                return new LoadLocalInstruction(LocalVariableInfo[0]);
-            case ILOpCode.Ldloc_1:
-                return new LoadLocalInstruction(LocalVariableInfo[1]);
-            case ILOpCode.Ldloc_2:
-                return new LoadLocalInstruction(LocalVariableInfo[2]);
-            case ILOpCode.Ldloc_3:
-                return new LoadLocalInstruction(LocalVariableInfo[3]);
-            case ILOpCode.Ldloc:
-            case ILOpCode.Ldloc_s:
-                return new LoadLocalInstruction((LocalVariableInfo)inst.Operand);
-            case ILOpCode.Stloc_0:
-                return new StoreLocalInstruction(LocalVariableInfo[0]);
-            case ILOpCode.Stloc_1:
-                return new StoreLocalInstruction(LocalVariableInfo[1]);
-            case ILOpCode.Stloc_2:
-                return new StoreLocalInstruction(LocalVariableInfo[2]);
-            case ILOpCode.Stloc_3:
-                return new StoreLocalInstruction(LocalVariableInfo[3]);
-            case ILOpCode.Stloc:
-                return new StoreLocalInstruction(((LocalVariableInfo)inst.Operand));
-            case ILOpCode.Stloc_s:
-                return new StoreLocalInstruction((LocalVariableInfo)inst.Operand);
-            case ILOpCode.Ldloca:
-                return new LoadLocalAddressInstruction((LocalVariableInfo)inst.Operand);
-            case ILOpCode.Ldloca_s:
-                return new LoadLocalAddressInstruction((LocalVariableInfo)inst.Operand);
-            case ILOpCode.Add:
-                return new BinaryArithmeticInstruction<BinaryArithmetic.Add>();
-            case ILOpCode.Sub:
-                return new BinaryArithmeticInstruction<BinaryArithmetic.Sub>();
-            case ILOpCode.Mul:
-                return new BinaryArithmeticInstruction<BinaryArithmetic.Mul>();
-            case ILOpCode.Div:
-                return new BinaryArithmeticInstruction<BinaryArithmetic.Div>();
-            case ILOpCode.Rem:
-                return new BinaryArithmeticInstruction<BinaryArithmetic.Rem>();
+        //    case ILOpCode.Ldloc_0:
+        //        return new LoadLocalInstruction(LocalVariableInfo[0]);
+        //    case ILOpCode.Ldloc_1:
+        //        return new LoadLocalInstruction(LocalVariableInfo[1]);
+        //    case ILOpCode.Ldloc_2:
+        //        return new LoadLocalInstruction(LocalVariableInfo[2]);
+        //    case ILOpCode.Ldloc_3:
+        //        return new LoadLocalInstruction(LocalVariableInfo[3]);
+        //    case ILOpCode.Ldloc:
+        //    case ILOpCode.Ldloc_s:
+        //        return new LoadLocalInstruction((LocalVariableInfo)inst.Operand);
+        //    case ILOpCode.Stloc_0:
+        //        return new StoreLocalInstruction(LocalVariableInfo[0]);
+        //    case ILOpCode.Stloc_1:
+        //        return new StoreLocalInstruction(LocalVariableInfo[1]);
+        //    case ILOpCode.Stloc_2:
+        //        return new StoreLocalInstruction(LocalVariableInfo[2]);
+        //    case ILOpCode.Stloc_3:
+        //        return new StoreLocalInstruction(LocalVariableInfo[3]);
+        //    case ILOpCode.Stloc:
+        //        return new StoreLocalInstruction(((LocalVariableInfo)inst.Operand));
+        //    case ILOpCode.Stloc_s:
+        //        return new StoreLocalInstruction((LocalVariableInfo)inst.Operand);
+        //    case ILOpCode.Ldloca:
+        //        return new LoadLocalAddressInstruction((LocalVariableInfo)inst.Operand);
+        //    case ILOpCode.Ldloca_s:
+        //        return new LoadLocalAddressInstruction((LocalVariableInfo)inst.Operand);
+        //    case ILOpCode.Add:
+        //        return new BinaryArithmeticInstruction<BinaryArithmetic.Add>();
+        //    case ILOpCode.Sub:
+        //        return new BinaryArithmeticInstruction<BinaryArithmetic.Sub>();
+        //    case ILOpCode.Mul:
+        //        return new BinaryArithmeticInstruction<BinaryArithmetic.Mul>();
+        //    case ILOpCode.Div:
+        //        return new BinaryArithmeticInstruction<BinaryArithmetic.Div>();
+        //    case ILOpCode.Rem:
+        //        return new BinaryArithmeticInstruction<BinaryArithmetic.Rem>();
 
-            case ILOpCode.Call:
-                return new CallInstruction((MethodInfo)inst.Operand);
-            case ILOpCode.Newobj:
-                return new NewObjInstruction((ConstructorInfo)inst.Operand);
+        //    case ILOpCode.Call:
+        //        return new CallInstruction((MethodInfo)inst.Operand);
+        //    case ILOpCode.Newobj:
+        //        return new NewObjInstruction((ConstructorInfo)inst.Operand);
 
-            case ILOpCode.Ret:
-                return new ReturnInstruction();
+        //    case ILOpCode.Ret:
+        //        return new ReturnInstruction();
 
-            case ILOpCode.Ldsfld:
-                return new LoadStaticFieldInstruction((FieldInfo)inst.Operand);
-            case ILOpCode.Ldfld:
-                return new LoadInstanceFieldInstruction((FieldInfo)inst.Operand);
-            case ILOpCode.Ldflda:
-                return new LoadInstanceFieldAddressInstruction((FieldInfo)inst.Operand);
-            case ILOpCode.Clt:
-                return new ConditionValueInstruction<Condition.Lt<S>>();
-            case ILOpCode.Clt_un:
-                return new ConditionValueInstruction<Condition.Lt<U>>();
-            case ILOpCode.Cgt:
-                return new ConditionValueInstruction<Condition.Gt<S>>();
-            case ILOpCode.Cgt_un:
-                return new ConditionValueInstruction<Condition.Gt<U>>();
+        //    case ILOpCode.Ldsfld:
+        //        return new LoadStaticFieldInstruction((FieldInfo)inst.Operand);
+        //    case ILOpCode.Ldfld:
+        //        return new LoadInstanceFieldInstruction((FieldInfo)inst.Operand);
+        //    case ILOpCode.Ldflda:
+        //        return new LoadInstanceFieldAddressInstruction((FieldInfo)inst.Operand);
+        //    case ILOpCode.Clt:
+        //        return new ConditionValueInstruction<Condition.Lt<S>>();
+        //    case ILOpCode.Clt_un:
+        //        return new ConditionValueInstruction<Condition.Lt<U>>();
+        //    case ILOpCode.Cgt:
+        //        return new ConditionValueInstruction<Condition.Gt<S>>();
+        //    case ILOpCode.Cgt_un:
+        //        return new ConditionValueInstruction<Condition.Gt<U>>();
 
-            case ILOpCode.Conv_r4:
-                return new ConvertInstruction(ShaderType.F32);
-            case ILOpCode.Conv_r8:
-                return new ConvertInstruction(ShaderType.F64);
+        //    case ILOpCode.Conv_r4:
+        //        return new ConvertInstruction(ShaderType.F32);
+        //    case ILOpCode.Conv_r8:
+        //        return new ConvertInstruction(ShaderType.F64);
 
-            case ILOpCode.Neg:
-                return new NegateInstruction();
+        //    case ILOpCode.Neg:
+        //        return new NegateInstruction();
 
-            default:
-                throw new NotSupportedException($"Compile {inst.OpCode}@{inst.Offset} of {Method.Name} is not supported");
-        }
+        //    default:
+        //        throw new NotSupportedException($"Compile {inst.OpCode}@{inst.Offset} of {Method.Name} is not supported");
+        //}
     }
 
     public IEnumerable<IStatement> CompileBody()
@@ -380,7 +372,7 @@ sealed class MethodCompilation
             }
             yield break;
         }
-        var bp = new VariableDeclaration(DeclarationScope.Function, "clsl_next", ShaderType.I32, []);
+        var bp = new VariableDeclaration(DeclarationScope.Function, LocalVariables.Count + 1, "clsl_next", ShaderType.I32, []);
         yield return SyntaxFactory.VarDeclaration(bp);
         var cases = new List<SwitchCase>();
         var phiLocals = new List<VariableDeclaration>[BasicBlocks.Count];
@@ -407,14 +399,12 @@ sealed class MethodCompilation
     }
     public IReadOnlyList<VariableDeclaration> CreateLocalVariableDeclarations()
     {
-        var li = 0;
         var result = new List<VariableDeclaration>(MethodBody.LocalVariables.Count);
-        foreach (var v in MethodBody.LocalVariables)
+        foreach (var (idx, v) in MethodBody.LocalVariables.Index())
         {
             var type = Context.Types[v.LocalType];
-            var name = $"clsl__v{li}";
-            li++;
-            var decl = new VariableDeclaration(DeclarationScope.Function, name, type, []);
+            var name = $"clsl__v{idx}";
+            var decl = new VariableDeclaration(DeclarationScope.Function, idx, name, type, []);
             result.Add(decl);
         }
         return result;
@@ -435,7 +425,7 @@ sealed class MethodCompilation
             {
                 case NopInstruction:
                     break;
-                case ILoadConstantInstruction { Literal: var literal }:
+                case IConstInstruction { Literal: var literal }:
                     stack.Push(new LiteralValueExpression(literal));
                     break;
                 case LoadArgumentInstruction { Index: var index }:
@@ -535,7 +525,7 @@ sealed class MethodCompilation
                         break;
                         throw new NotImplementedException();
                     }
-                case StoreLocalInstruction { Info.LocalIndex: var index }:
+                case StoreLocalInstruction { Target.LocalIndex: var index }:
                     {
                         yield return new SimpleAssignmentStatement(
                             LocalVariableRef(index),
@@ -544,7 +534,7 @@ sealed class MethodCompilation
                         );
                         break;
                     }
-                case LoadLocalInstruction { Info.LocalIndex: var index }:
+                case LoadLocalInstruction { Source.LocalIndex: var index }:
                     stack.Push(LocalVariableRef(index));
                     break;
                 case BranchInstruction<Condition.Unconditional> { Target: var target }:
@@ -618,7 +608,7 @@ sealed class MethodCompilation
                         yield return new IfStatement(
                             new BinaryRelationalExpression(
                                 l, r,
-                                BinaryRelationalOp.GreaterThan
+                                BinaryRelation.Op.gt
                             ),
                             new([
                                 new SimpleAssignmentStatement(
@@ -643,7 +633,7 @@ sealed class MethodCompilation
                         yield return new IfStatement(
                             new BinaryRelationalExpression(
                                 l, r,
-                                BinaryRelationalOp.LessThan
+                                BinaryRelation.Op.lt
                             ),
                             new([
                                 new SimpleAssignmentStatement(
@@ -668,7 +658,7 @@ sealed class MethodCompilation
                         yield return new IfStatement(
                             new BinaryRelationalExpression(
                                 l, r,
-                                BinaryRelationalOp.LessThanEqual
+                                BinaryRelation.Op.le
                             ),
                             new([
                                 new SimpleAssignmentStatement(
@@ -712,7 +702,7 @@ sealed class MethodCompilation
                         stack.Push(SyntaxFactory.AddressOf(SyntaxFactory.ArgIdentifier(Context.Parameters[index])));
                         break;
                     }
-                case LoadLocalAddressInstruction { Info: var info }:
+                case LoadLocalAddressInstruction { Source: var info }:
                     {
                         //var info = (LocalVariableInfo)inst.Operand;
                         //if (ip + 1 < Instructions.Length)
@@ -744,6 +734,7 @@ sealed class MethodCompilation
                         {
                             stack.Push(SyntaxFactory.VarIdentifier(
                                 new VariableDeclaration(DeclarationScope.Module,
+                                -1,
                                 info.Name,
                                 Context.Types[info.FieldType],
                                 []
@@ -805,19 +796,19 @@ sealed class MethodCompilation
         switch (f.Name)
         {
             case "op_Addition":
-                op = BinaryArithmetic.Op.Addition;
+                op = BinaryArithmetic.Op.add;
                 return true;
             case "op_Subtraction":
-                op = BinaryArithmetic.Op.Subtraction;
+                op = BinaryArithmetic.Op.sub;
                 return true;
             case "op_Multiply":
-                op = BinaryArithmetic.Op.Multiplication;
+                op = BinaryArithmetic.Op.mul;
                 return true;
             case "op_Division":
-                op = BinaryArithmetic.Op.Division;
+                op = BinaryArithmetic.Op.div;
                 return true;
             case "op_Modulus":
-                op = BinaryArithmetic.Op.Remainder;
+                op = BinaryArithmetic.Op.rem;
                 return true;
             default:
                 op = default;

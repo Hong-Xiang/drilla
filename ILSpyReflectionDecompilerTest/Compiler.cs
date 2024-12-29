@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common.Nat;
 using Lokad.ILPack.IL;
 using System.Reflection;
@@ -59,14 +60,14 @@ internal sealed class Compiler
                     {
                         var r = stack.Pop();
                         var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Addition));
+                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.add));
                         break;
                     }
                 case ILOpCode.Sub:
                     {
                         var r = stack.Pop();
                         var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.Subtraction));
+                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.sub));
                         break;
                     }
                 case ILOpCode.Call:

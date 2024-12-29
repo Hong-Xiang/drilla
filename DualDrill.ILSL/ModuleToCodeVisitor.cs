@@ -2,9 +2,10 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Common.Nat;
+using System.CodeDom.Compiler;
 
 namespace DualDrill.ILSL;
 
@@ -288,13 +289,11 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
         Writer.Write("( ");
         await expr.L.AcceptVisitor(this);
         Writer.Write(") ");
-        Writer.Write(BinaryArithmetic.GetInstance(expr.Op).Name);
+        Writer.Write(BinaryArithmetic.GetInstance(expr.Op).Symbol);
         Writer.Write("( ");
         await expr.R.AcceptVisitor(this);
         Writer.Write(")");
     }
-
-
 
     public async ValueTask VisitLiteralValueExpression(LiteralValueExpression expr)
     {
@@ -343,12 +342,12 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
         await expr.L.AcceptVisitor(this);
         var op = expr.Op switch
         {
-            BinaryRelationalOp.LessThan => "<",
-            BinaryRelationalOp.GreaterThan => ">",
-            BinaryRelationalOp.LessThanEqual => "<=",
-            BinaryRelationalOp.GreaterThanEqual => ">=",
-            BinaryRelationalOp.Equal => "==",
-            BinaryRelationalOp.NotEqual => "!=",
+            BinaryRelation.Op.lt => "<",
+            BinaryRelation.Op.gt => ">",
+            BinaryRelation.Op.le => "<=",
+            BinaryRelation.Op.ge => ">=",
+            BinaryRelation.Op.eq => "==",
+            BinaryRelation.Op.ne => "!=",
             _ => throw new NotSupportedException()
         };
         Writer.Write(' ');
@@ -500,5 +499,21 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
     {
         Writer.WriteLine("continue;");
         return ValueTask.CompletedTask;
+    }
+
+    public async ValueTask VisitModule(ShaderModuleDeclaration decl)
+    {
+        foreach (var d in decl.Declarations)
+        {
+            await d.AcceptVisitor(this);
+        }
+
+        foreach (var f in decl.DefinedFunctions)
+        {
+            var b = decl.GetBody(f);
+            var sw = new IndentedTextWriter(Writer);
+            sw.Indent++;
+            b.EmitCode(sw);
+        }
     }
 }

@@ -10,12 +10,12 @@ using System.Reflection;
 
 namespace DualDrill.ILSL.Frontend;
 
-sealed class RuntimeDefinitions : ISingleton<RuntimeDefinitions>
+sealed class RuntimeCompilationContext : ISingleton<RuntimeCompilationContext>
 {
     public ImmutableDictionary<Type, IShaderType> RuntimeTypes { get; }
     public ImmutableDictionary<MethodBase, FunctionDeclaration> RuntimeMethods { get; }
 
-    RuntimeDefinitions()
+    RuntimeCompilationContext()
     {
         RuntimeTypes = GetRuntimeTypes().ToImmutableDictionary();
         RuntimeMethods = GetRuntimeMethods(RuntimeTypes).ToImmutableDictionary();
@@ -124,42 +124,5 @@ sealed class RuntimeDefinitions : ISingleton<RuntimeDefinitions>
 
         return result;
     }
-    public static RuntimeDefinitions Instance { get; } = new RuntimeDefinitions();
-}
-
-public sealed record class ParserContext(
-    Dictionary<Type, IShaderType> Types,
-    Dictionary<MethodBase, FunctionDeclaration> Functions,
-    Dictionary<MemberInfo, VariableDeclaration> Variables,
-    Dictionary<Type, FunctionDeclaration> ZeroValueConstructors)
-{
-    public static ParserContext Create()
-    {
-        var types = new Dictionary<Type, IShaderType>();
-        foreach (var t in RuntimeDefinitions.Instance.RuntimeTypes)
-        {
-            types.Add(t.Key, t.Value);
-        }
-        var funcs = new Dictionary<MethodBase, FunctionDeclaration>();
-        foreach (var f in RuntimeDefinitions.Instance.RuntimeMethods)
-        {
-            funcs.Add(f.Key, f.Value);
-        }
-        return new ParserContext(types, funcs, new(), new());
-    }
-
-    public MethodParseContext GetMethodContext(MethodBase method)
-    {
-        if (!Functions.TryGetValue(method, out var func))
-        {
-            throw new KeyNotFoundException(method.Name);
-        }
-        return MethodParseContext.Empty with
-        {
-            Parameters = func.Parameters,
-            Methods = Functions.ToImmutableDictionary(),
-            Types = Types.ToImmutableDictionary(),
-            ZeroValueConstructors = ZeroValueConstructors.ToImmutableDictionary()
-        };
-    }
+    public static RuntimeCompilationContext Instance { get; } = new RuntimeCompilationContext();
 }

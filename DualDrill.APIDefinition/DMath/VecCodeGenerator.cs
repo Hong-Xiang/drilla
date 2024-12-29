@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -173,7 +174,7 @@ internal sealed record class VectorSimdCodeGenerator(
 
     public void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op)
     {
-        if (op.Op != BinaryArithmetic.Op.Remainder)
+        if (op.Op != BinaryArithmetic.Op.rem)
         {
             var l = op.Left is IScalarType ? $"{SimdStaticDataTypeName}.Create(left)" : "left.Data";
             var r = op.Right is IScalarType ? $"{SimdStaticDataTypeName}.Create(right)" : "right.Data";

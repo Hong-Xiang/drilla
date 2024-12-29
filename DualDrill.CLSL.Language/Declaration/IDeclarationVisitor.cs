@@ -10,6 +10,7 @@ public interface IDeclarationVisitor<T>
     T VisitParameter(ParameterDeclaration decl);
     T VisitStructure(StructureDeclaration decl);
     T VisitMember(MemberDeclaration decl);
+    T VisitModule(ShaderModuleDeclaration decl);
 }
 
 public interface ITypeReferenceVisitor<T>
@@ -29,6 +30,7 @@ public static class DeclarationExtension
             FunctionDeclaration d => visitor.VisitFunction(d),
             ParameterDeclaration p => visitor.VisitParameter(p),
             VariableDeclaration d => visitor.VisitVariable(d),
+            ShaderModuleDeclaration d => visitor.VisitModule(d),
             _ => throw new NotSupportedException($"{nameof(IDeclarationVisitor<T>)} does not support {decl}")
         };
     }

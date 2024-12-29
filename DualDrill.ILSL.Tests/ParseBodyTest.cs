@@ -2,9 +2,10 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
-using DualDrill.ILSL.Frontend;
+using DualDrill.ILSL.Compiler;
 using DualDrill.Mathematics;
 using System.Numerics;
 using System.Reflection;
@@ -24,8 +25,8 @@ public class ParseBodyTest
 
     IReadOnlyList<IStatement> ParseStatementsMethod(MethodBase m)
     {
-        var methodParser = new RelooperMethodParser();
-        var parser = new CLSLParser(methodParser);
+        var compiler = new MethodBodyCompiler();
+        var parser = new ShaderModuleMetadataParser();
         parser.ParseMethodMetadata(m);
         var methodContext = parser.Context.GetMethodContext(m);
         var body = methodParser.ParseMethodBody(methodContext, m);
@@ -66,7 +67,7 @@ public class ParseBodyTest
                 },
                 Type: IIntType { BitWidth: N32 }
             },
-            Op: BinaryArithmetic.Op.Addition,
+            Op: BinaryArithmetic.Op.add,
             Type: IIntType { BitWidth: N32 }
         });
     }
