@@ -32,12 +32,12 @@ public class RaymarchingPrimitivesShaderReflection : ILSL.IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration<MethodMetadataRepresentation> module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(ShaderModuleDeclaration<MethodMetadataRepresentation> module)
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(ShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
     }

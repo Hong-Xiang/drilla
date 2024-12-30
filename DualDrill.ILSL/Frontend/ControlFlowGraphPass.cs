@@ -48,7 +48,6 @@ public sealed record class ControlFlowGraphRepresentation(
 
 
 public class ControlFlowGraphPass(MethodCompilationContext Context)
-    : ICompilationPass<ControlFlowGraphDotNetInstructionRepresentation, ControlFlowGraphRepresentation>
 {
     public ControlFlowGraphRepresentation Run(ControlFlowGraphDotNetInstructionRepresentation data)
     {

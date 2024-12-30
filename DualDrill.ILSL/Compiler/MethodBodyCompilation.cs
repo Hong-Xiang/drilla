@@ -13,5 +13,6 @@ public sealed record class MethodBodyCompilation(
 {
     public static MethodBodyCompilation Create()
     {
+        throw new NotImplementedException();
     }
 }

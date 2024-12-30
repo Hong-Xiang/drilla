@@ -25,12 +25,13 @@ public class ParseBodyTest
 
     IReadOnlyList<IStatement> ParseStatementsMethod(MethodBase m)
     {
-        var compiler = new MethodBodyCompiler();
-        var parser = new ShaderModuleMetadataParser();
-        parser.ParseMethodMetadata(m);
-        var methodContext = parser.Context.GetMethodContext(m);
-        var body = methodParser.ParseMethodBody(methodContext, m);
-        return body.Statements;
+        //var compiler = new MethodBodyCompiler();
+        //var parser = new ShaderModuleMetadataParser();
+        //parser.ParseMethodMetadata(m);
+        //var methodContext = parser.Context.GetMethodContext(m);
+        //var body = methodParser.ParseMethodBody(methodContext, m);
+        //return body.Statements;
+        throw new NotImplementedException();
     }
 
     [Fact]

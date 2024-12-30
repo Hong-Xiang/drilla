@@ -26,7 +26,7 @@ public sealed record class DotNetInstructionRepresentation(
 }
 
 
-public record class DotNetInstructionPass : ICompilationPass<MethodMetadataRepresentation, DotNetInstructionRepresentation>
+public record class DotNetInstructionPass 
 {
     public DotNetInstructionRepresentation Run(MethodMetadataRepresentation data)
     {

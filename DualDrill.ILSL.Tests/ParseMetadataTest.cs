@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
+using DualDrill.ILSL.Compiler;
 using DualDrill.ILSL.Frontend;
 using DualDrill.Mathematics;
 using System.Numerics;
@@ -10,7 +11,7 @@ namespace DualDrill.ILSL.Tests;
 
 public partial class ParseMetadataTest
 {
-    ShaderModuleParser Parser { get; } = new();
+    ShaderModuleParser Parser { get; } = new(CompilationContext.Create(), DeclarationsContext.Create());
 
     [Fact]
     public void ShouldCollectCalledMethodsIntoContext()
@@ -127,7 +128,7 @@ public partial class ParseMetadataTest
     [Fact]
     async Task SimpleUniformDeclarationParseTest()
     {
-        var parser = new ShaderModuleMetadataParser();
+        var parser = new ShaderModuleParser(CompilationContext.Create(), DeclarationsContext.Create());
         var module = parser.ParseShaderModule(new SimpleUniformShader());
 
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();

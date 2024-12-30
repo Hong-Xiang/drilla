@@ -37,7 +37,7 @@ public interface ISharpShader
 public interface IReflection
 {
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration<MethodMetadataRepresentation> module);
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module);
 }
 
 public interface ISampler

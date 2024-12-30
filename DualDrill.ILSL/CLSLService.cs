@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.ILSL.Compiler;
+using Lokad.ILPack.IL;
 
 namespace DualDrill.ILSL;
 

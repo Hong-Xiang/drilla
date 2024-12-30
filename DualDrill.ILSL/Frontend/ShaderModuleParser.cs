@@ -16,7 +16,7 @@ public sealed record class DeclarationsContext(
      List<FunctionDeclaration> Functions
 )
 {
-    public static DeclarationsContext Empty => new([], [], []);
+    public static DeclarationsContext Create() => new([], [], []);
 }
 
 
@@ -216,7 +216,7 @@ public sealed record class ShaderModuleParser(CompilationContext Context, Declar
 
     bool IsRuntimeMethod(MethodBase m)
     {
-        return RuntimeCompilationContext.Instance.RuntimeMethods.ContainsKey(m);
+        return SharedCompilationContext.Instance.RuntimeMethods.ContainsKey(m);
     }
 
     IEnumerable<PropertyInfo> GetReferencedProperties(IReadOnlyList<Instruction> instructions)

@@ -10,12 +10,12 @@ using System.Reflection;
 
 namespace DualDrill.ILSL.Frontend;
 
-sealed class RuntimeCompilationContext : ISingleton<RuntimeCompilationContext>
+sealed class SharedCompilationContext : ISingleton<SharedCompilationContext>
 {
     public ImmutableDictionary<Type, IShaderType> RuntimeTypes { get; }
     public ImmutableDictionary<MethodBase, FunctionDeclaration> RuntimeMethods { get; }
 
-    RuntimeCompilationContext()
+    SharedCompilationContext()
     {
         RuntimeTypes = GetRuntimeTypes().ToImmutableDictionary();
         RuntimeMethods = GetRuntimeMethods(RuntimeTypes).ToImmutableDictionary();
@@ -124,5 +124,5 @@ sealed class RuntimeCompilationContext : ISingleton<RuntimeCompilationContext>
 
         return result;
     }
-    public static RuntimeCompilationContext Instance { get; } = new RuntimeCompilationContext();
+    public static SharedCompilationContext Instance { get; } = new SharedCompilationContext();
 }

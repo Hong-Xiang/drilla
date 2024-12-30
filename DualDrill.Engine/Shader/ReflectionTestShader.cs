@@ -25,7 +25,7 @@ public class ReflectionTestShaderReflection : IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration<MethodMetadataRepresentation> module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
