@@ -16,10 +16,12 @@ public sealed record class CompilationContext(
     Dictionary<FieldInfo, VariableDeclaration> FieldVariables,
     Dictionary<MethodBase, VariableDeclaration> PropertyGetterVariables,
 
-    Dictionary<IShaderType, FunctionDeclaration> ZeroValueConstructors
-
+    Dictionary<IShaderType, FunctionDeclaration> ZeroValueConstructors,
+    List<StructureDeclaration> StructureDeclarations,
+    List<VariableDeclaration> VariableDeclarations,
+    List<FunctionDeclaration> FunctionDeclarations
 )
 {
-    public static CompilationContext Create() => new([], [], [], [], [], []);
+    public static CompilationContext Create() => new([], [], [], [], [], [], [], [], []);
 }
 

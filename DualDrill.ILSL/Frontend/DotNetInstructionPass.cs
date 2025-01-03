@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
+using DualDrill.ILSL.Compiler;
 using Lokad.ILPack.IL;
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
@@ -26,12 +27,15 @@ public sealed record class DotNetInstructionRepresentation(
 }
 
 
-public record class DotNetInstructionPass 
+public record class DotNetInstructionPass(
+    CompilationContext Context,
+    MethodBodyCompilation Compilation
+) : IMethodBodyPass
 {
-    public DotNetInstructionRepresentation Run(MethodMetadataRepresentation data)
+    public ShaderModuleCompilation ShaderModuleCompilation => throw new NotImplementedException();
+
+    public IFunctionBody Compile(IFunctionBody compilation)
     {
-        var method = data.Method;
-        var instructions = method.GetInstructions();
         var body = method.GetMethodBody() ?? throw new NullReferenceException("Failed to get method body");
         var codeSize = body.GetILAsByteArray()?.Length ?? 0;
         var instructionByteSizes = new int[instructions.Count];
@@ -49,5 +53,7 @@ public record class DotNetInstructionPass
             [.. instructionByteSizes],
             codeSize
         );
+
+        throw new NotImplementedException();
     }
 }

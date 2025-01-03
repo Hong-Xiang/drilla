@@ -11,7 +11,7 @@ namespace DualDrill.ILSL.Tests;
 
 public partial class ParseMetadataTest
 {
-    ShaderModuleParser Parser { get; } = new(CompilationContext.Create(), DeclarationsContext.Create());
+    ShaderModuleParser Parser { get; } = new(CompilationContext.Create(), DeclarationsCollection.Create());
 
     [Fact]
     public void ShouldCollectCalledMethodsIntoContext()
@@ -128,7 +128,7 @@ public partial class ParseMetadataTest
     [Fact]
     async Task SimpleUniformDeclarationParseTest()
     {
-        var parser = new ShaderModuleParser(CompilationContext.Create(), DeclarationsContext.Create());
+        var parser = new ShaderModuleParser(CompilationContext.Create(), DeclarationsCollection.Create());
         var module = parser.ParseShaderModule(new SimpleUniformShader());
 
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();

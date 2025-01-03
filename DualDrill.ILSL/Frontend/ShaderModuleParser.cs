@@ -10,17 +10,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace DualDrill.ILSL.Frontend;
-public sealed record class DeclarationsContext(
-     List<StructureDeclaration> Types,
-     List<VariableDeclaration> ModuleVariables,
-     List<FunctionDeclaration> Functions
-)
-{
-    public static DeclarationsContext Create() => new([], [], []);
-}
 
-
-public sealed record class ShaderModuleParser(CompilationContext Context, DeclarationsContext Declarations)
+public sealed record class ShaderModuleParser(CompilationContext Context)
 {
 
 
@@ -66,8 +57,7 @@ public sealed record class ShaderModuleParser(CompilationContext Context, Declar
             ], [.. t.GetCustomAttributes().OfType<IShaderAttribute>()]);
 
 
-
-        Declarations.Types.Add(result);
+        Context.StructureDeclarations.Add(result);
 
         // for custom structs, a new zero-value constructor runtime method is added
         Context.ZeroValueConstructors.Add(result, new FunctionDeclaration(
@@ -91,7 +81,7 @@ public sealed record class ShaderModuleParser(CompilationContext Context, Declar
         return [
             ..m.GetCustomAttributes<VertexAttribute>(),
             ..m.GetCustomAttributes<FragmentAttribute>(),
-            ..m.GetCustomAttributes<ShaderMethodAttribute>(),
+            //..m.GetCustomAttributes<ShaderMethodAttribute>(),
         ];
     }
 
@@ -103,8 +93,13 @@ public sealed record class ShaderModuleParser(CompilationContext Context, Declar
         {
             return result;
         }
-        var decl = new VariableDeclaration(DeclarationScope.Module, Declarations.ModuleVariables.Count, info.Name, ParseType(info.FieldType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Declarations.ModuleVariables.Add(decl);
+        var decl = new VariableDeclaration(
+            DeclarationScope.Module,
+            Context.VariableDeclarations.Count,
+            info.Name,
+            ParseType(info.FieldType),
+            [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
+        Context.VariableDeclarations.Add(decl);
         Context.FieldVariables.Add(info, decl);
         return decl;
     }
@@ -130,6 +125,7 @@ public sealed record class ShaderModuleParser(CompilationContext Context, Declar
     }
 
     static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+
     public ShaderModuleDeclaration ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -145,12 +141,14 @@ public sealed record class ShaderModuleParser(CompilationContext Context, Declar
         {
             _ = ParseMethodMetadata(m);
         }
-        var functionBodies = Declarations.Functions
+        var emptyFunctionBodies = Context.FunctionDeclarations
             .Select(f => KeyValuePair.Create(f, (IFunctionBody)new EmptyFunctionBody()))
             .ToImmutableDictionary();
         return new(
-            [.. Declarations.Types, .. Declarations.ModuleVariables, .. Declarations.Functions],
-            functionBodies);
+            [.. Context.StructureDeclarations,
+             .. Context.VariableDeclarations,
+             .. Context.FunctionDeclarations],
+            emptyFunctionBodies);
     }
 
     ParameterDeclaration ParseParameter(ParameterInfo parameter)
@@ -161,7 +159,7 @@ public sealed record class ShaderModuleParser(CompilationContext Context, Declar
             ParseAttribute(parameter));
     }
 
-    FunctionReturn ParseReturn(MethodBase method)
+    FunctionReturn ParseMethodReturn(MethodBase method)
     {
         var returnType = method switch
         {
@@ -193,10 +191,10 @@ public sealed record class ShaderModuleParser(CompilationContext Context, Declar
             method.Name,
             method.IsStatic ? [.. method.GetParameters().Select(ParseParameter)]
                             : [new ParameterDeclaration("this", ParseType(method.ReflectedType), []), .. method.GetParameters().Select(ParseParameter)],
-            ParseReturn(method),
+            ParseMethodReturn(method),
             ParseAttribute(method));
 
-        Declarations.Functions.Add(decl);
+        Context.FunctionDeclarations.Add(decl);
         Context.Functions.Add(method, decl);
 
         if (!IsRuntimeMethod(method))

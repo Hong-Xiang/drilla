@@ -5,7 +5,7 @@ namespace DualDrill.ILSL.Compiler;
 public interface IMethodBodyPass
 {
     CompilationContext Context { get; }
-    ShaderModuleCompilation ShaderModuleCompilation { get; }
+    MethodBodyCompilation Compilation { get; }
     IFunctionBody Compile(IFunctionBody compilation);
 }
 
