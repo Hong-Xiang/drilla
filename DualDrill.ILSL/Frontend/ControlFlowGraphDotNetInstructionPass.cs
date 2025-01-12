@@ -8,6 +8,60 @@ using System.Reflection.Metadata;
 
 namespace DualDrill.ILSL.Frontend;
 
+
+interface IBasicBlock { }
+
+interface IBasicBlock<TBasicBlock> : IBasicBlock
+    where TBasicBlock : class, IBasicBlock<TBasicBlock>
+{
+    // successor of fallthrough, unconditional branch, default switch 
+    void Dump(IndentedTextWriter writer);
+}
+
+
+interface IControlFlowEdge
+{
+    IBasicBlock Source { get; }
+    IBasicBlock Target { get; }
+}
+
+sealed record class FallthroughEdge(IBasicBlock Source, IBasicBlock Target) : IControlFlowEdge { }
+
+sealed record class ControlFlowGraph<TBasicBlock>(
+    TBasicBlock EntryBlock,
+    ImmutableDictionary<TBasicBlock, ImmutableHashSet<IControlFlowEdge>> Edges
+) : IFunctionBody
+    where TBasicBlock : class, IBasicBlock<TBasicBlock>
+{
+    public void Dump(IndentedTextWriter writer)
+    {
+        HashSet<TBasicBlock> visited = [];
+
+        void Visit(TBasicBlock block)
+        {
+            if (!visited.Add(block))
+            {
+                return;
+            }
+            block.Dump(writer);
+            writer.WriteLine();
+
+            if (Edges.TryGetValue(block, out var edges))
+            {
+                foreach (var edge in edges)
+                {
+                    Visit((TBasicBlock)edge.Target);
+                }
+            }
+        }
+        Visit(EntryBlock);
+    }
+}
+
+sealed record class CILInstructionBasicBlock(ReadOnlyMemory<Instruction> Instructions)
+{
+}
+
 public sealed record class DotNetInstructionBasicBlock(
     int BlockIndex,
     int LeadInstructionIndex,
@@ -25,7 +79,7 @@ public sealed record class ControlFlowGraphDotNetInstructionRepresentation(
     ImmutableArray<DotNetInstructionBasicBlock> BasicBlocks
 ) : IFunctionBody
 {
-    public void EmitCode(IndentedTextWriter writer)
+    public void Dump(IndentedTextWriter writer)
     {
         writer.WriteLine($"{BasicBlocks.Length} blocks");
 
@@ -44,13 +98,12 @@ public sealed record class ControlFlowGraphDotNetInstructionRepresentation(
 }
 
 
-public sealed class ControlFlowGraphDotNetInstructionPass
+public sealed record class ControlFlowGraphDotNetInstructionPass(
+    CompilationContext Context,
+    MethodBodyCompilation Compilation
+)
     : IMethodBodyPass
 {
-    public CompilationContext Context => throw new NotImplementedException();
-
-    public ShaderModuleCompilation ShaderModuleCompilation => throw new NotImplementedException();
-
     enum BranchKind
     {
         FallThrough,

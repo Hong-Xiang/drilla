@@ -16,3 +16,10 @@ public sealed record class BasicBlock(int Offset) : ILabel
     public BasicBlock? ConditionalSuccessor { get; set; } = null;
 }
 
+public sealed record class ControlFlowGraph(
+    BasicBlock EntryBlock,
+    ImmutableHashSet<BasicBlock> Blocks
+)
+{
+}
+

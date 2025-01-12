@@ -9,9 +9,9 @@ using System.Numerics;
 
 namespace DualDrill.ILSL.Tests;
 
-public partial class ParseMetadataTest
+public partial class ShaderMetadataParseTest
 {
-    ShaderModuleParser Parser { get; } = new(CompilationContext.Create(), DeclarationsCollection.Create());
+    RuntimeReflectionShaderModuleMetadataParser Parser { get; } = new(CompilationContext.Create());
 
     [Fact]
     public void ShouldCollectCalledMethodsIntoContext()
@@ -21,14 +21,11 @@ public partial class ParseMetadataTest
             return a + b;
         }
 
-        var callee = ((Func<int, int, int>)Callee).Method;
-        var caller = ((Func<int>)(() =>
-        {
-            return Callee(1, 2);
-        })).Method;
-        _ = Parser.ParseMethodMetadata(caller);
+        var callee = MethodHelper.GetMethod<int, int, int>(Callee);
+        var caller = MethodHelper.GetMethod(static () => Callee(1, 2));
+        _ = Parser.ParseMethod(caller);
 
-        Assert.Contains(Parser.Context.Functions, c => c.Key.Equals(callee));
+        Assert.NotNull(Parser.Context[Symbol.Function(callee)]);
     }
 
     struct StructDeclTest
@@ -54,7 +51,7 @@ public partial class ParseMetadataTest
     [Fact]
     public void ShouldParseVector4AsRuntimeType()
     {
-        var shaderType = Parser.Context.Types[typeof(Vector4)];
+        var shaderType = Parser.Context[typeof(Vector4)];
         Assert.Equal(ShaderType.GetVecType(N4.Instance, ShaderType.F32), shaderType);
     }
 
@@ -62,7 +59,7 @@ public partial class ParseMetadataTest
     public void ShouldParseMinimumHelloTriangleVertexShader()
     {
         var vsm = ((Func<uint, vec4f32>)MinimumHelloTriangleShaderModule.vs).Method;
-        var parsed = Parser.ParseMethodMetadata(vsm);
+        var parsed = Parser.ParseMethod(vsm);
 
         Assert.Single(parsed.Parameters);
         var p0 = parsed.Parameters[0];
@@ -128,9 +125,7 @@ public partial class ParseMetadataTest
     [Fact]
     async Task SimpleUniformDeclarationParseTest()
     {
-        var parser = new ShaderModuleParser(CompilationContext.Create(), DeclarationsCollection.Create());
-        var module = parser.ParseShaderModule(new SimpleUniformShader());
-
+        var module = Parser.ParseShaderModule(new SimpleUniformShader());
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();
         Assert.Equal("ourStruct", uniformDecl.Name);
         Assert.Equal(0, uniformDecl.Attributes.OfType<GroupAttribute>().Single().Binding);

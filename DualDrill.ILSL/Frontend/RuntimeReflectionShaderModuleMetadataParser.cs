@@ -11,24 +11,24 @@ using System.Runtime.CompilerServices;
 
 namespace DualDrill.ILSL.Frontend;
 
-public sealed record class ShaderModuleParser(CompilationContext Context)
+/// <summary>
+/// Parse shader module metadata from reflection APIs, 
+/// including all types, shader module variables, functions signatures, etc.
+/// method bodies are not parsed.
+/// </summary>
+/// <param name="Context"></param>
+public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilationContext Context)
 {
-
-
-    //public ShaderModuleCompilationContext Context { get; } = ShaderModuleCompilationContext.Create();
-
-
     public IShaderType ParseType(Type t)
     {
-        if (Context.Types.TryGetValue(t, out var foundResult))
+        if (Context[t] is { } found)
         {
-            return foundResult;
+            return found;
         }
 
         if (t.IsValueType)
         {
             var result = ParseStructDeclaration(t);
-            Context.Types.Add(t, result);
             return result;
         }
 
@@ -48,24 +48,24 @@ public sealed record class ShaderModuleParser(CompilationContext Context)
         var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                       .Where(f => !f.Name.EndsWith("k__BackingField"));
         var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseType(f.FieldType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
-        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseType(f.PropertyType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
-
-        var result = new StructureDeclaration(t.Name, [
-            ..fieldMembers,
-            ..propsMembers
-            ], [.. t.GetCustomAttributes().OfType<IShaderAttribute>()]);
-
-
-        Context.StructureDeclarations.Add(result);
-
-        // for custom structs, a new zero-value constructor runtime method is added
-        Context.ZeroValueConstructors.Add(result, new FunctionDeclaration(
+        var result = new StructureDeclaration
+        {
+            Name = t.Name,
+            Attributes = [.. t.GetCustomAttributes().OfType<IShaderAttribute>()]
+        };
+        Context.AddStructure(t, result);
+        // for each custom struct definition, a new zero-value constructor runtime method is added
+        Context.AddFunction(new ZeroValueContructorFunctionSymbol(result), new FunctionDeclaration(
             result.Name,
             [],
             new FunctionReturn(result, []),
             [new ZeroValueBuiltinFunctionAttribute(), new ShaderRuntimeMethodAttribute()]
         ));
+
+        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseType(f.FieldType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
+        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseType(f.PropertyType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
+
+        result.Members = [.. fieldMembers, .. propsMembers];
         return result;
     }
 
@@ -76,6 +76,7 @@ public sealed record class ShaderModuleParser(CompilationContext Context)
             ..p.GetCustomAttributes<LocationAttribute>(),
         ];
     }
+
     ImmutableHashSet<IShaderAttribute> ParseAttribute(MethodBase m)
     {
         return [
@@ -85,33 +86,37 @@ public sealed record class ShaderModuleParser(CompilationContext Context)
         ];
     }
 
-
-
     VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
     {
-        if (Context.FieldVariables.TryGetValue(info, out var result))
+        var symbol = Symbol.Variable(info);
+        if (Context[symbol] is { } found)
         {
-            return result;
+            return found;
         }
-        var decl = new VariableDeclaration(
-            DeclarationScope.Module,
-            Context.VariableDeclarations.Count,
-            info.Name,
-            ParseType(info.FieldType),
-            [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.VariableDeclarations.Add(decl);
-        Context.FieldVariables.Add(info, decl);
+        var decl = Context.AddVariable(symbol, (index) =>
+            new VariableDeclaration(
+                        DeclarationScope.Module,
+                        index,
+                        info.Name,
+                        ParseType(info.FieldType),
+                        [.. info.GetCustomAttributes().OfType<IShaderAttribute>()])
+        );
         return decl;
     }
     VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
     {
         var getter = info.GetGetMethod() ?? throw new NotSupportedException("Properties without getter is not supported");
-        if (Context.PropertyGetterVariables.TryGetValue(getter, out var result))
+        var symbol = Symbol.Variable(info);
+        if (Context[symbol] is { } found)
         {
-            return result;
+            return found;
         }
-        var decl = new VariableDeclaration(DeclarationScope.Module, -1, info.Name, ParseType(info.PropertyType), [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.PropertyGetterVariables.Add(getter, decl);
+        var decl = Context.AddVariable(symbol, (index) =>
+            new VariableDeclaration(DeclarationScope.Module,
+                                    index,
+                                    info.Name,
+                                    ParseType(info.PropertyType),
+                                    [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]));
         return decl;
     }
 
@@ -124,8 +129,12 @@ public sealed record class ShaderModuleParser(CompilationContext Context)
         return [.. fields.Select(ParseModuleVariableDeclaration)];
     }
 
-    static readonly BindingFlags TargetMethodBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
-
+    /// <summary>
+    /// Parse shader module, since compilation context is fixed for this parser
+    /// use a parser for multiple shader modules will merge them into a larger module
+    /// </summary>
+    /// <param name="module"></param>
+    /// <returns></returns>
     public ShaderModuleDeclaration ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -139,10 +148,10 @@ public sealed record class ShaderModuleParser(CompilationContext Context)
 
         foreach (var m in entryMethods)
         {
-            _ = ParseMethodMetadata(m);
+            _ = ParseMethod(m);
         }
         var emptyFunctionBodies = Context.FunctionDeclarations
-            .Select(f => KeyValuePair.Create(f, (IFunctionBody)new EmptyFunctionBody()))
+            .Select(f => KeyValuePair.Create(f, (IFunctionBody)new NotParsedFunctionBody(Context.GetFunctionDefinition(f))))
             .ToImmutableDictionary();
         return new(
             [.. Context.StructureDeclarations,
@@ -180,24 +189,22 @@ public sealed record class ShaderModuleParser(CompilationContext Context)
 
 
 
-    public FunctionDeclaration ParseMethodMetadata(MethodBase method)
+    public FunctionDeclaration ParseMethod(MethodBase method)
     {
-        if (Context.Functions.TryGetValue(method, out var result))
+        var symbol = Symbol.Function(method);
+        if (Context[symbol] is { } found)
         {
-            return result;
+            return found;
         }
-
         var decl = new FunctionDeclaration(
             method.Name,
             method.IsStatic ? [.. method.GetParameters().Select(ParseParameter)]
                             : [new ParameterDeclaration("this", ParseType(method.ReflectedType), []), .. method.GetParameters().Select(ParseParameter)],
             ParseMethodReturn(method),
             ParseAttribute(method));
+        Context.AddFunction(symbol, decl);
 
-        Context.FunctionDeclarations.Add(decl);
-        Context.Functions.Add(method, decl);
-
-        if (!IsRuntimeMethod(method))
+        if (!IsExternalMethod(method))
         {
             var instructions = method.GetInstructions();
             if (instructions is not null)
@@ -205,34 +212,32 @@ public sealed record class ShaderModuleParser(CompilationContext Context)
                 var callees = GetCalledMethods(instructions).ToArray();
                 foreach (var callee in callees)
                 {
-                    _ = ParseMethodMetadata(callee);
+                    _ = ParseMethod(callee);
                 }
             }
+            Context.AddFunctionDefinition(decl, method);
         }
+
         return decl;
     }
 
-    bool IsRuntimeMethod(MethodBase m)
+    bool IsExternalMethod(MethodBase m)
     {
-        return SharedCompilationContext.Instance.RuntimeMethods.ContainsKey(m);
+        return SharedBuiltinCompilationContext.Instance.RuntimeMethods.ContainsKey(m);
     }
-
-    IEnumerable<PropertyInfo> GetReferencedProperties(IReadOnlyList<Instruction> instructions)
-    {
-        var operands = instructions.Select(op => op.Operand).ToArray();
-        return instructions.Select(op => op.Operand)
-                           .OfType<PropertyInfo>();
-    }
-
     IEnumerable<MethodBase> GetCalledMethods(IReadOnlyList<Instruction> instructions)
     {
         return instructions.Select(op => op.Operand)
                            .OfType<MethodBase>()
                            .Where(m =>
                            {
+                               if (IsExternalMethod(m))
+                               {
+                                   return false;
+                               }
                                // generated getter and setters should not be considered
                                var t = m.DeclaringType;
-                               if (Context.Types.TryGetValue(t, out var st) && (st is IVecType))
+                               if (Context[t] is IVecType st)
                                {
                                    return false;
                                }
@@ -247,13 +252,4 @@ public sealed record class ShaderModuleParser(CompilationContext Context)
                                return true;
                            });
     }
-
-    IEnumerable<Type> GetReferencedTypes(IReadOnlyList<Instruction> instructions)
-    {
-        return instructions.Select(op => op.Operand)
-                           .OfType<ConstructorInfo>()
-                           .Select(c => c.DeclaringType)
-                           .OfType<Type>();
-    }
-
 }

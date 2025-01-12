@@ -3,7 +3,7 @@
 namespace DualDrill.ILSL.Compiler;
 
 public sealed record class ShaderModuleCompilation(
-    CompilationContext Context,
+    ICompilationContext Context,
     ISharpShader Shader
 )
 {

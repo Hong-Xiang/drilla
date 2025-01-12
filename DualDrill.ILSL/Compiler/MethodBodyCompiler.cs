@@ -3,13 +3,13 @@
 namespace DualDrill.ILSL.Compiler;
 
 public sealed class MethodBodyCompiler(
-   CompilationContext Context,
-   IReadOnlyList<Func<CompilationContext, MethodBodyCompilation, IMethodBodyPass>> MethodPassFactories
+   ICompilationContext Context,
+   IReadOnlyList<Func<ICompilationContext, MethodBodyCompilation, IMethodBodyPass>> MethodPassFactories
 )
 {
     public IFunctionBody Compile(MethodBodyCompilation compilation)
     {
-        IFunctionBody result = new EmptyFunctionBody();
+        IFunctionBody result = new NotParsedFunctionBody(compilation.Method);
         foreach (var createPass in MethodPassFactories)
         {
             var pass = createPass(Context, compilation);

@@ -109,7 +109,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLS
         {
             var shaderModule = new RaymarchingPrimitiveShader();
             var type = shaderModule.GetType();
-            var module = Compiler.Parse(shaderModule);
+            var module = Compiler.Reflect(shaderModule);
             var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -117,14 +117,14 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLS
         {
             var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
-            var module = Compiler.Parse(shaderModule);
+            var module = Compiler.Reflect(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
         else if (name == nameof(MandelbrotDistanceShader))
         {
             var shaderModule = new MandelbrotDistanceShader();
-            var module = Compiler.Parse(shaderModule);
+            var module = Compiler.Reflect(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -139,7 +139,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLS
         {
             var shaderModule = new RaymarchingPrimitiveShader();
             var type = shaderModule.GetType();
-            var module = Compiler.Parse(shaderModule);
+            var module = Compiler.Reflect(shaderModule);
             var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
@@ -147,7 +147,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLS
         {
             var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
-            var module = Compiler.Parse(shaderModule);
+            var module = Compiler.Reflect(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }

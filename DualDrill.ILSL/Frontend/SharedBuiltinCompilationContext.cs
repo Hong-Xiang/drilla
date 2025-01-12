@@ -3,22 +3,23 @@ using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
+using DualDrill.ILSL.Compiler;
 using DualDrill.Mathematics;
-using System.Collections.Immutable;
+using System.Collections.Frozen;
 using System.Numerics;
 using System.Reflection;
 
 namespace DualDrill.ILSL.Frontend;
 
-sealed class SharedCompilationContext : ISingleton<SharedCompilationContext>
+sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilationContext>, ICompilationContextView
 {
-    public ImmutableDictionary<Type, IShaderType> RuntimeTypes { get; }
-    public ImmutableDictionary<MethodBase, FunctionDeclaration> RuntimeMethods { get; }
+    public FrozenDictionary<Type, IShaderType> RuntimeTypes { get; }
+    public FrozenDictionary<MethodBase, FunctionDeclaration> RuntimeMethods { get; }
 
-    SharedCompilationContext()
+    SharedBuiltinCompilationContext()
     {
-        RuntimeTypes = GetRuntimeTypes().ToImmutableDictionary();
-        RuntimeMethods = GetRuntimeMethods(RuntimeTypes).ToImmutableDictionary();
+        RuntimeTypes = GetRuntimeTypes().ToFrozenDictionary();
+        RuntimeMethods = GetRuntimeMethods(RuntimeTypes).ToFrozenDictionary();
     }
 
     private Dictionary<Type, IShaderType> GetRuntimeTypes()
@@ -124,5 +125,30 @@ sealed class SharedCompilationContext : ISingleton<SharedCompilationContext>
 
         return result;
     }
-    public static SharedCompilationContext Instance { get; } = new SharedCompilationContext();
+
+    public MethodBase GetFunctionDefinition(FunctionDeclaration declaration) => throw new NotSupportedException("All runtime methods have not definitions");
+
+    public static SharedBuiltinCompilationContext Instance { get; } = new SharedBuiltinCompilationContext();
+
+    // all entities in shared builtin context can only be directly refrenced
+    // declarations is not allowed
+    public IEnumerable<StructureDeclaration> StructureDeclarations => [];
+
+    public IEnumerable<VariableDeclaration> VariableDeclarations => [];
+
+    public IEnumerable<FunctionDeclaration> FunctionDeclarations => [];
+
+
+    public ParameterDeclaration? this[ParameterInfo parameter] => throw new NotImplementedException();
+
+    public VariableDeclaration? this[IVariableSymbol symbol] => null;
+
+    public FunctionDeclaration? this[IFunctionSymbol symbol] => symbol switch
+    {
+        ZeroValueContructorFunctionSymbol { Type: var t } => throw new NotImplementedException(),
+        CSharpMethodFunctionSymbol { Method: var m } => RuntimeMethods.TryGetValue(m, out var f) ? f : null,
+        _ => throw new NotImplementedException()
+    };
+
+    public IShaderType? this[Type type] => RuntimeTypes.TryGetValue(type, out var found) ? found : null;
 }

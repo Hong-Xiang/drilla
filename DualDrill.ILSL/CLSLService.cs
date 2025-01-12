@@ -1,21 +1,21 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.ILSL.Compiler;
-using Lokad.ILPack.IL;
+using DualDrill.ILSL.Frontend;
 
 namespace DualDrill.ILSL;
 
 public interface ICLSLService
 {
-    public ShaderModuleDeclaration Parse(ISharpShader shader);
+    public ShaderModuleDeclaration Reflect(ISharpShader shader);
     public ShaderModuleDeclaration Compile(ISharpShader shader);
     public ValueTask<string> EmitWGSL(ISharpShader module);
 }
 
 public sealed class CLSLService() : ICLSLService
 {
-    CompilationContext Context = CompilationContext.Create();
-    IReadOnlyList<Func<CompilationContext, ShaderModuleCompilation, IShaderModulePass>> ModulePassFactories = [];
-    IReadOnlyList<Func<CompilationContext, MethodBodyCompilation, IMethodBodyPass>> MethodPassFactories = [];
+    ICompilationContext Context = CompilationContext.Create();
+    IReadOnlyList<Func<ICompilationContext, ShaderModuleCompilation, IShaderModulePass>> ModulePassFactories = [];
+    IReadOnlyList<Func<ICompilationContext, MethodBodyCompilation, IMethodBodyPass>> MethodPassFactories = [];
 
     public async ValueTask<string> EmitWGSL(ISharpShader shader)
     {
@@ -26,31 +26,18 @@ public sealed class CLSLService() : ICLSLService
         return sw.ToString();
     }
 
-    public ShaderModuleDeclaration Parse(ISharpShader shader)
+    public ShaderModuleDeclaration Reflect(ISharpShader shader)
     {
-        var compiler = new ShaderModuleCompiler(
-            Context,
-            ModulePassFactories,
-            MethodPassFactories
-        );
-        return compiler.Compile(new(shader));
+        var parser = new RuntimeReflectionShaderModuleMetadataParser(Context);
+        return parser.ParseShaderModule(shader);
     }
 
     public ShaderModuleDeclaration Compile(ISharpShader shader)
     {
-        var metadataDecl = Parse(shader);
-        var methodBodies = new List<KeyValuePair<FunctionDeclaration, IFunctionBody>>();
-        var methodCompiler = new MethodBodyCompiler(Context, MethodPassFactories);
-        foreach (var (f, _) in metadataDecl.FunctionDefinitions)
-        {
-            var method = Context.FunctionDefinitions[f];
-            var methodCompilation = new MethodBodyCompilation(shader, method, method.GetMethodBody(), method.GetInstructions());
-            var bodyResult = methodCompiler.Compile(methodCompilation);
-            methodBodies.Add(KeyValuePair.Create(f, bodyResult));
-        }
-        return metadataDecl with
-        {
-            FunctionDefinitions = metadataDecl.FunctionDefinitions.SetItems(methodBodies)
-        };
+        var compiler = new ShaderModuleCompiler(
+           ModulePassFactories,
+           MethodPassFactories
+       );
+        return compiler.Compile(new(Context, shader));
     }
 }

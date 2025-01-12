@@ -14,12 +14,12 @@ public sealed record class ShaderModuleCompilationContext(
     public static ShaderModuleCompilationContext Create()
     {
         var types = new Dictionary<Type, IShaderType>();
-        foreach (var t in SharedCompilationContext.Instance.RuntimeTypes)
+        foreach (var t in SharedBuiltinCompilationContext.Instance.RuntimeTypes)
         {
             types.Add(t.Key, t.Value);
         }
         var funcs = new Dictionary<MethodBase, FunctionDeclaration>();
-        foreach (var f in SharedCompilationContext.Instance.RuntimeMethods)
+        foreach (var f in SharedBuiltinCompilationContext.Instance.RuntimeMethods)
         {
             funcs.Add(f.Key, f.Value);
         }

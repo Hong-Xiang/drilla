@@ -7,6 +7,7 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.LinearInstruction;
 using Lokad.ILPack.IL;
 using System.CodeDom.Compiler;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Reflection.Metadata;
@@ -23,12 +24,22 @@ public sealed record class BasicBlockC(
     public BasicBlockC? BrIfTrueSuccessor { get; set; } = null;
 }
 
+public sealed record class ControlFlowGraph(
+    BasicBlockC EntryBlock,
+    FrozenSet<BasicBlockC> BasicBlocks,
+    FrozenDictionary<BasicBlockC, BasicBlockC> FallthroughEdges,
+    FrozenDictionary<BasicBlockC, BasicBlockC> BrIfTrueEdges,
+    FrozenDictionary<BasicBlockC, FrozenDictionary<int, BasicBlockC>> SwitchEdges
+)
+{
+}
+
 public sealed record class ControlFlowGraphRepresentation(
     BasicBlockC EntryBlock,
     ImmutableArray<BasicBlockC> BasicBlocks
 ) : IFunctionBody
 {
-    public void EmitCode(IndentedTextWriter writer)
+    public void Dump(IndentedTextWriter writer)
     {
         writer.WriteLine($"{BasicBlocks.Length} blocks");
 

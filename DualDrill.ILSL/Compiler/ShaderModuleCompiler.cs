@@ -1,18 +1,17 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.ILSL.Frontend;
 using Lokad.ILPack.IL;
-using System.Reflection;
 
 namespace DualDrill.ILSL.Compiler;
 
 public sealed class ShaderModuleCompiler(
-   IReadOnlyList<Func<CompilationContext, ShaderModuleCompilation, IShaderModulePass>> ModulePassFactories,
-   IReadOnlyList<Func<CompilationContext, MethodBodyCompilation, IMethodBodyPass>> MethodPassFactories
+   IReadOnlyList<Func<ICompilationContext, ShaderModuleCompilation, IShaderModulePass>> ModulePassFactories,
+   IReadOnlyList<Func<ICompilationContext, MethodBodyCompilation, IMethodBodyPass>> MethodPassFactories
 )
 {
     public ShaderModuleDeclaration Compile(ShaderModuleCompilation compilation)
     {
-        var parser = new ShaderModuleParser(compilation.Context);
+        var parser = new RuntimeReflectionShaderModuleMetadataParser(compilation.Context);
         // TODO: property use parser
         var result = parser.ParseShaderModule(compilation.Shader);
         foreach (var createPass in ModulePassFactories)
@@ -20,6 +19,22 @@ public sealed class ShaderModuleCompiler(
             var pass = createPass(compilation.Context, compilation);
             result = pass.Run(result);
         }
+        var methodBodies = new List<KeyValuePair<FunctionDeclaration, IFunctionBody>>();
+        // TODO: add parameter etc context, and use new 
+        var methodContext = new CompilationContext(compilation.Context);
+        var methodCompiler = new MethodBodyCompiler(methodContext, MethodPassFactories);
+        foreach (var (f, _) in result.FunctionDefinitions)
+        {
+            var method = compilation.Context.GetFunctionDefinition(f);
+            var body = method.GetMethodBody() ?? throw new NotSupportedException("Can not compile method with null body");
+            var methodCompilation = new MethodBodyCompilation(compilation, method, body, [.. method.GetInstructions()]);
+            var bodyResult = methodCompiler.Compile(methodCompilation);
+            methodBodies.Add(KeyValuePair.Create(f, bodyResult));
+        }
+        result = result with
+        {
+            FunctionDefinitions = result.FunctionDefinitions.SetItems(methodBodies)
+        };
         return result;
     }
 }

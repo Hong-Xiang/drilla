@@ -22,8 +22,9 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = ShaderModuleDeclaration.CreateMetadataModule([
-            new VariableDeclaration(
+        var module = ShaderModuleDeclaration.Empty with
+        {
+            Declarations = [new VariableDeclaration(
                 DeclarationScope.Module,
                 -1,
                 "data",
@@ -34,8 +35,8 @@ public class ShaderReflectionTest
                     new VertexAttribute(),
                     new UniformAttribute()
                 ]
-            )
-        ]);
+            )]
+        };
 
         IShaderModuleReflection reflection = new ShaderModuleReflection();
         var layout = reflection.GetBindGroupLayoutDescriptor(module);

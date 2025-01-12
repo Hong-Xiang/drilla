@@ -513,7 +513,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
             var b = decl.GetBody(f);
             var sw = new IndentedTextWriter(Writer);
             sw.Indent++;
-            b.EmitCode(sw);
+            b.Dump(sw);
         }
     }
 }

@@ -1,16 +1,15 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
-using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
-public sealed record class StructureDeclaration(
-    string Name,
-    ImmutableArray<MemberDeclaration> Members,
-    ImmutableHashSet<IShaderAttribute> Attributes
-) : IShaderType, IDeclaration
+public sealed class StructureDeclaration : IShaderType, IDeclaration
 {
+    public required string Name { get; init; }
+    public ImmutableArray<MemberDeclaration> Members { get; set; } = [];
+    public ImmutableHashSet<IShaderAttribute> Attributes { get; set; } = [];
+
     public IRefType GetRefType()
     {
         throw new NotImplementedException();
