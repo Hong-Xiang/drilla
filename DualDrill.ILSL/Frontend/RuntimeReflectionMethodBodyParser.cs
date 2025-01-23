@@ -1,110 +1,162 @@
 ﻿using DualDrill.CLSL.ControlFlowGraph;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.LinearInstruction;
+using DualDrill.ILSL.Compiler;
 using Lokad.ILPack.IL;
-using System.CodeDom.Compiler;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Reflection.Metadata;
 using static DualDrill.CLSL.Language.Types.Signedness;
 
 namespace DualDrill.ILSL.Frontend;
 
-public sealed record class BasicBlockC(
-    int BlockIndex,
-    ImmutableArray<IInstruction> Instructions
+public sealed class RuntimeReflectionMethodBodyParser(
+    ICompilationContextView Context
 )
 {
-    public BasicBlockC? Successor { get; set; } = null;
-    public BasicBlockC? BrIfTrueSuccessor { get; set; } = null;
-}
-
-public sealed record class ControlFlowGraph(
-    BasicBlockC EntryBlock,
-    FrozenSet<BasicBlockC> BasicBlocks,
-    FrozenDictionary<BasicBlockC, BasicBlockC> FallthroughEdges,
-    FrozenDictionary<BasicBlockC, BasicBlockC> BrIfTrueEdges,
-    FrozenDictionary<BasicBlockC, FrozenDictionary<int, BasicBlockC>> SwitchEdges
-)
-{
-}
-
-public sealed record class ControlFlowGraphRepresentation(
-    BasicBlockC EntryBlock,
-    ImmutableArray<BasicBlockC> BasicBlocks
-) : IFunctionBody
-{
-    public void Dump(IndentedTextWriter writer)
+    public enum FlowKind
     {
-        writer.WriteLine($"{BasicBlocks.Length} blocks");
-
-        writer.WriteLine($"entry block index = {EntryBlock.BlockIndex}");
-
-        foreach (var b in BasicBlocks)
-        {
-            writer.WriteLine($"block #{b.BlockIndex}({b.Instructions.Length}), succ {b.Successor?.BlockIndex}, succ.if {b.BrIfTrueSuccessor?.BlockIndex} ");
-
-            foreach (var inst in b.Instructions)
-            {
-                writer.WriteLine($"{inst}");
-            }
-        }
-    }
-}
-
-
-public class ControlFlowGraphPass(MethodCompilationContext Context)
-{
-    public ControlFlowGraphRepresentation Run(ControlFlowGraphDotNetInstructionRepresentation data)
-    {
-        var basicBlocks = data.BasicBlocks.Select((b, i) =>
-            new BasicBlockC(i, [.. b.Instructions.SelectMany(inst => CompileInstruction(inst, 0, []))]))
-            .ToImmutableArray();
-        foreach (var (i, b) in basicBlocks.Index())
-        {
-            var b_ = data.BasicBlocks[i];
-            if (b_.Successor is { } s)
-            {
-                b.Successor = basicBlocks[s.BlockIndex];
-            }
-            if (b_.ConditionalSuccessor is { } cs)
-            {
-                b.BrIfTrueSuccessor = basicBlocks[cs.BlockIndex];
-            }
-        }
-        return new(basicBlocks[data.EntryBlock.BlockIndex], basicBlocks);
+        Next,
+        Fallthrough,
+        UnconditionalBranch,
+        ConditionalBranch,
+        Switch,
+        Return,
     }
 
-    IEnumerable<IInstruction> CompileInstruction(
-          Lokad.ILPack.IL.Instruction instruction,
-          int nextOffset, IReadOnlyList<BasicBlock?> blocks)
+    public CLSL.ControlFlowGraph.ControlFlowGraph Run(MethodBase method)
     {
-        IEnumerable<IInstruction> Branch<TCondition>(int offset)
-                    where TCondition : IBranchCondition
+        var instructions = method.GetInstructions()?.ToImmutableArray() ?? [];
+        if (instructions.Length == 0)
         {
-            var target = blocks[nextOffset + offset] ?? throw new NullReferenceException("Target block is null");
-            return [new BranchInstruction<TCondition>(target)];
+            return new([]);
         }
 
-        var argumentPositionBase = Context.Method.IsStatic ? 0 : 1; // ParameterInfo.Position need + 1 for hidden this parameter
+        var nextOffsets = new int[instructions.Length];
+        var offsetsToInstructionIndex = instructions.Index().ToFrozenDictionary((data) => data.Item.Offset, data => data.Index);
 
+        {
+            var methodBodyILByteSize = method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0;
+            foreach (var (i, inst) in instructions.Index())
+            {
+                nextOffsets[i] = (i + 1) < instructions.Length ? instructions[i + 1].Offset : methodBodyILByteSize;
+                var instSize = nextOffsets[i] - instructions[i].Offset;
+                Debug.Assert(instSize > 0);
+            }
+        }
+
+        var basicBlocks = new BasicBlock?[instructions.Length];
+        var successors = new HashSet<IControlFlowEdge>?[instructions.Length];
+
+        basicBlocks[0] = new BasicBlock(instructions[0].Offset);
+
+        void AddEdge(int index, Func<BasicBlock, IControlFlowEdge> edgeFactory)
+        {
+            if (index < instructions.Length)
+            {
+                basicBlocks[index] ??= new BasicBlock(instructions[index].Offset)
+                {
+                    Index = index
+                };
+                successors[index] ??= [];
+                successors[index]!.Add(edgeFactory(basicBlocks[index]!));
+            }
+        }
+
+        void TryAddLead(int index)
+        {
+            if (index < instructions.Length)
+            {
+                basicBlocks[index] ??= new BasicBlock(instructions[index].Offset)
+                {
+                    Index = index
+                };
+            }
+        }
+
+        foreach (var (idx, inst) in instructions.Index())
+        {
+            successors[idx] ??= [];
+            switch (inst.OpCode.FlowControl)
+            {
+                case FlowControl.Branch:
+                    {
+                        int jump = OpCodes.TakesSingleByteArgument(inst.OpCode) ? (sbyte)inst.Operand : (int)inst.Operand;
+                        var instIndex = offsetsToInstructionIndex[nextOffsets[idx] + jump];
+                        AddEdge(instIndex, static (bb) => new UnconditionalEdge(bb));
+                        TryAddLead(idx + 1);
+                        break;
+                    }
+                case FlowControl.Cond_Branch:
+                    if (inst.OpCode.ToILOpCode() == System.Reflection.Metadata.ILOpCode.Switch)
+                    {
+                        throw new NotImplementedException();
+                    }
+                    else
+                    {
+                        int jump = OpCodes.TakesSingleByteArgument(inst.OpCode) ? (sbyte)inst.Operand : (int)inst.Operand;
+                        var instIndex = offsetsToInstructionIndex[nextOffsets[idx] + jump];
+                        AddEdge(instIndex, static (bb) => new ConditionalEdge(bb));
+                        AddEdge(idx + 1, static (bb) => new FallthroughEdge(bb));
+                        break;
+                    }
+                case FlowControl.Return:
+                    {
+                        successors[idx]!.Add(new ReturnEdge());
+                        TryAddLead(idx + 1);
+                        break;
+                    }
+                case FlowControl.Throw:
+                    TryAddLead(idx + 1);
+                    throw new NotSupportedException("throw is not supported");
+                // TODO: handle switch
+                default:
+                    continue;
+            }
+        }
+
+        int bbCount = 0;
+        var bbInstCount = new int[instructions.Length];
+        BasicBlock? basicBlock = null;
+        foreach (var (idx, bb) in basicBlocks.Index())
+        {
+            if (bb is not null)
+            {
+                basicBlock = bb;
+                bbCount++;
+            }
+            bbInstCount[bbCount - 1]++;
+            basicBlock.Successors = [.. basicBlock.Successors, .. successors[idx]];
+        }
+
+        foreach (var (idx, bb) in basicBlocks.Index())
+        {
+            if (bb is not null)
+            {
+                bb.Instructions = [.. instructions.Slice(idx, bbInstCount[bb.Index]).SelectMany(ParseInstruction)];
+            }
+        }
+        return new([.. basicBlocks.OfType<BasicBlock>()]);
+    }
+
+    IEnumerable<IInstruction> ParseInstruction(Lokad.ILPack.IL.Instruction instruction)
+    {
         switch (instruction.OpCode.ToILOpCode())
         {
             case ILOpCode.Nop:
-                return [new NopInstruction()];
+                return [ShaderInstruction.Nop];
             case ILOpCode.Beq:
-                return Branch<Condition.Eq>((int)instruction.Operand);
             case ILOpCode.Beq_s:
-                return Branch<Condition.Eq>((sbyte)instruction.Operand);
+                return [ShaderInstruction.Eq, ShaderInstruction.BrIf];
             case ILOpCode.Bge:
-                return Branch<Condition.Ge<S>>((int)instruction.Operand);
             case ILOpCode.Bge_s:
-                return Branch<Condition.Ge<S>>((sbyte)instruction.Operand);
+                return [ShaderInstruction.Ge, ShaderInstruction.BrIf];
             case ILOpCode.Bge_un:
                 return Branch<Condition.Ge<U>>((int)instruction.Operand);
             case ILOpCode.Bge_un_s:
@@ -146,12 +198,11 @@ public class ControlFlowGraphPass(MethodCompilationContext Context)
             case ILOpCode.Brfalse_s:
                 return Branch<Condition.False>((sbyte)instruction.Operand);
             case ILOpCode.Brtrue:
-                return Branch<Condition.True>((int)instruction.Operand);
+                return [new BrIfInstruction()];
             case ILOpCode.Brtrue_s:
-                return Branch<Condition.True>((sbyte)instruction.Operand);
+                return [new BrIfInstruction()];
             case ILOpCode.Switch:
                 throw new NotImplementedException("compile switch instruction is not implemented yet");
-
             case ILOpCode.Ceq:
                 return [new ConditionValueInstruction<Condition.Eq>()];
 
@@ -281,16 +332,7 @@ public class ControlFlowGraphPass(MethodCompilationContext Context)
                 return [new NegateInstruction()];
 
             default:
-                throw new NotSupportedException($"Compile {instruction.OpCode}@{instruction.Offset} of {Context.Method.Name} is not supported");
+                throw new NotSupportedException($"Compile {instruction.OpCode}@{instruction.Offset}");
         }
-    }
-
-    private VariableDeclaration LocVar(int index)
-    {
-        return Context.LocalVariables[index];
-    }
-    private VariableDeclaration LocVar(Lokad.ILPack.IL.Instruction instruction)
-    {
-        return Context.LocalVariables[((LocalVariableInfo)instruction.Operand).LocalIndex];
     }
 }

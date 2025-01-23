@@ -26,8 +26,7 @@ public sealed class ShaderModuleCompiler(
         foreach (var (f, _) in result.FunctionDefinitions)
         {
             var method = compilation.Context.GetFunctionDefinition(f);
-            var body = method.GetMethodBody() ?? throw new NotSupportedException("Can not compile method with null body");
-            var methodCompilation = new MethodBodyCompilation(compilation, method, body, [.. method.GetInstructions()]);
+            var methodCompilation = MethodBodyCompilation.Create(compilation, method);
             var bodyResult = methodCompiler.Compile(methodCompilation);
             methodBodies.Add(KeyValuePair.Create(f, bodyResult));
         }

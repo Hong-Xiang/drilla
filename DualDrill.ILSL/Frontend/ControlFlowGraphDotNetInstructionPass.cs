@@ -19,45 +19,6 @@ interface IBasicBlock<TBasicBlock> : IBasicBlock
 }
 
 
-interface IControlFlowEdge
-{
-    IBasicBlock Source { get; }
-    IBasicBlock Target { get; }
-}
-
-sealed record class FallthroughEdge(IBasicBlock Source, IBasicBlock Target) : IControlFlowEdge { }
-
-sealed record class ControlFlowGraph<TBasicBlock>(
-    TBasicBlock EntryBlock,
-    ImmutableDictionary<TBasicBlock, ImmutableHashSet<IControlFlowEdge>> Edges
-) : IFunctionBody
-    where TBasicBlock : class, IBasicBlock<TBasicBlock>
-{
-    public void Dump(IndentedTextWriter writer)
-    {
-        HashSet<TBasicBlock> visited = [];
-
-        void Visit(TBasicBlock block)
-        {
-            if (!visited.Add(block))
-            {
-                return;
-            }
-            block.Dump(writer);
-            writer.WriteLine();
-
-            if (Edges.TryGetValue(block, out var edges))
-            {
-                foreach (var edge in edges)
-                {
-                    Visit((TBasicBlock)edge.Target);
-                }
-            }
-        }
-        Visit(EntryBlock);
-    }
-}
-
 sealed record class CILInstructionBasicBlock(ReadOnlyMemory<Instruction> Instructions)
 {
 }

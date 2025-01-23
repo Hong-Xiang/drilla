@@ -20,7 +20,7 @@ sealed class MethodCompilation
 {
     MethodCompilationContext Context { get; }
     MethodBase Method { get; }
-    ImmutableArray<Instruction> Instructions { get; }
+    ImmutableArray<Lokad.ILPack.IL.Instruction> Instructions { get; }
 
     MethodBody MethodBody { get; }
 
@@ -149,7 +149,7 @@ sealed class MethodCompilation
         return result;
     }
 
-    IInstruction CompileInstruction(Instruction inst, int nextOffset, IReadOnlyList<BasicBlock?> blocks)
+    IInstruction CompileInstruction(Lokad.ILPack.IL.Instruction inst, int nextOffset, IReadOnlyList<BasicBlock?> blocks)
     {
         throw new NotImplementedException();
         //IInstruction Branch<TCondition>(int offset)
