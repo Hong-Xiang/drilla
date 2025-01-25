@@ -1,16 +1,12 @@
 ﻿using DualDrill.CLSL.ControlFlowGraph;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.LinearInstruction;
 using DualDrill.ILSL.Compiler;
-using Lokad.ILPack.IL;
-using System.Collections.Frozen;
-using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Reflection.Metadata;
 using static DualDrill.CLSL.Language.Types.Signedness;
 
@@ -20,134 +16,60 @@ public sealed class RuntimeReflectionMethodBodyParser(
     ICompilationContextView Context
 )
 {
-    public enum FlowKind
-    {
-        Next,
-        Fallthrough,
-        UnconditionalBranch,
-        ConditionalBranch,
-        Switch,
-        Return,
-    }
 
     public CLSL.ControlFlowGraph.ControlFlowGraph Run(MethodBase method)
     {
-        var instructions = method.GetInstructions()?.ToImmutableArray() ?? [];
-        if (instructions.Length == 0)
+        var model = CilMethodSemanticModel.Create(method);
+        var basicBlocks = model.BasicBlocks.Select(b =>
         {
-            return new([]);
-        }
-
-        var nextOffsets = new int[instructions.Length];
-        var offsetsToInstructionIndex = instructions.Index().ToFrozenDictionary((data) => data.Item.Offset, data => data.Index);
-
-        {
-            var methodBodyILByteSize = method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0;
-            foreach (var (i, inst) in instructions.Index())
+            return new BasicBlock(b.ByteOffset)
             {
-                nextOffsets[i] = (i + 1) < instructions.Length ? instructions[i + 1].Offset : methodBodyILByteSize;
-                var instSize = nextOffsets[i] - instructions[i].Offset;
-                Debug.Assert(instSize > 0);
-            }
-        }
-
-        var basicBlocks = new BasicBlock?[instructions.Length];
-        var successors = new HashSet<IControlFlowEdge>?[instructions.Length];
-
-        basicBlocks[0] = new BasicBlock(instructions[0].Offset);
-
-        void AddEdge(int index, Func<BasicBlock, IControlFlowEdge> edgeFactory)
+                Index = b.BlockIndex,
+                Instructions = [.. b.Instructions.SelectMany(ParseInstruction)],
+            };
+        });
+        foreach (var block in basicBlocks)
         {
-            if (index < instructions.Length)
-            {
-                basicBlocks[index] ??= new BasicBlock(instructions[index].Offset)
-                {
-                    Index = index
-                };
-                successors[index] ??= [];
-                successors[index]!.Add(edgeFactory(basicBlocks[index]!));
-            }
-        }
-
-        void TryAddLead(int index)
-        {
-            if (index < instructions.Length)
-            {
-                basicBlocks[index] ??= new BasicBlock(instructions[index].Offset)
-                {
-                    Index = index
-                };
-            }
-        }
-
-        foreach (var (idx, inst) in instructions.Index())
-        {
-            successors[idx] ??= [];
-            switch (inst.OpCode.FlowControl)
-            {
-                case FlowControl.Branch:
-                    {
-                        int jump = OpCodes.TakesSingleByteArgument(inst.OpCode) ? (sbyte)inst.Operand : (int)inst.Operand;
-                        var instIndex = offsetsToInstructionIndex[nextOffsets[idx] + jump];
-                        AddEdge(instIndex, static (bb) => new UnconditionalEdge(bb));
-                        TryAddLead(idx + 1);
-                        break;
-                    }
-                case FlowControl.Cond_Branch:
-                    if (inst.OpCode.ToILOpCode() == System.Reflection.Metadata.ILOpCode.Switch)
-                    {
-                        throw new NotImplementedException();
-                    }
-                    else
-                    {
-                        int jump = OpCodes.TakesSingleByteArgument(inst.OpCode) ? (sbyte)inst.Operand : (int)inst.Operand;
-                        var instIndex = offsetsToInstructionIndex[nextOffsets[idx] + jump];
-                        AddEdge(instIndex, static (bb) => new ConditionalEdge(bb));
-                        AddEdge(idx + 1, static (bb) => new FallthroughEdge(bb));
-                        break;
-                    }
-                case FlowControl.Return:
-                    {
-                        successors[idx]!.Add(new ReturnEdge());
-                        TryAddLead(idx + 1);
-                        break;
-                    }
-                case FlowControl.Throw:
-                    TryAddLead(idx + 1);
-                    throw new NotSupportedException("throw is not supported");
-                // TODO: handle switch
-                default:
-                    continue;
-            }
-        }
-
-        int bbCount = 0;
-        var bbInstCount = new int[instructions.Length];
-        BasicBlock? basicBlock = null;
-        foreach (var (idx, bb) in basicBlocks.Index())
-        {
-            if (bb is not null)
-            {
-                basicBlock = bb;
-                bbCount++;
-            }
-            bbInstCount[bbCount - 1]++;
-            basicBlock.Successors = [.. basicBlock.Successors, .. successors[idx]];
-        }
-
-        foreach (var (idx, bb) in basicBlocks.Index())
-        {
-            if (bb is not null)
-            {
-                bb.Instructions = [.. instructions.Slice(idx, bbInstCount[bb.Index]).SelectMany(ParseInstruction)];
-            }
+            block.Successors = [..model.GetBasicBlockInfo(block.Index).Successors.Select(e => {
+                throw new NotImplementedException();
+                return (IControlFlowEdge) new ReturnEdge();
+            })];
         }
         return new([.. basicBlocks.OfType<BasicBlock>()]);
     }
 
-    IEnumerable<IInstruction> ParseInstruction(Lokad.ILPack.IL.Instruction instruction)
+    VariableDeclaration GetLocalVariable(int index)
     {
-        switch (instruction.OpCode.ToILOpCode())
+        throw new NotImplementedException();
+    }
+
+    VariableDeclaration GetLocalVariable(IInstructionInfo instruction)
+    {
+        throw new NotImplementedException();
+    }
+
+    ParameterDeclaration GetParameter(int index)
+    {
+        throw new NotImplementedException();
+    }
+    ParameterDeclaration GetParameter(ParameterInfo info)
+    {
+        throw new NotImplementedException();
+    }
+
+    FunctionDeclaration GetMethod(MethodInfo method)
+    {
+        throw new NotImplementedException();
+    }
+    FunctionDeclaration GetMethod(ConstructorInfo method)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    IEnumerable<IInstruction> ParseInstruction(IInstructionInfo instruction)
+    {
+        switch (instruction.ILOpCode)
         {
             case ILOpCode.Nop:
                 return [ShaderInstruction.Nop];
@@ -246,49 +168,49 @@ public sealed class RuntimeReflectionMethodBodyParser(
 
             case ILOpCode.Ldarg:
             case ILOpCode.Ldarg_s:
-                return [new LoadArgumentInstruction(((ParameterInfo)instruction.Operand).Position + argumentPositionBase)];
+                return [ShaderInstruction.Load(GetParameter((ParameterInfo)instruction.Operand))];
             case ILOpCode.Ldarg_0:
-                return [new LoadArgumentInstruction(0)];
+                return [ShaderInstruction.Load(GetParameter(0))];
             case ILOpCode.Ldarg_1:
-                return [new LoadArgumentInstruction(1)];
+                return [ShaderInstruction.Load(GetParameter(1))];
             case ILOpCode.Ldarg_2:
-                return [new LoadArgumentInstruction(2)];
+                return [ShaderInstruction.Load(GetParameter(2))];
             case ILOpCode.Ldarg_3:
-                return [new LoadArgumentInstruction(3)];
+                return [ShaderInstruction.Load(GetParameter(3))];
             case ILOpCode.Ldarga:
             case ILOpCode.Ldarga_s:
-                return [new LoadArgumentAddressInstruction(((ParameterInfo)instruction.Operand).Position + argumentPositionBase)];
+                return [ShaderInstruction.LoadAddress(GetParameter((ParameterInfo)instruction.Operand))];
             case ILOpCode.Starg:
             case ILOpCode.Starg_s:
-                return [new StoreArgumentInstruction(((ParameterInfo)instruction.Operand).Position + argumentPositionBase)];
+                return [ShaderInstruction.Store(GetParameter((ParameterInfo)instruction.Operand))];
 
             case ILOpCode.Ldloc_0:
-                return [new LoadLocalInstruction(LocVar(0))];
+                return [new LoadLocalInstruction(GetLocalVariable(0))];
             case ILOpCode.Ldloc_1:
-                return [new LoadLocalInstruction(LocVar(1))];
+                return [new LoadLocalInstruction(GetLocalVariable(1))];
             case ILOpCode.Ldloc_2:
-                return [new LoadLocalInstruction(LocVar(2))];
+                return [new LoadLocalInstruction(GetLocalVariable(2))];
             case ILOpCode.Ldloc_3:
-                return [new LoadLocalInstruction(LocVar(3))];
+                return [new LoadLocalInstruction(GetLocalVariable(3))];
             case ILOpCode.Ldloc:
             case ILOpCode.Ldloc_s:
-                return [new LoadLocalInstruction(LocVar(instruction))];
+                return [new LoadLocalInstruction(GetLocalVariable(instruction))];
             case ILOpCode.Stloc_0:
-                return [new StoreLocalInstruction(LocVar(0))];
+                return [new StoreLocalInstruction(GetLocalVariable(0))];
             case ILOpCode.Stloc_1:
-                return [new StoreLocalInstruction(LocVar(1))];
+                return [new StoreLocalInstruction(GetLocalVariable(1))];
             case ILOpCode.Stloc_2:
-                return [new StoreLocalInstruction(LocVar(2))];
+                return [new StoreLocalInstruction(GetLocalVariable(2))];
             case ILOpCode.Stloc_3:
-                return [new StoreLocalInstruction(LocVar(3))];
+                return [new StoreLocalInstruction(GetLocalVariable(3))];
             case ILOpCode.Stloc:
-                return [new StoreLocalInstruction((LocVar(instruction)))];
+                return [new StoreLocalInstruction((GetLocalVariable(instruction)))];
             case ILOpCode.Stloc_s:
-                return [new StoreLocalInstruction(LocVar(instruction))];
+                return [new StoreLocalInstruction(GetLocalVariable(instruction))];
             case ILOpCode.Ldloca:
-                return [new LoadLocalAddressInstruction(LocVar(instruction))];
+                return [new LoadLocalAddressInstruction(GetLocalVariable(instruction))];
             case ILOpCode.Ldloca_s:
-                return [new LoadLocalAddressInstruction(LocVar(instruction))];
+                return [new LoadLocalAddressInstruction(GetLocalVariable(instruction))];
             case ILOpCode.Add:
                 return [new BinaryArithmeticInstruction<BinaryArithmetic.Add>()];
             case ILOpCode.Sub:
@@ -301,9 +223,9 @@ public sealed class RuntimeReflectionMethodBodyParser(
                 return [new BinaryArithmeticInstruction<BinaryArithmetic.Rem>()];
 
             case ILOpCode.Call:
-                return [new CallInstruction((MethodInfo)instruction.Operand)];
+                return [ShaderInstruction.Call(GetMethod((MethodInfo)instruction.Operand))];
             case ILOpCode.Newobj:
-                return [new NewObjInstruction((ConstructorInfo)instruction.Operand)];
+                return [ShaderInstruction.Call(GetMethod((ConstructorInfo)instruction.Operand))];
 
             case ILOpCode.Ret:
                 return [new ReturnInstruction()];

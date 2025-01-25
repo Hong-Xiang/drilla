@@ -80,6 +80,10 @@ public sealed record class NopInstruction : ISingleton<NopInstruction>, IInstruc
 }
 public sealed record class ReturnInstruction : IInstruction { }
 
+public sealed record class Call(FunctionDeclaration FunctionDeclaration) : IInstruction
+{
+}
+
 public sealed record class CallInstruction(MethodInfo Callee) : IInstruction
 {
 }
@@ -87,6 +91,7 @@ public sealed record class CallInstruction(MethodInfo Callee) : IInstruction
 public sealed record class NewObjInstruction(ConstructorInfo Constructor) : IInstruction
 {
 }
+
 
 public sealed record class LoadArgumentInstruction(int Index) : IInstruction
 {
@@ -105,6 +110,19 @@ public sealed record class Const<TLiteral>(TLiteral Literal) : IConstInstruction
     where TLiteral : ILiteral
 {
     ILiteral IConstInstruction.Literal => Literal;
+}
+
+public sealed record class Load<TTarget>(TTarget Target) : IInstruction
+    where TTarget : IVariableIdentifierResolveResult
+{
+}
+public sealed record class LoadAddress<TTarget>(TTarget Target) : IInstruction
+    where TTarget : IVariableIdentifierResolveResult
+{
+}
+public sealed record class Store<TTarget>(TTarget Target) : IInstruction
+    where TTarget : IVariableIdentifierResolveResult
+{
 }
 
 public sealed record class LoadLocalInstruction(VariableDeclaration Source) : IInstruction { }
@@ -220,4 +238,14 @@ public static class ShaderInstruction
     public static BinaryRelationInstruction<BinaryRelation.Ge> Ge => BinaryRelationInstruction<BinaryRelation.Ge>.Instance;
     public static BinaryRelationInstruction<BinaryRelation.Eq> Eq => BinaryRelationInstruction<BinaryRelation.Eq>.Instance;
     public static BinaryRelationInstruction<BinaryRelation.Ne> Ne => BinaryRelationInstruction<BinaryRelation.Ne>.Instance;
+
+    public static Load<ParameterDeclaration> Load(ParameterDeclaration decl) => new(decl);
+    public static Load<VariableDeclaration> Load(VariableDeclaration decl) => new(decl);
+    public static LoadAddress<ParameterDeclaration> LoadAddress(ParameterDeclaration decl) => new(decl);
+    public static LoadAddress<VariableDeclaration> LoadAddress(VariableDeclaration decl) => new(decl);
+    public static Store<ParameterDeclaration> Store(ParameterDeclaration decl) => new(decl);
+    public static Store<VariableDeclaration> Store(VariableDeclaration decl) => new(decl);
+
+    public static Call Call(FunctionDeclaration decl) => new(decl);
+
 }
