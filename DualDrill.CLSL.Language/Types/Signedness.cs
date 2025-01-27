@@ -1,30 +1,20 @@
-﻿using DotNext.Patterns;
-
-namespace DualDrill.CLSL.Language.Types;
-
-public interface ISignedness
-{
-    string Name { get; }
-}
+﻿namespace DualDrill.CLSL.Language.Types;
 
 public interface ISignedness<TSign>
-    : ISignedness, ISingleton<TSign>
-    where TSign : class, ISignedness<TSign>
+    where TSign : ISignedness<TSign>
 {
+    abstract static string Name { get; }
 }
 
 public static class Signedness
 {
-    public sealed class S : ISignedness<S>
+    public readonly struct S : ISignedness<S>
     {
-        public static S Instance { get; } = new();
-
-        public string Name => "s";
+        public static string Name => "s";
     }
-    public sealed class U : ISignedness<U>
-    {
-        public static U Instance { get; } = new();
 
-        public string Name => "u";
+    public readonly struct U : ISignedness<U>
+    {
+        public static string Name => "u";
     }
 }

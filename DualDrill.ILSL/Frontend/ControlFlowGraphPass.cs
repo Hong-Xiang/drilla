@@ -163,35 +163,35 @@ public class ControlFlowGraphPass(MethodCompilationContext Context)
                 return [new BinaryBitwiseInstruction(BinaryBitwiseOp.BitwiseExclusiveOr)];
 
             case ILOpCode.Ldc_i4:
-                return [new Const<I32Literal>(new((int)instruction.Operand))];
+                return [new ConstInstruction<I32Literal>(new((int)instruction.Operand))];
             case ILOpCode.Ldc_i4_0:
-                return [new Const<I32Literal>(new(0))];
+                return [new ConstInstruction<I32Literal>(new(0))];
             case ILOpCode.Ldc_i4_1:
-                return [new Const<I32Literal>(new(1))];
+                return [new ConstInstruction<I32Literal>(new(1))];
             case ILOpCode.Ldc_i4_2:
-                return [new Const<I32Literal>(new(2))];
+                return [new ConstInstruction<I32Literal>(new(2))];
             case ILOpCode.Ldc_i4_3:
-                return [new Const<I32Literal>(new(3))];
+                return [new ConstInstruction<I32Literal>(new(3))];
             case ILOpCode.Ldc_i4_4:
-                return [new Const<I32Literal>(new(4))];
+                return [new ConstInstruction<I32Literal>(new(4))];
             case ILOpCode.Ldc_i4_5:
-                return [new Const<I32Literal>(new(5))];
+                return [new ConstInstruction<I32Literal>(new(5))];
             case ILOpCode.Ldc_i4_6:
-                return [new Const<I32Literal>(new(6))];
+                return [new ConstInstruction<I32Literal>(new(6))];
             case ILOpCode.Ldc_i4_7:
-                return [new Const<I32Literal>(new(7))];
+                return [new ConstInstruction<I32Literal>(new(7))];
             case ILOpCode.Ldc_i4_8:
-                return [new Const<I32Literal>(new(8))];
+                return [new ConstInstruction<I32Literal>(new(8))];
             case ILOpCode.Ldc_i4_m1:
-                return [new Const<I32Literal>(new(-1))];
+                return [new ConstInstruction<I32Literal>(new(-1))];
             case ILOpCode.Ldc_i4_s:
-                return [new Const<I32Literal>(new((sbyte)instruction.Operand))];
+                return [new ConstInstruction<I32Literal>(new((sbyte)instruction.Operand))];
             case ILOpCode.Ldc_i8:
-                return [new Const<I64Literal>(new((long)instruction.Operand))];
+                return [new ConstInstruction<I64Literal>(new((long)instruction.Operand))];
             case ILOpCode.Ldc_r4:
-                return [new Const<F32Literal>(new((float)instruction.Operand))];
+                return [new ConstInstruction<F32Literal>(new((float)instruction.Operand))];
             case ILOpCode.Ldc_r8:
-                return [new Const<F64Literal>(new((double)instruction.Operand))];
+                return [new ConstInstruction<F64Literal>(new((double)instruction.Operand))];
 
             case ILOpCode.Ldarg:
             case ILOpCode.Ldarg_s:

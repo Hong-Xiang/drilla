@@ -1,23 +1,11 @@
-﻿using DotNext.Patterns;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.Operation;
 
 public static class BinaryRelation
 {
-    public interface IOp
-    {
-        public Op Value { get; }
-    }
-
-    public interface IOp<TOp> : IOp, ISingleton<TOp>
-        where TOp : class, IOp<TOp>
-    {
-    }
-
-
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum Op
+    public enum OpKind
     {
         lt,
         gt,
@@ -27,41 +15,39 @@ public static class BinaryRelation
         ne
     }
 
-    public sealed class Lt : IOp<Lt>, IFloatOp, ISignednessIntegerOp
+    public interface IOp<TSelf> : IOpKind<TSelf, OpKind>, IBinaryOp<TSelf>
+        where TSelf : IOp<TSelf>
     {
-        public static Lt Instance { get; } = new();
-        public Op Value => Op.lt;
     }
 
-    public sealed class Gt : IOp<Gt>, IFloatOp, ISignednessIntegerOp
+    public sealed class Lt : IOp<Lt>, IFloatOp<Lt>, ISignedIntegerOp<Lt>
     {
-        public static Gt Instance { get; } = new();
-        public Op Value => Op.gt;
+        public static OpKind Kind => OpKind.lt;
+    }
+
+    public sealed class Gt : IOp<Gt>, IFloatOp<Gt>, ISignedIntegerOp<Gt>
+    {
+        public static OpKind Kind => OpKind.gt;
 
     }
 
-    public sealed class Le : IOp<Le>, IFloatOp, ISignednessIntegerOp
+    public sealed class Le : IOp<Le>, IFloatOp<Le>, ISignedIntegerOp<Le>
     {
-        public static Le Instance { get; } = new();
-        public Op Value => Op.le;
+        public static OpKind Kind => OpKind.le;
     }
 
-    public sealed class Ge : IOp<Ge>, IFloatOp, ISignednessIntegerOp
+    public sealed class Ge : IOp<Ge>, IFloatOp<Ge>, ISignedIntegerOp<Ge>
     {
-        public static Ge Instance { get; } = new();
-        public Op Value => Op.ge;
+        public static OpKind Kind => OpKind.ge;
     }
 
-    public sealed class Eq : IOp<Eq>, IFloatOp, ISignednessIntegerOp
+    public sealed class Eq : IOp<Eq>, IFloatOp<Eq>, IIntegerOp<Eq>
     {
-        public static Eq Instance { get; } = new();
-        public Op Value => Op.eq;
+        public static OpKind Kind => OpKind.eq;
     }
 
-    public sealed class Ne : IOp<Ne>, IFloatOp, ISignednessIntegerOp
+    public sealed class Ne : IOp<Ne>, IFloatOp<Ne>, IIntegerOp<Ne>
     {
-        public static Ne Instance { get; } = new();
-        public Op Value => Op.ne;
+        public static OpKind Kind => OpKind.ne;
     }
 }
-

@@ -1,4 +1,6 @@
-﻿using Lokad.ILPack.IL;
+﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Types;
+using Lokad.ILPack.IL;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
@@ -6,20 +8,6 @@ using System.Reflection.Emit;
 using System.Reflection.Metadata;
 
 namespace DualDrill.ILSL;
-
-interface IInstructionInfo
-{
-    OpCode OpCode { get; }
-    ReadOnlySpan<Type> OpStackBefore { get; }
-    ReadOnlySpan<Type> OpStackAfter { get; }
-    int Offset { get; }
-    int Size { get; }
-    int NextOffset { get; }
-    bool IsLead { get; }
-    object Operand { get; }
-    ILOpCode ILOpCode { get; }
-}
-
 enum FlowKind
 {
     Next,
@@ -29,6 +17,49 @@ enum FlowKind
     SwitchDefaultBranch,
     SwitchCaseBranch,
     Return,
+}
+
+
+interface IInstructionInfo
+{
+    public readonly record struct StackPopData(
+        int Count,
+        Type? Pop0,
+        Type? Pop1,
+        Type? Pop2
+    )
+    {
+    }
+
+    public enum OperationKind
+    {
+        BinaryArithmetic,
+        BinaryRelation,
+        LoadArg,
+        LoadArgAddress,
+        StoreArg,
+        LoadLoc,
+        LoadLocAddress,
+        StoreLoc,
+        Const
+    }
+
+    int Index { get; }
+    OpCode OpCode { get; }
+    ILOpCode ILOpCode { get; }
+    StackPopData StackPop { get; }
+    Type? StackPush { get; }
+    int Offset { get; }
+    int Size { get; }
+    int NextOffset { get; }
+    bool IsLead { get; }
+    object Operand { get; }
+    int? BranchTargetOffset { get; }
+    bool IsBranch { get; }
+    bool IsSwitch { get; }
+    BinaryRelation.OpKind? BinaryRelationKind { get; }
+    BinaryArithmetic.OpKind? BinaryArithmeticKind { get; }
+    OperationKind Kind { get; }
 }
 
 readonly record struct FlowEdge(

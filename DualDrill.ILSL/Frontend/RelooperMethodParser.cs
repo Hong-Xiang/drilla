@@ -608,7 +608,7 @@ sealed class MethodCompilation
                         yield return new IfStatement(
                             new BinaryRelationalExpression(
                                 l, r,
-                                BinaryRelation.Op.gt
+                                BinaryRelation.OpKind.gt
                             ),
                             new([
                                 new SimpleAssignmentStatement(
@@ -633,7 +633,7 @@ sealed class MethodCompilation
                         yield return new IfStatement(
                             new BinaryRelationalExpression(
                                 l, r,
-                                BinaryRelation.Op.lt
+                                BinaryRelation.OpKind.lt
                             ),
                             new([
                                 new SimpleAssignmentStatement(
@@ -658,7 +658,7 @@ sealed class MethodCompilation
                         yield return new IfStatement(
                             new BinaryRelationalExpression(
                                 l, r,
-                                BinaryRelation.Op.le
+                                BinaryRelation.OpKind.le
                             ),
                             new([
                                 new SimpleAssignmentStatement(
@@ -791,24 +791,24 @@ sealed class MethodCompilation
         }
     }
 
-    bool TryGetOp(MethodInfo f, out BinaryArithmetic.Op op)
+    bool TryGetOp(MethodInfo f, out BinaryArithmetic.OpKind op)
     {
         switch (f.Name)
         {
             case "op_Addition":
-                op = BinaryArithmetic.Op.add;
+                op = BinaryArithmetic.OpKind.add;
                 return true;
             case "op_Subtraction":
-                op = BinaryArithmetic.Op.sub;
+                op = BinaryArithmetic.OpKind.sub;
                 return true;
             case "op_Multiply":
-                op = BinaryArithmetic.Op.mul;
+                op = BinaryArithmetic.OpKind.mul;
                 return true;
             case "op_Division":
-                op = BinaryArithmetic.Op.div;
+                op = BinaryArithmetic.OpKind.div;
                 return true;
             case "op_Modulus":
-                op = BinaryArithmetic.Op.rem;
+                op = BinaryArithmetic.OpKind.rem;
                 return true;
             default:
                 op = default;

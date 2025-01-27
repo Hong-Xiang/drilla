@@ -6,20 +6,8 @@ namespace DualDrill.CLSL.Language.Operation;
 
 public static class BinaryArithmetic
 {
-    public interface IOp
-    {
-        public Op Value { get; }
-        public string Symbol { get; }
-
-    }
-
-    public interface IOp<TOp> : IOp, ISingleton<TOp>
-        where TOp : class, IOp<TOp>
-    {
-    }
-
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum Op
+    public enum OpKind
     {
         add,
         sub,
@@ -31,65 +19,109 @@ public static class BinaryArithmetic
         copysign
     }
 
-    public sealed class Add : IOp<Add>
+    public interface IOp
     {
-        public static Add Instance { get; } = new Add();
-        public Op Value => Op.add;
-        public string Symbol => "+";
-    }
-    public sealed class Sub : IOp<Sub>
-    {
-        public static Sub Instance { get; } = new Sub();
+        public interface IVisitor<TResult>
+        {
+            TResult Visit<TOp>(TOp op) where TOp : IOp<TOp>;
+        }
 
-        public Op Value => Op.sub;
-        public string Symbol => "-";
-    }
-    public sealed class Mul : IOp<Mul>
-    {
-        public static Mul Instance { get; } = new Mul();
-        public Op Value => Op.mul;
-        public string Symbol => "*";
-    }
-    public sealed class Div : IOp<Div>
-    {
-        public static Div Instance { get; } = new Div();
-        public Op Value => Op.div;
-        public string Symbol => "/";
-    }
-    public sealed class Rem : IOp<Rem>
-    {
-        public static Rem Instance { get; } = new Rem();
-        public Op Value => Op.rem;
-        public string Symbol => "%";
+        TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IVisitor<TResult>;
     }
 
-    public sealed class Min : IOp<Min>
+    public interface IOp<TSelf> : IOp, IOpKind<TSelf, OpKind>
+        where TSelf : IOp<TSelf>
     {
-        public static Min Instance => throw new NotImplementedException();
-
-        public Op Value => throw new NotImplementedException();
-
-        public string Symbol => throw new NotImplementedException();
-    }
-    public sealed class Max : IOp<Max>
-    {
-        public static Max Instance => throw new NotImplementedException();
-
-        public Op Value => throw new NotImplementedException();
-
-        public string Symbol => throw new NotImplementedException();
     }
 
-    public static IOp GetInstance(Op op)
+    public sealed class Add : IOp<Add>, ISymbolOp<Add>, ISingleton<Add>, IFloatOp<Add>, IIntegerOp<Add>
+    {
+        public static OpKind Kind => OpKind.add;
+        public static string Symbol => "+";
+
+        public static Add Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
+            => visitor.Visit(this);
+    }
+
+    public sealed class Sub : IOp<Sub>, ISymbolOp<Sub>, ISingleton<Sub>, IFloatOp<Sub>, IIntegerOp<Sub>
+    {
+        public static OpKind Kind => OpKind.sub;
+        public static string Symbol => "-";
+
+        public static Sub Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
+            => visitor.Visit(this);
+    }
+
+
+    public sealed class Mul : IOp<Mul>, ISymbolOp<Mul>, ISingleton<Mul>, IFloatOp<Mul>, IIntegerOp<Mul>
+    {
+        public static OpKind Kind => OpKind.mul;
+        public static string Symbol => "*";
+
+        public static Mul Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
+            => visitor.Visit(this);
+    }
+
+
+    public sealed class Div : IOp<Div>, ISymbolOp<Div>, ISingleton<Div>, IFloatOp<Div>, ISignedIntegerOp<Div>
+    {
+        public static OpKind Kind => OpKind.div;
+        public static string Symbol => "/";
+
+        public static Div Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
+            => visitor.Visit(this);
+    }
+
+
+    public sealed class Rem : IOp<Rem>, ISymbolOp<Rem>, ISingleton<Rem>, IFloatOp<Div>, ISignedIntegerOp<Div>
+    {
+        public static OpKind Kind => OpKind.rem;
+        public static string Symbol => "%";
+
+        public static Rem Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
+            => visitor.Visit(this);
+    }
+
+    public sealed class Min : IOp<Min>, ISingleton<Min>, IFloatOp<Min>
+    {
+        public static OpKind Kind => OpKind.min;
+
+        public static Min Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
+            => visitor.Visit(this);
+    }
+
+    public sealed class Max : IOp<Max>, ISingleton<Max>, IFloatOp<Min>
+    {
+        public static OpKind Kind => OpKind.max;
+
+        public static Max Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
+            => visitor.Visit(this);
+    }
+
+    public static IOp GetInstance(OpKind op)
     {
         return op switch
         {
-            Op.add => Add.Instance,
-            Op.sub => Sub.Instance,
-            Op.mul => Mul.Instance,
-            Op.div => Div.Instance,
-            Op.rem => Rem.Instance,
-            _ => throw new InvalidEnumArgumentException(nameof(op), (int)op, typeof(Op))
+            OpKind.add => Add.Instance,
+            OpKind.sub => Sub.Instance,
+            OpKind.mul => Mul.Instance,
+            OpKind.div => Div.Instance,
+            OpKind.rem => Rem.Instance,
+            _ => throw new InvalidEnumArgumentException(nameof(op), (int)op, typeof(OpKind))
         };
     }
 }

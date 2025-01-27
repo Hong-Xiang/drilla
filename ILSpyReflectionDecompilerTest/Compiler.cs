@@ -60,14 +60,14 @@ internal sealed class Compiler
                     {
                         var r = stack.Pop();
                         var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.add));
+                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.OpKind.add));
                         break;
                     }
                 case ILOpCode.Sub:
                     {
                         var r = stack.Pop();
                         var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.Op.sub));
+                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.OpKind.sub));
                         break;
                     }
                 case ILOpCode.Call:

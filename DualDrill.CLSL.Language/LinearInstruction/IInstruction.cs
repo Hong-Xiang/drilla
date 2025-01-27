@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -18,11 +19,16 @@ public interface ILabel
     public int Index { get; }
 }
 
-public sealed record class Br : IInstruction { }
-
-public sealed record class BrIfInstruction : IInstruction, ISingleton<BrIfInstruction>
+public sealed record class BrInstruction(ILabel Target) : IInstruction
 {
-    public static BrIfInstruction Instance { get; } = new();
+}
+
+public sealed record class BrIfInstruction(ILabel Target) : IInstruction
+{
+}
+
+public sealed record class ReturnInstruction() : IInstruction
+{
 }
 
 public interface IBranchInstruction : IInstruction
@@ -51,7 +57,7 @@ public static class Condition
     public struct False : IBranchCondition { }
     public struct Eq : IBranchCondition, IBinaryRelationInstruction
     {
-        public static BinaryRelation.Op OpKind => BinaryRelation.Op.eq;
+        public static BinaryRelation.OpKind OpKind => BinaryRelation.OpKind.eq;
     }
     public struct Ge<TSign> : IBranchCondition
         where TSign : ISignedness
@@ -59,7 +65,7 @@ public static class Condition
     public struct Gt<TSign> : IBranchCondition, IBinaryRelationInstruction
         where TSign : ISignedness
     {
-        public static BinaryRelation.Op OpKind => BinaryRelation.Op.gt;
+        public static BinaryRelation.OpKind OpKind => BinaryRelation.OpKind.gt;
     }
     public struct Le<TSign> : IBranchCondition
         where TSign : ISignedness
@@ -67,16 +73,15 @@ public static class Condition
     public struct Lt<TSign> : IBranchCondition, IBinaryRelationInstruction
         where TSign : ISignedness
     {
-        public static BinaryRelation.Op OpKind => BinaryRelation.Op.lt;
+        public static BinaryRelation.OpKind OpKind => BinaryRelation.OpKind.lt;
     }
     public struct Inst : IBranchCondition { }
     public struct Null : IBranchCondition { }
     public struct Ne : IBranchCondition { }
 }
 
-public sealed record class NopInstruction : ISingleton<NopInstruction>, IInstruction
+public sealed record class NopInstruction : IInstruction
 {
-    public static NopInstruction Instance { get; } = new();
 }
 public sealed record class ReturnInstruction : IInstruction { }
 
@@ -106,7 +111,7 @@ public interface IConstInstruction : IInstruction
 {
     ILiteral Literal { get; }
 }
-public sealed record class Const<TLiteral>(TLiteral Literal) : IConstInstruction
+public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IConstInstruction
     where TLiteral : ILiteral
 {
     ILiteral IConstInstruction.Literal => Literal;
@@ -149,14 +154,13 @@ public sealed record class BinaryArithmeticInstruction<TOp> : IBinaryArithmeticI
 
 public interface IBinaryRelationInstruction : IInstruction
 {
-    static abstract BinaryRelation.Op OpKind { get; }
 }
 
-public sealed record class BinaryRelationInstruction<TOp> : IBinaryRelationInstruction, ISingleton<BinaryRelationInstruction<TOp>>
-    where TOp : class, BinaryRelation.IOp<TOp>
+public sealed record class NumericInstruction<TTarget, TOp>
+    : IInstruction, ISingleton<NumericInstruction<TTarget, TOp>>
+    where TTarget : INumericOp<TTarget, TOp>
 {
-    public static BinaryRelation.Op OpKind => TOp.Instance.Value;
-    public static BinaryRelationInstruction<TOp> Instance { get; } = new();
+    public static NumericInstruction<TTarget, TOp> Instance { get; } = new();
 }
 
 public interface IConditionValueInstruction : IInstruction
@@ -230,14 +234,12 @@ public sealed record class NegateInstruction : IInstruction { }
 
 public static class ShaderInstruction
 {
-    public static NopInstruction Nop => NopInstruction.Instance;
-    public static BrIfInstruction BrIf => BrIfInstruction.Instance;
-    public static BinaryRelationInstruction<BinaryRelation.Lt> Lt => BinaryRelationInstruction<BinaryRelation.Lt>.Instance;
-    public static BinaryRelationInstruction<BinaryRelation.Gt> Gt => BinaryRelationInstruction<BinaryRelation.Gt>.Instance;
-    public static BinaryRelationInstruction<BinaryRelation.Le> Le => BinaryRelationInstruction<BinaryRelation.Le>.Instance;
-    public static BinaryRelationInstruction<BinaryRelation.Ge> Ge => BinaryRelationInstruction<BinaryRelation.Ge>.Instance;
-    public static BinaryRelationInstruction<BinaryRelation.Eq> Eq => BinaryRelationInstruction<BinaryRelation.Eq>.Instance;
-    public static BinaryRelationInstruction<BinaryRelation.Ne> Ne => BinaryRelationInstruction<BinaryRelation.Ne>.Instance;
+    public static IInstruction Nop() => new NopInstruction();
+    public static IInstruction Br(ILabel target) => new BrInstruction(target);
+    public static IInstruction BrIf(ILabel target) => new BrIfInstruction(target);
+    public static IInstruction I32Eq() => NumericInstruction<NumericIOp<N32, BinaryRelation.Eq>, BinaryRelation.Eq>.Instance;
+
+    public static IInstruction LogicalNot() => throw new NotImplementedException();
 
     public static Load<ParameterDeclaration> Load(ParameterDeclaration decl) => new(decl);
     public static Load<VariableDeclaration> Load(VariableDeclaration decl) => new(decl);
@@ -246,6 +248,10 @@ public static class ShaderInstruction
     public static Store<ParameterDeclaration> Store(ParameterDeclaration decl) => new(decl);
     public static Store<VariableDeclaration> Store(VariableDeclaration decl) => new(decl);
 
-    public static Call Call(FunctionDeclaration decl) => new(decl);
+    public static IInstruction Call(FunctionDeclaration decl) => new Call(decl);
 
+    public static IInstruction Return() => new ReturnInstruction();
+    public static IInstruction Const<TLiteral>(TLiteral value) 
+        where TLiteral : ILiteral
+        => new ConstInstruction<TLiteral>(value);
 }

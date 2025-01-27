@@ -342,12 +342,12 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
         await expr.L.AcceptVisitor(this);
         var op = expr.Op switch
         {
-            BinaryRelation.Op.lt => "<",
-            BinaryRelation.Op.gt => ">",
-            BinaryRelation.Op.le => "<=",
-            BinaryRelation.Op.ge => ">=",
-            BinaryRelation.Op.eq => "==",
-            BinaryRelation.Op.ne => "!=",
+            BinaryRelation.OpKind.lt => "<",
+            BinaryRelation.OpKind.gt => ">",
+            BinaryRelation.OpKind.le => "<=",
+            BinaryRelation.OpKind.ge => ">=",
+            BinaryRelation.OpKind.eq => "==",
+            BinaryRelation.OpKind.ne => "!=",
             _ => throw new NotSupportedException()
         };
         Writer.Write(' ');

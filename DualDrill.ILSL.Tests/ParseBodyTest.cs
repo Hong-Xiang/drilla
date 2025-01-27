@@ -68,7 +68,7 @@ public class ParseBodyTest
                 },
                 Type: IIntType { BitWidth: N32 }
             },
-            Op: BinaryArithmetic.Op.add,
+            Op: BinaryArithmetic.OpKind.add,
             Type: IIntType { BitWidth: N32 }
         });
     }

@@ -21,3 +21,14 @@ public interface ILiteral<TShaderType> : ILiteral
     where TShaderType : class, IScalarType<TShaderType>
 {
 }
+
+public static class Literal
+{
+    public static BoolLiteral Create(bool value) => new(value);
+    public static I32Literal Create(int value) => new(value);
+    public static I64Literal Create(long value) => new(value);
+    public static U32Literal Create(uint value) => new(value);
+    public static U64Literal Create(ulong value) => new(value);
+    public static F32Literal Create(float value) => new(value);
+    public static F64Literal Create(double value) => new(value);
+}

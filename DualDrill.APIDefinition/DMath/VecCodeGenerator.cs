@@ -174,7 +174,7 @@ internal sealed record class VectorSimdCodeGenerator(
 
     public void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op)
     {
-        if (op.Op != BinaryArithmetic.Op.rem)
+        if (op.Op != BinaryArithmetic.OpKind.rem)
         {
             var l = op.Left is IScalarType ? $"{SimdStaticDataTypeName}.Create(left)" : "left.Data";
             var r = op.Right is IScalarType ? $"{SimdStaticDataTypeName}.Create(right)" : "right.Data";

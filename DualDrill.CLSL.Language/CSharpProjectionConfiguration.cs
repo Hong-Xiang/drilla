@@ -36,15 +36,15 @@ public sealed class CSharpProjectionConfiguration
             _ => throw new NotSupportedException($"Unary arithmetic operator {op} is not supported")
         };
     }
-    public string OpName(BinaryArithmetic.Op op)
+    public string OpName(BinaryArithmetic.OpKind op)
     {
         return op switch
         {
-            BinaryArithmetic.Op.add => "+",
-            BinaryArithmetic.Op.sub => "-",
-            BinaryArithmetic.Op.mul => "*",
-            BinaryArithmetic.Op.div => "/",
-            BinaryArithmetic.Op.rem => "%",
+            BinaryArithmetic.OpKind.add => "+",
+            BinaryArithmetic.OpKind.sub => "-",
+            BinaryArithmetic.OpKind.mul => "*",
+            BinaryArithmetic.OpKind.div => "/",
+            BinaryArithmetic.OpKind.rem => "%",
             _ => throw new NotSupportedException($"Binary arithmetic operator {op} is not supported")
         };
     }
