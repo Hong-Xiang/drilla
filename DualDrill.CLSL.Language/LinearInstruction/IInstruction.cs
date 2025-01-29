@@ -1,5 +1,6 @@
 ﻿using DotNext.Patterns;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
@@ -7,6 +8,7 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Reflection.Metadata;
 
 namespace DualDrill.CLSL.LinearInstruction;
 
@@ -17,6 +19,14 @@ public interface IInstruction
 public interface ILabel
 {
     public int Index { get; }
+}
+
+public sealed record class Label(int Identifier)
+{
+}
+
+public sealed record class LabelInstruction(CLSL.Language.ControlFlowGraph.Label Label) : IInstruction, ILabeledEntity
+{
 }
 
 public sealed record class BrInstruction(ILabel Target) : IInstruction
@@ -60,18 +70,18 @@ public static class Condition
         public static BinaryRelation.OpKind OpKind => BinaryRelation.OpKind.eq;
     }
     public struct Ge<TSign> : IBranchCondition
-        where TSign : ISignedness
+        where TSign : ISignedness<TSign>
     { }
     public struct Gt<TSign> : IBranchCondition, IBinaryRelationInstruction
-        where TSign : ISignedness
+        where TSign : ISignedness<TSign>
     {
         public static BinaryRelation.OpKind OpKind => BinaryRelation.OpKind.gt;
     }
     public struct Le<TSign> : IBranchCondition
-        where TSign : ISignedness
+        where TSign : ISignedness<TSign>
     { }
     public struct Lt<TSign> : IBranchCondition, IBinaryRelationInstruction
-        where TSign : ISignedness
+        where TSign : ISignedness<TSign>
     {
         public static BinaryRelation.OpKind OpKind => BinaryRelation.OpKind.lt;
     }
@@ -83,7 +93,6 @@ public static class Condition
 public sealed record class NopInstruction : IInstruction
 {
 }
-public sealed record class ReturnInstruction : IInstruction { }
 
 public sealed record class Call(FunctionDeclaration FunctionDeclaration) : IInstruction
 {
@@ -148,7 +157,7 @@ public sealed record class BinaryArithmeticInstruction<TOp> : IBinaryArithmeticI
 {
     public IExpression CreateExpression(IExpression l, IExpression r)
     {
-        return new BinaryArithmeticExpression(l, r, TOp.Instance.Value);
+        throw new NotImplementedException();
     }
 }
 
@@ -205,16 +214,16 @@ public sealed record class ConditionValueInstruction<TCondition> : IConditionVal
         {
             if (l.Type is BoolType && TryConvertToBoolExpression(r, out var rb))
             {
-                return new BinaryRelationalExpression(l, rb, TCondition.OpKind);
+                throw new NotImplementedException();
             }
         }
         {
             if (r.Type is BoolType && TryConvertToBoolExpression(l, out var lb))
             {
-                return new BinaryRelationalExpression(lb, r, TCondition.OpKind);
+                throw new NotImplementedException();
             }
         }
-        return new BinaryRelationalExpression(l, r, TCondition.OpKind);
+        throw new NotImplementedException();
     }
 }
 
@@ -251,7 +260,7 @@ public static class ShaderInstruction
     public static IInstruction Call(FunctionDeclaration decl) => new Call(decl);
 
     public static IInstruction Return() => new ReturnInstruction();
-    public static IInstruction Const<TLiteral>(TLiteral value) 
+    public static IInstruction Const<TLiteral>(TLiteral value)
         where TLiteral : ILiteral
         => new ConstInstruction<TLiteral>(value);
 }

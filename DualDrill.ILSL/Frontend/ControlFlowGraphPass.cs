@@ -1,5 +1,5 @@
-﻿using DualDrill.CLSL.ControlFlowGraph;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;

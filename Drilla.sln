@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ILSpyReflectionDecompilerTe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticAnalysisTest", "SemanticAnalysisTest\SemanticAnalysisTest.csproj", "{99ACF7B4-104D-464B-91FF-3291BD0409EA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DualDrill.CLSL.Test", "DualDrill.CLSL.Test\DualDrill.CLSL.Test.csproj", "{FA047928-8BDE-4D9C-9F84-FC885C71F766}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -161,6 +163,14 @@ Global
 		{99ACF7B4-104D-464B-91FF-3291BD0409EA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{99ACF7B4-104D-464B-91FF-3291BD0409EA}.Release|x64.ActiveCfg = Release|Any CPU
 		{99ACF7B4-104D-464B-91FF-3291BD0409EA}.Release|x64.Build.0 = Release|Any CPU
+		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Debug|x64.Build.0 = Debug|Any CPU
+		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Release|x64.ActiveCfg = Release|Any CPU
+		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

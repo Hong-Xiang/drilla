@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using Lokad.ILPack.IL;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
@@ -106,6 +107,8 @@ sealed class CilMethodSemanticModel : ICilMethodSemanticModel
 
     static CilMethodSemanticModel Empty => throw new NotImplementedException();
 
+    public IEnumerable<IBasicBlockInfo> BasicBlocks => throw new NotImplementedException();
+
     public static ICilMethodSemanticModel Create(MethodBase method)
     {
         var instructions = method.GetInstructions()?.ToImmutableArray() ?? [];
@@ -128,98 +131,99 @@ sealed class CilMethodSemanticModel : ICilMethodSemanticModel
                 Debug.Assert(instSize > 0);
             }
         }
+        throw new NotImplementedException();
 
-        var basicBlocks = new BasicBlock?[instructions.Length];
-        var successors = new HashSet<IControlFlowEdge>?[instructions.Length];
+        //var basicBlocks = new BasicBlock?[instructions.Length];
+        //var successors = new HashSet<IControlFlowEdge>?[instructions.Length];
 
-        basicBlocks[0] = new BasicBlock(instructions[0].Offset);
+        //basicBlocks[0] = new BasicBlock(instructions[0].Offset);
 
-        void AddEdge(int index, Func<BasicBlock, IControlFlowEdge> edgeFactory)
-        {
-            if (index < instructions.Length)
-            {
-                basicBlocks[index] ??= new BasicBlock(instructions[index].Offset)
-                {
-                    Index = index
-                };
-                successors[index] ??= [];
-                successors[index]!.Add(edgeFactory(basicBlocks[index]!));
-            }
-        }
+        //void AddEdge(int index, Func<BasicBlock, IControlFlowEdge> edgeFactory)
+        //{
+        //    if (index < instructions.Length)
+        //    {
+        //        basicBlocks[index] ??= new BasicBlock(instructions[index].Offset)
+        //        {
+        //            Index = index
+        //        };
+        //        successors[index] ??= [];
+        //        successors[index]!.Add(edgeFactory(basicBlocks[index]!));
+        //    }
+        //}
 
-        void TryAddLead(int index)
-        {
-            if (index < instructions.Length)
-            {
-                basicBlocks[index] ??= new BasicBlock(instructions[index].Offset)
-                {
-                    Index = index
-                };
-            }
-        }
+        //void TryAddLead(int index)
+        //{
+        //    if (index < instructions.Length)
+        //    {
+        //        basicBlocks[index] ??= new BasicBlock(instructions[index].Offset)
+        //        {
+        //            Index = index
+        //        };
+        //    }
+        //}
 
-        foreach (var (idx, inst) in instructions.Index())
-        {
-            successors[idx] ??= [];
-            switch (inst.OpCode.FlowControl)
-            {
-                case FlowControl.Branch:
-                    {
-                        int jump = OpCodes.TakesSingleByteArgument(inst.OpCode) ? (sbyte)inst.Operand : (int)inst.Operand;
-                        var instIndex = offsetsToInstructionIndex[nextOffsets[idx] + jump];
-                        AddEdge(instIndex, static (bb) => new UnconditionalEdge(bb));
-                        TryAddLead(idx + 1);
-                        break;
-                    }
-                case FlowControl.Cond_Branch:
-                    if (inst.OpCode.ToILOpCode() == System.Reflection.Metadata.ILOpCode.Switch)
-                    {
-                        throw new NotImplementedException();
-                    }
-                    else
-                    {
-                        int jump = OpCodes.TakesSingleByteArgument(inst.OpCode) ? (sbyte)inst.Operand : (int)inst.Operand;
-                        var instIndex = offsetsToInstructionIndex[nextOffsets[idx] + jump];
-                        AddEdge(instIndex, static (bb) => new ConditionalEdge(bb));
-                        AddEdge(idx + 1, static (bb) => new FallthroughEdge(bb));
-                        break;
-                    }
-                case FlowControl.Return:
-                    {
-                        successors[idx]!.Add(new ReturnEdge());
-                        TryAddLead(idx + 1);
-                        break;
-                    }
-                case FlowControl.Throw:
-                    TryAddLead(idx + 1);
-                    throw new NotSupportedException("throw is not supported");
-                // TODO: handle switch
-                default:
-                    continue;
-            }
-        }
+        //foreach (var (idx, inst) in instructions.Index())
+        //{
+        //    successors[idx] ??= [];
+        //    switch (inst.OpCode.FlowControl)
+        //    {
+        //        case FlowControl.Branch:
+        //            {
+        //                int jump = OpCodes.TakesSingleByteArgument(inst.OpCode) ? (sbyte)inst.Operand : (int)inst.Operand;
+        //                var instIndex = offsetsToInstructionIndex[nextOffsets[idx] + jump];
+        //                AddEdge(instIndex, static (bb) => new UnconditionalEdge(bb));
+        //                TryAddLead(idx + 1);
+        //                break;
+        //            }
+        //        case FlowControl.Cond_Branch:
+        //            if (inst.OpCode.ToILOpCode() == System.Reflection.Metadata.ILOpCode.Switch)
+        //            {
+        //                throw new NotImplementedException();
+        //            }
+        //            else
+        //            {
+        //                int jump = OpCodes.TakesSingleByteArgument(inst.OpCode) ? (sbyte)inst.Operand : (int)inst.Operand;
+        //                var instIndex = offsetsToInstructionIndex[nextOffsets[idx] + jump];
+        //                AddEdge(instIndex, static (bb) => new ConditionalEdge(bb));
+        //                AddEdge(idx + 1, static (bb) => new FallthroughEdge(bb));
+        //                break;
+        //            }
+        //        case FlowControl.Return:
+        //            {
+        //                successors[idx]!.Add(new ReturnEdge());
+        //                TryAddLead(idx + 1);
+        //                break;
+        //            }
+        //        case FlowControl.Throw:
+        //            TryAddLead(idx + 1);
+        //            throw new NotSupportedException("throw is not supported");
+        //        // TODO: handle switch
+        //        default:
+        //            continue;
+        //    }
+        //}
 
-        int bbCount = 0;
-        var bbInstCount = new int[instructions.Length];
-        BasicBlock? basicBlock = null;
-        foreach (var (idx, bb) in basicBlocks.Index())
-        {
-            if (bb is not null)
-            {
-                basicBlock = bb;
-                bbCount++;
-            }
-            bbInstCount[bbCount - 1]++;
-            basicBlock.Successors = [.. basicBlock.Successors, .. successors[idx]];
-        }
+        //int bbCount = 0;
+        //var bbInstCount = new int[instructions.Length];
+        //BasicBlock? basicBlock = null;
+        //foreach (var (idx, bb) in basicBlocks.Index())
+        //{
+        //    if (bb is not null)
+        //    {
+        //        basicBlock = bb;
+        //        bbCount++;
+        //    }
+        //    bbInstCount[bbCount - 1]++;
+        //    basicBlock.Successors = [.. basicBlock.Successors, .. successors[idx]];
+        //}
 
-        foreach (var (idx, bb) in basicBlocks.Index())
-        {
-            if (bb is not null)
-            {
-                bb.Instructions = [.. instructions.Slice(idx, bbInstCount[bb.Index]).SelectMany(ParseInstruction)];
-            }
-        }
+        //foreach (var (idx, bb) in basicBlocks.Index())
+        //{
+        //    if (bb is not null)
+        //    {
+        //        bb.Instructions = [.. instructions.Slice(idx, bbInstCount[bb.Index]).SelectMany(ParseInstruction)];
+        //    }
+        //}
 
         throw new NotImplementedException();
     }

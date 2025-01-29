@@ -289,7 +289,8 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
         Writer.Write("( ");
         await expr.L.AcceptVisitor(this);
         Writer.Write(") ");
-        Writer.Write(BinaryArithmetic.GetInstance(expr.Op).Symbol);
+        //Writer.Write(BinaryArithmetic.GetInstance(expr.Op).Symbol);
+        throw new NotImplementedException();
         Writer.Write("( ");
         await expr.R.AcceptVisitor(this);
         Writer.Write(")");

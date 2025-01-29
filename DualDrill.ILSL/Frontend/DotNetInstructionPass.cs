@@ -1,8 +1,6 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
-using DualDrill.ILSL.Compiler;
 using Lokad.ILPack.IL;
 using System.CodeDom.Compiler;
-using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 
