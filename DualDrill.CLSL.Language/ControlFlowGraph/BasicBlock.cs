@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
-public sealed record class BasicBlock(int Offset) : ILabel, IInstructionRegionElement
+public sealed record class BasicBlock(int Offset) : ILabel, IControlFlowRegionElement
 {
     public int Index
     {

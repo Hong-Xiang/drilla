@@ -11,7 +11,7 @@ public interface ILabeledEntity
     public Label Label { get; }
 }
 
-public interface ILabelScopeInstructionGroup : IInstructionRegion
+public interface ILabelScopeInstructionGroup : IControlFlowRegion
 {
     ILabeledEntity GetLabelTarget(Label label);
 }

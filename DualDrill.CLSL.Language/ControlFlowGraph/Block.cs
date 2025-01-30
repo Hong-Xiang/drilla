@@ -8,13 +8,13 @@ namespace DualDrill.CLSL.Language.ControlFlowGraph;
 public sealed record class Block(
     ILabelScopeInstructionGroup? Root,
     Label Label,
-    ImmutableArray<IInstructionRegion> Children,
+    ImmutableArray<IControlFlowRegion> Children,
     ImmutableArray<IShaderType> StackParameters,
     ImmutableArray<IShaderType> StackResults,
     FrozenSet<VariableDeclaration> LocalVariables
-) : ILabeledEntity, ILabelScopeInstructionGroup, IInstructionRegionElement
+) : ILabeledEntity, ILabelScopeInstructionGroup, IControlFlowRegionElement
 {
-    IEnumerable<IInstructionRegionElement> IInstructionRegion.Children => Children;
+    IEnumerable<IControlFlowRegionElement> IControlFlowRegion.Children => Children;
 
     public ILabeledEntity GetLabelTarget(Label label) =>
         Label.Equals(label)

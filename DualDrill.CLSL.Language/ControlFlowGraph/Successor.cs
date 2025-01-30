@@ -6,18 +6,10 @@ namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
 public enum SuccessorKind
 {
-    BrOrNext,
-    BrIf,
+    Unconditional,
+    Conditional,
     Switch,
-    ReturnOrTerminate
-}
-
-public interface ISuccessorAlgebra<TLabel, TFalseBranchLabel, TResult>
-{
-    TResult Br(TLabel target);
-    TResult BrIf(TLabel trueTarget, TFalseBranchLabel falseTarget);
-    TResult Switch(TLabel defaultLabel, IEnumerable<(ILiteral, TLabel)> cases);
-    TResult Return();
+    Terminate
 }
 
 public interface ISuccessor
@@ -45,6 +37,15 @@ public sealed record class ReturnOrTerminateSuccessor() : ISuccessor
     public void Traverse(Action<Label> action)
     {
     }
+}
+
+
+public static class Successor
+{
+    public static ISuccessor Unconditional(Label target) => new BrOrNextSuccessor(target);
+    public static ISuccessor Conditional(Label trueTarget, Label falseTarget) => new BrIfSuccessor(trueTarget, falseTarget);
+    public static ISuccessor Switch() => throw new NotImplementedException();
+    public static ISuccessor Terminate() => new ReturnOrTerminateSuccessor();
 }
 
 //public static class Successor

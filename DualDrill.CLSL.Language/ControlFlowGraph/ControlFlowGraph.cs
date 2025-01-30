@@ -2,40 +2,79 @@
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
-
-
-public sealed partial class ControlFlowGraph<TNode>
+public sealed partial class ControlFlowGraph<TData>
 {
-    public Label Entry { get; }
+    public Label EntryLabel { get; }
     public int Count => Nodes.Count;
-    public IReadOnlySet<Label> Predecessor(Label label) => Predecessors[label];
-    public ISuccessor Successor(Label label) => Successors[label];
-    public TNode this[Label label] => Nodes[label];
+    public IReadOnlySet<Label> Predecessor(Label label) => Nodes[label].Predecessors;
+    public ISuccessor Successor(Label label) => Nodes[label].Successor;
+    public TData this[Label label] => Nodes[label].Data;
 
 
-    FrozenDictionary<Label, TNode> Nodes { get; }
-    FrozenDictionary<Label, ISuccessor> Successors { get; }
-    FrozenDictionary<Label, FrozenSet<Label>> Predecessors { get; }
-    internal ControlFlowGraph(
-        Label entry,
-        IDictionary<Label, TNode> nodes,
-        IDictionary<Label, ISuccessor> successors)
+    FrozenDictionary<Label, NodeData> Nodes { get; }
+    readonly record struct NodeData(
+       ISuccessor Successor,
+       TData Data,
+       FrozenSet<Label> Predecessors)
     {
-        Entry = entry;
-        Nodes = nodes.ToFrozenDictionary();
-        Successors = successors.ToFrozenDictionary();
+    }
+
+    public readonly record struct NodeDefinition(
+        ISuccessor Successor,
+        TData Data
+    )
+    {
+    }
+
+
+    /// <summary>
+    /// Create a control flow graph labeled by Label and user TData
+    /// Note arguments must satisfy
+    /// * entry exists in key of nodes
+    /// * all successors of nodes exists in key of nodes
+    /// </summary>
+    /// <param name="entry">entry label</param>
+    /// <param name="nodes">label to successor and data map</param>
+    /// <exception cref="ArgumentException"></exception>
+    public ControlFlowGraph(
+        Label entry,
+        IReadOnlyDictionary<Label, NodeDefinition> nodes)
+    {
+        if (!nodes.ContainsKey(entry))
+        {
+            throw new ArgumentException($"Entry label not found in nodes definition", nameof(nodes));
+        }
+
+        EntryLabel = entry;
         var predecessors = nodes.Keys.Select(n => KeyValuePair.Create(n, new HashSet<Label>())).ToDictionary();
-        foreach (var (l, s) in successors)
+        foreach (var (l, s) in nodes.Select(kv => (kv.Key, kv.Value.Successor)))
         {
             s.Traverse((t) =>
             {
+                if (!nodes.ContainsKey(t))
+                {
+                    throw new ArgumentException($"{t} is successor of {s}, but not exists in nodes definition", nameof(nodes));
+                }
                 predecessors[t].Add(l);
             });
         }
-        Predecessors = predecessors.Select(kv => KeyValuePair.Create(kv.Key, kv.Value.ToFrozenSet())).ToFrozenDictionary();
-    }
 
-    public void Traverse(Action<Label> beforeSuccessor, Action<Label> afterSuccessor)
+        Nodes = nodes.Select(kv =>
+        {
+            var node = new NodeData(kv.Value.Successor, kv.Value.Data, predecessors[kv.Key].ToFrozenSet());
+            return KeyValuePair.Create(kv.Key, node);
+        }).ToFrozenDictionary();
+    }
+}
+
+public static class ControlFlowGraph
+{
+    public static IReadOnlyDictionary<Label, ControlFlowGraph<TData>.NodeDefinition> CreateDefinitions<TData>(
+        Dictionary<Label, ControlFlowGraph<TData>.NodeDefinition> definitions
+    ) => definitions;
+
+
+    public static void Traverse<TNode>(this ControlFlowGraph<TNode> graph, Action<Label> beforeSuccessor, Action<Label> afterSuccessor)
     {
         HashSet<Label> visited = [];
         void DoVisit(Label label)
@@ -46,25 +85,24 @@ public sealed partial class ControlFlowGraph<TNode>
             };
             visited.Add(label);
             beforeSuccessor(label);
-            Successor(label).Traverse(DoVisit);
+            graph.Successor(label).Traverse(DoVisit);
             afterSuccessor(label);
         }
-        DoVisit(Entry);
+        DoVisit(graph.EntryLabel);
     }
-}
 
-public static class ControlFlowGraph
-{
-    public static IEnumerable<Label> GetLabels<TNode>(this ControlFlowGraph<TNode> graph)
+    public static IEnumerable<Label> Labels<TNode>(this ControlFlowGraph<TNode> graph)
     {
         var labels = new List<Label>();
-        graph.Traverse((l) => { }, labels.Add);
+        graph.Traverse(static (_) => { }, labels.Add);
         labels.Reverse();
         return labels;
     }
 
-    public static FrozenDictionary<Label, int> GetReversePostorderNumberingTable<TNode>(this ControlFlowGraph<TNode> graph)
+    public static bool IsMergeNode<TNode>(this ControlFlowGraph<TNode> graph, Label label)
     {
-        return graph.GetLabels().Select((l, i) => KeyValuePair.Create(l, i)).ToFrozenDictionary();
+        return graph.Predecessor(label).Count > 1;
     }
+
+
 }

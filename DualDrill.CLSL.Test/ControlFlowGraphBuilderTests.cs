@@ -20,13 +20,13 @@ public class ControlFlowGraphBuilderTests
 
         Assert.Equal(1, cfg.Count);
 
-        var e = cfg.Entry;
+        var e = cfg.EntryLabel;
         Assert.IsType<ReturnOrTerminateSuccessor>(cfg.Successor(e));
         Assert.Empty(cfg.Predecessor(e));
 
         Assert.Equal(new(0, 3), cfg[e]);
 
-        Assert.Equal([e], cfg.GetLabels());
+        Assert.Equal([e], cfg.Labels());
     }
 
     [Fact]
@@ -39,14 +39,14 @@ public class ControlFlowGraphBuilderTests
 
         Assert.Equal(1, cfg.Count);
 
-        var e = cfg.Entry;
+        var e = cfg.EntryLabel;
         var se = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(e));
         Assert.Equal(e, se.Target);
         Assert.Equal([e], cfg.Predecessor(e));
 
         Assert.Equal(new(0, 3), cfg[e]);
 
-        Assert.Equal([e], cfg.GetLabels());
+        Assert.Equal([e], cfg.Labels());
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class ControlFlowGraphBuilderTests
         var n = builder.AddBr(2, 3);
         var cfg = builder.Build(CreateNode);
 
-        var e = cfg.Entry;
+        var e = cfg.EntryLabel;
         Assert.Equal(2, cfg.Count);
 
         var se = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(e));
@@ -71,7 +71,7 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(new(3, 2), cfg[n]);
 
 
-        Assert.Equal([e, n], cfg.GetLabels());
+        Assert.Equal([e, n], cfg.Labels());
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class ControlFlowGraphBuilderTests
 
         Assert.Equal(2, cfg.Count);
 
-        var e = cfg.Entry;
+        var e = cfg.EntryLabel;
         Assert.Equal(e2, e);
 
         var se = Assert.IsType<BrIfSuccessor>(cfg.Successor(e));
@@ -98,7 +98,7 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(new(0, 3), cfg[e]);
         Assert.Equal(new(3, 2), cfg[n]);
 
-        Assert.Equal([e, n], cfg.GetLabels());
+        Assert.Equal([e, n], cfg.Labels());
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class ControlFlowGraphBuilderTests
 
         Assert.Equal(4, cfg.Count);
 
-        var e = cfg.Entry;
+        var e = cfg.EntryLabel;
         var se = Assert.IsType<BrIfSuccessor>(cfg.Successor(e));
         Assert.Equal(t, se.TrueTarget);
         var f = se.FalseTarget;
@@ -141,7 +141,7 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(new(8, 2), cfg[m]);
 
 
-        Assert.Equal([e, f, t, m], cfg.GetLabels());
+        Assert.Equal([e, f, t, m], cfg.Labels());
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class ControlFlowGraphBuilderTests
 
         Assert.Equal(3, cfg.Count);
 
-        Assert.Equal(a, cfg.Entry);
+        Assert.Equal(a, cfg.EntryLabel);
         var sa = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(a));
         Assert.Equal(b, sa.Target);
         Assert.Equal([b], cfg.Predecessor(a));
@@ -200,7 +200,7 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(new(3, 3), cfg[b]);
         Assert.Equal(new(6, 3), cfg[c]);
 
-        Assert.Equal([a, b, c], cfg.GetLabels());
+        Assert.Equal([a, b, c], cfg.Labels());
     }
 
 
@@ -226,7 +226,7 @@ public class ControlFlowGraphBuilderTests
 
         Assert.Equal(6, cfg.Count);
 
-        var a = cfg.Entry;
+        var a = cfg.EntryLabel;
         var sa = Assert.IsType<BrIfSuccessor>(cfg.Successor(a));
         var b = sa.FalseTarget;
         var sb = Assert.IsType<BrIfSuccessor>(cfg.Successor(b));
@@ -256,6 +256,6 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal([b, d], cfg.Predecessor(e));
         Assert.Equal([c, d, e], cfg.Predecessor(f));
 
-        Assert.Equal([a, b, c, d, e, f], cfg.GetLabels());
+        Assert.Equal([a, b, c, d, e, f], cfg.Labels());
     }
 }

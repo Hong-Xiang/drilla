@@ -2,59 +2,57 @@
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
-
 /// <summary>
 /// ControlFlowGraphBuilder build control flow graph from linear instructions with control flow instructions like
 /// br, br.if, switch, return, etc.
 /// When building nodes of control flow graph, basis blocks could be constructed
 /// </summary>
-/// <typeparam name="TNode"></typeparam>
 public sealed class ControlFlowGraphBuilder
 {
-    public delegate Label CreateLabel(int index);
     public readonly record struct InstructionRange(int Start, int Count) { }
 
-    public Label Entry => IndexToLabels[0];
-    Dictionary<int, Label> IndexToLabels { get; } = [];
-    Dictionary<Label, int> LabelIndex { get; } = [];
-    Dictionary<int, ISuccessor> IndexSuccessors = [];
-    int InstructionCount { get; }
+    public Label Entry => IndexToLabel[0];
 
-    CreateLabel LabelFactory { get; }
+    Dictionary<int, Label> IndexToLabel { get; } = [];
+    Dictionary<Label, int> LabelToIndex { get; } = [];
+    Dictionary<int, ISuccessor> IndexSuccessors = [];
+
+    int TotalInstructionCount { get; }
+    Func<int, Label> CreateLabelFromIndex { get; }
 
     /// <summary>
     /// Get label starts with instruction of index
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    public Label this[int index] => IndexToLabels[index];
+    public Label this[int index] => IndexToLabel[index];
 
-    public ControlFlowGraphBuilder(int instructionCount, CreateLabel labelFactory)
+    public ControlFlowGraphBuilder(int totalInstructionCount, Func<int, Label> instructionIndexToLabelFactory)
     {
-        if (!(instructionCount >= 1))
+        if (!(totalInstructionCount >= 1))
         {
-            throw new ArgumentException($"instruction count >= 1 is required, got {instructionCount}");
+            throw new ArgumentException($"instruction count >= 1 is required, got {totalInstructionCount}");
         }
-        LabelFactory = labelFactory;
-        InstructionCount = instructionCount;
-        AddLabel(0, labelFactory(0));
+        CreateLabelFromIndex = instructionIndexToLabelFactory;
+        TotalInstructionCount = totalInstructionCount;
+        AddLabel(0, instructionIndexToLabelFactory(0));
     }
 
     void AddLabel(int index, Label label)
     {
-        IndexToLabels[index] = label;
-        LabelIndex[label] = index;
+        IndexToLabel.Add(index, label);
+        LabelToIndex.Add(label, index);
     }
 
     Label GetOrCreateLabel(int index)
     {
-        if (IndexToLabels.TryGetValue(index, out var result))
+        if (IndexToLabel.TryGetValue(index, out var result))
         {
             return result;
         }
         else
         {
-            var label = LabelFactory(index);
+            var label = CreateLabelFromIndex(index);
             AddLabel(index, label);
             return label;
         }
@@ -62,7 +60,7 @@ public sealed class ControlFlowGraphBuilder
 
     bool TryGetOrCreateLabel(int index, [NotNullWhen(true)] out Label? result)
     {
-        if (index >= InstructionCount)
+        if (index >= TotalInstructionCount)
         {
             result = default;
             return false;
@@ -78,7 +76,7 @@ public sealed class ControlFlowGraphBuilder
     public Label AddBr(int source, int target)
     {
         var targetLabel = GetOrCreateLabel(target);
-        IndexSuccessors.Add(source, new BrOrNextSuccessor(targetLabel));
+        IndexSuccessors.Add(source, Successor.Unconditional(targetLabel));
         _ = TryGetOrCreateLabel(source + 1, out var _);
         return targetLabel;
     }
@@ -86,7 +84,7 @@ public sealed class ControlFlowGraphBuilder
     {
         var trueLabel = GetOrCreateLabel(target);
         var falseLabel = GetOrCreateLabel(source + 1);
-        IndexSuccessors.Add(source, new BrIfSuccessor(trueLabel, falseLabel));
+        IndexSuccessors.Add(source, Successor.Conditional(trueLabel, falseLabel));
         return trueLabel;
     }
     public void AddReturn(int source)
@@ -97,17 +95,17 @@ public sealed class ControlFlowGraphBuilder
     public ControlFlowGraph<TNode> Build<TNode>(Func<Label, InstructionRange, TNode> createNode)
     {
         Dictionary<Label, int> labelInstructionCount = [];
-        var indexToLabel = new Label[InstructionCount];
+        var indexToLabel = new Label[TotalInstructionCount];
         Dictionary<Label, ISuccessor> labelSuccessors = [];
 
         // scan instructions to get following maps
         // label -> instructionCount
-        // index -> containing label
+        // index -> label of containing range
         // label -> successor
         Label? current = default;
-        for (var i = 0; i < InstructionCount; i++)
+        for (var i = 0; i < TotalInstructionCount; i++)
         {
-            if (IndexToLabels.TryGetValue(i, out var next))
+            if (IndexToLabel.TryGetValue(i, out var next))
             {
                 current = next;
             }
@@ -125,44 +123,32 @@ public sealed class ControlFlowGraphBuilder
         }
 
         // handling normal fall through suceessors
-        foreach (var (label, idx) in LabelIndex)
+        foreach (var (label, idx) in LabelToIndex)
         {
             if (!labelSuccessors.ContainsKey(label))
             {
                 var nextInst = idx + labelInstructionCount[label];
-                if (nextInst >= InstructionCount - 1)
+                if (nextInst >= TotalInstructionCount - 1)
                 {
-                    labelSuccessors.Add(label, new ReturnOrTerminateSuccessor());
+                    labelSuccessors.Add(label, Successor.Terminate());
                 }
                 else
                 {
-                    labelSuccessors.Add(label, new BrOrNextSuccessor(indexToLabel[nextInst]));
+                    labelSuccessors.Add(label, Successor.Unconditional(indexToLabel[nextInst]));
                 }
             }
         }
 
         var nodes = labelInstructionCount.Select(kv =>
         {
-            var range = new InstructionRange(LabelIndex[kv.Key], labelInstructionCount[kv.Key]);
+            var range = new InstructionRange(LabelToIndex[kv.Key], labelInstructionCount[kv.Key]);
             var node = createNode(kv.Key, range);
-            return KeyValuePair.Create(kv.Key, node);
+            return KeyValuePair.Create(kv.Key, new ControlFlowGraph<TNode>.NodeDefinition(labelSuccessors[kv.Key], node));
         }).ToDictionary();
-
-        //var predecessors = nodes.Keys.Select(n => KeyValuePair.Create(n, new HashSet<Label>())).ToDictionary();
-        //foreach (var (l, s) in successors)
-        //{
-        //    s.Traverse((t) =>
-        //    {
-        //        predecessors[t].Add(l);
-        //    });
-        //}
-
-        //Predecessors = predecessors.Select(kv => KeyValuePair.Create(kv.Key, kv.Value.ToFrozenSet())).ToFrozenDictionary();
 
         return new ControlFlowGraph<TNode>(
             Entry,
-            nodes,
-            labelSuccessors
+            nodes
         );
     }
 }

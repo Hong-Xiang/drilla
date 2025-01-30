@@ -4,14 +4,14 @@
 /// The main external interface of CLSL IR collection,
 /// Basically encoding of Loop | Block
 /// </summary>
-public interface IInstructionRegion : IInstructionRegionElement
+public interface IControlFlowRegion : IControlFlowRegionElement
 {
-    public IEnumerable<IInstructionRegionElement> Children { get; }
+    public IEnumerable<IControlFlowRegionElement> Children { get; }
 }
 
 /// <summary>
 /// Encoding of Loop | Block | BasicBlock
 /// </summary>
-public interface IInstructionRegionElement
+public interface IControlFlowRegionElement
 {
 }

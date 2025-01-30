@@ -1,7 +1,7 @@
 ﻿
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
-public sealed class Loop : IInstructionRegion
+public sealed class Loop : IControlFlowRegion
 {
-    public IEnumerable<IInstructionRegionElement> Children => throw new NotImplementedException();
+    public IEnumerable<IControlFlowRegionElement> Children => throw new NotImplementedException();
 }

@@ -9,7 +9,7 @@ public record class UnstructuredControlFlowInstructionSequence(
     FrozenDictionary<Label, LabelInstruction> LabelInstructions
 ) : ILabelScopeInstructionGroup
 {
-    public IEnumerable<IInstructionRegionElement> Children => throw new NotImplementedException();
+    public IEnumerable<IControlFlowRegionElement> Children => throw new NotImplementedException();
 
     public ILabeledEntity GetLabelTarget(Label label)
         => LabelInstructions[label];
