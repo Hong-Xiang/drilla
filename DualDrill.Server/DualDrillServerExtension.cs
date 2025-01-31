@@ -78,7 +78,7 @@ public static class DualDrillServerExtension
     private static void AddCLSLCompilerService(IServiceCollection services)
     {
         services.AddSingleton<ILSLDevelopShaderModuleService>();
-        services.AddScoped<ICLSLService>((_) => new CLSLService());
+        services.AddScoped<ICLSLCompiler>((_) => new CLSLCompiler());
     }
 
     static void AddSingletonHostedService<T>(this IServiceCollection services)

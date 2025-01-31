@@ -28,7 +28,7 @@ public class ShaderReflectionTest
                 DeclarationScope.Module,
                 -1,
                 "data",
-                ShaderType.vec2f32,
+                ShaderType.Vec2F32,
                 [
                     new GroupAttribute(0),
                     new BindingAttribute(0),

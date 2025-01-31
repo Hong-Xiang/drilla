@@ -123,7 +123,7 @@ public partial class ShaderMetadataParseTest
     }
 
     [Fact]
-    async Task SimpleUniformDeclarationParseTest()
+    public async Task SimpleUniformDeclarationParseTest()
     {
         var module = Parser.ParseShaderModule(new SimpleUniformShader());
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();

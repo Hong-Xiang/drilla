@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
-public sealed class DominatorTree
+public sealed class DominatorTree : IComparer<Label>
 {
     FrozenDictionary<Label, int> LabelOrders { get; }
     /// <summary>
@@ -16,6 +16,7 @@ public sealed class DominatorTree
     /// <returns></returns>
     public IEnumerable<Label> GetChildren(Label node)
         => ChildrenMaps[node];
+
 
     public Label? ImmediateDominator(Label label)
     {
@@ -131,4 +132,23 @@ public sealed class DominatorTree
         Dictionary<Label, IEnumerable<Label>> ds = dominatorSets.Select(kv => KeyValuePair.Create(kv.Key, (IEnumerable<Label>)kv.Value)).ToDictionary();
         return new DominatorTree(labels, ds);
     }
+
+    public int Compare(Label? x, Label? y)
+    {
+        return (x, y) switch
+        {
+            (null, null) => 0,
+            (null, { }) => 1,
+            ({ }, null) => -1,
+            _ => LabelOrders[x] - LabelOrders[y]
+        };
+    }
+}
+
+public static partial class StructuredControlFlow
+{
+    public static DominatorTree GetDominatorTree<TData>(
+        this ControlFlowGraph<TData> controlFlowGraph
+    )
+        => DominatorTree.CreateFromControlFlowGraph(controlFlowGraph);
 }

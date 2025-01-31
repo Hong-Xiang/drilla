@@ -23,6 +23,7 @@ public static partial class ShaderType
     public static IEnumerable<IShaderType> GetScalarOrVectorTypes(IScalarType type) =>
         [type, .. GetVecTypes(type)];
 
-    public static IShaderType vec4f32 => GetVecType(N4.Instance, F32);
-    public static IShaderType vec2f32 => GetVecType(N2.Instance, F32);
+    public static IShaderType Vec4F32 => GetVecType(N4.Instance, F32);
+    public static IShaderType Vec3F32 => VecType<N3, FloatType<N32>>.Instance;
+    public static IShaderType Vec2F32 => GetVecType(N2.Instance, F32);
 }

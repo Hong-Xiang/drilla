@@ -59,6 +59,8 @@ public sealed class DominatorTreeTests
         Assert.Empty(dt.GetChildren(b));
         Assert.Equal(a, dt.ImmediateDominator(b));
         Assert.Equal([a, b], dt.Dominators(b));
+
+        Assert.True(dt.Compare(a, b) < 0);
     }
 
     [Fact]
@@ -120,5 +122,9 @@ public sealed class DominatorTreeTests
         Assert.Equal(a, dt.ImmediateDominator(d));
         Assert.Equal(a, dt.ImmediateDominator(e));
         Assert.Equal(a, dt.ImmediateDominator(f));
+
+        var sorted = new List<Label> { a, b, c, d, e, f };
+        sorted.Sort(dt);
+        Assert.Equal([a, b, c, d, e, f], sorted);
     }
 }

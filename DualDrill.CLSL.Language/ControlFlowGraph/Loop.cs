@@ -1,7 +1,16 @@
-﻿
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
+﻿namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
-public sealed class Loop : IControlFlowRegion
+public sealed class Loop<TInstruction>(
+    Label Label,
+    Block<TInstruction> Body)
+  : ILabeledEntity
+  , ILabeledStructuredControlFlowRegion<TInstruction>
 {
-    public IEnumerable<IControlFlowRegionElement> Children => throw new NotImplementedException();
+    public Label Label { get; } = Label;
+    public Block<TInstruction> BodyBlock { get; } = Body;
+
+    public TResult AcceptElementVisitor<TResult>(Block<TInstruction>.IElement.IVisitor<TResult> visitor)
+        => visitor.VisitLoop(this);
+    public TResult AcceptRegionVisitor<TResult>(IStructuredControlFlowRegion<TInstruction>.IVisitor<TResult> visitor)
+        => visitor.VisitLoop(this);
 }

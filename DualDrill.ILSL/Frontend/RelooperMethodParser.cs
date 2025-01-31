@@ -26,7 +26,7 @@ sealed class MethodCompilation
 
     IReadOnlyList<VariableDeclaration> LocalVariables { get; }
     IReadOnlyList<LocalVariableInfo> LocalVariableInfo { get; }
-    IReadOnlyList<BasicBlock> BasicBlocks { get; }
+    IReadOnlyList<BasicBlockLegacy> BasicBlocks { get; }
     Stack<IExpression>?[] Stacks { get; }
     int CodeSize { get; }
     IReadOnlyList<int> NextInstructionOffset { get; }
@@ -54,13 +54,13 @@ sealed class MethodCompilation
     }
 
 
-    public IReadOnlyList<BasicBlock> GetBasicBlocks()
+    public IReadOnlyList<BasicBlockLegacy> GetBasicBlocks()
     {
         Debug.Assert(Instructions.Length > 0);
         var lastInst = Instructions[^1];
-        var blocks = new BasicBlock?[CodeSize];
+        var blocks = new BasicBlockLegacy?[CodeSize];
         var shouldSkip = new bool[CodeSize];
-        blocks[0] = new BasicBlock(0);
+        blocks[0] = new BasicBlockLegacy(0);
         foreach (var (instIndex, inst) in Instructions.Index())
         {
             var nextOffset = NextInstructionOffset[instIndex];
@@ -111,12 +111,12 @@ sealed class MethodCompilation
             var jumpOffset = nextOffset + jump;
             if (nextOffset < blocks.Length)
             {
-                blocks[nextOffset] ??= new BasicBlock(nextOffset);
+                blocks[nextOffset] ??= new BasicBlockLegacy(nextOffset);
             }
-            blocks[jumpOffset] ??= new BasicBlock(jumpOffset);
+            blocks[jumpOffset] ??= new BasicBlockLegacy(jumpOffset);
         }
         {
-            BasicBlock? bb = null;
+            BasicBlockLegacy? bb = null;
             List<IInstruction>? instructions = null;
             foreach (var (ip, inst) in Instructions.Index())
             {
@@ -141,7 +141,7 @@ sealed class MethodCompilation
             }
             bb.Instructions = [.. instructions];
         }
-        IReadOnlyList<BasicBlock> result = [.. blocks.OfType<BasicBlock>()];
+        IReadOnlyList<BasicBlockLegacy> result = [.. blocks.OfType<BasicBlockLegacy>()];
         foreach (var (index, bb) in result.Index())
         {
             bb.Index = index;
@@ -149,7 +149,7 @@ sealed class MethodCompilation
         return result;
     }
 
-    IInstruction CompileInstruction(Lokad.ILPack.IL.Instruction inst, int nextOffset, IReadOnlyList<BasicBlock?> blocks)
+    IInstruction CompileInstruction(Lokad.ILPack.IL.Instruction inst, int nextOffset, IReadOnlyList<BasicBlockLegacy?> blocks)
     {
         throw new NotImplementedException();
         //IInstruction Branch<TCondition>(int offset)
@@ -415,7 +415,7 @@ sealed class MethodCompilation
            => SyntaxFactory.VarIdentifier(LocalVariables[index]);
 
 
-    IEnumerable<IStatement> CompileBasicBlock(VariableDeclaration? bp, Stack<IExpression> stack, BasicBlock basicBlock)
+    IEnumerable<IStatement> CompileBasicBlock(VariableDeclaration? bp, Stack<IExpression> stack, BasicBlockLegacy basicBlock)
     {
         var isUnconditionalBranchedOut = false;
         foreach (var inst in basicBlock.Instructions)
@@ -449,7 +449,7 @@ sealed class MethodCompilation
                         stack.Push(binst.CreateExpression(l, r));
                         break;
                     }
-                case CallInstruction { Callee: var methodInfo }:
+                case CallInstructionLegacy { Callee: var methodInfo }:
                     {
                         if (TryGetVectorSwizzle(methodInfo, out var swizzles, out var isSetter))
                         {

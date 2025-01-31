@@ -10,11 +10,20 @@ public interface IVariableSymbol
 
 public sealed record class ShaderModuleFieldVariableSymbol(
     FieldInfo Field
-) : IVariableSymbol;
+) : IVariableSymbol
+{ };
 
 public sealed record class ShaderModulePropertyGetterVariableSymbol(
     PropertyInfo Property
-) : IVariableSymbol;
+) : IVariableSymbol
+{ };
+
+public sealed record class FunctionLocalVariableSymbol(
+    LocalVariableInfo LocalVariableInfo
+) : IVariableSymbol
+{ }
+
+public interface IParameterSymbol { }
 
 public interface IFunctionSymbol { }
 
@@ -31,6 +40,7 @@ public static class Symbol
 {
     public static IVariableSymbol Variable(FieldInfo field) => new ShaderModuleFieldVariableSymbol(field);
     public static IVariableSymbol Variable(PropertyInfo getter) => new ShaderModulePropertyGetterVariableSymbol(getter);
+    public static IVariableSymbol Variable(LocalVariableInfo info) => new FunctionLocalVariableSymbol(info);
     public static IFunctionSymbol Function(MethodBase method) => new CSharpMethodFunctionSymbol(method);
     public static IFunctionSymbol ZeroValueConstructorFunction(IShaderType type) => new ZeroValueContructorFunctionSymbol(type);
 }
@@ -55,11 +65,12 @@ public interface ICompilationContextView
 
 public interface ICompilationContext : ICompilationContextView
 {
-    FunctionDeclaration AddFunction(IFunctionSymbol symbol, FunctionDeclaration declaration);
-    void AddFunctionDefinition(FunctionDeclaration declaration, MethodBase method);
+    void AddFunctionDeclaration(IFunctionSymbol symbol, FunctionDeclaration declaration);
+    void AddFunctionDefinition(IFunctionSymbol symbol, FunctionDeclaration declaration);
 
     // all structures/variables locally referenced must be defined, thus no AddStructureDefinitionMethod
     VariableDeclaration AddVariable(IVariableSymbol symbol, Func<int, VariableDeclaration> declaration);
+    ParameterDeclaration AddParameter(ParameterInfo symbol, ParameterDeclaration declaration);
     StructureDeclaration AddStructure(Type symbol, StructureDeclaration declaration);
 }
 
@@ -77,6 +88,7 @@ public sealed class CompilationContext : ISharedVariableIndexContext
     private readonly Dictionary<PropertyInfo, VariableDeclaration> PropertyGetterVariables = [];
     private readonly Dictionary<IShaderType, FunctionDeclaration> ZeroValueConstructors = [];
     private readonly HashSet<StructureDeclaration> ModuleStructureDeclarations = [];
+    private readonly Dictionary<ParameterInfo, ParameterDeclaration> Parameters = [];
     private readonly ICompilationContextView? Parent;
     private int DefinedVariableCount { get; set; } = 0;
 
@@ -94,6 +106,8 @@ public sealed class CompilationContext : ISharedVariableIndexContext
         _ => null
     };
 
+    public ParameterDeclaration? this[ParameterInfo info] => Parameters.TryGetValue(info, out var result) ? result : null;
+
     public VariableDeclaration? this[IVariableSymbol symbol] => symbol switch
     {
         ShaderModuleFieldVariableSymbol fieldSymbol => FieldVariables.TryGetValue(fieldSymbol.Field, out var declaration) ? declaration : null,
@@ -101,7 +115,13 @@ public sealed class CompilationContext : ISharedVariableIndexContext
         ShaderModulePropertyGetterVariableSymbol { Property: var prop } => PropertyGetterVariables.TryGetValue(prop, out var declaration) ? declaration : null,
         _ => null
     };
-    public ParameterDeclaration? this[ParameterInfo parameter] => null;
+
+    public ParameterDeclaration AddParameter(ParameterInfo info, ParameterDeclaration decl)
+    {
+        Parameters.Add(info, decl);
+        return decl;
+    }
+
     public VariableDeclaration AddVariable(IVariableSymbol symbol, Func<int, VariableDeclaration> declaration)
     {
         var index = NextVariableIndex();
@@ -121,18 +141,18 @@ public sealed class CompilationContext : ISharedVariableIndexContext
 
         throw new InvalidOperationException();
     }
-    public FunctionDeclaration AddFunction(IFunctionSymbol symbol, FunctionDeclaration declaration)
+    public void AddFunctionDeclaration(IFunctionSymbol symbol, FunctionDeclaration declaration)
     {
         if (symbol is CSharpMethodFunctionSymbol { Method: var method })
         {
             CSharpMethodFunctions.Add(method, declaration);
-            return declaration;
+            return;
         }
 
         if (symbol is ZeroValueContructorFunctionSymbol { Type: var type })
         {
             ZeroValueConstructors.Add(type, declaration);
-            return declaration;
+            return;
         }
 
         throw new NotSupportedException();
@@ -144,9 +164,15 @@ public sealed class CompilationContext : ISharedVariableIndexContext
         return declaration;
     }
 
-    public void AddFunctionDefinition(FunctionDeclaration declaration, MethodBase method)
+    public void AddFunctionDefinition(IFunctionSymbol symbol, FunctionDeclaration declaration)
     {
-        FunctionDefinitions.Add(declaration, method);
+        if (symbol is CSharpMethodFunctionSymbol { Method: var method })
+        {
+            CSharpMethodFunctions.Add(method, declaration);
+            FunctionDefinitions.Add(declaration, method);
+            return;
+        }
+        throw new NotSupportedException();
     }
 
     public MethodBase GetFunctionDefinition(FunctionDeclaration declaration) => FunctionDefinitions[declaration];

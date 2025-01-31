@@ -47,27 +47,33 @@ public interface IBitWidthOp<TSelf, TBitWidth>
 {
 }
 
-public interface INumericOp<TSelf, TOp>
+public interface INumericOp<TSelf>
+    where TSelf : INumericOp<TSelf>
 {
 }
 
-public struct NumericIOp<TBitWidth, TOp>
-     : INumericOp<NumericIOp<TBitWidth, TOp>, TOp>
-     where TBitWidth : IBitWidth
-     where TOp : IIntegerOp<TOp>
+public interface ISignedNumericOp<TSelf>
+    where TSelf : ISignedNumericOp<TSelf>
 {
 }
 
-public struct NumericSignedIOp<TBitWidth, TOp, TSign>
-    : INumericOp<NumericSignedIOp<TBitWidth, TOp, TSign>, TOp>
+public struct NumericSignedIntegerOp<TBitWidth, TOp, TSign>
+    : ISignedNumericOp<NumericSignedIntegerOp<TBitWidth, TOp, TSign>>
     where TBitWidth : IBitWidth
     where TSign : ISignedness<TSign>
     where TOp : ISignedIntegerOp<TOp>
 {
 }
 
-public struct NumericFOp<TBitWidth, TOp>
-    : INumericOp<NumericFOp<TBitWidth, TOp>, TOp>
+public struct NumericIntegerOp<TBitWidth, TOp>
+    : INumericOp<NumericIntegerOp<TBitWidth, TOp>>
+    where TBitWidth : IBitWidth
+    where TOp : IIntegerOp<TOp>
+{
+}
+
+public struct NumericFloatOp<TBitWidth, TOp>
+    : INumericOp<NumericFloatOp<TBitWidth, TOp>>
     where TBitWidth : IBitWidth
     where TOp : IFloatOp<TOp>
 {

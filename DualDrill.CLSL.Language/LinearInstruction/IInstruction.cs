@@ -8,11 +8,18 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using System.Reflection.Metadata;
 
 namespace DualDrill.CLSL.LinearInstruction;
 
 public interface IInstruction
+{
+}
+
+public interface IStackInstruction : IInstruction
+{
+}
+
+public interface IStructuredStackInstruction : IStackInstruction
 {
 }
 
@@ -21,35 +28,36 @@ public interface ILabel
     public int Index { get; }
 }
 
-public sealed record class Label(int Identifier)
+
+public sealed record class LabelInstruction(Label Label) : IStackInstruction, ILabeledEntity
 {
 }
 
-public sealed record class LabelInstruction(CLSL.Language.ControlFlowGraph.Label Label) : IInstruction, ILabeledEntity
+public sealed record class BrInstruction(Label Target) : IStructuredStackInstruction
 {
 }
 
-public sealed record class BrInstruction(ILabel Target) : IInstruction
+public sealed record class BrIfInstruction(Label Target) : IStructuredStackInstruction
 {
 }
 
-public sealed record class BrIfInstruction(ILabel Target) : IInstruction
+public sealed record class ReturnInstruction() : IStructuredStackInstruction
 {
 }
 
-public sealed record class ReturnInstruction() : IInstruction
-{
-}
 
+[Obsolete]
 public interface IBranchInstruction : IInstruction
 {
     ILabel Target { get; }
 }
 
+[Obsolete]
 public interface IBranchCondition
 {
 }
 
+[Obsolete]
 public sealed record class BranchInstruction<TCondition>(ILabel Target) : IBranchInstruction
    where TCondition : IBranchCondition
 {
@@ -59,7 +67,7 @@ public sealed record class BranchInstruction<TCondition>(ILabel Target) : IBranc
     }
 }
 
-
+[Obsolete]
 public static class Condition
 {
     public struct Unconditional : IBranchCondition { }
@@ -90,15 +98,19 @@ public static class Condition
     public struct Ne : IBranchCondition { }
 }
 
-public sealed record class NopInstruction : IInstruction
+public sealed record class NopInstruction
+    : IStructuredStackInstruction
+    , ISingleton<NopInstruction>
+{
+    public static NopInstruction Instance { get; } = new();
+}
+
+public sealed record class CallInstruction(FunctionDeclaration Callee) : IStructuredStackInstruction
 {
 }
 
-public sealed record class Call(FunctionDeclaration FunctionDeclaration) : IInstruction
-{
-}
-
-public sealed record class CallInstruction(MethodInfo Callee) : IInstruction
+[Obsolete]
+public sealed record class CallInstructionLegacy(MethodInfo Callee) : IInstruction
 {
 }
 
@@ -116,7 +128,7 @@ public sealed record class StoreArgumentInstruction(int Index) : IInstruction
 }
 public sealed record class LoadArgumentAddressInstruction(int Index) : IInstruction { }
 
-public interface IConstInstruction : IInstruction
+public interface IConstInstruction : IStructuredStackInstruction
 {
     ILiteral Literal { get; }
 }
@@ -126,24 +138,24 @@ public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IConst
     ILiteral IConstInstruction.Literal => Literal;
 }
 
-public sealed record class Load<TTarget>(TTarget Target) : IInstruction
+public sealed record class Load<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : IVariableIdentifierResolveResult
 {
 }
-public sealed record class LoadAddress<TTarget>(TTarget Target) : IInstruction
+public sealed record class LoadAddress<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : IVariableIdentifierResolveResult
 {
 }
-public sealed record class Store<TTarget>(TTarget Target) : IInstruction
+public sealed record class Store<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : IVariableIdentifierResolveResult
 {
 }
 
-public sealed record class LoadLocalInstruction(VariableDeclaration Source) : IInstruction { }
+public sealed record class LoadLocalInstruction(VariableDeclaration Source) : IStructuredStackInstruction { }
 
-public sealed record class StoreLocalInstruction(VariableDeclaration Target) : IInstruction { }
+public sealed record class StoreLocalInstruction(VariableDeclaration Target) : IStructuredStackInstruction { }
 
-public sealed record class LoadLocalAddressInstruction(VariableDeclaration Source) : IInstruction { }
+public sealed record class LoadLocalAddressInstruction(VariableDeclaration Source) : IStructuredStackInstruction { }
 
 
 public interface IBinaryArithmeticInstruction : IInstruction
@@ -165,11 +177,28 @@ public interface IBinaryRelationInstruction : IInstruction
 {
 }
 
-public sealed record class NumericInstruction<TTarget, TOp>
-    : IInstruction, ISingleton<NumericInstruction<TTarget, TOp>>
-    where TTarget : INumericOp<TTarget, TOp>
+public sealed record class VectorSwizzleGetInstruction<TTarget, TPattern>
+    where TPattern : Swizzle.IPattern<TPattern>
 {
-    public static NumericInstruction<TTarget, TOp> Instance { get; } = new();
+}
+
+public sealed record class VectorSwizzleSetInstruction<TTarget, TPattern>
+    where TPattern : Swizzle.IPattern<TPattern>
+{
+}
+
+public sealed record class NumericInstruction<TOp>
+    : IStructuredStackInstruction, ISingleton<NumericInstruction<TOp>>
+    where TOp : ISignedNumericOp<TOp>
+{
+    public static NumericInstruction<TOp> Instance { get; } = new();
+}
+
+public sealed record class NumericInstruction<TOp, TSign>
+    : IStructuredStackInstruction, ISingleton<NumericInstruction<TOp, TSign>>
+    where TOp : INumericOp<TOp>
+{
+    public static NumericInstruction<TOp, TSign> Instance { get; } = new();
 }
 
 public interface IConditionValueInstruction : IInstruction
@@ -243,10 +272,10 @@ public sealed record class NegateInstruction : IInstruction { }
 
 public static class ShaderInstruction
 {
-    public static IInstruction Nop() => new NopInstruction();
-    public static IInstruction Br(ILabel target) => new BrInstruction(target);
-    public static IInstruction BrIf(ILabel target) => new BrIfInstruction(target);
-    public static IInstruction I32Eq() => NumericInstruction<NumericIOp<N32, BinaryRelation.Eq>, BinaryRelation.Eq>.Instance;
+    public static IStructuredStackInstruction Nop() => new NopInstruction();
+    public static IStructuredStackInstruction Br(Label target) => new BrInstruction(target);
+    public static IStructuredStackInstruction BrIf(Label target) => new BrIfInstruction(target);
+    public static IStructuredStackInstruction I32Eq() => NumericInstruction<NumericIntegerOp<N32, BinaryRelation.Eq>, Signedness.S>.Instance;
 
     public static IInstruction LogicalNot() => throw new NotImplementedException();
 
@@ -257,10 +286,10 @@ public static class ShaderInstruction
     public static Store<ParameterDeclaration> Store(ParameterDeclaration decl) => new(decl);
     public static Store<VariableDeclaration> Store(VariableDeclaration decl) => new(decl);
 
-    public static IInstruction Call(FunctionDeclaration decl) => new Call(decl);
+    public static IStructuredStackInstruction Call(FunctionDeclaration decl) => new CallInstruction(decl);
 
-    public static IInstruction Return() => new ReturnInstruction();
-    public static IInstruction Const<TLiteral>(TLiteral value)
+    public static IStructuredStackInstruction Return() => new ReturnInstruction();
+    public static IStructuredStackInstruction Const<TLiteral>(TLiteral value)
         where TLiteral : ILiteral
         => new ConstInstruction<TLiteral>(value);
 }

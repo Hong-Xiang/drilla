@@ -6,6 +6,7 @@
   <ItemGroup>
     <PackageVersion Include="DotNext" Version="5.16.1" />
     <PackageVersion Include="DotNext.Unsafe" Version="5.14.0" />
+    <PackageVersion Include="FluentAssertions" Version="8.0.1" />
     <PackageVersion Include="Silk.NET" Version="$(SilkNETVersion)" />
     <PackageVersion Include="Silk.NET.Core" Version="$(SilkNETVersion)" />
     <PackageVersion Include="Silk.NET.SDL" Version="$(SilkNETVersion)" />
@@ -28,6 +29,7 @@
     <PackageVersion Include="SIPSorceryMedia.Encoders" Version="0.0.13" />
     <PackageVersion Include="ICSharpCode.Decompiler" Version="8.2.0.7535" />
     <PackageVersion Include="Lokad.ILPack" Version="0.2.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.v3" Version="0.3.0-pre.18" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.0-pre.30" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />

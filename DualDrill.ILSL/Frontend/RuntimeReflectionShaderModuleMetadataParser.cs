@@ -55,7 +55,7 @@ public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilat
         };
         Context.AddStructure(t, result);
         // for each custom struct definition, a new zero-value constructor runtime method is added
-        Context.AddFunction(new ZeroValueContructorFunctionSymbol(result), new FunctionDeclaration(
+        Context.AddFunctionDeclaration(new ZeroValueContructorFunctionSymbol(result), new FunctionDeclaration(
             result.Name,
             [],
             new FunctionReturn(result, []),
@@ -199,13 +199,22 @@ public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilat
         var decl = new FunctionDeclaration(
             method.Name,
             method.IsStatic ? [.. method.GetParameters().Select(ParseParameter)]
-                            : [new ParameterDeclaration("this", ParseType(method.ReflectedType), []), .. method.GetParameters().Select(ParseParameter)],
+                            : [new ParameterDeclaration("this", ParseType(method.DeclaringType), []), .. method.GetParameters().Select(ParseParameter)],
             ParseMethodReturn(method),
             ParseAttribute(method));
-        Context.AddFunction(symbol, decl);
-
         if (!IsExternalMethod(method))
         {
+            Context.AddFunctionDefinition(symbol, decl);
+            {
+                var body = method.GetMethodBody();
+                if (body is not null)
+                {
+                    foreach (var v in body.LocalVariables)
+                    {
+                        _ = ParseType(v.LocalType);
+                    }
+                }
+            }
             var instructions = method.GetInstructions();
             if (instructions is not null)
             {
@@ -215,7 +224,10 @@ public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilat
                     _ = ParseMethod(callee);
                 }
             }
-            Context.AddFunctionDefinition(decl, method);
+        }
+        else
+        {
+            Context.AddFunctionDeclaration(symbol, decl);
         }
 
         return decl;

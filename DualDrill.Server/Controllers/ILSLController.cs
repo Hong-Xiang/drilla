@@ -10,7 +10,7 @@ using System.Reflection;
 namespace DualDrill.Server.Controllers;
 
 [Route("[controller]")]
-public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLService Compiler) : Controller
+public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLCompiler Compiler) : Controller
 {
     ISharpShader? GetShader(string name)
     {
