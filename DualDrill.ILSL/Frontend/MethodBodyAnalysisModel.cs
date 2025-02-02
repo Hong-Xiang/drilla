@@ -7,25 +7,54 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Reflection.Metadata;
 
-namespace DualDrill.ILSL.Frontend;
+namespace DualDrill.CLSL.Frontend;
 
-sealed class MethodBodyCilInstructionTraverser
+public sealed class MethodBodyAnalysisModel
 {
     public ImmutableArray<Instruction> Instructions { get; }
     public ImmutableArray<ParameterInfo> Parameters { get; }
     public ImmutableArray<LocalVariableInfo> LocalVariables { get; }
     public ImmutableArray<int> Offsets { get; }
     public MethodBase Method { get; }
+    public MethodBody? Body { get; }
     public bool IsStatic => Method.IsStatic;
-    public MethodBodyCilInstructionTraverser(MethodBase method)
+    public MethodBodyAnalysisModel(MethodBase method)
     {
         Method = method;
+        Body = method.GetMethodBody();
         Parameters = [.. method.GetParameters()];
         LocalVariables = [.. method.GetMethodBody()?.LocalVariables ?? []];
         Instructions = [.. (method.GetInstructions() ?? [])];
         var offsets = Instructions.Select(inst => inst.Offset).ToList();
         offsets.Add(method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0);
         Offsets = [.. offsets];
+    }
+
+    public IEnumerable<MethodBase> CalledMethods()
+    {
+        return Instructions.Select(op => op.Operand)
+                           .OfType<MethodBase>();
+    }
+
+    public IEnumerable<int> GetJumpTargetOffsets()
+    {
+        foreach (var (index, inst) in Instructions.Index())
+        {
+            var flowControl = inst.OpCode.FlowControl;
+            if (flowControl == System.Reflection.Emit.FlowControl.Branch ||
+                flowControl == System.Reflection.Emit.FlowControl.Cond_Branch)
+            {
+                var nextOffset = Offsets[index + 1];
+                int jumpOffset = inst.Operand switch
+                {
+                    sbyte v => v,
+                    int v => v,
+                    _ => throw new NotSupportedException()
+                };
+                var target = nextOffset + jumpOffset;
+                yield return target;
+            }
+        }
     }
 
     ParameterInfo GetArg(int index)
@@ -90,7 +119,7 @@ sealed class MethodBodyCilInstructionTraverser
                 ILOpCode.Pop => throw new NotImplementedException(),
                 ILOpCode.Jmp => throw new NotImplementedException(),
                 ILOpCode.Call => visitor.VisitCall(info, (MethodInfo)instruction.Operand),
-                ILOpCode.Calli => throw new NotImplementedException(),
+                ILOpCode.Calli => throw new NotSupportedException(),
                 ILOpCode.Ret => visitor.VisitReturn(info),
                 ILOpCode.Br_s => visitor.VisitBr(info, (sbyte)instruction.Operand),
                 ILOpCode.Brfalse_s => visitor.VisitBrIf(info, (sbyte)instruction.Operand, value: false),
@@ -138,28 +167,28 @@ sealed class MethodBodyCilInstructionTraverser
                 ILOpCode.Stind_r4 => visitor.VisitStIndirect<FloatType<N32>>(info),
                 ILOpCode.Stind_r8 => throw new NotImplementedException(),
                 ILOpCode.Add => visitor.VisitBinaryArithmetic<BinaryArithmetic.Add>(info),
-                ILOpCode.Sub => throw new NotImplementedException(),
-                ILOpCode.Mul => throw new NotImplementedException(),
+                ILOpCode.Sub => visitor.VisitBinaryArithmetic<BinaryArithmetic.Sub>(info),
+                ILOpCode.Mul => visitor.VisitBinaryArithmetic<BinaryArithmetic.Mul>(info),
                 ILOpCode.Div => visitor.VisitBinaryArithmetic<BinaryArithmetic.Div>(info),
                 ILOpCode.Div_un => visitor.VisitBinaryArithmetic<BinaryArithmetic.Div>(info, true),
                 ILOpCode.Rem => throw new NotImplementedException(),
                 ILOpCode.Rem_un => throw new NotImplementedException(),
-                ILOpCode.And => throw new NotImplementedException(),
-                ILOpCode.Or => throw new NotImplementedException(),
-                ILOpCode.Xor => throw new NotImplementedException(),
+                ILOpCode.And => visitor.VisitBinaryLogical<OpAnd>(info),
+                ILOpCode.Or => visitor.VisitBinaryLogical<OpOr>(info),
+                ILOpCode.Xor => visitor.VisitBinaryLogical<OpXor>(info),
                 ILOpCode.Shl => throw new NotImplementedException(),
                 ILOpCode.Shr => throw new NotImplementedException(),
                 ILOpCode.Shr_un => throw new NotImplementedException(),
                 ILOpCode.Neg => throw new NotImplementedException(),
                 ILOpCode.Not => throw new NotImplementedException(),
-                ILOpCode.Conv_i1 => throw new NotImplementedException(),
-                ILOpCode.Conv_i2 => throw new NotImplementedException(),
-                ILOpCode.Conv_i4 => throw new NotImplementedException(),
-                ILOpCode.Conv_i8 => throw new NotImplementedException(),
-                ILOpCode.Conv_r4 => throw new NotImplementedException(),
-                ILOpCode.Conv_r8 => throw new NotImplementedException(),
-                ILOpCode.Conv_u4 => throw new NotImplementedException(),
-                ILOpCode.Conv_u8 => throw new NotImplementedException(),
+                ILOpCode.Conv_i1 => visitor.VisitConversion<IntType<N8>>(info),
+                ILOpCode.Conv_i2 => visitor.VisitConversion<IntType<N16>>(info),
+                ILOpCode.Conv_i4 => visitor.VisitConversion<IntType<N32>>(info),
+                ILOpCode.Conv_i8 => visitor.VisitConversion<IntType<N64>>(info),
+                ILOpCode.Conv_r4 => visitor.VisitConversion<FloatType<N32>>(info),
+                ILOpCode.Conv_r8 => visitor.VisitConversion<FloatType<N64>>(info),
+                ILOpCode.Conv_u4 => visitor.VisitConversion<UIntType<N32>>(info),
+                ILOpCode.Conv_u8 => visitor.VisitConversion<UIntType<N64>>(info),
                 ILOpCode.Callvirt => throw new NotImplementedException(),
                 ILOpCode.Cpobj => throw new NotImplementedException(),
                 ILOpCode.Ldobj => throw new NotImplementedException(),
@@ -243,19 +272,19 @@ sealed class MethodBodyCilInstructionTraverser
                 ILOpCode.Conv_u => throw new NotImplementedException(),
 
                 ILOpCode.Arglist => throw new NotImplementedException(),
-                ILOpCode.Ceq => throw new NotImplementedException(),
-                ILOpCode.Cgt => throw new NotImplementedException(),
-                ILOpCode.Cgt_un => throw new NotImplementedException(),
-                ILOpCode.Clt => throw new NotImplementedException(),
-                ILOpCode.Clt_un => throw new NotImplementedException(),
+                ILOpCode.Ceq => visitor.VisitBinaryRelation<BinaryRelation.Eq>(info),
+                ILOpCode.Cgt => visitor.VisitBinaryRelation<BinaryRelation.Gt>(info),
+                ILOpCode.Cgt_un => visitor.VisitBinaryRelation<BinaryRelation.Gt>(info, isUn: true),
+                ILOpCode.Clt => visitor.VisitBinaryRelation<BinaryRelation.Lt>(info),
+                ILOpCode.Clt_un => visitor.VisitBinaryRelation<BinaryRelation.Lt>(info, isUn: true),
                 ILOpCode.Ldftn => throw new NotImplementedException(),
                 ILOpCode.Ldvirtftn => throw new NotImplementedException(),
-                ILOpCode.Ldarg => throw new NotImplementedException(),
-                ILOpCode.Ldarga => throw new NotImplementedException(),
-                ILOpCode.Starg => throw new NotImplementedException(),
-                ILOpCode.Ldloc => throw new NotImplementedException(),
-                ILOpCode.Ldloca => throw new NotImplementedException(),
-                ILOpCode.Stloc => throw new NotImplementedException(),
+                ILOpCode.Ldarg => visitor.VisitLdArg(info, (ParameterInfo)instruction.Operand),
+                ILOpCode.Ldarga => visitor.VisitLdArgAddress(info, (ParameterInfo)instruction.Operand),
+                ILOpCode.Starg => visitor.VisitStArg(info, (ParameterInfo)instruction.Operand),
+                ILOpCode.Ldloc => visitor.VisitLdLoc(info, (LocalVariableInfo)instruction.Operand),
+                ILOpCode.Ldloca => visitor.VisitLdLocAddress(info, (LocalVariableInfo)instruction.Operand),
+                ILOpCode.Stloc => visitor.VisitStLoc(info, (LocalVariableInfo)instruction.Operand),
                 ILOpCode.Localloc => throw new NotImplementedException(),
                 ILOpCode.Endfilter => throw new NotImplementedException(),
                 ILOpCode.Unaligned => throw new NotImplementedException(),

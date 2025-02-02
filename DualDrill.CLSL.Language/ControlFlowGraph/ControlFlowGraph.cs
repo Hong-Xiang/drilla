@@ -8,6 +8,7 @@ public sealed partial class ControlFlowGraph<TData>
     public int Count => Nodes.Count;
     public IReadOnlySet<Label> Predecessor(Label label) => Nodes[label].Predecessors;
     public ISuccessor Successor(Label label) => Nodes[label].Successor;
+
     public TData this[Label label] => Nodes[label].Data;
 
 
@@ -26,7 +27,6 @@ public sealed partial class ControlFlowGraph<TData>
     {
     }
 
-
     /// <summary>
     /// Create a control flow graph labeled by Label and user TData
     /// Note arguments must satisfy
@@ -35,7 +35,6 @@ public sealed partial class ControlFlowGraph<TData>
     /// </summary>
     /// <param name="entry">entry label</param>
     /// <param name="nodes">label to successor and data map</param>
-    /// <exception cref="ArgumentException"></exception>
     public ControlFlowGraph(
         Label entry,
         IReadOnlyDictionary<Label, NodeDefinition> nodes)

@@ -28,7 +28,7 @@ public sealed class BasicBlock<TInstruction> : Block<TInstruction>.IElement
         return new(instructions.ToImmutableArray().AsMemory());
     }
 
-    public TResult AcceptElementVisitor<TResult>(Block<TInstruction>.IElement.IVisitor<TResult> visitor)
+    public TResult AcceptElementVisitor<TResult>(Block<TInstruction>.IElement.IElementVisitor<TResult> visitor)
         => visitor.VisitBasicBlock(this);
 }
 

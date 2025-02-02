@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace DualDrill.ILSL;
+namespace DualDrill.CLSL;
 
 public static class MethodHelper
 {

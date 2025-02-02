@@ -1,8 +1,9 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL;
 using Silk.NET.Maths;
 using System.Numerics;
 
-namespace DualDrill.ILSL.Tests;
+namespace DualDrill.CLSL.Test;
 
 public class CompileTimePolymorphicTest
 {

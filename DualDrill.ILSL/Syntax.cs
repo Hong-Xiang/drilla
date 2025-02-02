@@ -1,11 +1,9 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.Graphics;
 using Silk.NET.Maths;
-using System.Collections.Immutable;
 using System.Numerics;
 
-namespace DualDrill.ILSL;
+namespace DualDrill.CLSL;
 
 //public sealed class ShaderMethodAttribute() : Attribute, IShaderStageAttribute
 //{
@@ -32,12 +30,6 @@ namespace DualDrill.ILSL;
 
 public interface ISharpShader
 {
-}
-
-public interface IReflection
-{
-    public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module);
 }
 
 public interface ISampler

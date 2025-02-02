@@ -4,7 +4,7 @@ using DualDrill.CLSL.Language.Types;
 using Lokad.ILPack.IL;
 using System.Reflection;
 
-namespace DualDrill.ILSL.Frontend;
+namespace DualDrill.CLSL.Frontend;
 
 public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int NextByteOffset, Instruction Instruction)
 {
@@ -32,10 +32,14 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitBrIf(CilInstructionInfo inst, int jumpOffset, bool value);
     TResult VisitBrIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false) where TOp : BinaryRelation.IOp<TOp>;
     TResult VisitSwitch(CilInstructionInfo inst);
-    TResult VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryArithmetic.IOp<TOp>;
-    TResult VisitBinaryBitwise<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryArithmetic.IOp<TOp>;
+    TResult VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
+        where TOp : BinaryArithmetic.IOp<TOp>;
+    TResult VisitBinaryBitwise<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
+        where TOp : BinaryArithmetic.IOp<TOp>;
+    TResult VisitBinaryLogical<TOp>(CilInstructionInfo inst)
+        where TOp : BinaryLogical.IOp<TOp>;
     TResult VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryRelation.IOp<TOp>;
-    TResult VisitBinaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryRelation.IOp<TOp>;
+    TResult VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>; 
     TResult VisitUnaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryRelation.IOp<TOp>;
     TResult VisitLdIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;
     TResult VisitStIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;

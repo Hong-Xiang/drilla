@@ -59,6 +59,9 @@ public static class SyntaxFactory
     public static LiteralValueExpression Literal(int value) => new(new I32Literal(value));
     public static LiteralValueExpression Literal(uint value) => new(new U32Literal(value));
     public static LiteralValueExpression Literal(bool value) => new(new BoolLiteral(value));
+    public static LiteralValueExpression Literal<TLiteral>(TLiteral literal)
+        where TLiteral : ILiteral
+        => new(literal);
 
     public static VariableIdentifierExpression VarIdentifier(VariableDeclaration variable) => new(variable);
     public static FormalParameterExpression ArgIdentifier(ParameterDeclaration parameter) => new(parameter);

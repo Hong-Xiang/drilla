@@ -1,6 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+using System.Diagnostics.CodeAnalysis;
 
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
+namespace DualDrill.CLSL.Compiler;
 
 /// <summary>
 /// ControlFlowGraphBuilder build control flow graph from linear instructions with control flow instructions like

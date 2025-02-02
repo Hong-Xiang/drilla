@@ -1,17 +1,18 @@
-﻿using DualDrill.Common.Nat;
+﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.Common.Nat;
 using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
-
 
 public interface IIntType : IIntegerType
 {
 }
 
-public interface IIntType<TSelf> : IIntType, IScalarType<TSelf>
-    where TSelf : class, IIntType<TSelf>
+public interface IIntType<TSelf> : IIntType, INumericType<TSelf>
+    where TSelf : IIntType<TSelf>
 {
 }
+
 
 [DebuggerDisplay("{Name}")]
 public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
@@ -26,6 +27,9 @@ public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
+
+    public INumericBinaryOperation GetBinaryOperation<TOp>() where TOp : IBinaryOp<TOp>
+        => NumericBinaryOperation<IntType<TBitWidth>, TOp>.Instance;
 }
 
 public static partial class ShaderType

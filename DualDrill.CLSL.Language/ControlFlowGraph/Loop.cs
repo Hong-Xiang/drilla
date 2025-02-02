@@ -1,4 +1,6 @@
-﻿namespace DualDrill.CLSL.Language.ControlFlowGraph;
+﻿using System.CodeDom.Compiler;
+
+namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
 public sealed class Loop<TInstruction>(
     Label Label,
@@ -9,8 +11,8 @@ public sealed class Loop<TInstruction>(
     public Label Label { get; } = Label;
     public Block<TInstruction> BodyBlock { get; } = Body;
 
-    public TResult AcceptElementVisitor<TResult>(Block<TInstruction>.IElement.IVisitor<TResult> visitor)
+    public TResult AcceptElementVisitor<TResult>(Block<TInstruction>.IElement.IElementVisitor<TResult> visitor)
         => visitor.VisitLoop(this);
-    public TResult AcceptRegionVisitor<TResult>(IStructuredControlFlowRegion<TInstruction>.IVisitor<TResult> visitor)
+    public TResult AcceptRegionVisitor<TResult>(IStructuredControlFlowRegion<TInstruction>.IRegionVisitor<TResult> visitor)
         => visitor.VisitLoop(this);
 }

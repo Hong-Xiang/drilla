@@ -2,6 +2,7 @@
 
 	<PropertyGroup>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<RootNamespace>DualDrill.CLSL</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

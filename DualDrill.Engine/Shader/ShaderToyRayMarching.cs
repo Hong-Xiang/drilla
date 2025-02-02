@@ -1,4 +1,4 @@
-﻿using DualDrill.ILSL;
+﻿using DualDrill.CLSL;
 
 using vec2 = System.Numerics.Vector2;
 using vec3 = System.Numerics.Vector3;

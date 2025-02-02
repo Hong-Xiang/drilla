@@ -1,23 +1,43 @@
-﻿using DualDrill.CLSL.Language.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.ShaderAttribute;
+using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
-public sealed record class ShaderModuleDeclaration(
-    ImmutableArray<IDeclaration> Declarations,
-    ImmutableDictionary<FunctionDeclaration, IFunctionBody> FunctionDefinitions)
-    : IDeclaration
+public interface IShaderModuleDeclaration
 {
-    public string Name => nameof(ShaderModuleDeclaration);
+    ImmutableArray<IDeclaration> Declarations { get; init; }
+    public void Dump(IndentedTextWriter writer);
+}
+
+public sealed record class ShaderModuleDeclaration<TBody>(
+    ImmutableArray<IDeclaration> Declarations,
+    ImmutableDictionary<FunctionDeclaration, TBody> FunctionDefinitions)
+    : IDeclaration, IShaderModuleDeclaration where TBody : IFunctionBody
+{
+    public string Name => nameof(ShaderModuleDeclaration<TBody>);
     public ImmutableHashSet<IShaderAttribute> Attributes => [];
 
     public IEnumerable<FunctionDeclaration> DefinedFunctions => FunctionDefinitions.Keys;
 
-    public IFunctionBody GetBody(FunctionDeclaration func)
+    public TBody GetBody(FunctionDeclaration func)
     {
         return FunctionDefinitions[func];
     }
 
-    public static ShaderModuleDeclaration Empty
-           => new([], ImmutableDictionary<FunctionDeclaration, IFunctionBody>.Empty);
+    public static ShaderModuleDeclaration<TBody> Empty
+           => new([], ImmutableDictionary<FunctionDeclaration, TBody>.Empty);
+
+    public ShaderModuleDeclaration<TResult> MapBody<TResult>(Func<ShaderModuleDeclaration<TBody>, FunctionDeclaration, TBody, TResult> f)
+        where TResult : IFunctionBody
+    {
+        var result = FunctionDefinitions.Select(kv => KeyValuePair.Create(kv.Key, f(this, kv.Key, kv.Value))).ToImmutableDictionary();
+        return new ShaderModuleDeclaration<TResult>(Declarations, result);
+    }
+
+    public void Dump(IndentedTextWriter writer)
+    {
+        throw new NotImplementedException();
+    }
 }

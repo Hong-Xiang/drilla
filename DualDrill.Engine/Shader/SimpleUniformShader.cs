@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace DualDrill.Engine.Shader;
 
-public struct SimpleUniformShader : ILSL.ISharpShader
+public struct SimpleUniformShader : CLSL.ISharpShader
 {
 
     //public string ILSLWGSLExpectedCode => """

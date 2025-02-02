@@ -1,4 +1,5 @@
-﻿using DualDrill.Common.Nat;
+﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.Common.Nat;
 using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
@@ -15,4 +16,6 @@ public sealed class BoolType : IScalarType<BoolType>, IBasicPrimitiveType<BoolTy
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
+
+
 }

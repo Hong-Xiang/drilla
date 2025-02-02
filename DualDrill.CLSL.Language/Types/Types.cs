@@ -1,7 +1,9 @@
-﻿using DotNext.Patterns;
-using DualDrill.CLSL.Language.ShaderAttribute;
+﻿using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common.Nat;
+using DualDrill.Common;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -14,8 +16,14 @@ public interface IShaderType
     IPtrType GetPtrType();
 }
 
-public interface ISingletonShaderType<TSelf> : IShaderType
-    where TSelf : class, ISingletonShaderType<TSelf>, ISingleton<TSelf>
+public interface IShaderType<TSelf> : IShaderType
+    where TSelf : IShaderType<TSelf>
+{
+}
+
+public interface ISingletonShaderType<TSelf>
+    : IShaderType<TSelf>, ISingleton<TSelf>
+    where TSelf : ISingletonShaderType<TSelf>
 {
     IPtrType IShaderType.GetPtrType() => new PtrType(TSelf.Instance);
     IRefType IShaderType.GetRefType() => throw new NotImplementedException();
@@ -49,16 +57,34 @@ public interface IScalarType : IPlainType, IStorableType, ICreationFixedFootprin
     }
 
     T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IGenericVisitor<T>;
+
+    IScalarConversionOperation GetConversionToOperation<TTarget>()
+        where TTarget : IScalarType<TTarget>;
 }
 
 public interface IScalarType<TSelf> : IScalarType, ISingletonShaderType<TSelf>, ISingleton<TSelf>
-    where TSelf : class, IScalarType<TSelf>
+    where TSelf : IScalarType<TSelf>
+{
+    IScalarConversionOperation IScalarType.GetConversionToOperation<TTarget>() => ScalarConversionOperation<TSelf, TTarget>.Instance;
+}
+
+public interface INumericType : IScalarType
+{
+    INumericBinaryOperation GetBinaryOperation<TOp>() where TOp : IBinaryOp<TOp>;
+}
+
+public interface INumericType<TSelf> : INumericType, IShaderType<TSelf>, IScalarType<TSelf>
+    where TSelf : INumericType<TSelf>
 {
 }
 
 public interface IIntegerType : IScalarType { }
 
-
+public interface IIntegerType<TBitwidth, TSign> : IIntegerType
+    where TBitwidth : IBitWidth
+    where TSign : ISignedness<TSign>
+{
+}
 
 public sealed record class FixedSizedArrayType(IPlainType ElementType, int Size)
 {

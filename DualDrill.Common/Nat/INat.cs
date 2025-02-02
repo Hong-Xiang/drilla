@@ -15,7 +15,7 @@ public interface INat
     public T Accept<T>(INatVisitor<T> visitor);
 }
 
-public interface INat<TSelf> : INat, ISingleton<TSelf>
+public interface INat<TSelf> : INat, DotNext.Patterns.ISingleton<TSelf>
     where TSelf : class, INat<TSelf>
 {
 }

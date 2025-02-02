@@ -1,4 +1,5 @@
-﻿using DotNext.Patterns;
+﻿using DualDrill.Common;
+using DualDrill.Common.Nat;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
 
@@ -23,24 +24,23 @@ public static class BinaryArithmetic
     {
         public interface IVisitor<TResult>
         {
-            TResult Visit<TOp>(TOp op) where TOp : IOp<TOp>;
+            TResult Visit<TOp>(TOp op) where TOp : class, IOp<TOp>;
         }
 
         TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IVisitor<TResult>;
     }
 
-    public interface IOp<TSelf> : IOp, IOpKind<TSelf, OpKind>
+    public interface IOp<TSelf> : IOp, IOpKind<TSelf, OpKind>, ISingleton<TSelf>, IBinaryOp<TSelf>
         where TSelf : IOp<TSelf>
     {
     }
 
-    public sealed class Add : IOp<Add>, ISymbolOp<Add>, ISingleton<Add>, IFloatOp<Add>, IIntegerOp<Add>
+    public sealed class Add : IOp<Add>, ISymbolOp<Add>, IFloatOp<Add>, IIntegerOp<Add>
     {
-        public static OpKind Kind => OpKind.add;
-        public static string Symbol => "+";
-
         public static Add Instance { get; } = new();
 
+        public static OpKind Kind => OpKind.add;
+        public static string Symbol => "+";
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
             => visitor.Visit(this);
     }

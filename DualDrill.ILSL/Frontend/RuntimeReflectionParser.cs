@@ -1,15 +1,17 @@
 ﻿using DotNext.Reflection;
-
+using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.ILSL.Compiler;
+using DualDrill.Common;
 using Lokad.ILPack.IL;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace DualDrill.ILSL.Frontend;
+namespace DualDrill.CLSL.Frontend;
 
 /// <summary>
 /// Parse shader module metadata from reflection APIs, 
@@ -17,8 +19,18 @@ namespace DualDrill.ILSL.Frontend;
 /// method bodies are not parsed.
 /// </summary>
 /// <param name="Context"></param>
-public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilationContext Context)
+public sealed record class RuntimeReflectionParser(ICompilationContext Context, Dictionary<FunctionDeclaration, UnstructuredStackInstructionFunctionBody> MethodBodies)
 {
+    public RuntimeReflectionParser()
+        : this(CompilationContext.Create(), [])
+    {
+    }
+
+    public RuntimeReflectionParser(ICompilationContext Context)
+        : this(Context, [])
+    {
+    }
+
     public IShaderType ParseType(Type t)
     {
         if (Context[t] is { } found)
@@ -135,7 +147,7 @@ public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilat
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
-    public ShaderModuleDeclaration ParseShaderModule(ISharpShader module)
+    public ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
 
@@ -144,28 +156,32 @@ public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilat
                                      .OrderBy(m => m.Name)
                                      .ToImmutableArray();
 
-        ParseAllModuleVariableDeclarations(moduleType);
+        var variables = ParseAllModuleVariableDeclarations(moduleType);
 
         foreach (var m in entryMethods)
         {
             _ = ParseMethod(m);
         }
-        var emptyFunctionBodies = Context.FunctionDeclarations
-            .Select(f => KeyValuePair.Create(f, (IFunctionBody)new NotParsedFunctionBody(Context.GetFunctionDefinition(f))))
-            .ToImmutableDictionary();
+
         return new(
             [.. Context.StructureDeclarations,
-             .. Context.VariableDeclarations,
+             ..variables,
              .. Context.FunctionDeclarations],
-            emptyFunctionBodies);
+             MethodBodies.ToImmutableDictionary());
     }
 
     ParameterDeclaration ParseParameter(ParameterInfo parameter)
     {
-        return new ParameterDeclaration(
+        if (Context[parameter] is { } found)
+        {
+            return found;
+        }
+        var p = new ParameterDeclaration(
             parameter.Name ?? throw new NotSupportedException("Can not parse parameter without name"),
             ParseType(parameter.ParameterType),
             ParseAttribute(parameter));
+        Context.AddParameter(parameter, p);
+        return p;
     }
 
     FunctionReturn ParseMethodReturn(MethodBase method)
@@ -187,8 +203,6 @@ public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilat
         return new FunctionReturn(returnType, returnAttributes);
     }
 
-
-
     public FunctionDeclaration ParseMethod(MethodBase method)
     {
         var symbol = Symbol.Function(method);
@@ -196,33 +210,32 @@ public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilat
         {
             return found;
         }
+        var model = new MethodBodyAnalysisModel(method);
+
         var decl = new FunctionDeclaration(
             method.Name,
-            method.IsStatic ? [.. method.GetParameters().Select(ParseParameter)]
-                            : [new ParameterDeclaration("this", ParseType(method.DeclaringType), []), .. method.GetParameters().Select(ParseParameter)],
+            method.IsStatic ? [.. model.Parameters.Select(ParseParameter)]
+                            : [new ParameterDeclaration("this", ParseType(method.DeclaringType), []), .. model.Parameters.Select(ParseParameter)],
             ParseMethodReturn(method),
             ParseAttribute(method));
-        if (!IsExternalMethod(method))
+
+        if (IsMethodDefinition(method))
         {
-            Context.AddFunctionDefinition(symbol, decl);
+            Context.AddFunctionDefinition(symbol, decl, model);
             {
-                var body = method.GetMethodBody();
-                if (body is not null)
+                foreach (var v in model.LocalVariables)
                 {
-                    foreach (var v in body.LocalVariables)
-                    {
-                        _ = ParseType(v.LocalType);
-                    }
+                    _ = ParseType(v.LocalType);
                 }
             }
-            var instructions = method.GetInstructions();
-            if (instructions is not null)
+            var callees = GetCalledMethods(model.Instructions).ToArray();
+            foreach (var callee in callees)
             {
-                var callees = GetCalledMethods(instructions).ToArray();
-                foreach (var callee in callees)
-                {
-                    _ = ParseMethod(callee);
-                }
+                _ = ParseMethod(callee);
+            }
+            if (model.Body is not null)
+            {
+                MethodBodies.Add(decl, ParseMethodBody(decl, model));
             }
         }
         else
@@ -233,17 +246,54 @@ public sealed record class RuntimeReflectionShaderModuleMetadataParser(ICompilat
         return decl;
     }
 
-    bool IsExternalMethod(MethodBase m)
+    public UnstructuredStackInstructionFunctionBody ParseMethodBody(FunctionDeclaration f)
     {
-        return SharedBuiltinCompilationContext.Instance.RuntimeMethods.ContainsKey(m);
+        var model = Context.GetFunctionDefinition(f);
+        return ParseMethodBody(f, model);
     }
+
+    VariableDeclaration ParseLocalVariable(LocalVariableInfo info)
+    {
+        var t = ParseType(info.LocalType);
+        return Context.AddVariable(Symbol.Variable(info),
+                                index => new VariableDeclaration(
+                                    DeclarationScope.Function,
+                                    index,
+                                    $"loc_{info.LocalIndex}",
+                                    Context[info.LocalType] ?? throw new KeyNotFoundException($"Failed to resolve local varialbe {info}"),
+                                    []
+                                )
+                            );
+    }
+
+    public UnstructuredStackInstructionFunctionBody ParseMethodBody(FunctionDeclaration f, MethodBodyAnalysisModel methodModel)
+    {
+        var method = methodModel.Method;
+        foreach (var v in methodModel.LocalVariables)
+        {
+            _ = ParseLocalVariable(v);
+        }
+
+        var labels = methodModel.GetJumpTargetOffsets()
+                                .Select(offset => KeyValuePair.Create(offset, Label.Create(offset)))
+                                .ToFrozenDictionary();
+        var visitor = new InstructionVisitor(this, Context, f, labels);
+        methodModel.Accept<InstructionVisitor, Unit>(visitor);
+        return new(visitor.Result);
+    }
+
+    bool IsMethodDefinition(MethodBase m)
+    {
+        return !SharedBuiltinCompilationContext.Instance.RuntimeMethods.ContainsKey(m);
+    }
+
     IEnumerable<MethodBase> GetCalledMethods(IReadOnlyList<Instruction> instructions)
     {
         return instructions.Select(op => op.Operand)
                            .OfType<MethodBase>()
                            .Where(m =>
                            {
-                               if (IsExternalMethod(m))
+                               if (!IsMethodDefinition(m))
                                {
                                    return false;
                                }

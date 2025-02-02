@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.LinearInstruction;
+using DualDrill.CLSL.Compiler;
 
 namespace DualDrill.CLSL.Test;
 
@@ -19,7 +20,7 @@ public sealed class StructuredControlFlowTests
                 [e] = new(Successor.Terminate(), BasicBlock<Inst>.Create([]))
             })
         );
-        var ir = cfg.GetStructuredControlFlow();
+        var ir = cfg.ToStructuredControlFlow();
         var b = Assert.IsType<Block<Inst>>(ir);
     }
 
@@ -34,7 +35,7 @@ public sealed class StructuredControlFlowTests
                 [e] = new(Successor.Unconditional(e), BasicBlock<Inst>.Create([]))
             })
         );
-        var ir = cfg.GetStructuredControlFlow();
+        var ir = cfg.ToStructuredControlFlow();
         // loop @e:
         //   body:
         //     ... e ...
@@ -63,7 +64,7 @@ public sealed class StructuredControlFlowTests
                 [f] = new(Successor.Terminate(), BasicBlock<Inst>.Create([ShaderInstruction.Const(Literal.Create(2))])),
             })
         );
-        var result = cfg.GetStructuredControlFlow();
+        var result = cfg.ToStructuredControlFlow();
         // block:
         //   ... e ...
         //   if
@@ -104,7 +105,7 @@ public sealed class StructuredControlFlowTests
                 [m] = new(Successor.Terminate(), BasicBlock<Inst>.Create([])),
             })
         );
-        var result = cfg.GetStructuredControlFlow();
+        var result = cfg.ToStructuredControlFlow();
         // block
         //   ... e ...
         //   if
@@ -148,7 +149,7 @@ public sealed class StructuredControlFlowTests
                 [c] = new(Successor.Terminate(), BasicBlock<Inst>.Create([])),
             })
         );
-        var result = cfg.GetStructuredControlFlow();
+        var result = cfg.ToStructuredControlFlow();
 
         // loop @a
         //   ... a ...

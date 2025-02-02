@@ -1,4 +1,4 @@
-﻿namespace DualDrill.ILSL;
+﻿namespace DualDrill.CLSL;
 
 public class IndentStringWriter : StringWriter
 {

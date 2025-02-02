@@ -4,15 +4,16 @@ using DualDrill.Graphics;
 using DualDrill.Mathematics;
 using System.Collections.Immutable;
 using static DualDrill.Mathematics.DMath;
+using DualDrill.CLSL.Reflection;
 
 namespace DualDrill.Engine.Shader;
 
-public class SampleFragmentShaderReflection : ILSL.IReflection
+public class SampleFragmentShaderReflection : IReflection
 {
-    private ILSL.IShaderModuleReflection _shaderModuleReflection;
+    private IShaderModuleReflection _shaderModuleReflection;
     public SampleFragmentShaderReflection()
     {
-        _shaderModuleReflection = new ILSL.ShaderModuleReflection();
+        _shaderModuleReflection = new ShaderModuleReflection();
     }
 
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout()
@@ -21,19 +22,19 @@ public class SampleFragmentShaderReflection : ILSL.IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(IShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(ShaderModuleDeclaration module)
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(IShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
     }
 }
 
 
-public struct BasicConditionShader : ILSL.ISharpShader
+public struct BasicConditionShader : CLSL.ISharpShader
 {
     static bool Pred(int a, int b)
     {
@@ -55,7 +56,7 @@ public struct BasicConditionShader : ILSL.ISharpShader
     }
 }
 
-public struct MandelbrotDistanceShader : ILSL.ISharpShader
+public struct MandelbrotDistanceShader : CLSL.ISharpShader
 {
     public struct VertexInput
     {

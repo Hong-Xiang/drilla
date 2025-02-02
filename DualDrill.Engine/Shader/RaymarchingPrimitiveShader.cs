@@ -12,18 +12,19 @@ using vec3 = DualDrill.Mathematics.vec3f32;
 using vec2 = DualDrill.Mathematics.vec2f32;
 using DirectShowLib.DES;
 using DirectShowLib.BDA;
+using DualDrill.CLSL.Reflection;
 
 
 namespace DualDrill.Engine.Shader;
 
 // Raymarching - Primitives from shader toys https://www.shadertoy.com/view/Xds3zN
 
-public class RaymarchingPrimitivesShaderReflection : ILSL.IReflection
+public class RaymarchingPrimitivesShaderReflection : IReflection
 {
-    private ILSL.IShaderModuleReflection _shaderModuleReflection;
+    private IShaderModuleReflection _shaderModuleReflection;
     public RaymarchingPrimitivesShaderReflection()
     {
-        _shaderModuleReflection = new ILSL.ShaderModuleReflection();
+        _shaderModuleReflection = new ShaderModuleReflection();
     }
 
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout()
@@ -32,18 +33,18 @@ public class RaymarchingPrimitivesShaderReflection : ILSL.IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(IShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(ShaderModuleDeclaration module)
+    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(IShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
     }
 }
 
-public struct RaymarchingPrimitiveShader : ILSL.ISharpShader
+public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
 {
 
     [ShaderMethod]

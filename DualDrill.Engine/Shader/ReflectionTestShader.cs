@@ -1,9 +1,10 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Graphics;
-using DualDrill.ILSL;
+using DualDrill.CLSL;
 using System.Collections.Immutable;
 using System.Numerics;
+using DualDrill.CLSL.Reflection;
 
 namespace DualDrill.Engine.Shader;
 
@@ -25,7 +26,7 @@ public class ReflectionTestShaderReflection : IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ShaderModuleDeclaration module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(IShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }

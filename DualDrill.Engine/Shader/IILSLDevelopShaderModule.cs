@@ -1,4 +1,4 @@
-﻿using DualDrill.ILSL;
+﻿using DualDrill.CLSL;
 
 namespace DualDrill.Engine.Shader;
 

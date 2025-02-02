@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System.CodeDom.Compiler;
+using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
@@ -13,24 +14,23 @@ public sealed class Block<TInstruction>(
     /// </summary>
     public interface IElement
     {
-        public interface IVisitor<TResult>
+        public interface IElementVisitor<TResult>
         {
             TResult VisitBlock(Block<TInstruction> block);
             TResult VisitLoop(Loop<TInstruction> loop);
             TResult VisitIfThenElse(IfThenElse<TInstruction> ifThenElse);
             TResult VisitBasicBlock(BasicBlock<TInstruction> basicBlock);
         }
-
-        public TResult AcceptElementVisitor<TResult>(IVisitor<TResult> visitor);
+        public TResult AcceptElementVisitor<TResult>(IElementVisitor<TResult> visitor);
     }
 
     public Label Label { get; } = Label;
     public ImmutableArray<IElement> Body { get; } = Body;
-    public TResult AcceptRegionVisitor<TResult>(IStructuredControlFlowRegion<TInstruction>.IVisitor<TResult> visitor)
+    public TResult AcceptRegionVisitor<TResult>(IStructuredControlFlowRegion<TInstruction>.IRegionVisitor<TResult> visitor)
         => visitor.VisitBlock(this);
 
     public static Block<TInstruction> Empty() => new Block<TInstruction>(Label.Create(), []);
     public static Block<TInstruction> Create(ReadOnlySpan<BasicBlock<TInstruction>> body) => new Block<TInstruction>(Label.Create(), [.. body]);
 
-    public TResult AcceptElementVisitor<TResult>(IElement.IVisitor<TResult> visitor) => visitor.VisitBlock(this);
+    public TResult AcceptElementVisitor<TResult>(IElement.IElementVisitor<TResult> visitor) => visitor.VisitBlock(this);
 }

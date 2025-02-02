@@ -1,12 +1,15 @@
-﻿using DualDrill.Common.Nat;
+﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.Common;
+using DualDrill.Common.Nat;
 using System.Diagnostics;
 namespace DualDrill.CLSL.Language.Types;
 
 public interface IFloatType : IScalarType
 {
 }
-public interface IFloatType<TSelf> : IFloatType, IScalarType<TSelf>
-    where TSelf : class, IFloatType<TSelf>
+
+public interface IFloatType<TSelf> : IFloatType, INumericType<TSelf>
+    where TSelf : IFloatType<TSelf>
 {
 }
 
@@ -22,6 +25,9 @@ public sealed record class FloatType<TBitWidth> : IFloatType<FloatType<TBitWidth
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
+
+    public INumericBinaryOperation GetBinaryOperation<TOp>() where TOp : IBinaryOp<TOp>
+        => NumericBinaryOperation<FloatType<TBitWidth>, TOp>.Instance;
 }
 
 

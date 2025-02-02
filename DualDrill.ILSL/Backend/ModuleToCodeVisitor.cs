@@ -1,20 +1,21 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using System.CodeDom.Compiler;
 
-namespace DualDrill.ILSL;
+namespace DualDrill.CLSL.Backend;
 
-public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
+public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, ShaderModuleDeclaration<TBody> Module)
     : IDeclarationVisitor<ValueTask>
     , IStatementVisitor<ValueTask>
     , IExpressionVisitor<ValueTask>
     , ITypeReferenceVisitor<ValueTask>
-
+    where TBody : IFunctionBody
 {
     async ValueTask WriteAttributeAsync(IShaderAttribute attr, CancellationToken cancellation = default)
     {
@@ -81,9 +82,11 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
             await VisitTypeReference(decl.Return.Type);
         }
         Writer.WriteLine();
-        if (decl.Body is not null)
+        var b = Module.GetBody(decl);
+        //var sw = new IndentedTextWriter(Writer);
+        if (b is CompoundStatement s)
         {
-            await decl.Body.AcceptVisitor(this);
+            await s.AcceptVisitor(this);
         }
         Writer.WriteLine();
         Writer.WriteLine();
@@ -242,11 +245,11 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
             _ => throw new NotSupportedException()
         };
 
-        await stmt.L.AcceptVisitor(this);
+        await stmt.L.Accept(this);
         Writer.Write(' ');
         Writer.Write(op);
         Writer.Write(' ');
-        await stmt.R.AcceptVisitor(this);
+        await stmt.R.Accept(this);
     }
 
     public async ValueTask VisitPhonyAssignment(PhonyAssignmentStatement stmt)
@@ -282,6 +285,8 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
             await a.AcceptVisitor(this);
         }
         Writer.Write(')');
+
+
     }
 
     public async ValueTask VisitBinaryArithmeticExpression(BinaryArithmeticExpression expr)
@@ -457,7 +462,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
 
     public async ValueTask VisitNamedComponentExpression(NamedComponentExpression expr)
     {
-        await expr.Base.AcceptVisitor(this);
+        await expr.Base.Accept(this);
         Writer.Write(".");
         Writer.Write(expr.ComponentName);
     }
@@ -474,7 +479,7 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
     public async ValueTask VisitSwitch(SwitchStatement stmt)
     {
         Writer.Write("switch (");
-        await stmt.Expr.AcceptVisitor(this);
+        await stmt.Expr.Accept(this);
         Writer.WriteLine(") {");
         Writer.Indent();
         foreach (var c in stmt.Cases)
@@ -502,19 +507,21 @@ public sealed class ModuleToCodeVisitor(IndentStringWriter Writer)
         return ValueTask.CompletedTask;
     }
 
-    public async ValueTask VisitModule(ShaderModuleDeclaration decl)
+    public async ValueTask VisitModule<TBody>(ShaderModuleDeclaration<TBody> decl)
+        where TBody : IFunctionBody
     {
         foreach (var d in decl.Declarations)
         {
             await d.AcceptVisitor(this);
         }
 
-        foreach (var f in decl.DefinedFunctions)
-        {
-            var b = decl.GetBody(f);
-            var sw = new IndentedTextWriter(Writer);
-            sw.Indent++;
-            b.Dump(sw);
-        }
+
+    }
+
+    public async ValueTask VisitBinaryExpression<TOperation>(BinaryExpression<TOperation> expr) where TOperation : IBinaryOperation<TOperation>
+    {
+        await expr.Left.AcceptVisitor(this);
+        await Writer.WriteAsync($" <{typeof(TOperation).Name}> ");
+        await expr.Right.AcceptVisitor(this);
     }
 }

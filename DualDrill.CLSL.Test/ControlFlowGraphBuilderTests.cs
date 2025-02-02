@@ -1,3 +1,4 @@
+using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.Common;
 

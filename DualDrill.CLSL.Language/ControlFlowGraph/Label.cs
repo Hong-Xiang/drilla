@@ -53,6 +53,7 @@ public sealed class Label : ILabel<Label>
 
     public static Label Create(string name) => new(name);
     public static Label Create(int byteOffset) => new($"0x{byteOffset:X}");
+    public static Label FromIndex(int index) => new($"#{index}");
     public static Label Create() => new(null);
 
     public bool Equals(Label? other)

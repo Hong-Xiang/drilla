@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
@@ -19,6 +20,11 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 public interface IExpression : IShaderAstNode
 {
     IShaderType Type { get; }
+
+    TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
+    {
+        return this.AcceptVisitor(visitor);
+    }
 }
 
 public sealed class InvalidExpressionTypeException(string message) : Exception(message)
@@ -32,6 +38,8 @@ public interface IExpressionVisitor<T>
     T VisitFunctionCallExpression(FunctionCallExpression expr);
     T VisitBinaryArithmeticExpression(BinaryArithmeticExpression expr);
     T VisitBinaryBitwiseExpression(BinaryBitwiseExpression expr);
+    T VisitBinaryExpression<TOperation>(BinaryExpression<TOperation> expr)
+        where TOperation : IBinaryOperation<TOperation>;
     T VisitBinaryRelationalExpression(BinaryRelationalExpression expr);
     T VisitBinaryLogicalExpression(BinaryLogicalExpression expr);
     T VisitUnaryLogicalExpression(UnaryLogicalExpression expr);
@@ -61,7 +69,7 @@ public static class ExpressionExtension
             ParenthesizedExpression e => visitor.VisitParenthesizedExpression(e),
             VectorSwizzleAccessExpression e => visitor.VisitVectorSwizzleAccessExpression(e),
             NamedComponentExpression e => visitor.VisitNamedComponentExpression(e),
-            _ => throw new NotSupportedException($"Expression Visitor does not support {expr}")
+            _ => expr.Accept(visitor)
         };
     }
 }

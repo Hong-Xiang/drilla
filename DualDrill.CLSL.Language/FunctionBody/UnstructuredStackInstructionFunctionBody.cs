@@ -1,12 +1,12 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.LinearInstruction;
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
+namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed class UnstructuredControlFlowInstructionFunctionBody
+public sealed class UnstructuredStackInstructionFunctionBody
     : IFunctionBody
 {
     public void Dump(IndentedTextWriter writer)
@@ -17,8 +17,7 @@ public sealed class UnstructuredControlFlowInstructionFunctionBody
     public ImmutableArray<IStackInstruction> Instructions { get; }
     FrozenDictionary<Label, int> LabelInstructionIndices { get; }
 
-    public UnstructuredControlFlowInstructionFunctionBody(
-        IEnumerable<IStackInstruction> instructions)
+    public UnstructuredStackInstructionFunctionBody(IEnumerable<IStackInstruction> instructions)
     {
         Instructions = [.. instructions];
         Dictionary<Label, int> labelInstructionIndices = [];

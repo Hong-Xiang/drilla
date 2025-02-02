@@ -1,4 +1,7 @@
-﻿using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -10,7 +13,7 @@ public interface IDeclarationVisitor<T>
     T VisitParameter(ParameterDeclaration decl);
     T VisitStructure(StructureDeclaration decl);
     T VisitMember(MemberDeclaration decl);
-    T VisitModule(ShaderModuleDeclaration decl);
+    T VisitModule<TBody>(ShaderModuleDeclaration<TBody> decl) where TBody : IFunctionBody;
 }
 
 public interface ITypeReferenceVisitor<T>
@@ -30,7 +33,9 @@ public static class DeclarationExtension
             FunctionDeclaration d => visitor.VisitFunction(d),
             ParameterDeclaration p => visitor.VisitParameter(p),
             VariableDeclaration d => visitor.VisitVariable(d),
-            ShaderModuleDeclaration d => visitor.VisitModule(d),
+            ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> d => visitor.VisitModule(d),
+            ShaderModuleDeclaration<CompoundStatement> d => visitor.VisitModule(d),
+            ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> d => visitor.VisitModule(d),
             _ => throw new NotSupportedException($"{nameof(IDeclarationVisitor<T>)} does not support {decl}")
         };
     }

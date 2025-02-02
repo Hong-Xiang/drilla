@@ -4,7 +4,7 @@ using DualDrill.Engine.Media;
 using DualDrill.Engine.Services;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
-using DualDrill.ILSL;
+using DualDrill.CLSL;
 using DualDrill.Server.Services;
 using DualDrill.WebView;
 

@@ -1,5 +1,5 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.ILSL;
+using DualDrill.CLSL;
 using DualDrill.Mathematics;
 
 namespace DualDrill.Engine.Shader;

@@ -3,13 +3,12 @@ using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
-using DualDrill.ILSL.Compiler;
 using DualDrill.Mathematics;
 using System.Collections.Frozen;
 using System.Numerics;
 using System.Reflection;
 
-namespace DualDrill.ILSL.Frontend;
+namespace DualDrill.CLSL.Frontend;
 
 sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilationContext>, ICompilationContextView
 {
@@ -126,7 +125,7 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
         return result;
     }
 
-    public MethodBase GetFunctionDefinition(FunctionDeclaration declaration) => throw new NotSupportedException("All runtime methods have not definitions");
+    public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) => throw new NotSupportedException("All runtime methods have not definitions");
 
     public static SharedBuiltinCompilationContext Instance { get; } = new SharedBuiltinCompilationContext();
 
@@ -139,7 +138,7 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
     public IEnumerable<FunctionDeclaration> FunctionDeclarations => [];
 
 
-    public ParameterDeclaration? this[ParameterInfo parameter] => throw new NotImplementedException();
+    public ParameterDeclaration? this[ParameterInfo parameter] => null;
 
     public VariableDeclaration? this[IVariableSymbol symbol] => null;
 

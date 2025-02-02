@@ -1,4 +1,6 @@
-﻿namespace DualDrill.CLSL.Language.ControlFlowGraph;
+﻿using DualDrill.CLSL.Language.Declaration;
+
+namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
 /// <summary>
 /// Encoding of Loop | Block | IfThenElse
@@ -6,13 +8,13 @@
 public interface IStructuredControlFlowRegion<TInstruction>
     : Block<TInstruction>.IElement
 {
-    public interface IVisitor<TResult>
+    public interface IRegionVisitor<TResult>
     {
         TResult VisitBlock(Block<TInstruction> block);
         TResult VisitLoop(Loop<TInstruction> loop);
         TResult VisitIfThenElse(IfThenElse<TInstruction> ifThenElse);
     }
-    TResult AcceptRegionVisitor<TResult>(IVisitor<TResult> visitor);
+    TResult AcceptRegionVisitor<TResult>(IRegionVisitor<TResult> visitor);
 }
 
 /// <summary>

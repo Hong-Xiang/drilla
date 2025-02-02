@@ -1,8 +1,6 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Engine.Shader;
-using DualDrill.ILSL;
-using DualDrill.ILSL.Frontend;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
@@ -58,8 +56,8 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
         {
             return NotFound();
         }
-        var ir = Compiler.Compile(shader);
-        return Ok(ir);
+        var ir = shader.Parse();
+        return Ok(ir.Dump());
     }
 
     [HttpGet("compile/{name}/wgsl")]
@@ -70,7 +68,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
         {
             return NotFound();
         }
-        var code = Compiler.EmitWGSL(shader);
+        var code = await shader.EmitWgslCode();
         return Ok(code);
     }
 
@@ -152,28 +150,5 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
         return NotFound();
-    }
-
-
-
-    async Task<IActionResult> MethodTargetAction(string moduleName, string methodName,
-            Func<MethodBase, Task<IActionResult>> next)
-    {
-        var shaderModule = GetShader(moduleName);
-        if (shaderModule is null)
-        {
-            return NotFound($"Module {moduleName} not found");
-        }
-        var shaderModuleType = shaderModule.GetType();
-        var method = shaderModuleType.GetMethod(methodName,
-            System.Reflection.BindingFlags.Public
-            | System.Reflection.BindingFlags.NonPublic
-            | System.Reflection.BindingFlags.Static
-            | System.Reflection.BindingFlags.Instance);
-        if (method is null)
-        {
-            return NotFound($"Method {methodName} not found");
-        }
-        return await next(method);
     }
 }

@@ -1,17 +1,18 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Backend;
+using DualDrill.CLSL.Frontend;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
-using DualDrill.ILSL.Compiler;
-using DualDrill.ILSL.Frontend;
 using DualDrill.Mathematics;
 using System.Numerics;
 
-namespace DualDrill.ILSL.Tests;
+namespace DualDrill.CLSL.Test;
 
-public partial class ShaderMetadataParseTest
+public partial class RuntimeRelfectionParserTests
 {
-    RuntimeReflectionShaderModuleMetadataParser Parser { get; } = new(CompilationContext.Create());
+    RuntimeReflectionParser Parser { get; } = new(CompilationContext.Create());
 
     [Fact]
     public void ShouldCollectCalledMethodsIntoContext()
@@ -92,7 +93,7 @@ public partial class ShaderMetadataParseTest
 
         [Vertex]
         [return: Builtin(BuiltinBinding.position)]
-        Vector4 vs(
+        public Vector4 vs(
             [Builtin(BuiltinBinding.vertex_index)] uint vertexIndex
         )
         {
@@ -116,7 +117,7 @@ public partial class ShaderMetadataParseTest
 
         [Fragment]
         [return: Location(0)]
-        Vector4 fs()
+        public Vector4 fs()
         {
             return ourStruct.color;
         }
@@ -134,7 +135,7 @@ public partial class ShaderMetadataParseTest
         Assert.IsType<StructureDeclaration>(uniformDecl.Type);
 
         var tw = new IndentStringWriter("\t");
-        var visitor = new ModuleToCodeVisitor(tw);
+        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionFunctionBody>(tw, module);
         foreach (var d in module.Declarations)
         {
             await d.AcceptVisitor(visitor);
