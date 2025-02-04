@@ -10,6 +10,7 @@ using DualDrill.Common;
 Console.WriteLine(typeof(A.B.C<int>).CSharpFullName());
 Console.WriteLine(typeof(A.B.C<A.B.C<float>>).CSharpFullName());
 Console.WriteLine(typeof(A.B.D).CSharpFullName());
+Console.WriteLine(typeof(A.B.D.E).CSharpFullName());
 
 //var opcodes = typeof(OpCodes).GetMembers()
 //                .OfType<FieldInfo>()
@@ -33,6 +34,7 @@ namespace A.B
     }
     struct D
     {
+        public struct E { }
     }
 }
 

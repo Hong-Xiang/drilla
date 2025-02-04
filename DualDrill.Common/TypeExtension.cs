@@ -10,16 +10,17 @@ public static class TypeExtension
 {
     public static string CSharpFullName(this Type type)
     {
-        var ns = type.Namespace;
+        var ns = type.DeclaringType is { } t ? CSharpFullName(t) : type.Namespace;
         if (type.IsGenericType)
         {
-            var tn = type.Name.Split('`')[0];
+            var tn = type.Name.Split('`')[0].Replace("+", ".");
             var gn = string.Join(",", type.GetGenericArguments().Select(t => t.CSharpFullName()));
             return $"{ns}.{tn}<{gn}>";
         }
         else
         {
-            return $"{ns}.{type.Name}";
+            var tn = type.Name.Replace("+", ".");
+            return $"{ns}.{tn}";
         }
     }
 }

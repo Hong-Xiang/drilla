@@ -29,7 +29,7 @@ internal sealed record class VectorComponentCodeGenerator(
     {
         foreach (var m in VecType.Size.SwizzleComponents())
         {
-            Writer.Write($"public {Config.GetCSharpTypeName(VecType.ElementType)} {m} ");
+            Writer.Write($"public {Config.GetCSharpTypeName(VecType.ElementType)} {m.Name} ");
             Writer.WriteLine("{");
             using (Writer.IndentedScope())
             {
@@ -413,7 +413,7 @@ public sealed record class VecCodeGenerator<TRank, TElement>
                 //Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute(cps).GetCSharpUsageCode()}]");
                 CLSL.Language.Operation.IOperation getOperation = VectorSwizzleGetOperation<TPattern, TElement>.Instance;
                 Writer.WriteLine($"[{getOperation.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
-                Writer.Write($"get => vec{TRank.Instance.Value}(");
+                Writer.Write($"get => vec{rv.Size.Value}(");
                 Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. pattern.Components.Select(c => c.Name)]);
                 Writer.WriteLine(");");
 
@@ -431,7 +431,7 @@ public sealed record class VecCodeGenerator<TRank, TElement>
                         var sourceComponents = rv.Size.SwizzleComponents().ToImmutableArray();
                         foreach (var (ic, c) in pattern.Components.Index())
                         {
-                            Writer.WriteLine($"{c.Name} = value.{sourceComponents[ic]};");
+                            Writer.WriteLine($"{c.Name} = value.{sourceComponents[ic].Name};");
                         }
                     };
 

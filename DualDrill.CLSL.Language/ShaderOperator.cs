@@ -32,12 +32,18 @@ public static class ShaderOperator
           select new UnaryArithmeticOperatorDefinition(UnaryArithmeticOp.Minus, t, t)
     ];
 
+    static IEnumerable<BinaryArithmetic.OpKind> BinaryArithmeticWithOperator =>
+        [BinaryArithmetic.OpKind.add,
+         BinaryArithmetic.OpKind.sub,
+         BinaryArithmetic.OpKind.mul,
+         BinaryArithmetic.OpKind.div,
+         BinaryArithmetic.OpKind.rem];
     public static readonly ImmutableArray<BinaryArithmeticOperatorDefinition> BinaryArithmeticOperatorDefinitions = [
-        ..from o in Enum.GetValues<BinaryArithmetic.OpKind>()
+        ..from o in BinaryArithmeticWithOperator
           from s in ShaderType.NumericScalarTypes
           from t in ShaderType.GetScalarOrVectorTypes(s)
           select new BinaryArithmeticOperatorDefinition(o, t, t, t),
-        ..from o in Enum.GetValues<BinaryArithmetic.OpKind>()
+        ..from o in BinaryArithmeticWithOperator
           from s in ShaderType.NumericScalarTypes
           from v in ShaderType.GetVecTypes(s)
           from d in (BinaryArithmeticOperatorDefinition[])[
