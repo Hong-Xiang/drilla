@@ -1,14 +1,14 @@
-﻿using DualDrill.CLSL.Language.ControlFlowGraph;
-using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.LinearInstruction;
 using DualDrill.CLSL.Compiler;
 using System.Collections.Immutable;
 using FluentAssertions;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.ControlFlow;
 
 namespace DualDrill.CLSL.Test;
 

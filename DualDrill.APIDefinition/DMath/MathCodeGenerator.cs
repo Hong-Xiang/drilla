@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 using System.CodeDom.Compiler;
 namespace DualDrill.ApiGen.DMath;
 
@@ -46,9 +47,11 @@ public sealed class MathCodeGenerator
         return BaseWriter.ToString();
     }
 
-    public void Generate(IVecType vecType)
+    public void Generate<TRank, TElement>(VecType<TRank, TElement> vecType)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>
     {
-        var vecGenertor = new VecCodeGenerator(vecType, Writer, Config);
+        var vecGenertor = new VecCodeGenerator<TRank, TElement>(vecType, Writer, Config);
         vecGenertor.Generate();
     }
 

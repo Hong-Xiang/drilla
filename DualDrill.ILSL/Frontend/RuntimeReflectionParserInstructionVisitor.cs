@@ -1,11 +1,12 @@
-﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.LinearInstruction;
 using DualDrill.Common;
 using System.Collections.Frozen;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace DualDrill.CLSL.Frontend;
@@ -15,7 +16,7 @@ public sealed class ValidationException(string message)
 {
 }
 
-sealed class InstructionVisitor(
+sealed class RuntimeReflectionParserInstructionVisitor(
         RuntimeReflectionParser Parser,
         ICompilationContext Context,
         FunctionDeclaration Function,
@@ -57,7 +58,11 @@ sealed class InstructionVisitor(
             }
             else
             {
-                // TODO: check for consistency
+                var jump = JumpStack[label];
+                if (!ValidationStack.SequenceEqual(jump))
+                {
+                    throw new ValidationException($"Stack state after jump is not consistent");
+                }
             }
         }
     }
@@ -131,6 +136,7 @@ sealed class InstructionVisitor(
         Instructions.Add(ShaderInstruction.Br(label));
         if (JumpStack.TryGetValue(label, out var s))
         {
+            Debug.Assert(s.SequenceEqual(CurrentStack));
             // TODO: check for consistency
         }
         else
@@ -163,7 +169,10 @@ sealed class InstructionVisitor(
         Instructions.Add(ShaderInstruction.BrIf(label));
         if (JumpStack.TryGetValue(label, out var s))
         {
-            // TODO: check for consistency
+            if (!CurrentStack.SequenceEqual(s))
+            {
+                throw new ValidationException($"Stack state after jump is not consistent");
+            }
         }
         else
         {
@@ -174,9 +183,11 @@ sealed class InstructionVisitor(
 
     public Unit VisitBrIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false) where TOp : BinaryRelation.IOp<TOp>
     {
-        var v = CurrentStack.Pop();
+        var r = CurrentStack.Pop();
+        var l = CurrentStack.Pop();
+        var t = EnsureBinaryOpOprandsType(l, r);
 
-        if (v is INumericType nt)
+        if (t is INumericType nt)
         {
             Instructions.Add(nt.GetBinaryOperation<TOp>().Instruction);
         }
@@ -201,7 +212,7 @@ sealed class InstructionVisitor(
 
     public Unit VisitCall(CilInstructionInfo info, MethodInfo method)
     {
-        var f = Context[Symbol.Function(method)] ?? throw new KeyNotFoundException($"called {method} not found in context");
+        var f = Parser.ParseMethod(method);
         foreach (var (idx, p) in f.Parameters.Reverse().Index())
         {
             var vt = CurrentStack.Pop();
@@ -220,7 +231,7 @@ sealed class InstructionVisitor(
 
     public Unit VisitLdArg(CilInstructionInfo inst, ParameterInfo info)
     {
-        var p = Context[info] ?? throw new KeyNotFoundException($"Failed to resolve parameter {info}");
+        var p = Parser.ParseParameter(info);
         Instructions.Add(ShaderInstruction.Load(p));
         CurrentStack.Push(p.Type);
         return default;
@@ -228,10 +239,10 @@ sealed class InstructionVisitor(
 
     public Unit VisitLdArgAddress(CilInstructionInfo inst, ParameterInfo info)
     {
-        var p = Context[info] ?? throw new KeyNotFoundException($"Failed to resolve parameter {info}");
+        var p = Parser.ParseParameter(info);
         var c = ShaderInstruction.LoadAddress(p);
         Instructions.Add(c);
-        CurrentStack.Push(p.Type.GetRefType());
+        CurrentStack.Push(p.Type.GetPtrType());
         return default;
     }
 
@@ -264,6 +275,7 @@ sealed class InstructionVisitor(
     {
         var v = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException($"Failed to resolve local variable {info}");
         Instructions.Add(ShaderInstruction.LoadAddress(v));
+        CurrentStack.Push(v.Type.GetPtrType());
         return default;
     }
 
@@ -282,7 +294,15 @@ sealed class InstructionVisitor(
 
     public Unit VisitNewObj(CilInstructionInfo info, ConstructorInfo constructor)
     {
-        throw new NotImplementedException();
+        var callee = Context[Symbol.Function(constructor)] ?? throw new ValidationException($"Failed to resolve constructor {constructor}");
+        foreach (var p in callee.Parameters.Reverse())
+        {
+            var t = CurrentStack.Pop();
+            Debug.Assert(t.Equals(p.Type));
+        }
+        Instructions.Add(new CallInstruction(callee));
+        CurrentStack.Push(callee.Return.Type);
+        return default;
     }
 
     public Unit VisitNop(CilInstructionInfo inst)
@@ -293,7 +313,6 @@ sealed class InstructionVisitor(
 
     public Unit VisitReturn(CilInstructionInfo info)
     {
-        Instructions.Add(ShaderInstruction.Return());
         switch (CurrentStack.Count)
         {
             case 0:
@@ -309,7 +328,7 @@ sealed class InstructionVisitor(
                 var rt = Function.Return.Type;
                 if (!rt.Equals(vt))
                 {
-                    throw new ValidationException($"return when statck type {vt} is not consistent with function signature return {rt}");
+                    throw new ValidationException($"return when statck type {vt.Name} is not consistent with function signature return {rt.Name}");
                 }
                 Instructions.Add(ShaderInstruction.Return());
                 ValidationStack = null;
@@ -366,6 +385,36 @@ sealed class InstructionVisitor(
             CurrentStack.Push(TTarget.Instance);
             return default;
         }
+        throw new NotImplementedException();
+    }
+
+    public Unit VisitLdThis()
+    {
+        var p = Function.Parameters[0];
+        Instructions.Add(ShaderInstruction.Load(p));
+        CurrentStack.Push(p.Type.GetPtrType());
+        return default;
+    }
+
+    public Unit VisitStThis()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Unit VisitLdFld(CilInstructionInfo inst, FieldInfo info)
+    {
+        var m = Parser.ParseField(info);
+        CurrentStack.Push(m.Type);
+        return default;
+    }
+
+    public Unit VisitLdFldAddress(CilInstructionInfo inst, FieldInfo info)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Unit VisitStFld(CilInstructionInfo inst, FieldInfo info)
+    {
         throw new NotImplementedException();
     }
 }

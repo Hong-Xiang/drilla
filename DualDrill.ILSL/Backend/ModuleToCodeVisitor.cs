@@ -464,7 +464,7 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
     {
         await expr.Base.Accept(this);
         Writer.Write(".");
-        Writer.Write(expr.ComponentName);
+        Writer.Write(expr.Component.Name);
     }
 
     public async ValueTask VisitLoop(LoopStatement stmt)

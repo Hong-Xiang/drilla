@@ -1,7 +1,7 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Mathematics;
 
-namespace DualDrill.CLSL.Test;
+namespace DualDrill.CLSL.Test.ShaderModule;
 
 internal class CustomStructShaderModule
 {

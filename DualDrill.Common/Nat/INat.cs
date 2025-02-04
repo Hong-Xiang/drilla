@@ -1,6 +1,4 @@
-﻿using DotNext.Patterns;
-
-namespace DualDrill.Common.Nat;
+﻿namespace DualDrill.Common.Nat;
 
 /// <summary>
 /// Used as type level encoding of commonly used natural numbers.
@@ -15,8 +13,8 @@ public interface INat
     public T Accept<T>(INatVisitor<T> visitor);
 }
 
-public interface INat<TSelf> : INat, DotNext.Patterns.ISingleton<TSelf>
-    where TSelf : class, INat<TSelf>
+public interface INat<TSelf> : INat, ISingleton<TSelf>
+    where TSelf : INat<TSelf>
 {
 }
 

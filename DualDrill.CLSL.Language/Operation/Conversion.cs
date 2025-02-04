@@ -1,5 +1,5 @@
-﻿using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.LinearInstruction;
+﻿using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Operation;

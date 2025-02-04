@@ -1,46 +1,24 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+﻿using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.LinearInstruction;
+using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Common.Nat;
-using DualDrill.CLSL;
-using DualDrill.CLSL.Frontend;
 using DualDrill.Mathematics;
+using FluentAssertions;
+using Lokad.ILPack.IL;
+using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
-using FluentAssertions;
-using System.Collections.Immutable;
-using Lokad.ILPack.IL;
-using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.Frontend;
 
 namespace DualDrill.CLSL.Test;
 
 
 public class ParseBodyTest
 {
-    IExpression? ParseExpressionBodyMethod(MethodBase m)
-    {
-        var stmts = ParseStatementsMethod(m);
-        Assert.Single(stmts);
-        Assert.IsType<ReturnStatement>(stmts[0]);
-        return ((ReturnStatement)stmts[0]).Expr;
-    }
-
-    IReadOnlyList<IStatement> ParseStatementsMethod(MethodBase m)
-    {
-        //var compiler = new MethodBodyCompiler();
-        //var parser = new ShaderModuleMetadataParser();
-        //parser.ParseMethodMetadata(m);
-        //var methodContext = parser.Context.GetMethodContext(m);
-        //var body = methodParser.ParseMethodBody(methodContext, m);
-        //return body.Statements;
-        throw new NotImplementedException();
-    }
-
     UnstructuredStackInstructionFunctionBody ParseMethod(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
@@ -52,8 +30,8 @@ public class ParseBodyTest
     [Fact]
     public void ParseBasicLiteralExpressionBodyShouldWork()
     {
-        var f = new FunctionDeclaration("return42", [], new FunctionReturn(ShaderType.I32, []), []);
-        var result = ParseMethod(f, MethodHelper.GetMethod(static () => 42));
+        var f = new FunctionDeclaration(nameof(DevelopTestShaderModule.Return42), [], new FunctionReturn(ShaderType.I32, []), []);
+        var result = ParseMethod(f, MethodHelper.GetMethod(DevelopTestShaderModule.Return42));
         result.Instructions.Should().SatisfyRespectively(
             x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(42),
             x => x.Should().BeOfType<ReturnInstruction>()
@@ -63,11 +41,11 @@ public class ParseBodyTest
     [Fact]
     public void MinimumLoadArgumentShouldWork()
     {
-        var method = MethodHelper.GetMethod(static (int a) => a);
+        var method = MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.LoadArg);
         var parameters = method.GetParameters();
         var a = new ParameterDeclaration("a", ShaderType.I32, []);
         var f = new FunctionDeclaration(
-                    nameof(BasicLoadArgumentShouldWork),
+                    nameof(DevelopTestShaderModule.LoadArg),
                     [a],
                     new FunctionReturn(ShaderType.I32, []),
                     []);
@@ -86,11 +64,11 @@ public class ParseBodyTest
     [Fact]
     public void BasicLoadArgumentShouldWork()
     {
-        var method = MethodHelper.GetMethod(static (int a) => a + 1);
+        var method = MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.APlus1);
         var parameters = method.GetParameters();
         var a = new ParameterDeclaration("a", ShaderType.I32, []);
         var f = new FunctionDeclaration(
-            nameof(BasicLoadArgumentShouldWork),
+            nameof(DevelopTestShaderModule.APlus1),
             [a],
             new FunctionReturn(ShaderType.I32, []),
             []);
@@ -198,18 +176,17 @@ public class ParseBodyTest
     public void SimpleVec4ConstructionShouldWork()
     {
         var f = new FunctionDeclaration(
-            nameof(SimpleVec4ConstructionShouldWork),
+            nameof(DevelopTestShaderModule.SystemNumericVector4Creation),
             [],
             new FunctionReturn(ShaderType.Vec4F32, []),
             []
         );
-        var result = ParseMethod(f, MethodHelper.GetMethod(() => new Vector4(0.5f, 0.0f, 1.0f, 1.0f)));
+        var result = ParseMethod(f, MethodHelper.GetMethod(DevelopTestShaderModule.SystemNumericVector4Creation));
         result.Instructions.Should().SatisfyRespectively(
-            x => x.Should().BeOfType<NopInstruction>(),
-            x => x.Should().BeOfType<ConstInstruction<F32Literal>>().Which.Literal.Value.Should().Be(0.5f),
-            x => x.Should().BeOfType<ConstInstruction<F32Literal>>().Which.Literal.Value.Should().Be(0.0f),
             x => x.Should().BeOfType<ConstInstruction<F32Literal>>().Which.Literal.Value.Should().Be(1.0f),
-            x => x.Should().BeOfType<ConstInstruction<F32Literal>>().Which.Literal.Value.Should().Be(1.0f),
+            x => x.Should().BeOfType<ConstInstruction<F32Literal>>().Which.Literal.Value.Should().Be(2.0f),
+            x => x.Should().BeOfType<ConstInstruction<F32Literal>>().Which.Literal.Value.Should().Be(3.0f),
+            x => x.Should().BeOfType<ConstInstruction<F32Literal>>().Which.Literal.Value.Should().Be(4.0f),
             x => x.Should().Satisfy<CallInstruction>(c =>
             {
                 c.Callee.Parameters.Should().HaveCount(4).And.AllSatisfy(p =>
@@ -218,10 +195,6 @@ public class ParseBodyTest
                 });
                 c.Callee.Return.Type.Should().Be(ShaderType.Vec4F32);
             }),
-            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-            x => x.Should().BeOfType<BrInstruction>(),
-            x => x.Should().BeOfType<LabelInstruction>(),
-            x => x.Should().BeOfType<LoadSymbolInstruction<VariableDeclaration>>(),
             x => x.Should().BeOfType<ReturnInstruction>()
         );
     }
@@ -230,17 +203,16 @@ public class ParseBodyTest
     [Fact]
     public void BasicMethodInvocationParseShouldWork()
     {
-        static int Add(int a, int b) => a + b;
         var context = CompilationContext.Create();
         var fAdd = new FunctionDeclaration(
-            nameof(Add),
+            nameof(DevelopTestShaderModule.Add),
             [new ParameterDeclaration("a", ShaderType.I32, []),
              new ParameterDeclaration("b", ShaderType.I32, [])],
             new FunctionReturn(ShaderType.I32, []),
             []);
-        context.AddFunctionDeclaration(Symbol.Function(MethodHelper.GetMethod<int, int, int>(Add)), fAdd);
-        var fCall = new FunctionDeclaration(nameof(BasicMethodInvocationParseShouldWork), [], new FunctionReturn(ShaderType.I32, []), []);
-        var method = MethodHelper.GetMethod(() => Add(1, 2));
+        context.AddFunctionDeclaration(Symbol.Function(MethodHelper.GetMethod<int, int, int>(DevelopTestShaderModule.Add)), fAdd);
+        var fCall = new FunctionDeclaration(nameof(DevelopTestShaderModule.MethodInvocation), [], new FunctionReturn(ShaderType.I32, []), []);
+        var method = MethodHelper.GetMethod(DevelopTestShaderModule.MethodInvocation);
         context.AddFunctionDefinition(Symbol.Function(method), fCall);
         var parser = new RuntimeReflectionParser(context);
         var result = parser.ParseMethodBody(fCall);
@@ -255,23 +227,13 @@ public class ParseBodyTest
     [Fact]
     public void BasicIfThenElseParseShouldWork()
     {
-        var method = MethodHelper.GetMethod(static (int a, int b) =>
-        {
-            if (a >= b)
-            {
-                return a;
-            }
-            else
-            {
-                return b;
-            }
-        });
+        var method = MethodHelper.GetMethod<int, int, int>(DevelopTestShaderModule.MaxByfThenElse);
         var instructions = method.GetInstructions();
         var parameters = method.GetParameters();
         var a = new ParameterDeclaration("a", ShaderType.I32, []);
         var b = new ParameterDeclaration("b", ShaderType.I32, []);
         var f = new FunctionDeclaration(
-            nameof(BasicIfThenElseParseShouldWork),
+            nameof(DevelopTestShaderModule.MaxByfThenElse),
             [a, b],
             new FunctionReturn(ShaderType.I32, []),
             []);
@@ -364,40 +326,18 @@ public class ParseBodyTest
     [Fact]
     public void VectorSwizzleGetterShouldWork()
     {
-        //  IL_0000: nop
-        //  IL_0001: ldarga.s a
-        //  IL_0003: swizzle.get.vec4f32.xyx [ref<vec4f32>] -> [vec3f32]
-        //  IL_0008: stloc.0
-        //  IL_0009: br.s IL_000b
-
-        //  IL_000b: ldloc.0
-        //  IL_000c: ret
-
-        var v = new ParameterDeclaration("v", ShaderType.Vec4F32, []);
+        var v = new ParameterDeclaration("v", ShaderType.Vec2F32, []);
         var f = new FunctionDeclaration(
-                nameof(VectorSwizzleGetterShouldWork),
+                nameof(DevelopTestShaderModule.VecSwizzleGetter),
                 [],
-                new FunctionReturn(ShaderType.Vec2F32, []),
+                new FunctionReturn(ShaderType.Vec3F32, []),
                 []
             );
-        var result = ParseMethod(f, MethodHelper.GetMethod(static (vec4f32 v) => v.xyx));
+        var result = ParseMethod(f, MethodHelper.GetMethod<vec2f32, vec3f32>(DevelopTestShaderModule.VecSwizzleGetter));
 
         result.Instructions.Should().SatisfyRespectively(
-            //  IL_0000: nop
-            x => x.Should().BeOfType<NopInstruction>(),
-            //  IL_0001: ldarga.s a
             x => x.Should().BeOfType<LoadSymbolAddressInstruction<ParameterDeclaration>>().Which.Target.Should().Be(v),
-            //  IL_0003: swizzle.vec4f32.xyx [ref<vec4f32>] -> [vec3f32]
-            x => x.Should().BeOfType<VectorSwizzleGetInstruction<VecType<N4, FloatType<N32>>, Swizzle.Pattern<Swizzle.X, Swizzle.Y, Swizzle.X>>>(),
-            //  IL_0008: stloc.0
-            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-            //  IL_0009: br.s IL_000b
-            x => x.Should().BeOfType<BrInstruction>(),
-
-            x => x.Should().BeOfType<LabelInstruction>(),
-            //  IL_000b: ldloc.0
-            x => x.Should().BeOfType<LoadSymbolInstruction<VariableDeclaration>>(),
-            //  IL_000c: ret
+            x => x.Should().BeOfType<CallInstruction>().Which.Callee.Should().Be(VectorSwizzleGetOperation<Swizzle.Pattern<N2, Swizzle.X, Swizzle.Y, Swizzle.X>, FloatType<N32>>.Instance.Function),
             x => x.Should().BeOfType<ReturnInstruction>()
         );
     }
@@ -438,7 +378,8 @@ public class ParseBodyTest
             //  IL_0003: ldarg @b
             x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
             //  IL_0005: swizzle.set.vec4f32.xy
-            x => x.Should().BeOfType<VectorSwizzleSetInstruction<VecType<N4, FloatType<N32>>, Swizzle.Pattern<Swizzle.X, Swizzle.Y>>>(),
+            //x => x.Should().BeOfType<VectorSwizzleSetInstruction<VecType<N4, FloatType<N32>>, Swizzle.Pattern<Swizzle.X, Swizzle.Y>>>(),
+            x => x.Should().BeOfType<CallInstruction>().Which.Callee.Should().Be(VectorSwizzleSetOperation<Swizzle.Pattern<N4, Swizzle.X, Swizzle.Y>, FloatType<N32>>.Instance.Function),
             //  IL_000f: nop
             x => x.Should().BeOfType<NopInstruction>(),
             //  IL_0010: ldarg.0

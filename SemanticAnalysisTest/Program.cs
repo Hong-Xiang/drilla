@@ -3,10 +3,13 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
+using DualDrill.Common;
 
 
 
-Console.WriteLine(typeof(A).GUID);
+Console.WriteLine(typeof(A.B.C<int>).CSharpFullName());
+Console.WriteLine(typeof(A.B.C<A.B.C<float>>).CSharpFullName());
+Console.WriteLine(typeof(A.B.D).CSharpFullName());
 
 //var opcodes = typeof(OpCodes).GetMembers()
 //                .OfType<FieldInfo>()
@@ -23,6 +26,13 @@ Console.WriteLine(typeof(A).GUID);
 //    //Console.WriteLine("    throw new NotImplementedException($\"{instruction}\");");
 //}
 
-struct A
+namespace A.B
 {
+    struct C<T>
+    {
+    }
+    struct D
+    {
+    }
 }
+

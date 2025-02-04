@@ -4,13 +4,14 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
 using System.Numerics;
 
 namespace DualDrill.CLSL.Test;
 
-public partial class RuntimeRelfectionParserTests
+public class RuntimeRelfectionParserTests
 {
     RuntimeReflectionParser Parser { get; } = new(CompilationContext.Create());
 
@@ -76,57 +77,10 @@ public partial class RuntimeRelfectionParserTests
         Assert.Equal(BuiltinBinding.position, ((BuiltinAttribute)rta).Slot);
     }
 
-    // https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html
-    sealed class SimpleUniformShader : ISharpShader
-    {
-        public struct OurStruct
-        {
-            public Vector4 color;
-            public Vector2 scale;
-            public Vector2 offset;
-        }
-
-        [Group(0)]
-        [Binding(0)]
-        [Uniform]
-        OurStruct ourStruct;
-
-        [Vertex]
-        [return: Builtin(BuiltinBinding.position)]
-        public Vector4 vs(
-            [Builtin(BuiltinBinding.vertex_index)] uint vertexIndex
-        )
-        {
-            Vector2 pos = new();
-            if (vertexIndex == 0)
-            {
-                pos = new Vector2(0.0f, 0.5f);
-            }
-            if (vertexIndex == 1)
-            {
-                pos = new Vector2(-0.5f, -0.5f);
-            }
-            if (vertexIndex == 2)
-            {
-                pos = new Vector2(0.5f, -0.5f);
-            }
-            return new Vector4(
-                pos * ourStruct.scale + ourStruct.offset, 0.0f, 1.0f
-            );
-        }
-
-        [Fragment]
-        [return: Location(0)]
-        public Vector4 fs()
-        {
-            return ourStruct.color;
-        }
-    }
-
     [Fact]
     public async Task SimpleUniformDeclarationParseTest()
     {
-        var module = Parser.ParseShaderModule(new SimpleUniformShader());
+        var module = Parser.ParseShaderModule(new SimpleUniformShaderModule());
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();
         Assert.Equal("ourStruct", uniformDecl.Name);
         Assert.Equal(0, uniformDecl.Attributes.OfType<GroupAttribute>().Single().Binding);

@@ -2,7 +2,7 @@
 using DualDrill.Mathematics;
 using static DualDrill.Mathematics.DMath;
 
-namespace DualDrill.CLSL.Test;
+namespace DualDrill.CLSL.Test.ShaderModule;
 
 /// <summary>
 /// Minimum triangle shader for basic compile test

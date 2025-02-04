@@ -7,7 +7,6 @@
 public sealed record class OpaqueType(Type? Type) : IShaderType
 {
     public string Name => $"<OpaqueType:{Type?.Name ?? nameof(OpaqueType)}>";
-
     public IRefType GetRefType()
     {
         throw new NotSupportedException();

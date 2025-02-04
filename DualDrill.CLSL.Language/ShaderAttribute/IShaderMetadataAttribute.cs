@@ -1,14 +1,13 @@
-﻿namespace DualDrill.CLSL.Language.ShaderAttribute;
+﻿using DualDrill.Common;
+
+namespace DualDrill.CLSL.Language.ShaderAttribute;
 
 public interface IShaderMetadataAttribute : IShaderAttribute
 {
     string GetCSharpUsageCode();
 }
 
-public interface INoArgumentShaderMetadataAttribute : IShaderMetadataAttribute
+public interface IZeroArgumentNewLikeShaderMetadataAttribute : IShaderMetadataAttribute
 {
-    string IShaderMetadataAttribute.GetCSharpUsageCode()
-    {
-        return GetType().Name;
-    }
+    string IShaderMetadataAttribute.GetCSharpUsageCode() => GetType().CSharpFullName();
 }

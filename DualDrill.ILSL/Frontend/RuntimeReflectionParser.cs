@@ -1,5 +1,5 @@
 ﻿using DotNext.Reflection;
-using DualDrill.CLSL.Language.ControlFlowGraph;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
@@ -19,7 +19,9 @@ namespace DualDrill.CLSL.Frontend;
 /// method bodies are not parsed.
 /// </summary>
 /// <param name="Context"></param>
-public sealed record class RuntimeReflectionParser(ICompilationContext Context, Dictionary<FunctionDeclaration, UnstructuredStackInstructionFunctionBody> MethodBodies)
+public sealed record class RuntimeReflectionParser(
+    ICompilationContext Context,
+    Dictionary<FunctionDeclaration, UnstructuredStackInstructionFunctionBody> MethodBodies)
 {
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
@@ -74,11 +76,18 @@ public sealed record class RuntimeReflectionParser(ICompilationContext Context, 
             [new ZeroValueBuiltinFunctionAttribute(), new ShaderRuntimeMethodAttribute()]
         ));
 
-        var fieldMembers = fields.Select(f => new MemberDeclaration(f.Name, ParseType(f.FieldType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
+        var fieldMembers = fields.Select(ParseField);
         var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseType(f.PropertyType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
 
         result.Members = [.. fieldMembers, .. propsMembers];
         return result;
+    }
+
+    public MemberDeclaration ParseField(FieldInfo fieldInfo)
+    {
+        return new MemberDeclaration(fieldInfo.Name,
+            ParseType(fieldInfo.FieldType),
+            [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]);
     }
 
     ImmutableHashSet<IShaderAttribute> ParseAttribute(ParameterInfo p)
@@ -170,7 +179,7 @@ public sealed record class RuntimeReflectionParser(ICompilationContext Context, 
              MethodBodies.ToImmutableDictionary());
     }
 
-    ParameterDeclaration ParseParameter(ParameterInfo parameter)
+    public ParameterDeclaration ParseParameter(ParameterInfo parameter)
     {
         if (Context[parameter] is { } found)
         {
@@ -210,12 +219,26 @@ public sealed record class RuntimeReflectionParser(ICompilationContext Context, 
         {
             return found;
         }
+
+        var metaAttributes = method.GetCustomAttributes().OfType<IShaderMetadataAttribute>().ToFrozenSet();
+
+
+        {
+            if (metaAttributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } attr)
+            {
+                var f = attr.Operation.Function;
+                Context.AddFunctionDeclaration(symbol, f);
+                return f;
+            }
+        }
+
+
         var model = new MethodBodyAnalysisModel(method);
 
         var decl = new FunctionDeclaration(
             method.Name,
             method.IsStatic ? [.. model.Parameters.Select(ParseParameter)]
-                            : [new ParameterDeclaration("this", ParseType(method.DeclaringType), []), .. model.Parameters.Select(ParseParameter)],
+                            : [new ParameterDeclaration("this", ParseType(method.DeclaringType).GetPtrType(), []), .. model.Parameters.Select(ParseParameter)],
             ParseMethodReturn(method),
             ParseAttribute(method));
 
@@ -277,8 +300,8 @@ public sealed record class RuntimeReflectionParser(ICompilationContext Context, 
         var labels = methodModel.GetJumpTargetOffsets()
                                 .Select(offset => KeyValuePair.Create(offset, Label.Create(offset)))
                                 .ToFrozenDictionary();
-        var visitor = new InstructionVisitor(this, Context, f, labels);
-        methodModel.Accept<InstructionVisitor, Unit>(visitor);
+        var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, labels);
+        methodModel.Accept<RuntimeReflectionParserInstructionVisitor, Unit>(visitor);
         return new(visitor.Result);
     }
 

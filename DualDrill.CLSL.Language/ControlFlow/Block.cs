@@ -1,7 +1,8 @@
-﻿using System.CodeDom.Compiler;
+﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
+namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class Block<TInstruction>(
     Label Label,

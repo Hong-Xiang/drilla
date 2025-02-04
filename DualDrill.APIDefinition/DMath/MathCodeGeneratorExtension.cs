@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.ApiGen.DMath;
@@ -12,6 +13,18 @@ internal static class MathCodeGeneratorExtension
         N4 => ["x", "y", "z", "w"],
         _ => throw new NotSupportedException($"components for rank {rank} is not supported")
     };
+
+    public static IEnumerable<Swizzle.IComponent> SwizzleComponents(this IRank rank) => rank switch
+    {
+        N2 => [Swizzle.X.Instance, Swizzle.Y.Instance],
+        N3 => [Swizzle.X.Instance, Swizzle.Y.Instance, Swizzle.Z.Instance],
+        N4 => [Swizzle.X.Instance, Swizzle.Y.Instance, Swizzle.Z.Instance, Swizzle.W.Instance],
+        _ => throw new NotSupportedException($"components for rank {rank} is not supported")
+    };
+
+    
+
+
 
     public static string CSharpName(this MatType matType)
          => $"mat{matType.Row.Value}x{matType.Column.Value}{matType.ElementType.ElementName()}";

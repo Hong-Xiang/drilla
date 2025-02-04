@@ -1,6 +1,7 @@
-﻿using System.CodeDom.Compiler;
+﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+using System.CodeDom.Compiler;
 
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
+namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class Loop<TInstruction>(
     Label Label,

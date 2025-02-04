@@ -3,7 +3,7 @@ using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
-public sealed record class NamedComponentExpression(IExpression Base, string ComponentName) : IExpression
+public sealed record class NamedComponentExpression(IExpression Base, MemberDeclaration Component) : IExpression
 {
-    public IShaderType Type { get; } = ((StructureDeclaration)(Base.Type)).Members.Single(m => m.Name == ComponentName).Type;
+    public IShaderType Type => Component.Type;
 }

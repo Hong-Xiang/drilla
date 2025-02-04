@@ -1,5 +1,5 @@
-﻿using DualDrill.CLSL.Language.ControlFlowGraph;
-using DualDrill.CLSL.LinearInstruction;
+﻿using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.LinearInstruction;
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
 using System.Collections.Immutable;

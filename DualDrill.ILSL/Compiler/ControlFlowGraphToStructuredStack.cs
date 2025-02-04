@@ -1,7 +1,8 @@
-﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+﻿using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.LinearInstruction;
+using DualDrill.CLSL.Language.LinearInstruction;
 
 namespace DualDrill.CLSL.Compiler;
 

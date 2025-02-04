@@ -2,7 +2,7 @@
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.Common;
 
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
+namespace DualDrill.CLSL.Language.ControlFlow;
 
 public enum SuccessorKind
 {

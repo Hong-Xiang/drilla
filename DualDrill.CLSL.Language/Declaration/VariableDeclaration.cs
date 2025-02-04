@@ -11,7 +11,7 @@ public sealed record class VariableDeclaration(
     string Name,
     IShaderType Type,
     ImmutableHashSet<IShaderAttribute> Attributes
-) : IDeclaration, IVariableIdentifierResolveResult
+) : IDeclaration, IVariableIdentifierSymbol
 {
     public IExpression? Initializer { get; set; } = null;
 }

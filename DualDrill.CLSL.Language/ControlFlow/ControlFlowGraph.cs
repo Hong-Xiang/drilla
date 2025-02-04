@@ -1,6 +1,6 @@
 ﻿using System.Collections.Frozen;
 
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
+namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed partial class ControlFlowGraph<TData>
 {

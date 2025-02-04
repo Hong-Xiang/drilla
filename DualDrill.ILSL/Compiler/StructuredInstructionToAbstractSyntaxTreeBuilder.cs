@@ -1,12 +1,13 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.LinearInstruction;
 using DualDrill.Common;
 using System.Diagnostics;
 
@@ -122,25 +123,60 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         return default;
     }
 
-    public Unit Visit<TTarget>(LoadSymbolInstruction<TTarget> inst) where TTarget : IVariableIdentifierResolveResult
+    public Unit Visit<TTarget>(LoadSymbolInstruction<TTarget> inst)
+        where TTarget : ILoadStoreTargetSymbol
     {
-        Expressions.Push(new VariableIdentifierExpression(inst.Target));
+        switch (inst.Target)
+        {
+            case IVariableIdentifierSymbol v:
+                Expressions.Push(new VariableIdentifierExpression(v));
+                break;
+            case MemberDeclaration m:
+                {
+                    var o = Expressions.Pop();
+                    Expressions.Push(new NamedComponentExpression(o, m));
+                    break;
+                }
+            default:
+                throw new NotImplementedException();
+        }
         return default;
     }
 
-    public Unit Visit<TTarget>(LoadSymbolAddressInstruction<TTarget> inst) where TTarget : IVariableIdentifierResolveResult
+    public Unit Visit<TTarget>(LoadSymbolAddressInstruction<TTarget> inst)
+        where TTarget : ILoadStoreTargetSymbol
     {
         throw new NotImplementedException();
     }
 
-    public Unit Visit<TTarget>(StoreSymbolInstruction<TTarget> inst) where TTarget : IVariableIdentifierResolveResult
+    public Unit Visit<TTarget>(StoreSymbolInstruction<TTarget> inst)
+        where TTarget : ILoadStoreTargetSymbol
     {
-        Statements.Add(new SimpleAssignmentStatement(
-            new VariableIdentifierExpression(inst.Target),
-            Expressions.Pop(),
-            AssignmentOp.Assign
-        ));
-        return default;
+        {
+            if (inst.Target is IVariableIdentifierSymbol v)
+            {
+                Statements.Add(new SimpleAssignmentStatement(
+                            new VariableIdentifierExpression(v),
+                            Expressions.Pop(),
+                            AssignmentOp.Assign
+                        ));
+                return default;
+            }
+        }
+        {
+            if (inst.Target is MemberDeclaration m)
+            {
+                var v = Expressions.Pop();
+                var o = Expressions.Pop();
+                Statements.Add(new SimpleAssignmentStatement(
+                    o,
+                    v,
+                    AssignmentOp.Assign
+                ));
+                return default;
+            }
+        }
+        throw new NotImplementedException();
     }
 
     public Unit Visit<TOperation>(BinaryOperationInstruction<TOperation> inst) where TOperation : ISingleton<TOperation>, IBinaryOperation<TOperation>

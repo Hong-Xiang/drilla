@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+﻿using DualDrill.CLSL.Language.ControlFlow;
 using System.Diagnostics.CodeAnalysis;
 
 namespace DualDrill.CLSL.Compiler;

@@ -1,6 +1,7 @@
 ﻿using DualDrill.ApiGen.DMath;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common;
 using DualDrill.Common.Nat;
 
 var targetDirectory = new DirectoryInfo(args[0]);
@@ -20,11 +21,10 @@ var vec2funcs = ShaderFunction.Instance.Functions
 var config = CSharpProjectionConfiguration.Instance;
 foreach (var t in ShaderType.GetVecTypes())
 {
-    var gen = new MathCodeGenerator(config);
-    gen.Generate(t);
+    var code = t.Accept(new VecGenVisitor(config));
     var fn = $"{config.GetCSharpTypeName(t)}.gen.cs";
     var fpath = Path.Combine(targetDirectory.FullName, fn);
-    File.WriteAllText(fpath, gen.GetCode());
+    File.WriteAllText(fpath, code);
 }
 
 {
@@ -36,3 +36,14 @@ foreach (var t in ShaderType.GetVecTypes())
 }
 
 
+sealed record class VecGenVisitor(CSharpProjectionConfiguration Config) : IVecType.IVisitor<string>
+{
+    public string Visit<TRank, TElement>(VecType<TRank, TElement> t)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>
+    {
+        var gen = new MathCodeGenerator(Config);
+        gen.Generate(t);
+        return gen.GetCode();
+    }
+}

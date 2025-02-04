@@ -1,9 +1,12 @@
-﻿using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.LinearInstruction;
+﻿using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
+
 
 public interface IFloatOp<TSelf>
     where TSelf : IFloatOp<TSelf>
@@ -18,6 +21,19 @@ public interface ISignedIntegerOp<TSelf>
 
 public interface IUnaryOp { }
 
+public interface IOperation
+{
+    FunctionDeclaration Function { get; }
+    IOperationMethodAttribute GetOperationMethodAttribute();
+}
+
+public interface IOperation<TSelf> : IOperation, ISingleton<TSelf>
+    where TSelf : IOperation<TSelf>
+{
+    IOperationMethodAttribute IOperation.GetOperationMethodAttribute()
+        => new OperationMethodAttribute<TSelf>();
+}
+
 public interface IUnaryScalarOperation<TSelf> : IUnaryOp
     where TSelf : IUnaryScalarOperation<TSelf>
 {
@@ -30,10 +46,13 @@ public interface IBinaryOp<TSelf>
 public interface IGenericOp<TSelf>
     where TSelf : IGenericOp<TSelf>
 {
-}/// <summary>
+}
+
+/// <summary>
 /// Operation of form t -> t -> t
 /// </summary>
-/// <typeparam name="TSelf"></typeparam>public interface IBinaryOperation<TSelf> : ISingleton<TSelf>
+/// <typeparam name="TSelf"></typeparam>
+public interface IBinaryOperation<TSelf> : ISingleton<TSelf>
     where TSelf : IBinaryOperation<TSelf>
 {
     public IShaderType OperandType { get; }

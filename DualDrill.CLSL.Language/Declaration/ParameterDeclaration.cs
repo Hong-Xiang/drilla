@@ -8,7 +8,7 @@ namespace DualDrill.CLSL.Language.Declaration;
 public sealed record class ParameterDeclaration(
     string Name,
     IShaderType Type,
-    ImmutableHashSet<IShaderAttribute> Attributes) : IDeclaration, IVariableIdentifierResolveResult
+    ImmutableHashSet<IShaderAttribute> Attributes) : IDeclaration, IVariableIdentifierSymbol
 {
 }
 

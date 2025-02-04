@@ -1,6 +1,4 @@
-﻿using DualDrill.CLSL.LinearInstruction;
-
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
+﻿namespace DualDrill.CLSL.Language.ControlFlow;
 
 public interface ILabel<TSelf> : IEquatable<TSelf>
     where TSelf : ILabel<TSelf>

@@ -2,10 +2,10 @@
 using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.ControlFlowGraph;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.LinearInstruction;
+using DualDrill.CLSL.Language.LinearInstruction;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using System.Diagnostics;

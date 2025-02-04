@@ -1,7 +1,9 @@
-﻿using DotNext.Patterns;
+﻿using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.Common;
 using DualDrill.Common.Nat;
-using System.Collections.Immutable;
 using System.Diagnostics;
+using static DualDrill.CLSL.Language.Operation.Swizzle;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -9,70 +11,53 @@ public interface IVecType : IShaderType
 {
     public IScalarType ElementType { get; }
     public IRank Size { get; }
+
+    public IOperation ComponentGetOperation(IComponent c);
+    public IOperation ComponentSetOperation(IComponent c);
+
+    public interface IVisitor<TResult>
+    {
+        public TResult Visit<TRank, TElement>(VecType<TRank, TElement> t)
+            where TRank : IRank<TRank>
+            where TElement : IScalarType<TElement>;
+    }
+
+    public TResult Accept<TResult>(IVisitor<TResult> visitor);
+}
+
+
+public interface IVecType<TSelf> : IVecType, ISingleton<TSelf>
+    where TSelf : IVecType<TSelf>
+{
+    IShaderType SwizzleResultType<TPattern>() where TPattern : Swizzle.IPattern<TPattern>;
+}
+
+public interface ISizedVecType<TRank, TSelf> : IVecType<TSelf>
+    where TRank : IRank<TRank>
+    where TSelf : ISizedVecType<TRank, TSelf>
+{
+    public interface ISizedVisitor<TResult>
+    {
+        public TResult Visit<TElement>(VecType<TRank, TElement> t)
+            where TElement : IScalarType<TElement>;
+    }
+
+    public TResult Accept<TResult>(ISizedVisitor<TResult> visitor);
 }
 
 [DebuggerDisplay("{Name}")]
-public sealed class VecType<TRank, TElement> : IVecType,
-    ISingleton<VecType<TRank, TElement>>,
-    ISingletonShaderType<VecType<TRank, TElement>>
-    where TRank : class, IRank<TRank>
-    where TElement : class, IScalarType<TElement>
+public sealed class VecType<TRank, TElement>
+    : ISizedVecType<TRank, VecType<TRank, TElement>>
+    , ISingleton<VecType<TRank, TElement>>
+    , ISingletonShaderType<VecType<TRank, TElement>>
+    where TRank : IRank<TRank>
+    where TElement : IScalarType<TElement>
 {
     private VecType() { }
     public static VecType<TRank, TElement> Instance { get; } = new();
 
-    //public static readonly ImmutableArray<FunctionDeclaration> Constructors =
-    //    [
-    //      new FunctionDeclaration(
-    //            new VecType<TSize, TElement>().Name,
-    //            [],
-    //            new FunctionReturn(new VecType<TSize, TElement>(), []),
-    //            []
-    //      ),
-    //      ..Enumerable.Range(0, TSize.Value).Select(static count =>
-    //        new FunctionDeclaration(
-    //            new VecType<TSize, TElement>().Name,
-    //            [.. Enumerable.Range(0, count + 1).Select(static i => new ParameterDeclaration(ParameterNames[i], TElement.Instance, []))],
-    //            new FunctionReturn(new VecType<TSize, TElement>(), []),
-    //        []
-    //    ))];
-
     public string Name => $"vec{Size.Value}{ElementType.ElementName()}";
 
-    //public static readonly FunctionDeclaration Dot =
-    //    new FunctionDeclaration("dot",
-    //                           [new ParameterDeclaration("e1", new VecType<TSize, TElement>(), []),
-    //                            new ParameterDeclaration("e2", new VecType<TSize, TElement>(), [])],
-    //                            new FunctionReturn(TElement.Instance, []),
-    //                            []);
-    //public static readonly FunctionDeclaration Length =
-    //new FunctionDeclaration("length",
-    //                        [],
-    //                        new FunctionReturn(TElement.Instance, []),
-    //                        []);
-    //public static readonly FunctionDeclaration Abs =
-    //new FunctionDeclaration("abs",
-    //                        [new ParameterDeclaration("e", new VecType<TSize, TElement>(), [])],
-    //                        new FunctionReturn(new VecType<TSize, TElement>(), []),
-    //                        []);
-
-    //public static readonly FunctionDeclaration Normalize =
-    //new FunctionDeclaration("normalize",
-    //                    [new ParameterDeclaration("e", new VecType<TSize, TElement>(), [])],
-    //                    new FunctionReturn(new VecType<TSize, TElement>(), []),
-    //                    []);
-    //public static readonly FunctionDeclaration Reflect =
-    //new FunctionDeclaration("reflect",
-    //                [new ParameterDeclaration("a", new VecType<TSize, TElement>(), []),
-    //                new ParameterDeclaration("norm", new VecType<TSize, TElement>(), [])],
-    //                new FunctionReturn(new VecType<TSize, TElement>(), []),
-    //                []);
-    //public static readonly FunctionDeclaration Cross =
-    //new FunctionDeclaration("cross",
-    //            [new ParameterDeclaration("a", new VecType<TSize, TElement>(), []),
-    //                new ParameterDeclaration("b", new VecType<TSize, TElement>(), [])],
-    //            new FunctionReturn(new VecType<TSize, TElement>(), []),
-    //            []);
     public int ByteSize => Size.Value * ElementType.ByteSize;
 
     public IScalarType ElementType => TElement.Instance;
@@ -84,9 +69,42 @@ public sealed class VecType<TRank, TElement> : IVecType,
         throw new NotImplementedException();
     }
 
-    public IPtrType GetPtrType()
+    public IPtrType GetPtrType() => SingletonPtrType<VecType<TRank, TElement>>.Instance;
+
+    public IShaderType SwizzleResultType<TPattern>() where TPattern : Swizzle.IPattern<TPattern>
+        => TPattern.Instance.TargetType<TElement>();
+
+    public IOperation ComponentGetOperation(IComponent c)
     {
-        throw new NotImplementedException();
+        if (c is Swizzle.ISizedComponent<TRank> rc)
+        {
+            return rc.ComponentGetOperation<VecType<TRank, TElement>, TElement>();
+        }
+        throw new NotSupportedException();
+    }
+
+    public IOperation ComponentSetOperation(IComponent c)
+    {
+        if (c is Swizzle.ISizedComponent<TRank> rc)
+        {
+            return rc.ComponentSetOperation<VecType<TRank, TElement>, TElement>();
+        }
+        throw new NotSupportedException();
+    }
+
+    public TResult Accept<TResult>(IVecType.IVisitor<TResult> visitor)
+        => visitor.Visit(this);
+
+    public TResult Accept<TResult>(ISizedVecType<TRank, VecType<TRank, TElement>>.ISizedVisitor<TResult> visitor)
+        => visitor.Visit(this);
+
+    public sealed class ComponentMember<TComponent>
+        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
+    {
+        public MemberDeclaration Declaration { get; } = new MemberDeclaration(
+              TComponent.Instance.Name,
+              TElement.Instance,
+              []);
     }
 }
 
@@ -97,19 +115,10 @@ public static partial class ShaderType
            from e in ScalarTypes
            select GetVecType(r, e)];
     public static IVecType GetVecType(IRank size, IScalarType elementType)
-        => elementType.Accept<IVecType, VecTypeBuilder>(new(size));
+        => size.Accept(new VecTypeFromRankVisitor(elementType));
 
-    private struct VecTypeBuilder(IRank Size) : IScalarType.IGenericVisitor<IVecType>
+    private struct VecTypeFromRankVisitor(IScalarType ElementType) : IRank.IVisitor<IVecType>
     {
-        private struct Builder<TScalarType> : IRank.IVisitor<IVecType>
-                where TScalarType : class, IScalarType<TScalarType>
-        {
-            readonly IVecType IRank.IVisitor<IVecType>.Visit<TRank>() => VecType<TRank, TScalarType>.Instance;
-        }
-
-        readonly IVecType IScalarType.IGenericVisitor<IVecType>.Visit<TScalarType>(TScalarType scalarType)
-                    => Size.Accept(new Builder<TScalarType>());
+        readonly IVecType IRank.IVisitor<IVecType>.Visit<TRank>() => ElementType.GetVecType<TRank>();
     }
-
-
 }

@@ -18,11 +18,16 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitLdArg(CilInstructionInfo inst, ParameterInfo info);
     TResult VisitLdArgAddress(CilInstructionInfo inst, ParameterInfo info);
     TResult VisitStArg(CilInstructionInfo inst, ParameterInfo info);
-    //TResult VisitLdThis();
-    //TResult VsitiLdThisAddress();
+    TResult VisitLdThis();
+    TResult VisitStThis();
     TResult VisitLdLoc(CilInstructionInfo inst, LocalVariableInfo info);
     TResult VisitLdLocAddress(CilInstructionInfo inst, LocalVariableInfo info);
     TResult VisitStLoc(CilInstructionInfo inst, LocalVariableInfo info);
+
+    TResult VisitLdFld(CilInstructionInfo inst, FieldInfo info);
+    TResult VisitLdFldAddress(CilInstructionInfo inst, FieldInfo info);
+    TResult VisitStFld(CilInstructionInfo inst, FieldInfo info);
+
     TResult VisitLdNull(CilInstructionInfo info);
     TResult VisitCall(CilInstructionInfo info, MethodInfo method);
     TResult VisitNewObj(CilInstructionInfo info, ConstructorInfo constructor);
@@ -39,7 +44,7 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitBinaryLogical<TOp>(CilInstructionInfo inst)
         where TOp : BinaryLogical.IOp<TOp>;
     TResult VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryRelation.IOp<TOp>;
-    TResult VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>; 
+    TResult VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>;
     TResult VisitUnaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryRelation.IOp<TOp>;
     TResult VisitLdIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;
     TResult VisitStIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;

@@ -1,19 +1,7 @@
-﻿using DualDrill.CLSL.LinearInstruction;
+﻿using DualDrill.CLSL.Language.LinearInstruction;
 using System.Collections.Immutable;
 
-namespace DualDrill.CLSL.Language.ControlFlowGraph;
-
-[Obsolete]
-public sealed record class BasicBlockLegacy(int Offset)
-    : ILabel
-{
-    public int Index
-    {
-        get;
-        set;
-    } = -1;
-    public ImmutableArray<IInstruction> Instructions { get; set; } = [];
-}
+namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class BasicBlock<TInstruction> : Block<TInstruction>.IElement
 {

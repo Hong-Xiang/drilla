@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 

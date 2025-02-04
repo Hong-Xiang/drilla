@@ -10,6 +10,12 @@ public sealed class StructureDeclaration : IShaderType, IDeclaration
     public ImmutableArray<MemberDeclaration> Members { get; set; } = [];
     public ImmutableHashSet<IShaderAttribute> Attributes { get; set; } = [];
 
+    IPtrType? PtrType { get; set; } = null;
+
+    public StructureDeclaration()
+    {
+    }
+
     public IRefType GetRefType()
     {
         throw new NotImplementedException();
@@ -17,6 +23,7 @@ public sealed class StructureDeclaration : IShaderType, IDeclaration
 
     public IPtrType GetPtrType()
     {
-        throw new NotImplementedException();
+        PtrType ??= new PtrType(this);
+        return PtrType;
     }
 }

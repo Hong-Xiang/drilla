@@ -1,4 +1,4 @@
-﻿using DotNext.Patterns;
+﻿using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -24,7 +24,7 @@ public sealed record class PtrType(IShaderType BaseType) : IPtrType
 
 
 sealed class SingletonPtrType<TBaseType>() : IPtrType, ISingleton<SingletonPtrType<TBaseType>>
-    where TBaseType : class, IShaderType, ISingleton<TBaseType>
+    where TBaseType : IShaderType, ISingleton<TBaseType>
 {
     public static SingletonPtrType<TBaseType> Instance { get; } = new();
     public IShaderType BaseType => TBaseType.Instance;
@@ -35,10 +35,5 @@ sealed class SingletonPtrType<TBaseType>() : IPtrType, ISingleton<SingletonPtrTy
         throw new NotSupportedException();
     }
 
-    public IPtrType GetPtrType()
-    {
-        return SingletonPtrType<SingletonPtrType<TBaseType>>.Instance;
-    }
+    public IPtrType GetPtrType() => SingletonPtrType<SingletonPtrType<TBaseType>>.Instance;
 }
-
-

@@ -1,5 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.ControlFlowGraph;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
@@ -8,7 +8,7 @@ using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Reflection;
 
-namespace DualDrill.CLSL.LinearInstruction;
+namespace DualDrill.CLSL.Language.LinearInstruction;
 
 public interface IInstruction
 {
@@ -103,21 +103,21 @@ public sealed record class CallInstruction(FunctionDeclaration Callee) : IStruct
 }
 
 public sealed record class LoadSymbolInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
-    where TTarget : IVariableIdentifierResolveResult
+    where TTarget : ILoadStoreTargetSymbol
 {
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
 }
 public sealed record class LoadSymbolAddressInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
-    where TTarget : IVariableIdentifierResolveResult
+    where TTarget : ILoadStoreTargetSymbol
 {
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
 }
 public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
-    where TTarget : IVariableIdentifierResolveResult
+    where TTarget : ILoadStoreTargetSymbol
 {
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);

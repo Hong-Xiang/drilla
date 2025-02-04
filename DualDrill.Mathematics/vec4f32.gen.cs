@@ -10,6 +10,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.InteropServices;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 namespace DualDrill.Mathematics;
 using static DMath;
 
@@ -223,6 +226,7 @@ public partial struct vec4f32{
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [RuntimeVectorSwizzleSetMethodAttribute([DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.x, DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.y])]
+        [OperationMethod<VectorSwizzleSetOperation<Swizzle.Pattern<N4, Swizzle.X, Swizzle.Y>, FloatType<N32>>>]
         set 
         {
             x = value.x;

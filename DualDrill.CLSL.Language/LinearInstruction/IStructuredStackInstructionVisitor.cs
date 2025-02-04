@@ -3,7 +3,7 @@ using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common;
 
-namespace DualDrill.CLSL.LinearInstruction;
+namespace DualDrill.CLSL.Language.LinearInstruction;
 
 public interface IStructuredStackInstructionVisitor<TResult>
 {
@@ -14,11 +14,11 @@ public interface IStructuredStackInstructionVisitor<TResult>
     TResult Visit<TLiteral>(ConstInstruction<TLiteral> inst) where TLiteral : ILiteral;
     TResult Visit(CallInstruction inst);
     TResult Visit<TTarget>(LoadSymbolInstruction<TTarget> inst)
-        where TTarget : IVariableIdentifierResolveResult;
+        where TTarget : ILoadStoreTargetSymbol;
     TResult Visit<TTarget>(LoadSymbolAddressInstruction<TTarget> inst)
-        where TTarget : IVariableIdentifierResolveResult;
+        where TTarget : ILoadStoreTargetSymbol;
     TResult Visit<TTarget>(StoreSymbolInstruction<TTarget> inst)
-        where TTarget : IVariableIdentifierResolveResult;
+        where TTarget : ILoadStoreTargetSymbol;
     TResult Visit<TOperation>(BinaryOperationInstruction<TOperation> inst)
         where TOperation : ISingleton<TOperation>, IBinaryOperation<TOperation>;
     TResult Visit(LogicalNotInstruction inst);

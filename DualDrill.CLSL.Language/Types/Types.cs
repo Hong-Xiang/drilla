@@ -3,7 +3,6 @@ using DualDrill.Common.Nat;
 using DualDrill.Common;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -60,12 +59,17 @@ public interface IScalarType : IPlainType, IStorableType, ICreationFixedFootprin
 
     IScalarConversionOperation GetConversionToOperation<TTarget>()
         where TTarget : IScalarType<TTarget>;
+
+    IVecType GetVecType<TRank>() where TRank : class, IRank<TRank>;
 }
 
 public interface IScalarType<TSelf> : IScalarType, ISingletonShaderType<TSelf>, ISingleton<TSelf>
     where TSelf : IScalarType<TSelf>
 {
     IScalarConversionOperation IScalarType.GetConversionToOperation<TTarget>() => ScalarConversionOperation<TSelf, TTarget>.Instance;
+
+
+    IVecType IScalarType.GetVecType<TRank>() => VecType<TRank, TSelf>.Instance;
 }
 
 public interface INumericType : IScalarType

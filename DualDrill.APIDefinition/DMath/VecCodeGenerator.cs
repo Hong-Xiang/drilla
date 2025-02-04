@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common;
 using DualDrill.Common.Nat;
 using Microsoft.CodeAnalysis;
 using System.CodeDom.Compiler;
@@ -26,17 +27,19 @@ internal sealed record class VectorComponentCodeGenerator(
 {
     public void GenerateMemberDeclaration()
     {
-        foreach (var m in VecType.Size.Components())
+        foreach (var m in VecType.Size.SwizzleComponents())
         {
             Writer.Write($"public {Config.GetCSharpTypeName(VecType.ElementType)} {m} ");
             Writer.WriteLine("{");
             using (Writer.IndentedScope())
             {
                 Writer.WriteAggressiveInlining();
-                Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m)]).GetCSharpUsageCode()}]");
+                Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m.Name)]).GetCSharpUsageCode()}]");
+                Writer.WriteLine($"[{VecType.ComponentGetOperation(m).GetOperationMethodAttribute().GetCSharpUsageCode()}]");
                 Writer.WriteLine("get;");
                 Writer.WriteAggressiveInlining();
-                Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m)]).GetCSharpUsageCode()}]");
+                Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute([Enum.Parse<SwizzleComponent>(m.Name)]).GetCSharpUsageCode()}]");
+                Writer.WriteLine($"[{VecType.ComponentSetOperation(m).GetOperationMethodAttribute().GetCSharpUsageCode()}]");
                 Writer.WriteLine("set;");
             }
             Writer.WriteLine();
@@ -96,20 +99,22 @@ internal sealed record class VectorSimdCodeGenerator(
         Writer.WriteLine($"internal {SimdDataTypeName} Data;");
         Writer.WriteLine();
 
-        foreach (var (m, i) in VecType.Size.Components().Select((x, i) => (x, i)))
+        foreach (var (m, i) in VecType.Size.SwizzleComponents().Select((x, i) => (x, i)))
         {
-            Writer.Write($"public {Config.GetCSharpTypeName(VecType.ElementType)} {m}");
+            Writer.Write($"public {Config.GetCSharpTypeName(VecType.ElementType)} {m.Name}");
             Writer.WriteLine(" {");
             Writer.Indent++;
 
             //getter
             Writer.WriteAggressiveInlining();
-            Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m)]).GetCSharpUsageCode()}]");
+            Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m.Name)]).GetCSharpUsageCode()}]");
+            Writer.WriteLine($"[{VecType.ComponentGetOperation(m).GetOperationMethodAttribute().GetCSharpUsageCode()}]");
             Writer.WriteLine($"get => Data[{i}];");
             Writer.WriteLine();
 
             Writer.WriteAggressiveInlining();
-            Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute([Enum.Parse<SwizzleComponent>(m)]).GetCSharpUsageCode()}]");
+            Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute([Enum.Parse<SwizzleComponent>(m.Name)]).GetCSharpUsageCode()}]");
+            Writer.WriteLine($"[{VecType.ComponentSetOperation(m).GetOperationMethodAttribute().GetCSharpUsageCode()}]");
             Writer.WriteLine("set {");
             Writer.Indent++;
             Writer.Write($"Data = Vector{SimdDataBitWidth}.Create(");
@@ -130,14 +135,12 @@ internal sealed record class VectorSimdCodeGenerator(
                     Writer.Write(", ");
                 }
             }
-            Writer.WriteLine(");");
 
+            Writer.WriteLine(");");
 
             Writer.Indent--;
             Writer.WriteLine("}");
             Writer.WriteLine();
-
-
 
             Writer.Indent--;
             Writer.WriteLine("}");
@@ -195,9 +198,11 @@ internal sealed record class VectorSimdCodeGenerator(
 }
 
 
-public sealed record class VecCodeGenerator
+public sealed record class VecCodeGenerator<TRank, TElement>
+    where TRank : IRank<TRank>
+    where TElement : IScalarType<TElement>
 {
-    IVecType VecType { get; }
+    VecType<TRank, TElement> VecType { get; }
     public IndentedTextWriter Writer { get; }
     CSharpProjectionConfiguration Config { get; }
     IVectorDetailCodeGenerator DetailCodeGenerator { get; }
@@ -209,17 +214,15 @@ public sealed record class VecCodeGenerator
         // for vec3, we use vec4's data for optimizing memory access and SIMD optimization
         return vecType switch
         {
-            IVecType { ElementType: BoolType } => false,
-            IVecType { ElementType: IFloatType { BitWidth: N16 } } => false,
-            IVecType { ElementType: var e, Size: N3 } when e.BitWidth.Value * 4 >= 64 => true,
-            IVecType { ElementType: var e, Size: var s } when e.BitWidth.Value * s.Value >= 64 => true,
+            { ElementType: BoolType } => false,
+            { ElementType: IFloatType { BitWidth: N16 } } => false,
+            { ElementType: var e, Size: N3 } when e.BitWidth.Value * 4 >= 64 => true,
+            { ElementType: var e, Size: var s } when e.BitWidth.Value * s.Value >= 64 => true,
             _ => false
         };
-
-
     }
 
-    public VecCodeGenerator(IVecType vecType, IndentedTextWriter writer, CSharpProjectionConfiguration config)
+    public VecCodeGenerator(VecType<TRank, TElement> vecType, IndentedTextWriter writer, CSharpProjectionConfiguration config)
     {
         VecType = vecType;
         Writer = writer;
@@ -309,7 +312,6 @@ public sealed record class VecCodeGenerator
 
     public void GenerateDeclaration()
     {
-
         Writer.WriteStructLayout();
         var csharpName = Config.GetCSharpTypeName(VecType);
         Writer.Write("public partial struct ");
@@ -341,71 +343,105 @@ public sealed record class VecCodeGenerator
         }
     }
 
+
     public void GenerateSwizzles()
     {
+        //static IEnumerable<ImmutableArray<string>> MakePermutations(int count, IReadOnlyList<string> components)
+        //{
+        //    if (count <= 0)
+        //    {
+        //        yield return [];
+        //        yield break;
+        //    }
+        //    var result = new string[count];
+        //    if (count == 1)
+        //    {
+        //        foreach (var c in components)
+        //        {
+        //            result[0] = c;
+        //            yield return [.. result];
+        //        }
+        //        yield break;
+        //    }
+        //    var q = from n in MakePermutations(count - 1, components)
+        //            from c in components
+        //            select (string[])[c, .. n];
+        //    foreach (var r in q)
+        //    {
+        //        yield return [.. r];
+        //    }
+        //}
 
-        static IEnumerable<ImmutableArray<string>> MakePermutations(int count, IReadOnlyList<string> components)
+        //var sizedComponents = VecType.Size.SwizzleComponents()
+        //                                  .OfType<Swizzle.ISizedComponent<TRank>>()
+        //                                  .ToImmutableArray();
+        //Debug.Assert(sizedComponents.Length == VecType.Size.Value);
+
+        //var p2s = from c0 in sizedComponents
+        //          from c1 in sizedComponents
+        //          select c0.PatternAfterComponent(c1);
+
+        //string[] components = [.. VecType.Size.Components()];
+        //foreach (var rank in (IRank[])[N2.Instance, N3.Instance, N4.Instance])
+        //{
+        //    var rv = ShaderType.GetVecType(rank, VecType.ElementType);
+        //    foreach (var sw in MakePermutations(rank.Value, components))
+        //    {
+
+        //    }
+        //}
+        foreach (var p in Swizzle.SwizzlePatterns<TRank>())
         {
-            if (count <= 0)
-            {
-                yield return [];
-                yield break;
-            }
-            var result = new string[count];
-            if (count == 1)
-            {
-                foreach (var c in components)
-                {
-                    result[0] = c;
-                    yield return [.. result];
-                }
-                yield break;
-            }
-            var q = from n in MakePermutations(count - 1, components)
-                    from c in components
-                    select (string[])[c, .. n];
-            foreach (var r in q)
-            {
-                yield return [.. r];
-            }
-        }
-
-        string[] components = [.. VecType.Size.Components()];
-        foreach (var rank in (IRank[])[N2.Instance, N3.Instance, N4.Instance])
-        {
-            var rv = ShaderType.GetVecType(rank, VecType.ElementType);
-            foreach (var sw in MakePermutations(rank.Value, components))
-            {
-                var name = string.Join(string.Empty, sw);
-                Writer.Write($"public {Config.GetCSharpTypeName(rv)} {name} ");
-                var cps = sw.Select(Enum.Parse<SwizzleComponent>).ToArray();
-                using (Writer.IndentedScopeWithBracket())
-                {
-                    Writer.WriteAggressiveInlining();
-                    Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute(cps).GetCSharpUsageCode()}]");
-                    Writer.Write($"get => vec{rank.Value}(");
-                    Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. sw]);
-                    Writer.WriteLine(");");
-
-                    if (sw.Distinct().Count() == sw.Length && sw.Length < VecType.Size.Value)
-                    {
-                        Writer.WriteLine();
-                        Writer.WriteAggressiveInlining();
-                        Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute(cps).GetCSharpUsageCode()}]");
-                        Writer.WriteLine("set ");
-                        using (Writer.IndentedScopeWithBracket())
-                        {
-                            for (var i = 0; i < sw.Length; i++)
-                            {
-                                Writer.WriteLine($"{sw[i]} = value.{components[i]};");
-                            }
-                        };
-
-                    }
-                }
-            }
+            _ = p.Accept(new SwizzleForPatternGenerator(Config, Writer));
         }
     }
+
+    sealed class SwizzleForPatternGenerator(
+        CSharpProjectionConfiguration Config,
+        IndentedTextWriter Writer) : Swizzle.ISizedPattern<TRank>.ISizedPatternVisitor<Unit>
+    {
+        public Unit Visit<TPattern>() where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
+        {
+
+            var pattern = TPattern.Instance;
+            var rv = pattern.TargetType<TElement>();
+            Writer.Write($"public {Config.GetCSharpTypeName(rv)} {TPattern.Instance.Name} ");
+            //var cps = sw.Select(Enum.Parse<SwizzleComponent>).ToArray();
+            using (Writer.IndentedScopeWithBracket())
+            {
+                Writer.WriteAggressiveInlining();
+                //Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute(cps).GetCSharpUsageCode()}]");
+                CLSL.Language.Operation.IOperation getOperation = VectorSwizzleGetOperation<TPattern, TElement>.Instance;
+                Writer.WriteLine($"[{getOperation.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
+                Writer.Write($"get => vec{TRank.Instance.Value}(");
+                Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. pattern.Components.Select(c => c.Name)]);
+                Writer.WriteLine(");");
+
+                if (!pattern.HasDuplicateComponent)
+                {
+                    Writer.WriteLine();
+                    Writer.WriteAggressiveInlining();
+                    //Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute(cps).GetCSharpUsageCode()}]");
+                    CLSL.Language.Operation.IOperation setOperation = VectorSwizzleGetOperation<TPattern, TElement>.Instance;
+                    Writer.WriteLine($"[{setOperation.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
+                    Writer.WriteLine("set ");
+
+                    using (Writer.IndentedScopeWithBracket())
+                    {
+                        var sourceComponents = rv.Size.SwizzleComponents().ToImmutableArray();
+                        foreach (var (ic, c) in pattern.Components.Index())
+                        {
+                            Writer.WriteLine($"{c.Name} = value.{sourceComponents[ic]};");
+                        }
+                    };
+
+                }
+            }
+            return default;
+        }
+    }
+
+
 
     public void Generate()
     {
