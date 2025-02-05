@@ -6,6 +6,7 @@ using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -33,6 +34,24 @@ public static class ShaderModuleExtension
         return parser.ParseShaderModule(shader);
     }
 
+    public static ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> ReplaceOperationCallsToOperationInstruction(
+        this ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> ir
+    )
+    {
+        return ir.MapBody((m, f, b) =>
+            new UnstructuredStackInstructionFunctionBody(b.Instructions.Select(inst =>
+            {
+                if (inst is CallInstruction call)
+                {
+                    if (call.Callee.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } attr)
+                    {
+                        return attr.Operation.Instruction;
+                    }
+                }
+                return inst;
+            }))
+        );
+    }
     public static ShaderModuleDeclaration<CompoundStatement> ToAbstractSyntaxTreeFunctionBody(
            this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module
        )
@@ -110,11 +129,14 @@ public static class ShaderModuleExtension
         return isw.ToString();
     }
 
+
+
     public static async ValueTask<string> EmitWgslCode(
         this ISharpShader shader
     )
     {
         var module = shader.Parse()
+                           .ReplaceOperationCallsToOperationInstruction()
                            .ToControlFlowGraph()
                            .ToStructuredControlFlowStackModel()
                            .ToAbstractSyntaxTreeFunctionBody();

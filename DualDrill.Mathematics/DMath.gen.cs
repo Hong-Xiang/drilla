@@ -4440,5600 +4440,5600 @@ public static partial class DMath{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static SByte i8(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int16 i16(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int32 i32(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Int64 i64(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Byte u8(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt16 u16(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt32 u32(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static UInt64 u64(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Half f16(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Single f32(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
     public static Double f64(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2b vec2(Boolean e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2b vec2(Boolean e0, Boolean e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2b vec2b(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3b vec3(Boolean e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3b vec3(Boolean e0, Boolean e1, Boolean e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3b vec3(Boolean e0, vec2b e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3b vec3(vec2b e0, Boolean e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3b vec3b(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4b vec4(Boolean e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4b vec4(Boolean e0, Boolean e1, Boolean e2, Boolean e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4b vec4(Boolean e0, vec3b e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4b vec4(vec3b e0, Boolean e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4b vec4(Boolean e0, Boolean e1, vec2b e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4b vec4(Boolean e0, vec2b e1, Boolean e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4b vec4(vec2b e0, Boolean e1, Boolean e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4b vec4(vec2b e0, vec2b e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4b vec4b(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2i8 vec2(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2i8 vec2(SByte e0, SByte e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i8 vec2i8(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i8 vec3(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i8 vec3(SByte e0, SByte e1, SByte e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i8 vec3(SByte e0, vec2i8 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i8 vec3(vec2i8 e0, SByte e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i8 vec3i8(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i8 vec4(SByte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i8 vec4(SByte e0, SByte e1, SByte e2, SByte e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i8 vec4(SByte e0, vec3i8 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i8 vec4(vec3i8 e0, SByte e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i8 vec4(SByte e0, SByte e1, vec2i8 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i8 vec4(SByte e0, vec2i8 e1, SByte e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i8 vec4(vec2i8 e0, SByte e1, SByte e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i8 vec4(vec2i8 e0, vec2i8 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i8 vec4i8(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2i16 vec2(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2i16 vec2(Int16 e0, Int16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i16 vec2i16(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i16 vec3(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i16 vec3(Int16 e0, Int16 e1, Int16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i16 vec3(Int16 e0, vec2i16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i16 vec3(vec2i16 e0, Int16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i16 vec3i16(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i16 vec4(Int16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i16 vec4(Int16 e0, Int16 e1, Int16 e2, Int16 e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i16 vec4(Int16 e0, vec3i16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i16 vec4(vec3i16 e0, Int16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i16 vec4(Int16 e0, Int16 e1, vec2i16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i16 vec4(Int16 e0, vec2i16 e1, Int16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i16 vec4(vec2i16 e0, Int16 e1, Int16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i16 vec4(vec2i16 e0, vec2i16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i16 vec4i16(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2i32 vec2(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2i32 vec2(Int32 e0, Int32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i32 vec2i32(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i32 vec3(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i32 vec3(Int32 e0, Int32 e1, Int32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i32 vec3(Int32 e0, vec2i32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i32 vec3(vec2i32 e0, Int32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i32 vec3i32(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i32 vec4(Int32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i32 vec4(Int32 e0, Int32 e1, Int32 e2, Int32 e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i32 vec4(Int32 e0, vec3i32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i32 vec4(vec3i32 e0, Int32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i32 vec4(Int32 e0, Int32 e1, vec2i32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i32 vec4(Int32 e0, vec2i32 e1, Int32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i32 vec4(vec2i32 e0, Int32 e1, Int32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i32 vec4(vec2i32 e0, vec2i32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i32 vec4i32(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2i64 vec2(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2i64 vec2(Int64 e0, Int64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2i64 vec2i64(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i64 vec3(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i64 vec3(Int64 e0, Int64 e1, Int64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i64 vec3(Int64 e0, vec2i64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3i64 vec3(vec2i64 e0, Int64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3i64 vec3i64(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i64 vec4(Int64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i64 vec4(Int64 e0, Int64 e1, Int64 e2, Int64 e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i64 vec4(Int64 e0, vec3i64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i64 vec4(vec3i64 e0, Int64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i64 vec4(Int64 e0, Int64 e1, vec2i64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i64 vec4(Int64 e0, vec2i64 e1, Int64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i64 vec4(vec2i64 e0, Int64 e1, Int64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4i64 vec4(vec2i64 e0, vec2i64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4i64 vec4i64(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2u8 vec2(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2u8 vec2(Byte e0, Byte e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u8 vec2u8(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u8 vec3(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u8 vec3(Byte e0, Byte e1, Byte e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u8 vec3(Byte e0, vec2u8 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u8 vec3(vec2u8 e0, Byte e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u8 vec3u8(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u8 vec4(Byte e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u8 vec4(Byte e0, Byte e1, Byte e2, Byte e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u8 vec4(Byte e0, vec3u8 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u8 vec4(vec3u8 e0, Byte e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u8 vec4(Byte e0, Byte e1, vec2u8 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u8 vec4(Byte e0, vec2u8 e1, Byte e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u8 vec4(vec2u8 e0, Byte e1, Byte e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u8 vec4(vec2u8 e0, vec2u8 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u8 vec4u8(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2u16 vec2(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2u16 vec2(UInt16 e0, UInt16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u16 vec2u16(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u16 vec3(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u16 vec3(UInt16 e0, UInt16 e1, UInt16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u16 vec3(UInt16 e0, vec2u16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u16 vec3(vec2u16 e0, UInt16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u16 vec3u16(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u16 vec4(UInt16 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u16 vec4(UInt16 e0, UInt16 e1, UInt16 e2, UInt16 e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u16 vec4(UInt16 e0, vec3u16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u16 vec4(vec3u16 e0, UInt16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u16 vec4(UInt16 e0, UInt16 e1, vec2u16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u16 vec4(UInt16 e0, vec2u16 e1, UInt16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u16 vec4(vec2u16 e0, UInt16 e1, UInt16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u16 vec4(vec2u16 e0, vec2u16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u16 vec4u16(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2u32 vec2(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2u32 vec2(UInt32 e0, UInt32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u32 vec2u32(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u32 vec3(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u32 vec3(UInt32 e0, UInt32 e1, UInt32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u32 vec3(UInt32 e0, vec2u32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u32 vec3(vec2u32 e0, UInt32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u32 vec3u32(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u32 vec4(UInt32 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u32 vec4(UInt32 e0, UInt32 e1, UInt32 e2, UInt32 e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u32 vec4(UInt32 e0, vec3u32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u32 vec4(vec3u32 e0, UInt32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u32 vec4(UInt32 e0, UInt32 e1, vec2u32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u32 vec4(UInt32 e0, vec2u32 e1, UInt32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u32 vec4(vec2u32 e0, UInt32 e1, UInt32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u32 vec4(vec2u32 e0, vec2u32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u32 vec4u32(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2u64 vec2(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2u64 vec2(UInt64 e0, UInt64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2u64 vec2u64(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u64 vec3(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u64 vec3(UInt64 e0, UInt64 e1, UInt64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u64 vec3(UInt64 e0, vec2u64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3u64 vec3(vec2u64 e0, UInt64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3u64 vec3u64(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u64 vec4(UInt64 e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u64 vec4(UInt64 e0, UInt64 e1, UInt64 e2, UInt64 e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u64 vec4(UInt64 e0, vec3u64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u64 vec4(vec3u64 e0, UInt64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u64 vec4(UInt64 e0, UInt64 e1, vec2u64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u64 vec4(UInt64 e0, vec2u64 e1, UInt64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u64 vec4(vec2u64 e0, UInt64 e1, UInt64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4u64 vec4(vec2u64 e0, vec2u64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4u64 vec4u64(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2f16 vec2(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2f16 vec2(Half e0, Half e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f16 vec2f16(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f16 vec3(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f16 vec3(Half e0, Half e1, Half e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f16 vec3(Half e0, vec2f16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f16 vec3(vec2f16 e0, Half e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f16 vec3f16(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f16 vec4(Half e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f16 vec4(Half e0, Half e1, Half e2, Half e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f16 vec4(Half e0, vec3f16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f16 vec4(vec3f16 e0, Half e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f16 vec4(Half e0, Half e1, vec2f16 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f16 vec4(Half e0, vec2f16 e1, Half e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f16 vec4(vec2f16 e0, Half e1, Half e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f16 vec4(vec2f16 e0, vec2f16 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f16 vec4f16(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2f32 vec2(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2f32 vec2(Single e0, Single e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f32 vec2f32(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f32 vec3(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f32 vec3(Single e0, Single e1, Single e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f32 vec3(Single e0, vec2f32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f32 vec3(vec2f32 e0, Single e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f32 vec3f32(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f32 vec4(Single e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f32 vec4(Single e0, Single e1, Single e2, Single e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f32 vec4(Single e0, vec3f32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f32 vec4(vec3f32 e0, Single e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f32 vec4(Single e0, Single e1, vec2f32 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f32 vec4(Single e0, vec2f32 e1, Single e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f32 vec4(vec2f32 e0, Single e1, Single e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f32 vec4(vec2f32 e0, vec2f32 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f32 vec4f32(vec4f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2f64 vec2(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec2f64 vec2(Double e0, Double e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec2f64 vec2f64(vec2f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f64 vec3(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f64 vec3(Double e0, Double e1, Double e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f64 vec3(Double e0, vec2f64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec3f64 vec3(vec2f64 e0, Double e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec3f64 vec3f64(vec3f64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f64 vec4(Double e){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ZeroConstructorMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ZeroConstructorMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f64 vec4(Double e0, Double e1, Double e2, Double e3){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f64 vec4(Double e0, vec3f64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f64 vec4(vec3f64 e0, Double e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f64 vec4(Double e0, Double e1, vec2f64 e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f64 vec4(Double e0, vec2f64 e1, Double e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f64 vec4(vec2f64 e0, Double e1, Double e2){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
     public static vec4f64 vec4(vec2f64 e0, vec2f64 e1){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4b v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4i8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4i16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4i32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4i64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4u8 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4u16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4u32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4u64 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4f16 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4f32 v){
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [ShaderRuntimeMethodAttribute]
-    [ConversionMethodAttribute]
-    [VecMethodRenamedForOverloadAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ShaderRuntimeMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.ConversionMethodAttribute]
+    [DualDrill.CLSL.Language.ShaderAttribute.VecMethodRenamedForOverloadAttribute]
     public static vec4f64 vec4f64(vec4f64 v){
         throw new NotImplementedException();
     }

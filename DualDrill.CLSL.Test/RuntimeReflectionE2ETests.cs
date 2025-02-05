@@ -1,4 +1,5 @@
-﻿using Xunit.Abstractions;
+﻿using DualDrill.CLSL.Compiler;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
@@ -27,7 +28,22 @@ public sealed class RuntimeReflectionE2ETests(ITestOutputHelper Output)
     public async Task MandelbrotDistanceShaderModuleShouldWork()
     {
         var shader = new ShaderModule.MandelbrotDistanceShaderModule();
-        var code = await shader.EmitWgslCode();
+        var moduleStackIR = shader.Parse();
+        Output.WriteLine("Parsed:");
+        Output.WriteLine(moduleStackIR.Dump());
+        var moduleStackIROp = moduleStackIR.ReplaceOperationCallsToOperationInstruction();
+        Output.WriteLine("Parsed(Op):");
+        Output.WriteLine(moduleStackIROp.Dump());
+        var cfg = moduleStackIROp.ToControlFlowGraph();
+        Output.WriteLine("CFG:");
+        Output.WriteLine(cfg.Dump());
+        var scf = cfg.ToStructuredControlFlowStackModel();
+        Output.WriteLine("SCF:");
+        Output.WriteLine(scf.Dump());
+        var ast = scf.ToAbstractSyntaxTreeFunctionBody();
+        Output.WriteLine("AST:");
+        Output.WriteLine(ast.Dump());
+        var code = await ast.EmitWgslCode();
         Output.WriteLine("generated code:");
         Output.WriteLine(code);
     }

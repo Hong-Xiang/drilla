@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.Common;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 
@@ -38,6 +39,20 @@ public sealed record class ShaderModuleDeclaration<TBody>(
 
     public void Dump(IndentedTextWriter writer)
     {
-        throw new NotImplementedException();
+        writer.Write(GetType().CSharpFullName());
+    }
+
+    public string Dump()
+    {
+        var sw = new StringWriter();
+        var isw = new IndentedTextWriter(sw);
+        Dump(isw);
+        foreach (var f in Declarations.OfType<FunctionDeclaration>())
+        {
+            if (FunctionDefinitions.TryGetValue(f, out var body))
+            {
+            }
+        }
+        return sw.ToString();
     }
 }

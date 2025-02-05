@@ -43,6 +43,8 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
                 Writer.Write(a.Binding);
                 Writer.Write(")");
                 break;
+            case IShaderMetadataAttribute:
+                break;
             default:
                 throw new NotSupportedException($"WriteAttribute not support {attr}");
         }

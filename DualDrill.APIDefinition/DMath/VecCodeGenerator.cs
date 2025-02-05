@@ -8,6 +8,7 @@ using DualDrill.Common.Nat;
 using Microsoft.CodeAnalysis;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using IOperation = DualDrill.CLSL.Language.Operation.IOperation;
 
 namespace DualDrill.ApiGen.DMath;
 
@@ -16,7 +17,7 @@ interface IVectorDetailCodeGenerator
     void GenerateMemberDeclaration();
     void GeneratePrimaryFactoryMethodBody();
     string CreateVectorExpression(Func<string[], IEnumerable<string>> componentExpressions);
-    void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op);
+    void GenerateArithmeticOperatorBody(IVectorBinaryNumericOperation op);
     void GenerateArithmeticOperatorBody(UnaryArithmeticOperatorDefinition op);
 }
 
@@ -74,12 +75,12 @@ internal sealed record class VectorComponentCodeGenerator(
         Writer.WriteLine(");");
     }
 
-    public void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op)
+    public void GenerateArithmeticOperatorBody(IVectorBinaryNumericOperation op)
     {
         Writer.Write($"return vec{VecType.Size.Value}(");
         Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => {
-            var l = op.Left is IScalarType ?  "left" : $"left.{m}";
-            var r = op.Right is IScalarType ?  "right" : $"right.{m}";
+            var l = op.LeftType is IScalarType ?  "left" : $"left.{m}";
+            var r = op.RightType is IScalarType ?  "right" : $"right.{m}";
             return $"({Config.GetCSharpTypeName(VecType.ElementType)})({l} {Config.OpName(op.Op)} {r})"; })]);
         Writer.WriteLine(");");
     }
@@ -175,20 +176,22 @@ internal sealed record class VectorSimdCodeGenerator(
         Writer.WriteLine($"return new() {{ Data = {Config.OpName(op.Op)} v.Data }};");
     }
 
-    public void GenerateArithmeticOperatorBody(BinaryArithmeticOperatorDefinition op)
+    public void GenerateArithmeticOperatorBody(IVectorBinaryNumericOperation op)
     {
-        if (op.Op != BinaryArithmetic.OpKind.rem)
+        Writer.WriteLine("throw new NotImplementedException();");
+        return;
+        if (op.Op is BinaryArithmetic.Rem)
         {
-            var l = op.Left is IScalarType ? $"{SimdStaticDataTypeName}.Create(left)" : "left.Data";
-            var r = op.Right is IScalarType ? $"{SimdStaticDataTypeName}.Create(right)" : "right.Data";
+            var l = op.LeftType is IScalarType ? $"{SimdStaticDataTypeName}.Create(left)" : "left.Data";
+            var r = op.RightType is IScalarType ? $"{SimdStaticDataTypeName}.Create(right)" : "right.Data";
             Writer.WriteLine($"return new() {{ Data = {l} {Config.OpName(op.Op)} {r} }};");
         }
         else
         {
             Writer.Write($"return vec{VecType.Size.Value}(");
             List<string> args = [.. VecType.Size.Components().Select(c => {
-                var l = op.Left is IScalarType ? "left" : $"left.{c}";
-                var r = op.Right is IScalarType ? "right" : $"right.{c}";
+                var l = op.LeftType is IScalarType ? "left" : $"left.{c}";
+                var r = op.RightType is IScalarType ? "right" : $"right.{c}";
                 return $"({Config.GetCSharpTypeName(VecType.ElementType)})({l} % {r})";
             })];
             Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. args]);
@@ -322,6 +325,11 @@ public sealed record class VecCodeGenerator<TRank, TElement>
             foreach (var op in ShaderOperator.UnaryArithmeticOperatorDefinitions.Where(o => o.Source.Equals(VecType)))
             {
                 Writer.WriteAggressiveInlining();
+                if (op.Op == UnaryArithmeticOp.Minus && TElement.Instance is INumericType nt)
+                {
+                    IOperation operation = nt.GetVectorUnaryNumericOperation<TRank, UnaryArithmetic.Neg>();
+                    Writer.WriteLine($"[{operation.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
+                }
                 Writer.WriteLine($"public static {Config.GetCSharpTypeName(op.Result)} operator {Config.OpName(op.Op)}({Config.GetCSharpTypeName(op.Source)} v)");
                 using (Writer.IndentedScopeWithBracket())
                 {
@@ -329,15 +337,20 @@ public sealed record class VecCodeGenerator<TRank, TElement>
                 }
             }
 
-            foreach (var op in ShaderOperator.BinaryArithmeticOperatorDefinitions.Where(o => o.Left.Equals(VecType) || o.Right.Equals(VecType)))
+            if (VecType.ElementType is not BoolType)
             {
-                Writer.WriteAggressiveInlining();
-                Writer.WriteLine($"public static {Config.GetCSharpTypeName(op.Result)} operator {Config.OpName(op.Op)}({Config.GetCSharpTypeName(op.Left)} left, {Config.GetCSharpTypeName(op.Right)} right)");
-                using (Writer.IndentedScopeWithBracket())
+                foreach (var op in VecType.GetBinaryNumericOperations())
                 {
-                    DetailCodeGenerator.GenerateArithmeticOperatorBody(op);
+                    Writer.WriteAggressiveInlining();
+                    Writer.WriteLine($"[{op.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
+                    Writer.WriteLine($"public static {Config.GetCSharpTypeName(VecType)} operator {Config.OpName(op.Op)}({Config.GetCSharpTypeName(op.LeftType)} left, {Config.GetCSharpTypeName(op.RightType)} right)");
+                    using (Writer.IndentedScopeWithBracket())
+                    {
+                        DetailCodeGenerator.GenerateArithmeticOperatorBody(op);
+                    }
                 }
             }
+
 
             GenerateSwizzles();
         }
@@ -422,7 +435,7 @@ public sealed record class VecCodeGenerator<TRank, TElement>
                     Writer.WriteLine();
                     Writer.WriteAggressiveInlining();
                     //Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute(cps).GetCSharpUsageCode()}]");
-                    CLSL.Language.Operation.IOperation setOperation = VectorSwizzleGetOperation<TPattern, TElement>.Instance;
+                    CLSL.Language.Operation.IOperation setOperation = VectorSwizzleSetOperation<TPattern, TElement>.Instance;
                     Writer.WriteLine($"[{setOperation.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
                     Writer.WriteLine("set ");
 

@@ -8,6 +8,7 @@ using DualDrill.Common;
 using Lokad.ILPack.IL;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -81,6 +82,28 @@ public sealed record class RuntimeReflectionParser(
 
         result.Members = [.. fieldMembers, .. propsMembers];
         return result;
+    }
+
+
+    public VariableDeclaration ParseStaticField(FieldInfo fieldInfo)
+    {
+        var symbol = Symbol.Variable(fieldInfo);
+        // TODO: distinct on module variable and function variable
+        if (Context[symbol] is { } found)
+        {
+            return found;
+        }
+        var decl = Context.AddVariable(
+            symbol,
+            (idx) => new VariableDeclaration(
+                DeclarationScope.Module,
+                -1,
+                fieldInfo.Name,
+                ParseType(fieldInfo.FieldType),
+                [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]
+            )
+        );
+        return decl;
     }
 
     public MemberDeclaration ParseField(FieldInfo fieldInfo)
@@ -227,6 +250,7 @@ public sealed record class RuntimeReflectionParser(
             if (metaAttributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } attr)
             {
                 var f = attr.Operation.Function;
+                var oattr = f.Attributes.OfType<IOperationMethodAttribute>().Single();
                 Context.AddFunctionDeclaration(symbol, f);
                 return f;
             }
@@ -296,12 +320,45 @@ public sealed record class RuntimeReflectionParser(
         {
             _ = ParseLocalVariable(v);
         }
-
+        {
+            foreach (var inst in methodModel.Instructions)
+            {
+                if (inst.Operand is LocalVariableInfo info)
+                {
+                    Debug.Assert(Context[Symbol.Variable(info)] is not null);
+                }
+            }
+        }
+        var offsetToIndex = new Dictionary<int, int>();
+        foreach (var (idx, inst) in methodModel.Instructions.Index())
+        {
+            offsetToIndex.Add(inst.Offset, idx);
+        }
         var labels = methodModel.GetJumpTargetOffsets()
-                                .Select(offset => KeyValuePair.Create(offset, Label.Create(offset)))
+                                .Select(offset => KeyValuePair.Create(offset, (Label.Create(offset), offsetToIndex[offset])))
                                 .ToFrozenDictionary();
-        var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, labels);
-        methodModel.Accept<RuntimeReflectionParserInstructionVisitor, Unit>(visitor);
+
+        var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, method, labels);
+        var visited = new bool[methodModel.Instructions.Length];
+        Stack<int> nexts = [];
+        nexts.Push(0);
+        while (nexts.Count > 0)
+        {
+            var ip = nexts.Pop();
+            if (visited[ip])
+            {
+                continue;
+            }
+            visited[ip] = true;
+            var currentNexts = methodModel.Accept<RuntimeReflectionParserInstructionVisitor, int[]>(visitor, ip);
+            foreach (var n in currentNexts)
+            {
+                if (n < methodModel.Instructions.Length && !visited[n])
+                {
+                    nexts.Push(n);
+                }
+            }
+        }
         return new(visitor.Result);
     }
 

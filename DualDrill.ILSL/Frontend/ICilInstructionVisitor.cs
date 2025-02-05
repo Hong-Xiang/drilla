@@ -18,8 +18,8 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitLdArg(CilInstructionInfo inst, ParameterInfo info);
     TResult VisitLdArgAddress(CilInstructionInfo inst, ParameterInfo info);
     TResult VisitStArg(CilInstructionInfo inst, ParameterInfo info);
-    TResult VisitLdThis();
-    TResult VisitStThis();
+    TResult VisitLdThis(CilInstructionInfo inst);
+    TResult VisitStThis(CilInstructionInfo inst);
     TResult VisitLdLoc(CilInstructionInfo inst, LocalVariableInfo info);
     TResult VisitLdLocAddress(CilInstructionInfo inst, LocalVariableInfo info);
     TResult VisitStLoc(CilInstructionInfo inst, LocalVariableInfo info);
@@ -27,7 +27,7 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitLdFld(CilInstructionInfo inst, FieldInfo info);
     TResult VisitLdFldAddress(CilInstructionInfo inst, FieldInfo info);
     TResult VisitStFld(CilInstructionInfo inst, FieldInfo info);
-
+    TResult VisitLdsfld(CilInstructionInfo inst, FieldInfo info);
     TResult VisitLdNull(CilInstructionInfo info);
     TResult VisitCall(CilInstructionInfo info, MethodInfo method);
     TResult VisitNewObj(CilInstructionInfo info, ConstructorInfo constructor);

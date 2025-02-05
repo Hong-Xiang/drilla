@@ -99,12 +99,33 @@ public sealed class VecType<TRank, TElement>
         => visitor.Visit(this);
 
     public sealed class ComponentMember<TComponent>
-        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
+        where TComponent : ISizedComponent<TRank, TComponent>
     {
         public MemberDeclaration Declaration { get; } = new MemberDeclaration(
               TComponent.Instance.Name,
               TElement.Instance,
               []);
+    }
+
+    public IEnumerable<IVectorBinaryNumericOperation> GetBinaryNumericOperations()
+    {
+        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
+        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
+        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
+        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
+        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
+
+        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
+        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
+        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
+        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
+        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
+
+        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
+        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
+        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
+        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
+        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
     }
 }
 

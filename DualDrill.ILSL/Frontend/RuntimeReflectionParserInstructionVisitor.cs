@@ -11,18 +11,22 @@ using System.Reflection;
 
 namespace DualDrill.CLSL.Frontend;
 
-public sealed class ValidationException(string message)
+public sealed class ValidationException(string message, MethodBase method)
     : Exception(message)
 {
+    public MethodBase Method { get; } = method;
 }
 
 sealed class RuntimeReflectionParserInstructionVisitor(
         RuntimeReflectionParser Parser,
         ICompilationContext Context,
         FunctionDeclaration Function,
-        FrozenDictionary<int, Label> Labels
-    ) : ICilInstructionVisitor<Unit>
+        MethodBase Method,
+        FrozenDictionary<int, (Label, int)> Labels
+    ) : ICilInstructionVisitor<int[]>
 {
+    //public List<int> Nexts { get; private set; } = [];
+
     List<IStackInstruction> Instructions { get; } = [];
 
     public IReadOnlyList<IStackInstruction> Result => Instructions;
@@ -35,7 +39,25 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public void AfterVisitInstruction(CilInstructionInfo info)
     {
-        Console.Error.Write($"After inst#{info.Index} - {info.Instruction.OpCode}\t{info.Instruction.Operand} - [");
+        Console.Error.Write($"After inst#{info.Index}({info.Instruction.Offset}).({info.NextByteOffset}) - {info.Instruction.OpCode}");
+        var opcode = info.Instruction.OpCode;
+        if (opcode.FlowControl == System.Reflection.Emit.FlowControl.Branch
+            || opcode.FlowControl == System.Reflection.Emit.FlowControl.Cond_Branch)
+        {
+            switch (info.Instruction.Operand)
+            {
+                case sbyte v:
+                    Console.Error.Write($" -> {info.NextByteOffset + v}");
+                    break;
+                case int v:
+                    Console.Error.Write($" -> {info.NextByteOffset + v}");
+                    break;
+                default:
+                    break;
+
+            }
+        }
+        Console.Error.Write($"\t{info.Instruction.Operand} - [");
         if (ValidationStack is not null)
         {
             foreach (var s in CurrentStack)
@@ -49,25 +71,36 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public void BeforeVisitInstruction(CilInstructionInfo info)
     {
-        if (Labels.TryGetValue(info.ByteOffset, out var label))
+        if (Labels.TryGetValue(info.ByteOffset, out var labelIndex))
         {
+            var (label, _) = labelIndex;
             Instructions.Add(new LabelInstruction(label));
             if (ValidationStack is null)
             {
-                ValidationStack = JumpStack[label];
+                if (JumpStack.TryGetValue(label, out var s))
+                {
+                    ValidationStack = s;
+                }
+                else
+                {
+                    throw new NotSupportedException();
+                }
             }
             else
             {
-                var jump = JumpStack[label];
-                if (!ValidationStack.SequenceEqual(jump))
+                if (JumpStack.TryGetValue(label, out var jump))
                 {
-                    throw new ValidationException($"Stack state after jump is not consistent");
+                    if (!ValidationStack.SequenceEqual(jump))
+                    {
+                        throw new ValidationException($"Stack state after jump is not consistent", Method);
+                    }
                 }
             }
         }
     }
 
-    public Unit VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
+
+    public int[] VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
         where TOp : BinaryArithmetic.IOp<TOp>
     {
         var r = CurrentStack.Pop();
@@ -75,21 +108,21 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         var t = EnsureBinaryOpOprandsType(l, r);
         if (t is INumericType nt)
         {
-            var c = nt.GetBinaryOperation<TOp>().Instruction;
+            var c = ((IOperation)nt.GetBinaryOperation<TOp>()).Instruction;
             Instructions.Add(c);
             CurrentStack.Push(nt);
-            return default;
+            return [inst.Index + 1];
         }
         throw new NotImplementedException();
     }
 
-    public Unit VisitBinaryBitwise<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
+    public int[] VisitBinaryBitwise<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
         where TOp : BinaryArithmetic.IOp<TOp>
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitBinaryLogical<TOp>(CilInstructionInfo inst)
+    public int[] VisitBinaryLogical<TOp>(CilInstructionInfo inst)
         where TOp : BinaryLogical.IOp<TOp>
     {
         var r = CurrentStack.Pop();
@@ -98,10 +131,10 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
         if (t is INumericType nt)
         {
-            var c = nt.GetBinaryOperation<TOp>().Instruction;
+            var c = ((IOperation)nt.GetBinaryOperation<TOp>()).Instruction;
             Instructions.Add(c);
             CurrentStack.Push(nt);
-            return default;
+            return [inst.Index + 1];
         }
         throw new NotImplementedException();
     }
@@ -112,27 +145,28 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             return l;
         }
-        throw new ValidationException($"binary arithmeic validation mismatch {l}, {r}");
+        throw new ValidationException($"binary arithmeic validation mismatch {l}, {r}", Method);
     }
 
-    public Unit VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryRelation.IOp<TOp>
+    public int[] VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryRelation.IOp<TOp>
     {
         var r = CurrentStack.Pop();
         var l = CurrentStack.Pop();
         var t = EnsureBinaryOpOprandsType(l, r);
         if (t is INumericType nt)
         {
-            var c = nt.GetBinaryOperation<TOp>().Instruction;
+            var c = ((IOperation)nt.GetBinaryOperation<TOp>()).Instruction;
             Instructions.Add(c);
             CurrentStack.Push(nt);
-            return default;
+            return [inst.Index + 1];
         }
         throw new NotImplementedException();
     }
 
-    public Unit VisitBr(CilInstructionInfo inst, int jumpOffset)
+    public int[] VisitBr(CilInstructionInfo inst, int jumpOffset)
     {
-        var label = Labels[jumpOffset + inst.NextByteOffset];
+        var labelIndex = Labels[jumpOffset + inst.NextByteOffset];
+        var (label, index) = labelIndex;
         Instructions.Add(ShaderInstruction.Br(label));
         if (JumpStack.TryGetValue(label, out var s))
         {
@@ -144,44 +178,45 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             JumpStack.TryAdd(label, new Stack<IShaderType>(CurrentStack));
         }
         ValidationStack = null;
-        return default;
+        return [index];
     }
 
-    public Unit VisitBreak(CilInstructionInfo inst)
+    public int[] VisitBreak(CilInstructionInfo inst)
     {
         throw new NotSupportedException($"{inst.Instruction.OpCode}");
     }
 
-    public Unit VisitBrIf(CilInstructionInfo inst, int jumpOffset, bool value)
+    public int[] VisitBrIf(CilInstructionInfo inst, int jumpOffset, bool value)
     {
+        var v = CurrentStack.Pop();
+        if (v is not BoolType)
+        {
+            // TODO: add conversion instruction
+        }
         // bf.false
         if (value == false)
         {
-            var v = CurrentStack.Pop();
-            if (v is not BoolType)
-            {
-                // TODO: add conversion instruction
-            }
             Instructions.Add(ShaderInstruction.LogicalNot());
         }
 
-        var label = Labels[jumpOffset + inst.NextByteOffset];
+        var labelIndex = Labels[jumpOffset + inst.NextByteOffset];
+        var (label, index) = labelIndex;
         Instructions.Add(ShaderInstruction.BrIf(label));
         if (JumpStack.TryGetValue(label, out var s))
         {
             if (!CurrentStack.SequenceEqual(s))
             {
-                throw new ValidationException($"Stack state after jump is not consistent");
+                throw new ValidationException($"Stack state after jump is not consistent", Method);
             }
         }
         else
         {
             JumpStack.TryAdd(label, new Stack<IShaderType>(CurrentStack));
         }
-        return default;
+        return [index, inst.Index + 1];
     }
 
-    public Unit VisitBrIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false) where TOp : BinaryRelation.IOp<TOp>
+    public int[] VisitBrIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false) where TOp : BinaryRelation.IOp<TOp>
     {
         var r = CurrentStack.Pop();
         var l = CurrentStack.Pop();
@@ -189,7 +224,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
         if (t is INumericType nt)
         {
-            Instructions.Add(nt.GetBinaryOperation<TOp>().Instruction);
+            Instructions.Add(((IOperation)nt.GetBinaryOperation<TOp>()).Instruction);
         }
         else
         {
@@ -197,7 +232,8 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         }
 
 
-        var label = Labels[jumpOffset + inst.NextByteOffset];
+        var labelIndex = Labels[jumpOffset + inst.NextByteOffset];
+        var (label, index) = labelIndex;
         Instructions.Add(ShaderInstruction.BrIf(label));
         if (JumpStack.TryGetValue(label, out var s))
         {
@@ -207,10 +243,10 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             JumpStack.TryAdd(label, new Stack<IShaderType>(CurrentStack));
         }
-        return default;
+        return [index, inst.Index + 1];
     }
 
-    public Unit VisitCall(CilInstructionInfo info, MethodInfo method)
+    public int[] VisitCall(CilInstructionInfo info, MethodInfo method)
     {
         var f = Parser.ParseMethod(method);
         foreach (var (idx, p) in f.Parameters.Reverse().Index())
@@ -218,7 +254,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             var vt = CurrentStack.Pop();
             if (!vt.Equals(p.Type))
             {
-                throw new ValidationException($"parameter {p} not match: stack {vt} declaration {p.Type}");
+                throw new ValidationException($"parameter {p} not match: stack {vt.Name} declaration {p.Type.Name}", Method);
             }
         }
         Instructions.Add(ShaderInstruction.Call(f));
@@ -226,75 +262,76 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             CurrentStack.Push(f.Return.Type);
         }
-        return default;
+        return [info.Index + 1];
     }
 
-    public Unit VisitLdArg(CilInstructionInfo inst, ParameterInfo info)
+    public int[] VisitLdArg(CilInstructionInfo inst, ParameterInfo info)
     {
         var p = Parser.ParseParameter(info);
         Instructions.Add(ShaderInstruction.Load(p));
         CurrentStack.Push(p.Type);
-        return default;
+        return [inst.Index + 1];
     }
 
-    public Unit VisitLdArgAddress(CilInstructionInfo inst, ParameterInfo info)
+    public int[] VisitLdArgAddress(CilInstructionInfo inst, ParameterInfo info)
     {
         var p = Parser.ParseParameter(info);
         var c = ShaderInstruction.LoadAddress(p);
         Instructions.Add(c);
         CurrentStack.Push(p.Type.GetPtrType());
-        return default;
+        return [inst.Index + 1];
     }
 
-    public Unit VisitLdIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
+    public int[] VisitLdIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitLdIndirectNativeInt(CilInstructionInfo inst)
+    public int[] VisitLdIndirectNativeInt(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitLdIndirectRef(CilInstructionInfo inst)
+    public int[] VisitLdIndirectRef(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitLdLoc(CilInstructionInfo inst, LocalVariableInfo info)
+    public int[] VisitLdLoc(CilInstructionInfo inst, LocalVariableInfo info)
     {
 
         var v = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException($"Failed to resolve local variable {info}");
         Instructions.Add(ShaderInstruction.Load(v));
         CurrentStack.Push(v.Type);
-        return default;
+        return [inst.Index + 1];
 
     }
 
-    public Unit VisitLdLocAddress(CilInstructionInfo inst, LocalVariableInfo info)
+    public int[] VisitLdLocAddress(CilInstructionInfo inst, LocalVariableInfo info)
     {
         var v = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException($"Failed to resolve local variable {info}");
         Instructions.Add(ShaderInstruction.LoadAddress(v));
         CurrentStack.Push(v.Type.GetPtrType());
-        return default;
+        return [inst.Index + 1];
     }
 
-    public Unit VisitLdNull(CilInstructionInfo info)
+    public int[] VisitLdNull(CilInstructionInfo info)
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitLiteral<TLiteral>(CilInstructionInfo info, TLiteral literal) where TLiteral : ILiteral
+    public int[] VisitLiteral<TLiteral>(CilInstructionInfo info, TLiteral literal) where TLiteral : ILiteral
     {
         var c = ShaderInstruction.Const(literal);
         Instructions.Add(c);
         CurrentStack.Push(literal.Type);
-        return default;
+        return [info.Index + 1];
     }
 
-    public Unit VisitNewObj(CilInstructionInfo info, ConstructorInfo constructor)
+    public int[] VisitNewObj(CilInstructionInfo info, ConstructorInfo constructor)
     {
-        var callee = Context[Symbol.Function(constructor)] ?? throw new ValidationException($"Failed to resolve constructor {constructor}");
+        var callee = Context[Symbol.Function(constructor)]
+                     ?? throw new ValidationException($"Failed to resolve constructor {constructor}", Method);
         foreach (var p in callee.Parameters.Reverse())
         {
             var t = CurrentStack.Pop();
@@ -302,119 +339,139 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         }
         Instructions.Add(new CallInstruction(callee));
         CurrentStack.Push(callee.Return.Type);
-        return default;
+        return [info.Index + 1];
     }
 
-    public Unit VisitNop(CilInstructionInfo inst)
+    public int[] VisitNop(CilInstructionInfo inst)
     {
         Instructions.Add(ShaderInstruction.Nop());
-        return default;
+        return [inst.Index + 1];
     }
 
-    public Unit VisitReturn(CilInstructionInfo info)
+    public int[] VisitReturn(CilInstructionInfo info)
     {
         switch (CurrentStack.Count)
         {
             case 0:
                 if (Function.Return.Type is not UnitType)
                 {
-                    throw new ValidationException("return when stack is empty requires unit type");
+                    throw new ValidationException("return when stack is empty requires unit type", Method);
                 }
                 Instructions.Add(ShaderInstruction.Return());
                 ValidationStack = null;
-                return default;
+                return [];
             case 1:
                 var vt = CurrentStack.Pop();
                 var rt = Function.Return.Type;
                 if (!rt.Equals(vt))
                 {
-                    throw new ValidationException($"return when statck type {vt.Name} is not consistent with function signature return {rt.Name}");
+                    throw new ValidationException($"return when statck type {vt.Name} is not consistent with function signature return {rt.Name}", Method);
                 }
                 Instructions.Add(ShaderInstruction.Return());
                 ValidationStack = null;
-                return default;
+                return [];
             default:
-                throw new ValidationException("return when stack.Count > 1");
+                throw new ValidationException("return when stack.Count > 1", Method);
         }
     }
 
-    public Unit VisitStArg(CilInstructionInfo inst, ParameterInfo info)
+    public int[] VisitStArg(CilInstructionInfo inst, ParameterInfo info)
     {
         var p = Context[info] ?? throw new KeyNotFoundException($"Failed to resolve parameter {inst}");
         var v = CurrentStack.Pop();
         // TODO: check for consistency, may emit convert instruction here
         Instructions.Add(ShaderInstruction.LoadAddress(p));
-        return default;
+        return [inst.Index + 1];
     }
 
-    public Unit VisitStIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
+    public int[] VisitStIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitStIndirectRef(CilInstructionInfo inst)
+    public int[] VisitStIndirectRef(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitStLoc(CilInstructionInfo inst, LocalVariableInfo info)
+    public int[] VisitStLoc(CilInstructionInfo inst, LocalVariableInfo info)
     {
         var v = CurrentStack.Pop();
-        var varDecl = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException($"Failed to resolve local variable {info}");
+        var varDecl = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException($"Failed to resolve local variable {info}, @{inst}({inst.Instruction.OpCode}) - {Method.Name}");
         // TODO: check for consistency, may emit convert instruction here
         Instructions.Add(ShaderInstruction.Store(varDecl));
-        return default;
+        return [inst.Index + 1];
     }
 
-    public Unit VisitSwitch(CilInstructionInfo inst)
+    public int[] VisitSwitch(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitUnaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryRelation.IOp<TOp>
+    public int[] VisitUnaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryRelation.IOp<TOp>
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>
+    public int[] VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>
     {
         var t = CurrentStack.Pop();
         if (t is IScalarType nt)
         {
             Instructions.Add(nt.GetConversionToOperation<TTarget>().Instruction);
             CurrentStack.Push(TTarget.Instance);
-            return default;
+            return [inst.Index + 1];
         }
         throw new NotImplementedException();
     }
 
-    public Unit VisitLdThis()
+    public int[] VisitLdThis(CilInstructionInfo inst)
     {
         var p = Function.Parameters[0];
         Instructions.Add(ShaderInstruction.Load(p));
         CurrentStack.Push(p.Type.GetPtrType());
-        return default;
+        return [inst.Index + 1];
     }
 
-    public Unit VisitStThis()
+    public int[] VisitStThis(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitLdFld(CilInstructionInfo inst, FieldInfo info)
+    public int[] VisitLdFld(CilInstructionInfo inst, FieldInfo info)
     {
+        var o = CurrentStack.Pop();
+        if (o is not IPtrType)
+        {
+            throw new ValidationException("ldfld expect current stack to have ptr type", Method);
+        }
         var m = Parser.ParseField(info);
         CurrentStack.Push(m.Type);
-        return default;
+        return [inst.Index + 1];
     }
 
-    public Unit VisitLdFldAddress(CilInstructionInfo inst, FieldInfo info)
+    public int[] VisitLdFldAddress(CilInstructionInfo inst, FieldInfo info)
+    {
+        var o = CurrentStack.Pop();
+        if (o is not IPtrType)
+        {
+            throw new ValidationException("ldfld expect current stack to have ptr type", Method);
+        }
+        var m = Parser.ParseField(info);
+        CurrentStack.Push(m.Type.GetPtrType());
+        return [inst.Index + 1];
+    }
+
+    public int[] VisitStFld(CilInstructionInfo inst, FieldInfo info)
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitStFld(CilInstructionInfo inst, FieldInfo info)
+    public int[] VisitLdsfld(CilInstructionInfo inst, FieldInfo info)
     {
-        throw new NotImplementedException();
+        var v = Parser.ParseStaticField(info);
+        CurrentStack.Push(v.Type);
+        Instructions.Add(ShaderInstruction.Load(v));
+        return [inst.Index + 1];
     }
 }

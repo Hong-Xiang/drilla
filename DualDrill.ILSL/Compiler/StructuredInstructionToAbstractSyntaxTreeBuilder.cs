@@ -146,7 +146,21 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     public Unit Visit<TTarget>(LoadSymbolAddressInstruction<TTarget> inst)
         where TTarget : ILoadStoreTargetSymbol
     {
-        throw new NotImplementedException();
+        switch (inst.Target)
+        {
+            case IVariableIdentifierSymbol v:
+                Expressions.Push(new VariableIdentifierExpression(v));
+                break;
+            case MemberDeclaration m:
+                {
+                    var o = Expressions.Pop();
+                    Expressions.Push(new NamedComponentExpression(o, m));
+                    break;
+                }
+            default:
+                throw new NotImplementedException();
+        }
+        return default;
     }
 
     public Unit Visit<TTarget>(StoreSymbolInstruction<TTarget> inst)
@@ -194,6 +208,50 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 
     public Unit Visit<TOperation>(UnaryScalarInstruction<TOperation> inst) where TOperation : IUnaryScalarOperation<TOperation>
     {
+        return default;
+    }
+
+    public Unit VisitUnaryOperation<TOperation>(UnaryOperationInstruction<TOperation> inst) where TOperation : IUnaryOperation<TOperation>
+    {
+        throw new NotImplementedException();
+    }
+
+    public Unit VisitVectorComponentGet<TRank, TVector, TComponent>()
+        where TRank : Common.Nat.IRank<TRank>
+        where TVector : Language.Types.ISizedVecType<TRank, TVector>
+        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
+    {
+        throw new NotImplementedException();
+    }
+
+    public Unit VisitVectorComponentSet<TRank, TVector, TComponent>()
+        where TRank : Common.Nat.IRank<TRank>
+        where TVector : Language.Types.ISizedVecType<TRank, TVector>
+        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
+    {
+        throw new NotImplementedException();
+    }
+
+    public Unit VisitVectorSwizzleGet<TPattern, TElement>()
+        where TPattern : Swizzle.IPattern<TPattern>
+        where TElement : Language.Types.IScalarType<TElement>
+    {
+        var value = Expressions.Pop();
+        var expr = VectorSwizzleGetOperation<TPattern, TElement>.Instance.CreateExpression(value);
+        Expressions.Push(expr);
+        return default;
+
+        throw new NotImplementedException();
+    }
+
+    public Unit VisitVectorSwizzleSet<TPattern, TElement>()
+        where TPattern : Swizzle.IPattern<TPattern>
+        where TElement : Language.Types.IScalarType<TElement>
+    {
+        var value = Expressions.Pop();
+        var target = Expressions.Pop();
+        var stmt = VectorSwizzleSetOperation<TPattern, TElement>.Instance.CreateStatement(target, value);
+        Statements.Add(stmt);
         return default;
     }
 }

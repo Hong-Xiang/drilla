@@ -21,12 +21,16 @@ public static class BinaryLogical
 public sealed class OpAnd : BinaryLogical.IOp<OpAnd>, IIntegerOp<OpAnd>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.and;
+
+    public static OpAnd Instance { get; } = new();
 }
 public sealed class OpOr : BinaryLogical.IOp<OpOr>, IIntegerOp<OpOr>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.or;
+    public static OpOr Instance { get; } = new();
 }
 public sealed class OpXor : BinaryLogical.IOp<OpXor>, IIntegerOp<OpXor>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.xor;
+    public static OpXor Instance { get; } = new();
 }

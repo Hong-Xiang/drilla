@@ -124,6 +124,12 @@ public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : ISt
 
 }
 
+public sealed record class VectorGetComponentInstruction<TVector, TComponent>
+    where TVector : IVecType
+    where TComponent : Swizzle.IComponent
+{
+}
+
 public sealed record class VectorSwizzleGetInstruction<TTarget, TPattern>
     where TPattern : Swizzle.IPattern<TPattern>
 {
@@ -134,13 +140,24 @@ public sealed record class VectorSwizzleSetInstruction<TTarget, TPattern>
 {
 }
 
+public sealed record class UnaryOperationInstruction<TOperation>
+    : IStructuredStackInstruction
+    , ISingleton<UnaryOperationInstruction<TOperation>>
+    where TOperation : IUnaryOperation<TOperation>
+{
+    public static UnaryOperationInstruction<TOperation> Instance { get; } = new();
+    public TOperation Operation => TOperation.Instance;
+    public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
+        => visitor.VisitUnaryOperation(this);
+}
 
 public sealed record class BinaryOperationInstruction<TOperation>
     : ISingleton<BinaryOperationInstruction<TOperation>>
     , IStructuredStackInstruction
-    where TOperation : ISingleton<TOperation>, IBinaryOperation<TOperation>
+    where TOperation : IBinaryOperation<TOperation>
 {
     public static BinaryOperationInstruction<TOperation> Instance { get; } = new();
+    public TOperation Operation => TOperation.Instance;
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 

@@ -1,17 +1,13 @@
-﻿using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.Common.Nat;
+﻿using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common;
-using System.Collections.Immutable;
-using DualDrill.CLSL.Language.Operation;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Types;
 
 public interface IShaderType
 {
     string Name { get; }
-
     IRefType GetRefType();
-
     IPtrType GetPtrType();
 }
 
@@ -75,11 +71,18 @@ public interface IScalarType<TSelf> : IScalarType, ISingletonShaderType<TSelf>, 
 public interface INumericType : IScalarType
 {
     INumericBinaryOperation GetBinaryOperation<TOp>() where TOp : IBinaryOp<TOp>;
+
+    IOperation GetVectorUnaryNumericOperation<TRank, TOp>()
+        where TRank : IRank<TRank>
+        where TOp : UnaryArithmetic.IOp<TOp>;
+
 }
 
 public interface INumericType<TSelf> : INumericType, IShaderType<TSelf>, IScalarType<TSelf>
     where TSelf : INumericType<TSelf>
 {
+    IOperation INumericType.GetVectorUnaryNumericOperation<TRank, TOp>()
+        => VectorNumericUnaryOperation<TRank, TSelf, TOp>.Instance;
 }
 
 public interface IIntegerType : IScalarType { }
@@ -97,16 +100,6 @@ public sealed record class FixedSizedArrayType(IPlainType ElementType, int Size)
 public sealed record class RuntimeSizedArrayType(IScalarType ElementType)
 {
 }
-
-public readonly record struct StructureMember(string Name, IPlainType Type)
-{
-    public ImmutableArray<IShaderAttribute> Attributes { get; init; } = [];
-}
-
-public sealed record class StructureType(ImmutableArray<StructureMember> Members)
-{
-}
-
 
 public interface IStorableType : IShaderType { }
 

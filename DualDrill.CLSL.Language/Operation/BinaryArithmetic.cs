@@ -1,5 +1,4 @@
 ﻿using DualDrill.Common;
-using DualDrill.Common.Nat;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
 

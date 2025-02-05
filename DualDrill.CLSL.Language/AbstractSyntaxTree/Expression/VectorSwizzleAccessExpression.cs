@@ -17,5 +17,5 @@ public enum SwizzleComponent
 
 public sealed record class VectorSwizzleAccessExpression(IExpression Base, ImmutableArray<SwizzleComponent> Components) : IExpression
 {
-    public IShaderType Type { get; } = ((IVecType)Base.Type).ElementType;
+    public IShaderType Type => ((IVecType)Base.Type).ElementType;
 }

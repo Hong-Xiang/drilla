@@ -9,7 +9,7 @@ public sealed record class BinaryExpression<TOperation>(
 ) : IExpression
     where TOperation : IBinaryOperation<TOperation>
 {
-    public IShaderType Type => TOperation.Instance.OperandType;
+    public IShaderType Type => TOperation.Instance.ResultType;
 
     TResult IExpression.Accept<TResult>(IExpressionVisitor<TResult> visitor)
     {
