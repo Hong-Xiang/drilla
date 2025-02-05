@@ -209,7 +209,7 @@ public sealed class MethodBodyAnalysisModel
             ILOpCode.Ldflda => visitor.VisitLdFldAddress(info, (FieldInfo)instruction.Operand),
             ILOpCode.Stfld => visitor.VisitStFld(info, (FieldInfo)instruction.Operand),
             ILOpCode.Ldsfld => visitor.VisitLdsfld(info, (FieldInfo)instruction.Operand),
-            ILOpCode.Ldsflda => throw new NotImplementedException(),
+            ILOpCode.Ldsflda => visitor.VisitLdsflda(info, (FieldInfo)instruction.Operand),
             ILOpCode.Stsfld => throw new NotImplementedException(),
             ILOpCode.Stobj => throw new NotImplementedException(),
             ILOpCode.Conv_ovf_i1_un => throw new NotImplementedException(),

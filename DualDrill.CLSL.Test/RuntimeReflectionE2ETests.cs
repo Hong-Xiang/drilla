@@ -5,29 +5,9 @@ namespace DualDrill.CLSL.Test;
 
 public sealed class RuntimeReflectionE2ETests(ITestOutputHelper Output)
 {
-    [Fact]
-    public async Task MinimumTriangleShaderShouldWork()
-    {
-        var shader = new ShaderModule.MinimumHelloTriangleShaderModule();
-        var code = await shader.EmitWgslCode();
-        Output.WriteLine("generated code:");
-        Output.WriteLine(code);
 
-    }
-
-    [Fact]
-    public async Task DevelopTestShaderModuleShouldWork()
+    async Task TestShader(ISharpShader shader)
     {
-        var shader = new ShaderModule.DevelopTestShaderModule();
-        var code = await shader.EmitWgslCode();
-        Output.WriteLine("generated code:");
-        Output.WriteLine(code);
-    }
-
-    [Fact]
-    public async Task MandelbrotDistanceShaderModuleShouldWork()
-    {
-        var shader = new ShaderModule.MandelbrotDistanceShaderModule();
         var moduleStackIR = shader.Parse();
         Output.WriteLine("Parsed:");
         Output.WriteLine(moduleStackIR.Dump());
@@ -44,7 +24,36 @@ public sealed class RuntimeReflectionE2ETests(ITestOutputHelper Output)
         Output.WriteLine("AST:");
         Output.WriteLine(ast.Dump());
         var code = await ast.EmitWgslCode();
-        Output.WriteLine("generated code:");
+        Output.WriteLine("WGSL:");
         Output.WriteLine(code);
+    }
+
+    [Fact]
+    public async Task MinimumTriangleShaderShouldWork()
+    {
+        var shader = new ShaderModule.MinimumHelloTriangleShaderModule();
+        await TestShader(shader);
+    }
+
+    [Fact]
+    public async Task DevelopTestShaderModuleShouldWork()
+    {
+        var shader = new ShaderModule.DevelopTestShaderModule();
+        await TestShader(shader);
+    }
+
+    [Fact]
+    public async Task MandelbrotDistanceShaderModuleShouldWork()
+    {
+        var shader = new ShaderModule.MandelbrotDistanceShaderModule();
+        await TestShader(shader);
+
+    }
+
+    [Fact]
+    public async Task SimpleUniformShaderShouldWork()
+    {
+        var shader = new ShaderModule.SimpleStructUniformShaderModule();
+        await TestShader(shader);
     }
 }

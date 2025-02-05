@@ -28,6 +28,7 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitLdFldAddress(CilInstructionInfo inst, FieldInfo info);
     TResult VisitStFld(CilInstructionInfo inst, FieldInfo info);
     TResult VisitLdsfld(CilInstructionInfo inst, FieldInfo info);
+    TResult VisitLdsflda(CilInstructionInfo inst, FieldInfo info);
     TResult VisitLdNull(CilInstructionInfo info);
     TResult VisitCall(CilInstructionInfo info, MethodInfo method);
     TResult VisitNewObj(CilInstructionInfo info, ConstructorInfo constructor);

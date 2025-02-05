@@ -471,4 +471,12 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         Instructions.Add(ShaderInstruction.Load(v));
         return [inst.Index + 1];
     }
+
+    public int[] VisitLdsflda(CilInstructionInfo inst, FieldInfo info)
+    {
+        var v = Parser.ParseStaticField(info);
+        CurrentStack.Push(v.Type.GetPtrType());
+        Instructions.Add(ShaderInstruction.LoadAddress(v));
+        return [inst.Index + 1];
+    }
 }

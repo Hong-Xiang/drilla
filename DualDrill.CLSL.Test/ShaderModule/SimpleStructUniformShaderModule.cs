@@ -4,7 +4,7 @@ using System.Numerics;
 namespace DualDrill.CLSL.Test.ShaderModule;
 
 // https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html
-sealed class SimpleUniformShaderModule : ISharpShader
+sealed class SimpleStructUniformShaderModule : ISharpShader
 {
     public struct OurStruct
     {
@@ -16,11 +16,11 @@ sealed class SimpleUniformShaderModule : ISharpShader
     [Group(0)]
     [Binding(0)]
     [Uniform]
-    OurStruct ourStruct;
+    static readonly OurStruct ourStruct;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    public Vector4 vs(
+    public static Vector4 vs(
         [Builtin(BuiltinBinding.vertex_index)] uint vertexIndex
     )
     {
@@ -44,7 +44,7 @@ sealed class SimpleUniformShaderModule : ISharpShader
 
     [Fragment]
     [return: Location(0)]
-    public Vector4 fs()
+    public static Vector4 fs()
     {
         return ourStruct.color;
     }

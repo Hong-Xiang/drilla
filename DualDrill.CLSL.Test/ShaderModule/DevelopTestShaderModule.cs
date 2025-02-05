@@ -8,7 +8,7 @@ internal sealed class DevelopTestShaderModule
     : ISharpShader
 {
     [Vertex]
-    public int MinimumIfThenElse(int a)
+    public static int MinimumIfThenElse(int a)
     {
         if (a >= 42)
         {
@@ -55,7 +55,7 @@ internal sealed class DevelopTestShaderModule
     public static int MethodInvocation() => Add(1, 2);
 
     [Vertex]
-    public int APlusB(int a, int b) => a + b;
+    public static int APlusB(int a, int b) => a + b;
 
     [Vertex]
     public static int StaticTest() => 42;

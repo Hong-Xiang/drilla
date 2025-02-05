@@ -81,7 +81,7 @@ public class RuntimeRelfectionParserTests
     [Fact]
     public async Task SimpleUniformDeclarationParseTest()
     {
-        var module = Parser.ParseShaderModule(new SimpleUniformShaderModule());
+        var module = Parser.ParseShaderModule(new SimpleStructUniformShaderModule());
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();
         Assert.Equal("ourStruct", uniformDecl.Name);
         Assert.Equal(0, uniformDecl.Attributes.OfType<GroupAttribute>().Single().Binding);

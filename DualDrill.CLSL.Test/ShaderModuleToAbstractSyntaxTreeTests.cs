@@ -1,45 +1,51 @@
-﻿using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Literal;
-using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Compiler;
-using System.Collections.Immutable;
-using FluentAssertions;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Types;
+using FluentAssertions;
+using System.Collections.Immutable;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
 
-public sealed class ShaderModuleToAbstractSyntaxTreeTests
+public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Output)
 {
     [Fact]
-    void SimpleEmptyModuleShouldWork()
+    public void SimpleEmptyModuleShouldWork()
     {
         var moduleStack = new ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>([], ImmutableDictionary<FunctionDeclaration, StructuredStackInstructionFunctionBody>.Empty);
         var moduleAst = moduleStack.ToAbstractSyntaxTreeFunctionBody();
     }
 
     [Fact]
-    void SimpleConstFunctionShouldWork()
+    public void SimpleConstFunctionShouldWork()
     {
         var f = new FunctionDeclaration("foo", [], new FunctionReturn(ShaderType.I32, []), []);
         var body = new StructuredStackInstructionFunctionBody(
             new Block<IStructuredStackInstruction>(
                 Label.Create(),
-                [BasicBlock<IStructuredStackInstruction>.Create([ShaderInstruction.Const(Literal.Create(42))])]
+                [BasicBlock<IStructuredStackInstruction>.Create([
+                    ShaderInstruction.Const(Literal.Create(42)),
+                    ShaderInstruction.Return()
+                ])]
             )
         );
         var moduleStack = new ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>([f], new Dictionary<FunctionDeclaration, StructuredStackInstructionFunctionBody>()
         {
             [f] = body
         }.ToImmutableDictionary());
-        var moduleAst = moduleStack.ToAbstractSyntaxTreeFunctionBody();
-        var ast = moduleAst.GetBody(f);
-        ast.Statements
+        var ast = moduleStack.ToAbstractSyntaxTreeFunctionBody();
+        Output.WriteLine(ast.Dump());
+        var astBody = ast.GetBody(f);
+        astBody.Statements
             .Should().ContainSingle()
+            .Which.Should().BeOfType<CompoundStatement>()
+            .Which.Statements.Should().ContainSingle()
             .Which.Should().BeOfType<ReturnStatement>()
             .Which.Expr.Should().BeOfType<LiteralValueExpression>()
             .Which.Literal.Should().BeOfType<I32Literal>()

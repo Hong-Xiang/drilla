@@ -14,7 +14,7 @@ public struct MandelbrotDistanceShaderModule : ISharpShader
     [Uniform]
     [Group(0)]
     [Binding(0)]
-    static float iTime;
+    static readonly float iTime;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
