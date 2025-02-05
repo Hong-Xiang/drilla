@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 
 namespace DualDrill.ApiGen.DMath;

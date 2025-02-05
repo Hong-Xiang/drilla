@@ -65,7 +65,7 @@ public interface IBinaryOp
         where TElement : IScalarType<TElement>;
 }
 
-public interface IBinaryOp<TSelf> : IBinaryOp, ISingleton<TSelf>
+public interface IBinaryOp<TSelf> : IBinaryOp, IAbstractOp<TSelf>, ISingleton<TSelf>
     where TSelf : IBinaryOp<TSelf>
 {
     IOperation IBinaryOp.GetVectorBinaryNumericOperation<TRank, TElement>()
@@ -88,14 +88,15 @@ public interface IBinaryActionOperation : IOperation
     public IStatement CreateStatement(IExpression l, IExpression r);
 }
 
-public interface IBinaryOperation : IOperation
+public interface IBinaryFunctionOperation : IOperation
 {
     public IShaderType LeftType { get; }
     public IShaderType RightType { get; }
     public IShaderType ResultType { get; }
+    public IExpression CreateExpression(IExpression l, IExpression r);
 }
 
-public interface IBinaryOperation<TSelf> : IBinaryOperation, IOperation<TSelf>, ISingleton<TSelf>
+public interface IBinaryOperation<TSelf> : IBinaryFunctionOperation, IOperation<TSelf>, ISingleton<TSelf>
     where TSelf : IBinaryOperation<TSelf>
 {
     IStructuredStackInstruction IOperation.Instruction => BinaryOperationInstruction<TSelf>.Instance;
@@ -105,8 +106,36 @@ public interface IBinaryOperation<TSelf> : IBinaryOperation, IOperation<TSelf>, 
 public interface IBinaryOperation<TSelf, TDataType, TOp> : IBinaryOperation<TSelf>
     where TSelf : IBinaryOperation<TSelf, TDataType, TOp>
     where TDataType : IShaderType
-    where TOp : IAbstractOp<TOp>
+    where TOp : IBinaryOp<TOp>
 {
+    IExpression IBinaryFunctionOperation.CreateExpression(IExpression l, IExpression r)
+    {
+        if (TOp.Instance is ISymbolOp op)
+        {
+            return op.GetBinaryExpression<TSelf>(l, r);
+        }
+        throw new NotSupportedException();
+    }
+}
+
+public interface IBinaryFunctionOperation<TSelf, TLeftType, TRightType, TOp>
+    : IBinaryOperation<TSelf>
+    where TSelf : IBinaryFunctionOperation<TSelf, TLeftType, TRightType, TOp>
+    where TLeftType : ISingletonShaderType<TLeftType>
+    where TRightType : ISingletonShaderType<TRightType>
+    where TOp : IBinaryOp<TOp>
+{
+    IExpression IBinaryFunctionOperation.CreateExpression(IExpression l, IExpression r)
+    {
+        if (TOp.Instance is ISymbolOp op)
+        {
+            return op.GetBinaryExpression<TSelf>(l, r);
+        }
+        throw new NotSupportedException($"{TOp.Instance}");
+    }
+
+    IShaderType IBinaryFunctionOperation.LeftType => TLeftType.Instance;
+    IShaderType IBinaryFunctionOperation.RightType => TRightType.Instance;
 }
 
 public interface INamedOp<TSelf>
@@ -114,10 +143,18 @@ public interface INamedOp<TSelf>
 {
     abstract static string Name { get; }
 }
-public interface ISymbolOp<TSelf>
+public interface ISymbolOp
+{
+    IExpression GetBinaryExpression<TOperation>(IExpression l, IExpression r)
+            where TOperation : IBinaryOperation<TOperation>;
+}
+
+public interface ISymbolOp<TSelf> : ISymbolOp
     where TSelf : ISymbolOp<TSelf>
 {
     abstract static string Symbol { get; }
+    IExpression ISymbolOp.GetBinaryExpression<TOperation>(IExpression l, IExpression r)
+            => new BinaryExpression<TOperation, TSelf>(l, r);
 }
 
 public interface IOpKind<TSelf, TOpKind>
@@ -141,6 +178,7 @@ public sealed class NumericBinaryOperation<TType, TOp>
     : IBinaryOperation<NumericBinaryOperation<TType, TOp>>
     , ISingleton<NumericBinaryOperation<TType, TOp>>
     , INumericBinaryOperation<NumericBinaryOperation<TType, TOp>>
+    , IBinaryFunctionOperation<NumericBinaryOperation<TType, TOp>, TType, TType, TOp>
     where TType : INumericType<TType>
     where TOp : IBinaryOp<TOp>
 {

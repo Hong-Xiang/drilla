@@ -6,11 +6,12 @@ using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 
 namespace DualDrill.CLSL.Backend;
 
-public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, ShaderModuleDeclaration<TBody> Module)
+public sealed class ModuleToCodeVisitor<TBody>(IndentedTextWriter Writer, ShaderModuleDeclaration<TBody> Module)
     : IDeclarationVisitor<ValueTask>
     , IStatementVisitor<ValueTask>
     , IExpressionVisitor<ValueTask>
@@ -84,11 +85,13 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
             await VisitTypeReference(decl.Return.Type);
         }
         Writer.WriteLine();
-        var b = Module.GetBody(decl);
-        //var sw = new IndentedTextWriter(Writer);
-        if (b is CompoundStatement s)
+        if (Module.TryGetBody(decl, out var b))
         {
-            await s.AcceptVisitor(this);
+            //var sw = new IndentedTextWriter(Writer);
+            if (b is CompoundStatement s)
+            {
+                await s.AcceptVisitor(this);
+            }
         }
         Writer.WriteLine();
         Writer.WriteLine();
@@ -164,12 +167,13 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
     public async ValueTask VisitCompound(CompoundStatement stmt)
     {
         Writer.WriteLine('{');
-        Writer.Indent();
-        foreach (var s in stmt.Statements)
+        using (Writer.IndentedScope())
         {
-            await s.AcceptVisitor(this);
+            foreach (var s in stmt.Statements)
+            {
+                await s.AcceptVisitor(this);
+            }
         }
-        Writer.Unindent();
         Writer.WriteLine('}');
     }
 
@@ -180,16 +184,18 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
         Writer.WriteLine(") {");
         if (stmt.TrueBody.Statements.Length > 0)
         {
-            Writer.Indent();
-            await stmt.TrueBody.AcceptVisitor(this);
-            Writer.Unindent();
+            using (Writer.IndentedScope())
+            {
+                await stmt.TrueBody.AcceptVisitor(this);
+            }
         }
         Writer.WriteLine("} else {");
         if (stmt.FalseBody.Statements.Length > 0)
         {
-            Writer.Indent();
-            await stmt.FalseBody.AcceptVisitor(this);
-            Writer.Unindent();
+            using (Writer.IndentedScope())
+            {
+                await stmt.FalseBody.AcceptVisitor(this);
+            }
         }
         Writer.WriteLine("}");
     }
@@ -431,12 +437,13 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
         Writer.Write("struct ");
         Writer.Write(decl.Name);
         Writer.WriteLine(" {");
-        Writer.Indent();
-        foreach (var m in decl.Members)
+        using (Writer.IndentedScope())
         {
-            await m.AcceptVisitor(this);
+            foreach (var m in decl.Members)
+            {
+                await m.AcceptVisitor(this);
+            }
         }
-        Writer.Unindent();
         Writer.WriteLine("};");
         Writer.WriteLine();
     }
@@ -472,9 +479,10 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
     public async ValueTask VisitLoop(LoopStatement stmt)
     {
         Writer.WriteLine("loop {");
-        Writer.Indent();
-        await stmt.Body.AcceptVisitor(this);
-        Writer.Unindent();
+        using (Writer.IndentedScope())
+        {
+            await stmt.Body.AcceptVisitor(this);
+        }
         Writer.WriteLine("}");
     }
 
@@ -483,23 +491,26 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
         Writer.Write("switch (");
         await stmt.Expr.Accept(this);
         Writer.WriteLine(") {");
-        Writer.Indent();
-        foreach (var c in stmt.Cases)
+        using (Writer.IndentedScope())
         {
-            Writer.Write("case ");
-            await c.Label.AcceptVisitor(this);
-            Writer.WriteLine(" : {");
-            Writer.Indent();
-            await c.Body.AcceptVisitor(this);
-            Writer.Unindent();
-            Writer.WriteLine("}");
+            foreach (var c in stmt.Cases)
+            {
+                Writer.Write("case ");
+                await c.Label.AcceptVisitor(this);
+                Writer.WriteLine(" : {");
+                using (Writer.IndentedScope())
+                {
+                    await c.Body.AcceptVisitor(this);
+                }
+                Writer.WriteLine("}");
+            }
+            Writer.Write("default : {");
+            using (Writer.IndentedScope())
+            {
+                await stmt.DefaultCase.AcceptVisitor(this);
+            }
+            Writer.Write("}");
         }
-        Writer.Write("default : {");
-        Writer.Indent();
-        await stmt.DefaultCase.AcceptVisitor(this);
-        Writer.Unindent();
-        Writer.Write("}");
-        Writer.Unindent();
         Writer.WriteLine("}");
     }
 
@@ -516,14 +527,16 @@ public sealed class ModuleToCodeVisitor<TBody>(IndentStringWriter Writer, Shader
         {
             await d.AcceptVisitor(this);
         }
-
-
     }
 
-    public async ValueTask VisitBinaryExpression<TOperation>(BinaryExpression<TOperation> expr) where TOperation : IBinaryOperation<TOperation>
+    public async ValueTask VisitBinaryExpression<TOperation, TOp>(BinaryExpression<TOperation, TOp> expr)
+        where TOperation : IBinaryOperation<TOperation>
+        where TOp : ISymbolOp<TOp>
     {
+        Writer.Write("(");
         await expr.Left.AcceptVisitor(this);
-        await Writer.WriteAsync($" <{typeof(TOperation).Name}> ");
+        await Writer.WriteAsync($" {TOp.Symbol} ");
         await expr.Right.AcceptVisitor(this);
+        Writer.Write(")");
     }
 }

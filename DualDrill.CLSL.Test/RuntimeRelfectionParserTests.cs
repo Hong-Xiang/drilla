@@ -7,6 +7,7 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
+using System.CodeDom.Compiler;
 using System.Numerics;
 
 namespace DualDrill.CLSL.Test;
@@ -88,13 +89,14 @@ public class RuntimeRelfectionParserTests
         Assert.Single(uniformDecl.Attributes.OfType<UniformAttribute>());
         Assert.IsType<StructureDeclaration>(uniformDecl.Type);
 
-        var tw = new IndentStringWriter("\t");
-        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionFunctionBody>(tw, module);
+        var sw = new StringWriter();
+        var isw = new IndentedTextWriter(sw);
+        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionFunctionBody>(isw, module);
         foreach (var d in module.Declarations)
         {
             await d.AcceptVisitor(visitor);
         }
-        var code = tw.ToString();
+        var code = sw.ToString();
         Assert.NotEmpty(code);
     }
 }

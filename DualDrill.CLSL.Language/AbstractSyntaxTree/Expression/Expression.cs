@@ -38,8 +38,9 @@ public interface IExpressionVisitor<T>
     T VisitFunctionCallExpression(FunctionCallExpression expr);
     T VisitBinaryArithmeticExpression(BinaryArithmeticExpression expr);
     T VisitBinaryBitwiseExpression(BinaryBitwiseExpression expr);
-    T VisitBinaryExpression<TOperation>(BinaryExpression<TOperation> expr)
-        where TOperation : IBinaryOperation<TOperation>;
+    T VisitBinaryExpression<TOperation, TOp>(BinaryExpression<TOperation, TOp> expr)
+        where TOperation : IBinaryOperation<TOperation>
+        where TOp : ISymbolOp<TOp>;
     T VisitBinaryRelationalExpression(BinaryRelationalExpression expr);
     T VisitBinaryLogicalExpression(BinaryLogicalExpression expr);
     T VisitUnaryLogicalExpression(UnaryLogicalExpression expr);

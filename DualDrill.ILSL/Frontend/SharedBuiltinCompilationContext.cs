@@ -1,12 +1,14 @@
 ﻿using DotNext.Patterns;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
 using System.Collections.Frozen;
 using System.Numerics;
 using System.Reflection;
+using System.Security.Cryptography;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -76,6 +78,17 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
     private Dictionary<MethodBase, FunctionDeclaration> GetRuntimeMethods(IReadOnlyDictionary<Type, IShaderType> runtimeTypes)
     {
         var result = new Dictionary<MethodBase, FunctionDeclaration>();
+        var mathAssembly = typeof(DMath).Assembly;
+        var operationMethods = from t in mathAssembly.GetExportedTypes()
+                               from m in t.GetMethods()
+                               let attr = m.GetCustomAttributes().OfType<IOperationMethodAttribute>().SingleOrDefault()
+                               where attr is not null
+                               select (m, attr.Operation);
+        foreach (var (m, op) in operationMethods)
+        {
+            result.Add(m, op.Function);
+        }
+
         foreach (var m in typeof(DMath).GetMethods())
         {
             if (m.IsStatic)
@@ -89,10 +102,6 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
                     {
                         var parameterDecls = paramTypes.Select(t => new ParameterDeclaration(t.Name, runtimeTypes[t], []));
                         var parameterTypes = parameterDecls.Select(p => p.Type).ToArray();
-                        if (m.Name == "vec2" && parameterTypes.Length == 2 && rt is VecType<N2, BoolType>)
-                        {
-                            var fl = ShaderFunction.Instance.GetFunction(m.Name, rt, parameterTypes);
-                        }
                         var f = ShaderFunction.Instance.GetFunction(m.Name, rt, parameterTypes);
                         result.Add(m, f);
                     }

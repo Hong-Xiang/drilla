@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Backend;
+using System.CodeDom.Compiler;
 
 namespace DualDrill.CLSL;
 
@@ -20,8 +21,9 @@ public sealed class CLSLCompiler() : ICLSLCompiler
     public async ValueTask<string> EmitWGSL(ISharpShader shader)
     {
         var module = Compile(shader);
-        var sw = new IndentStringWriter("    ");
-        var emitter = new ModuleToCodeVisitor<StructuredStackInstructionFunctionBody>(sw, module);
+        var sw = new StringWriter();
+        var isw = new IndentedTextWriter(sw);
+        var emitter = new ModuleToCodeVisitor<StructuredStackInstructionFunctionBody>(isw, module);
         await module.AcceptVisitor(emitter);
         return sw.ToString();
     }

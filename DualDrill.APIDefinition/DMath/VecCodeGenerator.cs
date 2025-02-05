@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
+using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 using Microsoft.CodeAnalysis;
 using System.CodeDom.Compiler;

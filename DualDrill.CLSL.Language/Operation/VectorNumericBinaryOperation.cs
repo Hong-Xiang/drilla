@@ -11,11 +11,8 @@ public interface IVectorNumericOperation : IOperation
 {
 }
 
-public interface IVectorBinaryNumericOperation : IVectorNumericOperation
+public interface IVectorBinaryNumericOperation : IBinaryFunctionOperation, IVectorNumericOperation
 {
-    IShaderType LeftType { get; }
-    IShaderType RightType { get; }
-    IShaderType ResultType { get; }
     IBinaryOp Op { get; }
 }
 
@@ -110,11 +107,21 @@ public sealed class VectorNumericBinaryOperation<TRank, TElement, TOp>
     public IShaderType ResultType => OperandType;
 
     public IBinaryOp Op => TOp.Instance;
+
+    public IExpression CreateExpression(IExpression l, IExpression r)
+    {
+        if (TOp.Instance is ISymbolOp op)
+        {
+            return op.GetBinaryExpression<VectorNumericBinaryOperation<TRank, TElement, TOp>>(l, r);
+        }
+        throw new NotImplementedException();
+    }
 }
 
 
 public sealed class ScalarVectorNumericOperation<TRank, TElement, TOp>
     : IVectorBinaryNumericOperation<ScalarVectorNumericOperation<TRank, TElement, TOp>>
+    , IBinaryFunctionOperation<ScalarVectorNumericOperation<TRank, TElement, TOp>, TElement, VecType<TRank, TElement>, TOp>
     , IVectorBinaryNumericOperation
     where TRank : IRank<TRank>
     where TElement : IScalarType<TElement>
@@ -141,17 +148,22 @@ public sealed class ScalarVectorNumericOperation<TRank, TElement, TOp>
     public IScalarType ScalarType => TElement.Instance;
 
     public string Name => GetType().CSharpFullName();
-
-    public IShaderType LeftType => ScalarType;
-
-    public IShaderType RightType => VectorType;
-
     public IShaderType ResultType => VectorType;
     public IBinaryOp Op => TOp.Instance;
+
+    public IExpression CreateExpression(IExpression l, IExpression r)
+    {
+        if (TOp.Instance is ISymbolOp op)
+        {
+            return op.GetBinaryExpression<ScalarVectorNumericOperation<TRank, TElement, TOp>>(l, r);
+        }
+        throw new NotSupportedException();
+    }
 }
 
 public sealed class VectorScalarNumericOperation<TRank, TElement, TOp>
     : IVectorBinaryNumericOperation<VectorScalarNumericOperation<TRank, TElement, TOp>>
+    , IBinaryFunctionOperation<VectorScalarNumericOperation<TRank, TElement, TOp>, VecType<TRank, TElement>, TElement, TOp>
     , IVectorBinaryNumericOperation
     where TRank : IRank<TRank>
     where TElement : IScalarType<TElement>
@@ -179,11 +191,6 @@ public sealed class VectorScalarNumericOperation<TRank, TElement, TOp>
     public IScalarType ScalarType => TElement.Instance;
 
     public string Name => GetType().CSharpFullName();
-
-    public IShaderType LeftType => VectorType;
-
-    public IShaderType RightType => ScalarType;
-
     public IShaderType ResultType => VectorType;
     public IBinaryOp Op => TOp.Instance;
 }

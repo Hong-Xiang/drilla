@@ -197,7 +197,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     {
         var r = Expressions.Pop();
         var l = Expressions.Pop();
-        Expressions.Push(new BinaryExpression<TOperation>(l, r));
+        Expressions.Push(TOperation.Instance.CreateExpression(l, r));
         return default;
     }
 

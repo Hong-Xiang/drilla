@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -25,6 +26,10 @@ public sealed record class ShaderModuleDeclaration<TBody>(
     public TBody GetBody(FunctionDeclaration func)
     {
         return FunctionDefinitions[func];
+    }
+    public bool TryGetBody(FunctionDeclaration func, [NotNullWhen(true)] out TBody body)
+    {
+        return FunctionDefinitions.TryGetValue(func, out body);
     }
 
     public static ShaderModuleDeclaration<TBody> Empty

@@ -123,10 +123,10 @@ public static class ShaderModuleExtension
     )
     {
         var sw = new StringWriter();
-        var isw = new IndentStringWriter("\t");
+        var isw = new IndentedTextWriter(sw);
         var visitor = new ModuleToCodeVisitor<CompoundStatement>(isw, module);
         await module.AcceptVisitor(visitor);
-        return isw.ToString();
+        return sw.ToString();
     }
 
 

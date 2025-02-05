@@ -131,7 +131,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
         if (t is INumericType nt)
         {
-            var c = ((IOperation)nt.GetBinaryOperation<TOp>()).Instruction;
+            var c = ((IOperation)TOp.Instance.BitwiseOp.GetNumericBinaryOperation(nt)).Instruction;
             Instructions.Add(c);
             CurrentStack.Push(nt);
             return [inst.Index + 1];

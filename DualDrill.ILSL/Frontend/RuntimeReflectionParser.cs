@@ -256,7 +256,6 @@ public sealed record class RuntimeReflectionParser(
             }
         }
 
-
         var model = new MethodBodyAnalysisModel(method);
 
         var decl = new FunctionDeclaration(
