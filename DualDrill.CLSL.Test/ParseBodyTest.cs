@@ -13,11 +13,12 @@ using Lokad.ILPack.IL;
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Reflection;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
 
-public class ParseBodyTest
+public class ParseBodyTest(ITestOutputHelper Output)
 {
     UnstructuredStackInstructionFunctionBody ParseMethod(FunctionDeclaration f, MethodBase m)
     {
@@ -439,6 +440,10 @@ public class ParseBodyTest
         //  IL_0008: ret
         var method = MethodHelper.GetMethod(static (int a, int b, int c) => a <= 0 ? b : c);
         var instructions = method.GetInstructions();
+        foreach (var inst in instructions)
+        {
+            Output.WriteLine($"{inst.Offset} - {inst.OpCode} - {inst.Operand}");
+        }
         var parameters = method.GetParameters();
         var a = new ParameterDeclaration("a", ShaderType.I32, []);
         var b = new ParameterDeclaration("b", ShaderType.I32, []);
@@ -462,6 +467,9 @@ public class ParseBodyTest
 
         var l7 = labels[0].Label;
         var l8 = labels[1].Label;
+
+        Output.WriteLine($"l7: {l7}");
+        Output.WriteLine($"l8: {l8}");
 
         result.Instructions.Should().SatisfyRespectively(
             //  IL_0000: ldarg.0

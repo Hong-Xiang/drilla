@@ -27,10 +27,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 {
     //public List<int> Nexts { get; private set; } = [];
 
-    List<IStackInstruction> Instructions { get; } = [];
-
-    public IReadOnlyList<IStackInstruction> Result => Instructions;
-
+    public List<IStackInstruction> Instructions { get; set; } = [];
     Stack<IShaderType>? ValidationStack { get; set; } = [];
 
     Stack<IShaderType> CurrentStack => ValidationStack ?? throw new NullReferenceException("Invalid null stack state");

@@ -68,6 +68,11 @@ public sealed class Label : ILabel<Label>
     {
         return base.GetHashCode();
     }
+
+    public override string ToString()
+    {
+        return $"Label({Name})";
+    }
 }
 
 

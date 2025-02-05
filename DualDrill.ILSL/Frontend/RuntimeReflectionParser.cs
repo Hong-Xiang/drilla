@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
@@ -339,6 +340,11 @@ public sealed record class RuntimeReflectionParser(
 
         var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, method, labels);
         var visited = new bool[methodModel.Instructions.Length];
+        var results = new List<IStackInstruction>[methodModel.Instructions.Length];
+        for (var i = 0; i < results.Length; i++)
+        {
+            results[i] = [];
+        }
         Stack<int> nexts = [];
         nexts.Push(0);
         while (nexts.Count > 0)
@@ -349,6 +355,7 @@ public sealed record class RuntimeReflectionParser(
                 continue;
             }
             visited[ip] = true;
+            visitor.Instructions = results[ip];
             var currentNexts = methodModel.Accept<RuntimeReflectionParserInstructionVisitor, int[]>(visitor, ip);
             foreach (var n in currentNexts)
             {
@@ -358,7 +365,7 @@ public sealed record class RuntimeReflectionParser(
                 }
             }
         }
-        return new(visitor.Result);
+        return new(results.SelectMany(x => x));
     }
 
     bool IsMethodDefinition(MethodBase m)

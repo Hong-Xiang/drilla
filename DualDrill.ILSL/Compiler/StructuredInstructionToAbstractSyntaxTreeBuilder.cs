@@ -79,12 +79,16 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 
     public Unit Visit(BrInstruction inst)
     {
+        // TODO: proper handling of nested exit
+        Statements.Add(new BreakStatement());
         return default;
     }
 
     public Unit Visit(BrIfInstruction inst)
     {
-        throw new NotImplementedException();
+        // TODO: proper handling of nested exit
+        Statements.Add(new BreakStatement());
+        return default;
     }
 
     public Unit Visit(ReturnInstruction inst)
@@ -203,7 +207,10 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 
     public Unit Visit(LogicalNotInstruction inst)
     {
-        throw new NotImplementedException();
+        var e = Expressions.Pop();
+        var r = new UnaryLogicalExpression(e, UnaryLogicalOp.Not);
+        Expressions.Push(r);
+        return default;
     }
 
     public Unit Visit<TOperation>(UnaryScalarInstruction<TOperation> inst) where TOperation : IUnaryScalarOperation<TOperation>
