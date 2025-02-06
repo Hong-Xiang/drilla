@@ -56,7 +56,7 @@ public sealed class VecType<TRank, TElement>
     private VecType() { }
     public static VecType<TRank, TElement> Instance { get; } = new();
 
-    public string Name => $"vec{Size.Value}{ElementType.ElementName()}";
+    public string Name => $"vec{Size.Value}<{ElementType.Name}>";
 
     public int ByteSize => Size.Value * ElementType.ByteSize;
 

@@ -12,7 +12,12 @@ public interface IDeclarationVisitor<T>
     T VisitParameter(ParameterDeclaration decl);
     T VisitStructure(StructureDeclaration decl);
     T VisitMember(MemberDeclaration decl);
-    T VisitModule<TBody>(ShaderModuleDeclaration<TBody> decl) where TBody : IFunctionBody;
+}
+
+public interface IDeclarationVisitor<TBody, T> : IDeclarationVisitor<T>
+    where TBody : IFunctionBody
+{
+    T VisitModule(ShaderModuleDeclaration<TBody> decl);
 }
 
 public interface ITypeReferenceVisitor<T>
@@ -32,9 +37,6 @@ public static class DeclarationExtension
             FunctionDeclaration d => visitor.VisitFunction(d),
             ParameterDeclaration p => visitor.VisitParameter(p),
             VariableDeclaration d => visitor.VisitVariable(d),
-            ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> d => visitor.VisitModule(d),
-            ShaderModuleDeclaration<CompoundStatement> d => visitor.VisitModule(d),
-            ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> d => visitor.VisitModule(d),
             _ => throw new NotSupportedException($"{nameof(IDeclarationVisitor<T>)} does not support {decl}")
         };
     }

@@ -26,7 +26,7 @@ public sealed class LogicalAnd : BinaryLogical.IOp<LogicalAnd>, IIntegerOp<Logic
     public static LogicalAnd Instance { get; } = new();
 
     public BinaryArithmetic.IBitwiseLogicalOp BitwiseOp => BinaryArithmetic.BitwiseAnd.Instance;
-    
+
 }
 public sealed class LogicalOr : BinaryLogical.IOp<LogicalOr>, IIntegerOp<LogicalOr>
 {

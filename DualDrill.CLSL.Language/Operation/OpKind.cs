@@ -52,7 +52,12 @@ public interface IUnaryScalarOperation<TSelf> : IUnaryOp
 {
 }
 
-public interface IBinaryOp
+public interface IAbstractOp
+{
+    string Name { get; }
+}
+
+public interface IBinaryOp : IAbstractOp
 {
     IOperation GetVectorBinaryNumericOperation<TRank, TElement>()
         where TRank : IRank<TRank>
@@ -157,11 +162,13 @@ public interface ISymbolOp<TSelf> : ISymbolOp
             => new BinaryExpression<TOperation, TSelf>(l, r);
 }
 
-public interface IOpKind<TSelf, TOpKind>
+public interface IOpKind<TSelf, TOpKind> : IAbstractOp
     where TOpKind : struct, Enum
     where TSelf : IOpKind<TSelf, TOpKind>
 {
     abstract static TOpKind Kind { get; }
+
+    string IAbstractOp.Name => TSelf.Kind.ToString();
 }
 
 public interface INumericBinaryOperation
@@ -189,6 +196,6 @@ public sealed class NumericBinaryOperation<TType, TOp>
 
     public FunctionDeclaration Function => throw new NotImplementedException();
 
-    public string Name => throw new NotImplementedException();
+    public string Name => $"{TOp.Instance.Name}.{TType.Instance.Name}";
 }
 

@@ -6,4 +6,5 @@ namespace DualDrill.CLSL.Language.Literal;
 public record struct I64Literal(long Value) : ILiteral<IntType<N64>>
 {
     public readonly IShaderType Type => IntType<N64>.Instance;
+    public override string ToString() => $"{Type.Name}({Value})";
 }

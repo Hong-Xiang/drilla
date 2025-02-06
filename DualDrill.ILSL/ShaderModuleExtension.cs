@@ -7,8 +7,8 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.Common;
 using System.CodeDom.Compiler;
-using System.Collections.Immutable;
 using System.Diagnostics;
 
 namespace DualDrill.CLSL;
@@ -18,13 +18,6 @@ namespace DualDrill.CLSL;
 /// </summary>
 public static class ShaderModuleExtension
 {
-    public static string Dump(this IShaderModuleDeclaration shader)
-    {
-        var sw = new StringWriter();
-        var isw = new IndentedTextWriter(sw);
-        shader.Dump(isw);
-        return sw.ToString();
-    }
     public static ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> Parse(
         this ISharpShader shader
     )
@@ -124,8 +117,11 @@ public static class ShaderModuleExtension
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
-        var visitor = new ModuleToCodeVisitor<CompoundStatement>(isw, module);
-        await module.AcceptVisitor(visitor);
+        var typeVisitor = new WgslCodeTypeReferenceVisitor(isw);
+        var bodyVisitor = new WgslFunctionBodyVisitor(isw); ;
+        var visitor = new ModuleToCodeVisitor<CompoundStatement>(isw, module,
+            bodyVisitor.VisitCompound);
+        await module.Accept<ValueTask>(visitor);
         return sw.ToString();
     }
 
@@ -142,5 +138,48 @@ public static class ShaderModuleExtension
                            .ToAbstractSyntaxTreeFunctionBody();
         var code = await module.EmitWgslCode();
         return code;
+    }
+
+    public static async ValueTask<string> Dump(this ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> module)
+    {
+        var sw = new StringWriter();
+        var isw = new IndentedTextWriter(sw);
+        isw.Write(module.GetType().CSharpFullName());
+        var typeVisitor = new WgslCodeTypeReferenceVisitor(isw);
+        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionFunctionBody>(isw, module, (b) =>
+        {
+            foreach (var instruction in b.Instructions)
+            {
+                isw.WriteLine(instruction);
+                if (instruction is IJumpInstruction)
+                {
+                    isw.WriteLine();
+                }
+            }
+            return ValueTask.CompletedTask;
+        });
+        await module.Accept(visitor);
+        return sw.ToString();
+    }
+
+    public static async ValueTask Dump<TBody>(this ShaderModuleDeclaration<TBody> module, IndentedTextWriter writer)
+        where TBody : IFunctionBody
+    {
+        writer.Write(module.GetType().CSharpFullName());
+        var typeVisitor = new WgslCodeTypeReferenceVisitor(writer);
+        var visitor = new ModuleToCodeVisitor<TBody>(writer, module, (b) =>
+        {
+            return ValueTask.CompletedTask;
+        });
+        await module.Accept(visitor);
+    }
+
+    public static async ValueTask<string> Dump<TBody>(this ShaderModuleDeclaration<TBody> module)
+        where TBody : IFunctionBody
+    {
+        var sw = new StringWriter();
+        var isw = new IndentedTextWriter(sw);
+        await module.Dump(isw);
+        return sw.ToString();
     }
 }

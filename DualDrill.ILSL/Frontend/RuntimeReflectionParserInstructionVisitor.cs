@@ -4,7 +4,6 @@ using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Common;
 using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Reflection;

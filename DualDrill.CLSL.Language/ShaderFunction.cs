@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Reflection.Metadata;
 
 namespace DualDrill.CLSL.Language;
 
@@ -330,13 +331,15 @@ public class ShaderFunction : ISingleton<ShaderFunction>
                from r in ShaderType.Ranks
                let v = ShaderType.GetVecType(r, s)
                let name = $"vec{r.Value}"
+               let tname = CSharpProjectionConfiguration.Instance.GetCSharpTypeName(v)
                let bc = new FunctionDeclaration(
                             name,
                             [new ParameterDeclaration("e", s, [])],
                             new FunctionReturn(v, []),
                             [new ShaderRuntimeMethodAttribute()])
                let zc = new FunctionDeclaration(
-                            v.Name,
+                            //v.Name,
+                            tname,
                             [],
                             new FunctionReturn(v, []),
                             [new ShaderRuntimeMethodAttribute(), new ZeroConstructorMethodAttribute(), new VecMethodRenamedForOverloadAttribute()])
@@ -353,7 +356,7 @@ public class ShaderFunction : ISingleton<ShaderFunction>
                             [new ShaderRuntimeMethodAttribute()])
                let cc = from ss in ShaderType.ScalarTypes
                         select new FunctionDeclaration(
-                            v.Name,
+                            tname,
                             [new ParameterDeclaration("v", ShaderType.GetVecType(r, ss), [])],
                             new FunctionReturn(v, []),
                             [new ShaderRuntimeMethodAttribute(), new ConversionMethodAttribute(), new VecMethodRenamedForOverloadAttribute()])

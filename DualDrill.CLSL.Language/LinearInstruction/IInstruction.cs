@@ -60,6 +60,7 @@ public sealed record class BrInstruction(Label Target) : IJumpInstruction
 {
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
+    public override string ToString() => $"br {Target}";
 }
 
 public sealed record class BrIfInstruction(Label Target) : IJumpInstruction
@@ -67,6 +68,7 @@ public sealed record class BrIfInstruction(Label Target) : IJumpInstruction
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
+    public override string ToString() => $"br_if {Target}";
 }
 
 public sealed record class ReturnInstruction() : IJumpInstruction
@@ -74,6 +76,7 @@ public sealed record class ReturnInstruction() : IJumpInstruction
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
+    public override string ToString() => "return";
 }
 
 
@@ -85,6 +88,7 @@ public sealed record class NopInstruction
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
+    public override string ToString() => "nop";
 }
 
 public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IStructuredStackInstruction
@@ -93,6 +97,7 @@ public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IStruc
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
+    public override string ToString() => $"const.{Literal.Type.Name} {Literal}";
 }
 
 public sealed record class CallInstruction(FunctionDeclaration Callee) : IStructuredStackInstruction
@@ -108,36 +113,30 @@ public sealed record class LoadSymbolInstruction<TTarget>(TTarget Target) : IStr
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
+    public override string ToString()
+    {
+        return $"load {Target}";
+    }
 }
 public sealed record class LoadSymbolAddressInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
-
+    public override string ToString()
+    {
+        return $"load.address {Target}";
+    }
 }
 public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
-
-}
-
-public sealed record class VectorGetComponentInstruction<TVector, TComponent>
-    where TVector : IVecType
-    where TComponent : Swizzle.IComponent
-{
-}
-
-public sealed record class VectorSwizzleGetInstruction<TTarget, TPattern>
-    where TPattern : Swizzle.IPattern<TPattern>
-{
-}
-
-public sealed record class VectorSwizzleSetInstruction<TTarget, TPattern>
-    where TPattern : Swizzle.IPattern<TPattern>
-{
+    public override string ToString()
+    {
+        return $"store {Target}";
+    }
 }
 
 public sealed record class UnaryOperationInstruction<TOperation>
@@ -161,6 +160,8 @@ public sealed record class BinaryOperationInstruction<TOperation>
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
+    public override string ToString() => TOperation.Instance.Name;
+
 }
 
 public sealed class LogicalNotInstruction
@@ -182,18 +183,6 @@ public sealed record class UnaryScalarInstruction<TOp>
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
-}
-
-public sealed record class LoadStaticFieldInstruction(FieldInfo Field) : IInstruction
-{
-}
-
-public sealed record class LoadInstanceFieldInstruction(FieldInfo Field) : IInstruction
-{
-}
-
-public sealed record class LoadInstanceFieldAddressInstruction(FieldInfo Field) : IInstruction
-{
 }
 
 public sealed record class NegateInstruction : IInstruction { }

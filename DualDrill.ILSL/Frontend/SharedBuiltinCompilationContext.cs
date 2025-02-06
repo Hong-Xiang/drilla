@@ -45,7 +45,8 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
         var mathAssembly = typeof(DMath).Assembly;
         foreach (var v in ShaderType.GetVecTypes())
         {
-            var name = $"{mathNamespace}.{v.Name}";
+            var tn = CSharpProjectionConfiguration.Instance.GetCSharpTypeName(v);
+            var name = $"{mathNamespace}.{tn}";
             var t = mathAssembly.GetType(name) ?? throw new NotSupportedException($"Can not find type {name}");
             result.Add(t, v);
         }
@@ -100,7 +101,7 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
                     var paramTypes = parameters.Select(p => p.ParameterType).ToArray();
                     if (paramTypes.All(runtimeTypes.ContainsKey))
                     {
-                        var parameterDecls = paramTypes.Select(t => new ParameterDeclaration(t.Name, runtimeTypes[t], []));
+                        var parameterDecls = paramTypes.Select(p => new ParameterDeclaration(p.Name, runtimeTypes[p], []));
                         var parameterTypes = parameterDecls.Select(p => p.Type).ToArray();
                         var f = ShaderFunction.Instance.GetFunction(m.Name, rt, parameterTypes);
                         result.Add(m, f);

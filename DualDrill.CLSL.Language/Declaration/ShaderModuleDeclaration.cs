@@ -1,7 +1,5 @@
 ﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.Common;
-using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
@@ -10,13 +8,14 @@ namespace DualDrill.CLSL.Language.Declaration;
 public interface IShaderModuleDeclaration
 {
     ImmutableArray<IDeclaration> Declarations { get; init; }
-    public void Dump(IndentedTextWriter writer);
 }
 
 public sealed record class ShaderModuleDeclaration<TBody>(
     ImmutableArray<IDeclaration> Declarations,
     ImmutableDictionary<FunctionDeclaration, TBody> FunctionDefinitions)
-    : IDeclaration, IShaderModuleDeclaration where TBody : IFunctionBody
+    : IDeclaration
+    , IShaderModuleDeclaration
+    where TBody : IFunctionBody
 {
     public string Name => nameof(ShaderModuleDeclaration<TBody>);
     public ImmutableHashSet<IShaderAttribute> Attributes => [];
@@ -42,22 +41,8 @@ public sealed record class ShaderModuleDeclaration<TBody>(
         return new ShaderModuleDeclaration<TResult>(Declarations, result);
     }
 
-    public void Dump(IndentedTextWriter writer)
-    {
-        writer.Write(GetType().CSharpFullName());
-    }
 
-    public string Dump()
-    {
-        var sw = new StringWriter();
-        var isw = new IndentedTextWriter(sw);
-        Dump(isw);
-        foreach (var f in Declarations.OfType<FunctionDeclaration>())
-        {
-            if (FunctionDefinitions.TryGetValue(f, out var body))
-            {
-            }
-        }
-        return sw.ToString();
-    }
+
+    public TResult Accept<TResult>(IDeclarationVisitor<TBody, TResult> visitor)
+        => visitor.VisitModule(this);
 }

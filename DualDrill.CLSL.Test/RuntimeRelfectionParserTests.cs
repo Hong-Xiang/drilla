@@ -91,7 +91,11 @@ public class RuntimeRelfectionParserTests
 
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
-        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionFunctionBody>(isw, module);
+        var typeVisitor = new WgslCodeTypeReferenceVisitor(isw);
+        var stmtVisitor = new WgslFunctionBodyVisitor(isw);
+        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionFunctionBody>(isw, module,
+            (b) => ValueTask.CompletedTask
+        );
         foreach (var d in module.Declarations)
         {
             await d.AcceptVisitor(visitor);

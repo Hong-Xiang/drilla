@@ -23,7 +23,7 @@ public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Outp
     }
 
     [Fact]
-    public void SimpleConstFunctionShouldWork()
+    public async void SimpleConstFunctionShouldWork()
     {
         var f = new FunctionDeclaration("foo", [], new FunctionReturn(ShaderType.I32, []), []);
         var body = new StructuredStackInstructionFunctionBody(
@@ -40,7 +40,7 @@ public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Outp
             [f] = body
         }.ToImmutableDictionary());
         var ast = moduleStack.ToAbstractSyntaxTreeFunctionBody();
-        Output.WriteLine(ast.Dump());
+        Output.WriteLine(await ast.Dump());
         var astBody = ast.GetBody(f);
         astBody.Statements
             .Should().ContainSingle()

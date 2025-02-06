@@ -80,8 +80,7 @@ public sealed class CSharpProjectionConfiguration
             IFloatType { BitWidth: N16 } => typeof(Half).Name,
             IFloatType { BitWidth: N32 } => typeof(float).Name,
             IFloatType { BitWidth: N64 } => typeof(double).Name,
-
-            IVecType t => t.Name,
+            IVecType t => $"vec{t.Size.Value}{t.ElementType.ElementName()}",
             MatType m => m.Name,
             _ => throw new NotSupportedException($"C# type map for {type} is undefined")
         })!;

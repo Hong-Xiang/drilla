@@ -4,6 +4,7 @@ using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Backend;
 using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
 namespace DualDrill.CLSL;
 
@@ -20,12 +21,7 @@ public sealed class CLSLCompiler() : ICLSLCompiler
 
     public async ValueTask<string> EmitWGSL(ISharpShader shader)
     {
-        var module = Compile(shader);
-        var sw = new StringWriter();
-        var isw = new IndentedTextWriter(sw);
-        var emitter = new ModuleToCodeVisitor<StructuredStackInstructionFunctionBody>(isw, module);
-        await module.AcceptVisitor(emitter);
-        return sw.ToString();
+        return await shader.EmitWgslCode();
     }
 
     public ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> Reflect(ISharpShader shader)
@@ -41,4 +37,6 @@ public sealed class CLSLCompiler() : ICLSLCompiler
         return module.ToControlFlowGraph().ToStructuredControlFlowStackModel();
 
     }
+
+
 }

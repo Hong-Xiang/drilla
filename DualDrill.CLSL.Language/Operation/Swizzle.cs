@@ -6,8 +6,6 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
-using Silk.NET.OpenAL;
-using System.Security.Cryptography;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -23,15 +21,7 @@ public static class Swizzle
     public interface IComponent
     {
         ComponentKind Kind { get; }
-        string Name => Kind switch
-        {
-            ComponentKind.x => "x",
-            ComponentKind.y => "y",
-            ComponentKind.z => "z",
-            ComponentKind.w => "w",
-            _ => throw new NotSupportedException()
-        };
-
+        string Name { get; }
         AbstractSyntaxTree.Expression.SwizzleComponent LegacySwizzleComponent { get; }
     }
     public interface IComponent<TSelf> : IComponent, ISingleton<TSelf>
@@ -98,6 +88,8 @@ public static class Swizzle
         public ComponentKind Kind => ComponentKind.x;
 
         public SwizzleComponent LegacySwizzleComponent => SwizzleComponent.x;
+
+        public string Name => "x";
     }
 
     public sealed class Y
@@ -108,6 +100,7 @@ public static class Swizzle
         public static Y Instance { get; } = new();
         public ComponentKind Kind => ComponentKind.y;
         public SwizzleComponent LegacySwizzleComponent => SwizzleComponent.y;
+        public string Name => "y";
     }
 
     public sealed class Z
@@ -117,6 +110,7 @@ public static class Swizzle
         public static Z Instance { get; } = new();
         public ComponentKind Kind => ComponentKind.z;
         public SwizzleComponent LegacySwizzleComponent => SwizzleComponent.z;
+        public string Name => "z";
     }
 
     public sealed class W
@@ -125,6 +119,7 @@ public static class Swizzle
         public static W Instance { get; } = new();
         public ComponentKind Kind => ComponentKind.w;
         public SwizzleComponent LegacySwizzleComponent => SwizzleComponent.w;
+        public string Name => "w";
     }
 
     public interface IPattern<TSelf> : ISingleton<TSelf>
