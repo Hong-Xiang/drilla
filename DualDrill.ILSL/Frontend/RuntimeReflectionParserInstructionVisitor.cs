@@ -141,7 +141,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             return l;
         }
-        throw new ValidationException($"binary arithmeic validation mismatch {l}, {r}", Method);
+        throw new ValidationException($"binary arithmeic validation mismatch {l.Name}, {r.Name}", Method);
     }
 
     public int[] VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryRelation.IOp<TOp>
@@ -413,7 +413,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
     {
         if (CurrentStack.Count == 0)
             throw new ValidationException("Cannot dup when stack is empty", Method);
-            
+
         var top = CurrentStack.Peek();
         CurrentStack.Push(top);
         Instructions.Add(ShaderInstruction.Dup());
@@ -424,7 +424,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
     {
         if (CurrentStack.Count == 0)
             throw new ValidationException("Cannot pop when stack is empty", Method);
-            
+
         CurrentStack.Pop();
         Instructions.Add(ShaderInstruction.Pop());
         return [inst.Index + 1];

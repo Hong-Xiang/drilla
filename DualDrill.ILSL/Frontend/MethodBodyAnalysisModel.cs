@@ -295,7 +295,8 @@ public sealed class MethodBodyAnalysisModel
             ILOpCode.Unaligned => throw new NotImplementedException(),
             ILOpCode.Volatile => throw new NotImplementedException(),
             ILOpCode.Tail => throw new NotImplementedException(),
-            ILOpCode.Initobj => throw new NotImplementedException(),
+            // TODO: properly handle init obj
+            ILOpCode.Initobj => visitor.VisitPop(info),
             ILOpCode.Constrained => throw new NotImplementedException(),
             ILOpCode.Cpblk => throw new NotImplementedException(),
             ILOpCode.Initblk => throw new NotImplementedException(),

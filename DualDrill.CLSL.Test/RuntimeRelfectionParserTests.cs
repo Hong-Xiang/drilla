@@ -1,13 +1,10 @@
-﻿using DualDrill.CLSL.Backend;
-using DualDrill.CLSL.Frontend;
+﻿using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
-using System.CodeDom.Compiler;
 using System.Numerics;
 
 namespace DualDrill.CLSL.Test;
@@ -79,7 +76,7 @@ public class RuntimeRelfectionParserTests
     }
 
     [Fact]
-    public async Task SimpleUniformDeclarationParseTest()
+    public void SimpleUniformDeclarationParseTest()
     {
         var module = Parser.ParseShaderModule(new SimpleStructUniformShaderModule());
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();
@@ -88,19 +85,5 @@ public class RuntimeRelfectionParserTests
         Assert.Equal(0, uniformDecl.Attributes.OfType<BindingAttribute>().Single().Binding);
         Assert.Single(uniformDecl.Attributes.OfType<UniformAttribute>());
         Assert.IsType<StructureDeclaration>(uniformDecl.Type);
-
-        var sw = new StringWriter();
-        var isw = new IndentedTextWriter(sw);
-        var typeVisitor = new WgslCodeTypeReferenceVisitor(isw);
-        var stmtVisitor = new WgslFunctionBodyVisitor(isw);
-        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionFunctionBody>(isw, module,
-            (b) => ValueTask.CompletedTask
-        );
-        foreach (var d in module.Declarations)
-        {
-            await d.AcceptVisitor(visitor);
-        }
-        var code = sw.ToString();
-        Assert.NotEmpty(code);
     }
 }

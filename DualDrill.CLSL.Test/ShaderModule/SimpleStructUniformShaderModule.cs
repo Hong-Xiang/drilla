@@ -25,15 +25,18 @@ sealed class SimpleStructUniformShaderModule : ISharpShader
     )
     {
         Vector2 pos = new();
-        if (vertexIndex == 0)
+        uint v0 = 0u;
+        uint v1 = 1u;
+        uint v2 = 2u;
+        if (vertexIndex == v0)
         {
             pos = new Vector2(0.0f, 0.5f);
         }
-        if (vertexIndex == 1)
+        if (vertexIndex == v1)
         {
             pos = new Vector2(-0.5f, -0.5f);
         }
-        if (vertexIndex == 2)
+        if (vertexIndex == v2)
         {
             pos = new Vector2(0.5f, -0.5f);
         }
