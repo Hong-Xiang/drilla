@@ -284,7 +284,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         return default;
     }
 
-    public Unit Visit(DropInstruction inst)
+    public Unit Visit(DupInstruction inst)
     {
         if (Expressions.Count == 0)
             throw new InvalidOperationException("Cannot dup when expression stack is empty");
@@ -294,7 +294,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         return default;
     }
 
-    public Unit Visit(PopInstruction inst)
+    public Unit Visit(DropInstruction inst)
     {
         if (Expressions.Count == 0)
             throw new InvalidOperationException("Cannot pop when expression stack is empty");

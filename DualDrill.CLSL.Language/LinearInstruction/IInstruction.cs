@@ -188,9 +188,9 @@ public sealed record class UnaryScalarInstruction<TOp>
 
 public sealed record class NegateInstruction : IInstruction { }
 
-public sealed record class DropInstruction : IStructuredStackInstruction, ISingleton<DropInstruction>
+public sealed record class DupInstruction : IStructuredStackInstruction, ISingleton<DupInstruction>
 {
-    public static DropInstruction Instance { get; } = new();
+    public static DupInstruction Instance { get; } = new();
     
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
@@ -198,14 +198,14 @@ public sealed record class DropInstruction : IStructuredStackInstruction, ISingl
     public override string ToString() => "dup";
 }
 
-public sealed record class PopInstruction : IStructuredStackInstruction, ISingleton<PopInstruction>
+public sealed record class DropInstruction : IStructuredStackInstruction, ISingleton<DropInstruction>
 {
-    public static PopInstruction Instance { get; } = new();
+    public static DropInstruction Instance { get; } = new();
     
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
-    public override string ToString() => "pop";
+    public override string ToString() => "drop";
 }
 
 public static class ShaderInstruction
@@ -216,8 +216,8 @@ public static class ShaderInstruction
     public static IStructuredStackInstruction I32Eq() => BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryRelation.Eq>>.Instance;
 
     public static IStructuredStackInstruction LogicalNot() => new LogicalNotInstruction();
-    public static IStructuredStackInstruction Dup() => DropInstruction.Instance;
-    public static IStructuredStackInstruction Pop() => PopInstruction.Instance;
+    public static IStructuredStackInstruction Dup() => DupInstruction.Instance;
+    public static IStructuredStackInstruction Pop() => DropInstruction.Instance;
 
     public static LoadSymbolInstruction<ParameterDeclaration> Load(ParameterDeclaration decl) => new(decl);
     public static LoadSymbolInstruction<VariableDeclaration> Load(VariableDeclaration decl) => new(decl);
