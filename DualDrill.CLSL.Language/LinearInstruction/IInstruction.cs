@@ -105,6 +105,7 @@ public sealed record class CallInstruction(FunctionDeclaration Callee) : IStruct
     public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
          => visitor.Visit(this);
 
+    public override string ToString() => $"call {Callee.Name}({Callee})";
 }
 
 public sealed record class LoadSymbolInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
@@ -187,6 +188,26 @@ public sealed record class UnaryScalarInstruction<TOp>
 
 public sealed record class NegateInstruction : IInstruction { }
 
+public sealed record class DropInstruction : IStructuredStackInstruction, ISingleton<DropInstruction>
+{
+    public static DropInstruction Instance { get; } = new();
+    
+    public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
+         => visitor.Visit(this);
+
+    public override string ToString() => "dup";
+}
+
+public sealed record class PopInstruction : IStructuredStackInstruction, ISingleton<PopInstruction>
+{
+    public static PopInstruction Instance { get; } = new();
+    
+    public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
+         => visitor.Visit(this);
+
+    public override string ToString() => "pop";
+}
+
 public static class ShaderInstruction
 {
     public static IStructuredStackInstruction Nop() => new NopInstruction();
@@ -195,6 +216,8 @@ public static class ShaderInstruction
     public static IStructuredStackInstruction I32Eq() => BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryRelation.Eq>>.Instance;
 
     public static IStructuredStackInstruction LogicalNot() => new LogicalNotInstruction();
+    public static IStructuredStackInstruction Dup() => DropInstruction.Instance;
+    public static IStructuredStackInstruction Pop() => PopInstruction.Instance;
 
     public static LoadSymbolInstruction<ParameterDeclaration> Load(ParameterDeclaration decl) => new(decl);
     public static LoadSymbolInstruction<VariableDeclaration> Load(VariableDeclaration decl) => new(decl);

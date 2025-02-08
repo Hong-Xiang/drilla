@@ -14,4 +14,14 @@ public sealed record class VariableDeclaration(
 ) : IDeclaration, IVariableIdentifierSymbol
 {
     public IExpression? Initializer { get; set; } = null;
+    public override string ToString()
+    {
+        var scope = DeclarationScope switch
+        {
+            DeclarationScope.Module => "m",
+            DeclarationScope.Function => "f",
+            _ => throw new NotSupportedException()
+        };
+        return $"var@{scope}({Name}: {Type.Name})";
+    }
 }

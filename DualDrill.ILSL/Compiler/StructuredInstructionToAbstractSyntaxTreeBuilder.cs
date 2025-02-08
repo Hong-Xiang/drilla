@@ -261,4 +261,24 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         Statements.Add(stmt);
         return default;
     }
+
+    public Unit Visit(DropInstruction inst)
+    {
+        if (Expressions.Count == 0)
+            throw new InvalidOperationException("Cannot dup when expression stack is empty");
+            
+        var top = Expressions.Peek();
+        Expressions.Push(top);
+        return default;
+    }
+
+    public Unit Visit(PopInstruction inst)
+    {
+        if (Expressions.Count == 0)
+            throw new InvalidOperationException("Cannot pop when expression stack is empty");
+            
+        var expr = Expressions.Pop();
+        Statements.Add(new PhonyAssignmentStatement(expr));
+        return default;
+    }
 }

@@ -23,7 +23,6 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitLdLoc(CilInstructionInfo inst, LocalVariableInfo info);
     TResult VisitLdLocAddress(CilInstructionInfo inst, LocalVariableInfo info);
     TResult VisitStLoc(CilInstructionInfo inst, LocalVariableInfo info);
-
     TResult VisitLdFld(CilInstructionInfo inst, FieldInfo info);
     TResult VisitLdFldAddress(CilInstructionInfo inst, FieldInfo info);
     TResult VisitStFld(CilInstructionInfo inst, FieldInfo info);
@@ -52,4 +51,6 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitLdIndirectNativeInt(CilInstructionInfo inst);
     TResult VisitLdIndirectRef(CilInstructionInfo inst);
     TResult VisitStIndirectRef(CilInstructionInfo inst);
+    TResult VisitDup(CilInstructionInfo inst);
+    TResult VisitPop(CilInstructionInfo inst);
 }

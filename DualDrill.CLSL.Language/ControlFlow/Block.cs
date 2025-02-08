@@ -27,6 +27,25 @@ public sealed class Block<TInstruction>(
 
     public Label Label { get; } = Label;
     public ImmutableArray<IElement> Body { get; } = Body;
+
+    public IEnumerable<TInstruction> Instructions => from e in Body
+                                                     from i in (e switch
+                                                     {
+                                                         BasicBlock<TInstruction> bb => bb.Instructions.ToArray(),
+                                                         IStructuredControlFlowRegion<TInstruction> r => r.Instructions,
+                                                         _ => throw new NotSupportedException()
+                                                     })
+                                                     select i;
+
+    public IEnumerable<Label> Labels => [Label, ..from e in Body
+                                                  from l in (e switch
+                                                     {
+                                                         BasicBlock<TInstruction> bb => [],
+                                                         ILabeledStructuredControlFlowRegion<TInstruction> r => r.Labels,
+                                                         _ => throw new NotSupportedException()
+                                                     })
+                                                  select l];
+
     public TResult AcceptRegionVisitor<TResult>(IStructuredControlFlowRegion<TInstruction>.IRegionVisitor<TResult> visitor)
         => visitor.VisitBlock(this);
 

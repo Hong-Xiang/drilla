@@ -409,6 +409,27 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         throw new NotImplementedException();
     }
 
+    public int[] VisitDup(CilInstructionInfo inst)
+    {
+        if (CurrentStack.Count == 0)
+            throw new ValidationException("Cannot dup when stack is empty", Method);
+            
+        var top = CurrentStack.Peek();
+        CurrentStack.Push(top);
+        Instructions.Add(ShaderInstruction.Dup());
+        return [inst.Index + 1];
+    }
+
+    public int[] VisitPop(CilInstructionInfo inst)
+    {
+        if (CurrentStack.Count == 0)
+            throw new ValidationException("Cannot pop when stack is empty", Method);
+            
+        CurrentStack.Pop();
+        Instructions.Add(ShaderInstruction.Pop());
+        return [inst.Index + 1];
+    }
+
     public int[] VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>
     {
         var t = CurrentStack.Pop();

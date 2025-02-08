@@ -16,7 +16,7 @@ sealed class MinimumHelloTriangleShaderModule : ISharpShader
         // vertices [ (0.5, -0.5) (0.0, 0.5) (-0.5, -0.5) ]
         // use bit manipulation to avoid using any control flow and array index language features
         var vi = (int)vertex_index;
-        var x = (1 - vi) * (1 - vi & 1) * 0.5f;
+        var x = (1 - vi) * (1 - (vi & 1)) * 0.5f;
         var y = ((vi & 1) * 2 - 1) * 0.5f;
         return vec4(x, y, 0.0f, 1.0f);
     }

@@ -16,6 +16,9 @@ public interface IStructuredControlFlowRegion<TInstruction>
         TResult VisitIfThenElse(IfThenElse<TInstruction> ifThenElse);
     }
     TResult AcceptRegionVisitor<TResult>(IRegionVisitor<TResult> visitor);
+
+    IEnumerable<TInstruction> Instructions { get; }
+    IEnumerable<Label> Labels { get; }
 }
 
 /// <summary>

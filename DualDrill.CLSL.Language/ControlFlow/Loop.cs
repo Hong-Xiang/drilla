@@ -10,7 +10,11 @@ public sealed class Loop<TInstruction>(
   , ILabeledStructuredControlFlowRegion<TInstruction>
 {
     public Label Label { get; } = Label;
-    public Block<TInstruction> BodyBlock { get; } = Body;
+    public Block<TInstruction> Body { get; } = Body;
+
+    public IEnumerable<TInstruction> Instructions => Body.Instructions;
+
+    public IEnumerable<Label> Labels => [Label, ..Body.Labels];
 
     public TResult AcceptElementVisitor<TResult>(Block<TInstruction>.IElement.IElementVisitor<TResult> visitor)
         => visitor.VisitLoop(this);

@@ -12,7 +12,7 @@ public sealed record class ParameterDeclaration(
 {
     public override string ToString()
     {
-        return $"Parameter({Name}: {Type.Name})";
+        return $"arg({Name}: {Type.Name})";
     }
 }
 
