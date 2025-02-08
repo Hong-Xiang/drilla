@@ -41,7 +41,7 @@ public sealed class Block<TInstruction>(
                                                   from l in (e switch
                                                      {
                                                          BasicBlock<TInstruction> bb => [],
-                                                         ILabeledStructuredControlFlowRegion<TInstruction> r => r.Labels,
+                                                         IStructuredControlFlowRegion<TInstruction> r => r.Labels,
                                                          _ => throw new NotSupportedException()
                                                      })
                                                   select l];

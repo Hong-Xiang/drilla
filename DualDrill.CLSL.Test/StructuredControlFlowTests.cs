@@ -47,7 +47,6 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                     ShaderInstruction.Const(new I32Literal(1)),
                     BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryArithmetic.Add>>.Instance,
                     ShaderInstruction.Store(v),
-                    ShaderInstruction.Br(e)
                 ]))
             })
         );
@@ -61,7 +60,6 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var b = Assert.IsType<Loop<Inst>>(ir);
         Assert.Equal(e, b.Label);
         Assert.NotEqual(e, b.Body.Label);
-        Assert.IsType<BasicBlock<Inst>>(Assert.Single(b.Body.Body));
     }
 
     void Dump(IStructuredControlFlowRegion<Inst> result)
@@ -129,14 +127,12 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                 [e] = new(Successor.Conditional(t, f), BasicBlock<Inst>.Create([
                     ShaderInstruction.Const(Literal.Create(true))])),
                 [t] = new(Successor.Unconditional(m), BasicBlock<Inst>.Create([
-                        ShaderInstruction.Br(m),
+                    ShaderInstruction.Const(Literal.Create(1))
                     ])),
                 [f] = new(Successor.Unconditional(m), BasicBlock<Inst>.Create([
-                        ShaderInstruction.Br(m)
+                    ShaderInstruction.Const(Literal.Create(2))
                     ])),
-                [m] = new(Successor.Terminate(), BasicBlock<Inst>.Create([
-                        ShaderInstruction.Return()
-                    ])),
+                [m] = new(Successor.Terminate(), BasicBlock<Inst>.Create([])),
             })
         );
         var result = cfg.ToStructuredControlFlow();
@@ -192,7 +188,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
             a,
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
             {
-                [a] = new(Successor.Unconditional(b), 
+                [a] = new(Successor.Unconditional(b),
                     BasicBlock<Inst>.Create([
                         ShaderInstruction.Const(Literal.Create(1)),
                         ShaderInstruction.Store(v)
@@ -222,10 +218,10 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //   end (if)
         // end (loop)
 
-        var lp = Assert.IsType<Loop<Inst>>(result);
-        Assert.Equal(3, lp.Body.Body.Length);
-        var bba = Assert.IsType<BasicBlock<Inst>>(lp.Body.Body[0]);
-        var bbb = Assert.IsType<BasicBlock<Inst>>(lp.Body.Body[1]);
-        var rif = Assert.IsType<IfThenElse<Inst>>(lp.Body.Body[2]);
+        result.Should().BeOfType<Loop<Inst>>()
+              .Which.Body.Body.Should().SatisfyRespectively(
+                (bb) => bb.Should().BeOfType<BasicBlock<Inst>>(),
+                b => b.Should().BeOfType<Block<Inst>>()
+               );
     }
 }

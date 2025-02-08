@@ -62,6 +62,17 @@ public static class ShaderModuleExtension
         });
     }
 
+    public static ShaderModuleDeclaration<CompoundStatement> Simplify(
+        this ShaderModuleDeclaration<CompoundStatement> module
+    )
+    {
+        return module.MapBody((m, f, b) =>
+        {
+            var stmt = b.AcceptVisitor(new AbstractSyntaxTreeSimplify());
+            return (CompoundStatement)stmt;
+        });
+    }
+
     public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody> ToControlFlowGraph(
         this ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> module
     )
@@ -270,7 +281,7 @@ public static class ShaderModuleExtension
         var visitor = new ModuleToCodeVisitor<StructuredStackInstructionFunctionBody>(isw, module, (b) =>
         {
             var instructions = b.Root.Instructions.ToArray();
-            var labelIndex = b.Root.Labels.ToArray().Index().ToDictionary(x => x.Item, x => x.Index);
+            var labelIndex = b.Root.Labels.Distinct().ToArray().Index().ToDictionary(x => x.Item, x => x.Index);
             var variables = instructions.OfType<LoadSymbolInstruction<VariableDeclaration>>().Select(x => x.Target)
                            .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>().Select(x => x.Target))
                            .Concat(instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>().Select(x => x.Target))
@@ -278,7 +289,12 @@ public static class ShaderModuleExtension
                            .Distinct()
                            .Index()
                            .ToDictionary(x => x.Item, x => x.Index);
-            string VariableName(VariableDeclaration variable) => $"var#{variables[variable]} {variable}";
+            string VariableName(VariableDeclaration variable) =>
+                variable.DeclarationScope == DeclarationScope.Function
+                ? $"var#{variables[variable]} {variable}"
+                : $"module var {variable.Name}";
+
+
             string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
 
             b.Root.Dump(LabelName, VariableName, isw);
@@ -306,7 +322,12 @@ public static class ShaderModuleExtension
                            .Index()
                            .ToDictionary(x => x.Item, x => x.Index);
 
-            string VariableName(VariableDeclaration variable) => $"var#{variables[variable]} {variable}";
+            string VariableName(VariableDeclaration variable) =>
+                variable.DeclarationScope == DeclarationScope.Function
+                ? $"var#{variables[variable]} {variable}"
+                : $"module var {variable.Name}";
+
+
             string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
 
 
@@ -356,7 +377,10 @@ public static class ShaderModuleExtension
                            .ToDictionary(x => x.Item, x => x.Index);
 
             string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
-            string VariableName(VariableDeclaration variable) => $"var#{variables[variable]} {variable}";
+            string VariableName(VariableDeclaration variable) =>
+                variable.DeclarationScope == DeclarationScope.Function
+                ? $"var#{variables[variable]} {variable}"
+                : $"module var {variable.Name}";
 
             foreach (var (k, v) in variables)
             {

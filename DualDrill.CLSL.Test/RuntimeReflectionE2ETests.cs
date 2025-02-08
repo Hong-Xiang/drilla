@@ -28,8 +28,15 @@ public sealed class RuntimeReflectionE2ETests(ITestOutputHelper Output)
         var ast = scf.ToAbstractSyntaxTreeFunctionBody();
         Output.WriteLine("=== AST ===");
         Output.WriteLine(await ast.Dump());
+
         Output.WriteLine(sep);
-        var code = await ast.EmitWgslCode();
+
+        var astS = ast.Simplify();
+        Output.WriteLine("=== AST(Simplified) ===");
+        Output.WriteLine(await astS.Dump());
+        Output.WriteLine(sep);
+
+        var code = await astS.EmitWgslCode();
         Output.WriteLine("=== WGSL ===");
         Output.WriteLine(code);
         Output.WriteLine(sep);

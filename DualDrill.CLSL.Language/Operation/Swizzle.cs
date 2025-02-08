@@ -265,6 +265,10 @@ public sealed class VectorComponentGetOperation<TRank, TVector, TComponent>
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
             => visitor.VisitVectorComponentGet<TRank, TVector, TComponent>();
     }
+    public IExpression CreateExpression(IExpression expr)
+    {
+        return new VectorSwizzleAccessExpression(expr, [TComponent.Instance.LegacySwizzleComponent]);
+    }
 }
 
 public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
@@ -293,6 +297,15 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
 
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
             => visitor.VisitVectorComponentSet<TRank, TVector, TComponent>();
+    }
+
+    public IStatement CreateStatement(IExpression target, IExpression value)
+    {
+        return new SimpleAssignmentStatement(
+            new VectorSwizzleAccessExpression(target, [TComponent.Instance.LegacySwizzleComponent]),
+            value,
+            AssignmentOp.Assign
+        );
     }
 }
 

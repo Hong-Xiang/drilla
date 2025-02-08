@@ -58,12 +58,29 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 
     public Unit VisitLoop(Loop<IStructuredStackInstruction> loop)
     {
-        throw new NotImplementedException();
+        loop.Body.AcceptRegionVisitor(this);
+        var b = Blocks.Pop();
+        var l = new LoopStatement(b);
+        Blocks.Push(new CompoundStatement([l]));
+        return default;
     }
 
     public Unit VisitIfThenElse(IfThenElse<IStructuredStackInstruction> ifThenElse)
     {
-        throw new NotImplementedException();
+        var f = Expressions.Pop();
+        ifThenElse.TrueBlock.AcceptRegionVisitor(this);
+        var tBlock = Blocks.Pop();
+        ifThenElse.FalseBlock.AcceptRegionVisitor(this);
+        var fBlock = Blocks.Pop();
+        Statements.Add(new IfStatement(
+            f,
+            tBlock,
+            fBlock,
+            []
+        ));
+        Blocks.Push(new CompoundStatement([.. Statements]));
+        Statements.Clear();
+        return default;
     }
 
     public Unit VisitBasicBlock(BasicBlock<IStructuredStackInstruction> basicBlock)
@@ -228,7 +245,10 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         where TVector : Language.Types.ISizedVecType<TRank, TVector>
         where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
     {
-        throw new NotImplementedException();
+        var value = Expressions.Pop();
+        var expr = VectorComponentGetOperation<TRank, TVector, TComponent>.Instance.CreateExpression(value);
+        Expressions.Push(expr);
+        return default;
     }
 
     public Unit VisitVectorComponentSet<TRank, TVector, TComponent>()
@@ -236,7 +256,11 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         where TVector : Language.Types.ISizedVecType<TRank, TVector>
         where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
     {
-        throw new NotImplementedException();
+        var value = Expressions.Pop();
+        var vec = Expressions.Pop();
+        var stmt = VectorComponentSetOperation<TRank, TVector, TComponent>.Instance.CreateStatement(vec, value);
+        Statements.Add(stmt);
+        return default;
     }
 
     public Unit VisitVectorSwizzleGet<TPattern, TElement>()
@@ -247,8 +271,6 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         var expr = VectorSwizzleGetOperation<TPattern, TElement>.Instance.CreateExpression(value);
         Expressions.Push(expr);
         return default;
-
-        throw new NotImplementedException();
     }
 
     public Unit VisitVectorSwizzleSet<TPattern, TElement>()
@@ -266,7 +288,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     {
         if (Expressions.Count == 0)
             throw new InvalidOperationException("Cannot dup when expression stack is empty");
-            
+
         var top = Expressions.Peek();
         Expressions.Push(top);
         return default;
@@ -276,7 +298,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     {
         if (Expressions.Count == 0)
             throw new InvalidOperationException("Cannot pop when expression stack is empty");
-            
+
         var expr = Expressions.Pop();
         Statements.Add(new PhonyAssignmentStatement(expr));
         return default;
