@@ -16,9 +16,9 @@ public sealed record class ControlFlowGraphFunctionBody(
             foreach (var l in Graph.Labels())
             {
                 var bb = Graph[l];
-                foreach (var inst in bb.Instructions.Span)
+                foreach (var instruction in bb.Instructions.ToArray())
                 {
-                    switch (inst)
+                    switch (instruction)
                     {
                         case LoadSymbolInstruction<VariableDeclaration> x:
                             yield return x.Target;

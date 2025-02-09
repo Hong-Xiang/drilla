@@ -56,14 +56,24 @@ public interface IScalarType : IPlainType, IStorableType, ICreationFixedFootprin
     IScalarConversionOperation GetConversionToOperation<TTarget>()
         where TTarget : IScalarType<TTarget>;
 
+    IScalarConversionOperation GetConversionToOperation(IScalarType target);
+
+    internal IScalarConversionOperation GetConversionFromOperation(IScalarType target);
+
     IVecType GetVecType<TRank>() where TRank : class, IRank<TRank>;
 }
 
 public interface IScalarType<TSelf> : IScalarType, ISingletonShaderType<TSelf>, ISingleton<TSelf>
     where TSelf : IScalarType<TSelf>
 {
-    IScalarConversionOperation IScalarType.GetConversionToOperation<TTarget>() => ScalarConversionOperation<TSelf, TTarget>.Instance;
+    IScalarConversionOperation IScalarType.GetConversionToOperation<TTarget>() =>
+        ScalarConversionOperation<TSelf, TTarget>.Instance;
 
+    IScalarConversionOperation IScalarType.GetConversionToOperation(IScalarType target)
+        => target.GetConversionFromOperation(this);
+
+    IScalarConversionOperation IScalarType.GetConversionFromOperation(IScalarType source)
+        => source.GetConversionToOperation<TSelf>();
 
     IVecType IScalarType.GetVecType<TRank>() => VecType<TRank, TSelf>.Instance;
 }
@@ -75,7 +85,6 @@ public interface INumericType : IScalarType
     IOperation GetVectorUnaryNumericOperation<TRank, TOp>()
         where TRank : IRank<TRank>
         where TOp : UnaryArithmetic.IOp<TOp>;
-
 }
 
 public interface INumericType<TSelf> : INumericType, IShaderType<TSelf>, IScalarType<TSelf>
@@ -85,7 +94,9 @@ public interface INumericType<TSelf> : INumericType, IShaderType<TSelf>, IScalar
         => VectorNumericUnaryOperation<TRank, TSelf, TOp>.Instance;
 }
 
-public interface IIntegerType : IScalarType { }
+public interface IIntegerType : IScalarType
+{
+}
 
 public interface IIntegerType<TBitwidth, TSign> : IIntegerType
     where TBitwidth : IBitWidth
@@ -101,7 +112,9 @@ public sealed record class RuntimeSizedArrayType(IScalarType ElementType)
 {
 }
 
-public interface IStorableType : IShaderType { }
+public interface IStorableType : IShaderType
+{
+}
 
 public static partial class ShaderType
 {

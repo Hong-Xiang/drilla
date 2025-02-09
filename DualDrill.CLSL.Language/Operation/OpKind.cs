@@ -38,16 +38,18 @@ public interface IOperation<TSelf> : IOperation, ISingleton<TSelf>
         => new OperationMethodAttribute<TSelf>();
 }
 
-public interface IUnaryOperation<TSelf> : IOperation, ISingleton<TSelf>
+public interface IUnaryOperation<TSelf> : IOperation<TSelf>, ISingleton<TSelf>
     where TSelf : IUnaryOperation<TSelf>
 {
     IShaderType SourceType { get; }
     IShaderType ResultType { get; }
     IExpression CreateExpression(IExpression expr);
     IStructuredStackInstruction IOperation.Instruction => UnaryOperationInstruction<TSelf>.Instance;
+    IOperationMethodAttribute IOperation.GetOperationMethodAttribute()
+        => new OperationMethodAttribute<TSelf>();
 }
 
-public interface IUnaryScalarOperation<TSelf> : IUnaryOp
+public interface IUnaryScalarOperation<TSelf> : IUnaryOperation<TSelf>
     where TSelf : IUnaryScalarOperation<TSelf>
 {
 }

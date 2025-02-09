@@ -1,4 +1,6 @@
 ﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.LinearInstruction;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 
@@ -9,6 +11,7 @@ public sealed class Block<TInstruction>(
     ImmutableArray<Block<TInstruction>.IElement> Body
 ) : ILabeledEntity
   , ILabeledStructuredControlFlowRegion<TInstruction>
+    where TInstruction : IInstruction
 {
     /// <summary>
     /// Encoding of Loop | Block | IfThenElse | BasicBlock
@@ -45,6 +48,17 @@ public sealed class Block<TInstruction>(
                                                          _ => throw new NotSupportedException()
                                                      })
                                                   select l];
+
+    public IEnumerable<VariableDeclaration> LocalVariables =>
+        from e in Body
+        from v in (e switch
+        {
+            BasicBlock<TInstruction> bb => bb.Instructions.ToArray().SelectMany(x => x.ReferencedLocalVariable),
+            IStructuredControlFlowRegion<TInstruction> r => r.LocalVariables,
+            _ => throw new NotSupportedException()
+        })
+        select v;
+
 
     public TResult AcceptRegionVisitor<TResult>(IStructuredControlFlowRegion<TInstruction>.IRegionVisitor<TResult> visitor)
         => visitor.VisitBlock(this);

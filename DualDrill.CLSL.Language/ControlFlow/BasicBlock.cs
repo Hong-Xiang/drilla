@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class BasicBlock<TInstruction> : Block<TInstruction>.IElement
+    where TInstruction : IInstruction
 {
     public ReadOnlyMemory<TInstruction> Instructions { get; }
     public BasicBlock(ReadOnlyMemory<TInstruction> instructions)

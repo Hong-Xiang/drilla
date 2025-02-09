@@ -9,6 +9,7 @@ using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -16,8 +17,8 @@ namespace DualDrill.CLSL.Compiler;
 
 public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     : IStructuredControlFlowRegion<IStructuredStackInstruction>.IRegionVisitor<Unit>
-    , Block<IStructuredStackInstruction>.IElement.IElementVisitor<Unit>
-    , IStructuredStackInstructionVisitor<Unit>
+        , Block<IStructuredStackInstruction>.IElement.IElementVisitor<Unit>
+        , IStructuredStackInstructionVisitor<Unit>
 {
     public StructuredInstructionToAbstractSyntaxTreeBuilder(
         ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> shaderModule,
@@ -25,24 +26,31 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     {
         ShaderModule = shaderModule;
         Function = function;
-        StackIR = ShaderModule.GetBody(function).Root;
+        var functionBody = ShaderModule.GetBody(function);
+        RootRegion = functionBody.Root;
+        LocalVariables = functionBody.LocalVariables.Distinct().ToFrozenSet();
     }
 
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> ShaderModule { get; }
     public FunctionDeclaration Function { get; }
-    public IStructuredControlFlowRegion<IStructuredStackInstruction> StackIR { get; }
+    public IStructuredControlFlowRegion<IStructuredStackInstruction> RootRegion { get; }
 
     Stack<IExpression> Expressions = [];
     List<IStatement> Statements = [];
     Stack<CompoundStatement> Blocks = [];
+
     ImmutableDictionary<Label, ILabeledStructuredControlFlowRegion<IStructuredStackInstruction>> LabelContext =
         ImmutableDictionary<Label, ILabeledStructuredControlFlowRegion<IStructuredStackInstruction>>.Empty;
 
+    FrozenSet<VariableDeclaration> LocalVariables;
+
     public CompoundStatement Build()
     {
-        StackIR.AcceptRegionVisitor(this);
+        var varsDeclare = LocalVariables.Select(v => new VariableOrValueStatement(v));
+        RootRegion.AcceptRegionVisitor(this);
         Debug.Assert(Blocks.Count == 1);
-        return Blocks.Pop();
+        var body = Blocks.Pop();
+        return new CompoundStatement([.. varsDeclare, .. body.Statements]);
     }
 
     public Unit VisitBlock(Block<IStructuredStackInstruction> block)
@@ -53,6 +61,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
             e.AcceptElementVisitor(this);
             blocks.Add(Blocks.Pop());
         }
+
         Blocks.Push(new CompoundStatement([.. blocks]));
         return default;
     }
@@ -92,6 +101,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         {
             inst.Accept<StructuredInstructionToAbstractSyntaxTreeBuilder, Unit>(this);
         }
+
         Blocks.Push(new CompoundStatement([.. Statements]));
         Statements.Clear();
         return default;
@@ -121,6 +131,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         {
             Statements.Add(SyntaxFactory.Return(Expressions.Pop()));
         }
+
         return default;
     }
 
@@ -142,6 +153,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         {
             arguments.Add(Expressions.Pop());
         }
+
         arguments.Reverse();
         Expressions.Push(SyntaxFactory.Call(inst.Callee, [.. arguments]));
         return default;
@@ -156,14 +168,15 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
                 Expressions.Push(new VariableIdentifierExpression(v));
                 break;
             case MemberDeclaration m:
-                {
-                    var o = Expressions.Pop();
-                    Expressions.Push(new NamedComponentExpression(o, m));
-                    break;
-                }
+            {
+                var o = Expressions.Pop();
+                Expressions.Push(new NamedComponentExpression(o, m));
+                break;
+            }
             default:
                 throw new NotImplementedException();
         }
+
         return default;
     }
 
@@ -176,14 +189,15 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
                 Expressions.Push(new VariableIdentifierExpression(v));
                 break;
             case MemberDeclaration m:
-                {
-                    var o = Expressions.Pop();
-                    Expressions.Push(new NamedComponentExpression(o, m));
-                    break;
-                }
+            {
+                var o = Expressions.Pop();
+                Expressions.Push(new NamedComponentExpression(o, m));
+                break;
+            }
             default:
                 throw new NotImplementedException();
         }
+
         return default;
     }
 
@@ -194,10 +208,10 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
             if (inst.Target is IVariableIdentifierSymbol v)
             {
                 Statements.Add(new SimpleAssignmentStatement(
-                            new VariableIdentifierExpression(v),
-                            Expressions.Pop(),
-                            AssignmentOp.Assign
-                        ));
+                    new VariableIdentifierExpression(v),
+                    Expressions.Pop(),
+                    AssignmentOp.Assign
+                ));
                 return default;
             }
         }
@@ -217,7 +231,8 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         throw new NotImplementedException();
     }
 
-    public Unit Visit<TOperation>(BinaryOperationInstruction<TOperation> inst) where TOperation : ISingleton<TOperation>, IBinaryOperation<TOperation>
+    public Unit Visit<TOperation>(BinaryOperationInstruction<TOperation> inst)
+        where TOperation : ISingleton<TOperation>, IBinaryOperation<TOperation>
     {
         var r = Expressions.Pop();
         var l = Expressions.Pop();
@@ -233,14 +248,13 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         return default;
     }
 
-    public Unit Visit<TOperation>(UnaryScalarInstruction<TOperation> inst) where TOperation : IUnaryScalarOperation<TOperation>
+    public Unit VisitUnaryOperation<TOperation>(UnaryOperationInstruction<TOperation> inst)
+        where TOperation : IUnaryOperation<TOperation>
     {
+        var e = Expressions.Pop();
+        var r = TOperation.Instance.CreateExpression(e);
+        Expressions.Push(r);
         return default;
-    }
-
-    public Unit VisitUnaryOperation<TOperation>(UnaryOperationInstruction<TOperation> inst) where TOperation : IUnaryOperation<TOperation>
-    {
-        throw new NotImplementedException();
     }
 
     public Unit VisitVectorComponentGet<TRank, TVector, TComponent>()

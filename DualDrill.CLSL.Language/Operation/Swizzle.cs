@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
@@ -262,6 +263,10 @@ public sealed class VectorComponentGetOperation<TRank, TVector, TComponent>
     {
         public static Instruction Instance { get; } = new();
 
+        public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+
+        public IEnumerable<Label> ReferencedLabel => [];
+
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
             => visitor.VisitVectorComponentGet<TRank, TVector, TComponent>();
     }
@@ -293,6 +298,10 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
         : ISingleton<Instruction>
         , IStructuredStackInstruction
     {
+        public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+
+        public IEnumerable<Label> ReferencedLabel => [];
+
         public static Instruction Instance { get; } = new();
 
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
@@ -341,6 +350,10 @@ public sealed class VectorSwizzleGetOperation<TPattern, TElement>
         : ISingleton<Instruction>
         , IStructuredStackInstruction
     {
+        public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+
+        public IEnumerable<Label> ReferencedLabel => [];
+
         public static Instruction Instance { get; } = new();
 
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
@@ -373,6 +386,10 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
         : ISingleton<Instruction>
         , IStructuredStackInstruction
     {
+        public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+
+        public IEnumerable<Label> ReferencedLabel => [];
+
         public static Instruction Instance { get; } = new();
 
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>

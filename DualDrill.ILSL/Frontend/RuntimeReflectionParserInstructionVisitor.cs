@@ -17,12 +17,12 @@ public sealed class ValidationException(string message, MethodBase method)
 }
 
 sealed class RuntimeReflectionParserInstructionVisitor(
-        RuntimeReflectionParser Parser,
-        ICompilationContext Context,
-        FunctionDeclaration Function,
-        MethodBase Method,
-        FrozenDictionary<int, (Label, int)> Labels
-    ) : ICilInstructionVisitor<int[]>
+    RuntimeReflectionParser Parser,
+    ICompilationContext Context,
+    FunctionDeclaration Function,
+    MethodBase Method,
+    FrozenDictionary<int, (Label, int)> Labels
+) : ICilInstructionVisitor<int[]>
 {
     //public List<int> Nexts { get; private set; } = [];
 
@@ -35,7 +35,8 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public void AfterVisitInstruction(CilInstructionInfo info)
     {
-        Console.Error.Write($"After inst#{info.Index}({info.Instruction.Offset}).({info.NextByteOffset}) - {info.Instruction.OpCode}");
+        Console.Error.Write(
+            $"After inst#{info.Index}({info.Instruction.Offset}).({info.NextByteOffset}) - {info.Instruction.OpCode}");
         var opcode = info.Instruction.OpCode;
         if (opcode.FlowControl == System.Reflection.Emit.FlowControl.Branch
             || opcode.FlowControl == System.Reflection.Emit.FlowControl.Cond_Branch)
@@ -50,9 +51,9 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     break;
                 default:
                     break;
-
             }
         }
+
         Console.Error.Write($"\t{info.Instruction.Operand} - [");
         if (ValidationStack is not null)
         {
@@ -62,6 +63,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                 Console.Error.Write(", ");
             }
         }
+
         Console.Error.WriteLine("]");
     }
 
@@ -109,6 +111,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             CurrentStack.Push(nt);
             return [inst.Index + 1];
         }
+
         throw new NotImplementedException();
     }
 
@@ -132,6 +135,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             CurrentStack.Push(nt);
             return [inst.Index + 1];
         }
+
         throw new NotImplementedException();
     }
 
@@ -141,10 +145,12 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             return l;
         }
+
         throw new ValidationException($"binary arithmeic validation mismatch {l.Name}, {r.Name}", Method);
     }
 
-    public int[] VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryRelation.IOp<TOp>
+    public int[] VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
+        where TOp : BinaryRelation.IOp<TOp>
     {
         var r = CurrentStack.Pop();
         var l = CurrentStack.Pop();
@@ -156,6 +162,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             CurrentStack.Push(nt);
             return [inst.Index + 1];
         }
+
         throw new NotImplementedException();
     }
 
@@ -173,6 +180,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             JumpStack.TryAdd(label, new Stack<IShaderType>(CurrentStack));
         }
+
         ValidationStack = null;
         return [index];
     }
@@ -189,6 +197,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             // TODO: add conversion instruction
         }
+
         // bf.false
         if (value == false)
         {
@@ -209,10 +218,12 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             JumpStack.TryAdd(label, new Stack<IShaderType>(CurrentStack));
         }
+
         return [index, inst.Index + 1];
     }
 
-    public int[] VisitBrIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false) where TOp : BinaryRelation.IOp<TOp>
+    public int[] VisitBrIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false)
+        where TOp : BinaryRelation.IOp<TOp>
     {
         var r = CurrentStack.Pop();
         var l = CurrentStack.Pop();
@@ -239,6 +250,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             JumpStack.TryAdd(label, new Stack<IShaderType>(CurrentStack));
         }
+
         return [index, inst.Index + 1];
     }
 
@@ -250,14 +262,17 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             var vt = CurrentStack.Pop();
             if (!vt.Equals(p.Type))
             {
-                throw new ValidationException($"parameter {p} not match: stack {vt.Name} declaration {p.Type.Name}", Method);
+                throw new ValidationException($"parameter {p} not match: stack {vt.Name} declaration {p.Type.Name}",
+                    Method);
             }
         }
+
         Instructions.Add(ShaderInstruction.Call(f));
         if (f.Return.Type is not UnitType)
         {
             CurrentStack.Push(f.Return.Type);
         }
+
         return [info.Index + 1];
     }
 
@@ -295,17 +310,17 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public int[] VisitLdLoc(CilInstructionInfo inst, LocalVariableInfo info)
     {
-
-        var v = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException($"Failed to resolve local variable {info}");
+        var v = Context[Symbol.Variable(info)] ??
+                throw new KeyNotFoundException($"Failed to resolve local variable {info}");
         Instructions.Add(ShaderInstruction.Load(v));
         CurrentStack.Push(v.Type);
         return [inst.Index + 1];
-
     }
 
     public int[] VisitLdLocAddress(CilInstructionInfo inst, LocalVariableInfo info)
     {
-        var v = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException($"Failed to resolve local variable {info}");
+        var v = Context[Symbol.Variable(info)] ??
+                throw new KeyNotFoundException($"Failed to resolve local variable {info}");
         Instructions.Add(ShaderInstruction.LoadAddress(v));
         CurrentStack.Push(v.Type.GetPtrType());
         return [inst.Index + 1];
@@ -333,6 +348,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             var t = CurrentStack.Pop();
             Debug.Assert(t.Equals(p.Type));
         }
+
         Instructions.Add(new CallInstruction(callee));
         CurrentStack.Push(callee.Return.Type);
         return [info.Index + 1];
@@ -353,6 +369,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                 {
                     throw new ValidationException("return when stack is empty requires unit type", Method);
                 }
+
                 Instructions.Add(ShaderInstruction.Return());
                 ValidationStack = null;
                 return [];
@@ -361,8 +378,11 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                 var rt = Function.Return.Type;
                 if (!rt.Equals(vt))
                 {
-                    throw new ValidationException($"return when statck type {vt.Name} is not consistent with function signature return {rt.Name}", Method);
+                    throw new ValidationException(
+                        $"return when statck type {vt.Name} is not consistent with function signature return {rt.Name}",
+                        Method);
                 }
+
                 Instructions.Add(ShaderInstruction.Return());
                 ValidationStack = null;
                 return [];
@@ -375,7 +395,18 @@ sealed class RuntimeReflectionParserInstructionVisitor(
     {
         var p = Context[info] ?? throw new KeyNotFoundException($"Failed to resolve parameter {inst}");
         var v = CurrentStack.Pop();
-        // TODO: check for consistency, may emit convert instruction here
+        if (!p.Type.Equals(v))
+        {
+            if (p.Type is IScalarType ps && v is IScalarType ts)
+            {
+                Instructions.Add(ps.GetConversionToOperation(ts).Instruction);
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+        }
+
         Instructions.Add(ShaderInstruction.LoadAddress(p));
         return [inst.Index + 1];
     }
@@ -392,10 +423,22 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public int[] VisitStLoc(CilInstructionInfo inst, LocalVariableInfo info)
     {
-        var v = CurrentStack.Pop();
-        var varDecl = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException($"Failed to resolve local variable {info}, @{inst}({inst.Instruction.OpCode}) - {Method.Name}");
-        // TODO: check for consistency, may emit convert instruction here
-        Instructions.Add(ShaderInstruction.Store(varDecl));
+        var val = CurrentStack.Pop();
+        var loc = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException(
+            $"Failed to resolve local variable {info}, @{inst}({inst.Instruction.OpCode}) - {Method.Name}");
+        if (!loc.Type.Equals(val))
+        {
+            if (loc.Type is IScalarType ts && val is IScalarType ss)
+            {
+                Instructions.Add(ss.GetConversionToOperation(ts).Instruction);
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+        }
+
+        Instructions.Add(ShaderInstruction.Store(loc));
         return [inst.Index + 1];
     }
 
@@ -439,6 +482,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             CurrentStack.Push(TTarget.Instance);
             return [inst.Index + 1];
         }
+
         throw new NotImplementedException();
     }
 
@@ -462,6 +506,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             throw new ValidationException("ldfld expect current stack to have ptr type", Method);
         }
+
         var m = Parser.ParseField(info);
         CurrentStack.Push(m.Type);
         return [inst.Index + 1];
@@ -474,6 +519,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             throw new ValidationException("ldfld expect current stack to have ptr type", Method);
         }
+
         var m = Parser.ParseField(info);
         CurrentStack.Push(m.Type.GetPtrType());
         return [inst.Index + 1];

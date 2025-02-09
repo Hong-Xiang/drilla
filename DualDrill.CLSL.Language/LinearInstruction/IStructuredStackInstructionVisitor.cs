@@ -27,9 +27,6 @@ public interface IStructuredStackInstructionVisitor<TResult>
     TResult Visit(DupInstruction inst);
     TResult Visit(DropInstruction inst);
 
-    TResult Visit<TOperation>(UnaryScalarInstruction<TOperation> inst)
-        where TOperation : IUnaryScalarOperation<TOperation>;
-
     TResult VisitUnaryOperation<TOperation>(UnaryOperationInstruction<TOperation> inst)
         where TOperation : IUnaryOperation<TOperation>;
 

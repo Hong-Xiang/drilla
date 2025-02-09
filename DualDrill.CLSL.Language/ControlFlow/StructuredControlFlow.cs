@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
@@ -8,6 +9,7 @@ namespace DualDrill.CLSL.Language.ControlFlowGraph;
 /// </summary>
 public interface IStructuredControlFlowRegion<TInstruction>
     : Block<TInstruction>.IElement
+    where TInstruction : IInstruction
 {
     public interface IRegionVisitor<TResult>
     {
@@ -19,6 +21,7 @@ public interface IStructuredControlFlowRegion<TInstruction>
 
     IEnumerable<TInstruction> Instructions { get; }
     IEnumerable<Label> Labels { get; }
+    IEnumerable<VariableDeclaration> LocalVariables { get; }
 }
 
 /// <summary>
@@ -28,6 +31,7 @@ public interface IStructuredControlFlowRegion<TInstruction>
 public interface ILabeledStructuredControlFlowRegion<TInstruction>
     : IStructuredControlFlowRegion<TInstruction>
     , ILabeledEntity
+    where TInstruction : IInstruction
 {
 }
 

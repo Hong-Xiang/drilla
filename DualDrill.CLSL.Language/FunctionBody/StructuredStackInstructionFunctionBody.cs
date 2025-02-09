@@ -10,9 +10,9 @@ public sealed record class StructuredStackInstructionFunctionBody(
     IStructuredControlFlowRegion<IStructuredStackInstruction> Root
 ) : IFunctionBodyData
 {
-    public IEnumerable<VariableDeclaration> LocalVariables => throw new NotImplementedException();
+    public IEnumerable<VariableDeclaration> LocalVariables => Root.LocalVariables;
 
-    public IEnumerable<Label> Labels => throw new NotImplementedException();
+    public IEnumerable<Label> Labels => Root.Labels;
 
     sealed class LabelVisitor : IStructuredControlFlowRegion<IStructuredStackInstruction>.IRegionVisitor<IEnumerable<Label>>
     {
