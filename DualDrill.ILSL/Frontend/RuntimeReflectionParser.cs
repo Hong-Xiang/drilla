@@ -23,7 +23,7 @@ namespace DualDrill.CLSL.Frontend;
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
     ICompilationContext Context,
-    Dictionary<FunctionDeclaration, UnstructuredStackInstructionFunctionBody> MethodBodies)
+    Dictionary<FunctionDeclaration, UnstructuredStackInstructionSequence> MethodBodies)
 {
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
@@ -180,7 +180,7 @@ public sealed record class RuntimeReflectionParser(
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
-    public ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> ParseShaderModule(ISharpShader module)
+    public ShaderModuleDeclaration<UnstructuredStackInstructionSequence> ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
 
@@ -293,7 +293,7 @@ public sealed record class RuntimeReflectionParser(
         return decl;
     }
 
-    public UnstructuredStackInstructionFunctionBody ParseMethodBody(FunctionDeclaration f)
+    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f)
     {
         var model = Context.GetFunctionDefinition(f);
         return ParseMethodBody(f, model);
@@ -313,7 +313,7 @@ public sealed record class RuntimeReflectionParser(
                             );
     }
 
-    public UnstructuredStackInstructionFunctionBody ParseMethodBody(FunctionDeclaration f, MethodBodyAnalysisModel methodModel)
+    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f, MethodBodyAnalysisModel methodModel)
     {
         var method = methodModel.Method;
         foreach (var v in methodModel.LocalVariables)

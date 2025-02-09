@@ -90,7 +90,7 @@ public sealed class ControlFlowGraphBuilder
     }
     public void AddReturn(int source)
     {
-        IndexSuccessors.Add(source, new ReturnOrTerminateSuccessor());
+        IndexSuccessors.Add(source, new TerminateSuccessor());
         _ = TryGetOrCreateLabel(source + 1, out var _);
     }
     public ControlFlowGraph<TNode> Build<TNode>(Func<Label, InstructionRange, TNode> createNode)

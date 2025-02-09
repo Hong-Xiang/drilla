@@ -4,7 +4,18 @@
 
 ## Overview
 
-CLSL IR is a stack-based intermediate representation designed specifically for shader compilation. It combines concepts from WebAssembly, .NET CIL, and SPIR-V to create an IR that is both easy to generate from C# and efficient to translate to various shader languages.
+CLSL IR is a hybrid intermediate representation designed specifically for shader compilation. It combines concepts from WebAssembly, .NET CIL, and SPIR-V to create an IR that is both easy to generate from C# and efficient to translate to various shader languages.
+
+It has multiple different kinds of representations of function bodies,
+while the declarations are represented using `ShaderModuleDeclaration`, `FunctionDeclaration` etc,
+the function bodies are represented using differnt kinds of types implemented `IFunctionBody`, including:
+
+* `UnstructedStackInstruction` stack byte code with `LabelInstruction` and `BrInstruction`, `BrInstruction` is allowed to jump to any label inside current function.
+* `StructuredControlFlowRegion` structured control flow region with `Block`, `Loop`, `If`, `Else`, `Switch` etc, `BrInstruction` is only allowed to jump to the outer regions of current region.
+* `ControlFlowGraph` a control flow graph representation of the function body,
+with `Label`s associated with `BasicBlock`s,
+and `BasicBlock`s are connected with `ISuccessor`s.
+
 
 ## Design Principles
 

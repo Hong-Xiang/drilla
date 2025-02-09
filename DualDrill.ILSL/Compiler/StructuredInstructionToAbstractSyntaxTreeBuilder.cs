@@ -9,6 +9,7 @@ using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common;
+using System.Collections.Immutable;
 using System.Diagnostics;
 
 namespace DualDrill.CLSL.Compiler;
@@ -20,13 +21,11 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 {
     public StructuredInstructionToAbstractSyntaxTreeBuilder(
         ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> shaderModule,
-        FunctionDeclaration function,
-        IStructuredControlFlowRegion<IStructuredStackInstruction> stackIR
-    )
+        FunctionDeclaration function)
     {
         ShaderModule = shaderModule;
         Function = function;
-        StackIR = stackIR;
+        StackIR = ShaderModule.GetBody(function).Root;
     }
 
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> ShaderModule { get; }
@@ -36,6 +35,8 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     Stack<IExpression> Expressions = [];
     List<IStatement> Statements = [];
     Stack<CompoundStatement> Blocks = [];
+    ImmutableDictionary<Label, ILabeledStructuredControlFlowRegion<IStructuredStackInstruction>> LabelContext =
+        ImmutableDictionary<Label, ILabeledStructuredControlFlowRegion<IStructuredStackInstruction>>.Empty;
 
     public CompoundStatement Build()
     {
@@ -58,10 +59,12 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 
     public Unit VisitLoop(Loop<IStructuredStackInstruction> loop)
     {
+        var stms = Statements;
         loop.Body.AcceptRegionVisitor(this);
         var b = Blocks.Pop();
         var l = new LoopStatement(b);
         Blocks.Push(new CompoundStatement([l]));
+        Statements = stms;
         return default;
     }
 

@@ -6,7 +6,6 @@ using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
-using System.Reflection;
 
 namespace DualDrill.CLSL.Language.LinearInstruction;
 

@@ -15,7 +15,7 @@ public sealed record class ShaderModuleDeclaration<TBody>(
     ImmutableDictionary<FunctionDeclaration, TBody> FunctionDefinitions)
     : IDeclaration
     , IShaderModuleDeclaration
-    where TBody : IFunctionBody
+    where TBody : IFunctionBodyData
 {
     public string Name => nameof(ShaderModuleDeclaration<TBody>);
     public ImmutableHashSet<IShaderAttribute> Attributes => [];
@@ -35,7 +35,7 @@ public sealed record class ShaderModuleDeclaration<TBody>(
            => new([], ImmutableDictionary<FunctionDeclaration, TBody>.Empty);
 
     public ShaderModuleDeclaration<TResult> MapBody<TResult>(Func<ShaderModuleDeclaration<TBody>, FunctionDeclaration, TBody, TResult> f)
-        where TResult : IFunctionBody
+        where TResult : IFunctionBodyData
     {
         var result = FunctionDefinitions.Select(kv => KeyValuePair.Create(kv.Key, f(this, kv.Key, kv.Value))).ToImmutableDictionary();
         return new ShaderModuleDeclaration<TResult>(Declarations, result);

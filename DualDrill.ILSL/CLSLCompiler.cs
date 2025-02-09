@@ -10,7 +10,7 @@ namespace DualDrill.CLSL;
 
 public interface ICLSLCompiler
 {
-    public ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> Reflect(ISharpShader shader);
+    public ShaderModuleDeclaration<UnstructuredStackInstructionSequence> Reflect(ISharpShader shader);
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader);
     public ValueTask<string> EmitWGSL(ISharpShader module);
 }
@@ -24,7 +24,7 @@ public sealed class CLSLCompiler() : ICLSLCompiler
         return await shader.EmitWgslCode();
     }
 
-    public ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> Reflect(ISharpShader shader)
+    public ShaderModuleDeclaration<UnstructuredStackInstructionSequence> Reflect(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
         return parser.ParseShaderModule(shader);

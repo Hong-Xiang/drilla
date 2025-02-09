@@ -15,7 +15,7 @@ public interface IDeclarationVisitor<T>
 }
 
 public interface IDeclarationVisitor<TBody, T> : IDeclarationVisitor<T>
-    where TBody : IFunctionBody
+    where TBody : IFunctionBodyData
 {
     T VisitModule(ShaderModuleDeclaration<TBody> decl);
 }

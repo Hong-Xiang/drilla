@@ -22,7 +22,7 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(1, cfg.Count);
 
         var e = cfg.EntryLabel;
-        Assert.IsType<ReturnOrTerminateSuccessor>(cfg.Successor(e));
+        Assert.IsType<TerminateSuccessor>(cfg.Successor(e));
         Assert.Empty(cfg.Predecessor(e));
 
         Assert.Equal(new(0, 3), cfg[e]);
@@ -41,7 +41,7 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(1, cfg.Count);
 
         var e = cfg.EntryLabel;
-        var se = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(e));
+        var se = Assert.IsType<UnconditionalSuccessor>(cfg.Successor(e));
         Assert.Equal(e, se.Target);
         Assert.Equal([e], cfg.Predecessor(e));
 
@@ -61,11 +61,11 @@ public class ControlFlowGraphBuilderTests
         var e = cfg.EntryLabel;
         Assert.Equal(2, cfg.Count);
 
-        var se = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(e));
+        var se = Assert.IsType<UnconditionalSuccessor>(cfg.Successor(e));
         Assert.Equal(n, se.Target);
         Assert.Equal([], cfg.Predecessor(e));
 
-        Assert.IsType<ReturnOrTerminateSuccessor>(cfg.Successor(n));
+        Assert.IsType<TerminateSuccessor>(cfg.Successor(n));
         Assert.Equal([e], cfg.Predecessor(n));
 
         Assert.Equal(new(0, 3), cfg[e]);
@@ -88,12 +88,12 @@ public class ControlFlowGraphBuilderTests
         var e = cfg.EntryLabel;
         Assert.Equal(e2, e);
 
-        var se = Assert.IsType<BrIfSuccessor>(cfg.Successor(e));
+        var se = Assert.IsType<ConditionalSuccessor>(cfg.Successor(e));
         Assert.Equal(e, se.TrueTarget);
         var n = se.FalseTarget;
         Assert.Equal([e], cfg.Predecessor(e));
 
-        Assert.IsType<ReturnOrTerminateSuccessor>(cfg.Successor(n));
+        Assert.IsType<TerminateSuccessor>(cfg.Successor(n));
         Assert.Equal([e], cfg.Predecessor(n));
 
         Assert.Equal(new(0, 3), cfg[e]);
@@ -119,20 +119,20 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(4, cfg.Count);
 
         var e = cfg.EntryLabel;
-        var se = Assert.IsType<BrIfSuccessor>(cfg.Successor(e));
+        var se = Assert.IsType<ConditionalSuccessor>(cfg.Successor(e));
         Assert.Equal(t, se.TrueTarget);
         var f = se.FalseTarget;
         Assert.Equal([], cfg.Predecessor(e));
 
-        var st = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(t));
+        var st = Assert.IsType<UnconditionalSuccessor>(cfg.Successor(t));
         Assert.Equal(m, st.Target);
         Assert.Equal([e], cfg.Predecessor(t));
 
-        var sf = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(f));
+        var sf = Assert.IsType<UnconditionalSuccessor>(cfg.Successor(f));
         Assert.Equal(m, st.Target);
         Assert.Equal([e], cfg.Predecessor(f));
 
-        Assert.IsType<ReturnOrTerminateSuccessor>(cfg.Successor(m));
+        Assert.IsType<TerminateSuccessor>(cfg.Successor(m));
         Assert.Contains(t, cfg.Predecessor(m));
         Assert.Contains(f, cfg.Predecessor(m));
 
@@ -183,18 +183,18 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(3, cfg.Count);
 
         Assert.Equal(a, cfg.EntryLabel);
-        var sa = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(a));
+        var sa = Assert.IsType<UnconditionalSuccessor>(cfg.Successor(a));
         Assert.Equal(b, sa.Target);
         Assert.Equal([b], cfg.Predecessor(a));
 
 
-        var sb = Assert.IsType<BrIfSuccessor>(cfg.Successor(b));
+        var sb = Assert.IsType<ConditionalSuccessor>(cfg.Successor(b));
         var c = sb.FalseTarget;
         Assert.Equal(a, sb.TrueTarget);
         Assert.Equal([a], cfg.Predecessor(b));
 
 
-        Assert.IsType<ReturnOrTerminateSuccessor>(cfg.Successor(c));
+        Assert.IsType<TerminateSuccessor>(cfg.Successor(c));
         Assert.Equal([b], cfg.Predecessor(c));
 
         Assert.Equal(new(0, 3), cfg[a]);
@@ -228,14 +228,14 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(6, cfg.Count);
 
         var a = cfg.EntryLabel;
-        var sa = Assert.IsType<BrIfSuccessor>(cfg.Successor(a));
+        var sa = Assert.IsType<ConditionalSuccessor>(cfg.Successor(a));
         var b = sa.FalseTarget;
-        var sb = Assert.IsType<BrIfSuccessor>(cfg.Successor(b));
+        var sb = Assert.IsType<ConditionalSuccessor>(cfg.Successor(b));
         var c = sb.FalseTarget;
-        var sc = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(c));
-        var sd = Assert.IsType<BrIfSuccessor>(cfg.Successor(d));
-        var se = Assert.IsType<BrOrNextSuccessor>(cfg.Successor(e));
-        var sf = Assert.IsType<ReturnOrTerminateSuccessor>(cfg.Successor(f));
+        var sc = Assert.IsType<UnconditionalSuccessor>(cfg.Successor(c));
+        var sd = Assert.IsType<ConditionalSuccessor>(cfg.Successor(d));
+        var se = Assert.IsType<UnconditionalSuccessor>(cfg.Successor(e));
+        var sf = Assert.IsType<TerminateSuccessor>(cfg.Successor(f));
 
         Assert.Equal(d, sa.TrueTarget);
         Assert.Equal(e, sb.TrueTarget);

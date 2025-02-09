@@ -20,7 +20,7 @@ namespace DualDrill.CLSL.Test;
 
 public class ParseBodyTest(ITestOutputHelper Output)
 {
-    UnstructuredStackInstructionFunctionBody ParseMethod(FunctionDeclaration f, MethodBase m)
+    UnstructuredStackInstructionSequence ParseMethod(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
         context.AddFunctionDefinition(Symbol.Function(m), f);

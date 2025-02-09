@@ -17,14 +17,14 @@ public interface ISuccessor
     void Traverse(Action<Label> action);
 }
 
-public sealed record class BrOrNextSuccessor(Label Target) : ISuccessor
+public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
 {
     public void Traverse(Action<Label> action)
     {
         action(Target);
     }
 }
-public sealed record class BrIfSuccessor(Label TrueTarget, Label FalseTarget) : ISuccessor
+public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTarget) : ISuccessor
 {
     public void Traverse(Action<Label> action)
     {
@@ -32,7 +32,7 @@ public sealed record class BrIfSuccessor(Label TrueTarget, Label FalseTarget) : 
         action(FalseTarget);
     }
 }
-public sealed record class ReturnOrTerminateSuccessor() : ISuccessor
+public sealed record class TerminateSuccessor() : ISuccessor
 {
     public void Traverse(Action<Label> action)
     {
@@ -42,10 +42,10 @@ public sealed record class ReturnOrTerminateSuccessor() : ISuccessor
 
 public static class Successor
 {
-    public static ISuccessor Unconditional(Label target) => new BrOrNextSuccessor(target);
-    public static ISuccessor Conditional(Label trueTarget, Label falseTarget) => new BrIfSuccessor(trueTarget, falseTarget);
+    public static ISuccessor Unconditional(Label target) => new UnconditionalSuccessor(target);
+    public static ISuccessor Conditional(Label trueTarget, Label falseTarget) => new ConditionalSuccessor(trueTarget, falseTarget);
     public static ISuccessor Switch() => throw new NotImplementedException();
-    public static ISuccessor Terminate() => new ReturnOrTerminateSuccessor();
+    public static ISuccessor Terminate() => new TerminateSuccessor();
 }
 
 //public static class Successor

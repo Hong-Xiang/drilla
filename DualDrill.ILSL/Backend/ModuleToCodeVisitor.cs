@@ -34,7 +34,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
     Func<TBody, ValueTask> OnBody)
     : IDeclarationVisitor<ValueTask>
     , IDeclarationVisitor<TBody, ValueTask>
-    where TBody : IFunctionBody
+    where TBody : IFunctionBodyData
 {
 
     async ValueTask OnTypeReference(IShaderType type)

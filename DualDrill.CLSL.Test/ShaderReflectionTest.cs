@@ -24,7 +24,7 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody>.Empty with
+        var module = ShaderModuleDeclaration<UnstructuredStackInstructionSequence>.Empty with
         {
             Declarations = [new VariableDeclaration(
                 DeclarationScope.Module,

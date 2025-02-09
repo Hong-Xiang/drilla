@@ -20,7 +20,7 @@ namespace DualDrill.CLSL;
 /// </summary>
 public static class ShaderModuleExtension
 {
-    public static ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> Parse(
+    public static ShaderModuleDeclaration<UnstructuredStackInstructionSequence> Parse(
         this ISharpShader shader
     )
     {
@@ -29,12 +29,12 @@ public static class ShaderModuleExtension
         return parser.ParseShaderModule(shader);
     }
 
-    public static ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> ReplaceOperationCallsToOperationInstruction(
-        this ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> ir
+    public static ShaderModuleDeclaration<UnstructuredStackInstructionSequence> ReplaceOperationCallsToOperationInstruction(
+        this ShaderModuleDeclaration<UnstructuredStackInstructionSequence> ir
     )
     {
         return ir.MapBody((m, f, b) =>
-            new UnstructuredStackInstructionFunctionBody(b.Instructions.Select(inst =>
+            new UnstructuredStackInstructionSequence(b.Instructions.Select(inst =>
             {
                 if (inst is CallInstruction call)
                 {
@@ -55,9 +55,7 @@ public static class ShaderModuleExtension
         {
             var builder = new StructuredInstructionToAbstractSyntaxTreeBuilder(
                 module,
-                f,
-                b.Root
-            );
+                f);
             return builder.Build();
         });
     }
@@ -74,7 +72,7 @@ public static class ShaderModuleExtension
     }
 
     public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody> ToControlFlowGraph(
-        this ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> module
+        this ShaderModuleDeclaration<UnstructuredStackInstructionSequence> module
     )
     {
         return module.MapBody((m, f, b) =>
@@ -168,13 +166,13 @@ public static class ShaderModuleExtension
     {
         switch (successor)
         {
-            case BrOrNextSuccessor s:
+            case UnconditionalSuccessor s:
                 writer.Write($"br {labelName(s.Target)}");
                 break;
-            case BrIfSuccessor s:
+            case ConditionalSuccessor s:
                 writer.Write($"br_if {labelName(s.TrueTarget)} {labelName(s.FalseTarget)}");
                 break;
-            case ReturnOrTerminateSuccessor:
+            case TerminateSuccessor:
                 writer.Write($"return");
                 break;
             default:
@@ -356,12 +354,12 @@ public static class ShaderModuleExtension
         await module.Accept(visitor);
         return sw.ToString();
     }
-    public static async ValueTask<string> Dump(this ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> module)
+    public static async ValueTask<string> Dump(this ShaderModuleDeclaration<UnstructuredStackInstructionSequence> module)
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
         isw.Write(module.GetType().CSharpFullName());
-        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionFunctionBody>(isw, module, (b) =>
+        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionSequence>(isw, module, (b) =>
         {
             var labelIndex = b.Instructions.OfType<LabelInstruction>()
                                        .Select(inst => inst.Label)
@@ -403,7 +401,7 @@ public static class ShaderModuleExtension
     }
 
     public static async ValueTask Dump<TBody>(this ShaderModuleDeclaration<TBody> module, IndentedTextWriter writer)
-        where TBody : IFunctionBody
+        where TBody : IFunctionBodyData
     {
         writer.Write(module.GetType().CSharpFullName());
         var typeVisitor = new WgslCodeTypeReferenceVisitor(writer);
@@ -415,7 +413,7 @@ public static class ShaderModuleExtension
     }
 
     public static async ValueTask<string> Dump<TBody>(this ShaderModuleDeclaration<TBody> module)
-        where TBody : IFunctionBody
+        where TBody : IFunctionBodyData
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);

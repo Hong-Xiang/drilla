@@ -16,7 +16,9 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 [JsonDerivedType(typeof(DecrementStatement), nameof(DecrementStatement))]
 [JsonDerivedType(typeof(SwitchStatement), nameof(SwitchStatement))]
 [JsonDerivedType(typeof(LoopStatement), nameof(LoopStatement))]
-public interface IStatement : IShaderAstNode { }
+public interface IStatement
+    : IShaderAstNode
+{ }
 
 public interface IStatementVisitor<T>
 {

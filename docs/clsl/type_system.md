@@ -4,23 +4,16 @@
 
 ## Overview
 
-The CLSL type system provides a bridge between C# types and shader language types, ensuring type safety across the compilation boundary. It's designed to be extensible while maintaining zero-cost abstractions where possible.
+The CLSL type system provides a bridge between C# types and shader language types,
+enabling seamless translation of C# code to shader code.
+Additional shader attributes are introduced to add more shader specific information to C# types.
+Additional shader meta attributes are introduced to add more information about how to connect C# types/methods to CLSL types/methods.
 
 ## Core Type Interfaces
 
 ### Base Types
 
-```csharp
-public interface IShaderType
-{
-    string Name { get; }
-    IRefType GetRefType();
-    IPtrType GetPtrType();
-}
-
-public interface IPlainType : IShaderType { }
-public interface IStorableType : IShaderType { }
-```
+`IShaderType` is the base interface for all shader types.
 
 ### Type Categories
 
@@ -58,18 +51,18 @@ public interface IStorableType : IShaderType { }
 ### Primitive Types
 | C# Type  | CLSL Type | WGSL Type |
 |----------|-----------|------------|
-| bool     | BoolType  | bool      |
-| int      | I32       | i32       |
-| uint     | U32       | u32       |
-| float    | F32       | f32       |
-| double   | F64       | f64       |
+| bool     | `BoolType`  | bool      |
+| int      | `IntType<N32>`       | i32       |
+| uint     | `UIntType<N32>`      | u32       |
+| float    | `FloatType<N32>`      | f32       |
+| double   | `FloatType<N64>`       | f64       |
 
 ### Vector Types
 | C# Type     | CLSL Type            | WGSL Type |
 |-------------|----------------------|------------|
-| Vector2     | VecType<N2, F32>    | vec2<f32> |
-| Vector3     | VecType<N3, F32>    | vec3<f32> |
-| Vector4     | VecType<N4, F32>    | vec4<f32> |
+| Vector2     | VecType<N2, FloatType<N32>>    | vec2<f32> |
+| Vector3     | VecType<N3, FloatType<N32>>    | vec3<f32> |
+| Vector4     | VecType<N4, FloatType<N32>>    | vec4<f32> |
 
 ## Type Features
 

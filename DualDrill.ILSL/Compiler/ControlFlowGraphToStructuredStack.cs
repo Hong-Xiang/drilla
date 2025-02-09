@@ -89,11 +89,11 @@ public static partial class ShaderModuleExtension
             {
             [] => controlFlowGraph.Successor(target) switch
             {
-                ReturnOrTerminateSuccessor ret =>
+                TerminateSuccessor ret =>
                 [bb,
                  BasicBlock<IStructuredStackInstruction>.Create([ ShaderInstruction.Return() ])],
-                BrOrNextSuccessor unc => [bb, .. DoBranch(target, unc.Target)],
-                BrIfSuccessor brIf =>
+                UnconditionalSuccessor unc => [bb, .. DoBranch(target, unc.Target)],
+                ConditionalSuccessor brIf =>
                     [
                         bb,
                         new IfThenElse<IStructuredStackInstruction>(
