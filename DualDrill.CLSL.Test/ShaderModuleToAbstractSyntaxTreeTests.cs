@@ -12,13 +12,13 @@ using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
-
 public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Output)
 {
     [Fact]
     public void SimpleEmptyModuleShouldWork()
     {
-        var moduleStack = new ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>([], ImmutableDictionary<FunctionDeclaration, StructuredStackInstructionFunctionBody>.Empty);
+        var moduleStack = new ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>([],
+            ImmutableDictionary<FunctionDeclaration, StructuredStackInstructionFunctionBody>.Empty);
         var moduleAst = moduleStack.ToAbstractSyntaxTreeFunctionBody();
     }
 
@@ -29,16 +29,17 @@ public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Outp
         var body = new StructuredStackInstructionFunctionBody(
             new Block<IStructuredStackInstruction>(
                 Label.Create(),
-                [BasicBlock<IStructuredStackInstruction>.Create([
+                new([
                     ShaderInstruction.Const(Literal.Create(42)),
                     ShaderInstruction.Return()
-                ])]
+                ])
             )
         );
-        var moduleStack = new ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>([f], new Dictionary<FunctionDeclaration, StructuredStackInstructionFunctionBody>()
-        {
-            [f] = body
-        }.ToImmutableDictionary());
+        var moduleStack = new ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>([f],
+            new Dictionary<FunctionDeclaration, StructuredStackInstructionFunctionBody>()
+            {
+                [f] = body
+            }.ToImmutableDictionary());
         var ast = moduleStack.ToAbstractSyntaxTreeFunctionBody();
         Output.WriteLine(await ast.Dump());
         var astBody = ast.GetBody(f);

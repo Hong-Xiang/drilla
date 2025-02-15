@@ -1,12 +1,23 @@
-<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.1184077">
-<PropertyGroup>
-    <StartupCommand>pnpm run dev</StartupCommand>
-    <JavaScriptTestRoot>src\</JavaScriptTestRoot>
-    <JavaScriptTestFramework>Jest</JavaScriptTestFramework>
-    <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
-    <!-- Allows the build (or compile) script located on package.json to run on Build -->
-    <ShouldRunBuildScript>true</ShouldRunBuildScript>
-    <!-- Folder where production build objects will be placed -->
-    <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
+<Project Sdk="Microsoft.Build.NoTargets/3.7.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
+
+  <ItemGroup>
+    <SourceFiles Include="src\**\*.ts" />
+    <SourceFiles Include="esbuild.mjs" />
+    <SourceFiles Include="package.json" />
+    <SourceFiles Include="pnpm-lock.yaml" />
+  </ItemGroup>
+
+  <Target Name="PnpmRestore" AfterTargets="Restore">
+    <Exec Command="pnpm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="Build"
+          Inputs="@(SourceFiles)"
+          Outputs="$(MSBuildProjectDirectory)\build.stamp">
+    <Exec Command="node esbuild.mjs" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Touch Files="$(MSBuildProjectDirectory)\build.stamp" />
+  </Target>
 </Project>

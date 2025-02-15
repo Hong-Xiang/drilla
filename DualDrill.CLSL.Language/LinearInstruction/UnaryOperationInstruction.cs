@@ -10,8 +10,8 @@ public sealed record class UnaryOperationInstruction<TOperation>
         , ISingleton<UnaryOperationInstruction<TOperation>>
     where TOperation : IUnaryOperation<TOperation>
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
+    public IEnumerable<Label> ReferencedLabels => [];
     public static UnaryOperationInstruction<TOperation> Instance { get; } = new();
     
     public TOperation Operation => TOperation.Instance;

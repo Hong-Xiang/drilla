@@ -59,7 +59,6 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //     br e
         var b = Assert.IsType<Loop<Inst>>(ir);
         Assert.Equal(e, b.Label);
-        Assert.NotEqual(e, b.Body.Label);
     }
 
     void Dump(IStructuredControlFlowRegion<Inst> result)
@@ -83,7 +82,8 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
             e,
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
             {
-                [e] = new(Successor.Conditional(t, f), BasicBlock<Inst>.Create([ShaderInstruction.Const(Literal.Create(true))])),
+                [e] = new(Successor.Conditional(t, f),
+                    BasicBlock<Inst>.Create([ShaderInstruction.Const(Literal.Create(true))])),
                 [t] = new(Successor.Terminate(), BasicBlock<Inst>.Create([ShaderInstruction.Const(Literal.Create(1))])),
                 [f] = new(Successor.Terminate(), BasicBlock<Inst>.Create([ShaderInstruction.Const(Literal.Create(2))])),
             })
@@ -99,13 +99,13 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //      ... f ...
         //      return
         var re = Assert.IsType<Block<Inst>>(result);
-        Assert.Equal(2, re.Body.Length);
-        var bbe = Assert.IsType<BasicBlock<Inst>>(re.Body[0]);
-        var rif = Assert.IsType<IfThenElse<Inst>>(re.Body[1]);
-        var rt = Assert.IsType<Block<Inst>>(rif.TrueBlock);
-        var bbt = Assert.IsType<BasicBlock<Inst>>(rt.Body[0]);
-        var rf = Assert.IsType<Block<Inst>>(rif.FalseBlock);
-        var bbf = Assert.IsType<BasicBlock<Inst>>(rf.Body[0]);
+        Assert.Equal(2, re.Body.Elements.Length);
+        var bbe = Assert.IsType<BasicBlock<Inst>>(re.Body.Elements[0]);
+        var rif = Assert.IsType<IfThenElse<Inst>>(re.Body.Elements[1]);
+        var rt = Assert.IsType<Block<Inst>>(rif.TrueBody);
+        var bbt = Assert.IsType<BasicBlock<Inst>>(rt.Body.Elements[0]);
+        var rf = Assert.IsType<Block<Inst>>(rif.FalseBody);
+        var bbf = Assert.IsType<BasicBlock<Inst>>(rf.Body.Elements[0]);
     }
 
     [Fact]
@@ -125,13 +125,14 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
             {
                 [e] = new(Successor.Conditional(t, f), BasicBlock<Inst>.Create([
-                    ShaderInstruction.Const(Literal.Create(true))])),
+                    ShaderInstruction.Const(Literal.Create(true))
+                ])),
                 [t] = new(Successor.Unconditional(m), BasicBlock<Inst>.Create([
                     ShaderInstruction.Const(Literal.Create(1))
-                    ])),
+                ])),
                 [f] = new(Successor.Unconditional(m), BasicBlock<Inst>.Create([
                     ShaderInstruction.Const(Literal.Create(2))
-                    ])),
+                ])),
                 [m] = new(Successor.Terminate(), BasicBlock<Inst>.Create([])),
             })
         );
@@ -148,19 +149,19 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //   ... m ...
         var ir = Assert.IsType<Block<Inst>>(result);
         Dump(ir);
-        ir.Body.Should().SatisfyRespectively(
+        ir.Body.Elements.Should().SatisfyRespectively(
             b0 => b0.Should().BeOfType<Block<Inst>>()
-                    .Which.Should().Satisfy<Block<Inst>>(b =>
-                    {
-                        b.Label.Should().Be(m);
-                        b.Body.Should().SatisfyRespectively(
-                            bb => bb.Should().BeOfType<BasicBlock<Inst>>(),
-                            ifThenElse => ifThenElse.Should().BeOfType<IfThenElse<Inst>>()
-                        );
-                    }),
+                .Which.Should().Satisfy<Block<Inst>>(b =>
+                {
+                    b.Label.Should().Be(m);
+                    b.Body.Elements.Should().SatisfyRespectively(
+                        bb => bb.Should().BeOfType<BasicBlock<Inst>>(),
+                        ifThenElse => ifThenElse.Should().BeOfType<IfThenElse<Inst>>()
+                    );
+                }),
             b1 => b1.Should().BeOfType<Block<Inst>>()
-                    .Which.Instructions.Should().ContainSingle()
-                    .Which.Should().BeOfType<ReturnInstruction>()
+                .Which.Instructions.Should().ContainSingle()
+                .Which.Should().BeOfType<ReturnInstruction>()
         );
     }
 
@@ -194,14 +195,14 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                         ShaderInstruction.Store(v)
                     ])),
                 [b] = new(Successor.Conditional(a, c), BasicBlock<Inst>.Create([
-                        ShaderInstruction.Const(Literal.Create(2)),
-                        ShaderInstruction.Store(v),
-                        ShaderInstruction.Const(Literal.Create(true))
-                    ])),
+                    ShaderInstruction.Const(Literal.Create(2)),
+                    ShaderInstruction.Store(v),
+                    ShaderInstruction.Const(Literal.Create(true))
+                ])),
                 [c] = new(Successor.Terminate(), BasicBlock<Inst>.Create([
-                        ShaderInstruction.Const(Literal.Create(3)),
-                        ShaderInstruction.Store(v),
-                    ])),
+                    ShaderInstruction.Const(Literal.Create(3)),
+                    ShaderInstruction.Store(v),
+                ])),
             })
         );
         var result = cfg.ToStructuredControlFlow();
@@ -219,9 +220,9 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         // end (loop)
 
         result.Should().BeOfType<Loop<Inst>>()
-              .Which.Body.Body.Should().SatisfyRespectively(
+            .Which.Body.Elements.Should().SatisfyRespectively(
                 (bb) => bb.Should().BeOfType<BasicBlock<Inst>>(),
                 b => b.Should().BeOfType<Block<Inst>>()
-               );
+            );
     }
 }

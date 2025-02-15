@@ -1,11 +1,9 @@
-﻿using DotNext.Reflection;
-using DualDrill.CLSL.Language.ControlFlow;
+﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Common;
 using Lokad.ILPack.IL;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
@@ -44,8 +42,8 @@ public sealed record class RuntimeReflectionParser(
 
         if (t.IsValueType)
         {
-            var result = ParseStructDeclaration(t);
-            return result;
+            var structureType = ParseStructDeclaration(t);
+            Context.AddStructure(t, structureType);
         }
 
         return new OpaqueType(t);
@@ -59,30 +57,22 @@ public sealed record class RuntimeReflectionParser(
     /// </summary>
     /// <param name="t"></param>
     /// <returns></returns>
-    StructureDeclaration ParseStructDeclaration(Type t)
+    StructureType ParseStructDeclaration(Type t)
     {
         var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                      .Where(f => !f.Name.EndsWith("k__BackingField"));
+            .Where(f => !f.Name.EndsWith("k__BackingField"));
         var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         var result = new StructureDeclaration
         {
             Name = t.Name,
             Attributes = [.. t.GetCustomAttributes().OfType<IShaderAttribute>()]
         };
-        Context.AddStructure(t, result);
-        // for each custom struct definition, a new zero-value constructor runtime method is added
-        Context.AddFunctionDeclaration(new ZeroValueContructorFunctionSymbol(result), new FunctionDeclaration(
-            result.Name,
-            [],
-            new FunctionReturn(result, []),
-            [new ZeroValueBuiltinFunctionAttribute(), new ShaderRuntimeMethodAttribute()]
-        ));
-
         var fieldMembers = fields.Select(ParseField);
-        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseType(f.PropertyType), [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
+        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseType(f.PropertyType),
+            [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
 
         result.Members = [.. fieldMembers, .. propsMembers];
-        return result;
+        return new StructureType(result);
     }
 
 
@@ -94,6 +84,7 @@ public sealed record class RuntimeReflectionParser(
         {
             return found;
         }
+
         var decl = Context.AddVariable(
             symbol,
             (idx) => new VariableDeclaration(
@@ -116,7 +107,8 @@ public sealed record class RuntimeReflectionParser(
 
     ImmutableHashSet<IShaderAttribute> ParseAttribute(ParameterInfo p)
     {
-        return [
+        return
+        [
             ..p.GetCustomAttributes<BuiltinAttribute>(),
             ..p.GetCustomAttributes<LocationAttribute>(),
         ];
@@ -124,7 +116,8 @@ public sealed record class RuntimeReflectionParser(
 
     ImmutableHashSet<IShaderAttribute> ParseAttribute(MethodBase m)
     {
-        return [
+        return
+        [
             ..m.GetCustomAttributes<VertexAttribute>(),
             ..m.GetCustomAttributes<FragmentAttribute>(),
             //..m.GetCustomAttributes<ShaderMethodAttribute>(),
@@ -138,35 +131,41 @@ public sealed record class RuntimeReflectionParser(
         {
             return found;
         }
+
         var decl = Context.AddVariable(symbol, (index) =>
             new VariableDeclaration(
-                        DeclarationScope.Module,
-                        index,
-                        info.Name,
-                        ParseType(info.FieldType),
-                        [.. info.GetCustomAttributes().OfType<IShaderAttribute>()])
+                DeclarationScope.Module,
+                index,
+                info.Name,
+                ParseType(info.FieldType),
+                [.. info.GetCustomAttributes().OfType<IShaderAttribute>()])
         );
         return decl;
     }
+
     VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
     {
-        var getter = info.GetGetMethod() ?? throw new NotSupportedException("Properties without getter is not supported");
+        var getter = info.GetGetMethod() ??
+                     throw new NotSupportedException("Properties without getter is not supported");
         var symbol = Symbol.Variable(info);
         if (Context[symbol] is { } found)
         {
             return found;
         }
+
         var decl = Context.AddVariable(symbol, (index) =>
             new VariableDeclaration(DeclarationScope.Module,
-                                    index,
-                                    info.Name,
-                                    ParseType(info.PropertyType),
-                                    [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]));
+                index,
+                info.Name,
+                ParseType(info.PropertyType),
+                [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]));
         return decl;
     }
 
     // TODO static binding flags should not be used, add code to proper handle static readonly value
-    static readonly BindingFlags VariableBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+    static readonly BindingFlags VariableBindingFlags =
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+
     IReadOnlyList<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
     {
         var fields = moduleType.GetFields(VariableBindingFlags);
@@ -184,10 +183,11 @@ public sealed record class RuntimeReflectionParser(
     {
         var moduleType = module.GetType();
 
-        var entryMethods = moduleType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
-                                     .Where(m => m.GetCustomAttributes().Any(a => a is IShaderStageAttribute))
-                                     .OrderBy(m => m.Name)
-                                     .ToImmutableArray();
+        var entryMethods = moduleType
+            .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
+            .Where(m => m.GetCustomAttributes().Any(a => a is IShaderStageAttribute))
+            .OrderBy(m => m.Name)
+            .ToImmutableArray();
 
         var variables = ParseAllModuleVariableDeclarations(moduleType);
 
@@ -197,10 +197,12 @@ public sealed record class RuntimeReflectionParser(
         }
 
         return new(
-            [.. Context.StructureDeclarations,
-             ..variables,
-             .. Context.FunctionDeclarations],
-             MethodBodies.ToImmutableDictionary());
+            [
+                .. Context.StructureDeclarations,
+                ..variables,
+                .. Context.FunctionDeclarations
+            ],
+            MethodBodies.ToImmutableDictionary());
     }
 
     public ParameterDeclaration ParseParameter(ParameterInfo parameter)
@@ -209,6 +211,7 @@ public sealed record class RuntimeReflectionParser(
         {
             return found;
         }
+
         var p = new ParameterDeclaration(
             parameter.Name ?? throw new NotSupportedException("Can not parse parameter without name"),
             ParseType(parameter.ParameterType),
@@ -251,7 +254,6 @@ public sealed record class RuntimeReflectionParser(
             if (metaAttributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } attr)
             {
                 var f = attr.Operation.Function;
-                var oattr = f.Attributes.OfType<IOperationMethodAttribute>().Single();
                 Context.AddFunctionDeclaration(symbol, f);
                 return f;
             }
@@ -261,8 +263,13 @@ public sealed record class RuntimeReflectionParser(
 
         var decl = new FunctionDeclaration(
             method.Name,
-            method.IsStatic ? [.. model.Parameters.Select(ParseParameter)]
-                            : [new ParameterDeclaration("this", ParseType(method.DeclaringType).GetPtrType(), []), .. model.Parameters.Select(ParseParameter)],
+            method.IsStatic
+                ? [.. model.Parameters.Select(ParseParameter)]
+                :
+                [
+                    new ParameterDeclaration("this", ParseType(method.DeclaringType).GetPtrType(), []),
+                    .. model.Parameters.Select(ParseParameter)
+                ],
             ParseMethodReturn(method),
             ParseAttribute(method));
 
@@ -280,6 +287,7 @@ public sealed record class RuntimeReflectionParser(
             {
                 _ = ParseMethod(callee);
             }
+
             if (model.Body is not null)
             {
                 MethodBodies.Add(decl, ParseMethodBody(decl, model));
@@ -303,23 +311,25 @@ public sealed record class RuntimeReflectionParser(
     {
         var t = ParseType(info.LocalType);
         return Context.AddVariable(Symbol.Variable(info),
-                                index => new VariableDeclaration(
-                                    DeclarationScope.Function,
-                                    index,
-                                    $"loc_{info.LocalIndex}",
-                                    Context[info.LocalType] ?? throw new KeyNotFoundException($"Failed to resolve local varialbe {info}"),
-                                    []
-                                )
-                            );
+            index => new VariableDeclaration(
+                DeclarationScope.Function,
+                index,
+                $"loc_{info.LocalIndex}",
+                Context[info.LocalType] ?? throw new KeyNotFoundException($"Failed to resolve local varialbe {info}"),
+                []
+            )
+        );
     }
 
-    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f, MethodBodyAnalysisModel methodModel)
+    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,
+        MethodBodyAnalysisModel methodModel)
     {
         var method = methodModel.Method;
         foreach (var v in methodModel.LocalVariables)
         {
             _ = ParseLocalVariable(v);
         }
+
         {
             foreach (var inst in methodModel.Instructions)
             {
@@ -334,9 +344,10 @@ public sealed record class RuntimeReflectionParser(
         {
             offsetToIndex.Add(inst.Offset, idx);
         }
+
         var labels = methodModel.GetJumpTargetOffsets()
-                                .Select(offset => KeyValuePair.Create(offset, (Label.Create(offset), offsetToIndex[offset])))
-                                .ToFrozenDictionary();
+            .Select(offset => KeyValuePair.Create(offset, (Label.Create(offset), offsetToIndex[offset])))
+            .ToFrozenDictionary();
 
         var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, method, labels);
         var visited = new bool[methodModel.Instructions.Length];
@@ -345,6 +356,7 @@ public sealed record class RuntimeReflectionParser(
         {
             results[i] = [];
         }
+
         Stack<int> nexts = [];
         nexts.Push(0);
         while (nexts.Count > 0)
@@ -354,6 +366,7 @@ public sealed record class RuntimeReflectionParser(
             {
                 continue;
             }
+
             visited[ip] = true;
             visitor.Instructions = results[ip];
             var currentNexts = methodModel.Accept<RuntimeReflectionParserInstructionVisitor, int[]>(visitor, ip);
@@ -365,6 +378,7 @@ public sealed record class RuntimeReflectionParser(
                 }
             }
         }
+
         return new(results.SelectMany(x => x));
     }
 
@@ -376,28 +390,32 @@ public sealed record class RuntimeReflectionParser(
     IEnumerable<MethodBase> GetCalledMethods(IReadOnlyList<Instruction> instructions)
     {
         return instructions.Select(op => op.Operand)
-                           .OfType<MethodBase>()
-                           .Where(m =>
-                           {
-                               if (!IsMethodDefinition(m))
-                               {
-                                   return false;
-                               }
-                               // generated getter and setters should not be considered
-                               var t = m.DeclaringType;
-                               if (Context[t] is IVecType st)
-                               {
-                                   return false;
-                               }
-                               if (m.IsSpecialName && m.CustomAttributes.Any(a => a.AttributeType == typeof(CompilerGeneratedAttribute)))
-                               {
-                                   var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                                   if (props.Any(p => p.GetMethod == m || p.SetMethod == m))
-                                   {
-                                       return false;
-                                   }
-                               }
-                               return true;
-                           });
+            .OfType<MethodBase>()
+            .Where(m =>
+            {
+                if (!IsMethodDefinition(m))
+                {
+                    return false;
+                }
+
+                // generated getter and setters should not be considered
+                var t = m.DeclaringType;
+                if (Context[t] is IVecType st)
+                {
+                    return false;
+                }
+
+                if (m.IsSpecialName &&
+                    m.CustomAttributes.Any(a => a.AttributeType == typeof(CompilerGeneratedAttribute)))
+                {
+                    var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (props.Any(p => p.GetMethod == m || p.SetMethod == m))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
     }
 }

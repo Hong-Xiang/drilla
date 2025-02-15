@@ -154,7 +154,6 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
 
     public FunctionDeclaration? this[IFunctionSymbol symbol] => symbol switch
     {
-        ZeroValueContructorFunctionSymbol { Type: var t } => throw new NotImplementedException(),
         CSharpMethodFunctionSymbol { Method: var m } => RuntimeMethods.TryGetValue(m, out var f) ? f : null,
         _ => throw new NotImplementedException()
     };

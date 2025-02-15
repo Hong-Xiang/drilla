@@ -21,4 +21,12 @@ public static class TextDumpExtension
         target.Dump(isw);
         return sw.ToString();
     }
+
+    public static string Dump<TContext>(this ITextDumpable<TContext> target, TContext context)
+    {
+        var sw = new StringWriter();
+        var isw = new IndentedTextWriter(sw);
+        target.Dump(context, isw);
+        return sw.ToString();
+    }
 }

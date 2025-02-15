@@ -12,12 +12,13 @@ using DualDrill.Common;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using ICSharpCode.Decompiler.IL;
+using CallInstruction = DualDrill.CLSL.Language.LinearInstruction.CallInstruction;
 
 namespace DualDrill.CLSL.Compiler;
 
 public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     : IStructuredControlFlowRegion<IStructuredStackInstruction>.IRegionVisitor<Unit>
-        , Block<IStructuredStackInstruction>.IElement.IElementVisitor<Unit>
         , IStructuredStackInstructionVisitor<Unit>
 {
     public StructuredInstructionToAbstractSyntaxTreeBuilder(
@@ -47,63 +48,80 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     public CompoundStatement Build()
     {
         var varsDeclare = LocalVariables.Select(v => new VariableOrValueStatement(v));
-        RootRegion.AcceptRegionVisitor(this);
-        Debug.Assert(Blocks.Count == 1);
-        var body = Blocks.Pop();
-        return new CompoundStatement([.. varsDeclare, .. body.Statements]);
+        OnRegion(RootRegion);
+        return new CompoundStatement([.. varsDeclare, .. Statements]);
+    }
+
+    public void OnRegion(IStructuredControlFlowRegion<IStructuredStackInstruction> region)
+    {
+        switch (region)
+        {
+            case Block<IStructuredStackInstruction> block:
+                VisitBlock(block);
+                break;
+            case Loop<IStructuredStackInstruction> loop:
+                VisitLoop(loop);
+                break;
+            case IfThenElse<IStructuredStackInstruction> ifThenElse:
+                VisitIfThenElse(ifThenElse);
+                break;
+            default:
+                throw new NotSupportedException();
+        }
+    }
+
+    public Unit OnElement(IStructuredControlFlowElement<IStructuredStackInstruction> element)
+    {
+        switch (element)
+        {
+            case IStructuredStackInstruction instruction:
+                return instruction.Accept<StructuredInstructionToAbstractSyntaxTreeBuilder, Unit>(this);
+            case IStructuredControlFlowRegion<IStructuredStackInstruction> region:
+                OnRegion(region);
+                return default;
+            default:
+                throw new NotSupportedException();
+        }
+    }
+
+    public CompoundStatement OnSequence(StructuredControlFlowElementSequence<IStructuredStackInstruction> sequence)
+    {
+        var stms = Statements;
+        Statements = [];
+        foreach (var e in sequence.Elements)
+        {
+            _ = OnElement(e);
+        }
+
+        var result = new CompoundStatement([.. Statements]);
+        Statements = stms;
+        return result;
     }
 
     public Unit VisitBlock(Block<IStructuredStackInstruction> block)
     {
-        List<CompoundStatement> blocks = [];
-        foreach (var e in block.Body)
-        {
-            e.AcceptElementVisitor(this);
-            blocks.Add(Blocks.Pop());
-        }
-
-        Blocks.Push(new CompoundStatement([.. blocks]));
+        Statements.Add(OnSequence(block.Body));
         return default;
     }
 
     public Unit VisitLoop(Loop<IStructuredStackInstruction> loop)
     {
-        var stms = Statements;
-        loop.Body.AcceptRegionVisitor(this);
-        var b = Blocks.Pop();
-        var l = new LoopStatement(b);
-        Blocks.Push(new CompoundStatement([l]));
-        Statements = stms;
+        var l = new LoopStatement(OnSequence(loop.Body));
+        Statements.Add(l);
         return default;
     }
 
     public Unit VisitIfThenElse(IfThenElse<IStructuredStackInstruction> ifThenElse)
     {
         var f = Expressions.Pop();
-        ifThenElse.TrueBlock.AcceptRegionVisitor(this);
-        var tBlock = Blocks.Pop();
-        ifThenElse.FalseBlock.AcceptRegionVisitor(this);
-        var fBlock = Blocks.Pop();
+        var tBlock = OnSequence(ifThenElse.TrueBody);
+        var fBlock = OnSequence(ifThenElse.TrueBody);
         Statements.Add(new IfStatement(
             f,
             tBlock,
             fBlock,
             []
         ));
-        Blocks.Push(new CompoundStatement([.. Statements]));
-        Statements.Clear();
-        return default;
-    }
-
-    public Unit VisitBasicBlock(BasicBlock<IStructuredStackInstruction> basicBlock)
-    {
-        foreach (var inst in basicBlock.Instructions.Span)
-        {
-            inst.Accept<StructuredInstructionToAbstractSyntaxTreeBuilder, Unit>(this);
-        }
-
-        Blocks.Push(new CompoundStatement([.. Statements]));
-        Statements.Clear();
         return default;
     }
 

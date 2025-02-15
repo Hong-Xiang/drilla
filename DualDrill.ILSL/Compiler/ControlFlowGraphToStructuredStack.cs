@@ -54,32 +54,36 @@ public static partial class ShaderModuleExtension
         //   the question its children nodes could still br to other nodes,
         //   how can we ensure those nodes are properly nested?
 
-        IEnumerable<Block<IStructuredStackInstruction>.IElement> DoBranch(Label source, Label target)
+        IEnumerable<IStructuredControlFlowElement<IStructuredStackInstruction>> DoBranch(
+            Label source, Label target)
         {
             if (cfr.IsLoop(target))
             {
-                return [BasicBlock<IStructuredStackInstruction>.Create([ShaderInstruction.Br(target)])];
+                return [ShaderInstruction.Br(target)];
             }
+
             if (controlFlowGraph.IsMergeNode(target))
             {
-                return [BasicBlock<IStructuredStackInstruction>.Create([ShaderInstruction.Br(target)])];
+                return [ShaderInstruction.Br(target)];
             }
+
             return [DoTree(target)];
         }
 
         Block<IStructuredStackInstruction> ToBlock(
-            IEnumerable<Block<IStructuredStackInstruction>.IElement> elements
+            IEnumerable<IStructuredControlFlowElement<IStructuredStackInstruction>> elements
         )
         {
-            ImmutableArray<Block<IStructuredStackInstruction>.IElement> es = [.. elements];
+            ImmutableArray<IStructuredControlFlowElement<IStructuredStackInstruction>> es = [.. elements];
             return es switch
             {
-            [Block<IStructuredStackInstruction> b] => b,
-                _ => new Block<IStructuredStackInstruction>(Label.Create(), es)
+                [Block<IStructuredStackInstruction> b] => b,
+                _ => new Block<IStructuredStackInstruction>(Label.Create(), new(es))
             };
         }
 
-        IEnumerable<Block<IStructuredStackInstruction>.IElement> NodeWithin(Label target, ImmutableArray<Label> children)
+        IEnumerable<IStructuredControlFlowElement<IStructuredStackInstruction>> NodeWithin(Label target,
+            ImmutableArray<Label> children)
         {
             ImmutableArray<Label> childrenLabels = [.. children];
             var bb = controlFlowGraph[target];
@@ -87,27 +91,33 @@ public static partial class ShaderModuleExtension
 
             return childrenLabels switch
             {
-            [] => controlFlowGraph.Successor(target) switch
-            {
-                TerminateSuccessor ret =>
-                [bb,
-                 BasicBlock<IStructuredStackInstruction>.Create([ ShaderInstruction.Return() ])],
-                UnconditionalSuccessor unc => [bb, .. DoBranch(target, unc.Target)],
-                ConditionalSuccessor brIf =>
+                [] => controlFlowGraph.Successor(target) switch
+                {
+                    TerminateSuccessor ret =>
                     [
-                        bb,
+                        .. bb.Instructions.Span,
+                        ShaderInstruction.Return()
+                    ],
+                    UnconditionalSuccessor unc => [..bb.Instructions.Span, .. DoBranch(target, unc.Target)],
+                    ConditionalSuccessor brIf =>
+                    [
+                        ..bb.Instructions.Span,
                         new IfThenElse<IStructuredStackInstruction>(
-                            ToBlock(DoBranch(target, brIf.TrueTarget)),
-                            ToBlock(DoBranch(target, brIf.FalseTarget))
+                            new([
+                                ..DoBranch(target, brIf.TrueTarget)
+                            ]),
+                            new([
+                                ..DoBranch(target, brIf.FalseTarget)
+                            ])
                         ),
                     ],
-                _ => throw new NotSupportedException()
-            },
-            [var head, .. var rest] =>
+                    _ => throw new NotSupportedException()
+                },
+                [var head, .. var rest] =>
                 [
                     new Block<IStructuredStackInstruction>(
                         head,
-                        [..NodeWithin(target, rest)]
+                        new([..NodeWithin(target, rest)])
                     ),
                     DoTree(head)
                 ]
@@ -118,18 +128,17 @@ public static partial class ShaderModuleExtension
         {
             var bb = controlFlowGraph[label];
             var mergeChildren = dt.GetChildren(label)
-                                  .Where(controlFlowGraph.IsMergeNode)
-                                  .ToImmutableArray();
+                .Where(controlFlowGraph.IsMergeNode)
+                .ToImmutableArray();
             if (cfr.IsLoop(label))
             {
                 return new Loop<IStructuredStackInstruction>(label,
-                    new Block<IStructuredStackInstruction>(
-                        Label.Create(),
-                        [.. NodeWithin(label, mergeChildren)]));
+                    new([.. NodeWithin(label, mergeChildren)]));
             }
             else
             {
-                return new Block<IStructuredStackInstruction>(Label.Create(), [.. NodeWithin(label, mergeChildren)]);
+                return new Block<IStructuredStackInstruction>(Label.Create(),
+                    new([.. NodeWithin(label, mergeChildren)]));
             }
         }
 
@@ -140,8 +149,9 @@ public static partial class ShaderModuleExtension
         this ShaderModuleDeclaration<ControlFlowGraphFunctionBody> module
     )
     {
-        return module.MapBody((m, f, b) => new StructuredStackInstructionFunctionBody(b.Graph.ToStructuredControlFlow()));
+        return module.MapBody(
+            (m, f, b) => new StructuredStackInstructionFunctionBody(
+                b.Graph.ToStructuredControlFlow()
+            ));
     }
 }
-
-

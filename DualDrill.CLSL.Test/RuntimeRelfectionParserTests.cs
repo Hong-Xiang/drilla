@@ -40,8 +40,8 @@ public class RuntimeRelfectionParserTests
     {
         var t = typeof(StructDeclTest);
         var parsed = Parser.ParseType(t);
-        Assert.IsType<StructureDeclaration>(parsed);
-        var decl = (StructureDeclaration)parsed;
+        var st = Assert.IsType<StructureType>(parsed);
+        var decl = st.Declaration;
         Assert.Equal(2, decl.Members.Length);
         Assert.Contains("DA", decl.Members.Select(m => m.Name));
         Assert.Contains("DB", decl.Members.Select(m => m.Name));

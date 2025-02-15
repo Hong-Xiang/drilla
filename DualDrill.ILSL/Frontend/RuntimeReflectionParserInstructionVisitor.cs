@@ -521,7 +521,10 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         }
 
         var m = Parser.ParseField(info);
+        // TODO: check o is a structure type and m is member of it
         CurrentStack.Push(m.Type.GetPtrType());
+        // TODO: add component access instruction
+        throw new NotImplementedException();
         return [inst.Index + 1];
     }
 

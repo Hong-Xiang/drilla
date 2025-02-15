@@ -11,8 +11,6 @@ namespace DualDrill.CLSL.Language.LinearInstruction;
 
 public interface IInstruction
 {
-    IEnumerable<VariableDeclaration> ReferencedLocalVariable { get; }
-    IEnumerable<Label> ReferencedLabel { get; }
 }
 
 public interface IStackInstruction : IInstruction
@@ -37,17 +35,20 @@ public interface IStackPop<T1, T2>
 {
 }
 
-public interface IStructuredStackInstruction : IStackInstruction
+public interface IStructuredStackInstruction : IStackInstruction,
+    IStructuredControlFlowElement<IStructuredStackInstruction>
 {
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>;
+
+    IEnumerable<IStructuredStackInstruction> IStructuredControlFlowElement<IStructuredStackInstruction>.
+        Instructions => [this];
 }
 
 public sealed record class LabelInstruction(Label Label) : IStackInstruction, ILabeledEntity
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-
-    public IEnumerable<Label> ReferencedLabel => [Label];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
+    public IEnumerable<Label> ReferencedLabels => [Label];
 }
 
 public interface IJumpInstruction : IStructuredStackInstruction
@@ -56,50 +57,41 @@ public interface IJumpInstruction : IStructuredStackInstruction
 
 public sealed record class BrInstruction(Label Target) : IJumpInstruction
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-
-    public IEnumerable<Label> ReferencedLabel => [Target];
-
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
     public override string ToString() => $"br {Target}";
+    public IEnumerable<Label> ReferencedLabels => [Target];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }
 
 public sealed record class BrIfInstruction(Label Target) : IJumpInstruction
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-
-    public IEnumerable<Label> ReferencedLabel => [Target];
-
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
     public override string ToString() => $"br_if {Target}";
+    public IEnumerable<Label> ReferencedLabels => [Target];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }
 
 public sealed record class ReturnInstruction() : IJumpInstruction
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-
-    public IEnumerable<Label> ReferencedLabel => [];
-
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
     public override string ToString() => "return";
+    public IEnumerable<Label> ReferencedLabels => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }
 
 public sealed record class NopInstruction
     : IStructuredStackInstruction
         , ISingleton<NopInstruction>
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-
-    public IEnumerable<Label> ReferencedLabel => [];
     public static NopInstruction Instance { get; } = new();
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
@@ -107,14 +99,16 @@ public sealed record class NopInstruction
         => visitor.Visit(this);
 
     public override string ToString() => "nop";
+    public IEnumerable<Label> ReferencedLabels => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }
 
 public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IStructuredStackInstruction
     where TLiteral : ILiteral
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
@@ -125,9 +119,9 @@ public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IStruc
 
 public sealed record class CallInstruction(FunctionDeclaration Callee) : IStructuredStackInstruction
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
@@ -139,10 +133,10 @@ public sealed record class CallInstruction(FunctionDeclaration Callee) : IStruct
 public sealed record class LoadSymbolInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable =>
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
         Target is VariableDeclaration v ? [v] : [];
 
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
@@ -157,10 +151,10 @@ public sealed record class LoadSymbolInstruction<TTarget>(TTarget Target) : IStr
 public sealed record class LoadSymbolAddressInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable =>
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
         Target is VariableDeclaration v ? [v] : [];
 
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
@@ -175,10 +169,10 @@ public sealed record class LoadSymbolAddressInstruction<TTarget>(TTarget Target)
 public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable =>
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
         Target is VariableDeclaration v ? [v] : [];
 
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
@@ -195,8 +189,8 @@ public sealed record class BinaryOperationInstruction<TOperation>
         , IStructuredStackInstruction
     where TOperation : IBinaryOperation<TOperation>
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public static BinaryOperationInstruction<TOperation> Instance { get; } = new();
     public TOperation Operation => TOperation.Instance;
@@ -212,8 +206,8 @@ public sealed class LogicalNotInstruction
     : IStructuredStackInstruction
         , ISingleton<LogicalNotInstruction>
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public static LogicalNotInstruction Instance { get; } = new();
 
@@ -222,11 +216,10 @@ public sealed class LogicalNotInstruction
         => visitor.Visit(this);
 }
 
-
 public sealed record class DupInstruction : IStructuredStackInstruction, ISingleton<DupInstruction>
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public static DupInstruction Instance { get; } = new();
 
@@ -239,8 +232,8 @@ public sealed record class DupInstruction : IStructuredStackInstruction, ISingle
 
 public sealed record class DropInstruction : IStructuredStackInstruction, ISingleton<DropInstruction>
 {
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
-    public IEnumerable<Label> ReferencedLabel => [];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public static DropInstruction Instance { get; } = new();
 

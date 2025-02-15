@@ -289,6 +289,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<ConstInstruction<I32Literal>>(),
         //  IL_0006: ceq
             x => x.Should().BeOfType<BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryRelation.Eq>>>(),
+            x => x.Should().BeOfType<UnaryOperationInstruction<ScalarConversionOperation<IntType<N32>, BoolType>>>(),
         //  IL_0008: stloc.0
             x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
         //  IL_0009: ldloc.0

@@ -263,9 +263,9 @@ public sealed class VectorComponentGetOperation<TRank, TVector, TComponent>
     {
         public static Instruction Instance { get; } = new();
 
-        public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+        public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 
-        public IEnumerable<Label> ReferencedLabel => [];
+        public IEnumerable<Label> ReferencedLabels => [];
 
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
             => visitor.VisitVectorComponentGet<TRank, TVector, TComponent>();
@@ -298,9 +298,9 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
         : ISingleton<Instruction>
         , IStructuredStackInstruction
     {
-        public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+        public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 
-        public IEnumerable<Label> ReferencedLabel => [];
+        public IEnumerable<Label> ReferencedLabels => [];
 
         public static Instruction Instance { get; } = new();
 
@@ -350,9 +350,9 @@ public sealed class VectorSwizzleGetOperation<TPattern, TElement>
         : ISingleton<Instruction>
         , IStructuredStackInstruction
     {
-        public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+        public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 
-        public IEnumerable<Label> ReferencedLabel => [];
+        public IEnumerable<Label> ReferencedLabels => [];
 
         public static Instruction Instance { get; } = new();
 
@@ -386,9 +386,9 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
         : ISingleton<Instruction>
         , IStructuredStackInstruction
     {
-        public IEnumerable<VariableDeclaration> ReferencedLocalVariable => [];
+        public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 
-        public IEnumerable<Label> ReferencedLabel => [];
+        public IEnumerable<Label> ReferencedLabels => [];
 
         public static Instruction Instance { get; } = new();
 
