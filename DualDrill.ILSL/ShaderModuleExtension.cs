@@ -202,7 +202,7 @@ public static class ShaderModuleExtension
             case ReturnInstruction:
                 writer.WriteLine("return");
                 break;
-            case LoadSymbolInstruction<VariableDeclaration> inst:
+            case LoadSymbolValueInstruction<VariableDeclaration> inst:
                 writer.WriteLine($"load {variableName(inst.Target)};");
                 break;
             case LoadSymbolAddressInstruction<VariableDeclaration> inst:
@@ -295,7 +295,7 @@ public static class ShaderModuleExtension
             var instructions = b.Root.Instructions.ToArray();
             var labelIndex = b.Root.ReferencedLabels.Distinct().ToArray().Index()
                 .ToDictionary(x => x.Item, x => x.Index);
-            var variables = instructions.OfType<LoadSymbolInstruction<VariableDeclaration>>().Select(x => x.Target)
+            var variables = instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>().Select(x => x.Target)
                 .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>().Select(x => x.Target))
                 .Concat(instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>().Select(x => x.Target))
                 .Where(v => v.DeclarationScope == DeclarationScope.Function)
@@ -328,7 +328,7 @@ public static class ShaderModuleExtension
             var instructions = b.Graph.Labels().SelectMany(l => b.Graph[l].Instructions.ToArray()).ToArray();
 
             var labelIndex = b.Graph.Labels().Index().ToDictionary(x => x.Item, x => x.Index);
-            var variables = instructions.OfType<LoadSymbolInstruction<VariableDeclaration>>().Select(x => x.Target)
+            var variables = instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>().Select(x => x.Target)
                 .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>().Select(x => x.Target))
                 .Concat(instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>().Select(x => x.Target))
                 .Where(v => v.DeclarationScope == DeclarationScope.Function)
@@ -387,7 +387,7 @@ public static class ShaderModuleExtension
                 .Distinct()
                 .Index()
                 .ToDictionary(x => x.Item, x => x.Index);
-            var variables = b.Instructions.OfType<LoadSymbolInstruction<VariableDeclaration>>().Select(x => x.Target)
+            var variables = b.Instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>().Select(x => x.Target)
                 .Concat(b.Instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>().Select(x => x.Target))
                 .Concat(
                     b.Instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>().Select(x => x.Target))

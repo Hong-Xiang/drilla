@@ -32,7 +32,11 @@ internal sealed class DevelopTestShaderModule
             return b;
         }
     }
-
+    [Vertex]
+    public static int MaxByTaneryOperator(int a, int b)
+    {
+        return a >= b ? a : b;
+    }
     [Vertex]
     public static int Return42() => 42;
 

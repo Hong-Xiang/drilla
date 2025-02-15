@@ -17,24 +17,6 @@ public interface IStackInstruction : IInstruction
 {
 }
 
-public interface IStackPush
-{
-    public void Run(Stack<IShaderType> stack);
-}
-
-public interface IStackPushSingleton<T> : IStackPush
-    where T : class, ISingleton<T>, IShaderType
-{
-    void IStackPush.Run(Stack<IShaderType> stack)
-    {
-        stack.Push(T.Instance);
-    }
-}
-
-public interface IStackPop<T1, T2>
-{
-}
-
 public interface IStructuredStackInstruction : IStackInstruction,
     IStructuredControlFlowElement<IStructuredStackInstruction>
 {
@@ -130,7 +112,7 @@ public sealed record class CallInstruction(FunctionDeclaration Callee) : IStruct
     public override string ToString() => $"call {Callee.Name}({Callee})";
 }
 
-public sealed record class LoadSymbolInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
+public sealed record class LoadSymbolValueInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
@@ -257,8 +239,9 @@ public static class ShaderInstruction
     public static IStructuredStackInstruction Dup() => DupInstruction.Instance;
     public static IStructuredStackInstruction Pop() => DropInstruction.Instance;
 
-    public static LoadSymbolInstruction<ParameterDeclaration> Load(ParameterDeclaration decl) => new(decl);
-    public static LoadSymbolInstruction<VariableDeclaration> Load(VariableDeclaration decl) => new(decl);
+    public static LoadSymbolValueInstruction<ParameterDeclaration> Load(ParameterDeclaration decl) => new(decl);
+    public static LoadSymbolValueInstruction<VariableDeclaration> Load(VariableDeclaration decl) => new(decl);
+    public static LoadSymbolValueInstruction<MemberDeclaration> Load(MemberDeclaration decl) => new(decl);
 
     public static LoadSymbolAddressInstruction<ParameterDeclaration> LoadAddress(ParameterDeclaration decl) =>
         new(decl);

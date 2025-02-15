@@ -3,7 +3,7 @@ using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
-public sealed class RuntimeReflectionE2ETests(ITestOutputHelper Output)
+public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 {
 
     async Task TestShader(ISharpShader shader)

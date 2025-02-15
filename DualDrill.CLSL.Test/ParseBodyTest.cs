@@ -57,7 +57,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = parser.ParseMethodBody(f);
 
         result.Instructions.Should().SatisfyRespectively(
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
             x => x.Should().BeOfType<ReturnInstruction>()
         );
     }
@@ -81,7 +81,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = parser.ParseMethodBody(f);
 
         result.Instructions.Should().SatisfyRespectively(
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
             x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(1),
             x => x.Should().BeOfType<BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryArithmetic.Add>>>(),
             x => x.Should().BeOfType<ReturnInstruction>()
@@ -280,9 +280,9 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_0000: nop
             x => x.Should().BeOfType<NopInstruction>(),
         //  IL_0001: ldarg.0
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
         //  IL_0002: ldarg.1
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
         //  IL_0003: clt
             x => x.Should().BeOfType<BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryRelation.Lt>>>(),
         //  IL_0005: ldc.i4.0
@@ -293,7 +293,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_0008: stloc.0
             x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
         //  IL_0009: ldloc.0
-            x => x.Should().BeOfType<LoadSymbolInstruction<VariableDeclaration>>(),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
         //  IL_000a: brfalse.s IL_0011
             x => x.Should().BeOfType<LogicalNotInstruction>(),
             x => x.Should().BeOfType<BrIfInstruction>().Which.Target.Should().Be(l11),
@@ -301,7 +301,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_000c: nop
             x => x.Should().BeOfType<NopInstruction>(),
         //  IL_000d: ldarg.0
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
         //  IL_000e: stloc.1
             x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
         //  IL_000f: br.s IL_0016
@@ -311,7 +311,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_0011: nop
             x => x.Should().BeOfType<NopInstruction>(),
         //  IL_0012: ldarg.1
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
         //  IL_0013: stloc.1
             x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
         //  IL_0014: br.s IL_0016
@@ -319,7 +319,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
 
             x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l16),
         //  IL_0016: ldloc.1
-            x => x.Should().BeOfType<LoadSymbolInstruction<VariableDeclaration>>(),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
         //  IL_0017: ret
             x => x.Should().BeOfType<ReturnInstruction>()
         );
@@ -378,14 +378,14 @@ public class ParseBodyTest(ITestOutputHelper Output)
             //  IL_0001: ldarga @a
             x => x.Should().BeOfType<LoadSymbolAddressInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
             //  IL_0003: ldarg @b
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
             //  IL_0005: swizzle.set.vec4f32.xy
             //x => x.Should().BeOfType<VectorSwizzleSetInstruction<VecType<N4, FloatType<N32>>, Swizzle.Pattern<Swizzle.X, Swizzle.Y>>>(),
             x => x.Should().BeOfType<CallInstruction>().Which.Callee.Should().Be(VectorSwizzleSetOperation<Swizzle.Pattern<N4, Swizzle.X, Swizzle.Y>, FloatType<N32>>.Instance.Function),
             //  IL_000f: nop
             x => x.Should().BeOfType<NopInstruction>(),
             //  IL_0010: ldarg.0
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
             //  IL_0011: stloc.0
             x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
             //  IL_0012: br IL_0014
@@ -393,7 +393,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
 
             x => x.Should().BeOfType<LabelInstruction>(),
             //  IL_0014: ldloc.0
-            x => x.Should().BeOfType<LoadSymbolInstruction<VariableDeclaration>>(),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
             //  IL_0015: ret
             x => x.Should().BeOfType<ReturnInstruction>()
         );
@@ -416,9 +416,9 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_0007: ret
         result.Instructions.Should().SatisfyRespectively(
             //  IL_0000: ldarg.0
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
             //  IL_0001: ldarg.1
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
             //  IL_0002: call dot.vec4f32
             x => x.Should().BeOfType<CallInstruction>(),
             //  IL_0007: ret
@@ -474,7 +474,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
 
         result.Instructions.Should().SatisfyRespectively(
             //  IL_0000: ldarg.0
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
             //  IL_0001: ldc.i4.0
             x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(0),
             //  IL_0002: ble.s IL_0007
@@ -482,13 +482,13 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<BrIfInstruction>().Which.Target.Should().Be(l7),
 
             //  IL_0004: ldarg.2
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(c),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(c),
             //  IL_0005: br.s IL_0008
             x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l8),
 
             x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l7),
             //  IL_0007: ldarg.1
-            x => x.Should().BeOfType<LoadSymbolInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
 
             x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l8),
             //  IL_0008: ret

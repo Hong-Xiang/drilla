@@ -6,11 +6,6 @@ namespace DualDrill.CLSL.Test.ShaderModule;
 
 public struct MandelbrotDistanceShaderModule : ISharpShader
 {
-    public struct VertexInput
-    {
-        [Location(0)] public vec2f32 position;
-    }
-
     [Uniform]
     [Group(0)]
     [Binding(0)]
@@ -18,9 +13,9 @@ public struct MandelbrotDistanceShaderModule : ISharpShader
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    public static vec4f32 vs(VertexInput vertex)
+    public static vec4f32 vs([Location(0)] vec2f32 position)
     {
-        return vec4(vertex.position.xy, 0.0f, 1.0f);
+        return vec4(position.xy, 0.0f, 1.0f);
     }
 
     [Fragment]

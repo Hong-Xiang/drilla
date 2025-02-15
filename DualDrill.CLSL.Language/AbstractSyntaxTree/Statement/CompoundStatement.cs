@@ -40,6 +40,8 @@ public sealed record class CompoundStatement(ImmutableArray<IStatement> Statemen
             }
         }
     }
+
+    public static CompoundStatement Empty => new([]);
 }
 
 

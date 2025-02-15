@@ -11,7 +11,7 @@ public interface IVectorNumericOperation : IOperation
 {
 }
 
-public interface IVectorBinaryNumericOperation : IBinaryFunctionOperation, IVectorNumericOperation
+public interface IVectorBinaryNumericOperation : IBinaryExpressionOperation, IVectorNumericOperation
 {
     IBinaryOp Op { get; }
 }
@@ -121,7 +121,7 @@ public sealed class VectorNumericBinaryOperation<TRank, TElement, TOp>
 
 public sealed class ScalarVectorNumericOperation<TRank, TElement, TOp>
     : IVectorBinaryNumericOperation<ScalarVectorNumericOperation<TRank, TElement, TOp>>
-    , IBinaryFunctionOperation<ScalarVectorNumericOperation<TRank, TElement, TOp>, TElement, VecType<TRank, TElement>, TOp>
+    , IBinaryExpressionOperation<ScalarVectorNumericOperation<TRank, TElement, TOp>, TElement, VecType<TRank, TElement>, TOp>
     , IVectorBinaryNumericOperation
     where TRank : IRank<TRank>
     where TElement : IScalarType<TElement>
@@ -163,7 +163,7 @@ public sealed class ScalarVectorNumericOperation<TRank, TElement, TOp>
 
 public sealed class VectorScalarNumericOperation<TRank, TElement, TOp>
     : IVectorBinaryNumericOperation<VectorScalarNumericOperation<TRank, TElement, TOp>>
-    , IBinaryFunctionOperation<VectorScalarNumericOperation<TRank, TElement, TOp>, VecType<TRank, TElement>, TElement, TOp>
+    , IBinaryExpressionOperation<VectorScalarNumericOperation<TRank, TElement, TOp>, VecType<TRank, TElement>, TElement, TOp>
     , IVectorBinaryNumericOperation
     where TRank : IRank<TRank>
     where TElement : IScalarType<TElement>

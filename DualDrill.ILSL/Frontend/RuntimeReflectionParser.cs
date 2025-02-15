@@ -44,6 +44,7 @@ public sealed record class RuntimeReflectionParser(
         {
             var structureType = ParseStructDeclaration(t);
             Context.AddStructure(t, structureType);
+            return structureType;
         }
 
         return new OpaqueType(t);
@@ -100,9 +101,15 @@ public sealed record class RuntimeReflectionParser(
 
     public MemberDeclaration ParseField(FieldInfo fieldInfo)
     {
-        return new MemberDeclaration(fieldInfo.Name,
+        if (Context[fieldInfo] is { } found)
+        {
+            return found;
+        }
+        var decl =  new MemberDeclaration(fieldInfo.Name,
             ParseType(fieldInfo.FieldType),
             [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]);
+        Context.AddStructureMember(fieldInfo, decl);
+        return decl;
     }
 
     ImmutableHashSet<IShaderAttribute> ParseAttribute(ParameterInfo p)

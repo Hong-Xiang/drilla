@@ -14,4 +14,5 @@ public sealed class MemberDeclaration(
     public string Name { get; } = Name;
     public ImmutableHashSet<IShaderAttribute> Attributes { get; } = Attributes;
     public IShaderType Type { get; } = Type;
+    public override string ToString() => $"member {Name} : {Type.Name}";
 }

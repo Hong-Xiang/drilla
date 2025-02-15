@@ -1,5 +1,7 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.Mathematics;
 using System.Numerics;
+using static DualDrill.Mathematics.DMath;
 
 namespace DualDrill.CLSL.Test.ShaderModule;
 
@@ -8,9 +10,9 @@ sealed class SimpleStructUniformShaderModule : ISharpShader
 {
     public struct OurStruct
     {
-        public Vector4 color;
-        public Vector2 scale;
-        public Vector2 offset;
+        public vec4f32 color;
+        public vec2f32 scale;
+        public vec2f32 offset;
     }
 
     [Group(0)]
@@ -20,34 +22,34 @@ sealed class SimpleStructUniformShaderModule : ISharpShader
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    public static Vector4 vs(
+    public static vec4f32 vs(
         [Builtin(BuiltinBinding.vertex_index)] uint vertexIndex
     )
     {
-        Vector2 pos = new();
+        var pos = vec2f32();
         uint v0 = 0u;
         uint v1 = 1u;
         uint v2 = 2u;
         if (vertexIndex == v0)
         {
-            pos = new Vector2(0.0f, 0.5f);
+            pos = vec2(0.0f, 0.5f);
         }
         if (vertexIndex == v1)
         {
-            pos = new Vector2(-0.5f, -0.5f);
+            pos = vec2(-0.5f, -0.5f);
         }
         if (vertexIndex == v2)
         {
-            pos = new Vector2(0.5f, -0.5f);
+            pos = vec2(0.5f, -0.5f);
         }
-        return new Vector4(
+        return vec4(
             pos * ourStruct.scale + ourStruct.offset, 0.0f, 1.0f
         );
     }
 
     [Fragment]
     [return: Location(0)]
-    public static Vector4 fs()
+    public static vec4f32 fs()
     {
         return ourStruct.color;
     }

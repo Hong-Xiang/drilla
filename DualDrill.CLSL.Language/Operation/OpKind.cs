@@ -88,14 +88,14 @@ public interface IAbstractOp<TSelf>
 {
 }
 
-public interface IBinaryActionOperation : IOperation
+public interface IBinaryStatementOperation : IOperation
 {
     public IShaderType LeftType { get; }
     public IShaderType RightType { get; }
     public IStatement CreateStatement(IExpression l, IExpression r);
 }
 
-public interface IBinaryFunctionOperation : IOperation
+public interface IBinaryExpressionOperation : IOperation
 {
     public IShaderType LeftType { get; }
     public IShaderType RightType { get; }
@@ -103,7 +103,7 @@ public interface IBinaryFunctionOperation : IOperation
     public IExpression CreateExpression(IExpression l, IExpression r);
 }
 
-public interface IBinaryOperation<TSelf> : IBinaryFunctionOperation, IOperation<TSelf>, ISingleton<TSelf>
+public interface IBinaryOperation<TSelf> : IBinaryExpressionOperation, IOperation<TSelf>, ISingleton<TSelf>
     where TSelf : IBinaryOperation<TSelf>
 {
     IStructuredStackInstruction IOperation.Instruction => BinaryOperationInstruction<TSelf>.Instance;
@@ -115,7 +115,7 @@ public interface IBinaryOperation<TSelf, TDataType, TOp> : IBinaryOperation<TSel
     where TDataType : IShaderType
     where TOp : IBinaryOp<TOp>
 {
-    IExpression IBinaryFunctionOperation.CreateExpression(IExpression l, IExpression r)
+    IExpression IBinaryExpressionOperation.CreateExpression(IExpression l, IExpression r)
     {
         if (TOp.Instance is ISymbolOp op)
         {
@@ -125,14 +125,14 @@ public interface IBinaryOperation<TSelf, TDataType, TOp> : IBinaryOperation<TSel
     }
 }
 
-public interface IBinaryFunctionOperation<TSelf, TLeftType, TRightType, TOp>
+public interface IBinaryExpressionOperation<TSelf, TLeftType, TRightType, TOp>
     : IBinaryOperation<TSelf>
-    where TSelf : IBinaryFunctionOperation<TSelf, TLeftType, TRightType, TOp>
+    where TSelf : IBinaryExpressionOperation<TSelf, TLeftType, TRightType, TOp>
     where TLeftType : ISingletonShaderType<TLeftType>
     where TRightType : ISingletonShaderType<TRightType>
     where TOp : IBinaryOp<TOp>
 {
-    IExpression IBinaryFunctionOperation.CreateExpression(IExpression l, IExpression r)
+    IExpression IBinaryExpressionOperation.CreateExpression(IExpression l, IExpression r)
     {
         if (TOp.Instance is ISymbolOp op)
         {
@@ -141,8 +141,8 @@ public interface IBinaryFunctionOperation<TSelf, TLeftType, TRightType, TOp>
         throw new NotSupportedException($"{TOp.Instance}");
     }
 
-    IShaderType IBinaryFunctionOperation.LeftType => TLeftType.Instance;
-    IShaderType IBinaryFunctionOperation.RightType => TRightType.Instance;
+    IShaderType IBinaryExpressionOperation.LeftType => TLeftType.Instance;
+    IShaderType IBinaryExpressionOperation.RightType => TRightType.Instance;
 }
 
 public interface INamedOp<TSelf>
@@ -187,7 +187,7 @@ public sealed class NumericBinaryOperation<TType, TOp>
     : IBinaryOperation<NumericBinaryOperation<TType, TOp>>
     , ISingleton<NumericBinaryOperation<TType, TOp>>
     , INumericBinaryOperation<NumericBinaryOperation<TType, TOp>>
-    , IBinaryFunctionOperation<NumericBinaryOperation<TType, TOp>, TType, TType, TOp>
+    , IBinaryExpressionOperation<NumericBinaryOperation<TType, TOp>, TType, TType, TOp>
     where TType : INumericType<TType>
     where TOp : IBinaryOp<TOp>
 {
@@ -201,3 +201,20 @@ public sealed class NumericBinaryOperation<TType, TOp>
     public string Name => $"{TOp.Instance.Name}.{TType.Instance.Name}";
 }
 
+public sealed class NumericBinaryRelationOperation<TType, TOp>
+    : IBinaryOperation<NumericBinaryRelationOperation<TType, TOp>>
+    , IBinaryExpressionOperation<NumericBinaryRelationOperation<TType, TOp>, TType, TType, TOp>
+    where TType : INumericType<TType>
+    where TOp : IBinaryOp<TOp>
+
+{
+    public static NumericBinaryRelationOperation<TType, TOp> Instance { get; } = new();
+    public IShaderType ResultType => BoolType.Instance;
+    public FunctionDeclaration Function { get; } = new(
+        $"{TOp.Instance.Name}.{TType.Instance.Name}",
+        [],
+        new FunctionReturn(BoolType.Instance, []),
+        []
+    );
+    public string Name => TOp.Instance.Name;
+}

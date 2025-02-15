@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
+using FluentAssertions;
 using System.Numerics;
 
 namespace DualDrill.CLSL.Test;
@@ -81,9 +82,10 @@ public class RuntimeRelfectionParserTests
         var module = Parser.ParseShaderModule(new SimpleStructUniformShaderModule());
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();
         Assert.Equal("ourStruct", uniformDecl.Name);
+        uniformDecl.DeclarationScope.Should().Be(DeclarationScope.Module);
         Assert.Equal(0, uniformDecl.Attributes.OfType<GroupAttribute>().Single().Binding);
         Assert.Equal(0, uniformDecl.Attributes.OfType<BindingAttribute>().Single().Binding);
         Assert.Single(uniformDecl.Attributes.OfType<UniformAttribute>());
-        Assert.IsType<StructureDeclaration>(uniformDecl.Type);
+        Assert.IsType<StructureType>(uniformDecl.Type);
     }
 }

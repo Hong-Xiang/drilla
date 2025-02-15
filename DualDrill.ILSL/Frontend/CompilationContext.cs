@@ -2,6 +2,8 @@
 using DualDrill.CLSL.Language.Types;
 using System.Diagnostics;
 using System.Reflection;
+using ICSharpCode.Decompiler.CSharp.Syntax;
+using ParameterDeclaration = DualDrill.CLSL.Language.Declaration.ParameterDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -55,6 +57,8 @@ public interface ICompilationContextView
 
     ParameterDeclaration? this[ParameterInfo parameter] { get; }
 
+    MemberDeclaration? this[FieldInfo method] { get; }
+
     // new entities declared/defined in this context
     IEnumerable<StructureDeclaration> StructureDeclarations { get; }
     IEnumerable<VariableDeclaration> VariableDeclarations { get; }
@@ -73,6 +77,7 @@ public interface ICompilationContext : ICompilationContextView
     VariableDeclaration AddVariable(IVariableSymbol symbol, Func<int, VariableDeclaration> declaration);
     ParameterDeclaration AddParameter(ParameterInfo symbol, ParameterDeclaration declaration);
     StructureDeclaration AddStructure(Type symbol, StructureType declaration);
+    void AddStructureMember(FieldInfo symbol, MemberDeclaration declaration);
 }
 
 public interface ISharedVariableIndexContext : ICompilationContext
@@ -91,6 +96,7 @@ public sealed class CompilationContext : ISharedVariableIndexContext
     private readonly Dictionary<IShaderType, FunctionDeclaration> ZeroValueConstructors = [];
     private readonly HashSet<StructureDeclaration> ModuleStructureDeclarations = [];
     private readonly Dictionary<ParameterInfo, ParameterDeclaration> Parameters = [];
+    private readonly Dictionary<FieldInfo, MemberDeclaration> StructureMembers = [];
     private readonly ICompilationContextView? Parent;
     private int DefinedVariableCount { get; set; } = 0;
 
@@ -127,6 +133,9 @@ public sealed class CompilationContext : ISharedVariableIndexContext
         }
     }
 
+    public MemberDeclaration? this[FieldInfo method] =>
+        StructureMembers.TryGetValue(method, out var declaration) ? declaration : Parent?[method];
+
     public VariableDeclaration? this[IVariableSymbol symbol] => symbol switch
     {
         ShaderModuleFieldVariableSymbol fieldSymbol => FieldVariables.TryGetValue(fieldSymbol.Field,
@@ -154,28 +163,29 @@ public sealed class CompilationContext : ISharedVariableIndexContext
     public VariableDeclaration AddVariable(IVariableSymbol symbol, Func<int, VariableDeclaration> declaration)
     {
         var index = NextVariableIndex();
-        if (symbol is ShaderModuleFieldVariableSymbol fieldSymbol)
+        switch (symbol)
         {
-            var variable = declaration(index);
-            FieldVariables.Add(fieldSymbol.Field, variable);
-            return variable;
+            case ShaderModuleFieldVariableSymbol fieldSymbol:
+            {
+                var variable = declaration(index);
+                FieldVariables.Add(fieldSymbol.Field, variable);
+                return variable;
+            }
+            case ShaderModulePropertyGetterVariableSymbol getterSymbol:
+            {
+                var variable = declaration(index);
+                PropertyGetterVariables.Add(getterSymbol.Property, variable);
+                return variable;
+            }
+            case FunctionLocalVariableSymbol localSymbol:
+            {
+                var variable = declaration(index);
+                LocalVariables.Add(localSymbol.LocalVariableInfo, variable);
+                return variable;
+            }
+            default:
+                throw new NotSupportedException();
         }
-
-        if (symbol is ShaderModulePropertyGetterVariableSymbol getterSymbol)
-        {
-            var variable = declaration(index);
-            PropertyGetterVariables.Add(getterSymbol.Property, variable);
-            return variable;
-        }
-
-        if (symbol is FunctionLocalVariableSymbol localSymbol)
-        {
-            var variable = declaration(index);
-            LocalVariables.Add(localSymbol.LocalVariableInfo, variable);
-            return variable;
-        }
-
-        throw new NotSupportedException();
     }
 
     public void AddFunctionDeclaration(IFunctionSymbol symbol, FunctionDeclaration declaration)
@@ -195,6 +205,11 @@ public sealed class CompilationContext : ISharedVariableIndexContext
         Types.Add(symbol, type);
         ModuleStructureDeclarations.Add(type.Declaration);
         return type.Declaration;
+    }
+
+    public void AddStructureMember(FieldInfo symbol, MemberDeclaration declaration)
+    {
+        StructureMembers.Add(symbol, declaration);
     }
 
     public void AddFunctionDefinition(IFunctionSymbol symbol, FunctionDeclaration declaration,

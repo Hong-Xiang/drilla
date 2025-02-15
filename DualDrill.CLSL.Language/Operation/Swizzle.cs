@@ -363,7 +363,7 @@ public sealed class VectorSwizzleGetOperation<TPattern, TElement>
 
 public sealed class VectorSwizzleSetOperation<TPattern, TElement>
     : IVectorSizzleOperation<VectorSwizzleSetOperation<TPattern, TElement>>
-    , IBinaryActionOperation
+    , IBinaryStatementOperation
     where TPattern : Swizzle.IPattern<TPattern>
     where TElement : IScalarType<TElement>
 {

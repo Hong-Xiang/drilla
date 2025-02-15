@@ -9,7 +9,7 @@ namespace DualDrill.CLSL.Backend;
 
 public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
     : IStatementVisitor<ValueTask>
-    , IExpressionVisitor<ValueTask>
+        , IExpressionVisitor<ValueTask>
 {
     public async ValueTask VisitReturn(ReturnStatement stmt)
     {
@@ -45,6 +45,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
                 await s.AcceptVisitor(this);
             }
         }
+
         Writer.WriteLine('}');
     }
 
@@ -60,6 +61,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
                 await stmt.TrueBody.AcceptVisitor(this);
             }
         }
+
         Writer.WriteLine("} else {");
         if (stmt.FalseBody.Statements.Length > 0)
         {
@@ -68,6 +70,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
                 await stmt.FalseBody.AcceptVisitor(this);
             }
         }
+
         Writer.WriteLine("}");
     }
 
@@ -92,16 +95,19 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         {
             await header.Init.AcceptVisitor(this);
         }
+
         Writer.Write("; ");
         if (header.Expr != null)
         {
             await header.Expr.AcceptVisitor(this);
         }
+
         Writer.Write("; ");
         if (header.Update != null)
         {
             await header.Update.AcceptVisitor(this);
         }
+
         Writer.WriteLine(')');
         await stmt.Statement.AcceptVisitor(this);
     }
@@ -160,12 +166,12 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
             {
                 Writer.Write(", ");
             }
+
             firstArgument = false;
             await a.AcceptVisitor(this);
         }
+
         Writer.Write(')');
-
-
     }
 
     public async ValueTask VisitBinaryArithmeticExpression(BinaryArithmeticExpression expr)
@@ -220,8 +226,8 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         Writer.Write(op);
         Writer.Write(' ');
         await expr.R.AcceptVisitor(this);
-
     }
+
     public async ValueTask VisitBinaryRelationalExpression(BinaryRelationalExpression expr)
     {
         await expr.L.AcceptVisitor(this);
@@ -304,8 +310,6 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
     }
 
 
-
-
     public async ValueTask VisitNamedComponentExpression(NamedComponentExpression expr)
     {
         await expr.Base.Accept(this);
@@ -315,12 +319,11 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
 
     public async ValueTask VisitLoop(LoopStatement stmt)
     {
-        Writer.WriteLine("loop {");
-        using (Writer.IndentedScope())
+        Writer.Write("loop ");
+        using (Writer.IndentedScopeWithBracket())
         {
             await stmt.Body.AcceptVisitor(this);
         }
-        Writer.WriteLine("}");
     }
 
     public async ValueTask VisitSwitch(SwitchStatement stmt)
@@ -339,15 +342,19 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
                 {
                     await c.Body.AcceptVisitor(this);
                 }
+
                 Writer.WriteLine("}");
             }
+
             Writer.Write("default : {");
             using (Writer.IndentedScope())
             {
                 await stmt.DefaultCase.AcceptVisitor(this);
             }
+
             Writer.Write("}");
         }
+
         Writer.WriteLine("}");
     }
 
@@ -356,7 +363,6 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         Writer.WriteLine("continue;");
         return ValueTask.CompletedTask;
     }
-
 
 
     public async ValueTask VisitBinaryExpression<TOperation, TOp>(BinaryExpression<TOperation, TOp> expr)

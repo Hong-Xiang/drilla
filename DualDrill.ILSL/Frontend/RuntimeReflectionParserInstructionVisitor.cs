@@ -509,6 +509,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
         var m = Parser.ParseField(info);
         CurrentStack.Push(m.Type);
+        Instructions.Add(ShaderInstruction.Load(m));
         return [inst.Index + 1];
     }
 

@@ -20,7 +20,7 @@ public sealed record class ControlFlowGraphFunctionBody(
                 {
                     switch (instruction)
                     {
-                        case LoadSymbolInstruction<VariableDeclaration> x:
+                        case LoadSymbolValueInstruction<VariableDeclaration> x:
                             yield return x.Target;
                             break;
                         case LoadSymbolAddressInstruction<VariableDeclaration> x:

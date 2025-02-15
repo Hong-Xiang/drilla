@@ -65,26 +65,30 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
         {
             return typeof(vec4f32);
         }
+
         if (t == typeof(Vector3))
         {
             return typeof(vec3f32);
         }
+
         if (t == typeof(Vector2))
         {
             return typeof(vec2f32);
         }
+
         throw new NotSupportedException();
     }
 
-    private Dictionary<MethodBase, FunctionDeclaration> GetRuntimeMethods(IReadOnlyDictionary<Type, IShaderType> runtimeTypes)
+    private Dictionary<MethodBase, FunctionDeclaration> GetRuntimeMethods(
+        IReadOnlyDictionary<Type, IShaderType> runtimeTypes)
     {
         var result = new Dictionary<MethodBase, FunctionDeclaration>();
         var mathAssembly = typeof(DMath).Assembly;
         var operationMethods = from t in mathAssembly.GetExportedTypes()
-                               from m in t.GetMethods()
-                               let attr = m.GetCustomAttributes().OfType<IOperationMethodAttribute>().SingleOrDefault()
-                               where attr is not null
-                               select (m, attr.Operation);
+            from m in t.GetMethods()
+            let attr = m.GetCustomAttributes().OfType<IOperationMethodAttribute>().SingleOrDefault()
+            where attr is not null
+            select (m, attr.Operation);
         foreach (var (m, op) in operationMethods)
         {
             result.Add(m, op.Function);
@@ -101,7 +105,8 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
                     var paramTypes = parameters.Select(p => p.ParameterType).ToArray();
                     if (paramTypes.All(runtimeTypes.ContainsKey))
                     {
-                        var parameterDecls = paramTypes.Select(p => new ParameterDeclaration(p.Name, runtimeTypes[p], []));
+                        var parameterDecls =
+                            paramTypes.Select(p => new ParameterDeclaration(p.Name, runtimeTypes[p], []));
                         var parameterTypes = parameterDecls.Select(p => p.Type).ToArray();
                         var f = ShaderFunction.Instance.GetFunction(m.Name, rt, parameterTypes);
                         result.Add(m, f);
@@ -118,6 +123,7 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
             {
                 continue;
             }
+
             var f = ShaderFunction.Instance.GetFunction("vec4", vec4f32t, [
                 ..parameters.Select(p => runtimeTypes[p.ParameterType])
             ]);
@@ -135,12 +141,15 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
         return result;
     }
 
-    public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) => throw new NotSupportedException("All runtime methods have not definitions");
+    public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) =>
+        throw new NotSupportedException("All runtime methods have not definitions");
 
     public static SharedBuiltinCompilationContext Instance { get; } = new SharedBuiltinCompilationContext();
 
     // all entities in shared builtin context can only be directly refrenced
     // declarations is not allowed
+    public MemberDeclaration? this[FieldInfo method] => null;
+
     public IEnumerable<StructureDeclaration> StructureDeclarations => [];
 
     public IEnumerable<VariableDeclaration> VariableDeclarations => [];

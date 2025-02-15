@@ -1,9 +1,9 @@
-﻿using System.Collections;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
+
 
 /// <summary>
 /// Encoding of Loop | Block | IfThenElse
@@ -11,12 +11,33 @@ namespace DualDrill.CLSL.Language.ControlFlowGraph;
 public interface IStructuredControlFlowRegion<TInstruction> : IStructuredControlFlowElement<TInstruction>
     where TInstruction : IInstruction
 {
-    public interface IRegionVisitor<TResult>
+    sealed class FuncVisitor<TResult>(
+        Func<Block<TInstruction>, TResult> Block,
+        Func<Loop<TInstruction>, TResult> Loop,
+        Func<IfThenElse<TInstruction>, TResult> IfThenElse
+    ) : IRegionPatternVisitor<TResult>
+    {
+        public TResult VisitBlock(Block<TInstruction> block) => Block(block);
+        public TResult VisitIfThenElse(IfThenElse<TInstruction> ifThenElse)
+            => IfThenElse(ifThenElse);
+        public TResult VisitLoop(Loop<TInstruction> loop)
+            => Loop(loop);
+    }
+
+    public interface IRegionPatternVisitor<TResult>
     {
         TResult VisitBlock(Block<TInstruction> block);
         TResult VisitLoop(Loop<TInstruction> loop);
         TResult VisitIfThenElse(IfThenElse<TInstruction> ifThenElse);
+
+        public static IRegionPatternVisitor<TResult> Create(
+            Func<Block<TInstruction>, TResult> block,
+            Func<Loop<TInstruction>, TResult> loop,
+            Func<IfThenElse<TInstruction>, TResult> ifThenElse
+        ) => new FuncVisitor<TResult>(block, loop, ifThenElse);
     }
+
+    //public TResult Accept<TResult>(IRegionPatternVisitor<TResult> pattern);
 }
 
 /// <summary>
@@ -28,6 +49,7 @@ public interface ILabeledStructuredControlFlowRegion<TInstruction>
         , ILabeledEntity
     where TInstruction : IInstruction
 {
+    IStatement BrCurrentStatement();
 }
 
 public sealed class ControlFlowAnalysisResult<TData>

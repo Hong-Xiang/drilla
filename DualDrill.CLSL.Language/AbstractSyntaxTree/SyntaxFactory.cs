@@ -74,6 +74,15 @@ public static class SyntaxFactory
     public static VariableOrValueStatement VarDeclaration(VariableDeclaration variable) => new(variable);
     public static IfStatement If(IExpression expr, CompoundStatement trueBody, CompoundStatement falseBody) => new(expr, trueBody, falseBody, []);
 
+    public static SimpleAssignmentStatement AssignStatement(
+        IExpression target,
+        IExpression value
+    ) => new(target, value, AssignmentOp.Assign);
+
+    public static CompoundStatement CompoundStatement(
+        params ReadOnlySpan<IStatement> statements
+    ) => new([.. statements]);
+
     public static IExpression Not(IExpression e)
     {
         Debug.Assert(e.Type is BoolType);
