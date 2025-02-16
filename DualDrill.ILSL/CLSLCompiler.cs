@@ -4,6 +4,7 @@ using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Backend;
 using System.CodeDom.Compiler;
+using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
 namespace DualDrill.CLSL;
@@ -17,7 +18,7 @@ public interface ICLSLCompiler
 
 public sealed class CLSLCompiler() : ICLSLCompiler
 {
-    ICompilationContext Context = CompilationContext.Create();
+    ISymbolTable Context = CompilationContext.Create();
 
     public async ValueTask<string> EmitWGSL(ISharpShader shader)
     {

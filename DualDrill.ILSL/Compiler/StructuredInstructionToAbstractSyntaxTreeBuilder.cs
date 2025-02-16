@@ -52,7 +52,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     readonly FrozenSet<VariableDeclaration> LocalVariables;
     readonly Stack<(Label, IScfLabelRegion)> LabelTargetsContext = [];
 
-    VariableDeclaration BrDepth = new(DeclarationScope.Function, -1, "br_depth",
+    VariableDeclaration BrDepth = new(DeclarationScope.Function, "br_depth",
         ShaderType.I32,
         []
     );

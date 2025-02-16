@@ -45,3 +45,7 @@ public sealed record class ControlFlowGraphFunctionBody(
         throw new NotImplementedException();
     }
 }
+
+public interface IStructuredControlRegionFunctionBody<TElement> {}
+
+public interface IAbstractSyntaxTreeFunctionBody<TElement> {}

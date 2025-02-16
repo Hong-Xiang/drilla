@@ -3,17 +3,16 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public sealed class BasicBlock<TInstruction>
-    where TInstruction : IInstruction
+public sealed class BasicBlock<TElement>
 {
-    public ReadOnlyMemory<TInstruction> Instructions { get; }
+    public ReadOnlyMemory<TElement> Instructions { get; }
 
-    public BasicBlock(ReadOnlyMemory<TInstruction> instructions)
+    public BasicBlock(ReadOnlyMemory<TElement> instructions)
     {
         Instructions = instructions;
     }
 
-    public static BasicBlock<TInstruction> Create(ReadOnlySpan<TInstruction> instructions)
+    public static BasicBlock<TElement> Create(ReadOnlySpan<TElement> instructions)
     {
         return new(instructions.ToImmutableArray().AsMemory());
     }

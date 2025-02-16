@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using DualDrill.CLSL.Frontend.SymbolTable;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -20,7 +21,7 @@ namespace DualDrill.CLSL.Frontend;
 /// </summary>
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
-    ICompilationContext Context,
+    ISymbolTable Context,
     Dictionary<FunctionDeclaration, UnstructuredStackInstructionSequence> MethodBodies)
 {
     public RuntimeReflectionParser()
@@ -28,7 +29,7 @@ public sealed record class RuntimeReflectionParser(
     {
     }
 
-    public RuntimeReflectionParser(ICompilationContext Context)
+    public RuntimeReflectionParser(ISymbolTable Context)
         : this(Context, [])
     {
     }
@@ -88,9 +89,8 @@ public sealed record class RuntimeReflectionParser(
 
         var decl = Context.AddVariable(
             symbol,
-            (idx) => new VariableDeclaration(
+            new VariableDeclaration(
                 DeclarationScope.Module,
-                -1,
                 fieldInfo.Name,
                 ParseType(fieldInfo.FieldType),
                 [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]
@@ -105,7 +105,8 @@ public sealed record class RuntimeReflectionParser(
         {
             return found;
         }
-        var decl =  new MemberDeclaration(fieldInfo.Name,
+
+        var decl = new MemberDeclaration(fieldInfo.Name,
             ParseType(fieldInfo.FieldType),
             [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]);
         Context.AddStructureMember(fieldInfo, decl);
@@ -139,10 +140,9 @@ public sealed record class RuntimeReflectionParser(
             return found;
         }
 
-        var decl = Context.AddVariable(symbol, (index) =>
+        var decl = Context.AddVariable(symbol,
             new VariableDeclaration(
                 DeclarationScope.Module,
-                index,
                 info.Name,
                 ParseType(info.FieldType),
                 [.. info.GetCustomAttributes().OfType<IShaderAttribute>()])
@@ -160,9 +160,8 @@ public sealed record class RuntimeReflectionParser(
             return found;
         }
 
-        var decl = Context.AddVariable(symbol, (index) =>
+        var decl = Context.AddVariable(symbol,
             new VariableDeclaration(DeclarationScope.Module,
-                index,
                 info.Name,
                 ParseType(info.PropertyType),
                 [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]));
@@ -318,11 +317,10 @@ public sealed record class RuntimeReflectionParser(
     {
         var t = ParseType(info.LocalType);
         return Context.AddVariable(Symbol.Variable(info),
-            index => new VariableDeclaration(
+            new VariableDeclaration(
                 DeclarationScope.Function,
-                index,
                 $"loc_{info.LocalIndex}",
-                Context[info.LocalType] ?? throw new KeyNotFoundException($"Failed to resolve local varialbe {info}"),
+                t,
                 []
             )
         );
@@ -391,7 +389,7 @@ public sealed record class RuntimeReflectionParser(
 
     bool IsMethodDefinition(MethodBase m)
     {
-        return !SharedBuiltinCompilationContext.Instance.RuntimeMethods.ContainsKey(m);
+        return !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(m);
     }
 
     IEnumerable<MethodBase> GetCalledMethods(IReadOnlyList<Instruction> instructions)

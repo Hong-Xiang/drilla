@@ -19,10 +19,8 @@ public interface IFunctionBodyData
     IEnumerable<Label> Labels { get; }
 }
 
-public interface IFunctionBody
+public interface IFunctionBody : ILocalDeclarationContext
 {
-    public int VariableIndex(VariableDeclaration variable);
-    public int LabelIndex(Label label);
     public IReadOnlySet<VariableDeclaration> LocalVariables { get; }
     public IReadOnlySet<Label> Labels { get; }
 }

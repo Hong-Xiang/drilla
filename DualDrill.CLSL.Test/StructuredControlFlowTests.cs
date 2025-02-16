@@ -37,7 +37,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     public void SimpleSingleSelfLoopBasicBlockShouldWork()
     {
         var e = Label.Create("e");
-        var v = new VariableDeclaration(DeclarationScope.Function, 0, "x", ShaderType.I32, []);
+        var v = new VariableDeclaration(DeclarationScope.Function, "x", ShaderType.I32, []);
         var cfg = new ControlFlowGraph<BasicBlock<Inst>>(
             e,
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
@@ -183,7 +183,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var b = Label.Create("b"); // children (c) into if-else
         var c = Label.Create("c"); // inside else branch
 
-        var v = new VariableDeclaration(DeclarationScope.Function, 0, "v", ShaderType.I32, []);
+        var v = new VariableDeclaration(DeclarationScope.Function, "v", ShaderType.I32, []);
 
         var cfg = new ControlFlowGraph<BasicBlock<Inst>>(
             a,
@@ -210,19 +210,21 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
 
         // loop @a
         //   ... a ...
-        //   ... b ...
-        //   if
-        //      br a (continue)
-        //   else
-        //      ... c ...
-        //      return
+        //   block:
+        //      ... b ...
+        //      if
+        //          br a (continue)
+        //      else
+        //          ... c ...
+        //          return
         //   end (if)
         // end (loop)
 
         result.Should().BeOfType<Loop<Inst>>()
             .Which.Body.Elements.Should().SatisfyRespectively(
-                (bb) => bb.Should().BeOfType<BasicBlock<Inst>>(),
-                b => b.Should().BeOfType<Block<Inst>>()
+                x => x.Should().BeOfType<ConstInstruction<I32Literal>>(),
+                x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+                (b) => b.Should().BeOfType<Block<Inst>>()
             );
     }
 }

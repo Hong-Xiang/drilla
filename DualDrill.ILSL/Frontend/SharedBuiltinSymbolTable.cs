@@ -9,15 +9,16 @@ using System.Collections.Frozen;
 using System.Numerics;
 using System.Reflection;
 using System.Security.Cryptography;
+using DualDrill.CLSL.Frontend.SymbolTable;
 
 namespace DualDrill.CLSL.Frontend;
 
-sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilationContext>, ICompilationContextView
+sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, ISymbolTableView
 {
     public FrozenDictionary<Type, IShaderType> RuntimeTypes { get; }
     public FrozenDictionary<MethodBase, FunctionDeclaration> RuntimeMethods { get; }
 
-    SharedBuiltinCompilationContext()
+    SharedBuiltinSymbolTable()
     {
         RuntimeTypes = GetRuntimeTypes().ToFrozenDictionary();
         RuntimeMethods = GetRuntimeMethods(RuntimeTypes).ToFrozenDictionary();
@@ -144,10 +145,12 @@ sealed class SharedBuiltinCompilationContext : ISingleton<SharedBuiltinCompilati
     public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) =>
         throw new NotSupportedException("All runtime methods have not definitions");
 
-    public static SharedBuiltinCompilationContext Instance { get; } = new SharedBuiltinCompilationContext();
+    public static SharedBuiltinSymbolTable Instance { get; } = new SharedBuiltinSymbolTable();
 
     // all entities in shared builtin context can only be directly refrenced
     // declarations is not allowed
+    public VariableDeclaration? this[LocalVariableSymbol symbol] => null;
+
     public MemberDeclaration? this[FieldInfo method] => null;
 
     public IEnumerable<StructureDeclaration> StructureDeclarations => [];

@@ -1,11 +1,10 @@
-﻿using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Types;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Reflection;
-using ICSharpCode.Decompiler.CSharp.Syntax;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Types;
 using ParameterDeclaration = DualDrill.CLSL.Language.Declaration.ParameterDeclaration;
 
-namespace DualDrill.CLSL.Frontend;
+namespace DualDrill.CLSL.Frontend.SymbolTable;
 
 public interface IVariableSymbol
 {
@@ -29,10 +28,6 @@ public sealed record class FunctionLocalVariableSymbol(
 {
 }
 
-public interface IParameterSymbol
-{
-}
-
 public interface IFunctionSymbol
 {
 }
@@ -46,46 +41,11 @@ public static class Symbol
     public static IVariableSymbol Variable(FieldInfo field) => new ShaderModuleFieldVariableSymbol(field);
     public static IVariableSymbol Variable(PropertyInfo getter) => new ShaderModulePropertyGetterVariableSymbol(getter);
     public static IVariableSymbol Variable(LocalVariableInfo info) => new FunctionLocalVariableSymbol(info);
+    public static IVariableSymbol Variable(int localIndex) => new LocalVariableSymbol(localIndex);
     public static IFunctionSymbol Function(MethodBase method) => new CSharpMethodFunctionSymbol(method);
 }
 
-public interface ICompilationContextView
-{
-    IShaderType? this[Type type] { get; }
-    FunctionDeclaration? this[IFunctionSymbol symbol] { get; }
-    VariableDeclaration? this[IVariableSymbol symbol] { get; }
-
-    ParameterDeclaration? this[ParameterInfo parameter] { get; }
-
-    MemberDeclaration? this[FieldInfo method] { get; }
-
-    // new entities declared/defined in this context
-    IEnumerable<StructureDeclaration> StructureDeclarations { get; }
-    IEnumerable<VariableDeclaration> VariableDeclarations { get; }
-    IEnumerable<FunctionDeclaration> FunctionDeclarations { get; }
-    MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration);
-}
-
-public interface ICompilationContext : ICompilationContextView
-{
-    void AddFunctionDeclaration(IFunctionSymbol symbol, FunctionDeclaration declaration);
-
-    void AddFunctionDefinition(IFunctionSymbol symbol, FunctionDeclaration declaration,
-        MethodBodyAnalysisModel? model = null);
-
-    // all structures/variables locally referenced must be defined, thus no AddStructureDefinitionMethod
-    VariableDeclaration AddVariable(IVariableSymbol symbol, Func<int, VariableDeclaration> declaration);
-    ParameterDeclaration AddParameter(ParameterInfo symbol, ParameterDeclaration declaration);
-    StructureDeclaration AddStructure(Type symbol, StructureType declaration);
-    void AddStructureMember(FieldInfo symbol, MemberDeclaration declaration);
-}
-
-public interface ISharedVariableIndexContext : ICompilationContext
-{
-    public int NextVariableIndex();
-}
-
-public sealed class CompilationContext : ISharedVariableIndexContext
+public sealed class CompilationContext : ISymbolTable
 {
     private readonly Dictionary<Type, IShaderType> Types = [];
     private readonly Dictionary<MethodBase, FunctionDeclaration> CSharpMethodFunctions = [];
@@ -93,19 +53,19 @@ public sealed class CompilationContext : ISharedVariableIndexContext
     private readonly Dictionary<FieldInfo, VariableDeclaration> FieldVariables = [];
     private readonly Dictionary<PropertyInfo, VariableDeclaration> PropertyGetterVariables = [];
     private readonly Dictionary<LocalVariableInfo, VariableDeclaration> LocalVariables = [];
+    private readonly Dictionary<LocalVariableSymbol, VariableDeclaration> LocalVariablesByIndex = [];
     private readonly Dictionary<IShaderType, FunctionDeclaration> ZeroValueConstructors = [];
     private readonly HashSet<StructureDeclaration> ModuleStructureDeclarations = [];
     private readonly Dictionary<ParameterInfo, ParameterDeclaration> Parameters = [];
     private readonly Dictionary<FieldInfo, MemberDeclaration> StructureMembers = [];
-    private readonly ICompilationContextView? Parent;
-    private int DefinedVariableCount { get; set; } = 0;
+    private readonly ISymbolTableView? Parent;
 
-    public CompilationContext(ICompilationContextView? parent)
+    public CompilationContext(ISymbolTableView? parent)
     {
         Parent = parent;
     }
 
-    public static ICompilationContext Create() => new CompilationContext(SharedBuiltinCompilationContext.Instance);
+    public static ISymbolTable Create() => new CompilationContext(SharedBuiltinSymbolTable.Instance);
 
     public IShaderType? this[Type type] => Types.TryGetValue(type, out var shaderType) ? shaderType : Parent?[type];
 
@@ -118,20 +78,17 @@ public sealed class CompilationContext : ISharedVariableIndexContext
         _ => null
     } ?? Parent?[symbol];
 
-    public ParameterDeclaration? this[ParameterInfo info]
+    public ParameterDeclaration? this[ParameterInfo info] =>
+        Parameters.TryGetValue(info, out var result) ? result : Parent?[info];
+
+    private TResult? ChainedLookup<TKey, TResult>(Dictionary<TKey, TResult> dictionary, TKey key)
+        where TKey : ISymbolTableSymbol<TResult>
     {
-        get
-        {
-            if (Parameters.TryGetValue(info, out var result))
-            {
-                return result;
-            }
-            else
-            {
-                return Parent?[info];
-            }
-        }
+        return dictionary.TryGetValue(key, out var value) ? value : Parent is not null ? key.Lookup(Parent) : default;
     }
+
+    public VariableDeclaration? this[LocalVariableSymbol symbol] =>
+        ChainedLookup(LocalVariablesByIndex, symbol);
 
     public MemberDeclaration? this[FieldInfo method] =>
         StructureMembers.TryGetValue(method, out var declaration) ? declaration : Parent?[method];
@@ -160,28 +117,24 @@ public sealed class CompilationContext : ISharedVariableIndexContext
         return decl;
     }
 
-    public VariableDeclaration AddVariable(IVariableSymbol symbol, Func<int, VariableDeclaration> declaration)
+    public VariableDeclaration AddVariable(IVariableSymbol symbol, VariableDeclaration declaration)
     {
-        var index = NextVariableIndex();
         switch (symbol)
         {
             case ShaderModuleFieldVariableSymbol fieldSymbol:
             {
-                var variable = declaration(index);
-                FieldVariables.Add(fieldSymbol.Field, variable);
-                return variable;
+                FieldVariables.Add(fieldSymbol.Field, declaration);
+                return declaration;
             }
             case ShaderModulePropertyGetterVariableSymbol getterSymbol:
             {
-                var variable = declaration(index);
-                PropertyGetterVariables.Add(getterSymbol.Property, variable);
-                return variable;
+                PropertyGetterVariables.Add(getterSymbol.Property, declaration);
+                return declaration;
             }
             case FunctionLocalVariableSymbol localSymbol:
             {
-                var variable = declaration(index);
-                LocalVariables.Add(localSymbol.LocalVariableInfo, variable);
-                return variable;
+                LocalVariables.Add(localSymbol.LocalVariableInfo, declaration);
+                return declaration;
             }
             default:
                 throw new NotSupportedException();
@@ -230,19 +183,6 @@ public sealed class CompilationContext : ISharedVariableIndexContext
     public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) =>
         FunctionDefinitions[declaration];
 
-    public int NextVariableIndex()
-    {
-        if (Parent is ISharedVariableIndexContext shared)
-        {
-            return shared.NextVariableIndex();
-        }
-        else
-        {
-            var index = DefinedVariableCount;
-            DefinedVariableCount++;
-            return index;
-        }
-    }
 
     public IEnumerable<StructureDeclaration> StructureDeclarations => ModuleStructureDeclarations;
 

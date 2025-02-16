@@ -12,6 +12,7 @@ using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
+using DualDrill.CLSL.Frontend.SymbolTable;
 
 namespace DualDrill.CLSL;
 

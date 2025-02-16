@@ -7,6 +7,7 @@ using DualDrill.CLSL.Language.Types;
 using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Reflection;
+using DualDrill.CLSL.Frontend.SymbolTable;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -18,7 +19,7 @@ public sealed class ValidationException(string message, MethodBase method)
 
 sealed class RuntimeReflectionParserInstructionVisitor(
     RuntimeReflectionParser Parser,
-    ICompilationContext Context,
+    ISymbolTable Context,
     FunctionDeclaration Function,
     MethodBase Method,
     FrozenDictionary<int, (Label, int)> Labels
@@ -166,7 +167,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         throw new NotImplementedException();
     }
 
-    public int[] VisitBr(CilInstructionInfo inst, int jumpOffset)
+    public int[] VisitBranch(CilInstructionInfo inst, int jumpOffset)
     {
         var labelIndex = Labels[jumpOffset + inst.NextByteOffset];
         var (label, index) = labelIndex;
@@ -190,7 +191,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         throw new NotSupportedException($"{inst.Instruction.OpCode}");
     }
 
-    public int[] VisitBrIf(CilInstructionInfo inst, int jumpOffset, bool value)
+    public int[] VisitBranchIf(CilInstructionInfo inst, int jumpOffset, bool value)
     {
         var v = CurrentStack.Pop();
         if (v is not BoolType)
@@ -222,7 +223,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [index, inst.Index + 1];
     }
 
-    public int[] VisitBrIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false)
+    public int[] VisitBranchIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false)
         where TOp : BinaryRelation.IOp<TOp>
     {
         var r = CurrentStack.Pop();
@@ -276,7 +277,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [info.Index + 1];
     }
 
-    public int[] VisitLdArg(CilInstructionInfo inst, ParameterInfo info)
+    public int[] VisitLoadArgument(CilInstructionInfo inst, ParameterInfo info)
     {
         var p = Parser.ParseParameter(info);
         Instructions.Add(ShaderInstruction.Load(p));
@@ -284,7 +285,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [inst.Index + 1];
     }
 
-    public int[] VisitLdArgAddress(CilInstructionInfo inst, ParameterInfo info)
+    public int[] VisitLoadArgumentAddress(CilInstructionInfo inst, ParameterInfo info)
     {
         var p = Parser.ParseParameter(info);
         var c = ShaderInstruction.LoadAddress(p);
@@ -293,22 +294,22 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [inst.Index + 1];
     }
 
-    public int[] VisitLdIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
+    public int[] VisitLoadIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
     {
         throw new NotImplementedException();
     }
 
-    public int[] VisitLdIndirectNativeInt(CilInstructionInfo inst)
+    public int[] VisitLoadIndirectNativeInt(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }
 
-    public int[] VisitLdIndirectRef(CilInstructionInfo inst)
+    public int[] VisitLoadIndirectRef(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }
 
-    public int[] VisitLdLoc(CilInstructionInfo inst, LocalVariableInfo info)
+    public int[] VisitLoadLocal(CilInstructionInfo inst, LocalVariableInfo info)
     {
         var v = Context[Symbol.Variable(info)] ??
                 throw new KeyNotFoundException($"Failed to resolve local variable {info}");
@@ -317,7 +318,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [inst.Index + 1];
     }
 
-    public int[] VisitLdLocAddress(CilInstructionInfo inst, LocalVariableInfo info)
+    public int[] VisitLoadLocalAddress(CilInstructionInfo inst, LocalVariableInfo info)
     {
         var v = Context[Symbol.Variable(info)] ??
                 throw new KeyNotFoundException($"Failed to resolve local variable {info}");
@@ -326,7 +327,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [inst.Index + 1];
     }
 
-    public int[] VisitLdNull(CilInstructionInfo info)
+    public int[] VisitLoadNull(CilInstructionInfo info)
     {
         throw new NotImplementedException();
     }
@@ -339,7 +340,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [info.Index + 1];
     }
 
-    public int[] VisitNewObj(CilInstructionInfo info, ConstructorInfo constructor)
+    public int[] VisitNewObject(CilInstructionInfo info, ConstructorInfo constructor)
     {
         var callee = Context[Symbol.Function(constructor)]
                      ?? throw new ValidationException($"Failed to resolve constructor {constructor}", Method);
@@ -391,7 +392,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         }
     }
 
-    public int[] VisitStArg(CilInstructionInfo inst, ParameterInfo info)
+    public int[] VisitStoreArgument(CilInstructionInfo inst, ParameterInfo info)
     {
         var p = Context[info] ?? throw new KeyNotFoundException($"Failed to resolve parameter {inst}");
         var v = CurrentStack.Pop();
@@ -411,17 +412,17 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [inst.Index + 1];
     }
 
-    public int[] VisitStIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
+    public int[] VisitStoreIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
     {
         throw new NotImplementedException();
     }
 
-    public int[] VisitStIndirectRef(CilInstructionInfo inst)
+    public int[] VisitStoreIndirectRef(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }
 
-    public int[] VisitStLoc(CilInstructionInfo inst, LocalVariableInfo info)
+    public int[] VisitStoreLocal(CilInstructionInfo inst, LocalVariableInfo info)
     {
         var val = CurrentStack.Pop();
         var loc = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException(
@@ -499,7 +500,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         throw new NotImplementedException();
     }
 
-    public int[] VisitLdFld(CilInstructionInfo inst, FieldInfo info)
+    public int[] VisitLoadField(CilInstructionInfo inst, FieldInfo info)
     {
         var o = CurrentStack.Pop();
         if (o is not IPtrType)
@@ -513,7 +514,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [inst.Index + 1];
     }
 
-    public int[] VisitLdFldAddress(CilInstructionInfo inst, FieldInfo info)
+    public int[] VisitLoadFieldAddress(CilInstructionInfo inst, FieldInfo info)
     {
         var o = CurrentStack.Pop();
         if (o is not IPtrType)
@@ -529,12 +530,12 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [inst.Index + 1];
     }
 
-    public int[] VisitStFld(CilInstructionInfo inst, FieldInfo info)
+    public int[] VisitStoreField(CilInstructionInfo inst, FieldInfo info)
     {
         throw new NotImplementedException();
     }
 
-    public int[] VisitLdsfld(CilInstructionInfo inst, FieldInfo info)
+    public int[] VisitLoadStaticField(CilInstructionInfo inst, FieldInfo info)
     {
         var v = Parser.ParseStaticField(info);
         CurrentStack.Push(v.Type);
@@ -542,7 +543,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return [inst.Index + 1];
     }
 
-    public int[] VisitLdsflda(CilInstructionInfo inst, FieldInfo info)
+    public int[] VisitLoadStaticFieldAddress(CilInstructionInfo inst, FieldInfo info)
     {
         var v = Parser.ParseStaticField(info);
         CurrentStack.Push(v.Type.GetPtrType());

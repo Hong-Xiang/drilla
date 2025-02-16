@@ -7,6 +7,7 @@ using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
 using FluentAssertions;
 using System.Numerics;
+using DualDrill.CLSL.Frontend.SymbolTable;
 
 namespace DualDrill.CLSL.Test;
 

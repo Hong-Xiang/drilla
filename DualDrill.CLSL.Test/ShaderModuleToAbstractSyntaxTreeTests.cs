@@ -40,6 +40,7 @@ public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Outp
             {
                 [f] = body
             }.ToImmutableDictionary());
+        Output.WriteLine(await moduleStack.Dump());
         var ast = moduleStack.ToAbstractSyntaxTreeFunctionBody();
         Output.WriteLine(await ast.Dump());
         var astBody = ast.GetBody(f);

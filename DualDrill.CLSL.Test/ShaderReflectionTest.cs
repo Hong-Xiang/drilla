@@ -28,7 +28,6 @@ public class ShaderReflectionTest
         {
             Declarations = [new VariableDeclaration(
                 DeclarationScope.Module,
-                -1,
                 "data",
                 ShaderType.Vec2F32,
                 [

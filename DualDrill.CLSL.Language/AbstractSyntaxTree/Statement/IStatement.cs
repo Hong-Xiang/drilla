@@ -18,7 +18,8 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 [JsonDerivedType(typeof(LoopStatement), nameof(LoopStatement))]
 public interface IStatement
     : IShaderAstNode
-{ }
+{
+}
 
 public interface IStatementVisitor<T>
 {
@@ -65,6 +66,3 @@ public static class StatementExtension
         };
     }
 }
-
-
-

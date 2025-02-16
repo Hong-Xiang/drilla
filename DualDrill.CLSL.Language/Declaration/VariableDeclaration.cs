@@ -7,13 +7,13 @@ namespace DualDrill.CLSL.Language.Declaration;
 
 public sealed record class VariableDeclaration(
     DeclarationScope DeclarationScope,
-    int LocalIndex,
     string Name,
     IShaderType Type,
-    ImmutableHashSet<IShaderAttribute> Attributes
-) : IDeclaration, IVariableIdentifierSymbol
+    ImmutableHashSet<IShaderAttribute> Attributes)
+    : IDeclaration, IVariableIdentifierSymbol
 {
     public IExpression? Initializer { get; set; } = null;
+
     public override string ToString()
     {
         var scope = DeclarationScope switch
