@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -288,7 +289,7 @@ public sealed record class RuntimeReflectionParser(
                     _ = ParseType(v.LocalType);
                 }
             }
-            var callees = GetCalledMethods(model.Instructions).ToArray();
+            var callees = GetCalledMethods(model.CalledMethods()).ToArray();
             foreach (var callee in callees)
             {
                 _ = ParseMethod(callee);
@@ -313,6 +314,18 @@ public sealed record class RuntimeReflectionParser(
         return ParseMethodBody(f, model);
     }
 
+    public IUnstructuredControlFlowFunctionBody<IUnstructuredStackStatement> ParseMethodBody2(FunctionDeclaration f)
+    {
+        var model = Context.GetFunctionDefinition(f);
+        return ParseMethodBody2(f, model);
+    }
+
+    public IUnstructuredControlFlowFunctionBody<IUnstructuredStackStatement> ParseMethodBody2(FunctionDeclaration f,
+        MethodBodyAnalysisModel model)
+    {
+        throw new NotImplementedException();
+    }
+
     VariableDeclaration ParseLocalVariable(LocalVariableInfo info)
     {
         var t = ParseType(info.LocalType);
@@ -326,37 +339,40 @@ public sealed record class RuntimeReflectionParser(
         );
     }
 
-    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,
-        MethodBodyAnalysisModel methodModel)
+    ILocalDeclarationContext GetMethodLocalDeclaration(MethodBase method)
     {
-        var method = methodModel.Method;
-        foreach (var v in methodModel.LocalVariables)
+        var methodBody = method.GetMethodBody();
+        if (methodBody is null)
+        {
+            return LocalDeclarationContext.Empty;
+        }
+
+        var instructions = method.GetInstructions();
+        if (instructions is null)
+        {
+            return LocalDeclarationContext.Empty;
+        }
+
+        throw new NotImplementedException();
+    }
+
+    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,
+        MethodBodyAnalysisModel model)
+    {
+        var method = model.Method;
+        foreach (var v in model.LocalVariables)
         {
             _ = ParseLocalVariable(v);
         }
 
-        {
-            foreach (var inst in methodModel.Instructions)
-            {
-                if (inst.Operand is LocalVariableInfo info)
-                {
-                    Debug.Assert(Context[Symbol.Variable(info)] is not null);
-                }
-            }
-        }
-        var offsetToIndex = new Dictionary<int, int>();
-        foreach (var (idx, inst) in methodModel.Instructions.Index())
-        {
-            offsetToIndex.Add(inst.Offset, idx);
-        }
 
-        var labels = methodModel.GetJumpTargetOffsets()
-            .Select(offset => KeyValuePair.Create(offset, (Label.Create(offset), offsetToIndex[offset])))
+        var labels = model.GetJumpTargetOffsets()
+            .Select(offset => KeyValuePair.Create(offset, (Label.Create(offset), model.OffsetsToIndex[offset])))
             .ToFrozenDictionary();
 
         var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, method, labels);
-        var visited = new bool[methodModel.Instructions.Length];
-        var results = new List<IStackInstruction>[methodModel.Instructions.Length];
+        var visited = new bool[model.InstructionCount];
+        var results = new List<IStackInstruction>[model.InstructionCount];
         for (var i = 0; i < results.Length; i++)
         {
             results[i] = [];
@@ -374,10 +390,10 @@ public sealed record class RuntimeReflectionParser(
 
             visited[ip] = true;
             visitor.Instructions = results[ip];
-            var currentNexts = methodModel.Accept<RuntimeReflectionParserInstructionVisitor, int[]>(visitor, ip);
+            var currentNexts = model.Accept<RuntimeReflectionParserInstructionVisitor, int[]>(visitor, ip);
             foreach (var n in currentNexts)
             {
-                if (n < methodModel.Instructions.Length && !visited[n])
+                if (n < model.InstructionCount && !visited[n])
                 {
                     nexts.Push(n);
                 }
@@ -392,10 +408,9 @@ public sealed record class RuntimeReflectionParser(
         return !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(m);
     }
 
-    IEnumerable<MethodBase> GetCalledMethods(IReadOnlyList<Instruction> instructions)
+    IEnumerable<MethodBase> GetCalledMethods(IEnumerable<MethodBase> calleeCandidates)
     {
-        return instructions.Select(op => op.Operand)
-            .OfType<MethodBase>()
+        return calleeCandidates
             .Where(m =>
             {
                 if (!IsMethodDefinition(m))

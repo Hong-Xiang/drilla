@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.Literal;
+﻿using System.Collections.Frozen;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -7,18 +8,25 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Metadata;
+using DualDrill.CLSL.Language.ControlFlow;
 
 namespace DualDrill.CLSL.Frontend;
 
 public sealed class MethodBodyAnalysisModel
 {
-    public ImmutableArray<Instruction> Instructions { get; }
     public ImmutableArray<ParameterInfo> Parameters { get; }
     public ImmutableArray<LocalVariableInfo> LocalVariables { get; }
     public ImmutableArray<int> Offsets { get; }
+    private ImmutableArray<Instruction> Instructions { get; }
+    public ImmutableArray<(Label, int)> LabelOffsets { get; }
     public MethodBase Method { get; }
     public MethodBody? Body { get; }
     public bool IsStatic => Method.IsStatic;
+
+    public int InstructionCount => Instructions.Length;
+
+    public FrozenDictionary<int, int> OffsetsToIndex { get; }
+
     public MethodBodyAnalysisModel(MethodBase method)
     {
         Method = method;
@@ -26,30 +34,74 @@ public sealed class MethodBodyAnalysisModel
         Parameters = [.. method.GetParameters()];
         var localVariables = (method.GetMethodBody()?.LocalVariables ?? []).ToArray();
         Instructions = [.. (method.GetInstructions() ?? [])];
-        var localVariablesFromInsturctions = Instructions.Select(inst => inst.Operand).OfType<LocalVariableInfo>().Distinct().OrderBy(v => v.LocalIndex);
+        var localVariablesFromInsturctions = Instructions.Select(inst => inst.Operand).OfType<LocalVariableInfo>()
+            .Distinct().OrderBy(v => v.LocalIndex);
         foreach (var l in localVariablesFromInsturctions)
         {
             localVariables[l.LocalIndex] = l;
         }
+
         LocalVariables = [.. localVariables];
         var offsets = Instructions.Select(inst => inst.Offset).ToList();
         offsets.Add(method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0);
         Offsets = [.. offsets];
+        OffsetsToIndex = Offsets.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+        LabelOffsets = [..GetLabelOffsets()];
     }
 
     public IEnumerable<MethodBase> CalledMethods()
     {
         return Instructions.Select(op => op.Operand)
-                           .OfType<MethodBase>();
+            .OfType<MethodBase>();
+    }
+
+    private IEnumerable<(Label, int)> GetLabelOffsets()
+    {
+        var isLead = new bool[Instructions.Length];
+
+        foreach (var (index, inst) in Instructions.Index())
+        {
+            if (inst.OpCode.FlowControl
+                is System.Reflection.Emit.FlowControl.Branch
+                or System.Reflection.Emit.FlowControl.Cond_Branch)
+            {
+                var nextOffset = Offsets[index + 1];
+                var jumpOffset = inst.Operand switch
+                {
+                    sbyte v => v,
+                    int v => v,
+                    _ => throw new NotSupportedException()
+                };
+                var target = nextOffset + jumpOffset;
+                var targetIndex = OffsetsToIndex[target];
+                isLead[targetIndex] = true;
+
+                if (index + 1 < isLead.Length)
+                {
+                    isLead[index + 1] = true;
+                }
+            }
+        }
+
+        foreach (var (idx, head) in isLead.Index())
+        {
+            if (!head)
+            {
+                continue;
+            }
+
+            var offset = Offsets[idx];
+            yield return (Label.Create(offset), offset);
+        }
     }
 
     public IEnumerable<int> GetJumpTargetOffsets()
     {
         foreach (var (index, inst) in Instructions.Index())
         {
-            var flowControl = inst.OpCode.FlowControl;
-            if (flowControl == System.Reflection.Emit.FlowControl.Branch ||
-                flowControl == System.Reflection.Emit.FlowControl.Cond_Branch)
+            if (inst.OpCode.FlowControl
+                is System.Reflection.Emit.FlowControl.Branch
+                or System.Reflection.Emit.FlowControl.Cond_Branch)
             {
                 var nextOffset = Offsets[index + 1];
                 int jumpOffset = inst.Operand switch
@@ -76,7 +128,7 @@ public sealed class MethodBodyAnalysisModel
 
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor, int index)
-            where TVisitor : ICilInstructionVisitor<TResult>
+        where TVisitor : ICilInstructionVisitor<TResult>
     {
         var instruction = Instructions[index];
         var info = new CilInstructionInfo(index, Offsets[index], Offsets[index + 1], instruction);
@@ -86,8 +138,9 @@ public sealed class MethodBodyAnalysisModel
         {
             ILOpCode.Nop => visitor.VisitNop(info),
             ILOpCode.Break => visitor.VisitBreak(info),
-            ILOpCode.Ldarg_0 => IsStatic ? visitor.VisitLoadArgument(info, GetArg(0))
-                                         : visitor.VisitLdThis(info),
+            ILOpCode.Ldarg_0 => IsStatic
+                ? visitor.VisitLoadArgument(info, GetArg(0))
+                : visitor.VisitLdThis(info),
             ILOpCode.Ldarg_1 => visitor.VisitLoadArgument(info, GetArg(1)),
             ILOpCode.Ldarg_2 => visitor.VisitLoadArgument(info, GetArg(2)),
             ILOpCode.Ldarg_3 => visitor.VisitLoadArgument(info, GetArg(3)),

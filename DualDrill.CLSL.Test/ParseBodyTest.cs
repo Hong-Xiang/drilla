@@ -269,10 +269,9 @@ public class ParseBodyTest(ITestOutputHelper Output)
     }
 
     [Fact]
-    public void BasicIfThenElseParseShouldWork()
+    public void ParseMaxByIfThenElseShouldWork()
     {
         var method = MethodHelper.GetMethod<int, int, int>(DevelopTestShaderModule.MaxByfThenElse);
-        var instructions = method.GetInstructions();
         var parameters = method.GetParameters();
         var a = new ParameterDeclaration("a", ShaderType.I32, []);
         var b = new ParameterDeclaration("b", ShaderType.I32, []);
@@ -288,6 +287,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var parser = new RuntimeReflectionParser(context);
 
         var result = parser.ParseMethodBody(f);
+
 
         //  IL_0000: nop
         //  IL_0001: ldarg.0
