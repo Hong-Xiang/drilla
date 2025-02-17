@@ -41,6 +41,24 @@ public class ParseBodyTest(ITestOutputHelper Output)
     }
 
     [Fact]
+    public void MinimumIfThenElseShouldWork()
+    {
+        var method = MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.MinimumIfThenElse);
+        var parameters = method.GetParameters();
+        var a = new ParameterDeclaration("a", ShaderType.I32, []);
+        var f = new FunctionDeclaration(
+            nameof(IntAPlusBShouldWork),
+            [a],
+            new FunctionReturn(ShaderType.I32, []),
+            []);
+        var context = CompilationContext.Create();
+        context.AddFunctionDefinition(Symbol.Function(method), f);
+        context.AddParameter(parameters[0], a);
+        var parser = new RuntimeReflectionParser(context);
+        var result = parser.ParseMethodBody(f);
+    }
+
+    [Fact]
     public void MinimumLoadArgumentShouldWork()
     {
         var method = MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.LoadArg);
@@ -229,6 +247,25 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<CallInstruction>().Which.Callee.Should().Be(fAdd),
             x => x.Should().BeOfType<ReturnInstruction>()
         );
+    }
+
+    [Fact]
+    public void LiteralImplicitConversionShouldWork()
+    {
+        var method = MethodHelper.GetMethod<uint, bool>(DevelopTestShaderModule.ImplicitConvert);
+        var context = CompilationContext.Create();
+        var parameters = method.GetParameters();
+        var a = new ParameterDeclaration("a", ShaderType.U32, []);
+        context.AddParameter(parameters[0], a);
+        var f = new FunctionDeclaration(
+            nameof(DevelopTestShaderModule.ImplicitConvert),
+            [a],
+            new FunctionReturn(ShaderType.Bool, []),
+            []);
+        context.AddFunctionDefinition(Symbol.Function(method), f);
+        var parser = new RuntimeReflectionParser(context);
+        var result = parser.ParseMethodBody(f);
+        result.Instructions.Should().HaveCount(10);
     }
 
     [Fact]

@@ -160,7 +160,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         {
             var c = ((IOperation)nt.GetBinaryOperation<TOp>()).Instruction;
             Instructions.Add(c);
-            CurrentStack.Push(nt);
+            CurrentStack.Push(ShaderType.Bool);
             return [inst.Index + 1];
         }
 

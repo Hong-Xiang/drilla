@@ -21,6 +21,12 @@ internal sealed class DevelopTestShaderModule
     }
 
     [Vertex]
+    public static bool ImplicitConvert(uint a)
+    {
+        return a == 1;
+    }
+
+    [Vertex]
     public static int MaxByfThenElse(int a, int b)
     {
         if (a >= b)
@@ -32,11 +38,13 @@ internal sealed class DevelopTestShaderModule
             return b;
         }
     }
+
     [Vertex]
     public static int MaxByTaneryOperator(int a, int b)
     {
         return a >= b ? a : b;
     }
+
     [Vertex]
     public static int Return42() => 42;
 
