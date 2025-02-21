@@ -43,18 +43,19 @@ public interface IBinaryExpressionOperation<TSelf, TLeftType, TRightType, TResul
         $"{TOp.Instance.Name}.{TLeftType.Instance.Name}.{TRightType.Instance.Name}.{TResultType.Instance.Name}";
 
     public sealed record class Expression
-        : IExpression
+        : IBinaryExpression
     {
         public Expression(IExpression left, IExpression right)
         {
-            Debug.Assert(left.Type.Equals(TResultType.Instance));
-            Debug.Assert(right.Type.Equals(TResultType.Instance));
+            Debug.Assert(left.Type.Equals(TLeftType.Instance));
+            Debug.Assert(right.Type.Equals(TRightType.Instance));
             L = left;
             R = right;
         }
 
         public IExpression L { get; }
         public IExpression R { get; }
+        public IBinaryExpressionOperation Operation => TSelf.Instance;
         public IShaderType Type => TResultType.Instance;
 
         public TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)

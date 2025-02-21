@@ -8,7 +8,6 @@ using DualDrill.Mathematics;
 using System.Collections.Frozen;
 using System.Numerics;
 using System.Reflection;
-using System.Security.Cryptography;
 using DualDrill.CLSL.Frontend.SymbolTable;
 
 namespace DualDrill.CLSL.Frontend;
@@ -86,10 +85,10 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
         var result = new Dictionary<MethodBase, FunctionDeclaration>();
         var mathAssembly = typeof(DMath).Assembly;
         var operationMethods = from t in mathAssembly.GetExportedTypes()
-            from m in t.GetMethods()
-            let attr = m.GetCustomAttributes().OfType<IOperationMethodAttribute>().SingleOrDefault()
-            where attr is not null
-            select (m, attr.Operation);
+                               from m in t.GetMethods()
+                               let attr = m.GetCustomAttributes().OfType<IOperationMethodAttribute>().SingleOrDefault()
+                               where attr is not null
+                               select (m, attr.Operation);
         foreach (var (m, op) in operationMethods)
         {
             result.Add(m, op.Function);
@@ -149,7 +148,8 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
 
     // all entities in shared builtin context can only be directly refrenced
     // declarations is not allowed
-    public VariableDeclaration? this[LocalVariableSymbol symbol] => null;
+    public VariableDeclaration? this[IVariableSymbol symbol] => null;
+    public ParameterDeclaration? this[IParameterSymbol parameter] => null;
 
     public MemberDeclaration? this[FieldInfo method] => null;
 
@@ -159,10 +159,6 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
 
     public IEnumerable<FunctionDeclaration> FunctionDeclarations => [];
 
-
-    public ParameterDeclaration? this[ParameterInfo parameter] => null;
-
-    public VariableDeclaration? this[IVariableSymbol symbol] => null;
 
     public FunctionDeclaration? this[IFunctionSymbol symbol] => symbol switch
     {

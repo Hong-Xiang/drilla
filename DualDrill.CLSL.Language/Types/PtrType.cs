@@ -22,8 +22,7 @@ public sealed record class PtrType(IShaderType BaseType) : IPtrType
     }
 }
 
-
-sealed class SingletonPtrType<TBaseType>() : IPtrType, ISingleton<SingletonPtrType<TBaseType>>
+sealed class SingletonPtrType<TBaseType> : IPtrType, ISingleton<SingletonPtrType<TBaseType>>
     where TBaseType : IShaderType, ISingleton<TBaseType>
 {
     public static SingletonPtrType<TBaseType> Instance { get; } = new();

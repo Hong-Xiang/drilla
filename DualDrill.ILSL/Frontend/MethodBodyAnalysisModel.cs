@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
 using DualDrill.CLSL.Compiler;
+using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.Common;
 using Label = DualDrill.CLSL.Language.ControlFlow.Label;
@@ -92,43 +93,51 @@ public sealed class MethodBodyAnalysisModel
 
     private ControlFlowGraph<CilInstructionBlock> GetControlFlowGraph()
     {
-        var builder = new ControlFlowGraphBuilder(CodeByteSize, Label.Create);
+        var builder = new ControlFlowGraphBuilder(InstructionCount, index => Label.Create(Offsets[index]));
 
         foreach (var (index, inst) in Instructions.Index())
         {
-            var currentOffset = Offsets[index];
-            var nextOffset = Offsets[index + 1];
-            var jumpOffset = inst.Operand switch
+            int GetTargetIndex()
             {
-                sbyte v => v,
-                int v => v,
-                _ => 0
-            };
-            var target = nextOffset + jumpOffset;
+                var nextOffset = Offsets[index + 1];
+                var jumpOffset = inst.Operand switch
+                {
+                    sbyte v => v,
+                    int v => v,
+                    _ => 0
+                };
+                var target = nextOffset + jumpOffset;
+                return OffsetsToIndex[target];
+            }
+
+
             switch (inst.OpCode.FlowControl)
             {
                 case FlowControl.Branch:
-                    builder.AddBr(currentOffset, target);
+                    builder.AddBr(index, GetTargetIndex());
                     break;
                 case FlowControl.Cond_Branch when inst.OpCode.ToILOpCode() == ILOpCode.Switch:
                     throw new NotImplementedException();
                 case FlowControl.Cond_Branch:
-                    builder.AddBrIf(currentOffset, target);
+                    builder.AddBrIf(index, GetTargetIndex());
                     break;
                 case FlowControl.Return:
-                    builder.AddReturn(currentOffset);
+                    builder.AddReturn(index);
                     break;
+                case FlowControl.Next:
+                case FlowControl.Call:
+                    continue;
                 default:
-                    throw new NotSupportedException();
+                    throw new NotImplementedException($"Controlflow {inst.OpCode.FlowControl} not implemented");
             }
         }
 
         return builder.Build((label, range) => new CilInstructionBlock(
             label,
-            OffsetsToIndex[range.Start],
-            OffsetsToIndex[range.Start + range.Count] - OffsetsToIndex[range.Start],
             range.Start,
-            range.Count
+            range.Count,
+            Offsets[range.Start],
+            Offsets[range.Start + range.Count] - Offsets[range.Start]
         ));
 
         // var isLead = new bool[Instructions.Length];
@@ -161,13 +170,4 @@ public sealed class MethodBodyAnalysisModel
     }
 
     public CilInstructionInfo this[int index] => new(index, Offsets[index], Offsets[index + 1], Instructions[index]);
-
-    public TResult Accept<TVisitor, TResult>(TVisitor visitor, int index)
-        where TVisitor : ICilInstructionVisitor<TResult>
-    {
-        var instruction = Instructions[index];
-        var info = new CilInstructionInfo(index, Offsets[index], Offsets[index + 1], instruction);
-        var result = info.Evaluate(visitor, IsStatic, GetArg, GetLoc);
-        return result;
-    }
 }

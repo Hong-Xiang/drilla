@@ -95,13 +95,13 @@ public static partial class ShaderModuleExtension
                 {
                     TerminateSuccessor ret =>
                     [
-                        .. bb.Elements.Span,
+                        .. bb.Elements,
                         ShaderInstruction.Return()
                     ],
-                    UnconditionalSuccessor unc => [..bb.Elements.Span, .. DoBranch(target, unc.Target)],
+                    UnconditionalSuccessor unc => [..bb.Elements, .. DoBranch(target, unc.Target)],
                     ConditionalSuccessor brIf =>
                     [
-                        ..bb.Elements.Span,
+                        ..bb.Elements,
                         new IfThenElse<IStructuredStackInstruction>(
                             new([
                                 ..DoBranch(target, brIf.TrueTarget)
@@ -128,8 +128,8 @@ public static partial class ShaderModuleExtension
         {
             var bb = controlFlowGraph[label];
             var mergeChildren = dt.GetChildren(label)
-                .Where(controlFlowGraph.IsMergeNode)
-                .ToImmutableArray();
+                                  .Where(controlFlowGraph.IsMergeNode)
+                                  .ToImmutableArray();
             if (cfr.IsLoop(label))
             {
                 return new Loop<IStructuredStackInstruction>(label,

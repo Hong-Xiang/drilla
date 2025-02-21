@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Reflection.Metadata;
+using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
@@ -8,36 +10,72 @@ using Lokad.ILPack.IL;
 
 namespace DualDrill.CLSL.Frontend;
 
+public sealed class ParameterNotResolvedException(int Index) : Exception($"Parameter #{Index} not resolved")
+{
+}
+
+public sealed class VariableNotResolvedException(int Index) : Exception($"Variable #{Index} not resolved")
+{
+}
+
 public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int NextByteOffset, Instruction Instruction)
 {
     public TResult Evaluate<TResult>(ICilInstructionVisitor<TResult> visitor,
         bool isStatic,
-        Func<int, ParameterInfo> getArg,
-        Func<int, LocalVariableInfo> getLoc)
+        ISymbolTableView table)
     {
         var instruction = Instruction;
+
+        ParameterDeclaration GetParameterByInfo()
+        {
+            return table[Symbol.Parameter((ParameterInfo)instruction.Operand)] ?? throw new KeyNotFoundException();
+        }
+
+        ParameterDeclaration GetParameterByIndex(int index)
+        {
+            return table[Symbol.Parameter(index)] ??
+                   throw new ParameterNotResolvedException(index);
+        }
+
+        VariableDeclaration GetVariableByInfo()
+        {
+            return table[Symbol.Variable((LocalVariableInfo)instruction.Operand)] ?? throw new KeyNotFoundException();
+        }
+
+        VariableDeclaration GetVariableByIndex(int index)
+        {
+            return table[Symbol.Variable(index)] ?? throw new VariableNotResolvedException(index);
+        }
+
+        MemberDeclaration GetMemberByInfo()
+        {
+            return table[(FieldInfo)instruction.Operand] ?? throw new KeyNotFoundException();
+        }
+
         return Instruction.OpCode.ToILOpCode() switch
         {
             ILOpCode.Nop => visitor.VisitNop(this),
             ILOpCode.Break => visitor.VisitBreak(this),
-            ILOpCode.Ldarg_0 => isStatic ? visitor.VisitLoadArgument(this, getArg(1)) : visitor.VisitLdThis(this),
-            ILOpCode.Ldarg_1 => visitor.VisitLoadArgument(this, getArg(1)),
-            ILOpCode.Ldarg_2 => visitor.VisitLoadArgument(this, getArg(2)),
-            ILOpCode.Ldarg_3 => visitor.VisitLoadArgument(this, getArg(3)),
-            ILOpCode.Ldloc_0 => visitor.VisitLoadLocal(this, getLoc(0)),
-            ILOpCode.Ldloc_1 => visitor.VisitLoadLocal(this, getLoc(1)),
-            ILOpCode.Ldloc_2 => visitor.VisitLoadLocal(this, getLoc(2)),
-            ILOpCode.Ldloc_3 => visitor.VisitLoadLocal(this, getLoc(3)),
-            ILOpCode.Stloc_0 => visitor.VisitStoreLocal(this, getLoc(0)),
-            ILOpCode.Stloc_1 => visitor.VisitStoreLocal(this, getLoc(1)),
-            ILOpCode.Stloc_2 => visitor.VisitStoreLocal(this, getLoc(2)),
-            ILOpCode.Stloc_3 => visitor.VisitStoreLocal(this, getLoc(3)),
-            ILOpCode.Ldarg_s => visitor.VisitLoadArgument(this, (ParameterInfo)instruction.Operand),
-            ILOpCode.Ldarga_s => visitor.VisitLoadArgumentAddress(this, (ParameterInfo)instruction.Operand),
-            ILOpCode.Starg_s => visitor.VisitStoreArgument(this, (ParameterInfo)instruction.Operand),
-            ILOpCode.Ldloc_s => visitor.VisitLoadLocal(this, (LocalVariableInfo)instruction.Operand),
-            ILOpCode.Ldloca_s => visitor.VisitLoadLocalAddress(this, (LocalVariableInfo)instruction.Operand),
-            ILOpCode.Stloc_s => visitor.VisitStoreLocal(this, (LocalVariableInfo)instruction.Operand),
+            ILOpCode.Ldarg_0 => isStatic
+                ? visitor.VisitLoadArgument(this, GetParameterByIndex(0))
+                : visitor.VisitLdThis(this),
+            ILOpCode.Ldarg_1 => visitor.VisitLoadArgument(this, GetParameterByIndex(1)),
+            ILOpCode.Ldarg_2 => visitor.VisitLoadArgument(this, GetParameterByIndex(2)),
+            ILOpCode.Ldarg_3 => visitor.VisitLoadArgument(this, GetParameterByIndex(3)),
+            ILOpCode.Ldloc_0 => visitor.VisitLoadLocal(this, GetVariableByIndex(0)),
+            ILOpCode.Ldloc_1 => visitor.VisitLoadLocal(this, GetVariableByIndex(1)),
+            ILOpCode.Ldloc_2 => visitor.VisitLoadLocal(this, GetVariableByIndex(2)),
+            ILOpCode.Ldloc_3 => visitor.VisitLoadLocal(this, GetVariableByIndex(3)),
+            ILOpCode.Stloc_0 => visitor.VisitStoreLocal(this, GetVariableByIndex(0)),
+            ILOpCode.Stloc_1 => visitor.VisitStoreLocal(this, GetVariableByIndex(1)),
+            ILOpCode.Stloc_2 => visitor.VisitStoreLocal(this, GetVariableByIndex(2)),
+            ILOpCode.Stloc_3 => visitor.VisitStoreLocal(this, GetVariableByIndex(3)),
+            ILOpCode.Ldarg_s => visitor.VisitLoadArgument(this, GetParameterByInfo()),
+            ILOpCode.Ldarga_s => visitor.VisitLoadArgumentAddress(this, GetParameterByInfo()),
+            ILOpCode.Starg_s => visitor.VisitStoreArgument(this, GetParameterByInfo()),
+            ILOpCode.Ldloc_s => visitor.VisitLoadLocal(this, GetVariableByInfo()),
+            ILOpCode.Ldloca_s => visitor.VisitLoadLocalAddress(this, GetVariableByInfo()),
+            ILOpCode.Stloc_s => visitor.VisitStoreLocal(this, GetVariableByInfo()),
             ILOpCode.Ldnull => visitor.VisitLoadNull(this),
             ILOpCode.Ldc_i4_m1 => visitor.VisitLiteral(this, Literal.Create(-1)),
             ILOpCode.Ldc_i4_0 => visitor.VisitLiteral(this, Literal.Create(0)),
@@ -57,7 +95,8 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Dup => visitor.VisitDup(this),
             ILOpCode.Pop => visitor.VisitPop(this),
             ILOpCode.Jmp => throw new NotImplementedException(),
-            ILOpCode.Call => visitor.VisitCall(this, (MethodInfo)instruction.Operand),
+            ILOpCode.Call => visitor.VisitCall(this,
+                table[Symbol.Function((MethodInfo)instruction.Operand)] ?? throw new NotSupportedException()),
             ILOpCode.Calli => throw new NotSupportedException(),
             ILOpCode.Ret => visitor.VisitReturn(this),
             ILOpCode.Br_s => visitor.VisitBranch(this, (sbyte)instruction.Operand),
@@ -86,11 +125,16 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Bgt => visitor.VisitBranchIf<BinaryRelational.Gt>(this, (int)instruction.Operand),
             ILOpCode.Ble => visitor.VisitBranchIf<BinaryRelational.Le>(this, (int)instruction.Operand),
             ILOpCode.Blt => visitor.VisitBranchIf<BinaryRelational.Lt>(this, (int)instruction.Operand),
-            ILOpCode.Bne_un => visitor.VisitBranchIf<BinaryRelational.Ne>(this, (int)instruction.Operand, isUn: true),
-            ILOpCode.Bge_un => visitor.VisitBranchIf<BinaryRelational.Ge>(this, (int)instruction.Operand, isUn: true),
-            ILOpCode.Bgt_un => visitor.VisitBranchIf<BinaryRelational.Gt>(this, (int)instruction.Operand, isUn: true),
-            ILOpCode.Ble_un => visitor.VisitBranchIf<BinaryRelational.Le>(this, (int)instruction.Operand, isUn: true),
-            ILOpCode.Blt_un => visitor.VisitBranchIf<BinaryRelational.Lt>(this, (int)instruction.Operand, isUn: true),
+            ILOpCode.Bne_un => visitor.VisitBranchIf<BinaryRelational.Ne>(this, (int)instruction.Operand,
+                isUn: true),
+            ILOpCode.Bge_un => visitor.VisitBranchIf<BinaryRelational.Ge>(this, (int)instruction.Operand,
+                isUn: true),
+            ILOpCode.Bgt_un => visitor.VisitBranchIf<BinaryRelational.Gt>(this, (int)instruction.Operand,
+                isUn: true),
+            ILOpCode.Ble_un => visitor.VisitBranchIf<BinaryRelational.Le>(this, (int)instruction.Operand,
+                isUn: true),
+            ILOpCode.Blt_un => visitor.VisitBranchIf<BinaryRelational.Lt>(this, (int)instruction.Operand,
+                isUn: true),
             ILOpCode.Switch => visitor.VisitSwitch(this),
             ILOpCode.Ldind_i1 => visitor.VisitLoadIndirect<IntType<N8>>(this),
             ILOpCode.Ldind_u1 => visitor.VisitLoadIndirect<UIntType<N8>>(this),
@@ -123,8 +167,8 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Shl => throw new NotImplementedException(),
             ILOpCode.Shr => throw new NotImplementedException(),
             ILOpCode.Shr_un => throw new NotImplementedException(),
-            ILOpCode.Neg => throw new NotImplementedException(),
-            ILOpCode.Not => throw new NotImplementedException(),
+            ILOpCode.Neg => visitor.VisitUnaryArithmetic<UnaryArithmetic.Negate>(this),
+            ILOpCode.Not => visitor.VisitLogicalNot(this),
             ILOpCode.Conv_i1 => visitor.VisitConversion<IntType<N8>>(this),
             ILOpCode.Conv_i2 => visitor.VisitConversion<IntType<N16>>(this),
             ILOpCode.Conv_i4 => visitor.VisitConversion<IntType<N32>>(this),
@@ -137,17 +181,20 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Cpobj => throw new NotImplementedException(),
             ILOpCode.Ldobj => throw new NotImplementedException(),
             ILOpCode.Ldstr => throw new NotImplementedException(),
-            ILOpCode.Newobj => visitor.VisitNewObject(this, (ConstructorInfo)instruction.Operand),
+            ILOpCode.Newobj => visitor.VisitNewObject(this,
+                table[Symbol.Function((ConstructorInfo)instruction.Operand)] ?? throw new NotSupportedException()),
             ILOpCode.Castclass => throw new NotImplementedException(),
             ILOpCode.Isinst => throw new NotImplementedException(),
             ILOpCode.Conv_r_un => throw new NotImplementedException(),
             ILOpCode.Unbox => throw new NotImplementedException(),
             ILOpCode.Throw => throw new NotImplementedException(),
-            ILOpCode.Ldfld => visitor.VisitLoadField(this, (FieldInfo)instruction.Operand),
-            ILOpCode.Ldflda => visitor.VisitLoadFieldAddress(this, (FieldInfo)instruction.Operand),
-            ILOpCode.Stfld => visitor.VisitStoreField(this, (FieldInfo)instruction.Operand),
-            ILOpCode.Ldsfld => visitor.VisitLoadStaticField(this, (FieldInfo)instruction.Operand),
-            ILOpCode.Ldsflda => visitor.VisitLoadStaticFieldAddress(this, (FieldInfo)instruction.Operand),
+            ILOpCode.Ldfld => visitor.VisitLoadField(this, GetMemberByInfo()),
+            ILOpCode.Ldflda => visitor.VisitLoadFieldAddress(this, GetMemberByInfo()),
+            ILOpCode.Stfld => visitor.VisitStoreField(this, GetMemberByInfo()),
+            ILOpCode.Ldsfld => visitor.VisitLoadStaticField(this,
+                table[Symbol.Variable((FieldInfo)instruction.Operand)] ?? throw new NotSupportedException()),
+            ILOpCode.Ldsflda => visitor.VisitLoadStaticFieldAddress(this,
+                table[Symbol.Variable((FieldInfo)instruction.Operand)] ?? throw new NotSupportedException()),
             ILOpCode.Stsfld => throw new NotImplementedException(),
             ILOpCode.Stobj => throw new NotImplementedException(),
             ILOpCode.Conv_ovf_i1_un => throw new NotImplementedException(),
@@ -223,12 +270,12 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Clt_un => visitor.VisitBinaryRelation<BinaryRelational.Lt>(this, isUn: true),
             ILOpCode.Ldftn => throw new NotImplementedException(),
             ILOpCode.Ldvirtftn => throw new NotImplementedException(),
-            ILOpCode.Ldarg => visitor.VisitLoadArgument(this, (ParameterInfo)instruction.Operand),
-            ILOpCode.Ldarga => visitor.VisitLoadArgumentAddress(this, (ParameterInfo)instruction.Operand),
-            ILOpCode.Starg => visitor.VisitStoreArgument(this, (ParameterInfo)instruction.Operand),
-            ILOpCode.Ldloc => visitor.VisitLoadLocal(this, (LocalVariableInfo)instruction.Operand),
-            ILOpCode.Ldloca => visitor.VisitLoadLocalAddress(this, (LocalVariableInfo)instruction.Operand),
-            ILOpCode.Stloc => visitor.VisitStoreLocal(this, (LocalVariableInfo)instruction.Operand),
+            ILOpCode.Ldarg => visitor.VisitLoadArgument(this, GetParameterByInfo()),
+            ILOpCode.Ldarga => visitor.VisitLoadArgumentAddress(this, GetParameterByInfo()),
+            ILOpCode.Starg => visitor.VisitStoreArgument(this, GetParameterByInfo()),
+            ILOpCode.Ldloc => visitor.VisitLoadLocal(this, GetVariableByInfo()),
+            ILOpCode.Ldloca => visitor.VisitLoadLocalAddress(this, GetVariableByInfo()),
+            ILOpCode.Stloc => visitor.VisitStoreLocal(this, GetVariableByInfo()),
             ILOpCode.Localloc => throw new NotImplementedException(),
             ILOpCode.Endfilter => throw new NotImplementedException(),
             ILOpCode.Unaligned => throw new NotImplementedException(),

@@ -48,8 +48,7 @@ public sealed class VectorNumericUnaryOperation<TRank, TElement, TOp>
 
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        IUnaryExpressionOperation<VectorNumericUnaryOperation<TRank, TElement, TOp>, VecType<TRank, TElement>,
-            VecType<TRank, TElement>, TOp>.Expression expr)
+        UnaryExpression<VectorNumericUnaryOperation<TRank, TElement, TOp>> expr)
     {
         throw new NotImplementedException();
     }

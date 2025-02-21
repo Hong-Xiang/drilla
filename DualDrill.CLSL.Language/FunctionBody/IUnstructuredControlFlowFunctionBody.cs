@@ -1,5 +1,6 @@
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
@@ -31,11 +32,11 @@ public interface IUnstructuredControlFlowFunctionBody<TElement>
         where TResultElement : IUnstructuredControlFlowElement;
 }
 
-public sealed class CfgBody : IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction>
+public sealed class CfgBody : IUnstructuredControlFlowFunctionBody<IStackStatement>
 {
-    public ControlFlowGraph<BasicBlock<IStructuredStackInstruction>> Graph { get; }
+    public ControlFlowGraph<BasicBlock<IStackStatement>> Graph { get; }
 
-    public CfgBody(ControlFlowGraph<BasicBlock<IStructuredStackInstruction>> graph)
+    public CfgBody(ControlFlowGraph<BasicBlock<IStackStatement>> graph)
     {
         Graph = graph;
         Labels = [..graph.Labels()];
@@ -68,7 +69,7 @@ public sealed class CfgBody : IUnstructuredControlFlowFunctionBody<IStructuredSt
 
     public Label Entry { get; }
 
-    public BasicBlock<IStructuredStackInstruction> this[Label label] => Graph[label];
+    public BasicBlock<IStackStatement> this[Label label] => Graph[label];
 
     public ISuccessor Successor(Label label)
         => Graph.Successor(label);
@@ -92,7 +93,7 @@ public sealed class CfgBody : IUnstructuredControlFlowFunctionBody<IStructuredSt
     }
 
     public IUnstructuredControlFlowFunctionBody<TResultElement> MapBody<TResultElement>(
-        Func<BasicBlock<IStructuredStackInstruction>, BasicBlock<TResultElement>> f)
+        Func<BasicBlock<IStackStatement>, BasicBlock<TResultElement>> f)
         where TResultElement : IUnstructuredControlFlowElement
     {
         throw new NotImplementedException();

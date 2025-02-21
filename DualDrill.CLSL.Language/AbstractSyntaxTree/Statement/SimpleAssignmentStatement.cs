@@ -29,7 +29,12 @@ public sealed record class SimpleAssignmentStatement(
 ) : IStatement, IStackStatement, IForInit, IForUpdate
 {
     public IEnumerable<Label> ReferencedLabels => [];
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => throw new NotImplementedException();
+
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
+    [
+        ..L.ReferencedVariables,
+        ..R.ReferencedVariables,
+    ];
 
     public IEnumerable<IStackInstruction> ToInstructions()
     {

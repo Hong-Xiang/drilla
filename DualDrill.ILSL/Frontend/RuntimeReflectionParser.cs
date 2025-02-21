@@ -91,15 +91,14 @@ public sealed record class RuntimeReflectionParser(
             return found;
         }
 
-        var decl = Context.AddVariable(
-            symbol,
-            new VariableDeclaration(
-                DeclarationScope.Module,
-                fieldInfo.Name,
-                ParseType(fieldInfo.FieldType),
-                [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]
-            )
+        var decl = new VariableDeclaration(
+            DeclarationScope.Module,
+            fieldInfo.Name,
+            ParseType(fieldInfo.FieldType),
+            [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]
         );
+
+        Context.AddVariable(symbol, decl);
         return decl;
     }
 
@@ -144,13 +143,12 @@ public sealed record class RuntimeReflectionParser(
             return found;
         }
 
-        var decl = Context.AddVariable(symbol,
-            new VariableDeclaration(
-                DeclarationScope.Module,
-                info.Name,
-                ParseType(info.FieldType),
-                [.. info.GetCustomAttributes().OfType<IShaderAttribute>()])
-        );
+        var decl = new VariableDeclaration(
+            DeclarationScope.Module,
+            info.Name,
+            ParseType(info.FieldType),
+            [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
+        Context.AddVariable(symbol, decl);
         return decl;
     }
 
@@ -164,11 +162,12 @@ public sealed record class RuntimeReflectionParser(
             return found;
         }
 
-        var decl = Context.AddVariable(symbol,
+        var decl =
             new VariableDeclaration(DeclarationScope.Module,
                 info.Name,
                 ParseType(info.PropertyType),
-                [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]));
+                [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
+        Context.AddVariable(symbol, decl);
         return decl;
     }
 
@@ -218,7 +217,8 @@ public sealed record class RuntimeReflectionParser(
 
     public ParameterDeclaration ParseParameter(ParameterInfo parameter)
     {
-        if (Context[parameter] is { } found)
+        var symbol = Symbol.Parameter(parameter);
+        if (Context[symbol] is { } found)
         {
             return found;
         }
@@ -227,7 +227,7 @@ public sealed record class RuntimeReflectionParser(
             parameter.Name ?? throw new NotSupportedException("Can not parse parameter without name"),
             ParseType(parameter.ParameterType),
             ParseAttribute(parameter));
-        Context.AddParameter(parameter, p);
+        Context.AddParameter(symbol, p);
         return p;
     }
 
@@ -318,24 +318,24 @@ public sealed record class RuntimeReflectionParser(
         return ParseMethodBody(f, model);
     }
 
-    public IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction> ParseMethodBody2(FunctionDeclaration f)
+    public IUnstructuredControlFlowFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f)
     {
         var model = Context.GetFunctionDefinition(f);
         return ParseMethodBody2(f, model);
     }
 
 
-    VariableDeclaration ParseLocalVariable(LocalVariableInfo info)
+    VariableDeclaration ParseLocalVariable(LocalVariableInfo info, ISymbolTable methodTable)
     {
         var t = ParseType(info.LocalType);
-        return Context.AddVariable(Symbol.Variable(info),
-            new VariableDeclaration(
-                DeclarationScope.Function,
-                $"loc_{info.LocalIndex}",
-                t,
-                []
-            )
+        var result = new VariableDeclaration(
+            DeclarationScope.Function,
+            $"loc_{info.LocalIndex}",
+            t,
+            []
         );
+        methodTable.AddVariable(Symbol.Variable(info), result);
+        return result;
     }
 
     ILocalDeclarationContext GetMethodLocalDeclaration(MethodBase method)
@@ -355,12 +355,21 @@ public sealed record class RuntimeReflectionParser(
         throw new NotImplementedException();
     }
 
-    public IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction> ParseMethodBody2(FunctionDeclaration f,
+    public IUnstructuredControlFlowFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f,
         MethodBodyAnalysisModel model)
     {
+        var methodTable = new CompilationContext(Context);
         foreach (var v in model.LocalVariables)
         {
-            _ = ParseLocalVariable(v);
+            _ = ParseLocalVariable(v, methodTable);
+        }
+
+
+        {
+            foreach (var (index, p) in f.Parameters.Index())
+            {
+                methodTable.AddParameter(Symbol.Parameter(index), p);
+            }
         }
 
 
@@ -373,45 +382,73 @@ public sealed record class RuntimeReflectionParser(
 
         foreach (var l in model.ControlFlowGraph.Labels())
         {
-            var visitor = new RuntimeReflectionParserInstructionVisitor(
-                this,
-                Context,
-                f,
+            var visitor = new RuntimeReflectionParserInstructionVisitor(f,
                 model,
                 BasicBlockInputs[l]
             );
             var ilRange = model.ControlFlowGraph[l];
             for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
             {
-                _ = model.Accept<RuntimeReflectionParserInstructionVisitor, Unit>(visitor, i);
+                var cilInst = model[i];
+                cilInst.Evaluate(visitor, model.IsStatic, methodTable);
             }
 
-            if (BasicBlockOutputs.TryGetValue(l, out var existed))
             {
-                // TODO: check for consistancy
+                if (BasicBlockOutputs.TryGetValue(l, out var existed))
+                {
+                    // TODO: check for consistancy
+                }
+                else
+                {
+                    BasicBlockOutputs.Add(l, visitor.Outputs);
+                }
             }
-            else
+
+
             {
-                BasicBlockOutputs.Add(l, visitor.Outputs);
+                var successor = model.ControlFlowGraph.Successor(l);
+
+                foreach (var target in successor.AllTargets())
+                {
+                    if (BasicBlockInputs.TryGetValue(target, out var existed))
+                    {
+                        // TODO: check for consistancy
+                    }
+                    else
+                    {
+                        BasicBlockInputs.Add(target, visitor.Outputs);
+                    }
+                }
             }
+
 
             BasicBlocks.Add(l,
                 BasicBlock<IStackStatement>.Create([..visitor.Statements]));
         }
 
-        return new CfgBody(null);
+        var bodies = model.ControlFlowGraph.Labels().ToDictionary(l => l,
+            l =>
+                new ControlFlowGraph<BasicBlock<IStackStatement>>.NodeDefinition(
+                    model.ControlFlowGraph.Successor(l),
+                    BasicBlocks[l]));
+        var cfg = new ControlFlowGraph<BasicBlock<IStackStatement>>(
+            model.ControlFlowGraph.EntryLabel,
+            bodies
+        );
+
+        return new CfgBody(cfg);
     }
 
     public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,
         MethodBodyAnalysisModel model)
     {
+        var methodTable = new CompilationContext(Context);
         foreach (var v in model.LocalVariables)
         {
-            _ = ParseLocalVariable(v);
+            _ = ParseLocalVariable(v, methodTable);
         }
 
-
-        var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, model, []);
+        var visitor = new RuntimeReflectionParserInstructionVisitor(f, model, []);
         var visited = new bool[model.InstructionCount];
         var results = new List<IStackInstruction>[model.InstructionCount];
         for (var i = 0; i < results.Length; i++)
@@ -432,7 +469,7 @@ public sealed record class RuntimeReflectionParser(
             visited[ip] = true;
             // visitor.Statements = results[ip];
             throw new NotImplementedException();
-            model.Accept<RuntimeReflectionParserInstructionVisitor, Unit>(visitor, ip);
+            // model.Accept<RuntimeReflectionParserInstructionVisitor, Unit>(visitor, ip);
             int[] currentNexts = [];
             foreach (var n in currentNexts)
             {

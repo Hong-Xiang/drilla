@@ -14,11 +14,7 @@ public interface ISymbolTableView
     IShaderType? this[Type type] { get; }
     FunctionDeclaration? this[IFunctionSymbol symbol] { get; }
     VariableDeclaration? this[IVariableSymbol symbol] { get; }
-
-    ParameterDeclaration? this[ParameterInfo parameter] { get; }
-
-    VariableDeclaration? this[LocalVariableSymbol symbol] { get; }
-
+    ParameterDeclaration? this[IParameterSymbol parameter] { get; }
     MemberDeclaration? this[FieldInfo method] { get; }
 
     // new entities declared/defined in this context

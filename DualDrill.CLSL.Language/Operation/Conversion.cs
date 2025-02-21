@@ -33,8 +33,7 @@ public sealed class ScalarConversionOperation<TSource, TTarget>
     public override string ToString() => Name;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        IUnaryExpressionOperation<ScalarConversionOperation<TSource, TTarget>, TSource, TTarget,
-            ScalarConvOp<TSource, TTarget>>.Expression expr)
+        UnaryExpression<ScalarConversionOperation<TSource, TTarget>> expr)
     {
         throw new NotImplementedException();
     }

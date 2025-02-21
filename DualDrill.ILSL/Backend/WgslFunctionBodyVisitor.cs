@@ -202,7 +202,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
 
     public async ValueTask VisitUnaryExpression
         <TOperation, TSourceType, TResultType, TOp>
-        (IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>.Expression expr)
+        (UnaryExpression<TOperation> expr)
         where TOperation : IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>
         where TSourceType : ISingletonShaderType<TSourceType>
         where TResultType : ISingletonShaderType<TResultType>
@@ -212,7 +212,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         {
             Writer.Write(symbol.Symbol);
             Writer.Write("(");
-            await expr.Expr.Accept(this);
+            await expr.Source.Accept(this);
             Writer.Write(")");
         }
         else

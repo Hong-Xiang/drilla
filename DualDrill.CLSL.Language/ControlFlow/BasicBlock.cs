@@ -5,15 +5,15 @@ namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class BasicBlock<TElement>
 {
-    public ReadOnlyMemory<TElement> Elements { get; }
+    public ImmutableArray<TElement> Elements { get; }
 
-    public BasicBlock(ReadOnlyMemory<TElement> elements)
+    public BasicBlock(ImmutableArray<TElement> elements)
     {
         Elements = elements;
     }
 
     public static BasicBlock<TElement> Create(ReadOnlySpan<TElement> instructions)
     {
-        return new(instructions.ToImmutableArray().AsMemory());
+        return new([..instructions]);
     }
 }

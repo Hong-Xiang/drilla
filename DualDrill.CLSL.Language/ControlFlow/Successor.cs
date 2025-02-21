@@ -1,4 +1,5 @@
 ﻿using DotNext.Patterns;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.Common;
 
@@ -24,6 +25,7 @@ public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
         action(Target);
     }
 }
+
 public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTarget) : ISuccessor
 {
     public void Traverse(Action<Label> action)
@@ -32,6 +34,7 @@ public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTar
         action(FalseTarget);
     }
 }
+
 public sealed record class TerminateSuccessor() : ISuccessor
 {
     public void Traverse(Action<Label> action)
@@ -39,13 +42,22 @@ public sealed record class TerminateSuccessor() : ISuccessor
     }
 }
 
-
 public static class Successor
 {
     public static ISuccessor Unconditional(Label target) => new UnconditionalSuccessor(target);
-    public static ISuccessor Conditional(Label trueTarget, Label falseTarget) => new ConditionalSuccessor(trueTarget, falseTarget);
+
+    public static ISuccessor Conditional(Label trueTarget, Label falseTarget) =>
+        new ConditionalSuccessor(trueTarget, falseTarget);
+
     public static ISuccessor Switch() => throw new NotImplementedException();
     public static ISuccessor Terminate() => new TerminateSuccessor();
+
+    public static IEnumerable<Label> AllTargets(this ISuccessor successor)
+    {
+        List<Label> targets = [];
+        successor.Traverse(targets.Add);
+        return targets;
+    }
 }
 
 //public static class Successor
@@ -108,4 +120,3 @@ public static class Successor
 //    public ISuccessor<TLabel, TLabel> Switch(TLabel defaultLabel, IEnumerable<(ILiteral, TLabel)> cases)
 //        => throw new NotImplementedException();
 //}
-

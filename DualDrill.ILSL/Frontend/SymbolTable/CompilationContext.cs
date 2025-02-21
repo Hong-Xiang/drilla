@@ -6,57 +6,17 @@ using ParameterDeclaration = DualDrill.CLSL.Language.Declaration.ParameterDeclar
 
 namespace DualDrill.CLSL.Frontend.SymbolTable;
 
-public interface IVariableSymbol
-{
-}
-
-public sealed record class ShaderModuleFieldVariableSymbol(
-    FieldInfo Field
-) : IVariableSymbol
-{
-};
-
-public sealed record class ShaderModulePropertyGetterVariableSymbol(
-    PropertyInfo Property
-) : IVariableSymbol
-{
-};
-
-public sealed record class FunctionLocalVariableSymbol(
-    LocalVariableInfo LocalVariableInfo
-) : IVariableSymbol
-{
-}
-
-public interface IFunctionSymbol
-{
-}
-
-public readonly record struct CSharpMethodFunctionSymbol(
-    MethodBase Method
-) : IFunctionSymbol;
-
-public static class Symbol
-{
-    public static IVariableSymbol Variable(FieldInfo field) => new ShaderModuleFieldVariableSymbol(field);
-    public static IVariableSymbol Variable(PropertyInfo getter) => new ShaderModulePropertyGetterVariableSymbol(getter);
-    public static IVariableSymbol Variable(LocalVariableInfo info) => new FunctionLocalVariableSymbol(info);
-    public static IVariableSymbol Variable(int localIndex) => new LocalVariableSymbol(localIndex);
-    public static IFunctionSymbol Function(MethodBase method) => new CSharpMethodFunctionSymbol(method);
-}
-
 public sealed class CompilationContext : ISymbolTable
 {
     private readonly Dictionary<Type, IShaderType> Types = [];
-    private readonly Dictionary<MethodBase, FunctionDeclaration> CSharpMethodFunctions = [];
     private readonly Dictionary<FunctionDeclaration, MethodBodyAnalysisModel> FunctionDefinitions = [];
-    private readonly Dictionary<FieldInfo, VariableDeclaration> FieldVariables = [];
-    private readonly Dictionary<PropertyInfo, VariableDeclaration> PropertyGetterVariables = [];
-    private readonly Dictionary<LocalVariableInfo, VariableDeclaration> LocalVariables = [];
-    private readonly Dictionary<LocalVariableSymbol, VariableDeclaration> LocalVariablesByIndex = [];
-    private readonly Dictionary<IShaderType, FunctionDeclaration> ZeroValueConstructors = [];
+
+    private readonly Dictionary<IFunctionSymbol, FunctionDeclaration> Functions = [];
+    private readonly Dictionary<IParameterSymbol, ParameterDeclaration> Parameters = [];
+    private readonly Dictionary<IVariableSymbol, VariableDeclaration> LocalVariables = [];
+    private readonly Dictionary<FieldInfo, MemberDeclaration> Members = [];
+
     private readonly HashSet<StructureDeclaration> ModuleStructureDeclarations = [];
-    private readonly Dictionary<ParameterInfo, ParameterDeclaration> Parameters = [];
     private readonly Dictionary<FieldInfo, MemberDeclaration> StructureMembers = [];
     private readonly ISymbolTableView? Parent;
 
@@ -69,112 +29,63 @@ public sealed class CompilationContext : ISymbolTable
 
     public IShaderType? this[Type type] => Types.TryGetValue(type, out var shaderType) ? shaderType : Parent?[type];
 
-    public FunctionDeclaration? this[IFunctionSymbol symbol] => symbol switch
-    {
-        CSharpMethodFunctionSymbol { Method: var method } => CSharpMethodFunctions.TryGetValue(method,
-            out var declaration)
-            ? declaration
-            : null,
-        _ => null
-    } ?? Parent?[symbol];
+    public FunctionDeclaration? this[IFunctionSymbol symbol] =>
+        Functions.TryGetValue(symbol, out var found) ? found : Parent?[symbol];
 
-    public ParameterDeclaration? this[ParameterInfo info] =>
+    public ParameterDeclaration? this[ParameterInfo parameter] => throw new NotImplementedException();
+
+    public ParameterDeclaration? this[IParameterSymbol info] =>
         Parameters.TryGetValue(info, out var result) ? result : Parent?[info];
 
-    private TResult? ChainedLookup<TKey, TResult>(Dictionary<TKey, TResult> dictionary, TKey key)
-        where TKey : ISymbolTableSymbol<TResult>
-    {
-        return dictionary.TryGetValue(key, out var value) ? value : Parent is not null ? key.Lookup(Parent) : default;
-    }
+    public VariableDeclaration? this[IVariableSymbol symbol] =>
+        LocalVariables.TryGetValue(symbol, out var result) ? result : Parent?[symbol];
 
-    public VariableDeclaration? this[LocalVariableSymbol symbol] =>
-        ChainedLookup(LocalVariablesByIndex, symbol);
 
     public MemberDeclaration? this[FieldInfo method] =>
         StructureMembers.TryGetValue(method, out var declaration) ? declaration : Parent?[method];
 
-    public VariableDeclaration? this[IVariableSymbol symbol] => symbol switch
+
+    public ISymbolTable AddParameter(IParameterSymbol symbol, ParameterDeclaration decl)
     {
-        ShaderModuleFieldVariableSymbol fieldSymbol => FieldVariables.TryGetValue(fieldSymbol.Field,
-            out var declaration)
-            ? declaration
-            : null,
-
-        ShaderModulePropertyGetterVariableSymbol { Property: var prop } => PropertyGetterVariables.TryGetValue(prop,
-            out var declaration)
-            ? declaration
-            : null,
-
-        FunctionLocalVariableSymbol { LocalVariableInfo: var info } => LocalVariables.TryGetValue(info, out var result)
-            ? result
-            : Parent?[symbol],
-        _ => null
-    };
-
-    public ParameterDeclaration AddParameter(ParameterInfo info, ParameterDeclaration decl)
-    {
-        Parameters.Add(info, decl);
-        return decl;
+        Parameters.Add(symbol, decl);
+        return this;
     }
 
-    public VariableDeclaration AddVariable(IVariableSymbol symbol, VariableDeclaration declaration)
+    public ISymbolTable AddVariable(IVariableSymbol symbol, VariableDeclaration declaration)
     {
-        switch (symbol)
-        {
-            case ShaderModuleFieldVariableSymbol fieldSymbol:
-            {
-                FieldVariables.Add(fieldSymbol.Field, declaration);
-                return declaration;
-            }
-            case ShaderModulePropertyGetterVariableSymbol getterSymbol:
-            {
-                PropertyGetterVariables.Add(getterSymbol.Property, declaration);
-                return declaration;
-            }
-            case FunctionLocalVariableSymbol localSymbol:
-            {
-                LocalVariables.Add(localSymbol.LocalVariableInfo, declaration);
-                return declaration;
-            }
-            default:
-                throw new NotSupportedException();
-        }
+        LocalVariables.Add(symbol, declaration);
+        return this;
     }
 
-    public void AddFunctionDeclaration(IFunctionSymbol symbol, FunctionDeclaration declaration)
+    public ISymbolTable AddFunctionDeclaration(IFunctionSymbol symbol, FunctionDeclaration declaration)
     {
-        if (symbol is CSharpMethodFunctionSymbol { Method: var method })
-        {
-            CSharpMethodFunctions.Add(method, declaration);
-            return;
-        }
-
-
-        throw new NotSupportedException();
+        Functions.Add(symbol, declaration);
+        return this;
     }
 
-    public StructureDeclaration AddStructure(Type symbol, StructureType type)
+    public ISymbolTable AddStructure(Type symbol, StructureType type)
     {
         Types.Add(symbol, type);
         ModuleStructureDeclarations.Add(type.Declaration);
-        return type.Declaration;
+        return this;
     }
 
-    public void AddStructureMember(FieldInfo symbol, MemberDeclaration declaration)
+    public ISymbolTable AddStructureMember(FieldInfo symbol, MemberDeclaration declaration)
     {
         StructureMembers.Add(symbol, declaration);
+        return this;
     }
 
-    public void AddFunctionDefinition(IFunctionSymbol symbol, FunctionDeclaration declaration,
+    public ISymbolTable AddFunctionDefinition(IFunctionSymbol symbol, FunctionDeclaration declaration,
         MethodBodyAnalysisModel? model = null)
     {
         if (symbol is CSharpMethodFunctionSymbol { Method: var method })
         {
             model ??= new MethodBodyAnalysisModel(method);
             Debug.Assert(method.Equals(model.Method));
-            CSharpMethodFunctions.Add(method, declaration);
+            Functions.Add(symbol, declaration);
             FunctionDefinitions.Add(declaration, model);
-            return;
+            return this;
         }
 
         throw new NotSupportedException();
@@ -187,7 +98,7 @@ public sealed class CompilationContext : ISymbolTable
     public IEnumerable<StructureDeclaration> StructureDeclarations => ModuleStructureDeclarations;
 
     public IEnumerable<VariableDeclaration> VariableDeclarations =>
-        FieldVariables.Values.Concat(PropertyGetterVariables.Values);
+        LocalVariables.Values;
 
-    public IEnumerable<FunctionDeclaration> FunctionDeclarations => CSharpMethodFunctions.Values;
+    public IEnumerable<FunctionDeclaration> FunctionDeclarations => Functions.Values;
 }

@@ -356,7 +356,7 @@ public static class ShaderModuleExtension
                 isw.WriteLine();
                 using (isw.IndentedScope())
                 {
-                    foreach (var instruction in b.Graph[l].Elements.Span)
+                    foreach (var instruction in b.Graph[l].Elements)
                     {
                         instruction.Dump(LabelName, VariableName, isw);
                     }

@@ -2,6 +2,8 @@
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using System.Reflection;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Declaration;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -9,22 +11,22 @@ public interface ICilInstructionVisitor<TResult>
 {
     TResult VisitNop(CilInstructionInfo inst);
     TResult VisitBreak(CilInstructionInfo inst);
-    TResult VisitLoadArgument(CilInstructionInfo inst, ParameterInfo info);
-    TResult VisitLoadArgumentAddress(CilInstructionInfo inst, ParameterInfo info);
-    TResult VisitStoreArgument(CilInstructionInfo inst, ParameterInfo info);
+    TResult VisitLoadArgument(CilInstructionInfo inst, ParameterDeclaration p);
+    TResult VisitLoadArgumentAddress(CilInstructionInfo inst, ParameterDeclaration p);
+    TResult VisitStoreArgument(CilInstructionInfo inst, ParameterDeclaration p);
     TResult VisitLdThis(CilInstructionInfo inst);
     TResult VisitStThis(CilInstructionInfo inst);
-    TResult VisitLoadLocal(CilInstructionInfo inst, LocalVariableInfo info);
-    TResult VisitLoadLocalAddress(CilInstructionInfo inst, LocalVariableInfo info);
-    TResult VisitStoreLocal(CilInstructionInfo inst, LocalVariableInfo info);
-    TResult VisitLoadField(CilInstructionInfo inst, FieldInfo info);
-    TResult VisitLoadFieldAddress(CilInstructionInfo inst, FieldInfo info);
-    TResult VisitStoreField(CilInstructionInfo inst, FieldInfo info);
-    TResult VisitLoadStaticField(CilInstructionInfo inst, FieldInfo info);
-    TResult VisitLoadStaticFieldAddress(CilInstructionInfo inst, FieldInfo info);
+    TResult VisitLoadLocal(CilInstructionInfo inst, VariableDeclaration v);
+    TResult VisitLoadLocalAddress(CilInstructionInfo inst, VariableDeclaration v);
+    TResult VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration v);
+    TResult VisitLoadField(CilInstructionInfo inst, MemberDeclaration m);
+    TResult VisitLoadFieldAddress(CilInstructionInfo inst, MemberDeclaration m);
+    TResult VisitStoreField(CilInstructionInfo inst, MemberDeclaration m);
+    TResult VisitLoadStaticField(CilInstructionInfo inst, VariableDeclaration v);
+    TResult VisitLoadStaticFieldAddress(CilInstructionInfo inst, VariableDeclaration v);
     TResult VisitLoadNull(CilInstructionInfo info);
-    TResult VisitCall(CilInstructionInfo info, MethodInfo method);
-    TResult VisitNewObject(CilInstructionInfo info, ConstructorInfo constructor);
+    TResult VisitCall(CilInstructionInfo info, FunctionDeclaration f);
+    TResult VisitNewObject(CilInstructionInfo info, FunctionDeclaration f);
     TResult VisitReturn(CilInstructionInfo info);
     TResult VisitLiteral<TLiteral>(CilInstructionInfo info, TLiteral literal) where TLiteral : ILiteral;
     TResult VisitBranch(CilInstructionInfo inst, int jumpOffset);
@@ -38,9 +40,6 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
         where TOp : BinaryArithmetic.IOp<TOp>;
 
-    TResult VisitBinaryBitwise<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
-        where TOp : BinaryArithmetic.IOp<TOp>;
-
     TResult VisitBinaryLogical<TOp>(CilInstructionInfo inst)
         where TOp : BinaryLogical.IOp<TOp>;
 
@@ -48,7 +47,9 @@ public interface ICilInstructionVisitor<TResult>
         where TOp : BinaryRelational.IOp<TOp>;
 
     TResult VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>;
-    TResult VisitUnaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryRelational.IOp<TOp>;
+    TResult VisitLogicalNot(CilInstructionInfo inst);
+    TResult VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>;
+
     TResult VisitLoadIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;
     TResult VisitStoreIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;
     TResult VisitLoadIndirectNativeInt(CilInstructionInfo inst);

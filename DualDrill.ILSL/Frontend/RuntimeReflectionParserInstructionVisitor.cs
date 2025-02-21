@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
@@ -7,10 +6,10 @@ using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
-using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
@@ -23,26 +22,19 @@ public sealed class ValidationException(string message, MethodBase method)
 }
 
 sealed class RuntimeReflectionParserInstructionVisitor(
-    RuntimeReflectionParser Parser,
-    ISymbolTable Context,
     FunctionDeclaration Function,
     MethodBodyAnalysisModel Model,
-    ImmutableStack<VariableDeclaration> Inputs) : ICilInstructionVisitor<Unit>
+    ImmutableStack<VariableDeclaration> Inputs)
+    : ICilInstructionVisitor<Unit>
 {
     //public List<int> Nexts { get; private set; } = [];
 
     public List<IStackStatement> Statements { get; set; } = [];
 
-    public IExpression? ResultExpression { get; private set; } = null;
-
-    Stack<IExpression>? ValidationStack { get; set; } = [];
 
     Stack<IExpression> CurrentStack = new(Inputs.Select(v => SyntaxFactory.VarIdentifier(v)));
 
     public ImmutableStack<VariableDeclaration> Outputs { get; private set; } = [];
-
-
-    public Dictionary<Label, Stack<IExpression>> JumpStack { get; } = [];
 
 
     static IExpression ToBinaryArithmeticExpression<TOp>(IExpression left, IExpression right)
@@ -96,11 +88,6 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return default;
     }
 
-    public Unit VisitBinaryBitwise<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
-        where TOp : BinaryArithmetic.IOp<TOp>
-    {
-        throw new NotImplementedException();
-    }
 
     static IExpression ToBoolExpr(IExpression expr)
     {
@@ -137,7 +124,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return default;
     }
 
-    void DumpOutputs()
+    void FlushOutputs()
     {
         Outputs = ImmutableStack.Create<VariableDeclaration>();
         foreach (var expr in CurrentStack)
@@ -152,7 +139,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitBranch(CilInstructionInfo inst, int jumpOffset)
     {
-        DumpOutputs();
+        FlushOutputs();
         return default;
     }
 
@@ -171,17 +158,13 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             v = LogicalNotOperation.Instance.CreateExpression(v);
         }
 
-        if (CurrentStack.Count == 0)
+        if (CurrentStack.Count > 0)
         {
-            ResultExpression = v;
+            FlushOutputs();
         }
-        else
-        {
-            DumpOutputs();
-            var cond = new VariableDeclaration(DeclarationScope.Function, string.Empty, ShaderType.Bool, []);
-            Statements.Add(SyntaxFactory.AssignStatement(SyntaxFactory.VarIdentifier(cond), v));
-            ResultExpression = SyntaxFactory.VarIdentifier(cond);
-        }
+
+        Statements.Add(new PushStatement(v));
+
 
         return default;
     }
@@ -194,23 +177,48 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         // TODO: handle isUn = true
         var e = ToBinaryRelationalExpression<TOp>(l, r);
 
-        if (CurrentStack.Count == 0)
+        if (CurrentStack.Count > 0)
         {
-            ResultExpression = e;
-        }
-        else
-        {
-            DumpOutputs();
-            var cond = new VariableDeclaration(DeclarationScope.Function, string.Empty, ShaderType.Bool, []);
-            Statements.Add(SyntaxFactory.AssignStatement(SyntaxFactory.VarIdentifier(cond), e));
-            ResultExpression = SyntaxFactory.VarIdentifier(cond);
+            FlushOutputs();
         }
 
+        Statements.Add(new PushStatement(e));
         return default;
     }
 
     void VisitCallFunction(FunctionDeclaration func, bool isExpression)
     {
+        if (func.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } opAttr)
+        {
+            switch (opAttr.Operation)
+            {
+                case IBinaryExpressionOperation be:
+                {
+                    var r = CurrentStack.Pop();
+                    var l = CurrentStack.Pop();
+                    var e = be.CreateExpression(l, r);
+                    CurrentStack.Push(e);
+                    return;
+                }
+                case IBinaryStatementOperation bs:
+                {
+                    var r = CurrentStack.Pop();
+                    var l = CurrentStack.Pop();
+                    var s = bs.CreateStatement(l, r);
+                    Statements.Add((IStackStatement)s);
+                    return;
+                }
+                case IUnaryExpressionOperation ue:
+                {
+                    var s = CurrentStack.Pop();
+                    var e = ue.CreateExpression(s);
+                    CurrentStack.Push(e);
+                    return;
+                }
+            }
+        }
+
+        var args = new List<IExpression>(func.Parameters.Length);
         foreach (var p in func.Parameters.Reverse())
         {
             var ve = CurrentStack.Pop();
@@ -220,40 +228,44 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     $"parameter {p} not match: stack {ve.Type.Name} declaration {p.Type.Name}",
                     Model.Method);
             }
+
+            args.Add(ve);
         }
 
-        var r = SyntaxFactory.Call(func);
+        args.Reverse();
+
+        var result = SyntaxFactory.Call(func, [..args]);
         if (isExpression)
         {
-            CurrentStack.Push(r);
+            CurrentStack.Push(result);
         }
         else
         {
-            Statements.Add(SyntaxFactory.ExpressionStatement(r));
+            Statements.Add(SyntaxFactory.ExpressionStatement(result));
         }
     }
 
-    public Unit VisitCall(CilInstructionInfo info, MethodInfo method)
+    public Unit VisitCall(CilInstructionInfo info, FunctionDeclaration f)
     {
-        var f = Parser.ParseMethod(method);
-
-        VisitCallFunction(f, f.Return.Type is UnitType);
-
+        VisitCallFunction(f, f.Return.Type is not UnitType);
         return default;
     }
 
-    public Unit VisitLoadArgument(CilInstructionInfo inst, ParameterInfo info)
+    public Unit VisitLoadArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        var p = Parser.ParseParameter(info);
         CurrentStack.Push(SyntaxFactory.ArgIdentifier(p));
         return default;
     }
 
-    public Unit VisitLoadArgumentAddress(CilInstructionInfo inst, ParameterInfo info)
+    public Unit VisitLoadArgumentAddress(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        var p = Parser.ParseParameter(info);
         CurrentStack.Push(SyntaxFactory.AddressOf(SyntaxFactory.ArgIdentifier(p)));
         return default;
+    }
+
+    public Unit VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>
+    {
+        throw new NotImplementedException();
     }
 
     public Unit VisitLoadIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType
@@ -271,18 +283,14 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         throw new NotImplementedException();
     }
 
-    public Unit VisitLoadLocal(CilInstructionInfo inst, LocalVariableInfo info)
+    public Unit VisitLoadLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
-        var v = Context[Symbol.Variable(info)] ??
-                throw new KeyNotFoundException($"Failed to resolve local variable {info}");
         CurrentStack.Push(SyntaxFactory.VarIdentifier(v));
         return default;
     }
 
-    public Unit VisitLoadLocalAddress(CilInstructionInfo inst, LocalVariableInfo info)
+    public Unit VisitLoadLocalAddress(CilInstructionInfo inst, VariableDeclaration v)
     {
-        var v = Context[Symbol.Variable(info)] ??
-                throw new KeyNotFoundException($"Failed to resolve local variable {info}");
         CurrentStack.Push(SyntaxFactory.AddressOf(SyntaxFactory.VarIdentifier(v)));
         return default;
     }
@@ -298,11 +306,9 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return default;
     }
 
-    public Unit VisitNewObject(CilInstructionInfo info, ConstructorInfo constructor)
+    public Unit VisitNewObject(CilInstructionInfo info, FunctionDeclaration callee)
     {
-        var callee = Parser.ParseMethod(constructor)
-                     ?? throw new ValidationException($"Failed to resolve constructor {constructor}", Model.Method);
-        VisitCallFunction(callee, false);
+        VisitCallFunction(callee, true);
         return default;
     }
 
@@ -340,9 +346,8 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         }
     }
 
-    public Unit VisitStoreArgument(CilInstructionInfo inst, ParameterInfo info)
+    public Unit VisitStoreArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        var p = Context[info] ?? throw new KeyNotFoundException($"Failed to resolve parameter {inst}");
         var v = CurrentStack.Pop();
         if (!p.Type.Equals(v.Type))
         {
@@ -365,15 +370,13 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         throw new NotImplementedException();
     }
 
-    public Unit VisitStoreLocal(CilInstructionInfo inst, LocalVariableInfo info)
+    public Unit VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
         var val = CurrentStack.Pop();
-        var loc = Context[Symbol.Variable(info)] ?? throw new KeyNotFoundException(
-            $"Failed to resolve local variable {info}, @{inst}({inst.Instruction.OpCode}) - {Model.Method.Name}");
-        if (!loc.Type.Equals(val.Type))
+        if (!v.Type.Equals(val.Type))
         {
             Statements.Add(SyntaxFactory.AssignStatement(
-                SyntaxFactory.VarIdentifier(loc),
+                SyntaxFactory.VarIdentifier(v),
                 val
             ));
         }
@@ -426,6 +429,21 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         throw new NotImplementedException();
     }
 
+    public Unit VisitLogicalNot(CilInstructionInfo inst)
+    {
+        var v = CurrentStack.Pop();
+        switch (v.Type)
+        {
+            case BoolType:
+                CurrentStack.Push(LogicalNotOperation.Instance.CreateExpression(v));
+                break;
+            default:
+                throw new NotImplementedException();
+        }
+
+        return default;
+    }
+
     public Unit VisitLdThis(CilInstructionInfo inst)
     {
         var p = Function.Parameters[0];
@@ -438,7 +456,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         throw new NotImplementedException();
     }
 
-    public Unit VisitLoadField(CilInstructionInfo inst, FieldInfo info)
+    public Unit VisitLoadField(CilInstructionInfo inst, MemberDeclaration m)
     {
         var o = CurrentStack.Pop();
         if (o.Type is not IPtrType)
@@ -446,12 +464,11 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             throw new ValidationException("ldfld expect current stack to have ptr type", Model.Method);
         }
 
-        var m = Parser.ParseField(info);
         CurrentStack.Push(SyntaxFactory.FieldIdentifier(o, m));
         return default;
     }
 
-    public Unit VisitLoadFieldAddress(CilInstructionInfo inst, FieldInfo info)
+    public Unit VisitLoadFieldAddress(CilInstructionInfo inst, MemberDeclaration m)
     {
         var o = CurrentStack.Pop();
         if (o.Type is not IPtrType)
@@ -459,27 +476,25 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             throw new ValidationException("ldfld expect current stack to have ptr type", Model.Method);
         }
 
-        var m = Parser.ParseField(info);
         // TODO: check o is a structure type and m is member of it
         CurrentStack.Push(SyntaxFactory.AddressOf(SyntaxFactory.FieldIdentifier(o, m)));
         return default;
     }
 
-    public Unit VisitStoreField(CilInstructionInfo inst, FieldInfo info)
+    public Unit VisitStoreField(CilInstructionInfo inst, MemberDeclaration m)
     {
         throw new NotImplementedException();
     }
 
-    public Unit VisitLoadStaticField(CilInstructionInfo inst, FieldInfo info)
+
+    public Unit VisitLoadStaticField(CilInstructionInfo inst, VariableDeclaration v)
     {
-        var v = Parser.ParseStaticField(info);
         CurrentStack.Push(SyntaxFactory.VarIdentifier(v));
         return default;
     }
 
-    public Unit VisitLoadStaticFieldAddress(CilInstructionInfo inst, FieldInfo info)
+    public Unit VisitLoadStaticFieldAddress(CilInstructionInfo inst, VariableDeclaration v)
     {
-        var v = Parser.ParseStaticField(info);
         CurrentStack.Push(SyntaxFactory.AddressOf(SyntaxFactory.VarIdentifier(v)));
         return default;
     }

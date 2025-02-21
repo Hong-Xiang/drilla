@@ -34,7 +34,7 @@ internal sealed class DevelopTestShaderModule
     }
 
     [Vertex]
-    public static int MaxByfThenElse(int a, int b)
+    public static int MaxByIfThenElse(int a, int b)
     {
         if (a >= b)
         {
@@ -65,6 +65,13 @@ internal sealed class DevelopTestShaderModule
     public static vec3f32 VecSwizzleGetter(vec2f32 v) => v.xyx;
 
     [Vertex]
+    public static vec4f32 VecSwizzleSetter(vec4f32 a, vec2f32 b)
+    {
+        a.xy = b;
+        return a;
+    }
+
+    [Vertex]
     public static Vector4 SystemNumericVector4Creation() => new Vector4(1.0f, 2.0f, 3.0f, 4.0f);
 
 
@@ -77,7 +84,7 @@ internal sealed class DevelopTestShaderModule
     public static int APlusB(int a, int b) => a + b;
 
     [Vertex]
-    public static int StaticTest() => 42;
+    public static float Vector4Dot(Vector4 a, Vector4 b) => Vector4.Dot(a, b);
 
     //[Uniform]
     //[Group(0)]

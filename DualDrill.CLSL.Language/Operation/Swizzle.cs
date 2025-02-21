@@ -19,14 +19,16 @@ public static class Swizzle
         z,
         w
     }
+
     public interface IComponent
     {
         ComponentKind Kind { get; }
         string Name { get; }
         AbstractSyntaxTree.Expression.SwizzleComponent LegacySwizzleComponent { get; }
     }
+
     public interface IComponent<TSelf> : IComponent, ISingleton<TSelf>
-           where TSelf : IComponent<TSelf>
+        where TSelf : IComponent<TSelf>
     {
     }
 
@@ -35,18 +37,22 @@ public static class Swizzle
     {
         IOperation ComponentGetOperation<TVector, TElement>()
             where TVector : ISizedVecType<TRank, TVector>;
+
         IOperation ComponentSetOperation<TVector, TElement>()
             where TVector : ISizedVecType<TRank, TVector>;
-        ISizedPattern<TRank> PatternAfterComponent(ISizedComponent<TRank> c);
-        ISizedPattern<TRank> WithComponent<TC>()
-              where TC : ISizedComponent<TRank, TC>;
-        ISizedPattern<TRank> PatternAfterPattern(ISizedPattern<TRank> pattern);
 
+        ISizedPattern<TRank> PatternAfterComponent(ISizedComponent<TRank> c);
+
+        ISizedPattern<TRank> WithComponent<TC>()
+            where TC : ISizedComponent<TRank, TC>;
+
+        ISizedPattern<TRank> PatternAfterPattern(ISizedPattern<TRank> pattern);
     }
 
     public static IEnumerable<ISizedComponent<TRank>> Components<TRank>()
         where TRank : IRank<TRank>
-        => ((IEnumerable<IComponent>)[X.Instance, Y.Instance, Z.Instance, W.Instance]).OfType<ISizedComponent<TRank>>();
+        => ((IEnumerable<IComponent>) [X.Instance, Y.Instance, Z.Instance, W.Instance])
+            .OfType<ISizedComponent<TRank>>();
 
     public static IEnumerable<ISizedPattern<TRank>> SwizzlePatterns<TRank>()
         where TRank : IRank<TRank>
@@ -69,13 +75,16 @@ public static class Swizzle
     {
         IOperation ISizedComponent<TRank>.ComponentGetOperation<TVector, TElement>()
             => VectorComponentGetOperation<TRank, TVector, TSelf>.Instance;
+
         IOperation ISizedComponent<TRank>.ComponentSetOperation<TVector, TElement>()
             => VectorComponentSetOperation<TRank, TVector, TSelf>.Instance;
 
         ISizedPattern<TRank> ISizedComponent<TRank>.PatternAfterComponent(ISizedComponent<TRank> c)
             => c.WithComponent<TSelf>();
+
         ISizedPattern<TRank> ISizedComponent<TRank>.WithComponent<TC>()
             => Pattern<TRank, TSelf, TC>.Instance;
+
         ISizedPattern<TRank> ISizedComponent<TRank>.PatternAfterPattern(ISizedPattern<TRank> pattern)
             => pattern.WithComponent<TSelf>();
     }
@@ -124,7 +133,7 @@ public static class Swizzle
     }
 
     public interface IPattern<TSelf> : ISingleton<TSelf>
-            where TSelf : IPattern<TSelf>
+        where TSelf : IPattern<TSelf>
     {
         IEnumerable<IComponent> Components { get; }
 
@@ -139,7 +148,7 @@ public static class Swizzle
         where TRank : IRank<TRank>
     {
         ISizedPattern<TRank> WithComponent<TY>()
-             where TY : ISizedComponent<TRank, TY>;
+            where TY : ISizedComponent<TRank, TY>;
 
         public interface ISizedPatternVisitor<TResult>
         {
@@ -147,7 +156,6 @@ public static class Swizzle
         }
 
         TResult Accept<TResult>(ISizedPatternVisitor<TResult> visitor);
-
     }
 
     public interface ISizedPattern<TRank, TSelf>
@@ -177,10 +185,10 @@ public static class Swizzle
         public IVecType TargetType<TElement>()
             where TElement : IScalarType<TElement>
             => VecType<N2, TElement>.Instance;
+
         public ISizedPattern<TRank> WithComponent<TZ>()
             where TZ : ISizedComponent<TRank, TZ>
             => Pattern<TRank, TX, TY, TZ>.Instance;
-
     }
 
     public sealed class Pattern<TRank, TX, TY, TZ> : ISizedPattern<TRank, Pattern<TRank, TX, TY, TZ>>
@@ -189,10 +197,10 @@ public static class Swizzle
         where TY : ISizedComponent<TRank, TY>
         where TZ : ISizedComponent<TRank, TZ>
     {
-
         public string Name => $"{TX.Instance.Name}{TY.Instance.Name}{TZ.Instance.Name}";
         public static Pattern<TRank, TX, TY, TZ> Instance { get; } = new();
         public IEnumerable<IComponent> Components => [TX.Instance, TY.Instance, TZ.Instance];
+
         public IVecType TargetType<TElement>()
             where TElement : IScalarType<TElement>
             => VecType<N3, TElement>.Instance;
@@ -202,7 +210,7 @@ public static class Swizzle
             => Pattern<TRank, TX, TY, TZ, TW>.Instance;
 
         public bool HasDuplicateComponent =>
-               TX.Instance.Equals(TY.Instance)
+            TX.Instance.Equals(TY.Instance)
             || TX.Instance.Equals(TZ.Instance)
             || TY.Instance.Equals(TZ.Instance);
     }
@@ -217,6 +225,7 @@ public static class Swizzle
         public string Name => $"{TX.Instance.Name}{TY.Instance.Name}{TZ.Instance.Name}{TW.Instance.Name}";
         public static Pattern<TRank, TX, TY, TZ, TW> Instance { get; } = new();
         public IEnumerable<IComponent> Components => [TX.Instance, TY.Instance, TZ.Instance, TW.Instance];
+
         public IVecType TargetType<TElement>()
             where TElement : IScalarType<TElement>
             => VecType<N4, TElement>.Instance;
@@ -227,7 +236,7 @@ public static class Swizzle
         }
 
         public bool HasDuplicateComponent =>
-               Pattern<TRank, TX, TY, TZ>.Instance.HasDuplicateComponent
+            Pattern<TRank, TX, TY, TZ>.Instance.HasDuplicateComponent
             || TX.Instance.Equals(TW.Instance)
             || TY.Instance.Equals(TW.Instance)
             || TZ.Instance.Equals(TW.Instance);
@@ -250,7 +259,7 @@ public sealed class VectorComponentGetOperation<TRank, TVector, TComponent>
     public FunctionDeclaration Function { get; } = new FunctionDeclaration(
         $"get_{TComponent.Instance.Name}_{TVector.Instance.Name}",
         [new ParameterDeclaration("v", TVector.Instance.GetPtrType(), [])],
-         new FunctionReturn(TVector.Instance.ElementType, []),
+        new FunctionReturn(TVector.Instance.ElementType, []),
         [new OperationMethodAttribute<VectorComponentGetOperation<TRank, TVector, TComponent>>()]);
 
     public string Name => $"get.{TComponent.Instance.Name}.{TVector.Instance.Name}";
@@ -267,9 +276,11 @@ public sealed class VectorComponentGetOperation<TRank, TVector, TComponent>
 
         public IEnumerable<Label> ReferencedLabels => [];
 
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor)
+            where TVisitor : IStructuredStackInstructionVisitor<TResult>
             => visitor.VisitVectorComponentGet<TRank, TVector, TComponent>();
     }
+
     public IExpression CreateExpression(IExpression expr)
     {
         return new VectorSwizzleAccessExpression(expr, [TComponent.Instance.LegacySwizzleComponent]);
@@ -283,12 +294,15 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
     where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
 {
     public static VectorComponentSetOperation<TRank, TVector, TComponent> Instance { get; } = new();
+
     public FunctionDeclaration Function { get; } = new FunctionDeclaration(
-            $"set_{TComponent.Instance.Name}_{TVector.Instance.Name}",
-            [new ParameterDeclaration("v", TVector.Instance.GetPtrType(), []),
-             new ParameterDeclaration("value", TVector.Instance.ElementType, [])],
-             new FunctionReturn(TVector.Instance.ElementType, []),
-            [new OperationMethodAttribute<VectorComponentSetOperation<TRank, TVector, TComponent>>()]);
+        $"set_{TComponent.Instance.Name}_{TVector.Instance.Name}",
+        [
+            new ParameterDeclaration("v", TVector.Instance.GetPtrType(), []),
+            new ParameterDeclaration("value", TVector.Instance.ElementType, [])
+        ],
+        new FunctionReturn(TVector.Instance.ElementType, []),
+        [new OperationMethodAttribute<VectorComponentSetOperation<TRank, TVector, TComponent>>()]);
 
     public string Name => $"set.{TComponent.Instance.Name}.{TVector.Instance.Name}";
 
@@ -304,7 +318,8 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
 
         public static Instruction Instance { get; } = new();
 
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor)
+            where TVisitor : IStructuredStackInstructionVisitor<TResult>
             => visitor.VisitVectorComponentSet<TRank, TVector, TComponent>();
     }
 
@@ -318,6 +333,10 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
     }
 }
 
+public interface IVectorSwizzleGetOperation
+{
+}
+
 public sealed class VectorSwizzleGetOperation<TPattern, TElement>
     : IVectorSizzleOperation<VectorSwizzleGetOperation<TPattern, TElement>>
     , IUnaryOperation<VectorSwizzleGetOperation<TPattern, TElement>>
@@ -325,26 +344,21 @@ public sealed class VectorSwizzleGetOperation<TPattern, TElement>
     where TElement : IScalarType<TElement>
 {
     public static VectorSwizzleGetOperation<TPattern, TElement> Instance { get; } = new();
-
-    public FunctionDeclaration Function { get; } = new FunctionDeclaration(
-            $"get_{TPattern.Instance.Name}_{TPattern.Instance.SourceType<TElement>().Name}",
-            [new ParameterDeclaration("v", TPattern.Instance.SourceType<TElement>().GetPtrType(), [])],
-             new FunctionReturn(TPattern.Instance.TargetType<TElement>(), []),
-            [new OperationMethodAttribute<VectorSwizzleGetOperation<TPattern, TElement>>()]);
-
-
     public string Name => $"get.{TPattern.Instance.Name}.{TElement.Instance.Name}";
-
-    public IShaderType SourceType => TPattern.Instance.SourceType<TElement>();
-
+    public IShaderType SourceType => TPattern.Instance.SourceType<TElement>().GetPtrType();
     public IShaderType ResultType => TPattern.Instance.TargetType<TElement>();
+
+    public IUnaryExpression CreateExpression(IExpression expr)
+        => new UnaryExpression<VectorSwizzleGetOperation<TPattern, TElement>>(expr);
 
     IStructuredStackInstruction IOperation.Instruction => Instruction.Instance;
 
-    public IExpression CreateExpression(IExpression expr)
+    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
+        UnaryExpression<VectorSwizzleGetOperation<TPattern, TElement>> expr)
     {
-        return new VectorSwizzleAccessExpression(expr, [.. TPattern.Instance.Components.Select(c => c.LegacySwizzleComponent)]);
+        throw new NotImplementedException();
     }
+
 
     public sealed class Instruction
         : ISingleton<Instruction>
@@ -356,7 +370,8 @@ public sealed class VectorSwizzleGetOperation<TPattern, TElement>
 
         public static Instruction Instance { get; } = new();
 
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor)
+            where TVisitor : IStructuredStackInstructionVisitor<TResult>
             => visitor.VisitVectorSwizzleGet<TPattern, TElement>();
     }
 }
@@ -370,15 +385,18 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
     public static VectorSwizzleSetOperation<TPattern, TElement> Instance { get; } = new();
 
     public FunctionDeclaration Function { get; } = new FunctionDeclaration(
-            $"set_{TPattern.Instance.Name}_{TPattern.Instance.SourceType<TElement>().Name}",
-            [new ParameterDeclaration("v", TPattern.Instance.SourceType<TElement>().GetPtrType(), []),
-             new ParameterDeclaration("value",TPattern.Instance.TargetType<TElement>(), [])],
-             new FunctionReturn(UnitType.Instance, []),
-            [new OperationMethodAttribute<VectorSwizzleGetOperation<TPattern, TElement>>()]);
+        $"set_{TPattern.Instance.Name}_{TPattern.Instance.SourceType<TElement>().Name}",
+        [
+            new ParameterDeclaration("v", TPattern.Instance.SourceType<TElement>().GetPtrType(), []),
+            new ParameterDeclaration("value", TPattern.Instance.TargetType<TElement>(), [])
+        ],
+        new FunctionReturn(UnitType.Instance, []),
+        [new OperationMethodAttribute<VectorSwizzleSetOperation<TPattern, TElement>>()]);
+
     public string Name => $"set.{TPattern.Instance.Name}.{TElement.Instance.Name}";
     IStructuredStackInstruction IOperation.Instruction => Instruction.Instance;
 
-    public IShaderType LeftType => TPattern.Instance.SourceType<TElement>();
+    public IShaderType LeftType => TPattern.Instance.SourceType<TElement>().GetPtrType();
 
     public IShaderType RightType => TPattern.Instance.TargetType<TElement>();
 
@@ -392,16 +410,18 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
 
         public static Instruction Instance { get; } = new();
 
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IStructuredStackInstructionVisitor<TResult>
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor)
+            where TVisitor : IStructuredStackInstructionVisitor<TResult>
             => visitor.VisitVectorSwizzleSet<TPattern, TElement>();
     }
+
     public IStatement CreateStatement(IExpression target, IExpression value)
     {
         return new SimpleAssignmentStatement(
-            new VectorSwizzleAccessExpression(target, [.. TPattern.Instance.Components.Select(c => c.LegacySwizzleComponent)]),
+            new VectorSwizzleAccessExpression(target,
+                [.. TPattern.Instance.Components.Select(c => c.LegacySwizzleComponent)]),
             value,
             AssignmentOp.Assign
         );
     }
 }
-

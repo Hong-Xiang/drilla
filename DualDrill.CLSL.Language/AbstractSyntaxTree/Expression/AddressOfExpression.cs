@@ -6,7 +6,7 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
 public sealed record class AddressOfExpression(IExpression Base) : IExpression
 {
-    public IShaderType Type => new PtrType(Base.Type);
+    public IShaderType Type => Base.Type.GetPtrType();
 
     public TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
         => throw new NotImplementedException();
