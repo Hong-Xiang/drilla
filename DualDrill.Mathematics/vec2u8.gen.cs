@@ -38,112 +38,112 @@ public partial struct vec2u8{
     
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Neg>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Negate>>]
     public static vec2u8 operator -(vec2u8 v)
     {
         return vec2((Byte)(-v.x), (Byte)(-v.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec2u8 operator +(vec2u8 left, vec2u8 right)
     {
         return vec2((Byte)(left.x + right.x), (Byte)(left.y + right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec2u8 operator -(vec2u8 left, vec2u8 right)
     {
         return vec2((Byte)(left.x - right.x), (Byte)(left.y - right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec2u8 operator *(vec2u8 left, vec2u8 right)
     {
         return vec2((Byte)(left.x * right.x), (Byte)(left.y * right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec2u8 operator /(vec2u8 left, vec2u8 right)
     {
         return vec2((Byte)(left.x / right.x), (Byte)(left.y / right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec2u8 operator %(vec2u8 left, vec2u8 right)
     {
         return vec2((Byte)(left.x % right.x), (Byte)(left.y % right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec2u8 operator +(Byte left, vec2u8 right)
     {
         return vec2((Byte)(left + right.x), (Byte)(left + right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec2u8 operator -(Byte left, vec2u8 right)
     {
         return vec2((Byte)(left - right.x), (Byte)(left - right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec2u8 operator *(Byte left, vec2u8 right)
     {
         return vec2((Byte)(left * right.x), (Byte)(left * right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec2u8 operator /(Byte left, vec2u8 right)
     {
         return vec2((Byte)(left / right.x), (Byte)(left / right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec2u8 operator %(Byte left, vec2u8 right)
     {
         return vec2((Byte)(left % right.x), (Byte)(left % right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec2u8 operator +(vec2u8 left, Byte right)
     {
         return vec2((Byte)(left.x + right), (Byte)(left.y + right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec2u8 operator -(vec2u8 left, Byte right)
     {
         return vec2((Byte)(left.x - right), (Byte)(left.y - right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec2u8 operator *(vec2u8 left, Byte right)
     {
         return vec2((Byte)(left.x * right), (Byte)(left.y * right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec2u8 operator /(vec2u8 left, Byte right)
     {
         return vec2((Byte)(left.x / right), (Byte)(left.y / right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec2u8 operator %(vec2u8 left, Byte right)
     {
         return vec2((Byte)(left.x % right), (Byte)(left.y % right));

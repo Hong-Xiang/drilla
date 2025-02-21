@@ -10,8 +10,11 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using DotNext.Collections.Generic;
 using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.Common;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -63,7 +66,7 @@ public sealed record class RuntimeReflectionParser(
     StructureType ParseStructDeclaration(Type t)
     {
         var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-            .Where(f => !f.Name.EndsWith("k__BackingField"));
+                      .Where(f => !f.Name.EndsWith("k__BackingField"));
         var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         var result = new StructureDeclaration
         {
@@ -191,10 +194,11 @@ public sealed record class RuntimeReflectionParser(
         var moduleType = module.GetType();
 
         var entryMethods = moduleType
-            .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
-            .Where(m => m.GetCustomAttributes().Any(a => a is IShaderStageAttribute))
-            .OrderBy(m => m.Name)
-            .ToImmutableArray();
+                           .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                                       BindingFlags.Instance)
+                           .Where(m => m.GetCustomAttributes().Any(a => a is IShaderStageAttribute))
+                           .OrderBy(m => m.Name)
+                           .ToImmutableArray();
 
         var variables = ParseAllModuleVariableDeclarations(moduleType);
 
@@ -314,17 +318,12 @@ public sealed record class RuntimeReflectionParser(
         return ParseMethodBody(f, model);
     }
 
-    public IUnstructuredControlFlowFunctionBody<IUnstructuredStackStatement> ParseMethodBody2(FunctionDeclaration f)
+    public IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction> ParseMethodBody2(FunctionDeclaration f)
     {
         var model = Context.GetFunctionDefinition(f);
         return ParseMethodBody2(f, model);
     }
 
-    public IUnstructuredControlFlowFunctionBody<IUnstructuredStackStatement> ParseMethodBody2(FunctionDeclaration f,
-        MethodBodyAnalysisModel model)
-    {
-        throw new NotImplementedException();
-    }
 
     VariableDeclaration ParseLocalVariable(LocalVariableInfo info)
     {
@@ -356,21 +355,63 @@ public sealed record class RuntimeReflectionParser(
         throw new NotImplementedException();
     }
 
-    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,
+    public IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction> ParseMethodBody2(FunctionDeclaration f,
         MethodBodyAnalysisModel model)
     {
-        var method = model.Method;
         foreach (var v in model.LocalVariables)
         {
             _ = ParseLocalVariable(v);
         }
 
 
-        var labels = model.GetJumpTargetOffsets()
-            .Select(offset => KeyValuePair.Create(offset, (Label.Create(offset), model.OffsetsToIndex[offset])))
-            .ToFrozenDictionary();
+        Dictionary<Label, ImmutableStack<VariableDeclaration>> BasicBlockInputs = new()
+        {
+            [model.ControlFlowGraph.EntryLabel] = []
+        };
+        Dictionary<Label, ImmutableStack<VariableDeclaration>> BasicBlockOutputs = [];
+        Dictionary<Label, BasicBlock<IStackStatement>> BasicBlocks = [];
 
-        var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, method, labels);
+        foreach (var l in model.ControlFlowGraph.Labels())
+        {
+            var visitor = new RuntimeReflectionParserInstructionVisitor(
+                this,
+                Context,
+                f,
+                model,
+                BasicBlockInputs[l]
+            );
+            var ilRange = model.ControlFlowGraph[l];
+            for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
+            {
+                _ = model.Accept<RuntimeReflectionParserInstructionVisitor, Unit>(visitor, i);
+            }
+
+            if (BasicBlockOutputs.TryGetValue(l, out var existed))
+            {
+                // TODO: check for consistancy
+            }
+            else
+            {
+                BasicBlockOutputs.Add(l, visitor.Outputs);
+            }
+
+            BasicBlocks.Add(l,
+                BasicBlock<IStackStatement>.Create([..visitor.Statements]));
+        }
+
+        return new CfgBody(null);
+    }
+
+    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,
+        MethodBodyAnalysisModel model)
+    {
+        foreach (var v in model.LocalVariables)
+        {
+            _ = ParseLocalVariable(v);
+        }
+
+
+        var visitor = new RuntimeReflectionParserInstructionVisitor(this, Context, f, model, []);
         var visited = new bool[model.InstructionCount];
         var results = new List<IStackInstruction>[model.InstructionCount];
         for (var i = 0; i < results.Length; i++)
@@ -389,8 +430,10 @@ public sealed record class RuntimeReflectionParser(
             }
 
             visited[ip] = true;
-            visitor.Instructions = results[ip];
-            var currentNexts = model.Accept<RuntimeReflectionParserInstructionVisitor, int[]>(visitor, ip);
+            // visitor.Statements = results[ip];
+            throw new NotImplementedException();
+            model.Accept<RuntimeReflectionParserInstructionVisitor, Unit>(visitor, ip);
+            int[] currentNexts = [];
             foreach (var n in currentNexts)
             {
                 if (n < model.InstructionCount && !visited[n])

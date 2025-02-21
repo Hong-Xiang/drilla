@@ -5,13 +5,18 @@ using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
 
-public interface IUIntType : IIntegerType, IScalarType { }
+public interface IUIntType : IIntegerType, IScalarType
+{
+}
 
 [DebuggerDisplay("{Name}")]
 public sealed class UIntType<TBitWidth> : IUIntType, INumericType<UIntType<TBitWidth>>
     where TBitWidth : IBitWidth
 {
-    private UIntType() { }
+    private UIntType()
+    {
+    }
+
     public static UIntType<TBitWidth> Instance { get; } = new();
 
     public string Name => $"u{BitWidth.Value}";
@@ -24,9 +29,6 @@ public sealed class UIntType<TBitWidth> : IUIntType, INumericType<UIntType<TBitW
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
-
-    public INumericBinaryOperation GetBinaryOperation<TOp>() where TOp : IBinaryOp<TOp>
-        => NumericBinaryOperation<UIntType<TBitWidth>, TOp>.Instance;
 }
 
 public static partial class ShaderType
@@ -48,4 +50,3 @@ public static partial class ShaderType
         };
     }
 }
-

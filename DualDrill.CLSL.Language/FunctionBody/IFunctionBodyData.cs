@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
+using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
@@ -21,8 +22,6 @@ public interface IFunctionBodyData
 
 public interface IFunctionBody : ILocalDeclarationContext
 {
-    public IReadOnlySet<VariableDeclaration> LocalVariables { get; }
-    public IReadOnlySet<Label> Labels { get; }
 }
 
 public sealed class FunctionBody<TBody>
@@ -34,28 +33,29 @@ public sealed class FunctionBody<TBody>
     FrozenDictionary<VariableDeclaration, int> VariableIndices { get; }
     FrozenDictionary<Label, int> LabelIndices { get; }
 
-    public IReadOnlySet<VariableDeclaration> LocalVariables { get; }
-    public IReadOnlySet<Label> Labels { get; }
+    public ImmutableArray<VariableDeclaration> LocalVariables { get; }
+    public ImmutableArray<Label> Labels { get; }
 
     public FunctionBody(TBody body)
     {
         Body = body;
-        LocalVariables = body.LocalVariables.Distinct().ToHashSet();
-        Labels = body.Labels.Distinct().ToHashSet();
+        LocalVariables = [..body.LocalVariables.Distinct()];
+        Labels = [..body.Labels.Distinct()];
         VariableIndices = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
         LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
     }
 
     public int VariableIndex(VariableDeclaration variable)
         => VariableIndices[variable];
+
     public int LabelIndex(Label label)
         => LabelIndices[label];
 
     public string VariableName(VariableDeclaration variable)
     {
         return variable.DeclarationScope == DeclarationScope.Function
-                        ? $"var%{VariableIndex(variable)} {variable}"
-                        : $"module var {variable.Name}";
+            ? $"var%{VariableIndex(variable)} {variable}"
+            : $"module var {variable.Name}";
     }
 
     public string LabelName(Label label) => $"label%{LabelIndex(label)} {label}";

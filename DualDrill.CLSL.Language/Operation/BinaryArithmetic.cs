@@ -32,20 +32,19 @@ public static class BinaryArithmetic
 
         TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IVisitor<TResult>;
 
-        INumericBinaryOperation GetNumericBinaryOperation(INumericType t);
+        INumericBinaryArithmeticOperation GetNumericBinaryOperation(INumericType t);
     }
 
-    public interface IOp<TSelf> : IOp, IOpKind<TSelf, OpKind>, ISingleton<TSelf>, IBinaryOp<TSelf>
+    public interface IOp<TSelf> : IOp, IOpKind<TSelf, OpKind>, IBinaryOp<TSelf>
         where TSelf : IOp<TSelf>
     {
-
         TResult IOp.Accept<TVisitor, TResult>(TVisitor visitor)
             => visitor.Visit(TSelf.Instance);
 
 
-        INumericBinaryOperation IOp.GetNumericBinaryOperation(INumericType t)
+        INumericBinaryArithmeticOperation IOp.GetNumericBinaryOperation(INumericType t)
         {
-            return t.GetBinaryOperation<TSelf>();
+            return t.ArithmeticOperation<TSelf>();
         }
     }
 
@@ -54,15 +53,16 @@ public static class BinaryArithmetic
         public static Add Instance { get; } = new();
 
         public static OpKind Kind => OpKind.add;
-        public static string Symbol => "+";
+        public string Symbol => "+";
+
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
             => visitor.Visit(this);
     }
 
-    public sealed class Sub : IOp<Sub>, ISymbolOp<Sub>, ISingleton<Sub>, IFloatOp<Sub>, IIntegerOp<Sub>
+    public sealed class Sub : IOp<Sub>, ISymbolOp<Sub>, IFloatOp<Sub>, IIntegerOp<Sub>
     {
         public static OpKind Kind => OpKind.sub;
-        public static string Symbol => "-";
+        public string Symbol => "-";
 
         public static Sub Instance { get; } = new();
 
@@ -71,10 +71,10 @@ public static class BinaryArithmetic
     }
 
 
-    public sealed class Mul : IOp<Mul>, ISymbolOp<Mul>, ISingleton<Mul>, IFloatOp<Mul>, IIntegerOp<Mul>
+    public sealed class Mul : IOp<Mul>, ISymbolOp<Mul>, IFloatOp<Mul>, IIntegerOp<Mul>
     {
         public static OpKind Kind => OpKind.mul;
-        public static string Symbol => "*";
+        public string Symbol => "*";
 
         public static Mul Instance { get; } = new();
 
@@ -83,10 +83,10 @@ public static class BinaryArithmetic
     }
 
 
-    public sealed class Div : IOp<Div>, ISymbolOp<Div>, ISingleton<Div>, IFloatOp<Div>, ISignedIntegerOp<Div>
+    public sealed class Div : IOp<Div>, ISymbolOp<Div>, IFloatOp<Div>, ISignedIntegerOp<Div>
     {
         public static OpKind Kind => OpKind.div;
-        public static string Symbol => "/";
+        public string Symbol => "/";
 
         public static Div Instance { get; } = new();
 
@@ -95,10 +95,10 @@ public static class BinaryArithmetic
     }
 
 
-    public sealed class Rem : IOp<Rem>, ISymbolOp<Rem>, ISingleton<Rem>, IFloatOp<Div>, ISignedIntegerOp<Div>
+    public sealed class Rem : IOp<Rem>, ISymbolOp<Rem>, IFloatOp<Div>, ISignedIntegerOp<Div>
     {
         public static OpKind Kind => OpKind.rem;
-        public static string Symbol => "%";
+        public string Symbol => "%";
 
         public static Rem Instance { get; } = new();
 
@@ -106,7 +106,7 @@ public static class BinaryArithmetic
             => visitor.Visit(this);
     }
 
-    public sealed class Min : IOp<Min>, ISingleton<Min>, IFloatOp<Min>
+    public sealed class Min : IOp<Min>, IFloatOp<Min>
     {
         public static OpKind Kind => OpKind.min;
 
@@ -116,7 +116,7 @@ public static class BinaryArithmetic
             => visitor.Visit(this);
     }
 
-    public sealed class Max : IOp<Max>, ISingleton<Max>, IFloatOp<Min>
+    public sealed class Max : IOp<Max>, IFloatOp<Min>
     {
         public static OpKind Kind => OpKind.max;
 
@@ -155,8 +155,7 @@ public static class BinaryArithmetic
         public static OpKind Kind => OpKind.and;
         public static BitwiseAnd Instance { get; } = new();
 
-        public static string Symbol => "&";
-
+        public string Symbol => "&";
     }
 
     public sealed class BitwiseOr
@@ -167,17 +166,18 @@ public static class BinaryArithmetic
     {
         public static OpKind Kind => OpKind.or;
         public static BitwiseOr Instance { get; } = new();
-        public static string Symbol => "|";
+        public string Symbol => "|";
     }
 
     public sealed class BitwiseXor
         : IOp<BitwiseXor>
         , IIntegerOp<BitwiseXor>
-        , ISymbolOp<BitwiseAnd>
+        , ISymbolOp<BitwiseXor>
         , IBitwiseLogicalOp
     {
+        private BitwiseAnd _instance;
         public static OpKind Kind => OpKind.xor;
         public static BitwiseXor Instance { get; } = new();
-        public static string Symbol => "^";
+        public string Symbol => "^";
     }
 }

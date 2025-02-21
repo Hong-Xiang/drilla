@@ -78,112 +78,112 @@ public partial struct vec4i64{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Neg>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Negate>>]
     public static vec4i64 operator -(vec4i64 v)
     {
         return new() { Data = - v.Data };
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec4i64 operator +(vec4i64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec4i64 operator -(vec4i64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec4i64 operator *(vec4i64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec4i64 operator /(vec4i64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec4i64 operator %(vec4i64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec4i64 operator +(Int64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec4i64 operator -(Int64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec4i64 operator *(Int64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec4i64 operator /(Int64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec4i64 operator %(Int64 left, vec4i64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec4i64 operator +(vec4i64 left, Int64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec4i64 operator -(vec4i64 left, Int64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec4i64 operator *(vec4i64 left, Int64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec4i64 operator /(vec4i64 left, Int64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.IntType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec4i64 operator %(vec4i64 left, Int64 right)
     {
         throw new NotImplementedException();

@@ -13,7 +13,6 @@ public interface IIntType<TSelf> : IIntType, INumericType<TSelf>
 {
 }
 
-
 [DebuggerDisplay("{Name}")]
 public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
     where TBitWidth : IBitWidth
@@ -27,9 +26,6 @@ public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
-
-    public INumericBinaryOperation GetBinaryOperation<TOp>() where TOp : IBinaryOp<TOp>
-        => NumericBinaryOperation<IntType<TBitWidth>, TOp>.Instance;
 }
 
 public static partial class ShaderType

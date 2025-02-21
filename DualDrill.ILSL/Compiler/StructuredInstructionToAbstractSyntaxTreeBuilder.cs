@@ -19,8 +19,8 @@ namespace DualDrill.CLSL.Compiler;
 using ScfBlock = Block<IStructuredStackInstruction>;
 using ScfLoop = Loop<IStructuredStackInstruction>;
 using ScfIf = IfThenElse<IStructuredStackInstruction>;
-using IScfElement = IStructuredControlFlowElement<IStructuredStackInstruction>;
-using ScfElements = StructuredControlFlowElementSequence<IStructuredStackInstruction>;
+using IScfElement = IStructuredControlFlowElement;
+using ScfElements = StructuredControlFlowElementSequence;
 using IScfRegion = IStructuredControlFlowRegion<IStructuredStackInstruction>;
 using IScfLabelRegion = ILabeledStructuredControlFlowRegion<IStructuredStackInstruction>;
 
@@ -37,7 +37,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         RootRegion = functionBody.Root;
         // TODO: fix local variable contains module variable problem
         LocalVariables = functionBody.LocalVariables.Where(v => v.DeclarationScope == DeclarationScope.Function)
-            .Distinct().ToFrozenSet();
+                                     .Distinct().ToFrozenSet();
     }
 
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> ShaderModule { get; }
@@ -71,7 +71,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         if (UsedNestedBreak)
         {
             var varsDeclare = LocalVariables.Append(BrDepth)
-                .Select(v => new VariableOrValueStatement(v));
+                                            .Select(v => new VariableOrValueStatement(v));
             return new CompoundStatement([
                 .. varsDeclare,
                 SyntaxFactory.AssignStatement(SyntaxFactory.VarIdentifier(BrDepth), SyntaxFactory.Literal(-1)),
@@ -180,8 +180,10 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     {
         if (MaxNestedBreakDepth > 0)
         {
-            IBinaryExpressionOperation eq = NumericBinaryRelationOperation<IntType<N32>, BinaryRelation.Eq>.Instance;
-            IBinaryExpressionOperation sub = NumericBinaryOperation<IntType<N32>, BinaryArithmetic.Sub>.Instance;
+            IBinaryExpressionOperation eq = NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>
+                .Instance;
+            IBinaryExpressionOperation sub = NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Sub>
+                .Instance;
             return SyntaxFactory.If(
                 eq.CreateExpression(
                     SyntaxFactory.VarIdentifier(BrDepth),
@@ -430,8 +432,8 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         throw new NotImplementedException();
     }
 
-    public Unit Visit<TOperation>(BinaryOperationInstruction<TOperation> inst)
-        where TOperation : ISingleton<TOperation>, IBinaryOperation<TOperation>
+    public Unit Visit<TOperation>(BinaryExpressionOperationInstruction<TOperation> inst)
+        where TOperation : ISingleton<TOperation>, IBinaryExpressionOperation<TOperation>
     {
         var r = Expressions.Pop();
         var l = Expressions.Pop();

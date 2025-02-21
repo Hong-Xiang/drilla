@@ -27,8 +27,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.Mathematics.CodeG
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DualDrill.CLSL.Language", "DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj", "{A1EE58EC-8B7E-4A19-AE35-6239CC13CED2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ILSpyReflectionDecompilerTest", "ILSpyReflectionDecompilerTest\ILSpyReflectionDecompilerTest.csproj", "{98E233CF-A208-4F8E-BB99-42B2F7575CA6}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticAnalysisTest", "SemanticAnalysisTest\SemanticAnalysisTest.csproj", "{99ACF7B4-104D-464B-91FF-3291BD0409EA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DualDrill.CLSL.Test", "DualDrill.CLSL.Test\DualDrill.CLSL.Test.csproj", "{FA047928-8BDE-4D9C-9F84-FC885C71F766}"
@@ -137,14 +135,6 @@ Global
 		{A1EE58EC-8B7E-4A19-AE35-6239CC13CED2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A1EE58EC-8B7E-4A19-AE35-6239CC13CED2}.Release|x64.ActiveCfg = Release|Any CPU
 		{A1EE58EC-8B7E-4A19-AE35-6239CC13CED2}.Release|x64.Build.0 = Release|Any CPU
-		{98E233CF-A208-4F8E-BB99-42B2F7575CA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{98E233CF-A208-4F8E-BB99-42B2F7575CA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{98E233CF-A208-4F8E-BB99-42B2F7575CA6}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{98E233CF-A208-4F8E-BB99-42B2F7575CA6}.Debug|x64.Build.0 = Debug|Any CPU
-		{98E233CF-A208-4F8E-BB99-42B2F7575CA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{98E233CF-A208-4F8E-BB99-42B2F7575CA6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{98E233CF-A208-4F8E-BB99-42B2F7575CA6}.Release|x64.ActiveCfg = Release|Any CPU
-		{98E233CF-A208-4F8E-BB99-42B2F7575CA6}.Release|x64.Build.0 = Release|Any CPU
 		{99ACF7B4-104D-464B-91FF-3291BD0409EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{99ACF7B4-104D-464B-91FF-3291BD0409EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{99ACF7B4-104D-464B-91FF-3291BD0409EA}.Debug|x64.ActiveCfg = Debug|Any CPU

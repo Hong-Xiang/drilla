@@ -1,8 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Common;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
@@ -13,184 +10,138 @@ public interface IVectorNumericOperation : IOperation
 
 public interface IVectorBinaryNumericOperation : IBinaryExpressionOperation, IVectorNumericOperation
 {
-    IBinaryOp Op { get; }
 }
 
 public interface IVectorNumericOperation<TSelf>
-    : ISingleton<TSelf>, IOperation<TSelf>
+    : IOperation<TSelf>
     , IVectorNumericOperation
     where TSelf : IVectorNumericOperation<TSelf>
 {
 }
 
-public interface IVectorBinaryNumericOperation<TSelf>
-    : ISingleton<TSelf>, IOperation<TSelf>
-    , IVectorNumericOperation<TSelf>
-    , IBinaryOperation<TSelf>
-    where TSelf : IVectorBinaryNumericOperation<TSelf>
+public interface IVectorBinaryExpressionNumericOperation<TSelf>
+    : IVectorNumericOperation<TSelf>
+    , IBinaryExpressionOperation<TSelf>
+    where TSelf : IVectorBinaryExpressionNumericOperation<TSelf>
 {
 }
 
 public sealed class VectorNumericUnaryOperation<TRank, TElement, TOp>
     : IVectorNumericOperation<VectorNumericUnaryOperation<TRank, TElement, TOp>>
-    , IUnaryOperation<VectorNumericUnaryOperation<TRank, TElement, TOp>>
+    , IUnaryExpressionOperation<VectorNumericUnaryOperation<TRank, TElement, TOp>,
+          VecType<TRank, TElement>,
+          VecType<TRank, TElement>,
+          TOp>
     where TRank : IRank<TRank>
     where TElement : INumericType<TElement>
-    where TOp : IUnaryOp
+    // TODO: use more restricted constraint
+    where TOp : IUnaryOp<TOp>
 
 {
     public static VectorNumericUnaryOperation<TRank, TElement, TOp> Instance { get; } = new();
 
     private VectorNumericUnaryOperation()
     {
-        Function = new FunctionDeclaration(
-                Name,
-                [
-                    new ParameterDeclaration( "l", OperandType, [] ),
-                    new ParameterDeclaration( "r", OperandType, [] )
-                ],
-                new FunctionReturn(OperandType, []),
-                [((IOperation)this).GetOperationMethodAttribute()]
-            );
     }
 
-    public FunctionDeclaration Function { get; }
-
     public VecType<TRank, TElement> OperandType => VecType<TRank, TElement>.Instance;
-    public IShaderType SourceType => OperandType;
-    public IShaderType ResultType => OperandType;
 
-    public string Name => GetType().CSharpFullName();
 
-    IStructuredStackInstruction IOperation.Instruction => UnaryOperationInstruction<VectorNumericUnaryOperation<TRank, TElement, TOp>>.Instance;
-
-    public IExpression CreateExpression(IExpression expr)
+    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
+        IUnaryExpressionOperation<VectorNumericUnaryOperation<TRank, TElement, TOp>, VecType<TRank, TElement>,
+            VecType<TRank, TElement>, TOp>.Expression expr)
     {
         throw new NotImplementedException();
     }
 }
 
-public sealed class VectorNumericBinaryOperation<TRank, TElement, TOp>
-    : IVectorBinaryNumericOperation<VectorNumericBinaryOperation<TRank, TElement, TOp>>
+public sealed class VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>
+    : IVectorBinaryExpressionNumericOperation<VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>>
     , IVectorBinaryNumericOperation
+    , IBinaryExpressionOperation<VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>,
+          VecType<TRank, TElement>,
+          VecType<TRank, TElement>,
+          VecType<TRank, TElement>,
+          TOp
+      >
     where TRank : IRank<TRank>
     // TODO: fix this to INumericType<TElement>
     where TElement : IScalarType<TElement>
     where TOp : IBinaryOp<TOp>
 
 {
-    public static VectorNumericBinaryOperation<TRank, TElement, TOp> Instance { get; } = new();
+    public static VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp> Instance { get; } = new();
 
-    private VectorNumericBinaryOperation()
+    private VectorExpressionNumericBinaryExpressionOperation()
     {
-        Function = new FunctionDeclaration(
-                Name,
-                [
-                    new ParameterDeclaration( "l", OperandType, [] ),
-                    new ParameterDeclaration( "r", OperandType, [] )
-                ],
-                new FunctionReturn(OperandType, []),
-                [((IOperation)this).GetOperationMethodAttribute()]
-            );
     }
-
-    public FunctionDeclaration Function { get; }
 
     public VecType<TRank, TElement> OperandType => VecType<TRank, TElement>.Instance;
 
-    public string Name => GetType().CSharpFullName();
-
-    public IShaderType LeftType => OperandType;
-
-    public IShaderType RightType => OperandType;
-
-    public IShaderType ResultType => OperandType;
-
-    public IBinaryOp Op => TOp.Instance;
-
-    public IExpression CreateExpression(IExpression l, IExpression r)
+    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
+        IBinaryExpressionOperation<VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>,
+            VecType<TRank, TElement>, VecType<TRank, TElement>, VecType<TRank, TElement>, TOp>.Expression expr)
     {
-        if (TOp.Instance is ISymbolOp op)
-        {
-            return op.GetBinaryExpression<VectorNumericBinaryOperation<TRank, TElement, TOp>>(l, r);
-        }
         throw new NotImplementedException();
     }
 }
 
-
-public sealed class ScalarVectorNumericOperation<TRank, TElement, TOp>
-    : IVectorBinaryNumericOperation<ScalarVectorNumericOperation<TRank, TElement, TOp>>
-    , IBinaryExpressionOperation<ScalarVectorNumericOperation<TRank, TElement, TOp>, TElement, VecType<TRank, TElement>, TOp>
+public sealed class ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>
+    : IVectorBinaryExpressionNumericOperation<ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>>
+    , IBinaryExpressionOperation<ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>,
+          TElement,
+          VecType<TRank, TElement>,
+          VecType<TRank, TElement>,
+          TOp>
     , IVectorBinaryNumericOperation
     where TRank : IRank<TRank>
     where TElement : IScalarType<TElement>
     where TOp : IBinaryOp<TOp>
 
 {
-    public static ScalarVectorNumericOperation<TRank, TElement, TOp> Instance { get; } = new();
+    public static ScalarVectorExpressionNumericOperation<TRank, TElement, TOp> Instance { get; } = new();
 
-    private ScalarVectorNumericOperation()
+    private ScalarVectorExpressionNumericOperation()
     {
-        Function = new FunctionDeclaration(
-                Name,
-                [
-                    new ParameterDeclaration( "l", ScalarType, [] ),
-                    new ParameterDeclaration( "r", VectorType, [] )
-                ],
-                new FunctionReturn(VectorType, []),
-                [((IOperation)this).GetOperationMethodAttribute()]
-            );
     }
 
-    public FunctionDeclaration Function { get; }
     public VecType<TRank, TElement> VectorType => VecType<TRank, TElement>.Instance;
     public IScalarType ScalarType => TElement.Instance;
 
-    public string Name => GetType().CSharpFullName();
-    public IShaderType ResultType => VectorType;
-    public IBinaryOp Op => TOp.Instance;
-
-    public IExpression CreateExpression(IExpression l, IExpression r)
+    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
+        IBinaryExpressionOperation<ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>, TElement,
+            VecType<TRank, TElement>, VecType<TRank, TElement>, TOp>.Expression expr)
     {
-        if (TOp.Instance is ISymbolOp op)
-        {
-            return op.GetBinaryExpression<ScalarVectorNumericOperation<TRank, TElement, TOp>>(l, r);
-        }
-        throw new NotSupportedException();
+        throw new NotImplementedException();
     }
 }
 
-public sealed class VectorScalarNumericOperation<TRank, TElement, TOp>
-    : IVectorBinaryNumericOperation<VectorScalarNumericOperation<TRank, TElement, TOp>>
-    , IBinaryExpressionOperation<VectorScalarNumericOperation<TRank, TElement, TOp>, VecType<TRank, TElement>, TElement, TOp>
+public sealed class VectorScalarExpressionNumericOperation<TRank, TElement, TOp>
+    : IVectorBinaryExpressionNumericOperation<VectorScalarExpressionNumericOperation<TRank, TElement, TOp>>
+    , IBinaryExpressionOperation<
+          VectorScalarExpressionNumericOperation<TRank, TElement, TOp>,
+          VecType<TRank, TElement>,
+          TElement,
+          VecType<TRank, TElement>,
+          TOp>
     , IVectorBinaryNumericOperation
     where TRank : IRank<TRank>
     where TElement : IScalarType<TElement>
     where TOp : IBinaryOp<TOp>
-
 {
-    public static VectorScalarNumericOperation<TRank, TElement, TOp> Instance { get; } = new();
+    public static VectorScalarExpressionNumericOperation<TRank, TElement, TOp> Instance { get; } = new();
 
-    private VectorScalarNumericOperation()
+    private VectorScalarExpressionNumericOperation()
     {
-        Function = new FunctionDeclaration(
-                Name,
-                [
-                    new ParameterDeclaration( "l", VectorType, [] ),
-                    new ParameterDeclaration( "r", ScalarType, [] )
-                ],
-                new FunctionReturn(VectorType, []),
-                [((IOperation)this).GetOperationMethodAttribute()]
-            );
     }
-
-    public FunctionDeclaration Function { get; }
 
     public VecType<TRank, TElement> VectorType => VecType<TRank, TElement>.Instance;
     public IScalarType ScalarType => TElement.Instance;
 
-    public string Name => GetType().CSharpFullName();
-    public IShaderType ResultType => VectorType;
-    public IBinaryOp Op => TOp.Instance;
+    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
+        IBinaryExpressionOperation<VectorScalarExpressionNumericOperation<TRank, TElement, TOp>,
+            VecType<TRank, TElement>, TElement, VecType<TRank, TElement>, TOp>.Expression expr)
+    {
+        throw new NotImplementedException();
+    }
 }

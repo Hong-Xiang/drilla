@@ -1,8 +1,9 @@
 ﻿using System.Text.Json.Serialization;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
 namespace DualDrill.CLSL.Language.Operation;
 
-public static class BinaryRelation
+public static class BinaryRelational
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum OpKind
@@ -20,52 +21,52 @@ public static class BinaryRelation
     {
     }
 
-    public sealed class Lt : IOp<Lt>, IFloatOp<Lt>, ISignedIntegerOp<Lt>, ISymbolOp<Lt>
+    public sealed class Lt : IOp<Lt>, IFloatOp<Lt>, ISignedIntegerOp<Lt>
     {
         public static OpKind Kind => OpKind.lt;
 
         public static Lt Instance { get; } = new();
 
-        public static string Symbol => "<";
+        public string Symbol => "<";
     }
 
-    public sealed class Gt : IOp<Gt>, IFloatOp<Gt>, ISignedIntegerOp<Gt>, ISymbolOp<Gt>
+    public sealed class Gt : IOp<Gt>, IFloatOp<Gt>, ISignedIntegerOp<Gt>
     {
         public static OpKind Kind => OpKind.gt;
         public static Gt Instance { get; } = new();
 
-        public static string Symbol => ">";
+        public string Symbol => ">";
     }
 
-    public sealed class Le : IOp<Le>, IFloatOp<Le>, ISignedIntegerOp<Le>, ISymbolOp<Le>
+    public sealed class Le : IOp<Le>, IFloatOp<Le>, ISignedIntegerOp<Le>
     {
         public static OpKind Kind => OpKind.le;
         public static Le Instance { get; } = new();
 
-        public static string Symbol => "<=";
+        public string Symbol => "<=";
     }
 
-    public sealed class Ge : IOp<Ge>, IFloatOp<Ge>, ISignedIntegerOp<Ge>, ISymbolOp<Ge>
+    public sealed class Ge : IOp<Ge>, IFloatOp<Ge>, ISignedIntegerOp<Ge>
     {
         public static OpKind Kind => OpKind.ge;
         public static Ge Instance { get; } = new();
 
-        public static string Symbol => ">=";
+        public string Symbol => ">=";
     }
 
-    public sealed class Eq : IOp<Eq>, IFloatOp<Eq>, IIntegerOp<Eq>, ISymbolOp<Eq>
+    public sealed class Eq : IOp<Eq>, IFloatOp<Eq>, IIntegerOp<Eq>
     {
         public static OpKind Kind => OpKind.eq;
         public static Eq Instance { get; } = new();
 
-        public static string Symbol => "==";
+        public string Symbol => "==";
     }
 
-    public sealed class Ne : IOp<Ne>, IFloatOp<Ne>, IIntegerOp<Ne>, ISymbolOp<Ne>
+    public sealed class Ne : IOp<Ne>, IFloatOp<Ne>, IIntegerOp<Ne>
     {
         public static OpKind Kind => OpKind.ne;
         public static Ne Instance { get; } = new();
 
-        public static string Symbol => "!=";
+        public string Symbol => "!=";
     }
 }

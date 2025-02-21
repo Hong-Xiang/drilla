@@ -7,36 +7,35 @@ using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Operation;
 
-public interface IScalarConversionOperation
+public interface IConversionOperation : IUnaryExpressionOperation
 {
-    IStructuredStackInstruction Instruction { get; }
+}
+
+public sealed class ScalarConvOp<TSource, TTarget> : IUnaryOp<ScalarConvOp<TSource, TTarget>>
+    where TSource : IScalarType<TSource>
+    where TTarget : IScalarType<TTarget>
+{
+    public string Name => $"conv.{TSource.Instance.Name}.{TTarget.Instance.Name}";
+    public static ScalarConvOp<TSource, TTarget> Instance { get; } = new();
 }
 
 public sealed class ScalarConversionOperation<TSource, TTarget>
-    : IScalarConversionOperation, IUnaryOperation<ScalarConversionOperation<TSource, TTarget>>
+    : IConversionOperation
+    , IUnaryExpressionOperation<ScalarConversionOperation<TSource, TTarget>, TSource, TTarget, ScalarConvOp<TSource, TTarget>>
     where TSource : IScalarType<TSource>
     where TTarget : IScalarType<TTarget>
 {
     public static ScalarConversionOperation<TSource, TTarget> Instance { get; } = new();
 
-    public IStructuredStackInstruction Instruction =>
-        UnaryOperationInstruction<ScalarConversionOperation<TSource, TTarget>>.Instance;
 
-    public IShaderType SourceType => TSource.Instance;
+    public string Name => ScalarConvOp<TSource, TTarget>.Instance.Name;
 
-    public IShaderType ResultType => TTarget.Instance;
-
-    public FunctionDeclaration Function { get; } = new(
-        $"{TTarget.Instance.Name}",
-        [new ParameterDeclaration("v", TSource.Instance, [])],
-        new FunctionReturn(TTarget.Instance, []),
-        [new ShaderRuntimeMethodAttribute()]
-    );
-
-    public string Name => $"conv.{TSource.Instance.Name}->{TTarget.Instance.Name}";
-    
     public override string ToString() => Name;
 
-    public IExpression CreateExpression(IExpression expr)
-        => new FunctionCallExpression(Function, [expr]);
+    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
+        IUnaryExpressionOperation<ScalarConversionOperation<TSource, TTarget>, TSource, TTarget,
+            ScalarConvOp<TSource, TTarget>>.Expression expr)
+    {
+        throw new NotImplementedException();
+    }
 }

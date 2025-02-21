@@ -41,6 +41,22 @@ public class ParseBodyTest(ITestOutputHelper Output)
     }
 
     [Fact]
+    public void LiteralI4ToUInt32ImplicitConversionShouldWorkForCrossBlockScenario()
+    {
+        var f = new FunctionDeclaration(
+            nameof(DevelopTestShaderModule.StackTransferedValuesWithLiteralImplicitConversion),
+            [
+                new ParameterDeclaration("x", ShaderType.U32, []),
+                new ParameterDeclaration("y", ShaderType.U32, []),
+            ],
+            new FunctionReturn(ShaderType.U32, []), []);
+        var result = ParseMethod(f,
+            MethodHelper.GetMethod<uint, uint, uint>(DevelopTestShaderModule
+                .StackTransferedValuesWithLiteralImplicitConversion));
+        // TODO: add control flow graph assertations
+    }
+
+    [Fact]
     public void MinimumIfThenElseShouldWork()
     {
         var method = MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.MinimumIfThenElse);
@@ -103,7 +119,8 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
             x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(1),
             x => x.Should()
-                .BeOfType<BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryArithmetic.Add>>>(),
+                  .BeOfType<BinaryExpressionOperationInstruction<
+                      NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>>>(),
             x => x.Should().BeOfType<ReturnInstruction>()
         );
     }
@@ -134,7 +151,8 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = parser.ParseMethodBody(f);
 
         result.Instructions[2].Should()
-            .BeOfType<BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryArithmetic.Add>>>();
+              .BeOfType<BinaryExpressionOperationInstruction<
+                  NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>>>();
     }
 
     [Fact]
@@ -163,7 +181,8 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = parser.ParseMethodBody(f);
 
         result.Instructions[2].Should()
-            .BeOfType<BinaryOperationInstruction<NumericBinaryOperation<UIntType<N32>, BinaryArithmetic.Add>>>();
+              .BeOfType<BinaryExpressionOperationInstruction<
+                  NumericBinaryArithmeticOperation<UIntType<N32>, BinaryArithmetic.Add>>>();
     }
 
     [Fact]
@@ -192,7 +211,8 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = parser.ParseMethodBody(f);
 
         result.Instructions[2].Should()
-            .BeOfType<BinaryOperationInstruction<NumericBinaryOperation<FloatType<N32>, BinaryArithmetic.Add>>>();
+              .BeOfType<BinaryExpressionOperationInstruction<
+                  NumericBinaryArithmeticOperation<FloatType<N32>, BinaryArithmetic.Add>>>();
     }
 
 
@@ -328,12 +348,14 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
             //  IL_0003: clt
             x => x.Should()
-                .BeOfType<BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryRelation.Lt>>>(),
+                  .BeOfType<BinaryExpressionOperationInstruction<
+                      NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>>>(),
             //  IL_0005: ldc.i4.0
             x => x.Should().BeOfType<ConstInstruction<I32Literal>>(),
             //  IL_0006: ceq
             x => x.Should()
-                .BeOfType<BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryRelation.Eq>>>(),
+                  .BeOfType<BinaryExpressionOperationInstruction<
+                      NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>>(),
             x => x.Should().BeOfType<UnaryOperationInstruction<ScalarConversionOperation<IntType<N32>, BoolType>>>(),
             //  IL_0008: stloc.0
             x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
@@ -525,7 +547,8 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(0),
             //  IL_0002: ble.s IL_0007
             x => x.Should()
-                .BeOfType<BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryRelation.Le>>>(),
+                  .BeOfType<BinaryExpressionOperationInstruction<
+                      NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Le>>>(),
             x => x.Should().BeOfType<BrIfInstruction>().Which.Target.Should().Be(l7),
 
             //  IL_0004: ldarg.2

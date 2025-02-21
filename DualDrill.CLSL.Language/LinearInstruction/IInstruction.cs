@@ -17,14 +17,19 @@ public interface IStackInstruction : IInstruction
 {
 }
 
-public interface IStructuredStackInstruction : IStackInstruction,
-    IStructuredControlFlowElement<IStructuredStackInstruction>
+public interface IStructuredStackInstruction
+    : IStackInstruction
+    , IStructuredControlFlowElement
+    , IUnstructuredControlFlowElement
 {
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>;
+}
 
-    IEnumerable<IStructuredStackInstruction> IStructuredControlFlowElement<IStructuredStackInstruction>.
-        Instructions => [this];
+public interface IComputeInstruction<TSelf> : IStructuredStackInstruction, ISingleton<TSelf>
+{
+    IEnumerable<Label> IStructuredControlFlowElement.ReferencedLabels => [];
+    IEnumerable<VariableDeclaration> IStructuredControlFlowElement.ReferencedLocalVariables => [];
 }
 
 public sealed record class LabelInstruction(Label Label) : IStackInstruction, ILabeledEntity
@@ -72,7 +77,7 @@ public sealed record class ReturnInstruction() : IJumpInstruction
 
 public sealed record class NopInstruction
     : IStructuredStackInstruction
-        , ISingleton<NopInstruction>
+    , ISingleton<NopInstruction>
 {
     public static NopInstruction Instance { get; } = new();
 
@@ -166,27 +171,9 @@ public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : ISt
     }
 }
 
-public sealed record class BinaryOperationInstruction<TOperation>
-    : ISingleton<BinaryOperationInstruction<TOperation>>
-        , IStructuredStackInstruction
-    where TOperation : IBinaryOperation<TOperation>
-{
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
-    public IEnumerable<Label> ReferencedLabels => [];
-
-    public static BinaryOperationInstruction<TOperation> Instance { get; } = new();
-    public TOperation Operation => TOperation.Instance;
-
-    public TResult Accept<TVisitor, TResult>(TVisitor visitor)
-        where TVisitor : IStructuredStackInstructionVisitor<TResult>
-        => visitor.Visit(this);
-
-    public override string ToString() => TOperation.Instance.Name;
-}
-
 public sealed class LogicalNotInstruction
     : IStructuredStackInstruction
-        , ISingleton<LogicalNotInstruction>
+    , ISingleton<LogicalNotInstruction>
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
     public IEnumerable<Label> ReferencedLabels => [];
@@ -233,7 +220,8 @@ public static class ShaderInstruction
     public static IStructuredStackInstruction BrIf(Label target) => new BrIfInstruction(target);
 
     public static IStructuredStackInstruction I32Eq() =>
-        BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryRelation.Eq>>.Instance;
+        BinaryExpressionOperationInstruction<NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>
+            .Instance;
 
     public static IStructuredStackInstruction LogicalNot() => new LogicalNotInstruction();
     public static IStructuredStackInstruction Dup() => DupInstruction.Instance;
@@ -249,6 +237,7 @@ public static class ShaderInstruction
     public static LoadSymbolAddressInstruction<VariableDeclaration> LoadAddress(VariableDeclaration decl) => new(decl);
     public static StoreSymbolInstruction<ParameterDeclaration> Store(ParameterDeclaration decl) => new(decl);
     public static StoreSymbolInstruction<VariableDeclaration> Store(VariableDeclaration decl) => new(decl);
+    public static StoreSymbolInstruction<MemberDeclaration> Store(MemberDeclaration decl) => new(decl);
 
     public static IStructuredStackInstruction Call(FunctionDeclaration decl) => new CallInstruction(decl);
 

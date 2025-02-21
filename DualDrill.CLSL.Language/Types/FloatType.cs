@@ -2,6 +2,7 @@
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Diagnostics;
+
 namespace DualDrill.CLSL.Language.Types;
 
 public interface IFloatType : IScalarType
@@ -25,11 +26,7 @@ public sealed record class FloatType<TBitWidth> : IFloatType<FloatType<TBitWidth
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
-
-    public INumericBinaryOperation GetBinaryOperation<TOp>() where TOp : IBinaryOp<TOp>
-        => NumericBinaryOperation<FloatType<TBitWidth>, TOp>.Instance;
 }
-
 
 public static partial class ShaderType
 {

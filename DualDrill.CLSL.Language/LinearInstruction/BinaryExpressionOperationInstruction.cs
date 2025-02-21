@@ -5,20 +5,20 @@ using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.LinearInstruction;
 
-public sealed record class UnaryOperationInstruction<TOperation>
-    : IStructuredStackInstruction
-    , ISingleton<UnaryOperationInstruction<TOperation>>
-    where TOperation : IUnaryOperation<TOperation>
+public sealed record class BinaryExpressionOperationInstruction<TOperation>
+    : ISingleton<BinaryExpressionOperationInstruction<TOperation>>
+    , IStructuredStackInstruction
+    where TOperation : IBinaryExpressionOperation<TOperation>
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
     public IEnumerable<Label> ReferencedLabels => [];
-    public static UnaryOperationInstruction<TOperation> Instance { get; } = new();
 
+    public static BinaryExpressionOperationInstruction<TOperation> Instance { get; } = new();
     public TOperation Operation => TOperation.Instance;
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
-        => visitor.VisitUnaryOperation(this);
+        => visitor.Visit(this);
 
-    public override string ToString() => $"{Operation}";
+    public override string ToString() => TOperation.Instance.Name;
 }

@@ -21,8 +21,8 @@ public interface IStructuredStackInstructionVisitor<TResult>
         where TTarget : ILoadStoreTargetSymbol;
     TResult Visit<TTarget>(StoreSymbolInstruction<TTarget> inst)
         where TTarget : ILoadStoreTargetSymbol;
-    TResult Visit<TOperation>(BinaryOperationInstruction<TOperation> inst)
-        where TOperation : ISingleton<TOperation>, IBinaryOperation<TOperation>;
+    TResult Visit<TOperation>(BinaryExpressionOperationInstruction<TOperation> inst)
+        where TOperation : ISingleton<TOperation>, IBinaryExpressionOperation<TOperation>;
     TResult Visit(LogicalNotInstruction inst);
     TResult Visit(DupInstruction inst);
     TResult Visit(DropInstruction inst);

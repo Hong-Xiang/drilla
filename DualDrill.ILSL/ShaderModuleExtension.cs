@@ -128,7 +128,7 @@ public static class ShaderModuleExtension
                     }
 
                     body = b.Instructions.Slice(structuredInstructionStart, structuredInstructionCount)
-                        .Cast<IStructuredStackInstruction>();
+                            .Cast<IStructuredStackInstruction>();
                 }
                 //var body = b.Instructions.Slice(structuredInstructionStart, structuredInstructionCount)
                 //                               .Cast<IStructuredStackInstruction>();
@@ -160,10 +160,10 @@ public static class ShaderModuleExtension
     )
     {
         var module = shader.Parse()
-            .ReplaceOperationCallsToOperationInstruction()
-            .ToControlFlowGraph()
-            .ToStructuredControlFlowStackModel()
-            .ToAbstractSyntaxTreeFunctionBody();
+                           .ReplaceOperationCallsToOperationInstruction()
+                           .ToControlFlowGraph()
+                           .ToStructuredControlFlowStackModel()
+                           .ToAbstractSyntaxTreeFunctionBody();
         var code = await module.EmitWgslCode();
         return code;
     }
@@ -219,7 +219,7 @@ public static class ShaderModuleExtension
     }
 
     public static void Dump(
-        this StructuredControlFlowElementSequence<IStructuredStackInstruction> sequence,
+        this StructuredControlFlowElementSequence sequence,
         Func<Label, string> labelName,
         Func<VariableDeclaration, string> variableName,
         IndentedTextWriter writer
@@ -293,16 +293,10 @@ public static class ShaderModuleExtension
         isw.Write(module.GetType().CSharpFullName());
         var visitor = new ModuleToCodeVisitor<StructuredStackInstructionFunctionBody>(isw, module, (b) =>
         {
-            var instructions = b.Root.Instructions.ToArray();
             var labelIndex = b.Root.ReferencedLabels.Distinct().ToArray().Index()
-                .ToDictionary(x => x.Item, x => x.Index);
-            var variables = instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>().Select(x => x.Target)
-                .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>().Select(x => x.Target))
-                .Concat(instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>().Select(x => x.Target))
-                .Where(v => v.DeclarationScope == DeclarationScope.Function)
-                .Distinct()
-                .Index()
-                .ToDictionary(x => x.Item, x => x.Index);
+                              .ToDictionary(x => x.Item, x => x.Index);
+            var variables = b.Root.ReferencedLocalVariables.Index()
+                             .ToDictionary(x => x.Item, x => x.Index);
 
             string VariableName(VariableDeclaration variable) =>
                 variable.DeclarationScope == DeclarationScope.Function
@@ -326,16 +320,18 @@ public static class ShaderModuleExtension
         isw.Write(module.GetType().CSharpFullName());
         var visitor = new ModuleToCodeVisitor<ControlFlowGraphFunctionBody>(isw, module, (b) =>
         {
-            var instructions = b.Graph.Labels().SelectMany(l => b.Graph[l].Instructions.ToArray()).ToArray();
+            var instructions = b.Graph.Labels().SelectMany(l => b.Graph[l].Elements.ToArray()).ToArray();
 
             var labelIndex = b.Graph.Labels().Index().ToDictionary(x => x.Item, x => x.Index);
             var variables = instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>().Select(x => x.Target)
-                .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>().Select(x => x.Target))
-                .Concat(instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>().Select(x => x.Target))
-                .Where(v => v.DeclarationScope == DeclarationScope.Function)
-                .Distinct()
-                .Index()
-                .ToDictionary(x => x.Item, x => x.Index);
+                                        .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>()
+                                                            .Select(x => x.Target))
+                                        .Concat(instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>()
+                                                            .Select(x => x.Target))
+                                        .Where(v => v.DeclarationScope == DeclarationScope.Function)
+                                        .Distinct()
+                                        .Index()
+                                        .ToDictionary(x => x.Item, x => x.Index);
 
             string VariableName(VariableDeclaration variable) =>
                 variable.DeclarationScope == DeclarationScope.Function
@@ -360,7 +356,7 @@ public static class ShaderModuleExtension
                 isw.WriteLine();
                 using (isw.IndentedScope())
                 {
-                    foreach (var instruction in b.Graph[l].Instructions.Span)
+                    foreach (var instruction in b.Graph[l].Elements.Span)
                     {
                         instruction.Dump(LabelName, VariableName, isw);
                     }
@@ -384,18 +380,21 @@ public static class ShaderModuleExtension
         var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionSequence>(isw, module, (b) =>
         {
             var labelIndex = b.Instructions.OfType<LabelInstruction>()
-                .Select(inst => inst.Label)
-                .Distinct()
-                .Index()
-                .ToDictionary(x => x.Item, x => x.Index);
-            var variables = b.Instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>().Select(x => x.Target)
-                .Concat(b.Instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>().Select(x => x.Target))
-                .Concat(
-                    b.Instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>().Select(x => x.Target))
-                .Where(v => v.DeclarationScope == DeclarationScope.Function)
-                .Distinct()
-                .Index()
-                .ToDictionary(x => x.Item, x => x.Index);
+                              .Select(inst => inst.Label)
+                              .Distinct()
+                              .Index()
+                              .ToDictionary(x => x.Item, x => x.Index);
+            var variables = b.Instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>()
+                             .Select(x => x.Target)
+                             .Concat(b.Instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>()
+                                      .Select(x => x.Target))
+                             .Concat(
+                                 b.Instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>()
+                                  .Select(x => x.Target))
+                             .Where(v => v.DeclarationScope == DeclarationScope.Function)
+                             .Distinct()
+                             .Index()
+                             .ToDictionary(x => x.Item, x => x.Index);
 
             string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
 

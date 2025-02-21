@@ -54,7 +54,7 @@ public static partial class ShaderModuleExtension
         //   the question its children nodes could still br to other nodes,
         //   how can we ensure those nodes are properly nested?
 
-        IEnumerable<IStructuredControlFlowElement<IStructuredStackInstruction>> DoBranch(
+        IEnumerable<IStructuredControlFlowElement> DoBranch(
             Label source, Label target)
         {
             if (cfr.IsLoop(target))
@@ -71,10 +71,10 @@ public static partial class ShaderModuleExtension
         }
 
         Block<IStructuredStackInstruction> ToBlock(
-            IEnumerable<IStructuredControlFlowElement<IStructuredStackInstruction>> elements
+            IEnumerable<IStructuredControlFlowElement> elements
         )
         {
-            ImmutableArray<IStructuredControlFlowElement<IStructuredStackInstruction>> es = [.. elements];
+            ImmutableArray<IStructuredControlFlowElement> es = [.. elements];
             return es switch
             {
                 [Block<IStructuredStackInstruction> b] => b,
@@ -82,7 +82,7 @@ public static partial class ShaderModuleExtension
             };
         }
 
-        IEnumerable<IStructuredControlFlowElement<IStructuredStackInstruction>> NodeWithin(Label target,
+        IEnumerable<IStructuredControlFlowElement> NodeWithin(Label target,
             ImmutableArray<Label> children)
         {
             ImmutableArray<Label> childrenLabels = [.. children];
@@ -95,13 +95,13 @@ public static partial class ShaderModuleExtension
                 {
                     TerminateSuccessor ret =>
                     [
-                        .. bb.Instructions.Span,
+                        .. bb.Elements.Span,
                         ShaderInstruction.Return()
                     ],
-                    UnconditionalSuccessor unc => [..bb.Instructions.Span, .. DoBranch(target, unc.Target)],
+                    UnconditionalSuccessor unc => [..bb.Elements.Span, .. DoBranch(target, unc.Target)],
                     ConditionalSuccessor brIf =>
                     [
-                        ..bb.Instructions.Span,
+                        ..bb.Elements.Span,
                         new IfThenElse<IStructuredStackInstruction>(
                             new([
                                 ..DoBranch(target, brIf.TrueTarget)

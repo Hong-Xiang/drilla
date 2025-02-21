@@ -82,7 +82,7 @@ internal sealed record class VectorComponentCodeGenerator(
         Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. VecType.Size.Components().Select(m => {
             var l = op.LeftType is IScalarType ?  "left" : $"left.{m}";
             var r = op.RightType is IScalarType ?  "right" : $"right.{m}";
-            return $"({Config.GetCSharpTypeName(VecType.ElementType)})({l} {Config.OpName(op.Op)} {r})"; })]);
+            return $"({Config.GetCSharpTypeName(VecType.ElementType)})({l} {Config.OpName(op.BinaryOp)} {r})"; })]);
         Writer.WriteLine(");");
     }
 }
@@ -181,11 +181,11 @@ internal sealed record class VectorSimdCodeGenerator(
     {
         Writer.WriteLine("throw new NotImplementedException();");
         return;
-        if (op.Op is BinaryArithmetic.Rem)
+        if (op.BinaryOp is BinaryArithmetic.Rem)
         {
             var l = op.LeftType is IScalarType ? $"{SimdStaticDataTypeName}.Create(left)" : "left.Data";
             var r = op.RightType is IScalarType ? $"{SimdStaticDataTypeName}.Create(right)" : "right.Data";
-            Writer.WriteLine($"return new() {{ Data = {l} {Config.OpName(op.Op)} {r} }};");
+            Writer.WriteLine($"return new() {{ Data = {l} {Config.OpName(op.BinaryOp)} {r} }};");
         }
         else
         {
@@ -328,7 +328,7 @@ public sealed record class VecCodeGenerator<TRank, TElement>
                 Writer.WriteAggressiveInlining();
                 if (op.Op == UnaryArithmeticOp.Minus && TElement.Instance is INumericType nt)
                 {
-                    IOperation operation = nt.GetVectorUnaryNumericOperation<TRank, UnaryArithmetic.Neg>();
+                    IOperation operation = nt.GetVectorUnaryNumericOperation<TRank, UnaryArithmetic.Negate>();
                     Writer.WriteLine($"[{operation.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
                 }
                 Writer.WriteLine($"public static {Config.GetCSharpTypeName(op.Result)} operator {Config.OpName(op.Op)}({Config.GetCSharpTypeName(op.Source)} v)");
@@ -344,7 +344,7 @@ public sealed record class VecCodeGenerator<TRank, TElement>
                 {
                     Writer.WriteAggressiveInlining();
                     Writer.WriteLine($"[{op.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
-                    Writer.WriteLine($"public static {Config.GetCSharpTypeName(VecType)} operator {Config.OpName(op.Op)}({Config.GetCSharpTypeName(op.LeftType)} left, {Config.GetCSharpTypeName(op.RightType)} right)");
+                    Writer.WriteLine($"public static {Config.GetCSharpTypeName(VecType)} operator {Config.OpName(op.BinaryOp)}({Config.GetCSharpTypeName(op.LeftType)} left, {Config.GetCSharpTypeName(op.RightType)} right)");
                     using (Writer.IndentedScopeWithBracket())
                     {
                         DetailCodeGenerator.GenerateArithmeticOperatorBody(op);

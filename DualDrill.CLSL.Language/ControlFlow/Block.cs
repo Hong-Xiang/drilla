@@ -8,13 +8,12 @@ namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class Block<TInstruction>(
     Label Label,
-    StructuredControlFlowElementSequence<TInstruction> Body
+    StructuredControlFlowElementSequence Body
 ) : ILabeledStructuredControlFlowRegion<TInstruction>
     where TInstruction : IInstruction
 {
     public Label Label { get; } = Label;
-    public StructuredControlFlowElementSequence<TInstruction> Body { get; } = Body;
-    public IEnumerable<TInstruction> Instructions => Body.Instructions;
+    public StructuredControlFlowElementSequence Body { get; } = Body;
     public IEnumerable<Label> ReferencedLabels => [Label, .. Body.Labels];
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Body.LocalVariables;
 

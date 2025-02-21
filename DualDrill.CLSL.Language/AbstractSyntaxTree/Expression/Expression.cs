@@ -1,33 +1,33 @@
 ﻿using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
 [JsonDerivedType(typeof(LiteralValueExpression), nameof(LiteralValueExpression))]
 [JsonDerivedType(typeof(VariableIdentifierExpression), nameof(VariableIdentifierExpression))]
 [JsonDerivedType(typeof(FunctionCallExpression), nameof(FunctionCallExpression))]
-[JsonDerivedType(typeof(BinaryArithmeticExpression), nameof(BinaryArithmeticExpression))]
-[JsonDerivedType(typeof(BinaryBitwiseExpression), nameof(BinaryBitwiseExpression))]
 [JsonDerivedType(typeof(FormalParameterExpression), nameof(FormalParameterExpression))]
-[JsonDerivedType(typeof(ParenthesizedExpression), nameof(ParenthesizedExpression))]
 [JsonDerivedType(typeof(VectorSwizzleAccessExpression), nameof(VectorSwizzleAccessExpression))]
-[JsonDerivedType(typeof(BinaryRelationalExpression), nameof(BinaryRelationalExpression))]
-[JsonDerivedType(typeof(BinaryLogicalExpression), nameof(BinaryLogicalExpression))]
-[JsonDerivedType(typeof(UnaryLogicalExpression), nameof(UnaryLogicalExpression))]
-[JsonDerivedType(typeof(UnaryArithmeticExpression), nameof(UnaryArithmeticExpression))]
 [JsonDerivedType(typeof(NamedComponentExpression), nameof(NamedComponentExpression))]
 public interface IExpression : IShaderAstNode
 {
     IShaderType Type { get; }
 
-    TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
-    {
-        return this.AcceptVisitor(visitor);
-    }
+    TResult Accept<TResult>(IExpressionVisitor<TResult> visitor);
+
+    IEnumerable<IStructuredStackInstruction> ToInstructions();
+    IEnumerable<VariableDeclaration> ReferencedVariables { get; }
 }
 
 public sealed class InvalidExpressionTypeException(string message) : Exception(message)
+{
+}
+
+// either literal or local variable
+public interface ICrossBlockExpression : IExpression
 {
 }
 
@@ -36,43 +36,29 @@ public interface IExpressionVisitor<T>
     T VisitLiteralValueExpression(LiteralValueExpression expr);
     T VisitVariableIdentifierExpression(VariableIdentifierExpression expr);
     T VisitFunctionCallExpression(FunctionCallExpression expr);
-    T VisitBinaryArithmeticExpression(BinaryArithmeticExpression expr);
-    T VisitBinaryBitwiseExpression(BinaryBitwiseExpression expr);
 
-    T VisitBinaryExpression<TOperation, TOp>(BinaryExpression<TOperation, TOp> expr)
-        where TOperation : IBinaryOperation<TOperation>
-        where TOp : ISymbolOp<TOp>;
+    T VisitBinaryExpression
+        <TOperation, TLeftType, TRightType, TResultType, TOp>
+        (IBinaryExpressionOperation<TOperation, TLeftType, TRightType, TResultType, TOp>.Expression expr)
+        where TOperation : IBinaryExpressionOperation<TOperation, TLeftType, TRightType, TResultType, TOp>
+        where TLeftType : ISingletonShaderType<TLeftType>
+        where TRightType : ISingletonShaderType<TRightType>
+        where TResultType : ISingletonShaderType<TResultType>
+        where TOp : IBinaryOp<TOp>;
 
-    T VisitBinaryRelationalExpression(BinaryRelationalExpression expr);
-    T VisitBinaryLogicalExpression(BinaryLogicalExpression expr);
-    T VisitUnaryLogicalExpression(UnaryLogicalExpression expr);
-    T VisitUnaryArithmeticExpression(UnaryArithmeticExpression expr);
+    T VisitUnaryExpression
+        <TOperation, TSourceType, TResultType, TOp>
+        (IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>.Expression expr)
+        where TOperation : IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>
+        where TSourceType : ISingletonShaderType<TSourceType>
+        where TResultType : ISingletonShaderType<TResultType>
+        where TOp : IUnaryOp<TOp>;
+
     T VisitFormalParameterExpression(FormalParameterExpression expr);
-    T VisitParenthesizedExpression(ParenthesizedExpression expr);
     T VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr);
     T VisitNamedComponentExpression(NamedComponentExpression expr);
 }
 
 public static class ExpressionExtension
 {
-    public static T AcceptVisitor<T>(this IExpression expr, IExpressionVisitor<T> visitor)
-    {
-        return expr switch
-        {
-            FunctionCallExpression e => visitor.VisitFunctionCallExpression(e),
-            BinaryArithmeticExpression e => visitor.VisitBinaryArithmeticExpression(e),
-            BinaryBitwiseExpression e => visitor.VisitBinaryBitwiseExpression(e),
-            BinaryRelationalExpression e => visitor.VisitBinaryRelationalExpression(e),
-            BinaryLogicalExpression e => visitor.VisitBinaryLogicalExpression(e),
-            UnaryLogicalExpression e => visitor.VisitUnaryLogicalExpression(e),
-            UnaryArithmeticExpression e => visitor.VisitUnaryArithmeticExpression(e),
-            LiteralValueExpression e => visitor.VisitLiteralValueExpression(e),
-            VariableIdentifierExpression e => visitor.VisitVariableIdentifierExpression(e),
-            FormalParameterExpression e => visitor.VisitFormalParameterExpression(e),
-            ParenthesizedExpression e => visitor.VisitParenthesizedExpression(e),
-            VectorSwizzleAccessExpression e => visitor.VisitVectorSwizzleAccessExpression(e),
-            NamedComponentExpression e => visitor.VisitNamedComponentExpression(e),
-            _ => expr.Accept(visitor)
-        };
-    }
 }

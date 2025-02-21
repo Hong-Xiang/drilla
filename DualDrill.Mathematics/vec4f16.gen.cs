@@ -60,112 +60,112 @@ public partial struct vec4f16{
     
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Neg>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Negate>>]
     public static vec4f16 operator -(vec4f16 v)
     {
         return vec4((Half)(-v.x), (Half)(-v.y), (Half)(-v.z), (Half)(-v.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec4f16 operator +(vec4f16 left, vec4f16 right)
     {
         return vec4((Half)(left.x + right.x), (Half)(left.y + right.y), (Half)(left.z + right.z), (Half)(left.w + right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec4f16 operator -(vec4f16 left, vec4f16 right)
     {
         return vec4((Half)(left.x - right.x), (Half)(left.y - right.y), (Half)(left.z - right.z), (Half)(left.w - right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec4f16 operator *(vec4f16 left, vec4f16 right)
     {
         return vec4((Half)(left.x * right.x), (Half)(left.y * right.y), (Half)(left.z * right.z), (Half)(left.w * right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec4f16 operator /(vec4f16 left, vec4f16 right)
     {
         return vec4((Half)(left.x / right.x), (Half)(left.y / right.y), (Half)(left.z / right.z), (Half)(left.w / right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec4f16 operator %(vec4f16 left, vec4f16 right)
     {
         return vec4((Half)(left.x % right.x), (Half)(left.y % right.y), (Half)(left.z % right.z), (Half)(left.w % right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec4f16 operator +(Half left, vec4f16 right)
     {
         return vec4((Half)(left + right.x), (Half)(left + right.y), (Half)(left + right.z), (Half)(left + right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec4f16 operator -(Half left, vec4f16 right)
     {
         return vec4((Half)(left - right.x), (Half)(left - right.y), (Half)(left - right.z), (Half)(left - right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec4f16 operator *(Half left, vec4f16 right)
     {
         return vec4((Half)(left * right.x), (Half)(left * right.y), (Half)(left * right.z), (Half)(left * right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec4f16 operator /(Half left, vec4f16 right)
     {
         return vec4((Half)(left / right.x), (Half)(left / right.y), (Half)(left / right.z), (Half)(left / right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec4f16 operator %(Half left, vec4f16 right)
     {
         return vec4((Half)(left % right.x), (Half)(left % right.y), (Half)(left % right.z), (Half)(left % right.w));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec4f16 operator +(vec4f16 left, Half right)
     {
         return vec4((Half)(left.x + right), (Half)(left.y + right), (Half)(left.z + right), (Half)(left.w + right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec4f16 operator -(vec4f16 left, Half right)
     {
         return vec4((Half)(left.x - right), (Half)(left.y - right), (Half)(left.z - right), (Half)(left.w - right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec4f16 operator *(vec4f16 left, Half right)
     {
         return vec4((Half)(left.x * right), (Half)(left.y * right), (Half)(left.z * right), (Half)(left.w * right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec4f16 operator /(vec4f16 left, Half right)
     {
         return vec4((Half)(left.x / right), (Half)(left.y / right), (Half)(left.z / right), (Half)(left.w / right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N4,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N16>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec4f16 operator %(vec4f16 left, Half right)
     {
         return vec4((Half)(left.x % right), (Half)(left.y % right), (Half)(left.z % right), (Half)(left.w % right));

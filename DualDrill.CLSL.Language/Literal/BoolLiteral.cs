@@ -2,8 +2,6 @@
 
 namespace DualDrill.CLSL.Language.Literal;
 
-public readonly record struct BoolLiteral(bool Value) : ILiteral
+public readonly record struct BoolLiteral(bool Value) : ILiteral<BoolLiteral, bool, BoolType>
 {
-    public IShaderType Type => ShaderType.Bool;
-    public override string ToString() => $"{Type.Name}({Value})";
 }

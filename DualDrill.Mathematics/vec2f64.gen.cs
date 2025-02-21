@@ -48,112 +48,112 @@ public partial struct vec2f64{
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Neg>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Negate>>]
     public static vec2f64 operator -(vec2f64 v)
     {
         return new() { Data = - v.Data };
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec2f64 operator +(vec2f64 left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec2f64 operator -(vec2f64 left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec2f64 operator *(vec2f64 left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec2f64 operator /(vec2f64 left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericBinaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec2f64 operator %(vec2f64 left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec2f64 operator +(Double left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec2f64 operator -(Double left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec2f64 operator *(Double left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec2f64 operator /(Double left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec2f64 operator %(Double left, vec2f64 right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec2f64 operator +(vec2f64 left, Double right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec2f64 operator -(vec2f64 left, Double right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec2f64 operator *(vec2f64 left, Double right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec2f64 operator /(vec2f64 left, Double right)
     {
         throw new NotImplementedException();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
+    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N64>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec2f64 operator %(vec2f64 left, Double right)
     {
         throw new NotImplementedException();

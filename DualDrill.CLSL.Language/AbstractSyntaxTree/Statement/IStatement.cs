@@ -1,4 +1,6 @@
 ﻿using System.Text.Json.Serialization;
+using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
@@ -19,6 +21,11 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 public interface IStatement
     : IShaderAstNode
 {
+}
+
+public interface IStackStatement : IStructuredControlFlowElement, IUnstructuredControlFlowElement
+{
+    IEnumerable<IStackInstruction> ToInstructions();
 }
 
 public interface IStatementVisitor<T>

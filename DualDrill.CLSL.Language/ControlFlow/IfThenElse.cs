@@ -5,16 +5,14 @@ using DualDrill.CLSL.Language.LinearInstruction;
 namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class IfThenElse<TInstruction>(
-    StructuredControlFlowElementSequence<TInstruction> TrueBody,
-    StructuredControlFlowElementSequence<TInstruction> FalseBody
+    StructuredControlFlowElementSequence TrueBody,
+    StructuredControlFlowElementSequence FalseBody
 ) : IStructuredControlFlowRegion<TInstruction>
     where TInstruction : IInstruction
 {
-    public StructuredControlFlowElementSequence<TInstruction> TrueBody { get; } = TrueBody;
-    public StructuredControlFlowElementSequence<TInstruction> FalseBody { get; } = FalseBody;
+    public StructuredControlFlowElementSequence TrueBody { get; } = TrueBody;
+    public StructuredControlFlowElementSequence FalseBody { get; } = FalseBody;
 
-    public IEnumerable<TInstruction> Instructions =>
-        TrueBody.Instructions.Concat(FalseBody.Instructions);
 
     public IEnumerable<Label> ReferencedLabels =>
         TrueBody.Labels.Concat(FalseBody.Labels);

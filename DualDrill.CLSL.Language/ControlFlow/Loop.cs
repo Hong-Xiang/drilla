@@ -6,15 +6,15 @@ using DualDrill.CLSL.Language.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public sealed class Loop<TInstruction>(Label label,
-    StructuredControlFlowElementSequence<TInstruction> body)
+public sealed class Loop<TInstruction>(
+    Label label,
+    StructuredControlFlowElementSequence body)
     : ILabeledStructuredControlFlowRegion<TInstruction>
     where TInstruction : IInstruction
 {
     public Label Label { get; } = label;
-    public StructuredControlFlowElementSequence<TInstruction> Body { get; } = body;
+    public StructuredControlFlowElementSequence Body { get; } = body;
 
-    public IEnumerable<TInstruction> Instructions => Body.Instructions;
 
     public IEnumerable<Label> ReferencedLabels => [Label, .. Body.Labels];
 

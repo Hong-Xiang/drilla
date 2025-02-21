@@ -1,19 +1,12 @@
 ﻿using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
-using Lokad.ILPack.IL;
 using System.Reflection;
 
 namespace DualDrill.CLSL.Frontend;
 
-public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int NextByteOffset, Instruction Instruction)
-{
-}
-
 public interface ICilInstructionVisitor<TResult>
 {
-    void BeforeVisitInstruction(CilInstructionInfo info);
-    void AfterVisitInstruction(CilInstructionInfo info);
     TResult VisitNop(CilInstructionInfo inst);
     TResult VisitBreak(CilInstructionInfo inst);
     TResult VisitLoadArgument(CilInstructionInfo inst, ParameterInfo info);
@@ -38,7 +31,7 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitBranchIf(CilInstructionInfo inst, int jumpOffset, bool value);
 
     TResult VisitBranchIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false)
-        where TOp : BinaryRelation.IOp<TOp>;
+        where TOp : BinaryRelational.IOp<TOp>;
 
     TResult VisitSwitch(CilInstructionInfo inst);
 
@@ -52,10 +45,10 @@ public interface ICilInstructionVisitor<TResult>
         where TOp : BinaryLogical.IOp<TOp>;
 
     TResult VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
-        where TOp : BinaryRelation.IOp<TOp>;
+        where TOp : BinaryRelational.IOp<TOp>;
 
     TResult VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>;
-    TResult VisitUnaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryRelation.IOp<TOp>;
+    TResult VisitUnaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryRelational.IOp<TOp>;
     TResult VisitLoadIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;
     TResult VisitStoreIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;
     TResult VisitLoadIndirectNativeInt(CilInstructionInfo inst);
@@ -63,10 +56,4 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitStoreIndirectRef(CilInstructionInfo inst);
     TResult VisitDup(CilInstructionInfo inst);
     TResult VisitPop(CilInstructionInfo inst);
-}
-
-public interface ICilMethodBodyAbstractInterpreter<TResult>
-{
-    TResult Next(ICilInstructionVisitor<TResult> visitor);
-    TResult GoTo(ICilInstructionVisitor<TResult> visitor, params ReadOnlySpan<int> offsets);
 }

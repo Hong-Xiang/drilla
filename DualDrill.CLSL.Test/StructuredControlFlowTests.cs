@@ -45,7 +45,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                 [e] = new(Successor.Unconditional(e), BasicBlock<Inst>.Create([
                     ShaderInstruction.Load(v),
                     ShaderInstruction.Const(new I32Literal(1)),
-                    BinaryOperationInstruction<NumericBinaryOperation<IntType<N32>, BinaryArithmetic.Add>>.Instance,
+                    BinaryExpressionOperationInstruction<NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>>.Instance,
                     ShaderInstruction.Store(v),
                 ]))
             })
@@ -160,7 +160,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                     );
                 }),
             b1 => b1.Should().BeOfType<Block<Inst>>()
-                .Which.Instructions.Should().ContainSingle()
+                .Which.Body.Elements.Should().ContainSingle()
                 .Which.Should().BeOfType<ReturnInstruction>()
         );
     }

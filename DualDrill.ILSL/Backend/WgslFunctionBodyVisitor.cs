@@ -4,19 +4,20 @@ using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Backend;
 
 public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
     : IStatementVisitor<ValueTask>
-        , IExpressionVisitor<ValueTask>
+    , IExpressionVisitor<ValueTask>
 {
     public async ValueTask VisitReturn(ReturnStatement stmt)
     {
         Writer.Write("return ");
         if (stmt.Expr is not null)
         {
-            await stmt.Expr.AcceptVisitor(this);
+            await stmt.Expr.Accept(this);
         }
     }
 
@@ -31,7 +32,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         if (stmt.Variable.Initializer is not null)
         {
             Writer.Write(" = ");
-            await stmt.Variable.Initializer.AcceptVisitor(this);
+            await stmt.Variable.Initializer.Accept(this);
         }
     }
 
@@ -52,7 +53,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
     public async ValueTask VisitIf(IfStatement stmt)
     {
         Writer.Write("if (");
-        await stmt.Expr.AcceptVisitor(this);
+        await stmt.Expr.Accept(this);
         Writer.WriteLine(") {");
         if (stmt.TrueBody.Statements.Length > 0)
         {
@@ -77,7 +78,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
     public async ValueTask VisitWhile(WhileStatement stmt)
     {
         Writer.Write("while ");
-        await stmt.Expr.AcceptVisitor(this);
+        await stmt.Expr.Accept(this);
         Writer.WriteLine();
         await stmt.Statement.AcceptVisitor(this);
     }
@@ -99,7 +100,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         Writer.Write("; ");
         if (header.Expr != null)
         {
-            await header.Expr.AcceptVisitor(this);
+            await header.Expr.Accept(this);
         }
 
         Writer.Write("; ");
@@ -140,18 +141,18 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
     public async ValueTask VisitPhonyAssignment(PhonyAssignmentStatement stmt)
     {
         Writer.Write("_ = ");
-        await stmt.Expr.AcceptVisitor(this);
+        await stmt.Expr.Accept(this);
     }
 
     public async ValueTask VisitIncrement(IncrementStatement stmt)
     {
-        await stmt.Expr.AcceptVisitor(this);
+        await stmt.Expr.Accept(this);
         Writer.Write("++");
     }
 
     public async ValueTask VisitDecrement(DecrementStatement stmt)
     {
-        await stmt.Expr.AcceptVisitor(this);
+        await stmt.Expr.Accept(this);
         Writer.Write("--");
     }
 
@@ -168,22 +169,56 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
             }
 
             firstArgument = false;
-            await a.AcceptVisitor(this);
+            await a.Accept(this);
         }
 
         Writer.Write(')');
     }
 
-    public async ValueTask VisitBinaryArithmeticExpression(BinaryArithmeticExpression expr)
+    public async ValueTask VisitBinaryExpression
+        <TOperation, TLeftType, TRightType, TResultType, TOp>
+        (IBinaryExpressionOperation<TOperation, TLeftType, TRightType, TResultType, TOp>.Expression expr)
+        where TOperation : IBinaryExpressionOperation<TOperation, TLeftType, TRightType, TResultType, TOp>
+        where TLeftType : ISingletonShaderType<TLeftType>
+        where TRightType : ISingletonShaderType<TRightType>
+        where TResultType : ISingletonShaderType<TResultType>
+        where TOp : IBinaryOp<TOp>
     {
-        Writer.Write("( ");
-        await expr.L.AcceptVisitor(this);
-        Writer.Write(") ");
-        //Writer.Write(BinaryArithmetic.GetInstance(expr.Op).Symbol);
-        throw new NotImplementedException();
-        Writer.Write("( ");
-        await expr.R.AcceptVisitor(this);
-        Writer.Write(")");
+        if (TOp.Instance is ISymbolOp symbol)
+        {
+            Writer.Write("( ");
+            await expr.L.Accept(this);
+            Writer.Write(") ");
+            Writer.Write(symbol.Symbol);
+            Writer.Write("( ");
+            await expr.R.Accept(this);
+            Writer.Write(")");
+        }
+        else
+        {
+            throw new NotSupportedException($"Non symbol binary op {TOp.Instance.Name} is not supported.");
+        }
+    }
+
+    public async ValueTask VisitUnaryExpression
+        <TOperation, TSourceType, TResultType, TOp>
+        (IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>.Expression expr)
+        where TOperation : IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>
+        where TSourceType : ISingletonShaderType<TSourceType>
+        where TResultType : ISingletonShaderType<TResultType>
+        where TOp : IUnaryOp<TOp>
+    {
+        if (TOp.Instance is ISymbolOp symbol)
+        {
+            Writer.Write(symbol.Symbol);
+            Writer.Write("(");
+            await expr.Expr.Accept(this);
+            Writer.Write(")");
+        }
+        else
+        {
+            throw new NotSupportedException($"Unary operation {TOperation.Instance.Name} is not supported.");
+        }
     }
 
     public async ValueTask VisitLiteralValueExpression(LiteralValueExpression expr)
@@ -212,86 +247,6 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         Writer.Write(expr.Parameter.Name);
     }
 
-    public async ValueTask VisitBinaryBitwiseExpression(BinaryBitwiseExpression expr)
-    {
-        await expr.L.AcceptVisitor(this);
-        var op = expr.Op switch
-        {
-            BinaryBitwiseOp.BitwiseOr => "|",
-            BinaryBitwiseOp.BitwiseAnd => "&",
-            BinaryBitwiseOp.BitwiseExclusiveOr => "^",
-            _ => throw new NotSupportedException()
-        };
-        Writer.Write(' ');
-        Writer.Write(op);
-        Writer.Write(' ');
-        await expr.R.AcceptVisitor(this);
-    }
-
-    public async ValueTask VisitBinaryRelationalExpression(BinaryRelationalExpression expr)
-    {
-        await expr.L.AcceptVisitor(this);
-        var op = expr.Op switch
-        {
-            BinaryRelation.OpKind.lt => "<",
-            BinaryRelation.OpKind.gt => ">",
-            BinaryRelation.OpKind.le => "<=",
-            BinaryRelation.OpKind.ge => ">=",
-            BinaryRelation.OpKind.eq => "==",
-            BinaryRelation.OpKind.ne => "!=",
-            _ => throw new NotSupportedException()
-        };
-        Writer.Write(' ');
-        Writer.Write(op);
-        Writer.Write(' ');
-        await expr.R.AcceptVisitor(this);
-    }
-
-    public async ValueTask VisitBinaryLogicalExpression(BinaryLogicalExpression expr)
-    {
-        await expr.L.AcceptVisitor(this);
-        var op = expr.Op switch
-        {
-            BinaryLogicalOp.And => "&&",
-            BinaryLogicalOp.Or => "||",
-            _ => throw new NotSupportedException()
-        };
-        Writer.Write(' ');
-        Writer.Write(op);
-        Writer.Write(' ');
-        await expr.R.AcceptVisitor(this);
-    }
-
-    public async ValueTask VisitUnaryLogicalExpression(UnaryLogicalExpression expr)
-    {
-        var op = expr.Op switch
-        {
-            UnaryLogicalOp.Not => "!",
-            _ => throw new NotSupportedException()
-        };
-        Writer.Write(op);
-        Writer.Write("(");
-        await expr.Expr.AcceptVisitor(this);
-        Writer.Write(")");
-    }
-
-    public async ValueTask VisitUnaryArithmeticExpression(UnaryArithmeticExpression expr)
-    {
-        var op = expr.Op switch
-        {
-            UnaryArithmeticOp.Minus => "-",
-            _ => throw new NotSupportedException()
-        };
-        Writer.Write(op);
-        await expr.Expr.AcceptVisitor(this);
-    }
-
-    public async ValueTask VisitParenthesizedExpression(ParenthesizedExpression expr)
-    {
-        Writer.Write("(");
-        await expr.Expr.AcceptVisitor(this);
-        Writer.Write(")");
-    }
 
     public async ValueTask AppendSemicolon(ValueTask task)
     {
@@ -301,7 +256,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
 
     public async ValueTask VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr)
     {
-        await expr.Base.AcceptVisitor(this);
+        await expr.Base.Accept(this);
         Writer.Write('.');
         foreach (SwizzleComponent c in expr.Components)
         {
@@ -336,7 +291,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
             foreach (var c in stmt.Cases)
             {
                 Writer.Write("case ");
-                await c.Label.AcceptVisitor(this);
+                await c.Label.Accept(this);
                 Writer.WriteLine(" : {");
                 using (Writer.IndentedScope())
                 {
@@ -362,17 +317,5 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
     {
         Writer.WriteLine("continue;");
         return ValueTask.CompletedTask;
-    }
-
-
-    public async ValueTask VisitBinaryExpression<TOperation, TOp>(BinaryExpression<TOperation, TOp> expr)
-        where TOperation : IBinaryOperation<TOperation>
-        where TOp : ISymbolOp<TOp>
-    {
-        Writer.Write("(");
-        await expr.Left.AcceptVisitor(this);
-        await Writer.WriteAsync($" {TOp.Symbol} ");
-        await expr.Right.AcceptVisitor(this);
-        Writer.Write(")");
     }
 }

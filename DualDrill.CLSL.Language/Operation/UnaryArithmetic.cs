@@ -9,17 +9,17 @@ public static class UnaryArithmetic
         neg
     }
 
-    public interface IOp<TSelf> : IOpKind<TSelf, OpKind>, ISingleton<TSelf>, IUnaryOp
+    public interface IOp<TSelf> : IOpKind<TSelf, OpKind>, IUnaryOp<TSelf>
         where TSelf : IOp<TSelf>
     {
     }
 
-    public sealed class Neg : IOp<Neg>, ISymbolOp<Neg>
+    public sealed class Negate : IOp<Negate>, ISymbolOp<Negate>
     {
         public static OpKind Kind => OpKind.neg;
 
-        public static Neg Instance { get; } = new();
+        public static Negate Instance { get; } = new();
 
-        public static string Symbol => "-";
+        public string Symbol => "-";
     }
 }

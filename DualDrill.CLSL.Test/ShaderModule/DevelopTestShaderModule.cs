@@ -8,6 +8,13 @@ internal sealed class DevelopTestShaderModule
     : ISharpShader
 {
     [Vertex]
+    public static uint StackTransferedValuesWithLiteralImplicitConversion(uint x, uint y)
+    {
+        return x >= y ? x : uint.MaxValue;
+    }
+
+
+    [Vertex]
     public static int MinimumIfThenElse(int a)
     {
         if (a >= 42)

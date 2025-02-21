@@ -19,24 +19,28 @@ public static class BinaryLogical
     }
 }
 
-public sealed class LogicalAnd : BinaryLogical.IOp<LogicalAnd>, IIntegerOp<LogicalAnd>
+public sealed class LogicalAnd : BinaryLogical.IOp<LogicalAnd>, IIntegerOp<LogicalAnd>, ISymbolOp<LogicalAnd>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.and;
 
     public static LogicalAnd Instance { get; } = new();
 
     public BinaryArithmetic.IBitwiseLogicalOp BitwiseOp => BinaryArithmetic.BitwiseAnd.Instance;
-
+    public string Symbol => "&&";
 }
-public sealed class LogicalOr : BinaryLogical.IOp<LogicalOr>, IIntegerOp<LogicalOr>
+
+public sealed class LogicalOr : BinaryLogical.IOp<LogicalOr>, IIntegerOp<LogicalOr>, ISymbolOp<LogicalOr>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.or;
     public static LogicalOr Instance { get; } = new();
     public BinaryArithmetic.IBitwiseLogicalOp BitwiseOp => BinaryArithmetic.BitwiseOr.Instance;
+    public string Symbol => "||";
 }
-public sealed class LogicalXor : BinaryLogical.IOp<LogicalXor>, IIntegerOp<LogicalXor>
+
+public sealed class LogicalXor : BinaryLogical.IOp<LogicalXor>, IIntegerOp<LogicalXor>, ISymbolOp<LogicalXor>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.xor;
     public static LogicalXor Instance { get; } = new();
     public BinaryArithmetic.IBitwiseLogicalOp BitwiseOp => BinaryArithmetic.BitwiseXor.Instance;
+    public string Symbol => "^";
 }

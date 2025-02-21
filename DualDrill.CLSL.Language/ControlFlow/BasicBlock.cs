@@ -5,11 +5,11 @@ namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class BasicBlock<TElement>
 {
-    public ReadOnlyMemory<TElement> Instructions { get; }
+    public ReadOnlyMemory<TElement> Elements { get; }
 
-    public BasicBlock(ReadOnlyMemory<TElement> instructions)
+    public BasicBlock(ReadOnlyMemory<TElement> elements)
     {
-        Instructions = instructions;
+        Elements = elements;
     }
 
     public static BasicBlock<TElement> Create(ReadOnlySpan<TElement> instructions)

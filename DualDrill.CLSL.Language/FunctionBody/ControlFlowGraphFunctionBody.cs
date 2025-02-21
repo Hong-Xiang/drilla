@@ -16,7 +16,7 @@ public sealed record class ControlFlowGraphFunctionBody(
             foreach (var l in Graph.Labels())
             {
                 var bb = Graph[l];
-                foreach (var instruction in bb.Instructions.ToArray())
+                foreach (var instruction in bb.Elements.ToArray())
                 {
                     switch (instruction)
                     {

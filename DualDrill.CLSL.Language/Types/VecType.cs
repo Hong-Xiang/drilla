@@ -109,23 +109,23 @@ public sealed class VecType<TRank, TElement>
 
     public IEnumerable<IVectorBinaryNumericOperation> GetBinaryNumericOperations()
     {
-        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
-        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
-        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
-        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
-        yield return VectorNumericBinaryOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
+        yield return VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
+        yield return VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
+        yield return VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
+        yield return VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
+        yield return VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
 
-        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
-        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
-        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
-        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
-        yield return ScalarVectorNumericOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
+        yield return ScalarVectorExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
+        yield return ScalarVectorExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
+        yield return ScalarVectorExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
+        yield return ScalarVectorExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
+        yield return ScalarVectorExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
 
-        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
-        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
-        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
-        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
-        yield return VectorScalarNumericOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
+        yield return VectorScalarExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
+        yield return VectorScalarExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Sub>.Instance;
+        yield return VectorScalarExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Mul>.Instance;
+        yield return VectorScalarExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
+        yield return VectorScalarExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
     }
 }
 

@@ -10,13 +10,12 @@ public sealed partial class ControlFlowGraph<TData>
     public ISuccessor Successor(Label label) => Nodes[label].Successor;
 
     public TData this[Label label] => Nodes[label].Data;
-
-
     FrozenDictionary<Label, NodeData> Nodes { get; }
+
     readonly record struct NodeData(
-       ISuccessor Successor,
-       TData Data,
-       FrozenSet<Label> Predecessors)
+        ISuccessor Successor,
+        TData Data,
+        FrozenSet<Label> Predecessors)
     {
     }
 
@@ -52,8 +51,10 @@ public sealed partial class ControlFlowGraph<TData>
             {
                 if (!nodes.ContainsKey(t))
                 {
-                    throw new ArgumentException($"{t} is successor of {s}, but not exists in nodes definition", nameof(nodes));
+                    throw new ArgumentException($"{t} is successor of {s}, but not exists in nodes definition",
+                        nameof(nodes));
                 }
+
                 predecessors[t].Add(l);
             });
         }
@@ -73,20 +74,24 @@ public static class ControlFlowGraph
     ) => definitions;
 
 
-    public static void Traverse<TNode>(this ControlFlowGraph<TNode> graph, Action<Label> beforeSuccessor, Action<Label> afterSuccessor)
+    public static void Traverse<TNode>(this ControlFlowGraph<TNode> graph, Action<Label> beforeSuccessor,
+        Action<Label> afterSuccessor)
     {
         HashSet<Label> visited = [];
+
         void DoVisit(Label label)
         {
             if (visited.Contains(label))
             {
                 return;
-            };
+            }
+
             visited.Add(label);
             beforeSuccessor(label);
             graph.Successor(label).Traverse(DoVisit);
             afterSuccessor(label);
         }
+
         DoVisit(graph.EntryLabel);
     }
 
@@ -102,6 +107,4 @@ public static class ControlFlowGraph
     {
         return graph.Predecessor(label).Count > 1;
     }
-
-
 }

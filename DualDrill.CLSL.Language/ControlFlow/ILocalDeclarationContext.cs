@@ -9,18 +9,28 @@ public interface ILocalDeclarationContext
 {
     int LabelIndex(Label label);
     int VariableIndex(VariableDeclaration variable);
+
+    ImmutableArray<VariableDeclaration> LocalVariables { get; }
+    ImmutableArray<Label> Labels { get; }
 }
 
-public sealed class LocalDeclarationContext(
-    ImmutableArray<Label> Labels,
-    ImmutableArray<VariableDeclaration> Variables
-) : ILocalDeclarationContext
+public sealed class LocalDeclarationContext : ILocalDeclarationContext
 {
-    private FrozenDictionary<Label, int> LabelIndexLookup { get; } =
-        Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+    public LocalDeclarationContext(IEnumerable<Label> labels,
+        IEnumerable<VariableDeclaration> localVariables)
+    {
+        Labels = [..labels.Distinct()];
+        LocalVariables = [..localVariables.Distinct()];
 
-    private FrozenDictionary<VariableDeclaration, int> VariableIndexLookup { get; } =
-        Variables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+        LabelIndexLookup = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+        VariableIndexLookup = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+    }
+
+    public ImmutableArray<Label> Labels { get; }
+    public ImmutableArray<VariableDeclaration> LocalVariables { get; }
+    private FrozenDictionary<Label, int> LabelIndexLookup { get; }
+
+    private FrozenDictionary<VariableDeclaration, int> VariableIndexLookup { get; }
 
     public int LabelIndex(Label label) => LabelIndexLookup[label];
     public int VariableIndex(VariableDeclaration variable) => VariableIndexLookup[variable];

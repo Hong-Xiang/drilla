@@ -8,7 +8,7 @@ namespace DualDrill.CLSL.Language.ControlFlowGraph;
 /// <summary>
 /// Encoding of Loop | Block | IfThenElse
 /// </summary>
-public interface IStructuredControlFlowRegion<TInstruction> : IStructuredControlFlowElement<TInstruction>
+public interface IStructuredControlFlowRegion<TInstruction> : IStructuredControlFlowElement
     where TInstruction : IInstruction
 {
     sealed class FuncVisitor<TResult>(

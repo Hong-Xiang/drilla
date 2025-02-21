@@ -17,13 +17,13 @@ public class TypeJsonConverter : JsonConverter<Type>
         ref Utf8JsonReader reader,
         Type typeToConvert,
         JsonSerializerOptions options) =>
-            throw new NotSupportedException();
+        throw new NotSupportedException();
 
     public override void Write(
         Utf8JsonWriter writer,
         Type value,
         JsonSerializerOptions options) =>
-            writer.WriteStringValue(value.Name);
+        writer.WriteStringValue(value.Name);
 }
 
 internal sealed class Compiler
@@ -47,29 +47,29 @@ internal sealed class Compiler
                 case ILOpCode.Ldc_i4_6:
                 case ILOpCode.Ldc_i4_7:
                 case ILOpCode.Ldc_i4_8:
-                    {
-                        // Load integer constant onto the stack
-                        int value = inst.Operand is sbyte v ? v : (int)inst.Operand;
-                        stack.Push(new LiteralValueExpression(new I32Literal(value)));
-                        break;
-                    }
+                {
+                    // Load integer constant onto the stack
+                    int value = inst.Operand is sbyte v ? v : (int)inst.Operand;
+                    stack.Push(new LiteralValueExpression(new I32Literal(value)));
+                    break;
+                }
 
                 case ILOpCode.Ldstr:
                     throw new NotSupportedException();
                 case ILOpCode.Add:
-                    {
-                        var r = stack.Pop();
-                        var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.OpKind.add));
-                        break;
-                    }
+                {
+                    var r = stack.Pop();
+                    var l = stack.Pop();
+                    stack.Push(NumericBinaryArithmeticOperation.CreateExpression<BinaryArithmetic.Add>(l, r));
+                    break;
+                }
                 case ILOpCode.Sub:
-                    {
-                        var r = stack.Pop();
-                        var l = stack.Pop();
-                        stack.Push(new BinaryArithmeticExpression(l, r, BinaryArithmetic.OpKind.sub));
-                        break;
-                    }
+                {
+                    var r = stack.Pop();
+                    var l = stack.Pop();
+                    stack.Push(NumericBinaryArithmeticOperation.CreateExpression<BinaryArithmetic.Sub>(l, r));
+                    break;
+                }
                 case ILOpCode.Call:
                     //var methodInfo = (MethodInfo)inst.Operand;
                     //var parameters = methodInfo.GetParameters();
