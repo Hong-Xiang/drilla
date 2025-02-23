@@ -24,7 +24,7 @@ public sealed class BasicBlock<TElement> : IBasicBlock<TElement, TElement, Unit>
         Elements = elements;
     }
 
-    public static BasicBlock<TElement> Create(ReadOnlySpan<TElement> instructions)
+    public static BasicBlock<TElement> Create(IEnumerable<TElement> instructions)
     {
         return new([..instructions]);
     }

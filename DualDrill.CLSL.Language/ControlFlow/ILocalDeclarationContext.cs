@@ -14,13 +14,19 @@ public interface ILocalDeclarationContext
     ImmutableArray<Label> Labels { get; }
 }
 
+public interface ILocalDeclarationReferencingElement
+{
+    public IEnumerable<Label> ReferencedLabels { get; }
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables { get; }
+}
+
 public sealed class LocalDeclarationContext : ILocalDeclarationContext
 {
-    public LocalDeclarationContext(IEnumerable<Label> labels,
-        IEnumerable<VariableDeclaration> localVariables)
+    public LocalDeclarationContext(IEnumerable<ILocalDeclarationReferencingElement> elements)
     {
-        Labels = [..labels.Distinct()];
-        LocalVariables = [..localVariables.Distinct()];
+        ImmutableArray<ILocalDeclarationReferencingElement> els = [..elements];
+        Labels = [..els.SelectMany(e => e.ReferencedLabels).Distinct()];
+        LocalVariables = [..els.SelectMany(e => e.ReferencedLocalVariables).Distinct()];
 
         LabelIndexLookup = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
         VariableIndexLookup = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
@@ -35,5 +41,5 @@ public sealed class LocalDeclarationContext : ILocalDeclarationContext
     public int LabelIndex(Label label) => LabelIndexLookup[label];
     public int VariableIndex(VariableDeclaration variable) => VariableIndexLookup[variable];
 
-    public static LocalDeclarationContext Empty { get; } = new([], []);
+    public static LocalDeclarationContext Empty { get; } = new([]);
 }

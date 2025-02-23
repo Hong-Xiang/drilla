@@ -27,7 +27,7 @@ namespace DualDrill.CLSL.Frontend;
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
-    Dictionary<FunctionDeclaration, IUnstructuredControlFlowFunctionBody<IStackStatement>> MethodBodies)
+    Dictionary<FunctionDeclaration, ControlFlowGraphFunctionBody<IStackStatement>> MethodBodies)
 {
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
@@ -189,7 +189,7 @@ public sealed record class RuntimeReflectionParser(
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
-    public ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStackStatement>> ParseShaderModule(
+    public ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> ParseShaderModule(
         ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -314,7 +314,7 @@ public sealed record class RuntimeReflectionParser(
         return decl;
     }
 
-    public IUnstructuredControlFlowFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f)
+    public ControlFlowGraphFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f)
     {
         var model = Context.GetFunctionDefinition(f);
         return ParseMethodBody2(f, model);
@@ -351,7 +351,7 @@ public sealed record class RuntimeReflectionParser(
         throw new NotImplementedException();
     }
 
-    public IUnstructuredControlFlowFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f,
+    public ControlFlowGraphFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f,
         MethodBodyAnalysisModel model)
     {
         var methodTable = new CompilationContext(Context);
@@ -450,7 +450,7 @@ public sealed record class RuntimeReflectionParser(
             bodies
         );
 
-        return new CfgBody<IStackStatement>(cfg);
+        return new ControlFlowGraphFunctionBody<IStackStatement>(cfg);
     }
 
     public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,

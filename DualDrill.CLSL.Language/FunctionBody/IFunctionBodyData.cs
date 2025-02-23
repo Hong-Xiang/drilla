@@ -14,7 +14,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 /// * CompondStatement
 /// </summary>
 public interface IFunctionBodyData
-    : ITextDumpable<IFunctionBody>
+    : ITextDumpable<ILocalDeclarationContext>
 {
     IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables { get; }
     IEnumerable<Label> FunctionBodyDataLabels { get; }

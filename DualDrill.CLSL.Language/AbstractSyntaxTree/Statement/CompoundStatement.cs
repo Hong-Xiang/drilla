@@ -22,7 +22,7 @@ public sealed record class CompoundStatement(ImmutableArray<IStatement> Statemen
 
     public IEnumerable<Label> FunctionBodyDataLabels => [];
 
-    public void Dump(IFunctionBody context, IndentedTextWriter writer)
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
         foreach (var stmt in Statements)
         {

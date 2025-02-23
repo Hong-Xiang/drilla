@@ -19,7 +19,6 @@ public interface IStackInstruction : IInstruction
 
 public interface IStructuredStackInstruction
     : IStackInstruction
-    , IStructuredControlFlowElement
     , IBasicBlockElement
 {
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
@@ -28,8 +27,8 @@ public interface IStructuredStackInstruction
 
 public interface IComputeInstruction<TSelf> : IStructuredStackInstruction, ISingleton<TSelf>
 {
-    IEnumerable<Label> IStructuredControlFlowElement.ReferencedLabels => [];
-    IEnumerable<VariableDeclaration> IStructuredControlFlowElement.ReferencedLocalVariables => [];
+    IEnumerable<Label> ILocalDeclarationReferencingElement.ReferencedLabels => [];
+    IEnumerable<VariableDeclaration> ILocalDeclarationReferencingElement.ReferencedLocalVariables => [];
 }
 
 public sealed record class LabelInstruction(Label Label) : IStackInstruction, ILabeledEntity

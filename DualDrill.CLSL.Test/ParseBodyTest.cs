@@ -41,7 +41,7 @@ public class ParseBodyTest
     }
 
 
-    IUnstructuredControlFlowFunctionBody<IStackStatement> ParseMethod2(FunctionDeclaration f, MethodBase m)
+    ControlFlowGraphFunctionBody<IStackStatement> ParseMethod2(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
         context.AddFunctionDefinition(Symbol.Function(m), f);

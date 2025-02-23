@@ -142,7 +142,7 @@ public static partial class ShaderModuleExtension
     }
 
     public static ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> ToStructuredControlFlowStackModel(
-        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody> module
+        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStructuredStackInstruction>> module
     )
     {
         return module.MapBody(

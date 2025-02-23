@@ -7,6 +7,7 @@ using DualDrill.CLSL.Language.ControlFlowGraph;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
+// TODO: refactor to simply FunctionBody<IStructuredControlFlowRegion<IStructuredStackInstruction>>
 public sealed class StructuredStackInstructionFunctionBody : IFunctionBody
 {
     public IStructuredControlFlowRegion<IStructuredStackInstruction> Root { get; }

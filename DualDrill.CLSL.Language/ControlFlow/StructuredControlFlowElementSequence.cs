@@ -3,10 +3,8 @@ using DualDrill.CLSL.Language.Declaration;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public interface IStructuredControlFlowElement
+public interface IStructuredControlFlowElement : ILocalDeclarationReferencingElement
 {
-    public IEnumerable<Label> ReferencedLabels { get; }
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables { get; }
 }
 
 public readonly record struct StructuredControlFlowElementSequence(

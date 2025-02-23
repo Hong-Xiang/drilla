@@ -10,7 +10,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 public sealed class UnstructuredStackInstructionSequence
     : IFunctionBodyData
 {
-    public void Dump(IFunctionBody context, IndentedTextWriter writer)
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
         throw new NotImplementedException();
     }
