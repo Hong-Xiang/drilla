@@ -21,10 +21,14 @@ public static class BinaryLogical
     {
     }
 
-    public interface IWithBitwiseOp<TSelf> : IOp<TSelf>, IOpKind<TSelf, OpKind>
-        where TSelf : IWithBitwiseOp<TSelf>
+    public interface IWithBitwiseOp
     {
         BinaryArithmetic.IBitwiseLogicalOp BitwiseOp { get; }
+    }
+
+    public interface IWithBitwiseOp<TSelf> : IWithBitwiseOp, IOp<TSelf>, IOpKind<TSelf, OpKind>
+        where TSelf : IWithBitwiseOp<TSelf>
+    {
     }
 }
 

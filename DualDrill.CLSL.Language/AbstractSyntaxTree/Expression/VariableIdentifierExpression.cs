@@ -14,9 +14,7 @@ public sealed record class VariableIdentifierExpression(IVariableIdentifierSymbo
     public IShaderType Type => Variable.Type;
 
     public TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
-    {
-        throw new NotImplementedException();
-    }
+        => visitor.VisitVariableIdentifierExpression(this);
 
     public IEnumerable<IStructuredStackInstruction> ToInstructions()
         => Variable switch

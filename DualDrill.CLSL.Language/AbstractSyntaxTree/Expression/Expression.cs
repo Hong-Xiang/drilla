@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
@@ -48,6 +49,19 @@ public interface IExpressionVisitor<T>
         where TSourceType : ISingletonShaderType<TSourceType>
         where TResultType : ISingletonShaderType<TResultType>
         where TOp : IUnaryOp<TOp>;
+
+    T VisitConversionExpression<TTarget>(
+        IUnaryExpression expr)
+        where TTarget : ISingletonShaderType<TTarget>;
+
+    T VisitVectorSwizzleGetExpression<TPattern, TElement>(IUnaryExpression expr)
+        where TPattern : Swizzle.IPattern<TPattern>
+        where TElement : IScalarType<TElement>;
+
+    T VisitVectorComponentGetExpression<TRank, TVector, TComponent>(IUnaryExpression expr)
+        where TRank : IRank<TRank>
+        where TVector : ISizedVecType<TRank, TVector>
+        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>;
 
     T VisitFormalParameterExpression(FormalParameterExpression expr);
     T VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr);

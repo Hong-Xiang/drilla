@@ -15,14 +15,22 @@ public interface IStructuredStackInstructionVisitor<TResult>
     TResult Visit(NopInstruction inst);
     TResult Visit<TLiteral>(ConstInstruction<TLiteral> inst) where TLiteral : ILiteral;
     TResult Visit(CallInstruction inst);
+
     TResult Visit<TTarget>(LoadSymbolValueInstruction<TTarget> inst)
         where TTarget : ILoadStoreTargetSymbol;
+
     TResult Visit<TTarget>(LoadSymbolAddressInstruction<TTarget> inst)
         where TTarget : ILoadStoreTargetSymbol;
+
     TResult Visit<TTarget>(StoreSymbolInstruction<TTarget> inst)
         where TTarget : ILoadStoreTargetSymbol;
+
     TResult Visit<TOperation>(BinaryExpressionOperationInstruction<TOperation> inst)
         where TOperation : ISingleton<TOperation>, IBinaryExpressionOperation<TOperation>;
+
+    TResult VisitBinaryStatement<TOperation>(BinaryStatementOperationInstruction<TOperation> inst)
+        where TOperation : IBinaryStatementOperation<TOperation>;
+
     TResult Visit(LogicalNotInstruction inst);
     TResult Visit(DupInstruction inst);
     TResult Visit(DropInstruction inst);
@@ -34,6 +42,7 @@ public interface IStructuredStackInstructionVisitor<TResult>
         where TRank : IRank<TRank>
         where TVector : ISizedVecType<TRank, TVector>
         where TComponent : Swizzle.ISizedComponent<TRank, TComponent>;
+
     TResult VisitVectorComponentSet<TRank, TVector, TComponent>()
         where TRank : IRank<TRank>
         where TVector : ISizedVecType<TRank, TVector>
@@ -43,6 +52,7 @@ public interface IStructuredStackInstructionVisitor<TResult>
     TResult VisitVectorSwizzleGet<TPattern, TElement>()
         where TPattern : Swizzle.IPattern<TPattern>
         where TElement : IScalarType<TElement>;
+
     TResult VisitVectorSwizzleSet<TPattern, TElement>()
         where TPattern : Swizzle.IPattern<TPattern>
         where TElement : IScalarType<TElement>;

@@ -13,7 +13,12 @@ public sealed record class AddressOfExpression(IExpression Base) : IExpression
 
     public IEnumerable<IStructuredStackInstruction> ToInstructions()
     {
-        throw new NotImplementedException();
+        return Base switch
+        {
+            VariableIdentifierExpression { Variable: VariableDeclaration v } => [ShaderInstruction.Load(v)],
+            FormalParameterExpression { Parameter: var p } => [ShaderInstruction.Load(p)],
+            _ => throw new NotImplementedException()
+        };
     }
 
     public IEnumerable<VariableDeclaration> ReferencedVariables => Base.ReferencedVariables;

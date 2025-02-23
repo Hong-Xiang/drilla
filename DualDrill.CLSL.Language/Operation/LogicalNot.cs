@@ -18,10 +18,9 @@ public sealed record class LogicalNotOperation
 {
     public string Name => LogicalNot.Instance.Name;
     public static LogicalNotOperation Instance => new();
+    public override string ToString() => Name;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<LogicalNotOperation> expr)
-    {
-        throw new NotImplementedException();
-    }
+        => visitor.VisitUnaryExpression<LogicalNotOperation, BoolType, BoolType, LogicalNot>(expr);
 }

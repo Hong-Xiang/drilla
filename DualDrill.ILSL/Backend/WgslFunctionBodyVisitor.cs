@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Backend;
 
@@ -43,7 +44,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         {
             foreach (var s in stmt.Statements)
             {
-                await s.AcceptVisitor(this);
+                await s.Accept(this);
             }
         }
 
@@ -59,7 +60,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         {
             using (Writer.IndentedScope())
             {
-                await stmt.TrueBody.AcceptVisitor(this);
+                await stmt.TrueBody.Accept(this);
             }
         }
 
@@ -68,7 +69,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         {
             using (Writer.IndentedScope())
             {
-                await stmt.FalseBody.AcceptVisitor(this);
+                await stmt.FalseBody.Accept(this);
             }
         }
 
@@ -80,7 +81,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         Writer.Write("while ");
         await stmt.Expr.Accept(this);
         Writer.WriteLine();
-        await stmt.Statement.AcceptVisitor(this);
+        await stmt.Statement.Accept(this);
     }
 
     public async ValueTask VisitBreak(BreakStatement stmt)
@@ -217,6 +218,15 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         }
     }
 
+    public async ValueTask VisitConversionExpression<TTarget>(IUnaryExpression expr)
+        where TTarget : ISingletonShaderType<TTarget>
+    {
+        Writer.Write(TTarget.Instance.Name);
+        Writer.Write('(');
+        await expr.Source.Accept(this);
+        Writer.Write(')');
+    }
+
     public async ValueTask VisitLiteralValueExpression(LiteralValueExpression expr)
     {
         var code = expr.Literal switch
@@ -250,6 +260,17 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         Writer.WriteLine(';');
     }
 
+    public async ValueTask
+        VisitVectorSwizzleSet<TRank, TElement, TPattern>(VectorSwizzleSetStatement<TRank, TElement, TPattern> stmt)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>
+        where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
+    {
+        await stmt.Target.Accept(this);
+        Writer.WriteLine(" = ");
+        await stmt.Value.Accept(this);
+    }
+
     public async ValueTask VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr)
     {
         await expr.Base.Accept(this);
@@ -260,6 +281,24 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         }
     }
 
+    public async ValueTask VisitVectorSwizzleGetExpression<TPattern, TElement>(IUnaryExpression expr)
+        where TPattern : Swizzle.IPattern<TPattern>
+        where TElement : IScalarType<TElement>
+    {
+        await expr.Source.Accept(this);
+        Writer.Write('.');
+        Writer.Write(TPattern.Instance.Name);
+    }
+
+    public async ValueTask VisitVectorComponentGetExpression<TRank, TVector, TComponent>(IUnaryExpression expr)
+        where TRank : IRank<TRank>
+        where TVector : ISizedVecType<TRank, TVector>
+        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
+    {
+        await expr.Source.Accept(this);
+        Writer.Write('.');
+        Writer.Write(TComponent.Instance.Name);
+    }
 
     public async ValueTask VisitNamedComponentExpression(NamedComponentExpression expr)
     {

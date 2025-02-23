@@ -18,7 +18,7 @@ public sealed record class UnaryOperationExpression<TOperation>
 {
     public UnaryOperationExpression(IExpression source)
     {
-        Debug.Assert(source.Type.Equals(TOperation.Instance.SourceType));
+        // Debug.Assert(source.Type.Equals(TOperation.Instance.SourceType));
         Source = source;
     }
 

@@ -21,4 +21,7 @@ public sealed record class PhonyAssignmentStatement(
 
     public IEnumerable<IStackInstruction> ToInstructions()
         => [..Expr.ToInstructions(), ShaderInstruction.Pop()];
+
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitPhonyAssignment(this);
 }

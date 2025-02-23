@@ -9,6 +9,8 @@ public sealed record class SwitchStatement(
     CompoundStatement DefaultCase
 ) : IStatement
 {
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitSwitch(this);
 }
 
 public sealed record class SwitchCase(

@@ -5,7 +5,6 @@ namespace DualDrill.CLSL.Test;
 
 public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 {
-
     async Task TestShader(ISharpShader shader)
     {
         var sep = $"\n{new string('-', 10)}\n";
@@ -13,7 +12,8 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Output.WriteLine("=== Parsed ===");
         Output.WriteLine(await moduleStackIR.Dump());
         Output.WriteLine(sep);
-        var moduleStackIROp = moduleStackIR.ReplaceOperationCallsToOperationInstruction();
+        var moduleStackIROp = moduleStackIR.ConvertFunctionBodyToStructuredStackInstructions()
+                                           .ReplaceOperationCallsToOperationInstruction();
         Output.WriteLine("=== Parsed(Op) ===");
         Output.WriteLine(await moduleStackIROp.Dump());
         Output.WriteLine(sep);
@@ -61,7 +61,6 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     {
         var shader = new ShaderModule.MandelbrotDistanceShaderModule();
         await TestShader(shader);
-
     }
 
     [Fact]

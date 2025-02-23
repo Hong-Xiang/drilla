@@ -5,14 +5,20 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
-public sealed record class ParameterDeclaration(
-    string Name,
-    IShaderType Type,
-    ImmutableHashSet<IShaderAttribute> Attributes) : IDeclaration, IVariableIdentifierSymbol
+public sealed class ParameterDeclaration : IDeclaration, IVariableIdentifierSymbol
 {
-    public sealed override string ToString()
+    public ParameterDeclaration(string name,
+        IShaderType type,
+        ImmutableHashSet<IShaderAttribute> attributes)
     {
-        return $"arg({Name}: {Type.Name})";
+        Name = name;
+        Type = type;
+        Attributes = attributes;
     }
-}
 
+    public override string ToString() => $"arg({Name}: {Type.Name})";
+
+    public string Name { get; }
+    public IShaderType Type { get; }
+    public ImmutableHashSet<IShaderAttribute> Attributes { get; }
+}

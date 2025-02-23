@@ -12,4 +12,7 @@ public sealed record class ReturnStatement(IExpression? Expr) : IStatement, ISta
 
     public IEnumerable<IStackInstruction> ToInstructions()
         => [..Expr.ToInstructions(), ShaderInstruction.Return()];
+
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitReturn(this);
 }

@@ -33,6 +33,9 @@ public sealed record class SimpleAssignmentStatement(
         return Op == AssignmentOp.Assign ? $"{L} = {R}" : $"{L} {Op} {R}";
     }
 
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitSimpleAssignment(this);
+
     public IEnumerable<Label> ReferencedLabels => [];
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>

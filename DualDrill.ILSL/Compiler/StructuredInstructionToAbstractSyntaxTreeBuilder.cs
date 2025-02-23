@@ -36,7 +36,8 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         var functionBody = ShaderModule.GetBody(function);
         RootRegion = functionBody.Root;
         // TODO: fix local variable contains module variable problem
-        LocalVariables = functionBody.LocalVariables.Where(v => v.DeclarationScope == DeclarationScope.Function)
+        LocalVariables = functionBody.FunctionBodyDataLocalVariables
+                                     .Where(v => v.DeclarationScope == DeclarationScope.Function)
                                      .Distinct().ToFrozenSet();
     }
 
@@ -438,6 +439,15 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         var r = Expressions.Pop();
         var l = Expressions.Pop();
         Expressions.Push(TOperation.Instance.CreateExpression(l, r));
+        return default;
+    }
+
+    public Unit VisitBinaryStatement<TOperation>(BinaryStatementOperationInstruction<TOperation> inst)
+        where TOperation : IBinaryStatementOperation<TOperation>
+    {
+        var r = Expressions.Pop();
+        var l = Expressions.Pop();
+        Statements.Add(TOperation.Instance.CreateStatement(l, r));
         return default;
     }
 

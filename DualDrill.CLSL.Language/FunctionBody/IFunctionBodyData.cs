@@ -16,8 +16,8 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 public interface IFunctionBodyData
     : ITextDumpable<IFunctionBody>
 {
-    IEnumerable<VariableDeclaration> LocalVariables { get; }
-    IEnumerable<Label> Labels { get; }
+    IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables { get; }
+    IEnumerable<Label> FunctionBodyDataLabels { get; }
 }
 
 public interface IFunctionBody : ILocalDeclarationContext
@@ -39,8 +39,8 @@ public sealed class FunctionBody<TBody>
     public FunctionBody(TBody body)
     {
         Body = body;
-        LocalVariables = [..body.LocalVariables.Distinct()];
-        Labels = [..body.Labels.Distinct()];
+        LocalVariables = [..body.FunctionBodyDataLocalVariables.Distinct()];
+        Labels = [..body.FunctionBodyDataLabels.Distinct()];
         VariableIndices = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
         LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
     }

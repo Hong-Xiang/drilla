@@ -6,6 +6,7 @@ using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
@@ -87,7 +88,26 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         where TOp : BinaryLogical.IOp<TOp>
     {
         IBinaryExpressionOperation op = LogicalBinaryOperation<TOp>.Instance;
-        return op.CreateExpression(ToBoolExpr(left), ToBoolExpr(right));
+        switch (left, right)
+        {
+            case ({ Type: BoolType }, _):
+            case (_, { Type: BoolType }):
+                return op.CreateExpression(ToBoolExpr(left), ToBoolExpr(right));
+            case ({ Type: INumericType lt }, { Type: INumericType rt }) when lt.Equals(rt):
+            {
+                if (TOp.Instance is BinaryLogical.IWithBitwiseOp withBitwiseOp)
+                {
+                    var bitwiseOp = withBitwiseOp.BitwiseOp;
+                    return bitwiseOp.GetNumericBinaryOperation(lt).CreateExpression(left, right);
+                }
+
+                break;
+            }
+            default:
+                throw new NotImplementedException();
+        }
+
+        throw new NotImplementedException();
     }
 
     public Unit VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
@@ -348,7 +368,6 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     throw new ValidationException("return when stack is empty requires unit type", Model.Method);
                 }
 
-                Statements.Add(SyntaxFactory.Return(null));
                 return default;
             case 1:
                 var e = CurrentStack.Pop();
@@ -360,7 +379,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                         Model.Method);
                 }
 
-                Statements.Add(SyntaxFactory.Return(e));
+                Statements.Add(new PushStatement(e));
                 return default;
             default:
                 throw new ValidationException("return when stack.Count > 1", Model.Method);
@@ -402,6 +421,22 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                 case (BoolType, LiteralValueExpression):
                     val = ToBoolExpr(val);
                     break;
+                case (UIntType<N32>, LiteralValueExpression { Literal: I32Literal { Value: var i32Value } }):
+                {
+                    var u32Value = BitConverter.ToUInt32(BitConverter.GetBytes(i32Value));
+                    val = SyntaxFactory.Literal(u32Value);
+                    break;
+                }
+                case (IntType<N32>, IExpression { Type: UIntType<N32> }):
+                {
+                    val = ScalarConversionOperation<UIntType<N32>, IntType<N32>>.Instance.CreateExpression(val);
+                    break;
+                }
+                case (UIntType<N32>, IExpression { Type: IntType<N32> }):
+                {
+                    val = ScalarBitCastOperation<IntType<N32>, UIntType<N32>>.Instance.CreateExpression(val);
+                    break;
+                }
                 default:
                     throw new NotSupportedException($"store {val.Type.Name} to loc : {v.Type.Name} is not supported");
             }

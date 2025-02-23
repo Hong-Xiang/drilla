@@ -10,4 +10,6 @@ public sealed record class WhileStatement(
     IStatement Statement
 ) : IStatement
 {
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitWhile(this);
 }

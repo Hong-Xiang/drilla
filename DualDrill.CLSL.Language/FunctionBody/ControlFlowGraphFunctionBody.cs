@@ -9,7 +9,7 @@ public sealed record class ControlFlowGraphFunctionBody(
     ControlFlowGraph<BasicBlock<IStructuredStackInstruction>> Graph
 ) : IFunctionBodyData
 {
-    public IEnumerable<VariableDeclaration> LocalVariables
+    public IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables
     {
         get
         {
@@ -38,7 +38,7 @@ public sealed record class ControlFlowGraphFunctionBody(
     }
 
 
-    public IEnumerable<Label> Labels => Graph.Labels();
+    public IEnumerable<Label> FunctionBodyDataLabels => Graph.Labels();
 
     public void Dump(IFunctionBody context, IndentedTextWriter writer)
     {

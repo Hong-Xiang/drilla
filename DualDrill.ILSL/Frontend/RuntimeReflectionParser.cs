@@ -15,6 +15,7 @@ using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.Common;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -26,7 +27,7 @@ namespace DualDrill.CLSL.Frontend;
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
-    Dictionary<FunctionDeclaration, UnstructuredStackInstructionSequence> MethodBodies)
+    Dictionary<FunctionDeclaration, IUnstructuredControlFlowFunctionBody<IStackStatement>> MethodBodies)
 {
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
@@ -188,7 +189,8 @@ public sealed record class RuntimeReflectionParser(
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
-    public ShaderModuleDeclaration<UnstructuredStackInstructionSequence> ParseShaderModule(ISharpShader module)
+    public ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStackStatement>> ParseShaderModule(
+        ISharpShader module)
     {
         var moduleType = module.GetType();
 
@@ -293,7 +295,7 @@ public sealed record class RuntimeReflectionParser(
                     _ = ParseType(v.LocalType);
                 }
             }
-            var callees = GetCalledMethods(model.CalledMethods()).ToArray();
+            var callees = FilterCalledMethods(model.CalledMethods()).ToArray();
             foreach (var callee in callees)
             {
                 _ = ParseMethod(callee);
@@ -301,7 +303,7 @@ public sealed record class RuntimeReflectionParser(
 
             if (model.Body is not null)
             {
-                MethodBodies.Add(decl, ParseMethodBody(decl, model));
+                MethodBodies.Add(decl, ParseMethodBody2(decl, model));
             }
         }
         else
@@ -310,12 +312,6 @@ public sealed record class RuntimeReflectionParser(
         }
 
         return decl;
-    }
-
-    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f)
-    {
-        var model = Context.GetFunctionDefinition(f);
-        return ParseMethodBody(f, model);
     }
 
     public IUnstructuredControlFlowFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f)
@@ -396,16 +392,7 @@ public sealed record class RuntimeReflectionParser(
 
             visitor.FlushOutputs();
 
-            {
-                if (BasicBlockOutputs.TryGetValue(l, out var existed))
-                {
-                    // TODO: check for consistancy
-                }
-                else
-                {
-                    BasicBlockOutputs.Add(l, visitor.Outputs);
-                }
-            }
+            BasicBlockOutputs.Add(l, visitor.Outputs);
 
 
             {
@@ -415,7 +402,24 @@ public sealed record class RuntimeReflectionParser(
                 {
                     if (BasicBlockInputs.TryGetValue(target, out var existed))
                     {
-                        // TODO: check for consistancy
+                        foreach (var (c, e) in visitor.Outputs.Zip(existed))
+                        {
+                            if (c.Type.Equals(e.Type))
+                            {
+                                continue;
+                            }
+
+                            switch (c.Type, e.Type)
+                            {
+                                case (IntType<N32>, UIntType<N32>):
+                                case (UIntType<N32>, IntType<N32>):
+                                    continue;
+                                default:
+                                    throw new ValidationException(
+                                        $"Successor's input type {e.Type.Name} not matching current output {c.Type.Name}",
+                                        model.Method);
+                            }
+                        }
                     }
                     else
                     {
@@ -446,7 +450,7 @@ public sealed record class RuntimeReflectionParser(
             bodies
         );
 
-        return new CfgBody(cfg);
+        return new CfgBody<IStackStatement>(cfg);
     }
 
     public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,
@@ -497,7 +501,7 @@ public sealed record class RuntimeReflectionParser(
         return !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(m);
     }
 
-    IEnumerable<MethodBase> GetCalledMethods(IEnumerable<MethodBase> calleeCandidates)
+    IEnumerable<MethodBase> FilterCalledMethods(IEnumerable<MethodBase> calleeCandidates)
     {
         return calleeCandidates
             .Where(m =>

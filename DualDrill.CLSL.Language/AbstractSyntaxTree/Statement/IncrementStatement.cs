@@ -6,4 +6,6 @@ public sealed record class IncrementStatement(
     IExpression Expr
 ) : IStatement, IForInit, IForUpdate
 {
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitIncrement(this);
 }

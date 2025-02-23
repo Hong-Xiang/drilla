@@ -1,6 +1,9 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 
@@ -16,16 +19,8 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
     public string Name => $"set.{TPattern.Instance.Name}.{TElement.Instance.Name}";
 
     public IShaderType LeftType => TPattern.Instance.SourceType<TElement>().GetPtrType();
-
     public IShaderType RightType => TPattern.Instance.TargetType<TElement>();
 
     public IStatement CreateStatement(IExpression target, IExpression value)
-    {
-        // TODO: replace simple assignment with proper handling of complex target reference (ptr) semantic
-        return new SimpleAssignmentStatement(
-            VectorSwizzleGetOperation<TPattern, TElement>.Instance.CreateExpression(target),
-            value,
-            AssignmentOp.Assign
-        );
-    }
+        => TPattern.Instance.CreateSwizzleSetStatement<TElement>(target, value);
 }

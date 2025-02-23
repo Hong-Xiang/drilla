@@ -24,7 +24,5 @@ public sealed class VectorComponentGetOperation<TRank, TVector, TComponent>
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<VectorComponentGetOperation<TRank, TVector, TComponent>> expr)
-    {
-        throw new NotImplementedException();
-    }
+        => visitor.VisitVectorComponentGetExpression<TRank, TVector, TComponent>(expr);
 }

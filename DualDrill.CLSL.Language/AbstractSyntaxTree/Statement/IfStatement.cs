@@ -11,5 +11,6 @@ public sealed record class IfStatement(
     ImmutableHashSet<IShaderAttribute> Attributes
 ) : IStatement
 {
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitIf(this);
 }
-

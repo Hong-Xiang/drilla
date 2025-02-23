@@ -18,9 +18,9 @@ public sealed class UnstructuredStackInstructionSequence
     public ImmutableArray<IStackInstruction> Instructions { get; }
     FrozenDictionary<Label, int> LabelInstructionIndices { get; }
 
-    public IEnumerable<VariableDeclaration> LocalVariables => throw new NotImplementedException();
+    public IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables => throw new NotImplementedException();
 
-    public IEnumerable<Label> Labels => LabelInstructionIndices.Keys;
+    public IEnumerable<Label> FunctionBodyDataLabels => LabelInstructionIndices.Keys;
 
     public UnstructuredStackInstructionSequence(IEnumerable<IStackInstruction> instructions)
     {

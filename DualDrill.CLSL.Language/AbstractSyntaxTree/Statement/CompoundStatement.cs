@@ -11,16 +11,16 @@ public sealed record class CompoundStatement(ImmutableArray<IStatement> Statemen
     : IStatement
     , IFunctionBodyData
 {
-    public IEnumerable<VariableDeclaration> LocalVariables =>
+    public IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables =>
         Statements.SelectMany(s =>
-        s switch
-        {
-            CompoundStatement x => x.LocalVariables,
-            VariableOrValueStatement x => [x.Variable],
-            _ => []
-        });
+            s switch
+            {
+                CompoundStatement x => x.FunctionBodyDataLocalVariables,
+                VariableOrValueStatement x => [x.Variable],
+                _ => []
+            });
 
-    public IEnumerable<Label> Labels => [];
+    public IEnumerable<Label> FunctionBodyDataLabels => [];
 
     public void Dump(IFunctionBody context, IndentedTextWriter writer)
     {
@@ -33,6 +33,7 @@ public sealed record class CompoundStatement(ImmutableArray<IStatement> Statemen
                     {
                         s.Dump(context, writer);
                     }
+
                     break;
                 default:
                     writer.WriteLine(stmt.ToString());
@@ -42,7 +43,7 @@ public sealed record class CompoundStatement(ImmutableArray<IStatement> Statemen
     }
 
     public static CompoundStatement Empty => new([]);
+
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitCompound(this);
 }
-
-
-

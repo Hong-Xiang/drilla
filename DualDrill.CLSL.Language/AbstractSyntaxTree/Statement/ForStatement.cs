@@ -10,6 +10,8 @@ public sealed record class ForStatement(
     IStatement Statement
 ) : IStatement
 {
+    public T Accept<T>(IStatementVisitor<T> visitor)
+        => visitor.VisitFor(this);
 }
 
 public sealed record class ForHeader

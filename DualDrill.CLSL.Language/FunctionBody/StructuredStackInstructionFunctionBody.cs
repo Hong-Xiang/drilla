@@ -10,9 +10,9 @@ public sealed record class StructuredStackInstructionFunctionBody(
     IStructuredControlFlowRegion<IStructuredStackInstruction> Root
 ) : IFunctionBodyData
 {
-    public IEnumerable<VariableDeclaration> LocalVariables => Root.ReferencedLocalVariables;
+    public IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables => Root.ReferencedLocalVariables;
 
-    public IEnumerable<Label> Labels => Root.ReferencedLabels;
+    public IEnumerable<Label> FunctionBodyDataLabels => Root.ReferencedLabels;
 
     public void Dump(IFunctionBody context, IndentedTextWriter writer)
     {

@@ -23,7 +23,7 @@ public static class BinaryArithmetic
         xor
     }
 
-    public interface IOp
+    public interface IOp : IBinaryOp
     {
         public interface IVisitor<TResult>
         {

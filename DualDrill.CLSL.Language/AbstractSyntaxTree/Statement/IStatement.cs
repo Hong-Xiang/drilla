@@ -1,6 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
@@ -21,11 +24,16 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 public interface IStatement
     : IShaderAstNode
 {
+    T Accept<T>(IStatementVisitor<T> visitor);
 }
 
-public interface IStackStatement : IStructuredControlFlowElement, IUnstructuredControlFlowElement
+public interface IStackStatement : IStructuredControlFlowElement, IBasicBlockElement
 {
     IEnumerable<IStackInstruction> ToInstructions();
+}
+
+public interface ICommonStatement : IStatement, IStackStatement
+{
 }
 
 public interface IStatementVisitor<T>
@@ -47,6 +55,11 @@ public interface IStatementVisitor<T>
     T VisitContinue(ContinueStatement stmt);
 
     T AppendSemicolon(T t);
+
+    T VisitVectorSwizzleSet<TRank, TElement, TPattern>(VectorSwizzleSetStatement<TRank, TElement, TPattern> stmt)
+        where TRank : IRank<TRank>
+        where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
+        where TElement : IScalarType<TElement>;
 }
 
 public static class StatementExtension

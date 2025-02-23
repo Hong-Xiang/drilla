@@ -19,7 +19,7 @@ public sealed record class BinaryStatementOperationInstruction<TOperation>
 
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
-        => throw new NotSupportedException();
+        => visitor.VisitBinaryStatement(this);
 
     public override string ToString() => TOperation.Instance.Name;
 }

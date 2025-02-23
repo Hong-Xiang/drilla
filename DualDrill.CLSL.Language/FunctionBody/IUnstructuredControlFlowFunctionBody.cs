@@ -1,7 +1,9 @@
 using System.CodeDom.Compiler;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.Common.CodeTextWriter;
@@ -16,8 +18,8 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 /// </summary>
 /// <typeparam name="TElement"></typeparam>
 public interface IUnstructuredControlFlowFunctionBody<TElement>
-    : IFunctionBody, ITextDumpable
-    where TElement : IUnstructuredControlFlowElement
+    : IFunctionBody, ITextDumpable, IFunctionBodyData
+    where TElement : IBasicBlockElement
 {
     Label Entry { get; }
     BasicBlock<TElement> this[Label label] { get; }
@@ -29,47 +31,60 @@ public interface IUnstructuredControlFlowFunctionBody<TElement>
 
     IUnstructuredControlFlowFunctionBody<TResultElement>
         MapBody<TResultElement>(Func<BasicBlock<TElement>, BasicBlock<TResultElement>> f)
-        where TResultElement : IUnstructuredControlFlowElement;
+        where TResultElement : IBasicBlockElement;
 }
 
-public sealed class CfgBody : IUnstructuredControlFlowFunctionBody<IStackStatement>
+public sealed class CfgBody<TElement> : IUnstructuredControlFlowFunctionBody<TElement>
+    where TElement : IBasicBlockElement
 {
-    public ControlFlowGraph<BasicBlock<IStackStatement>> Graph { get; }
+    public ControlFlowGraph<BasicBlock<TElement>> Graph { get; }
+    public DominatorTree DominatorTree { get; }
 
-    public CfgBody(ControlFlowGraph<BasicBlock<IStackStatement>> graph)
+    private readonly FrozenDictionary<Label, int> LabelIndices;
+    private readonly FrozenDictionary<VariableDeclaration, int> LocalVariableIndices;
+
+    public CfgBody(ControlFlowGraph<BasicBlock<TElement>> graph)
     {
         Graph = graph;
+        DominatorTree = DominatorTree.CreateFromControlFlowGraph(Graph);
         Labels = [..graph.Labels()];
         Entry = graph.EntryLabel;
         LocalVariables =
         [
-            ..Labels.Select(l => graph[l]).SelectMany(b => b.Elements.ToArray())
+            ..Labels.Select(l => graph[l]).SelectMany(b => b.Elements)
                     .SelectMany(e => e.ReferencedLocalVariables)
                     .Distinct()
         ];
+        LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+        LocalVariableIndices = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
     }
 
     public int LabelIndex(Label label)
-    {
-        throw new NotImplementedException();
-    }
+        => LabelIndices[label];
 
     public int VariableIndex(VariableDeclaration variable)
-    {
-        throw new NotImplementedException();
-    }
+        => LocalVariableIndices[variable];
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
+    IEnumerable<Label> IFunctionBodyData.FunctionBodyDataLabels => Labels;
+
+    IEnumerable<VariableDeclaration> IFunctionBodyData.FunctionBodyDataLocalVariables => LocalVariables;
+
     public ImmutableArray<Label> Labels { get; }
 
     public void Dump(IndentedTextWriter writer)
+    {
+        Dump(this, writer);
+    }
+
+    public void Dump(IFunctionBody context, IndentedTextWriter writer)
     {
         throw new NotImplementedException();
     }
 
     public Label Entry { get; }
 
-    public BasicBlock<IStackStatement> this[Label label] => Graph[label];
+    public BasicBlock<TElement> this[Label label] => Graph[label];
 
     public ISuccessor Successor(Label label)
         => Graph.Successor(label);
@@ -78,24 +93,24 @@ public sealed class CfgBody : IUnstructuredControlFlowFunctionBody<IStackStateme
         => Graph.Predecessor(label);
 
     public IEnumerable<Label> Dominators(Label label)
-    {
-        throw new NotImplementedException();
-    }
+        => DominatorTree.Dominators(label);
 
     public Label? ImmediateDominator(Label label)
-    {
-        throw new NotImplementedException();
-    }
+        => DominatorTree.ImmediateDominator(label);
 
     public IEnumerable<Label> DominatorTreeChildren(Label label)
-    {
-        throw new NotImplementedException();
-    }
+        => DominatorTree.GetChildren(label);
 
     public IUnstructuredControlFlowFunctionBody<TResultElement> MapBody<TResultElement>(
-        Func<BasicBlock<IStackStatement>, BasicBlock<TResultElement>> f)
-        where TResultElement : IUnstructuredControlFlowElement
+        Func<BasicBlock<TElement>, BasicBlock<TResultElement>> f)
+        where TResultElement : IBasicBlockElement
     {
-        throw new NotImplementedException();
+        return new CfgBody<TResultElement>(new ControlFlowGraph<BasicBlock<TResultElement>>(
+            Entry,
+            Labels.ToFrozenDictionary(l => l, l => new ControlFlowGraph<BasicBlock<TResultElement>>.NodeDefinition(
+                Successor(l),
+                f(this[l])
+            ))
+        ));
     }
 }

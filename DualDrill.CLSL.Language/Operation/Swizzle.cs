@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
@@ -137,6 +138,9 @@ public static class Swizzle
         IVecType SourceType<TElement>() where TElement : IScalarType<TElement>;
         IVecType TargetType<TElement>() where TElement : IScalarType<TElement>;
         bool HasDuplicateComponent { get; }
+
+        public ICommonStatement CreateSwizzleSetStatement<TElement>(IExpression target, IExpression value)
+            where TElement : IScalarType<TElement>;
     }
 
     public interface ISizedPattern<TRank>
@@ -163,6 +167,11 @@ public static class Swizzle
             => visitor.Visit<TSelf>();
 
         IVecType IPattern<TSelf>.SourceType<TElement>() => VecType<TRank, TElement>.Instance;
+
+        ICommonStatement IPattern<TSelf>.CreateSwizzleSetStatement<TElement>(IExpression target, IExpression value)
+        {
+            return new VectorSwizzleSetStatement<TRank, TElement, TSelf>(target, value);
+        }
     }
 
     public sealed class Pattern<TRank, TX, TY> : ISizedPattern<TRank, Pattern<TRank, TX, TY>>

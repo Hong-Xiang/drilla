@@ -11,10 +11,6 @@ namespace DualDrill.CLSL.Compiler;
 using BasicBlock = BasicBlock<IStructuredStackInstruction>;
 using InstructionRegion = IStructuredControlFlowRegion<IStructuredStackInstruction>;
 
-internal class ControlFlowGraphToStructuredStack
-{
-}
-
 public static partial class ShaderModuleExtension
 {
     /// <summary>

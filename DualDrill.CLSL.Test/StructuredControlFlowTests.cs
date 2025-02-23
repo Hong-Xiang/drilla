@@ -45,7 +45,8 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                 [e] = new(Successor.Unconditional(e), BasicBlock<Inst>.Create([
                     ShaderInstruction.Load(v),
                     ShaderInstruction.Const(new I32Literal(1)),
-                    BinaryExpressionOperationInstruction<NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>>.Instance,
+                    BinaryExpressionOperationInstruction<
+                        NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>>.Instance,
                     ShaderInstruction.Store(v),
                 ]))
             })
@@ -98,14 +99,38 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //   else
         //      ... f ...
         //      return
-        var re = Assert.IsType<Block<Inst>>(result);
-        Assert.Equal(2, re.Body.Elements.Length);
-        var bbe = Assert.IsType<BasicBlock<Inst>>(re.Body.Elements[0]);
-        var rif = Assert.IsType<IfThenElse<Inst>>(re.Body.Elements[1]);
-        var rt = Assert.IsType<Block<Inst>>(rif.TrueBody);
-        var bbt = Assert.IsType<BasicBlock<Inst>>(rt.Body.Elements[0]);
-        var rf = Assert.IsType<Block<Inst>>(rif.FalseBody);
-        var bbf = Assert.IsType<BasicBlock<Inst>>(rf.Body.Elements[0]);
+        result.Should().Satisfy<Block<Inst>>(bodyBlock =>
+        {
+            bodyBlock.Body.Elements.Should().SatisfyRespectively(
+                eInst => eInst.Should().BeOfType<ConstInstruction<BoolLiteral>>().Which.Literal.Value.Should().Be(true),
+                ifRegion => ifRegion.Should().Satisfy<IfThenElse<Inst>>(
+                    ifThenElse =>
+                    {
+                        ifThenElse.TrueBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block<Inst>>().Which.Body.Elements.Should()
+                                  .SatisfyRespectively(
+                                      tInst => tInst
+                                               .Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
+                                               .Should().Be(1),
+                                      ret => ret.Should().BeOfType<ReturnInstruction>()
+                                  );
+                        ifThenElse.FalseBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block<Inst>>().Which.Body.Elements.Should()
+                                  .SatisfyRespectively(
+                                      fInst => fInst.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
+                                                    .Should().Be(2),
+                                      ret => ret.Should().BeOfType<ReturnInstruction>()
+                                  );
+                    })
+            );
+        });
+
+        // var re = Assert.IsType<Block<Inst>>(result);
+        // Assert.Equal(2, re.Body.Elements.Length);
+        // var bbe = Assert.IsType<ConstInstruction<BoolLiteral>>(re.Body.Elements[0]);
+        // var rif = Assert.IsType<IfThenElse<Inst>>(re.Body.Elements[1]);
+        // var rt = Assert.IsType<Block<Inst>>(rif.TrueBody.Elements);
+        // var bbt = Assert.IsType<BasicBlock<Inst>>(rt.Body.Elements[0]);
+        // var rf = Assert.IsType<Block<Inst>>(rif.FalseBody);
+        // var bbf = Assert.IsType<BasicBlock<Inst>>(rf.Body.Elements[0]);
     }
 
     [Fact]
@@ -151,17 +176,18 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         Dump(ir);
         ir.Body.Elements.Should().SatisfyRespectively(
             b0 => b0.Should().BeOfType<Block<Inst>>()
-                .Which.Should().Satisfy<Block<Inst>>(b =>
-                {
-                    b.Label.Should().Be(m);
-                    b.Body.Elements.Should().SatisfyRespectively(
-                        bb => bb.Should().BeOfType<BasicBlock<Inst>>(),
-                        ifThenElse => ifThenElse.Should().BeOfType<IfThenElse<Inst>>()
-                    );
-                }),
+                    .Which.Should().Satisfy<Block<Inst>>(b =>
+                    {
+                        b.Label.Should().Be(m);
+                        b.Body.Elements.Should().SatisfyRespectively(
+                            val => val.Should().BeOfType<ConstInstruction<BoolLiteral>>().Which.Literal.Value.Should()
+                                      .Be(true),
+                            ifThenElse => ifThenElse.Should().BeOfType<IfThenElse<Inst>>()
+                        );
+                    }),
             b1 => b1.Should().BeOfType<Block<Inst>>()
-                .Which.Body.Elements.Should().ContainSingle()
-                .Which.Should().BeOfType<ReturnInstruction>()
+                    .Which.Body.Elements.Should().ContainSingle()
+                    .Which.Should().BeOfType<ReturnInstruction>()
         );
     }
 
@@ -221,10 +247,10 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         // end (loop)
 
         result.Should().BeOfType<Loop<Inst>>()
-            .Which.Body.Elements.Should().SatisfyRespectively(
-                x => x.Should().BeOfType<ConstInstruction<I32Literal>>(),
-                x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-                (b) => b.Should().BeOfType<Block<Inst>>()
-            );
+              .Which.Body.Elements.Should().SatisfyRespectively(
+                  x => x.Should().BeOfType<ConstInstruction<I32Literal>>(),
+                  x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+                  (b) => b.Should().BeOfType<Block<Inst>>()
+              );
     }
 }

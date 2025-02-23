@@ -7,6 +7,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Compiler;
 
@@ -18,6 +21,13 @@ internal sealed class AbstractSyntaxTreeSimplify
         return t;
     }
 
+    public IStatement
+        VisitVectorSwizzleSet<TRank, TElement, TPattern>(VectorSwizzleSetStatement<TRank, TElement, TPattern> stmt)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>
+        where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
+        => stmt;
+
     public IStatement VisitBreak(BreakStatement stmt)
     {
         return stmt;
@@ -25,7 +35,7 @@ internal sealed class AbstractSyntaxTreeSimplify
 
     public IStatement VisitCompound(CompoundStatement stmt)
     {
-        var results = stmt.Statements.Select(s => s.AcceptVisitor(this))
+        var results = stmt.Statements.Select(s => s.Accept(this))
                           .ToImmutableArray();
         List<IStatement> statements = [];
         foreach (var r in results)
@@ -40,6 +50,7 @@ internal sealed class AbstractSyntaxTreeSimplify
                     break;
             }
         }
+
         return new CompoundStatement([.. statements]);
     }
 

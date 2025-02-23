@@ -11,6 +11,7 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
+using System.Collections.Frozen;
 using System.Diagnostics;
 using DualDrill.CLSL.Frontend.SymbolTable;
 
@@ -21,7 +22,7 @@ namespace DualDrill.CLSL;
 /// </summary>
 public static class ShaderModuleExtension
 {
-    public static ShaderModuleDeclaration<UnstructuredStackInstructionSequence> Parse(
+    public static ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStackStatement>> Parse(
         this ISharpShader shader
     )
     {
@@ -30,25 +31,40 @@ public static class ShaderModuleExtension
         return parser.ParseShaderModule(shader);
     }
 
-    public static ShaderModuleDeclaration<UnstructuredStackInstructionSequence>
+    public static ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction>>
+        ConvertFunctionBodyToStructuredStackInstructions(
+            this ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStackStatement>> module
+        )
+        => module.MapBody((module, f, body) =>
+            body.MapBody(bb =>
+                BasicBlock<IStructuredStackInstruction>.Create([
+                    ..bb.Elements.SelectMany(e => e.ToInstructions()).Cast<IStructuredStackInstruction>()
+                ])));
+
+    public static ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction>>
         ReplaceOperationCallsToOperationInstruction(
-            this ShaderModuleDeclaration<UnstructuredStackInstructionSequence> ir
+            this ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction>> ir
         )
     {
         return ir.MapBody((m, f, b) =>
-            new UnstructuredStackInstructionSequence(b.Instructions.Select(inst =>
+            b.MapBody(bb =>
             {
-                if (inst is CallInstruction call)
-                {
-                    if (call.Callee.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } attr)
+                return BasicBlock<IStructuredStackInstruction>.Create([
+                    ..bb.Elements.Select(inst =>
                     {
-                        return attr.Operation.Instruction;
-                    }
-                }
+                        if (inst is CallInstruction call)
+                        {
+                            if (call.Callee.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is
+                                { } attr)
+                            {
+                                return attr.Operation.Instruction;
+                            }
+                        }
 
-                return inst;
-            }))
-        );
+                        return inst;
+                    })
+                ]);
+            }));
     }
 
     public static ShaderModuleDeclaration<CompoundStatement> ToAbstractSyntaxTreeFunctionBody(
@@ -76,66 +92,73 @@ public static class ShaderModuleExtension
     }
 
     public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody> ToControlFlowGraph(
-        this ShaderModuleDeclaration<UnstructuredStackInstructionSequence> module
+        this ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStructuredStackInstruction>> module
     )
     {
         return module.MapBody((m, f, b) =>
         {
-            Dictionary<int, Label> labels = [];
-            Dictionary<Label, int> labelIndex = [];
-            foreach (var (idx, inst) in b.Instructions.Index())
-            {
-                if (inst is LabelInstruction l)
-                {
-                    labels.Add(idx, l.Label);
-                    labelIndex.Add(l.Label, idx);
-                }
-            }
-
-            var builder = new ControlFlowGraphBuilder(b.Instructions.Length, (idx) =>
-                labels.TryGetValue(idx, out var l) ? l : Label.FromIndex(idx));
-
-            foreach (var (idx, inst) in b.Instructions.Index())
-            {
-                switch (inst)
-                {
-                    case BrInstruction br:
-                        builder.AddBr(idx, labelIndex[br.Target]);
-                        break;
-                    case BrIfInstruction brIf:
-                        builder.AddBrIf(idx, labelIndex[brIf.Target]);
-                        break;
-                    case ReturnInstruction:
-                        builder.AddReturn(idx);
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            var cfg = builder.Build((l, r) =>
-            {
-                Debug.Assert(r.Count > 0);
-                var isFirstLabel = b.Instructions[r.Start] is LabelInstruction;
-                var structuredInstructionStart = isFirstLabel ? r.Start + 1 : r.Start;
-                var structuredInstructionCount = isFirstLabel ? r.Count - 1 : r.Count;
-                IEnumerable<IStructuredStackInstruction> body = [];
-                if (structuredInstructionCount > 0)
-                {
-                    if (b.Instructions[r.Start + r.Count - 1] is IJumpInstruction)
-                    {
-                        structuredInstructionCount--;
-                    }
-
-                    body = b.Instructions.Slice(structuredInstructionStart, structuredInstructionCount)
-                            .Cast<IStructuredStackInstruction>();
-                }
-                //var body = b.Instructions.Slice(structuredInstructionStart, structuredInstructionCount)
-                //                               .Cast<IStructuredStackInstruction>();
-
-                return BasicBlock<IStructuredStackInstruction>.Create([.. body]);
-            });
-            return new ControlFlowGraphFunctionBody(cfg);
+            // Dictionary<int, Label> labels = [];
+            // Dictionary<Label, int> labelIndex = [];
+            // foreach (var (idx, inst) in b.Instructions.Index())
+            // {
+            //     if (inst is LabelInstruction l)
+            //     {
+            //         labels.Add(idx, l.Label);
+            //         labelIndex.Add(l.Label, idx);
+            //     }
+            // }
+            //
+            // var builder = new ControlFlowGraphBuilder(b.Instructions.Length, (idx) =>
+            //     labels.TryGetValue(idx, out var l) ? l : Label.FromIndex(idx));
+            //
+            // foreach (var (idx, inst) in b.Instructions.Index())
+            // {
+            //     switch (inst)
+            //     {
+            //         case BrInstruction br:
+            //             builder.AddBr(idx, labelIndex[br.Target]);
+            //             break;
+            //         case BrIfInstruction brIf:
+            //             builder.AddBrIf(idx, labelIndex[brIf.Target]);
+            //             break;
+            //         case ReturnInstruction:
+            //             builder.AddReturn(idx);
+            //             break;
+            //         default:
+            //             break;
+            //     }
+            // }
+            //
+            // var cfg = builder.Build((l, r) =>
+            // {
+            //     Debug.Assert(r.Count > 0);
+            //     var isFirstLabel = b.Instructions[r.Start] is LabelInstruction;
+            //     var structuredInstructionStart = isFirstLabel ? r.Start + 1 : r.Start;
+            //     var structuredInstructionCount = isFirstLabel ? r.Count - 1 : r.Count;
+            //     IEnumerable<IStructuredStackInstruction> body = [];
+            //     if (structuredInstructionCount > 0)
+            //     {
+            //         if (b.Instructions[r.Start + r.Count - 1] is IJumpInstruction)
+            //         {
+            //             structuredInstructionCount--;
+            //         }
+            //
+            //         body = b.Instructions.Slice(structuredInstructionStart, structuredInstructionCount)
+            //                 .Cast<IStructuredStackInstruction>();
+            //     }
+            //     //var body = b.Instructions.Slice(structuredInstructionStart, structuredInstructionCount)
+            //     //                               .Cast<IStructuredStackInstruction>();
+            //
+            //     return BasicBlock<IStructuredStackInstruction>.Create([.. body]);
+            // });
+            return new ControlFlowGraphFunctionBody(new ControlFlowGraph<BasicBlock<IStructuredStackInstruction>>(
+                b.Entry,
+                ((IFunctionBody)b).Labels.ToFrozenDictionary(l => l,
+                    l => new ControlFlowGraph<BasicBlock<IStructuredStackInstruction>>.NodeDefinition(
+                        b.Successor(l),
+                        BasicBlock<IStructuredStackInstruction>.Create([..b[l].Elements])
+                    ))
+            ));
         });
     }
 
@@ -145,7 +168,6 @@ public static class ShaderModuleExtension
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
-        var typeVisitor = new WgslCodeTypeReferenceVisitor(isw);
         var bodyVisitor = new WgslFunctionBodyVisitor(isw);
         ;
         var visitor = new ModuleToCodeVisitor<CompoundStatement>(isw, module,
@@ -160,6 +182,7 @@ public static class ShaderModuleExtension
     )
     {
         var module = shader.Parse()
+                           .ConvertFunctionBodyToStructuredStackInstructions()
                            .ReplaceOperationCallsToOperationInstruction()
                            .ToControlFlowGraph()
                            .ToStructuredControlFlowStackModel()
@@ -295,7 +318,7 @@ public static class ShaderModuleExtension
         {
             var labelIndex = b.Root.ReferencedLabels.Distinct().ToArray().Index()
                               .ToDictionary(x => x.Item, x => x.Index);
-            var variables = b.Root.ReferencedLocalVariables.Index()
+            var variables = b.Root.ReferencedLocalVariables.Distinct().Index()
                              .ToDictionary(x => x.Item, x => x.Index);
 
             string VariableName(VariableDeclaration variable) =>
@@ -429,7 +452,6 @@ public static class ShaderModuleExtension
         where TBody : IFunctionBodyData
     {
         writer.Write(module.GetType().CSharpFullName());
-        var typeVisitor = new WgslCodeTypeReferenceVisitor(writer);
         var visitor = new ModuleToCodeVisitor<TBody>(writer, module, (b) => { return ValueTask.CompletedTask; });
         await module.Accept(visitor);
     }

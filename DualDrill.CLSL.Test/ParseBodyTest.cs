@@ -40,14 +40,6 @@ public class ParseBodyTest
         throw new NotImplementedException();
     }
 
-    UnstructuredStackInstructionSequence ParseMethod(FunctionDeclaration f, MethodBase m)
-    {
-        var context = CompilationContext.Create();
-        context.AddFunctionDefinition(Symbol.Function(m), f);
-        var parser = new RuntimeReflectionParser(context);
-        return parser.ParseMethodBody(f);
-    }
-
 
     IUnstructuredControlFlowFunctionBody<IStackStatement> ParseMethod2(FunctionDeclaration f, MethodBase m)
     {
@@ -71,7 +63,7 @@ public class ParseBodyTest
         var result = ParseMethod2(f, MethodHelper.GetMethod(DevelopTestShaderModule.Return42));
         var entry = result[result.Entry];
         entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<ReturnStatement>()
+             .Which.Should().BeOfType<PushStatement>()
              .Which.Expr.Should().BeOfType<LiteralValueExpression>()
              .Which.Literal.Should().BeOfType<I32Literal>()
              .Which.Value.Should().Be(42);
@@ -89,7 +81,7 @@ public class ParseBodyTest
         var result = ParseMethod2(f, MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.LoadArg));
         var entry = result[result.Entry];
         entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<ReturnStatement>()
+             .Which.Should().BeOfType<PushStatement>()
              .Which.Expr.Should().BeOfType<FormalParameterExpression>()
              .Which.Parameter.Should().Be(a);
     }
@@ -106,7 +98,7 @@ public class ParseBodyTest
         var result = ParseMethod2(f, MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.APlus1));
         var entry = result[result.Entry];
         entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<ReturnStatement>()
+             .Which.Should().BeOfType<PushStatement>()
              .Which.Expr.Should().Satisfy<IBinaryExpression>(e =>
              {
                  e.Operation.Should().Satisfy<IBinaryExpressionOperation>(operation =>
@@ -135,7 +127,7 @@ public class ParseBodyTest
         var result = ParseMethod2(f, MethodHelper.GetMethod(DevelopTestShaderModule.SystemNumericVector4Creation));
         var entry = result[result.Entry];
         entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<ReturnStatement>()
+             .Which.Should().BeOfType<PushStatement>()
              .Which.Expr.Should().Satisfy<FunctionCallExpression>(
                  call =>
                  {
@@ -183,7 +175,7 @@ public class ParseBodyTest
         var result = parser.ParseMethodBody2(fCall);
         var entry = result[result.Entry];
         entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<ReturnStatement>()
+             .Which.Should().BeOfType<PushStatement>()
              .Which.Expr.Should().Satisfy<FunctionCallExpression>(
                  call =>
                  {
@@ -309,7 +301,7 @@ public class ParseBodyTest
                        }
                    );
         result[l16].Elements.Should().ContainSingle()
-                   .Which.Should().BeOfType<ReturnStatement>()
+                   .Which.Should().BeOfType<PushStatement>()
                    .Which.Expr.Should().BeOfType<VariableIdentifierExpression>()
                    .Which.Variable.Should().Be(loc1);
 
@@ -394,7 +386,7 @@ public class ParseBodyTest
         var entry = result[result.Entry];
 
         entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<ReturnStatement>()
+             .Which.Should().BeOfType<PushStatement>()
              .Which.Expr.Should().Satisfy<IUnaryExpression>(e =>
              {
                  e.Operation.Should().BeOfType<VectorSwizzleGetOperation<
@@ -449,20 +441,24 @@ public class ParseBodyTest
         entry.Elements.Should().SatisfyRespectively(
             s =>
             {
-                s.Should().Satisfy<SimpleAssignmentStatement>(assign =>
-                {
-                    // TODO: add vector swizzle getter expression assert
-                    assign.R.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(pb));
-                });
+                s.Should()
+                 .Satisfy<VectorSwizzleSetStatement<N4, FloatType<N32>, Swizzle.Pattern<N4, Swizzle.X, Swizzle.Y>>>(
+                     assign =>
+                     {
+                         assign.Target.Should().BeOfType<AddressOfExpression>()
+                               .Which.Base.Should().BeOfType<FormalParameterExpression>()
+                               .Which.Parameter.Should().Be(pa);
+                         assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(pb));
+                     });
             },
             s =>
             {
                 s.Should().Satisfy<SimpleAssignmentStatement>(assign =>
                 {
                     assign.L.Should().BeOfType<VariableIdentifierExpression>()
-                     .Which.Variable.Should().Be(loc0);
+                          .Which.Variable.Should().Be(loc0);
                     assign.R.Should().BeOfType<FormalParameterExpression>()
-                     .Which.Parameter.Should().Be(pa);
+                          .Which.Parameter.Should().Be(pa);
                 });
             }
         );
@@ -471,7 +467,7 @@ public class ParseBodyTest
         {
             var bb = result[s.Target];
             bb.Elements.Should().ContainSingle()
-              .Which.Should().BeOfType<ReturnStatement>()
+              .Which.Should().BeOfType<PushStatement>()
               .Which.Expr.Should().Satisfy<VariableIdentifierExpression>(e => e.Variable.Should().Be(loc0));
         });
 
@@ -530,7 +526,7 @@ public class ParseBodyTest
         var entry = result[result.Entry];
 
         entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<ReturnStatement>()
+             .Which.Should().BeOfType<PushStatement>()
              .Which.Expr.Should().Satisfy<FunctionCallExpression>(
                  call =>
                  {
@@ -664,7 +660,7 @@ public class ParseBodyTest
                   );
 
         result[lc].Elements.Should().ContainSingle()
-                  .Which.Should().BeOfType<ReturnStatement>()
+                  .Which.Should().BeOfType<PushStatement>()
                   .Which.Expr.Should().BeOfType<VariableIdentifierExpression>()
                   .Which.Variable.Should().Be(variables[2]);
 

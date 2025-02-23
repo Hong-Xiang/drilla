@@ -11,7 +11,7 @@ namespace DualDrill.CLSL;
 
 public interface ICLSLCompiler
 {
-    public ShaderModuleDeclaration<UnstructuredStackInstructionSequence> Reflect(ISharpShader shader);
+    public ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStackStatement>> Reflect(ISharpShader shader);
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader);
     public ValueTask<string> EmitWGSL(ISharpShader module);
 }
@@ -25,7 +25,7 @@ public sealed class CLSLCompiler() : ICLSLCompiler
         return await shader.EmitWgslCode();
     }
 
-    public ShaderModuleDeclaration<UnstructuredStackInstructionSequence> Reflect(ISharpShader shader)
+    public ShaderModuleDeclaration<IUnstructuredControlFlowFunctionBody<IStackStatement>> Reflect(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
         return parser.ParseShaderModule(shader);
@@ -34,10 +34,8 @@ public sealed class CLSLCompiler() : ICLSLCompiler
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
-        var module = parser.ParseShaderModule(shader);
+        var module = parser.ParseShaderModule(shader).ConvertFunctionBodyToStructuredStackInstructions()
+                           .ReplaceOperationCallsToOperationInstruction();
         return module.ToControlFlowGraph().ToStructuredControlFlowStackModel();
-
     }
-
-
 }

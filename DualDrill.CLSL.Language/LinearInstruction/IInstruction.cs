@@ -20,7 +20,7 @@ public interface IStackInstruction : IInstruction
 public interface IStructuredStackInstruction
     : IStackInstruction
     , IStructuredControlFlowElement
-    , IUnstructuredControlFlowElement
+    , IBasicBlockElement
 {
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>;
@@ -114,7 +114,7 @@ public sealed record class CallInstruction(FunctionDeclaration Callee) : IStruct
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public override string ToString() => $"call {Callee.Name}({Callee})";
+    public override string ToString() => $"call({Callee})";
 }
 
 public sealed record class LoadSymbolValueInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
