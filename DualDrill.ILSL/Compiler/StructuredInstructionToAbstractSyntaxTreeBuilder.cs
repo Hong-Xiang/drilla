@@ -449,7 +449,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         return default;
     }
 
-    public Unit VisitUnaryOperation<TOperation>(UnaryOperationInstruction<TOperation> inst)
+    public Unit VisitUnaryOperation<TOperation>(UnaryExpressionOperationInstruction<TOperation> inst)
         where TOperation : IUnaryOperation<TOperation>
     {
         var e = Expressions.Pop();

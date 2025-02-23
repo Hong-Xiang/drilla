@@ -10,7 +10,7 @@ public sealed record class ParameterDeclaration(
     IShaderType Type,
     ImmutableHashSet<IShaderAttribute> Attributes) : IDeclaration, IVariableIdentifierSymbol
 {
-    public override string ToString()
+    public sealed override string ToString()
     {
         return $"arg({Name}: {Type.Name})";
     }

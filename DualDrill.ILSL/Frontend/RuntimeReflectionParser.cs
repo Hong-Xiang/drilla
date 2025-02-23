@@ -384,6 +384,7 @@ public sealed record class RuntimeReflectionParser(
         {
             var visitor = new RuntimeReflectionParserInstructionVisitor(f,
                 model,
+                l,
                 BasicBlockInputs[l]
             );
             var ilRange = model.ControlFlowGraph[l];
@@ -392,6 +393,8 @@ public sealed record class RuntimeReflectionParser(
                 var cilInst = model[i];
                 cilInst.Evaluate(visitor, model.IsStatic, methodTable);
             }
+
+            visitor.FlushOutputs();
 
             {
                 if (BasicBlockOutputs.TryGetValue(l, out var existed))
@@ -416,7 +419,14 @@ public sealed record class RuntimeReflectionParser(
                     }
                     else
                     {
-                        BasicBlockInputs.Add(target, visitor.Outputs);
+                        var inputs = ImmutableStack.Create<VariableDeclaration>();
+                        foreach (var (index, v) in visitor.Outputs.Index())
+                        {
+                            inputs = inputs.Push(new VariableDeclaration(DeclarationScope.Function,
+                                $"input({target.Name})#{index}", v.Type, []));
+                        }
+
+                        BasicBlockInputs.Add(target, inputs);
                     }
                 }
             }
@@ -448,7 +458,6 @@ public sealed record class RuntimeReflectionParser(
             _ = ParseLocalVariable(v, methodTable);
         }
 
-        var visitor = new RuntimeReflectionParserInstructionVisitor(f, model, []);
         var visited = new bool[model.InstructionCount];
         var results = new List<IStackInstruction>[model.InstructionCount];
         for (var i = 0; i < results.Length; i++)

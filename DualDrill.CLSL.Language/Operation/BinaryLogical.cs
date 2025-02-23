@@ -9,17 +9,26 @@ public static class BinaryLogical
     {
         and,
         or,
-        xor,
+        xor
     }
 
-    public interface IOp<TSelf> : IOpKind<TSelf, OpKind>, IBinaryOp<TSelf>
+    public interface IOp
+    {
+    }
+
+    public interface IOp<TSelf> : IOp, IBinaryOp<TSelf>
         where TSelf : IOp<TSelf>
+    {
+    }
+
+    public interface IWithBitwiseOp<TSelf> : IOp<TSelf>, IOpKind<TSelf, OpKind>
+        where TSelf : IWithBitwiseOp<TSelf>
     {
         BinaryArithmetic.IBitwiseLogicalOp BitwiseOp { get; }
     }
 }
 
-public sealed class LogicalAnd : BinaryLogical.IOp<LogicalAnd>, IIntegerOp<LogicalAnd>, ISymbolOp<LogicalAnd>
+public sealed class LogicalAnd : BinaryLogical.IWithBitwiseOp<LogicalAnd>, IIntegerOp<LogicalAnd>, ISymbolOp<LogicalAnd>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.and;
 
@@ -29,7 +38,7 @@ public sealed class LogicalAnd : BinaryLogical.IOp<LogicalAnd>, IIntegerOp<Logic
     public string Symbol => "&&";
 }
 
-public sealed class LogicalOr : BinaryLogical.IOp<LogicalOr>, IIntegerOp<LogicalOr>, ISymbolOp<LogicalOr>
+public sealed class LogicalOr : BinaryLogical.IWithBitwiseOp<LogicalOr>, IIntegerOp<LogicalOr>, ISymbolOp<LogicalOr>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.or;
     public static LogicalOr Instance { get; } = new();
@@ -37,7 +46,7 @@ public sealed class LogicalOr : BinaryLogical.IOp<LogicalOr>, IIntegerOp<Logical
     public string Symbol => "||";
 }
 
-public sealed class LogicalXor : BinaryLogical.IOp<LogicalXor>, IIntegerOp<LogicalXor>, ISymbolOp<LogicalXor>
+public sealed class LogicalXor : BinaryLogical.IWithBitwiseOp<LogicalXor>, IIntegerOp<LogicalXor>, ISymbolOp<LogicalXor>
 {
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.xor;
     public static LogicalXor Instance { get; } = new();

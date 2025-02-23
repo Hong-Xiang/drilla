@@ -10,7 +10,6 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 [JsonDerivedType(typeof(VariableIdentifierExpression), nameof(VariableIdentifierExpression))]
 [JsonDerivedType(typeof(FunctionCallExpression), nameof(FunctionCallExpression))]
 [JsonDerivedType(typeof(FormalParameterExpression), nameof(FormalParameterExpression))]
-[JsonDerivedType(typeof(VectorSwizzleAccessExpression), nameof(VectorSwizzleAccessExpression))]
 [JsonDerivedType(typeof(NamedComponentExpression), nameof(NamedComponentExpression))]
 public interface IExpression : IShaderAstNode
 {
@@ -38,17 +37,13 @@ public interface IExpressionVisitor<T>
     T VisitFunctionCallExpression(FunctionCallExpression expr);
 
     T VisitBinaryExpression
-        <TOperation, TLeftType, TRightType, TResultType, TOp>
-        (IBinaryExpressionOperation<TOperation, TLeftType, TRightType, TResultType, TOp>.Expression expr)
-        where TOperation : IBinaryExpressionOperation<TOperation, TLeftType, TRightType, TResultType, TOp>
-        where TLeftType : ISingletonShaderType<TLeftType>
-        where TRightType : ISingletonShaderType<TRightType>
-        where TResultType : ISingletonShaderType<TResultType>
-        where TOp : IBinaryOp<TOp>;
+        <TOperation>
+        (BinaryOperationExpression<TOperation> expr)
+        where TOperation : IBinaryExpressionOperation<TOperation>;
 
     T VisitUnaryExpression
         <TOperation, TSourceType, TResultType, TOp>
-        (UnaryExpression<TOperation> expr)
+        (UnaryOperationExpression<TOperation> expr)
         where TOperation : IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>
         where TSourceType : ISingletonShaderType<TSourceType>
         where TResultType : ISingletonShaderType<TResultType>

@@ -25,7 +25,6 @@ public interface IVecType : IShaderType
     public TResult Accept<TResult>(IVisitor<TResult> visitor);
 }
 
-
 public interface IVecType<TSelf> : IVecType, ISingleton<TSelf>
     where TSelf : IVecType<TSelf>
 {
@@ -48,15 +47,20 @@ public interface ISizedVecType<TRank, TSelf> : IVecType<TSelf>
 [DebuggerDisplay("{Name}")]
 public sealed class VecType<TRank, TElement>
     : ISizedVecType<TRank, VecType<TRank, TElement>>
-    , ISingleton<VecType<TRank, TElement>>
     , ISingletonShaderType<VecType<TRank, TElement>>
     where TRank : IRank<TRank>
     where TElement : IScalarType<TElement>
 {
-    private VecType() { }
+    private VecType()
+    {
+    }
+
     public static VecType<TRank, TElement> Instance { get; } = new();
 
     public string Name => $"vec{Size.Value}<{ElementType.Name}>";
+
+    public override string ToString()
+        => Name;
 
     public int ByteSize => Size.Value * ElementType.ByteSize;
 
@@ -80,6 +84,7 @@ public sealed class VecType<TRank, TElement>
         {
             return rc.ComponentGetOperation<VecType<TRank, TElement>, TElement>();
         }
+
         throw new NotSupportedException();
     }
 
@@ -89,6 +94,7 @@ public sealed class VecType<TRank, TElement>
         {
             return rc.ComponentSetOperation<VecType<TRank, TElement>, TElement>();
         }
+
         throw new NotSupportedException();
     }
 
@@ -102,9 +108,9 @@ public sealed class VecType<TRank, TElement>
         where TComponent : ISizedComponent<TRank, TComponent>
     {
         public MemberDeclaration Declaration { get; } = new MemberDeclaration(
-              TComponent.Instance.Name,
-              TElement.Instance,
-              []);
+            TComponent.Instance.Name,
+            TElement.Instance,
+            []);
     }
 
     public IEnumerable<IVectorBinaryNumericOperation> GetBinaryNumericOperations()
@@ -132,9 +138,12 @@ public sealed class VecType<TRank, TElement>
 public static partial class ShaderType
 {
     public static IEnumerable<IVecType> GetVecTypes() =>
-        [..from r in Ranks
-           from e in ScalarTypes
-           select GetVecType(r, e)];
+    [
+        ..from r in Ranks
+          from e in ScalarTypes
+          select GetVecType(r, e)
+    ];
+
     public static IVecType GetVecType(IRank size, IScalarType elementType)
         => size.Accept(new VecTypeFromRankVisitor(elementType));
 

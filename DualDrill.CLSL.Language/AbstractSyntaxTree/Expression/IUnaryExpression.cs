@@ -12,11 +12,11 @@ public interface IUnaryExpression : IExpression
     public IUnaryExpressionOperation Operation { get; }
 }
 
-public sealed record class UnaryExpression<TOperation>
+public sealed record class UnaryOperationExpression<TOperation>
     : IUnaryExpression
     where TOperation : IUnaryOperation<TOperation>
 {
-    public UnaryExpression(IExpression source)
+    public UnaryOperationExpression(IExpression source)
     {
         Debug.Assert(source.Type.Equals(TOperation.Instance.SourceType));
         Source = source;

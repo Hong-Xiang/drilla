@@ -17,9 +17,9 @@ public interface IUnaryExpressionOperation
 public interface IUnaryOperation<TSelf> : IUnaryExpressionOperation, IOperation<TSelf>
     where TSelf : IUnaryOperation<TSelf>
 {
-    IStructuredStackInstruction IOperation.Instruction => UnaryOperationInstruction<TSelf>.Instance;
+    IStructuredStackInstruction IOperation.Instruction => UnaryExpressionOperationInstruction<TSelf>.Instance;
 
-    TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor, UnaryExpression<TSelf> expr);
+    TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor, UnaryOperationExpression<TSelf> expr);
 
     static readonly FunctionDeclaration OperationFunction = new(
         TSelf.Instance.Name,
@@ -31,6 +31,9 @@ public interface IUnaryOperation<TSelf> : IUnaryExpressionOperation, IOperation<
     );
 
     FunctionDeclaration IOperation.Function => OperationFunction;
+
+    IUnaryExpression IUnaryExpressionOperation.CreateExpression(IExpression expr) =>
+        new UnaryOperationExpression<TSelf>(expr);
 }
 
 public interface IUnaryExpressionOperation<TSelf, TSourceType, TResultType, TOp>
@@ -42,9 +45,5 @@ public interface IUnaryExpressionOperation<TSelf, TSourceType, TResultType, TOp>
 {
     IShaderType IUnaryExpressionOperation.SourceType => TSourceType.Instance;
     IShaderType IUnaryExpressionOperation.ResultType => TResultType.Instance;
-
     string IOperation.Name => $"{TOp.Instance.Name}.{TSourceType.Instance.Name}.{TResultType.Instance.Name}";
-
-    IUnaryExpression IUnaryExpressionOperation.CreateExpression(IExpression expr) =>
-        new UnaryExpression<TSelf>(expr);
 }

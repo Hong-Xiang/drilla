@@ -47,7 +47,7 @@ internal sealed class DevelopTestShaderModule
     }
 
     [Vertex]
-    public static int MaxByTaneryOperator(int a, int b)
+    public static int MaxByTernaryOperator(int a, int b)
     {
         return a >= b ? a : b;
     }

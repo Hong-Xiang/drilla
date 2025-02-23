@@ -27,7 +27,7 @@ public interface IStructuredStackInstructionVisitor<TResult>
     TResult Visit(DupInstruction inst);
     TResult Visit(DropInstruction inst);
 
-    TResult VisitUnaryOperation<TOperation>(UnaryOperationInstruction<TOperation> inst)
+    TResult VisitUnaryOperation<TOperation>(UnaryExpressionOperationInstruction<TOperation> inst)
         where TOperation : IUnaryOperation<TOperation>;
 
     TResult VisitVectorComponentGet<TRank, TVector, TComponent>()

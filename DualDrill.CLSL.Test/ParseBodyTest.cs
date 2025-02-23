@@ -211,7 +211,7 @@ public class ParseBodyTest
             new FunctionReturn(ShaderType.I32, []),
             []
         );
-        var result = ParseMethod(f, MethodHelper.GetMethod<int, int, int>(DevelopTestShaderModule.MaxByIfThenElse));
+        var result = ParseMethod2(f, MethodHelper.GetMethod<int, int, int>(DevelopTestShaderModule.MaxByIfThenElse));
         //  IL_0000: nop
         //  IL_0001: ldarg.0
         //  IL_0002: ldarg.1
@@ -235,60 +235,138 @@ public class ParseBodyTest
         //  IL_0016: ldloc.1
         //  IL_0017: ret
 
-        ImmutableArray<LabelInstruction> labels = [.. result.Instructions.OfType<LabelInstruction>()];
+        var labels = result.Labels;
+        labels.Should().HaveCount(4);
+        labels[0].Should().Be(result.Entry);
+        var l0c = labels[1];
+        var l11 = labels[2];
+        var l16 = labels[3];
 
-        labels.Should().HaveCount(2).And.OnlyHaveUniqueItems();
+        result.Successor(result.Entry).Should().Satisfy<ConditionalSuccessor>(sIf =>
+        {
+            sIf.TrueTarget.Should().Be(l11);
+            sIf.FalseTarget.Should().Be(l0c);
+        });
 
-        var l11 = labels[0];
-        var l16 = labels[1];
+        result.Successor(l11).Should().BeOfType<UnconditionalSuccessor>().Which.Target.Should().Be(l16);
+        result.Successor(l0c).Should().BeOfType<UnconditionalSuccessor>().Which.Target.Should().Be(l16);
 
-        result.Instructions.Should().SatisfyRespectively(
-            //  IL_0000: nop
-            x => x.Should().BeOfType<NopInstruction>(),
-            //  IL_0001: ldarg.0
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
-            //  IL_0002: ldarg.1
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
-            // IL_0003: clt
-            x => x.Should()
-                  .BeOfType<BinaryExpressionOperationInstruction<
-                      NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>>>(),
-            // IL_0005: ldc.i4.0
-            x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(0),
-            // IL_0006: ceq
-            x => x.Should()
-                  .BeOfType<BinaryExpressionOperationInstruction<
-                      NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>>(),
-            // IL_0008: stloc.0
-            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-            // IL_0009: ldloc.0
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-            // IL_000a: brfalse.s IL_0011
-            x => x.Should().BeOfType<BrIfInstruction>().Which.Target.Should().Be(l11),
+        var variables = result.LocalVariables;
+        variables.Should().HaveCount(2);
+        var loc0 = variables[0];
+        var loc1 = variables[1];
 
-            // IL_000c: nop
-            x => x.Should().BeOfType<NopInstruction>(),
-            // IL_000d: ldarg.0
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
-            // IL_000e: stloc.1
-            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-            // IL_000f: br.s IL_0016
-            x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l16),
-            x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l11),
-            // IL_0011: nop
-            x => x.Should().BeOfType<NopInstruction>(),
-            // IL_0012: ldarg.1
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
-            // IL_0013: stloc.1
-            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-            // IL_0014: br.s IL_0016
-            x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l16),
-            x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l16),
-            // IL_0016: ldloc.1
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-            // IL_0017: ret
-            x => x.Should().BeOfType<ReturnInstruction>()
+        var entryBB = result[result.Entry];
+
+        entryBB.Elements.Should().SatisfyRespectively(
+            s => s.Should().Satisfy<SimpleAssignmentStatement>(s_ =>
+            {
+                s_.L.Should().BeOfType<VariableIdentifierExpression>()
+                  .Which.Variable.Should().Be(loc0);
+                s_.R.Should().Satisfy<BinaryOperationExpression<LogicalBinaryOperation<BinaryRelational.Eq>>>(elt =>
+                {
+                    elt.L.Should()
+                       .Satisfy<BinaryOperationExpression<
+                           NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>>>(
+                           clt =>
+                           {
+                               clt.L.Should().BeOfType<FormalParameterExpression>()
+                                  .Which.Parameter.Should().Be(a);
+                               clt.R.Should().BeOfType<FormalParameterExpression>()
+                                  .Which.Parameter.Should().Be(b);
+                           }
+                       );
+                    elt.R.Should().BeOfType<LiteralValueExpression>()
+                       .Which.Literal.Should().BeOfType<BoolLiteral>()
+                       .Which.Value.Should().Be(false);
+                });
+            }),
+            s => s.Should().BeOfType<PushStatement>()
+                  .Which.Expr.Should().BeOfType<UnaryOperationExpression<LogicalNotOperation>>()
+                  .Which.Source.Should().BeOfType<VariableIdentifierExpression>()
+                  .Which.Variable.Should().Be(loc0)
         );
+
+        result[l0c].Elements.Should().ContainSingle()
+                   .Which.Should().Satisfy<SimpleAssignmentStatement>(
+                       s =>
+                       {
+                           s.L.Should().BeOfType<VariableIdentifierExpression>()
+                            .Which.Variable.Should().Be(loc1);
+                           s.R.Should().BeOfType<FormalParameterExpression>()
+                            .Which.Parameter.Should().Be(a);
+                       }
+                   );
+
+        result[l11].Elements.Should().ContainSingle()
+                   .Which.Should().Satisfy<SimpleAssignmentStatement>(
+                       s =>
+                       {
+                           s.L.Should().BeOfType<VariableIdentifierExpression>()
+                            .Which.Variable.Should().Be(loc1);
+                           s.R.Should().BeOfType<FormalParameterExpression>()
+                            .Which.Parameter.Should().Be(b);
+                       }
+                   );
+        result[l16].Elements.Should().ContainSingle()
+                   .Which.Should().BeOfType<ReturnStatement>()
+                   .Which.Expr.Should().BeOfType<VariableIdentifierExpression>()
+                   .Which.Variable.Should().Be(loc1);
+
+        // ImmutableArray<LabelInstruction> labels = [.. result.Instructions.OfType<LabelInstruction>()];
+        //
+        // labels.Should().HaveCount(2).And.OnlyHaveUniqueItems();
+        //
+        // var l11 = labels[0];
+        // var l16 = labels[1];
+        //
+        // result.Instructions.Should().SatisfyRespectively(
+        //     //  IL_0000: nop
+        //     x => x.Should().BeOfType<NopInstruction>(),
+        //     //  IL_0001: ldarg.0
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+        //     //  IL_0002: ldarg.1
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+        //     // IL_0003: clt
+        //     x => x.Should()
+        //           .BeOfType<BinaryExpressionOperationInstruction<
+        //               NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>>>(),
+        //     // IL_0005: ldc.i4.0
+        //     x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(0),
+        //     // IL_0006: ceq
+        //     x => x.Should()
+        //           .BeOfType<BinaryExpressionOperationInstruction<
+        //               NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>>(),
+        //     // IL_0008: stloc.0
+        //     x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+        //     // IL_0009: ldloc.0
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+        //     // IL_000a: brfalse.s IL_0011
+        //     x => x.Should().BeOfType<BrIfInstruction>().Which.Target.Should().Be(l11),
+        //
+        //     // IL_000c: nop
+        //     x => x.Should().BeOfType<NopInstruction>(),
+        //     // IL_000d: ldarg.0
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+        //     // IL_000e: stloc.1
+        //     x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+        //     // IL_000f: br.s IL_0016
+        //     x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l16),
+        //     x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l11),
+        //     // IL_0011: nop
+        //     x => x.Should().BeOfType<NopInstruction>(),
+        //     // IL_0012: ldarg.1
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+        //     // IL_0013: stloc.1
+        //     x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+        //     // IL_0014: br.s IL_0016
+        //     x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l16),
+        //     x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l16),
+        //     // IL_0016: ldloc.1
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+        //     // IL_0017: ret
+        //     x => x.Should().BeOfType<ReturnInstruction>()
+        // );
     }
 
     [Fact]
@@ -351,11 +429,11 @@ public class ParseBodyTest
     [Fact]
     public void VectorSwizzleSetShouldWork()
     {
-        var a = new ParameterDeclaration("a", ShaderType.Vec4F32, []);
-        var b = new ParameterDeclaration("b", ShaderType.Vec2F32, []);
+        var pa = new ParameterDeclaration("a", ShaderType.Vec4F32, []);
+        var pb = new ParameterDeclaration("b", ShaderType.Vec2F32, []);
         var f = new FunctionDeclaration(
             nameof(DevelopTestShaderModule.VecSwizzleSetter),
-            [a, b],
+            [pa, pb],
             new FunctionReturn(ShaderType.Vec4F32, []),
             []);
         var result = ParseMethod2(f,
@@ -363,22 +441,38 @@ public class ParseBodyTest
 
         result.LocalVariables.Should().ContainSingle();
 
-        var local = result.LocalVariables[0];
-        local.Type.Should().Be(ShaderType.Vec4F32);
+        var loc0 = result.LocalVariables[0];
+        loc0.Type.Should().Be(ShaderType.Vec4F32);
 
         var entry = result[result.Entry];
 
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().Satisfy<SimpleAssignmentStatement>(
-                 s => { }
-             );
+        entry.Elements.Should().SatisfyRespectively(
+            s =>
+            {
+                s.Should().Satisfy<SimpleAssignmentStatement>(assign =>
+                {
+                    // TODO: add vector swizzle getter expression assert
+                    assign.R.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(pb));
+                });
+            },
+            s =>
+            {
+                s.Should().Satisfy<SimpleAssignmentStatement>(assign =>
+                {
+                    assign.L.Should().BeOfType<VariableIdentifierExpression>()
+                     .Which.Variable.Should().Be(loc0);
+                    assign.R.Should().BeOfType<FormalParameterExpression>()
+                     .Which.Parameter.Should().Be(pa);
+                });
+            }
+        );
 
         result.Successor(result.Entry).Should().Satisfy<UnconditionalSuccessor>(s =>
         {
             var bb = result[s.Target];
             bb.Elements.Should().ContainSingle()
               .Which.Should().BeOfType<ReturnStatement>()
-              .Which.Expr.Should().Satisfy<VariableIdentifierExpression>(e => e.Variable.Should().Be(local));
+              .Which.Expr.Should().Satisfy<VariableIdentifierExpression>(e => e.Variable.Should().Be(loc0));
         });
 
 
@@ -469,70 +563,148 @@ public class ParseBodyTest
     }
 
     [Fact]
-    public void CompileTaneryConditionalExpressionShouldWork()
+    public void ParseMaxByTernaryOperatorShouldWork()
     {
-        //  IL_0000: nop
-        //  IL_0001: ldarg.1
-        //  IL_0002: ldc.i4.0
-        //  IL_0003: ble.s IL_0008
+        //        IL_0000: nop
+        //        IL_0001: ldarg.0      // a
+        //        IL_0002: ldarg.1      // b
+        //        IL_0003: bge.s        IL_0008
 
-        //  IL_0005: ldarg.3
-        //  IL_0006: br.s IL_0009
+        //        IL_0005: ldarg.1      // b
+        //        IL_0006: br.s         IL_0009
 
-        //  IL_0008: ldarg.2
+        //        IL_0008: ldarg.0      // a
 
-        //  IL_0009: stloc.0
-        //  IL_000a: br.s IL_000c
+        //        IL_0009: stloc.0      // V_0
+        //        IL_000a: br.s         IL_000c
 
-        //  IL_000c: ldloc.0
-        //  IL_000d: ret
+        //        IL_000c: ldloc.0      // V_0
+        //        IL_000d: ret
+
         var a = new ParameterDeclaration("a", ShaderType.I32, []);
         var b = new ParameterDeclaration("b", ShaderType.I32, []);
-        var c = new ParameterDeclaration("c", ShaderType.I32, []);
         var f = new FunctionDeclaration(
-            nameof(CompileTaneryConditionalExpressionShouldWork),
-            [a, b, c],
+            nameof(DevelopTestShaderModule.MaxByTernaryOperator),
+            [a, b],
             new FunctionReturn(ShaderType.I32, []),
             []);
-        var result = ParseMethod(f, MethodHelper.GetMethod(static (int a, int b, int c) => a <= 0 ? b : c));
+        var result = ParseMethod2(f,
+            MethodHelper.GetMethod<int, int, int>(DevelopTestShaderModule.MaxByTernaryOperator));
 
-        var labels = result.Instructions.OfType<LabelInstruction>().ToArray();
-        labels.Should().HaveCount(3).And.OnlyHaveUniqueItems();
+        var labels = result.Labels;
+        labels.Should().HaveCount(5);
 
-        var l8 = labels[0];
-        var l9 = labels[1];
-        var lc = labels[2];
+        var l0 = result.Entry;
+        var l5 = labels[1];
+        var l8 = labels[2];
+        var l9 = labels[3];
+        var lc = labels[4];
 
-        result.Instructions.Should().SatisfyRespectively(
-            //  IL_0000: nop
-            x => x.Should().BeOfType<NopInstruction>(),
-            //  IL_0001: ldarg.1
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
-            //  IL_0002: ldc.i4.0
-            x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(0),
-            //  IL_0003: ble.s IL_0008
-            x => x.Should()
-                  .BeOfType<BinaryExpressionOperationInstruction<
-                      NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Le>>>(),
-            x => x.Should().BeOfType<BrIfInstruction>().Which.Target.Should().Be(l8),
+        result.Successor(l0).Should().Satisfy<ConditionalSuccessor>(s =>
+        {
+            s.TrueTarget.Should().Be(l8);
+            s.FalseTarget.Should().Be(l5);
+        });
+        result.Successor(l5).Should().BeOfType<UnconditionalSuccessor>()
+              .Which.Target.Should().Be(l9);
+        result.Successor(l8).Should().BeOfType<UnconditionalSuccessor>()
+              .Which.Target.Should().Be(l9);
+        result.Successor(l9).Should().BeOfType<UnconditionalSuccessor>()
+              .Which.Target.Should().Be(lc);
 
-            //  IL_0005: ldarg.3
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(c),
-            //  IL_0006: br.s IL_0009
-            x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l9),
-            x => x.Should().BeOfType<LabelInstruction>().Should().Be(l8),
-            //  IL_0008: ldarg.2
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
-            x => x.Should().BeOfType<LabelInstruction>().Should().Be(l9),
-            //  IL_0009: stloc.0
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-            //  IL_000a: br.s IL_000c
-            x => x.Should().BeOfType<BrInstruction>().Should().Be(lc),
-            x => x.Should().BeOfType<LabelInstruction>().Should().Be(lc),
-            //  IL_000c: ldloc.0
-            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-            //  IL_000d: ret
-            x => x.Should().BeOfType<ReturnInstruction>()
-        );
+        var variables = result.LocalVariables;
+
+        result[l0].Elements.Should().ContainSingle()
+                  .Which.Should().BeOfType<PushStatement>()
+                  .Which.Expr.Should().Satisfy<IBinaryExpression>(e =>
+                  {
+                      e.Operation.Should().Satisfy<IBinaryExpressionOperation>(operation =>
+                      {
+                          operation.LeftType.Should().BeOfType<IntType<N32>>();
+                          operation.RightType.Should().BeOfType<IntType<N32>>();
+                          operation.BinaryOp.Should().BeOfType<BinaryRelational.Ge>();
+                      });
+                      e.L.Should().BeOfType<FormalParameterExpression>()
+                       .Which.Parameter.Should().Be(a);
+                      e.R.Should().BeOfType<FormalParameterExpression>()
+                       .Which.Parameter.Should().Be(b);
+                  });
+
+        result[l5].Elements.Should().ContainSingle()
+                  .Which.Should().Satisfy<SimpleAssignmentStatement>(
+                      s =>
+                      {
+                          s.L.Should().BeOfType<VariableIdentifierExpression>()
+                           .Which.Variable.Should().Be(variables[0]);
+                          s.R.Should().BeOfType<FormalParameterExpression>()
+                           .Which.Parameter.Should().Be(b);
+                      }
+                  );
+
+        result[l8].Elements.Should().ContainSingle()
+                  .Which.Should().Satisfy<SimpleAssignmentStatement>(
+                      s =>
+                      {
+                          s.L.Should().BeOfType<VariableIdentifierExpression>()
+                           .Which.Variable.Should().Be(variables[1]);
+                          s.R.Should().BeOfType<FormalParameterExpression>()
+                           .Which.Parameter.Should().Be(a);
+                      }
+                  );
+
+        result[l9].Elements.Should().ContainSingle()
+                  .Which.Should().Satisfy<SimpleAssignmentStatement>(
+                      s =>
+                      {
+                          s.L.Should().BeOfType<VariableIdentifierExpression>()
+                           .Which.Variable.Should().Be(variables[2]);
+                          s.R.Should().BeOfType<VariableIdentifierExpression>()
+                           .Which.Variable.Should().Be(variables[3]);
+                      }
+                  );
+
+        result[lc].Elements.Should().ContainSingle()
+                  .Which.Should().BeOfType<ReturnStatement>()
+                  .Which.Expr.Should().BeOfType<VariableIdentifierExpression>()
+                  .Which.Variable.Should().Be(variables[2]);
+
+        // var labels = result.Instructions.OfType<LabelInstruction>().ToArray();
+        // labels.Should().HaveCount(3).And.OnlyHaveUniqueItems();
+        //
+        // var l8 = labels[0];
+        // var l9 = labels[1];
+        // var lc = labels[2];
+        //
+        // result.Instructions.Should().SatisfyRespectively(
+        //     //  IL_0000: nop
+        //     x => x.Should().BeOfType<NopInstruction>(),
+        //     //  IL_0001: ldarg.1
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+        //     //  IL_0002: ldc.i4.0
+        //     x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(0),
+        //     //  IL_0003: ble.s IL_0008
+        //     x => x.Should()
+        //           .BeOfType<BinaryExpressionOperationInstruction<
+        //               NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Le>>>(),
+        //     x => x.Should().BeOfType<BrIfInstruction>().Which.Target.Should().Be(l8),
+        //
+        //     //  IL_0005: ldarg.3
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(c),
+        //     //  IL_0006: br.s IL_0009
+        //     x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l9),
+        //     x => x.Should().BeOfType<LabelInstruction>().Should().Be(l8),
+        //     //  IL_0008: ldarg.2
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+        //     x => x.Should().BeOfType<LabelInstruction>().Should().Be(l9),
+        //     //  IL_0009: stloc.0
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+        //     //  IL_000a: br.s IL_000c
+        //     x => x.Should().BeOfType<BrInstruction>().Should().Be(lc),
+        //     x => x.Should().BeOfType<LabelInstruction>().Should().Be(lc),
+        //     //  IL_000c: ldloc.0
+        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+        //     //  IL_000d: ret
+        //     x => x.Should().BeOfType<ReturnInstruction>()
+        // );
     }
 }

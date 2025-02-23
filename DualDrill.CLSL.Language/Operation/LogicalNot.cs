@@ -20,7 +20,7 @@ public sealed record class LogicalNotOperation
     public static LogicalNotOperation Instance => new();
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        UnaryExpression<LogicalNotOperation> expr)
+        UnaryOperationExpression<LogicalNotOperation> expr)
     {
         throw new NotImplementedException();
     }

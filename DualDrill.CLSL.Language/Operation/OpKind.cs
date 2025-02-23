@@ -1,6 +1,4 @@
 ﻿using System.Diagnostics;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
@@ -85,19 +83,6 @@ public interface IBinaryOp<TSelf> : IBinaryOp, IAbstractOp<TSelf>
 
     IOperation IBinaryOp.GetVectorScalarNumericOperation<TRank, TElement>()
         => VectorScalarExpressionNumericOperation<TRank, TElement, TSelf>.Instance;
-}
-
-public interface IBinaryStatementOperation : IOperation
-{
-    public IShaderType LeftType { get; }
-    public IShaderType RightType { get; }
-    public IStatement CreateStatement(IExpression l, IExpression r);
-}
-
-public interface INamedOp<TSelf>
-    where TSelf : INamedOp<TSelf>
-{
-    abstract static string Name { get; }
 }
 
 public interface ISymbolOp

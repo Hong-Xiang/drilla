@@ -176,15 +176,11 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
     }
 
     public async ValueTask VisitBinaryExpression
-        <TOperation, TLeftType, TRightType, TResultType, TOp>
-        (IBinaryExpressionOperation<TOperation, TLeftType, TRightType, TResultType, TOp>.Expression expr)
-        where TOperation : IBinaryExpressionOperation<TOperation, TLeftType, TRightType, TResultType, TOp>
-        where TLeftType : ISingletonShaderType<TLeftType>
-        where TRightType : ISingletonShaderType<TRightType>
-        where TResultType : ISingletonShaderType<TResultType>
-        where TOp : IBinaryOp<TOp>
+        <TOperation>
+        (BinaryOperationExpression<TOperation> expr)
+        where TOperation : IBinaryExpressionOperation<TOperation>
     {
-        if (TOp.Instance is ISymbolOp symbol)
+        if (TOperation.Instance.BinaryOp is ISymbolOp symbol)
         {
             Writer.Write("( ");
             await expr.L.Accept(this);
@@ -196,13 +192,13 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         }
         else
         {
-            throw new NotSupportedException($"Non symbol binary op {TOp.Instance.Name} is not supported.");
+            throw new NotSupportedException($"Non symbol binary op {TOperation.Instance.Name} is not supported.");
         }
     }
 
     public async ValueTask VisitUnaryExpression
         <TOperation, TSourceType, TResultType, TOp>
-        (UnaryExpression<TOperation> expr)
+        (UnaryOperationExpression<TOperation> expr)
         where TOperation : IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>
         where TSourceType : ISingletonShaderType<TSourceType>
         where TResultType : ISingletonShaderType<TResultType>

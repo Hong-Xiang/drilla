@@ -48,7 +48,7 @@ public sealed class VectorNumericUnaryOperation<TRank, TElement, TOp>
 
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        UnaryExpression<VectorNumericUnaryOperation<TRank, TElement, TOp>> expr)
+        UnaryOperationExpression<VectorNumericUnaryOperation<TRank, TElement, TOp>> expr)
     {
         throw new NotImplementedException();
     }
@@ -78,8 +78,7 @@ public sealed class VectorExpressionNumericBinaryExpressionOperation<TRank, TEle
     public VecType<TRank, TElement> OperandType => VecType<TRank, TElement>.Instance;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        IBinaryExpressionOperation<VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>,
-            VecType<TRank, TElement>, VecType<TRank, TElement>, VecType<TRank, TElement>, TOp>.Expression expr)
+        BinaryOperationExpression<VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>> expr)
     {
         throw new NotImplementedException();
     }
@@ -108,8 +107,7 @@ public sealed class ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>
     public IScalarType ScalarType => TElement.Instance;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        IBinaryExpressionOperation<ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>, TElement,
-            VecType<TRank, TElement>, VecType<TRank, TElement>, TOp>.Expression expr)
+        BinaryOperationExpression<ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>> expr)
     {
         throw new NotImplementedException();
     }
@@ -138,8 +136,7 @@ public sealed class VectorScalarExpressionNumericOperation<TRank, TElement, TOp>
     public IScalarType ScalarType => TElement.Instance;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        IBinaryExpressionOperation<VectorScalarExpressionNumericOperation<TRank, TElement, TOp>,
-            VecType<TRank, TElement>, TElement, VecType<TRank, TElement>, TOp>.Expression expr)
+        BinaryOperationExpression<VectorScalarExpressionNumericOperation<TRank, TElement, TOp>> expr)
     {
         throw new NotImplementedException();
     }

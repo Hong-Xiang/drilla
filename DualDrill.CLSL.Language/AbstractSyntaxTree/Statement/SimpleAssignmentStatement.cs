@@ -28,6 +28,11 @@ public sealed record class SimpleAssignmentStatement(
     AssignmentOp Op
 ) : IStatement, IStackStatement, IForInit, IForUpdate
 {
+    public override string ToString()
+    {
+        return Op == AssignmentOp.Assign ? $"{L} = {R}" : $"{L} {Op} {R}";
+    }
+
     public IEnumerable<Label> ReferencedLabels => [];
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>

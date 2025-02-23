@@ -9,6 +9,7 @@ using System.Reflection;
 using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
@@ -24,6 +25,7 @@ public sealed class ValidationException(string message, MethodBase method)
 sealed class RuntimeReflectionParserInstructionVisitor(
     FunctionDeclaration Function,
     MethodBodyAnalysisModel Model,
+    Label Label,
     ImmutableStack<VariableDeclaration> Inputs)
     : ICilInstructionVisitor<Unit>
 {
@@ -52,23 +54,33 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         return op.CreateExpression(l, r);
     }
 
-    static IExpression ToBinaryRelationalExpression<TOp>(IExpression left, IExpression right)
+    static IExpression HandleBinaryRelationalExpression<TOp>(IExpression left, IExpression right)
         where TOp : BinaryRelational.IOp<TOp>
     {
-        if (left.Type.Equals(right.Type) && left.Type is INumericType nt)
+        switch (left, right)
         {
-            IBinaryExpressionOperation op = nt.RelationalOperation<TOp>();
-            return op.CreateExpression(left, right);
+            case ({ Type: INumericType nt }, _) when left.Type.Equals(right.Type):
+                IBinaryExpressionOperation op = nt.RelationalOperation<TOp>();
+                return op.CreateExpression(left, right);
+            case ({ Type: UIntType<N32> lt }, LiteralValueExpression { Literal: I32Literal { Value: var value } }):
+                var ur = new LiteralValueExpression(Literal.Create((uint)value));
+                return ((INumericType)lt).RelationalOperation<TOp>().CreateExpression(left, ur);
+            case ({ Type: BoolType }, LiteralValueExpression):
+            case (LiteralValueExpression, { Type: BoolType }):
+                switch (TOp.Instance)
+                {
+                    case BinaryRelational.Eq:
+                        return ToLogicalBinaryExpression<BinaryRelational.Eq>(left, right);
+                    case BinaryRelational.Ne:
+                        return ToLogicalBinaryExpression<BinaryRelational.Ne>(left, right);
+                }
+
+                break;
         }
 
-        if (left.Type is UIntType<N32> u32t &&
-            right is LiteralValueExpression { Literal: I32Literal { Value: var value } })
-        {
-            var ur = new LiteralValueExpression(Literal.Create((uint)value));
-            return ((INumericType)u32t).RelationalOperation<TOp>().CreateExpression(left, ur);
-        }
 
-        throw new NotSupportedException();
+        throw new NotSupportedException(
+            $"relational operator {TOp.Instance.Name} for {left.Type.Name} and {right.Type.Name} is not supported");
     }
 
     static IExpression ToLogicalBinaryExpression<TOp>(IExpression left, IExpression right)
@@ -119,22 +131,31 @@ sealed class RuntimeReflectionParserInstructionVisitor(
     {
         var r = CurrentStack.Pop();
         var l = CurrentStack.Pop();
-        var e = ToBinaryRelationalExpression<TOp>(l, r);
+        var e = HandleBinaryRelationalExpression<TOp>(l, r);
         CurrentStack.Push(e);
         return default;
     }
 
-    void FlushOutputs()
+    public void FlushOutputs()
     {
-        Outputs = ImmutableStack.Create<VariableDeclaration>();
-        foreach (var expr in CurrentStack)
+        if (CurrentStack.Count == 0)
+            return;
+        if (!Outputs.IsEmpty)
         {
-            var v = new VariableDeclaration(DeclarationScope.Function, string.Empty, expr.Type, []);
+            throw new NotSupportedException("multiple flush outputs are not expected");
+        }
+
+        Outputs = ImmutableStack.Create<VariableDeclaration>();
+        foreach (var (index, expr) in CurrentStack.Index())
+        {
+            var v = new VariableDeclaration(DeclarationScope.Function, $"output({Label.Name})#{index}", expr.Type, []);
             Statements.Add(SyntaxFactory.AssignStatement(
                 SyntaxFactory.VarIdentifier(v),
                 expr));
             Outputs = Outputs.Push(v);
         }
+
+        CurrentStack.Clear();
     }
 
     public Unit VisitBranch(CilInstructionInfo inst, int jumpOffset)
@@ -175,7 +196,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         var r = CurrentStack.Pop();
         var l = CurrentStack.Pop();
         // TODO: handle isUn = true
-        var e = ToBinaryRelationalExpression<TOp>(l, r);
+        var e = HandleBinaryRelationalExpression<TOp>(l, r);
 
         if (CurrentStack.Count > 0)
         {
@@ -373,14 +394,23 @@ sealed class RuntimeReflectionParserInstructionVisitor(
     public Unit VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
         var val = CurrentStack.Pop();
+
         if (!v.Type.Equals(val.Type))
         {
-            Statements.Add(SyntaxFactory.AssignStatement(
-                SyntaxFactory.VarIdentifier(v),
-                val
-            ));
+            switch (v.Type, val)
+            {
+                case (BoolType, LiteralValueExpression):
+                    val = ToBoolExpr(val);
+                    break;
+                default:
+                    throw new NotSupportedException($"store {val.Type.Name} to loc : {v.Type.Name} is not supported");
+            }
         }
 
+        Statements.Add(SyntaxFactory.AssignStatement(
+            SyntaxFactory.VarIdentifier(v),
+            val
+        ));
         return default;
     }
 

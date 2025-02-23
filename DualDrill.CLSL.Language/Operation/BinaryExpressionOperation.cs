@@ -35,46 +35,15 @@ public interface IBinaryExpressionOperation<TSelf, TLeftType, TRightType, TResul
     IShaderType IBinaryExpressionOperation.LeftType => TLeftType.Instance;
     IShaderType IBinaryExpressionOperation.RightType => TRightType.Instance;
     IShaderType IBinaryExpressionOperation.ResultType => TResultType.Instance;
-    IExpression IBinaryExpressionOperation.CreateExpression(IExpression l, IExpression r) => new Expression(l, r);
+
+    IExpression IBinaryExpressionOperation.CreateExpression(IExpression l, IExpression r) =>
+        new BinaryOperationExpression<TSelf>(l, r);
 
     IBinaryOp IBinaryExpressionOperation.BinaryOp => TOp.Instance;
 
     string IOperation.Name =>
         $"{TOp.Instance.Name}.{TLeftType.Instance.Name}.{TRightType.Instance.Name}.{TResultType.Instance.Name}";
 
-    public sealed record class Expression
-        : IBinaryExpression
-    {
-        public Expression(IExpression left, IExpression right)
-        {
-            Debug.Assert(left.Type.Equals(TLeftType.Instance));
-            Debug.Assert(right.Type.Equals(TRightType.Instance));
-            L = left;
-            R = right;
-        }
-
-        public IExpression L { get; }
-        public IExpression R { get; }
-        public IBinaryExpressionOperation Operation => TSelf.Instance;
-        public IShaderType Type => TResultType.Instance;
-
-        public TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
-            => visitor.VisitBinaryExpression(this);
-
-        public IEnumerable<IStructuredStackInstruction> ToInstructions()
-            =>
-            [
-                ..L.ToInstructions(),
-                ..R.ToInstructions(),
-                TSelf.Instance.Instruction
-            ];
-
-        public IEnumerable<VariableDeclaration> ReferencedVariables =>
-        [
-            ..L.ReferencedVariables,
-            ..R.ReferencedVariables
-        ];
-    }
 
     FunctionDeclaration IOperation.Function => OperationFunction;
 
