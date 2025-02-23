@@ -20,6 +20,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         {
             await stmt.Expr.Accept(this);
         }
+        Writer.WriteLine(";");
     }
 
     public async ValueTask VisitVariableOrValue(VariableOrValueStatement stmt)
@@ -35,6 +36,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
             Writer.Write(" = ");
             await stmt.Variable.Initializer.Accept(this);
         }
+        Writer.WriteLine(";");
     }
 
     public async ValueTask VisitCompound(CompoundStatement stmt)
@@ -86,7 +88,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
 
     public async ValueTask VisitBreak(BreakStatement stmt)
     {
-        Writer.Write("break");
+        Writer.WriteLine("break;");
     }
 
     public async ValueTask VisitFor(ForStatement stmt)
@@ -137,12 +139,14 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         Writer.Write(op);
         Writer.Write(' ');
         await stmt.R.Accept(this);
+        Writer.WriteLine(";");
     }
 
     public async ValueTask VisitPhonyAssignment(PhonyAssignmentStatement stmt)
     {
         Writer.Write("_ = ");
         await stmt.Expr.Accept(this);
+        Writer.WriteLine(";");
     }
 
     public async ValueTask VisitIncrement(IncrementStatement stmt)
@@ -267,8 +271,11 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
     {
         await stmt.Target.Accept(this);
+        Writer.Write('.');
+        Writer.Write(TPattern.Instance.Name);
         Writer.Write(" = ");
         await stmt.Value.Accept(this);
+        Writer.WriteLine(';');
     }
 
     public async ValueTask
@@ -283,6 +290,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         Writer.Write(TComponent.Instance.Name);
         Writer.Write(" = ");
         await stmt.Value.Accept(this);
+        Writer.WriteLine(';');
     }
 
 

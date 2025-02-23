@@ -67,7 +67,7 @@ public static class ShaderModuleExtension
             }));
     }
 
-    public static ShaderModuleDeclaration<CompoundStatement> ToAbstractSyntaxTreeFunctionBody(
+    public static ShaderModuleDeclaration<FunctionBody<CompoundStatement>> ToAbstractSyntaxTreeFunctionBody(
         this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module
     )
     {
@@ -76,18 +76,18 @@ public static class ShaderModuleExtension
             var builder = new StructuredInstructionToAbstractSyntaxTreeBuilder(
                 module,
                 f);
-            return builder.Build();
+            return new FunctionBody<CompoundStatement>(builder.Build());
         });
     }
 
-    public static ShaderModuleDeclaration<CompoundStatement> Simplify(
-        this ShaderModuleDeclaration<CompoundStatement> module
+    public static ShaderModuleDeclaration<FunctionBody<CompoundStatement>> Simplify(
+        this ShaderModuleDeclaration<FunctionBody<CompoundStatement>> module
     )
     {
         return module.MapBody((m, f, b) =>
         {
-            var stmt = b.AcceptVisitor(new AbstractSyntaxTreeSimplify());
-            return (CompoundStatement)stmt;
+            var stmt = b.Body.AcceptVisitor(new AbstractSyntaxTreeSimplify());
+            return new FunctionBody<CompoundStatement>((CompoundStatement)stmt);
         });
     }
 
@@ -151,27 +151,28 @@ public static class ShaderModuleExtension
             //
             //     return BasicBlock<IStructuredStackInstruction>.Create([.. body]);
             // });
-            return new ControlFlowGraphFunctionBody(new ControlFlowGraph<BasicBlock<IStructuredStackInstruction>>(
-                b.Entry,
-                ((IFunctionBody)b).Labels.ToFrozenDictionary(l => l,
-                    l => new ControlFlowGraph<BasicBlock<IStructuredStackInstruction>>.NodeDefinition(
-                        b.Successor(l),
-                        BasicBlock<IStructuredStackInstruction>.Create([..b[l].Elements])
-                    ))
-            ));
+            return new ControlFlowGraphFunctionBody(
+                new ControlFlowGraph<BasicBlock<IStructuredStackInstruction>>(
+                    b.Entry,
+                    ((IFunctionBody)b).Labels.ToFrozenDictionary(l => l,
+                        l => new ControlFlowGraph<BasicBlock<IStructuredStackInstruction>>.NodeDefinition(
+                            b.Successor(l),
+                            BasicBlock<IStructuredStackInstruction>.Create([..b[l].Elements])
+                        ))
+                ));
         });
     }
 
     public static async ValueTask<string> EmitWgslCode(
-        this ShaderModuleDeclaration<CompoundStatement> module
+        this ShaderModuleDeclaration<FunctionBody<CompoundStatement>> module
     )
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
         var bodyVisitor = new WgslFunctionBodyVisitor(isw);
         ;
-        var visitor = new ModuleToCodeVisitor<CompoundStatement>(isw, module,
-            bodyVisitor.VisitCompound);
+        var visitor = new ModuleToCodeVisitor<FunctionBody<CompoundStatement>>(isw, module,
+            b => bodyVisitor.VisitCompound(b.Body));
         await module.Accept<ValueTask>(visitor);
         return sw.ToString();
     }
@@ -395,24 +396,24 @@ public static class ShaderModuleExtension
     }
 
     public static async ValueTask<string> Dump(
-        this ShaderModuleDeclaration<UnstructuredStackInstructionSequence> module)
+        this ShaderModuleDeclaration<FunctionBody<UnstructuredStackInstructionSequence>> module)
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
         isw.Write(module.GetType().CSharpFullName());
-        var visitor = new ModuleToCodeVisitor<UnstructuredStackInstructionSequence>(isw, module, (b) =>
+        var visitor = new ModuleToCodeVisitor<FunctionBody<UnstructuredStackInstructionSequence>>(isw, module, (b) =>
         {
-            var labelIndex = b.Instructions.OfType<LabelInstruction>()
+            var labelIndex = b.Body.Instructions.OfType<LabelInstruction>()
                               .Select(inst => inst.Label)
                               .Distinct()
                               .Index()
                               .ToDictionary(x => x.Item, x => x.Index);
-            var variables = b.Instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>()
+            var variables = b.Body.Instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>()
                              .Select(x => x.Target)
-                             .Concat(b.Instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>()
+                             .Concat(b.Body.Instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>()
                                       .Select(x => x.Target))
                              .Concat(
-                                 b.Instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>()
+                                 b.Body.Instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>()
                                   .Select(x => x.Target))
                              .Where(v => v.DeclarationScope == DeclarationScope.Function)
                              .Distinct()
@@ -433,7 +434,7 @@ public static class ShaderModuleExtension
 
             isw.WriteLine();
 
-            foreach (var instruction in b.Instructions)
+            foreach (var instruction in b.Body.Instructions)
             {
                 instruction.Dump(LabelName, VariableName, isw);
                 if (instruction is IJumpInstruction)
@@ -449,7 +450,7 @@ public static class ShaderModuleExtension
     }
 
     public static async ValueTask Dump<TBody>(this ShaderModuleDeclaration<TBody> module, IndentedTextWriter writer)
-        where TBody : IFunctionBodyData
+        where TBody : IFunctionBody
     {
         writer.Write(module.GetType().CSharpFullName());
         var visitor = new ModuleToCodeVisitor<TBody>(writer, module, (b) => { return ValueTask.CompletedTask; });
@@ -457,7 +458,7 @@ public static class ShaderModuleExtension
     }
 
     public static async ValueTask<string> Dump<TBody>(this ShaderModuleDeclaration<TBody> module)
-        where TBody : IFunctionBodyData
+        where TBody : IFunctionBody
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);

@@ -24,19 +24,22 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = ShaderModuleDeclaration<UnstructuredStackInstructionSequence>.Empty with
+        var module = ShaderModuleDeclaration<FunctionBody<UnstructuredStackInstructionSequence>>.Empty with
         {
-            Declarations = [new VariableDeclaration(
-                DeclarationScope.Module,
-                "data",
-                ShaderType.Vec2F32,
-                [
-                    new GroupAttribute(0),
-                    new BindingAttribute(0),
-                    new VertexAttribute(),
-                    new UniformAttribute()
-                ]
-            )]
+            Declarations =
+            [
+                new VariableDeclaration(
+                    DeclarationScope.Module,
+                    "data",
+                    ShaderType.Vec2F32,
+                    [
+                        new GroupAttribute(0),
+                        new BindingAttribute(0),
+                        new VertexAttribute(),
+                        new UniformAttribute()
+                    ]
+                )
+            ]
         };
 
         IShaderModuleReflection reflection = new ShaderModuleReflection();
@@ -70,26 +73,20 @@ public class ShaderReflectionBasicVertexLayoutTest
 {
     struct Vertex
     {
-        [Location(0)]
-        public Vector2 Position;
+        [Location(0)] public Vector2 Position;
 
-        [Location(1)]
-        public Vector4 Color;
+        [Location(1)] public Vector4 Color;
 
-        [Location(2)]
-        public Vector2 Offset;
+        [Location(2)] public Vector2 Offset;
 
-        [Location(3)]
-        public Vector2 Scale;
+        [Location(3)] public Vector2 Scale;
     }
 
     struct VSOutput
     {
-        [Builtin(BuiltinBinding.position)]
-        public Vector4 Position;
+        [Builtin(BuiltinBinding.position)] public Vector4 Position;
 
-        [Location(0)]
-        public Vector4 Color;
+        [Location(0)] public Vector4 Color;
     }
 
     struct ShaderModule
@@ -147,39 +144,50 @@ public class ShaderReflectionBasicVertexLayoutTest
                             .AddMapping(g => g.Scale, h => h.Scale);
         // TODO:  shaders can add default values, how to support auto type conversion?
 
-        ImmutableArray<GPUVertexBufferLayout> expectedLayouts = [
-            new() {
+        ImmutableArray<GPUVertexBufferLayout> expectedLayouts =
+        [
+            new()
+            {
                 ArrayStride = 2 * 4,
                 StepMode = GPUVertexStepMode.Vertex,
-                Attributes = new GPUVertexAttribute[] {
-                    new GPUVertexAttribute(){
+                Attributes = new GPUVertexAttribute[]
+                {
+                    new GPUVertexAttribute()
+                    {
                         ShaderLocation = 0,
                         Offset = 0,
                         Format = GPUVertexFormat.Float32x2,
                     }
                 }
             },
-            new(){
+            new()
+            {
                 ArrayStride = 6 * 4,
                 StepMode = GPUVertexStepMode.Instance,
-                Attributes = new GPUVertexAttribute[] {
-                    new GPUVertexAttribute(){
+                Attributes = new GPUVertexAttribute[]
+                {
+                    new GPUVertexAttribute()
+                    {
                         ShaderLocation = 1,
                         Offset = 0,
                         Format = GPUVertexFormat.Float32x4,
                     },
-                    new GPUVertexAttribute(){
+                    new GPUVertexAttribute()
+                    {
                         ShaderLocation = 2,
                         Offset = 4 * 4,
                         Format = GPUVertexFormat.Float32x2,
                     },
                 }
             },
-            new(){
+            new()
+            {
                 ArrayStride = 2 * 4,
                 StepMode = GPUVertexStepMode.Instance,
-                Attributes = new GPUVertexAttribute[] {
-                    new GPUVertexAttribute(){
+                Attributes = new GPUVertexAttribute[]
+                {
+                    new GPUVertexAttribute()
+                    {
                         ShaderLocation = 3,
                         Offset = 0,
                         Format = GPUVertexFormat.Float32x2,
@@ -204,32 +212,24 @@ public class ShaderReflectionBasicVertexLayoutTest
     }
 }
 
-
-
 public class ShaderReflectionBasicDefaultVertexLayoutTest
 {
     struct Vertex
     {
-        [Location(0)]
-        public Vector2 Position;
+        [Location(0)] public Vector2 Position;
 
-        [Location(1)]
-        public Vector4 Color;
+        [Location(1)] public Vector4 Color;
 
-        [Location(2)]
-        public Vector2 Offset;
+        [Location(2)] public Vector2 Offset;
 
-        [Location(3)]
-        public Vector2 Scale;
+        [Location(3)] public Vector2 Scale;
     }
 
     struct VSOutput
     {
-        [Builtin(BuiltinBinding.position)]
-        public Vector4 Position;
+        [Builtin(BuiltinBinding.position)] public Vector4 Position;
 
-        [Location(0)]
-        public Vector4 Color;
+        [Location(0)] public Vector4 Color;
     }
 
     struct ShaderModule
@@ -258,26 +258,33 @@ public class ShaderReflectionBasicDefaultVertexLayoutTest
         IShaderModuleReflection reflection = new ShaderModuleReflection();
         var vertexMappingBuilder = reflection.GetVertexBufferLayoutBuilder<Vertex>();
 
-        ImmutableArray<GPUVertexBufferLayout> expectedLayouts = [
-            new() {
+        ImmutableArray<GPUVertexBufferLayout> expectedLayouts =
+        [
+            new()
+            {
                 ArrayStride = 4 * 10,
-                Attributes = new GPUVertexAttribute[] {
-                    new GPUVertexAttribute(){
+                Attributes = new GPUVertexAttribute[]
+                {
+                    new GPUVertexAttribute()
+                    {
                         ShaderLocation = 0,
                         Offset = 0,
                         Format = GPUVertexFormat.Float32x2,
                     },
-                    new GPUVertexAttribute(){
+                    new GPUVertexAttribute()
+                    {
                         ShaderLocation = 1,
                         Offset = 4 * 2,
                         Format = GPUVertexFormat.Float32x4,
                     },
-                    new GPUVertexAttribute(){
+                    new GPUVertexAttribute()
+                    {
                         ShaderLocation = 2,
                         Offset = 4 * 6,
                         Format = GPUVertexFormat.Float32x2,
                     },
-                    new GPUVertexAttribute(){
+                    new GPUVertexAttribute()
+                    {
                         ShaderLocation = 3,
                         Offset = 4 * 8,
                         Format = GPUVertexFormat.Float32x2,

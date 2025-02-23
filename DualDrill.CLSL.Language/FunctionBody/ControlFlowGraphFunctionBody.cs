@@ -2,50 +2,38 @@
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using System.CodeDom.Compiler;
+using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed record class ControlFlowGraphFunctionBody(
-    ControlFlowGraph<BasicBlock<IStructuredStackInstruction>> Graph
-) : IFunctionBodyData
+public sealed record class ControlFlowGraphFunctionBody : IFunctionBody
 {
-    public IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables
+    public ControlFlowGraphFunctionBody(ControlFlowGraph<BasicBlock<IStructuredStackInstruction>> graph)
     {
-        get
-        {
-            foreach (var l in Graph.Labels())
-            {
-                var bb = Graph[l];
-                foreach (var instruction in bb.Elements.ToArray())
-                {
-                    switch (instruction)
-                    {
-                        case LoadSymbolValueInstruction<VariableDeclaration> x:
-                            yield return x.Target;
-                            break;
-                        case LoadSymbolAddressInstruction<VariableDeclaration> x:
-                            yield return x.Target;
-                            break;
-                        case StoreSymbolInstruction<VariableDeclaration> x:
-                            yield return x.Target;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        }
+        Graph = graph;
+        Labels = [..graph.Labels().Distinct()];
+        LocalVariables =
+        [
+            ..graph.Labels().SelectMany(l => graph[l].Elements.SelectMany(e => e.ReferencedLocalVariables)).Distinct()
+        ];
     }
-
-
-    public IEnumerable<Label> FunctionBodyDataLabels => Graph.Labels();
 
     public void Dump(IFunctionBody context, IndentedTextWriter writer)
     {
         throw new NotImplementedException();
     }
+
+    public int LabelIndex(Label label)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int VariableIndex(VariableDeclaration variable)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ImmutableArray<VariableDeclaration> LocalVariables { get; }
+    public ImmutableArray<Label> Labels { get; }
+    public ControlFlowGraph<BasicBlock<IStructuredStackInstruction>> Graph { get; }
 }
-
-public interface IStructuredControlRegionFunctionBody<TElement> {}
-
-public interface IAbstractSyntaxTreeFunctionBody<TElement> {}

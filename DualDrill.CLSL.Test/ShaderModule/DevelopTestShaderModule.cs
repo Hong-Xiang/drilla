@@ -34,6 +34,12 @@ internal sealed class DevelopTestShaderModule
     }
 
     [Vertex]
+    public static bool ImplicitConvertUIntMax(uint a)
+    {
+        return a == uint.MaxValue;
+    }
+
+    [Vertex]
     public static int MaxByIfThenElse(int a, int b)
     {
         if (a >= b)

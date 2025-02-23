@@ -2,14 +2,22 @@
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using System.CodeDom.Compiler;
+using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed record class StructuredStackInstructionFunctionBody(
-    IStructuredControlFlowRegion<IStructuredStackInstruction> Root
-) : IFunctionBodyData
+public sealed class StructuredStackInstructionFunctionBody : IFunctionBody
 {
+    public IStructuredControlFlowRegion<IStructuredStackInstruction> Root { get; }
+
+    public StructuredStackInstructionFunctionBody(IStructuredControlFlowRegion<IStructuredStackInstruction> root)
+    {
+        Root = root;
+        Labels = [..Root.ReferencedLabels.Distinct()];
+        LocalVariables = [..Root.ReferencedLocalVariables.Distinct()];
+    }
+
     public IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables => Root.ReferencedLocalVariables;
 
     public IEnumerable<Label> FunctionBodyDataLabels => Root.ReferencedLabels;
@@ -18,4 +26,17 @@ public sealed record class StructuredStackInstructionFunctionBody(
     {
         throw new NotImplementedException();
     }
+
+    public int LabelIndex(Label label)
+    {
+        throw new NotImplementedException();
+    }
+
+    public int VariableIndex(VariableDeclaration variable)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ImmutableArray<VariableDeclaration> LocalVariables { get; }
+    public ImmutableArray<Label> Labels { get; }
 }

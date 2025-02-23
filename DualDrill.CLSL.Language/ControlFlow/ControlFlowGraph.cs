@@ -2,7 +2,7 @@
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public sealed partial class ControlFlowGraph<TData>
+public sealed class ControlFlowGraph<TData>
 {
     public Label EntryLabel { get; }
     public int Count => Nodes.Count;

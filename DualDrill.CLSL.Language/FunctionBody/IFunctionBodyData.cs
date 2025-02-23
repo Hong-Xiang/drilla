@@ -24,19 +24,19 @@ public interface IFunctionBody : ILocalDeclarationContext
 {
 }
 
-public sealed class FunctionBody<TBody>
+public sealed class FunctionBody<TBodyData>
     : IFunctionBody
     , ITextDumpable
-    where TBody : IFunctionBodyData
+    where TBodyData : IFunctionBodyData
 {
-    public TBody Body { get; }
+    public TBodyData Body { get; }
     FrozenDictionary<VariableDeclaration, int> VariableIndices { get; }
     FrozenDictionary<Label, int> LabelIndices { get; }
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
 
-    public FunctionBody(TBody body)
+    public FunctionBody(TBodyData body)
     {
         Body = body;
         LocalVariables = [..body.FunctionBodyDataLocalVariables.Distinct()];

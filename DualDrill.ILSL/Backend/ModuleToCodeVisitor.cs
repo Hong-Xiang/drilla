@@ -32,15 +32,14 @@ public sealed class ModuleToCodeVisitor<TBody>(
     IndentedTextWriter Writer,
     IShaderModuleDeclaration Module,
     Func<TBody, ValueTask> OnBody)
-    : IDeclarationVisitor<ValueTask>
-    , IDeclarationVisitor<TBody, ValueTask>
-    where TBody : IFunctionBodyData
+    : IDeclarationVisitor<TBody, ValueTask>
+    where TBody : IFunctionBody
 {
-
     async ValueTask OnTypeReference(IShaderType type)
     {
         Writer.Write(type.Name);
     }
+
     async ValueTask WriteAttributeAsync(IShaderAttribute attr, CancellationToken cancellation = default)
     {
         switch (attr)
@@ -100,6 +99,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
         {
             await p.AcceptVisitor(this);
         }
+
         Writer.Write(")");
         Writer.Write(" -> ");
         await WriteAttributesAsync(decl.Return.Attributes);
@@ -107,6 +107,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
         {
             await OnTypeReference(decl.Return.Type);
         }
+
         Writer.WriteLine();
         using (Writer.IndentedScope())
         {
@@ -120,6 +121,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
                 Writer.WriteLine($"...{Module.GetType().CSharpFullName()}...");
             }
         }
+
         Writer.WriteLine();
         Writer.WriteLine();
     }
@@ -161,6 +163,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
                     throw new NotSupportedException($"VisitVariableDeclaration attribute {a} not support ");
             }
         }
+
         Writer.Write(decl.Name);
         Writer.Write(": ");
         await OnTypeReference(decl.Type);
@@ -168,6 +171,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
         Writer.WriteLine(";");
         Writer.WriteLine();
     }
+
     public async ValueTask VisitMember(MemberDeclaration decl)
     {
         await WriteAttributesAsync(decl.Attributes, true);
@@ -176,6 +180,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
         await OnTypeReference(decl.Type);
         Writer.WriteLine(",");
     }
+
     public async ValueTask VisitStructure(StructureDeclaration decl)
     {
         Writer.Write("struct ");
@@ -188,6 +193,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
                 await m.AcceptVisitor(this);
             }
         }
+
         Writer.WriteLine("};");
         Writer.WriteLine();
     }

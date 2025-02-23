@@ -44,7 +44,7 @@ public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Outp
         var ast = moduleStack.ToAbstractSyntaxTreeFunctionBody();
         Output.WriteLine(await ast.Dump());
         var astBody = ast.GetBody(f);
-        astBody.Statements
+        astBody.Body.Statements
             .Should().ContainSingle()
             .Which.Should().BeOfType<CompoundStatement>()
             .Which.Statements.Should().ContainSingle()

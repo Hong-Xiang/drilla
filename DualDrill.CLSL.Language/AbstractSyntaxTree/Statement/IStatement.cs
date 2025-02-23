@@ -54,6 +54,7 @@ public interface IStatementVisitor<T>
     T VisitSwitch(SwitchStatement stmt);
     T VisitContinue(ContinueStatement stmt);
 
+    // TODO: remove this method
     T AppendSemicolon(T t);
 
     T VisitVectorSwizzleSet<TRank, TElement, TPattern>(VectorSwizzleSetStatement<TRank, TElement, TPattern> stmt)
