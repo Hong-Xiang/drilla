@@ -44,7 +44,11 @@ internal sealed class AbstractSyntaxTreeSimplify
             switch (r)
             {
                 case CompoundStatement cs:
-                    statements.AddRange(cs.Statements);
+                    if (cs.Statements.Length > 0)
+                    {
+                        statements.AddRange(cs.Statements);
+                    }
+
                     break;
                 default:
                     statements.Add(r);
@@ -73,7 +77,12 @@ internal sealed class AbstractSyntaxTreeSimplify
 
     public IStatement VisitIf(IfStatement stmt)
     {
-        return stmt;
+        return new IfStatement(
+            stmt.Expr,
+            (CompoundStatement)stmt.TrueBody.Accept(this),
+            (CompoundStatement)stmt.FalseBody.Accept(this),
+            stmt.Attributes
+        );
     }
 
     public IStatement VisitIncrement(IncrementStatement stmt)
@@ -83,7 +92,10 @@ internal sealed class AbstractSyntaxTreeSimplify
 
     public IStatement VisitLoop(LoopStatement stmt)
     {
-        return stmt;
+        return stmt with
+        {
+            Body = (CompoundStatement)stmt.Body.Accept(this),
+        };
     }
 
     public IStatement VisitPhonyAssignment(PhonyAssignmentStatement stmt)

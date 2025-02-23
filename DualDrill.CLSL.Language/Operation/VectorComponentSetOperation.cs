@@ -29,11 +29,11 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
 
     public string Name => $"set.{TComponent.Instance.Name}.{TVector.Instance.Name}";
 
-    IStructuredStackInstruction IOperation.Instruction => Instruction.Instance;
+    IInstruction IOperation.Instruction => Instruction.Instance;
 
     public sealed class Instruction
         : ISingleton<Instruction>
-        , IStructuredStackInstruction
+        , IInstruction
     {
         public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 

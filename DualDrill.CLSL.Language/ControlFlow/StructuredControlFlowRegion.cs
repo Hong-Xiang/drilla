@@ -4,36 +4,36 @@ using DualDrill.CLSL.Language.LinearInstruction;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
-
 /// <summary>
 /// Encoding of Loop | Block | IfThenElse
 /// </summary>
-public interface IStructuredControlFlowRegion<TInstruction> : IStructuredControlFlowElement
-    where TInstruction : IInstruction
+public interface IStructuredControlFlowRegion : IStructuredControlFlowElement
 {
     sealed class FuncVisitor<TResult>(
-        Func<Block<TInstruction>, TResult> Block,
-        Func<Loop<TInstruction>, TResult> Loop,
-        Func<IfThenElse<TInstruction>, TResult> IfThenElse
+        Func<Block, TResult> Block,
+        Func<Loop, TResult> Loop,
+        Func<IfThenElse, TResult> IfThenElse
     ) : IRegionPatternVisitor<TResult>
     {
-        public TResult VisitBlock(Block<TInstruction> block) => Block(block);
-        public TResult VisitIfThenElse(IfThenElse<TInstruction> ifThenElse)
+        public TResult VisitBlock(Block block) => Block(block);
+
+        public TResult VisitIfThenElse(IfThenElse ifThenElse)
             => IfThenElse(ifThenElse);
-        public TResult VisitLoop(Loop<TInstruction> loop)
+
+        public TResult VisitLoop(Loop loop)
             => Loop(loop);
     }
 
     public interface IRegionPatternVisitor<TResult>
     {
-        TResult VisitBlock(Block<TInstruction> block);
-        TResult VisitLoop(Loop<TInstruction> loop);
-        TResult VisitIfThenElse(IfThenElse<TInstruction> ifThenElse);
+        TResult VisitBlock(Block block);
+        TResult VisitLoop(Loop loop);
+        TResult VisitIfThenElse(IfThenElse ifThenElse);
 
         public static IRegionPatternVisitor<TResult> Create(
-            Func<Block<TInstruction>, TResult> block,
-            Func<Loop<TInstruction>, TResult> loop,
-            Func<IfThenElse<TInstruction>, TResult> ifThenElse
+            Func<Block, TResult> block,
+            Func<Loop, TResult> loop,
+            Func<IfThenElse, TResult> ifThenElse
         ) => new FuncVisitor<TResult>(block, loop, ifThenElse);
     }
 
@@ -44,10 +44,9 @@ public interface IStructuredControlFlowRegion<TInstruction> : IStructuredControl
 /// Encoding of Block | Loop
 /// </summary>
 /// <typeparam name="TInstruction"></typeparam>
-public interface ILabeledStructuredControlFlowRegion<TInstruction>
-    : IStructuredControlFlowRegion<TInstruction>
-        , ILabeledEntity
-    where TInstruction : IInstruction
+public interface ILabeledStructuredControlFlowRegion
+    : IStructuredControlFlowRegion
+    , ILabeledEntity
 {
     IStatement BrCurrentStatement();
 }

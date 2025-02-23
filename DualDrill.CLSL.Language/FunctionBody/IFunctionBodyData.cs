@@ -7,27 +7,14 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-/// <summary>
-/// Currently support 3 kinds of function body representation:
-/// * UnstructedControlFlowInstructionFunctionBody
-/// * StructuredStackInstructionFunctionBody
-/// * CompondStatement
-/// </summary>
-public interface IFunctionBodyData
-    : ITextDumpable<ILocalDeclarationContext>
-{
-    IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables { get; }
-    IEnumerable<Label> FunctionBodyDataLabels { get; }
-}
-
-public interface IFunctionBody : ILocalDeclarationContext
+public interface IFunctionBody : ILocalDeclarationContext, ITextDumpable
 {
 }
 
 public sealed class FunctionBody<TBodyData>
     : IFunctionBody
     , ITextDumpable
-    where TBodyData : IFunctionBodyData
+    where TBodyData : ILocalDeclarationReferencingElement
 {
     public TBodyData Body { get; }
     FrozenDictionary<VariableDeclaration, int> VariableIndices { get; }
@@ -39,8 +26,8 @@ public sealed class FunctionBody<TBodyData>
     public FunctionBody(TBodyData body)
     {
         Body = body;
-        LocalVariables = [..body.FunctionBodyDataLocalVariables.Distinct()];
-        Labels = [..body.FunctionBodyDataLabels.Distinct()];
+        LocalVariables = [..body.ReferencedLocalVariables.Distinct()];
+        Labels = [..body.ReferencedLabels.Distinct()];
         VariableIndices = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
         LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
     }

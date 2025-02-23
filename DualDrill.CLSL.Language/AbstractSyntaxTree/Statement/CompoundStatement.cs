@@ -9,35 +9,27 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
 public sealed record class CompoundStatement(ImmutableArray<IStatement> Statements)
     : IStatement
-    , IFunctionBodyData
+    , ILocalDeclarationReferencingElement
 {
-    public IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables =>
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
         Statements.SelectMany(s =>
             s switch
             {
-                CompoundStatement x => x.FunctionBodyDataLocalVariables,
+                CompoundStatement x => x.ReferencedLocalVariables,
                 VariableOrValueStatement x => [x.Variable],
                 _ => []
             });
 
-    public IEnumerable<Label> FunctionBodyDataLabels => [];
+    public IEnumerable<Label> ReferencedLabels => [];
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
-        foreach (var stmt in Statements)
+        writer.WriteLine("compound");
+        using (writer.IndentedScope())
         {
-            switch (stmt)
+            foreach (var stmt in Statements)
             {
-                case CompoundStatement s:
-                    using (writer.IndentedScopeWithBracket())
-                    {
-                        s.Dump(context, writer);
-                    }
-
-                    break;
-                default:
-                    writer.WriteLine(stmt.ToString());
-                    break;
+                stmt.Dump(context, writer);
             }
         }
     }

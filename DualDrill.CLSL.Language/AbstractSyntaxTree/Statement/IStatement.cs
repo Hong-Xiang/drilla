@@ -22,14 +22,14 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 [JsonDerivedType(typeof(SwitchStatement), nameof(SwitchStatement))]
 [JsonDerivedType(typeof(LoopStatement), nameof(LoopStatement))]
 public interface IStatement
-    : IShaderAstNode
+    : IShaderAstNode, ILocalDeclarationReferencingElement
 {
     T Accept<T>(IStatementVisitor<T> visitor);
 }
 
-public interface IStackStatement : IStructuredControlFlowElement, IBasicBlockElement
+public interface IStackStatement : IBasicBlockElement
 {
-    IEnumerable<IStackInstruction> ToInstructions();
+    IEnumerable<IInstruction> ToInstructions();
 }
 
 public interface ICommonStatement : IStatement, IStackStatement
@@ -55,6 +55,7 @@ public interface IStatementVisitor<T>
     T VisitContinue(ContinueStatement stmt);
 
     // TODO: remove this method
+    [Obsolete]
     T AppendSemicolon(T t);
 
     T VisitVectorSwizzleSet<TRank, TElement, TPattern>(VectorSwizzleSetStatement<TRank, TElement, TPattern> stmt)

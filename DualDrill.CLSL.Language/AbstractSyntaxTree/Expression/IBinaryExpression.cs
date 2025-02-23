@@ -1,8 +1,11 @@
+using System.CodeDom.Compiler;
 using System.Diagnostics;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
@@ -33,7 +36,7 @@ public sealed record class BinaryOperationExpression<TOperation>
     public TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
         => visitor.VisitBinaryExpression(this);
 
-    public IEnumerable<IStructuredStackInstruction> ToInstructions()
+    public IEnumerable<IInstruction> ToInstructions()
         =>
         [
             ..L.ToInstructions(),
@@ -46,4 +49,14 @@ public sealed record class BinaryOperationExpression<TOperation>
         ..L.ReferencedVariables,
         ..R.ReferencedVariables
     ];
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine($"{TOperation.Instance.Name}");
+        using (writer.IndentedScope())
+        {
+            L.Dump(context, writer);
+            R.Dump(context, writer);
+        }
+    }
 }

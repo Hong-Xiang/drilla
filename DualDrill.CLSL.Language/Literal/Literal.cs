@@ -15,7 +15,7 @@ public interface ILiteral
 {
     IShaderType Type { get; }
     string Name { get; }
-    IStructuredStackInstruction GetInstruction();
+    IInstruction GetInstruction();
 }
 
 public interface INumericLiteral : ILiteral
@@ -29,7 +29,7 @@ public interface ILiteral<TSelf, TCSharpType, TShaderType> : ILiteral
     TCSharpType Value { get; }
     string ILiteral.Name => $"{TShaderType.Instance.Name}({Value})";
     IShaderType ILiteral.Type => TShaderType.Instance;
-    IStructuredStackInstruction ILiteral.GetInstruction() => ShaderInstruction.Const((TSelf)this);
+    IInstruction ILiteral.GetInstruction() => ShaderInstruction.Const((TSelf)this);
 }
 
 public static class Literal

@@ -1,4 +1,6 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Types;
 
@@ -16,7 +18,7 @@ public sealed record class VariableIdentifierExpression(IVariableIdentifierSymbo
     public TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
         => visitor.VisitVariableIdentifierExpression(this);
 
-    public IEnumerable<IStructuredStackInstruction> ToInstructions()
+    public IEnumerable<IInstruction> ToInstructions()
         => Variable switch
         {
             ParameterDeclaration d => [ShaderInstruction.Load(d)],
@@ -29,6 +31,21 @@ public sealed record class VariableIdentifierExpression(IVariableIdentifierSymbo
         VariableDeclaration d => [d],
         _ => []
     };
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        switch (Variable)
+        {
+            case VariableDeclaration v:
+                writer.WriteLine(context.VariableName(v));
+                break;
+            case ParameterDeclaration p:
+                writer.WriteLine(p);
+                break;
+            default:
+                throw new NotImplementedException();
+        }
+    }
 }
 
 public interface ILoadStoreTargetSymbol

@@ -8,8 +8,8 @@ using DualDrill.CLSL.Language.LinearInstruction;
 
 namespace DualDrill.CLSL.Compiler;
 
-using BasicBlock = BasicBlock<IStructuredStackInstruction>;
-using InstructionRegion = IStructuredControlFlowRegion<IStructuredStackInstruction>;
+using BasicBlock = BasicBlock<IInstruction>;
+using InstructionRegion = IStructuredControlFlowRegion;
 
 public static partial class ShaderModuleExtension
 {
@@ -30,7 +30,7 @@ public static partial class ShaderModuleExtension
         var dt = cfr.DominatorTree;
 
         Stack<Label[]> childrenLabels = [];
-        Stack<Block<IStructuredStackInstruction>> blocks = [];
+        Stack<Block> blocks = [];
 
 
         // there is only two ways to enter a basic block
@@ -66,15 +66,15 @@ public static partial class ShaderModuleExtension
             return [DoTree(target)];
         }
 
-        Block<IStructuredStackInstruction> ToBlock(
+        Block ToBlock(
             IEnumerable<IStructuredControlFlowElement> elements
         )
         {
             ImmutableArray<IStructuredControlFlowElement> es = [.. elements];
             return es switch
             {
-                [Block<IStructuredStackInstruction> b] => b,
-                _ => new Block<IStructuredStackInstruction>(Label.Create(), new(es))
+                [Block b] => b,
+                _ => new Block(Label.Create(), new(es))
             };
         }
 
@@ -98,7 +98,7 @@ public static partial class ShaderModuleExtension
                     ConditionalSuccessor brIf =>
                     [
                         ..bb.Elements,
-                        new IfThenElse<IStructuredStackInstruction>(
+                        new IfThenElse(
                             new([
                                 ..DoBranch(target, brIf.TrueTarget)
                             ]),
@@ -111,7 +111,7 @@ public static partial class ShaderModuleExtension
                 },
                 [var head, .. var rest] =>
                 [
-                    new Block<IStructuredStackInstruction>(
+                    new Block(
                         head,
                         new([..NodeWithin(target, rest)])
                     ),
@@ -128,12 +128,12 @@ public static partial class ShaderModuleExtension
                                   .ToImmutableArray();
             if (cfr.IsLoop(label))
             {
-                return new Loop<IStructuredStackInstruction>(label,
+                return new Loop(label,
                     new([.. NodeWithin(label, mergeChildren)]));
             }
             else
             {
-                return new Block<IStructuredStackInstruction>(Label.Create(),
+                return new Block(Label.Create(),
                     new([.. NodeWithin(label, mergeChildren)]));
             }
         }
@@ -142,7 +142,7 @@ public static partial class ShaderModuleExtension
     }
 
     public static ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> ToStructuredControlFlowStackModel(
-        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStructuredStackInstruction>> module
+        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>> module
     )
     {
         return module.MapBody(

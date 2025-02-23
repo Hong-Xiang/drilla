@@ -6,7 +6,7 @@ using DualDrill.Common;
 namespace DualDrill.CLSL.Language.LinearInstruction;
 
 public sealed class UnaryStatementOperationInstruction<TOperation>
-    : IStructuredStackInstruction
+    : IInstruction
     , ISingleton<UnaryStatementOperationInstruction<TOperation>>
     where TOperation : IUnaryStatementOperation<TOperation>
 {

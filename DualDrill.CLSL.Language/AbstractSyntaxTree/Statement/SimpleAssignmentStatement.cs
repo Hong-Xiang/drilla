@@ -1,8 +1,10 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
@@ -28,6 +30,24 @@ public sealed record class SimpleAssignmentStatement(
     AssignmentOp Op
 ) : IStatement, IStackStatement, IForInit, IForUpdate
 {
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine("assign :=");
+        using (writer.IndentedScope())
+        {
+            writer.WriteLine("target:");
+            using (writer.IndentedScope())
+            {
+                L.Dump(context, writer);
+            }
+            writer.WriteLine("value:");
+            using (writer.IndentedScope())
+            {
+                R.Dump(context, writer);
+            }
+        }
+    }
+
     public override string ToString()
     {
         return Op == AssignmentOp.Assign ? $"{L} = {R}" : $"{L} {Op} {R}";
@@ -44,7 +64,7 @@ public sealed record class SimpleAssignmentStatement(
         ..R.ReferencedVariables,
     ];
 
-    public IEnumerable<IStackInstruction> ToInstructions()
+    public IEnumerable<IInstruction> ToInstructions()
     {
         return L switch
         {

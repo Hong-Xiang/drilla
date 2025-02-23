@@ -27,7 +27,7 @@ public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Outp
     {
         var f = new FunctionDeclaration("foo", [], new FunctionReturn(ShaderType.I32, []), []);
         var body = new StructuredStackInstructionFunctionBody(
-            new Block<IStructuredStackInstruction>(
+            new Block(
                 Label.Create(),
                 new([
                     ShaderInstruction.Const(Literal.Create(42)),

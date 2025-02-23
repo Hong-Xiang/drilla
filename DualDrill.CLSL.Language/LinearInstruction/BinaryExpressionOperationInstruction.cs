@@ -7,7 +7,7 @@ namespace DualDrill.CLSL.Language.LinearInstruction;
 
 public sealed record class BinaryExpressionOperationInstruction<TOperation>
     : ISingleton<BinaryExpressionOperationInstruction<TOperation>>
-    , IStructuredStackInstruction
+    , IInstruction
     where TOperation : IBinaryExpressionOperation<TOperation>
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];

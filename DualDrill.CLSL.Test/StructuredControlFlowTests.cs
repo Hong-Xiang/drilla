@@ -13,7 +13,7 @@ using FluentAssertions;
 
 namespace DualDrill.CLSL.Test;
 
-using Inst = IStructuredStackInstruction;
+using Inst = IInstruction;
 
 public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
 {
@@ -21,7 +21,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     public void SimpleSingleBasicBlockShouldWork()
     {
         var e = Label.Create("e");
-        var cfg = new ControlFlowGraph<BasicBlock<Inst>>(
+        var cfg = new ControlFlowGraph<BasicBlock<IInstruction>>(
             e,
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
             {
@@ -30,7 +30,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         );
         var ir = cfg.ToStructuredControlFlow();
         Dump(ir);
-        var b = Assert.IsType<Block<Inst>>(ir);
+        var b = Assert.IsType<Block>(ir);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     {
         var e = Label.Create("e");
         var v = new VariableDeclaration(DeclarationScope.Function, "x", ShaderType.I32, []);
-        var cfg = new ControlFlowGraph<BasicBlock<Inst>>(
+        var cfg = new ControlFlowGraph<BasicBlock<IInstruction>>(
             e,
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
             {
@@ -58,11 +58,11 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //   body:
         //     ... e ...
         //     br e
-        var b = Assert.IsType<Loop<Inst>>(ir);
+        var b = Assert.IsType<Loop>(ir);
         Assert.Equal(e, b.Label);
     }
 
-    void Dump(IStructuredControlFlowRegion<Inst> result)
+    void Dump(IStructuredControlFlowRegion result)
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
@@ -79,7 +79,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var e = Label.Create("e");
         var f = Label.Create("f");
         var t = Label.Create("t");
-        var cfg = new ControlFlowGraph<BasicBlock<Inst>>(
+        var cfg = new ControlFlowGraph<BasicBlock<IInstruction>>(
             e,
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
             {
@@ -99,21 +99,21 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //   else
         //      ... f ...
         //      return
-        result.Should().Satisfy<Block<Inst>>(bodyBlock =>
+        result.Should().Satisfy<Block>(bodyBlock =>
         {
             bodyBlock.Body.Elements.Should().SatisfyRespectively(
                 eInst => eInst.Should().BeOfType<ConstInstruction<BoolLiteral>>().Which.Literal.Value.Should().Be(true),
-                ifRegion => ifRegion.Should().Satisfy<IfThenElse<Inst>>(
+                ifRegion => ifRegion.Should().Satisfy<IfThenElse>(
                     ifThenElse =>
                     {
-                        ifThenElse.TrueBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block<Inst>>().Which.Body.Elements.Should()
+                        ifThenElse.TrueBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block>().Which.Body.Elements.Should()
                                   .SatisfyRespectively(
                                       tInst => tInst
                                                .Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
                                                .Should().Be(1),
                                       ret => ret.Should().BeOfType<ReturnInstruction>()
                                   );
-                        ifThenElse.FalseBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block<Inst>>().Which.Body.Elements.Should()
+                        ifThenElse.FalseBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block>().Which.Body.Elements.Should()
                                   .SatisfyRespectively(
                                       fInst => fInst.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
                                                     .Should().Be(2),
@@ -145,7 +145,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var f = Label.Create("f");
         var t = Label.Create("t");
         var m = Label.Create("m");
-        var cfg = new ControlFlowGraph<BasicBlock<Inst>>(
+        var cfg = new ControlFlowGraph<BasicBlock<IInstruction>>(
             e,
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
             {
@@ -172,20 +172,20 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //          ... f ...
         //          br m
         //   ... m ...
-        var ir = Assert.IsType<Block<Inst>>(result);
+        var ir = Assert.IsType<Block>(result);
         Dump(ir);
         ir.Body.Elements.Should().SatisfyRespectively(
-            b0 => b0.Should().BeOfType<Block<Inst>>()
-                    .Which.Should().Satisfy<Block<Inst>>(b =>
+            b0 => b0.Should().BeOfType<Block>()
+                    .Which.Should().Satisfy<Block>(b =>
                     {
                         b.Label.Should().Be(m);
                         b.Body.Elements.Should().SatisfyRespectively(
                             val => val.Should().BeOfType<ConstInstruction<BoolLiteral>>().Which.Literal.Value.Should()
                                       .Be(true),
-                            ifThenElse => ifThenElse.Should().BeOfType<IfThenElse<Inst>>()
+                            ifThenElse => ifThenElse.Should().BeOfType<IfThenElse>()
                         );
                     }),
-            b1 => b1.Should().BeOfType<Block<Inst>>()
+            b1 => b1.Should().BeOfType<Block>()
                     .Which.Body.Elements.Should().ContainSingle()
                     .Which.Should().BeOfType<ReturnInstruction>()
         );
@@ -211,7 +211,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
 
         var v = new VariableDeclaration(DeclarationScope.Function, "v", ShaderType.I32, []);
 
-        var cfg = new ControlFlowGraph<BasicBlock<Inst>>(
+        var cfg = new ControlFlowGraph<BasicBlock<IInstruction>>(
             a,
             ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
             {
@@ -246,11 +246,11 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //   end (if)
         // end (loop)
 
-        result.Should().BeOfType<Loop<Inst>>()
+        result.Should().BeOfType<Loop>()
               .Which.Body.Elements.Should().SatisfyRespectively(
                   x => x.Should().BeOfType<ConstInstruction<I32Literal>>(),
                   x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-                  (b) => b.Should().BeOfType<Block<Inst>>()
+                  (b) => b.Should().BeOfType<Block>()
               );
     }
 }

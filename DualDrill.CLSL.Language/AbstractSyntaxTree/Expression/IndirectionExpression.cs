@@ -1,4 +1,6 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Types;
 
@@ -13,10 +15,14 @@ public sealed record class IndirectionExpression() : IExpression
         throw new NotImplementedException();
     }
 
-    public IEnumerable<IStructuredStackInstruction> ToInstructions()
+    public IEnumerable<IInstruction> ToInstructions()
     {
         throw new NotImplementedException();
     }
 
     public IEnumerable<VariableDeclaration> ReferencedVariables { get; }
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        throw new NotImplementedException();
+    }
 }

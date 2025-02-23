@@ -16,13 +16,9 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Compiler;
 
-using ScfBlock = Block<IStructuredStackInstruction>;
-using ScfLoop = Loop<IStructuredStackInstruction>;
-using ScfIf = IfThenElse<IStructuredStackInstruction>;
 using IScfElement = IStructuredControlFlowElement;
 using ScfElements = StructuredControlFlowElementSequence;
-using IScfRegion = IStructuredControlFlowRegion<IStructuredStackInstruction>;
-using IScfLabelRegion = ILabeledStructuredControlFlowRegion<IStructuredStackInstruction>;
+using IScfLabelRegion = ILabeledStructuredControlFlowRegion;
 
 public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     : IStructuredStackInstructionVisitor<Unit>
@@ -43,7 +39,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> ShaderModule { get; }
     public FunctionDeclaration Function { get; }
-    public IScfRegion RootRegion { get; }
+    public IStructuredControlFlowRegion RootRegion { get; }
 
     private bool SupportNestedBreak = true;
 
@@ -102,7 +98,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
                 case BrIfInstruction brIf:
                     yield return brIf.Target;
                     break;
-                case IScfRegion region:
+                case IStructuredControlFlowRegion region:
                     foreach (var l in GetUsedBrLabels(region))
                     {
                         yield return l;
@@ -115,32 +111,32 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         }
     }
 
-    static IEnumerable<Label> GetUsedBrLabels(IScfRegion region)
+    static IEnumerable<Label> GetUsedBrLabels(IStructuredControlFlowRegion region)
     {
         return region switch
         {
-            ScfBlock b => GetUsedBrLabels(b.Body),
-            ScfLoop l => GetUsedBrLabels(l.Body),
-            ScfIf i => GetUsedBrLabels(i.TrueBody).Concat(GetUsedBrLabels(i.FalseBody)),
+            Block b => GetUsedBrLabels(b.Body),
+            Loop l => GetUsedBrLabels(l.Body),
+            IfThenElse i => GetUsedBrLabels(i.TrueBody).Concat(GetUsedBrLabels(i.FalseBody)),
             _ => throw new NotSupportedException()
         };
     }
 
-    public void ControlFlowRegion(IScfRegion region)
+    public void ControlFlowRegion(IStructuredControlFlowRegion region)
     {
         switch (region)
         {
-            case ScfBlock block:
+            case Block block:
             {
                 Block(block);
                 return;
             }
-            case ScfLoop loop:
+            case Loop loop:
             {
                 VisitLoop(loop);
                 return;
             }
-            case ScfIf ifThenElse:
+            case IfThenElse ifThenElse:
                 VisitIfThenElse(ifThenElse);
                 break;
             default:
@@ -152,10 +148,10 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     {
         switch (element)
         {
-            case IStructuredStackInstruction instruction:
+            case IInstruction instruction:
                 instruction.Accept<StructuredInstructionToAbstractSyntaxTreeBuilder, Unit>(this);
                 return;
-            case IScfRegion region:
+            case IStructuredControlFlowRegion region:
                 ControlFlowRegion(region);
                 return;
             default:
@@ -212,7 +208,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     }
 
 
-    public Unit Block(ScfBlock block)
+    public Unit Block(Block block)
     {
         var isBrTarget = UsedBrLabels.Contains(block.Label);
         if (isBrTarget)
@@ -240,7 +236,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     }
 
 
-    public Unit VisitLoop(ScfLoop loop)
+    public Unit VisitLoop(Loop loop)
     {
         LabelTargetsContext.Push((loop.Label, loop));
         var body = ControlFlowElementSequence(loop.Body);
@@ -254,7 +250,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         return default;
     }
 
-    public Unit VisitIfThenElse(ScfIf ifThenElse)
+    public Unit VisitIfThenElse(IfThenElse ifThenElse)
     {
         var e = Expressions.Pop();
         var t = ControlFlowElementSequence(ifThenElse.TrueBody);

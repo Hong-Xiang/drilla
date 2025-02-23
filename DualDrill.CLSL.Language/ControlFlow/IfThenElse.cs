@@ -1,14 +1,15 @@
-﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public sealed class IfThenElse<TInstruction>(
+public sealed class IfThenElse(
     StructuredControlFlowElementSequence TrueBody,
     StructuredControlFlowElementSequence FalseBody
-) : IStructuredControlFlowRegion<TInstruction>
-    where TInstruction : IInstruction
+) : IStructuredControlFlowRegion
 {
     public StructuredControlFlowElementSequence TrueBody { get; } = TrueBody;
     public StructuredControlFlowElementSequence FalseBody { get; } = FalseBody;
@@ -19,4 +20,19 @@ public sealed class IfThenElse<TInstruction>(
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
         TrueBody.LocalVariables.Concat(FalseBody.LocalVariables);
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine("if:");
+        using (writer.IndentedScope())
+        {
+            TrueBody.Dump(context, writer);
+        }
+
+        writer.WriteLine("else:");
+        using (writer.IndentedScope())
+        {
+            FalseBody.Dump(context, writer);
+        }
+    }
 }

@@ -1,10 +1,13 @@
-﻿using DualDrill.CLSL.Language.LinearInstruction;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.LinearInstruction;
 using System.Collections.Immutable;
 using DualDrill.Common;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
 public interface IBasicBlock<TElement, TResult, TTransfer>
+    : ITextDumpable<ILocalDeclarationContext>
 {
     public ImmutableArray<TElement> Elements { get; }
     public TResult? Result { get; }
@@ -13,6 +16,7 @@ public interface IBasicBlock<TElement, TResult, TTransfer>
 }
 
 public sealed class BasicBlock<TElement> : IBasicBlock<TElement, TElement, Unit>
+    where TElement : ILocalDeclarationReferencingElement
 {
     public ImmutableArray<TElement> Elements { get; }
     public TElement? Result => default;
@@ -27,5 +31,13 @@ public sealed class BasicBlock<TElement> : IBasicBlock<TElement, TElement, Unit>
     public static BasicBlock<TElement> Create(IEnumerable<TElement> instructions)
     {
         return new([..instructions]);
+    }
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        foreach (var e in Elements)
+        {
+            e.Dump(context, writer);
+        }
     }
 }

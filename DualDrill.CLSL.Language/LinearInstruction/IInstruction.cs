@@ -1,43 +1,28 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
+using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.LinearInstruction;
 
-public interface IInstruction
-{
-}
-
-public interface IStackInstruction : IInstruction
-{
-}
-
-public interface IStructuredStackInstruction
-    : IStackInstruction
-    , IBasicBlockElement
+public interface IInstruction : IBasicBlockElement
 {
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>;
+
+    void ITextDumpable<ILocalDeclarationContext>.Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine(ToString());
+    }
 }
 
-public interface IComputeInstruction<TSelf> : IStructuredStackInstruction, ISingleton<TSelf>
-{
-    IEnumerable<Label> ILocalDeclarationReferencingElement.ReferencedLabels => [];
-    IEnumerable<VariableDeclaration> ILocalDeclarationReferencingElement.ReferencedLocalVariables => [];
-}
-
-public sealed record class LabelInstruction(Label Label) : IStackInstruction, ILabeledEntity
-{
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
-    public IEnumerable<Label> ReferencedLabels => [Label];
-}
-
-public interface IJumpInstruction : IStructuredStackInstruction
+public interface IJumpInstruction : IInstruction
 {
 }
 
@@ -75,7 +60,7 @@ public sealed record class ReturnInstruction() : IJumpInstruction
 }
 
 public sealed record class NopInstruction
-    : IStructuredStackInstruction
+    : IInstruction
     , ISingleton<NopInstruction>
 {
     public static NopInstruction Instance { get; } = new();
@@ -89,7 +74,7 @@ public sealed record class NopInstruction
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }
 
-public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IStructuredStackInstruction
+public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IInstruction
     where TLiteral : ILiteral
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
@@ -103,7 +88,7 @@ public sealed record class ConstInstruction<TLiteral>(TLiteral Literal) : IStruc
     public override string ToString() => $"const.{Literal.Type.Name} {Literal}";
 }
 
-public sealed record class CallInstruction(FunctionDeclaration Callee) : IStructuredStackInstruction
+public sealed record class CallInstruction(FunctionDeclaration Callee) : IInstruction
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 
@@ -116,7 +101,7 @@ public sealed record class CallInstruction(FunctionDeclaration Callee) : IStruct
     public override string ToString() => $"call({Callee})";
 }
 
-public sealed record class LoadSymbolValueInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
+public sealed record class LoadSymbolValueInstruction<TTarget>(TTarget Target) : IInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
@@ -134,7 +119,7 @@ public sealed record class LoadSymbolValueInstruction<TTarget>(TTarget Target) :
     }
 }
 
-public sealed record class LoadSymbolAddressInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
+public sealed record class LoadSymbolAddressInstruction<TTarget>(TTarget Target) : IInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
@@ -152,7 +137,7 @@ public sealed record class LoadSymbolAddressInstruction<TTarget>(TTarget Target)
     }
 }
 
-public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : IStructuredStackInstruction
+public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : IInstruction
     where TTarget : ILoadStoreTargetSymbol
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
@@ -171,7 +156,7 @@ public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : ISt
 }
 
 public sealed class LogicalNotInstruction
-    : IStructuredStackInstruction
+    : IInstruction
     , ISingleton<LogicalNotInstruction>
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
@@ -184,7 +169,7 @@ public sealed class LogicalNotInstruction
         => visitor.Visit(this);
 }
 
-public sealed record class DupInstruction : IStructuredStackInstruction, ISingleton<DupInstruction>
+public sealed record class DupInstruction : IInstruction, ISingleton<DupInstruction>
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
     public IEnumerable<Label> ReferencedLabels => [];
@@ -198,7 +183,7 @@ public sealed record class DupInstruction : IStructuredStackInstruction, ISingle
     public override string ToString() => "dup";
 }
 
-public sealed record class DropInstruction : IStructuredStackInstruction, ISingleton<DropInstruction>
+public sealed record class DropInstruction : IInstruction, ISingleton<DropInstruction>
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
     public IEnumerable<Label> ReferencedLabels => [];
@@ -214,17 +199,17 @@ public sealed record class DropInstruction : IStructuredStackInstruction, ISingl
 
 public static class ShaderInstruction
 {
-    public static IStructuredStackInstruction Nop() => new NopInstruction();
-    public static IStructuredStackInstruction Br(Label target) => new BrInstruction(target);
-    public static IStructuredStackInstruction BrIf(Label target) => new BrIfInstruction(target);
+    public static IInstruction Nop() => new NopInstruction();
+    public static IInstruction Br(Label target) => new BrInstruction(target);
+    public static IInstruction BrIf(Label target) => new BrIfInstruction(target);
 
-    public static IStructuredStackInstruction I32Eq() =>
+    public static IInstruction I32Eq() =>
         BinaryExpressionOperationInstruction<NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>
             .Instance;
 
-    public static IStructuredStackInstruction LogicalNot() => new LogicalNotInstruction();
-    public static IStructuredStackInstruction Dup() => DupInstruction.Instance;
-    public static IStructuredStackInstruction Pop() => DropInstruction.Instance;
+    public static IInstruction LogicalNot() => new LogicalNotInstruction();
+    public static IInstruction Dup() => DupInstruction.Instance;
+    public static IInstruction Pop() => DropInstruction.Instance;
 
     public static LoadSymbolValueInstruction<ParameterDeclaration> Load(ParameterDeclaration decl) => new(decl);
     public static LoadSymbolValueInstruction<VariableDeclaration> Load(VariableDeclaration decl) => new(decl);
@@ -238,11 +223,11 @@ public static class ShaderInstruction
     public static StoreSymbolInstruction<VariableDeclaration> Store(VariableDeclaration decl) => new(decl);
     public static StoreSymbolInstruction<MemberDeclaration> Store(MemberDeclaration decl) => new(decl);
 
-    public static IStructuredStackInstruction Call(FunctionDeclaration decl) => new CallInstruction(decl);
+    public static IInstruction Call(FunctionDeclaration decl) => new CallInstruction(decl);
 
-    public static IStructuredStackInstruction Return() => new ReturnInstruction();
+    public static IInstruction Return() => new ReturnInstruction();
 
-    public static IStructuredStackInstruction Const<TLiteral>(TLiteral value)
+    public static IInstruction Const<TLiteral>(TLiteral value)
         where TLiteral : ILiteral
         => new ConstInstruction<TLiteral>(value);
 }

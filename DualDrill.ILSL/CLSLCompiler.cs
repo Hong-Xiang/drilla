@@ -34,8 +34,8 @@ public sealed class CLSLCompiler() : ICLSLCompiler
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
-        var module = parser.ParseShaderModule(shader).ConvertFunctionBodyToStructuredStackInstructions()
+        var module = parser.ParseShaderModule(shader).BasicBlockTransformStatementsToInstructions()
                            .ReplaceOperationCallsToOperationInstruction();
-        return module.ToControlFlowGraph().ToStructuredControlFlowStackModel();
+        return module.ToStructuredControlFlowStackModel();
     }
 }

@@ -1,8 +1,10 @@
 ﻿using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
@@ -12,13 +14,13 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 [JsonDerivedType(typeof(FunctionCallExpression), nameof(FunctionCallExpression))]
 [JsonDerivedType(typeof(FormalParameterExpression), nameof(FormalParameterExpression))]
 [JsonDerivedType(typeof(NamedComponentExpression), nameof(NamedComponentExpression))]
-public interface IExpression : IShaderAstNode
+public interface IExpression : IShaderAstNode, ITextDumpable<ILocalDeclarationContext>
 {
     IShaderType Type { get; }
 
     TResult Accept<TResult>(IExpressionVisitor<TResult> visitor);
 
-    IEnumerable<IStructuredStackInstruction> ToInstructions();
+    IEnumerable<IInstruction> ToInstructions();
     IEnumerable<VariableDeclaration> ReferencedVariables { get; }
 }
 

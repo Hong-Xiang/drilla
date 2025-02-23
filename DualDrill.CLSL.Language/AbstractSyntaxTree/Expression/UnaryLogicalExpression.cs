@@ -1,5 +1,7 @@
-﻿using DualDrill.CLSL.Language.Types;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 
@@ -23,10 +25,15 @@ public sealed record class UnaryLogicalExpression(
         throw new NotImplementedException();
     }
 
-    public IEnumerable<IStructuredStackInstruction> ToInstructions()
+    public IEnumerable<IInstruction> ToInstructions()
     {
         throw new NotImplementedException();
     }
 
     public IEnumerable<VariableDeclaration> ReferencedVariables => Expr.ReferencedVariables;
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        throw new NotImplementedException();
+    }
 }

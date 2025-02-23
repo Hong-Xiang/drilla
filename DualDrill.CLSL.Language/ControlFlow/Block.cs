@@ -1,16 +1,16 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public sealed class Block<TInstruction>(
+public sealed class Block(
     Label Label,
     StructuredControlFlowElementSequence Body
-) : ILabeledStructuredControlFlowRegion<TInstruction>
-    where TInstruction : IInstruction
+) : ILabeledStructuredControlFlowRegion
 {
     public Label Label { get; } = Label;
     public StructuredControlFlowElementSequence Body { get; } = Body;
@@ -18,4 +18,13 @@ public sealed class Block<TInstruction>(
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Body.LocalVariables;
 
     public IStatement BrCurrentStatement() => SyntaxFactory.Break();
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine($"block {context.LabelName(Label)}:");
+        using (writer.IndentedScope())
+        {
+            Body.Dump(context, writer);
+        }
+    }
 }

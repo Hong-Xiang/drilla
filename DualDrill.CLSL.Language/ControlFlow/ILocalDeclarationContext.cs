@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
@@ -14,7 +15,7 @@ public interface ILocalDeclarationContext
     ImmutableArray<Label> Labels { get; }
 }
 
-public interface ILocalDeclarationReferencingElement
+public interface ILocalDeclarationReferencingElement : ITextDumpable<ILocalDeclarationContext>
 {
     public IEnumerable<Label> ReferencedLabels { get; }
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables { get; }
@@ -25,7 +26,7 @@ public static class LocalDeclarationContextExtensions
     public static string VariableName(this ILocalDeclarationContext context, VariableDeclaration variable)
     {
         return variable.DeclarationScope == DeclarationScope.Function
-            ? $"var%{context.VariableIndex(variable)} {variable}"
+            ? $"var%{context.VariableIndex(variable)} : {variable.Type.Name} {variable.Name}"
             : $"module var {variable.Name}";
     }
 

@@ -34,6 +34,7 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ITex
         [
             ..Labels.Select(l => graph[l]).SelectMany(b => b.Elements)
                     .SelectMany(e => e.ReferencedLocalVariables)
+                    .Where(v => v.DeclarationScope == DeclarationScope.Function)
                     .Distinct()
         ];
         LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
@@ -56,7 +57,23 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ITex
 
     public void Dump(IFunctionBody context, IndentedTextWriter writer)
     {
-        throw new NotImplementedException();
+        foreach (var v in LocalVariables)
+        {
+            writer.WriteLine($"{this.VariableName(v)} : {v.Type.Name}");
+        }
+
+        writer.WriteLine();
+
+        foreach (var label in Labels)
+        {
+            writer.WriteLine(this.LabelName(label));
+            using (writer.IndentedScope())
+            {
+                var bb = this[label];
+                bb.Dump(context, writer);
+            }
+            writer.WriteLine();
+        }
     }
 
     public Label Entry { get; }

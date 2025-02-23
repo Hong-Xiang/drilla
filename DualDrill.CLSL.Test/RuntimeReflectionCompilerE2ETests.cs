@@ -8,20 +8,18 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     async Task TestShader(ISharpShader shader)
     {
         var sep = $"\n{new string('-', 10)}\n";
-        var moduleStackIR = shader.Parse();
+        var cfg = shader.Parse();
         Output.WriteLine("=== Parsed ===");
-        Output.WriteLine(await moduleStackIR.Dump());
-        Output.WriteLine(sep);
-        var moduleStackIROp = moduleStackIR.ConvertFunctionBodyToStructuredStackInstructions()
-                                           .ReplaceOperationCallsToOperationInstruction();
-        Output.WriteLine("=== Parsed(Op) ===");
-        Output.WriteLine(await moduleStackIROp.Dump());
-        Output.WriteLine(sep);
-        var cfg = moduleStackIROp.ToControlFlowGraph();
-        Output.WriteLine("=== CFG ===");
         Output.WriteLine(await cfg.Dump());
         Output.WriteLine(sep);
-        var scf = cfg.ToStructuredControlFlowStackModel();
+
+        var cfgOp = cfg.BasicBlockTransformStatementsToInstructions()
+                       .ReplaceOperationCallsToOperationInstruction();
+        Output.WriteLine("=== Parsed(Op) ===");
+        Output.WriteLine(await cfgOp.Dump());
+        Output.WriteLine(sep);
+
+        var scf = cfgOp.ToStructuredControlFlowStackModel();
         Output.WriteLine("=== SCF ===");
         Output.WriteLine(await scf.Dump());
         Output.WriteLine(sep);

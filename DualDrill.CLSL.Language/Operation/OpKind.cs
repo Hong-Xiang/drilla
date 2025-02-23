@@ -28,7 +28,7 @@ public interface IOperation
     FunctionDeclaration Function { get; }
     string Name { get; }
     IOperationMethodAttribute GetOperationMethodAttribute();
-    IStructuredStackInstruction Instruction { get; }
+    IInstruction Instruction { get; }
 }
 
 public interface IOperation<TSelf> : IOperation, ISingleton<TSelf>

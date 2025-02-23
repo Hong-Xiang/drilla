@@ -27,5 +27,5 @@ public interface IBinaryStatementOperation<TOperation> : IBinaryStatementOperati
         [new OperationMethodAttribute<TOperation>()]);
 
     FunctionDeclaration IOperation.Function => OperationFunction;
-    IStructuredStackInstruction IOperation.Instruction => BinaryStatementOperationInstruction<TOperation>.Instance;
+    IInstruction IOperation.Instruction => BinaryStatementOperationInstruction<TOperation>.Instance;
 }

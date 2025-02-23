@@ -17,7 +17,7 @@ public interface IUnaryExpressionOperation
 public interface IUnaryOperation<TSelf> : IUnaryExpressionOperation, IOperation<TSelf>
     where TSelf : IUnaryOperation<TSelf>
 {
-    IStructuredStackInstruction IOperation.Instruction => UnaryExpressionOperationInstruction<TSelf>.Instance;
+    IInstruction IOperation.Instruction => UnaryExpressionOperationInstruction<TSelf>.Instance;
 
     TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor, UnaryOperationExpression<TSelf> expr);
 

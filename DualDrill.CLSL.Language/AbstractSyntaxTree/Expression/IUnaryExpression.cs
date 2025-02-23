@@ -1,8 +1,11 @@
+using System.CodeDom.Compiler;
 using System.Diagnostics;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
@@ -30,8 +33,17 @@ public sealed record class UnaryOperationExpression<TOperation>
     public TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
         => TOperation.Instance.EvaluateExpression(visitor, this);
 
-    public IEnumerable<IStructuredStackInstruction> ToInstructions()
+    public IEnumerable<IInstruction> ToInstructions()
         => [..Source.ToInstructions(), TOperation.Instance.Instruction];
 
     public IEnumerable<VariableDeclaration> ReferencedVariables => Source.ReferencedVariables;
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine(TOperation.Instance.Name);
+        using (writer.IndentedScope())
+        {
+            Source.Dump(context, writer);
+        }
+    }
 }

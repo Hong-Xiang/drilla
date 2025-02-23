@@ -11,8 +11,6 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
-using System.Collections.Frozen;
-using System.Diagnostics;
 using DualDrill.CLSL.Frontend.SymbolTable;
 
 namespace DualDrill.CLSL;
@@ -31,25 +29,25 @@ public static class ShaderModuleExtension
         return parser.ParseShaderModule(shader);
     }
 
-    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStructuredStackInstruction>>
-        ConvertFunctionBodyToStructuredStackInstructions(
+    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>>
+        BasicBlockTransformStatementsToInstructions(
             this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> module
         )
-        => module.MapBody((module, f, body) =>
+        => module.MapBody((_, _, body) =>
             body.MapBody(bb =>
-                BasicBlock<IStructuredStackInstruction>.Create([
-                    ..bb.Elements.SelectMany(e => e.ToInstructions()).Cast<IStructuredStackInstruction>()
+                BasicBlock<IInstruction>.Create([
+                    ..bb.Elements.SelectMany(e => e.ToInstructions())
                 ])));
 
-    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStructuredStackInstruction>>
+    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>>
         ReplaceOperationCallsToOperationInstruction(
-            this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStructuredStackInstruction>> ir
+            this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>> ir
         )
     {
         return ir.MapBody((m, f, b) =>
             b.MapBody(bb =>
             {
-                return BasicBlock<IStructuredStackInstruction>.Create([
+                return BasicBlock<IInstruction>.Create([
                     ..bb.Elements.Select(inst =>
                     {
                         if (inst is CallInstruction call)
@@ -91,79 +89,6 @@ public static class ShaderModuleExtension
         });
     }
 
-    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStructuredStackInstruction>>
-        ToControlFlowGraph(
-            this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStructuredStackInstruction>> module
-        )
-    {
-        return module;
-        // return module.MapBody((m, f, b) =>
-        // {
-        //     // Dictionary<int, Label> labels = [];
-        //     // Dictionary<Label, int> labelIndex = [];
-        //     // foreach (var (idx, inst) in b.Instructions.Index())
-        //     // {
-        //     //     if (inst is LabelInstruction l)
-        //     //     {
-        //     //         labels.Add(idx, l.Label);
-        //     //         labelIndex.Add(l.Label, idx);
-        //     //     }
-        //     // }
-        //     //
-        //     // var builder = new ControlFlowGraphBuilder(b.Instructions.Length, (idx) =>
-        //     //     labels.TryGetValue(idx, out var l) ? l : Label.FromIndex(idx));
-        //     //
-        //     // foreach (var (idx, inst) in b.Instructions.Index())
-        //     // {
-        //     //     switch (inst)
-        //     //     {
-        //     //         case BrInstruction br:
-        //     //             builder.AddBr(idx, labelIndex[br.Target]);
-        //     //             break;
-        //     //         case BrIfInstruction brIf:
-        //     //             builder.AddBrIf(idx, labelIndex[brIf.Target]);
-        //     //             break;
-        //     //         case ReturnInstruction:
-        //     //             builder.AddReturn(idx);
-        //     //             break;
-        //     //         default:
-        //     //             break;
-        //     //     }
-        //     // }
-        //     //
-        //     // var cfg = builder.Build((l, r) =>
-        //     // {
-        //     //     Debug.Assert(r.Count > 0);
-        //     //     var isFirstLabel = b.Instructions[r.Start] is LabelInstruction;
-        //     //     var structuredInstructionStart = isFirstLabel ? r.Start + 1 : r.Start;
-        //     //     var structuredInstructionCount = isFirstLabel ? r.Count - 1 : r.Count;
-        //     //     IEnumerable<IStructuredStackInstruction> body = [];
-        //     //     if (structuredInstructionCount > 0)
-        //     //     {
-        //     //         if (b.Instructions[r.Start + r.Count - 1] is IJumpInstruction)
-        //     //         {
-        //     //             structuredInstructionCount--;
-        //     //         }
-        //     //
-        //     //         body = b.Instructions.Slice(structuredInstructionStart, structuredInstructionCount)
-        //     //                 .Cast<IStructuredStackInstruction>();
-        //     //     }
-        //     //     //var body = b.Instructions.Slice(structuredInstructionStart, structuredInstructionCount)
-        //     //     //                               .Cast<IStructuredStackInstruction>();
-        //     //
-        //     //     return BasicBlock<IStructuredStackInstruction>.Create([.. body]);
-        //     // });
-        //     return new ControlFlowGraphFunctionBody(
-        //         new ControlFlowGraph<BasicBlock<IStructuredStackInstruction>>(
-        //             b.Entry,
-        //             ((IFunctionBody)b).Labels.ToFrozenDictionary(l => l,
-        //                 l => new ControlFlowGraph<BasicBlock<IStructuredStackInstruction>>.NodeDefinition(
-        //                     b.Successor(l),
-        //                     BasicBlock<IStructuredStackInstruction>.Create([..b[l].Elements])
-        //                 ))
-        //         ));
-        // });
-    }
 
     public static async ValueTask<string> EmitWgslCode(
         this ShaderModuleDeclaration<FunctionBody<CompoundStatement>> module
@@ -185,9 +110,8 @@ public static class ShaderModuleExtension
     )
     {
         var module = shader.Parse()
-                           .ConvertFunctionBodyToStructuredStackInstructions()
+                           .BasicBlockTransformStatementsToInstructions()
                            .ReplaceOperationCallsToOperationInstruction()
-                           .ToControlFlowGraph()
                            .ToStructuredControlFlowStackModel()
                            .ToAbstractSyntaxTreeFunctionBody();
         var code = await module.EmitWgslCode();
@@ -212,14 +136,11 @@ public static class ShaderModuleExtension
         }
     }
 
-    static void Dump(this IStackInstruction instruction, Func<Label, string> labelName,
+    static void Dump(this IInstruction instruction, Func<Label, string> labelName,
         Func<VariableDeclaration, string> variableName, IndentedTextWriter writer)
     {
         switch (instruction)
         {
-            case LabelInstruction l:
-                writer.WriteLine($"label {labelName(l.Label)}:");
-                break;
             case BrInstruction br:
                 writer.WriteLine($"br {labelName(br.Target)};");
                 break;
@@ -255,10 +176,10 @@ public static class ShaderModuleExtension
         {
             switch (inst)
             {
-                case IStackInstruction stackInstruction:
+                case IInstruction stackInstruction:
                     stackInstruction.Dump(labelName, variableName, writer);
                     break;
-                case IStructuredControlFlowRegion<IStructuredStackInstruction> region:
+                case IStructuredControlFlowRegion region:
                     region.Dump(labelName, variableName, writer);
                     break;
                 default:
@@ -268,14 +189,14 @@ public static class ShaderModuleExtension
     }
 
     public static void Dump(
-        this IStructuredControlFlowRegion<IStructuredStackInstruction> region,
+        this IStructuredControlFlowRegion region,
         Func<Label, string> labelName,
         Func<VariableDeclaration, string> variableName,
         IndentedTextWriter writer)
     {
         switch (region)
         {
-            case Loop<IStructuredStackInstruction> r:
+            case Loop r:
                 writer.WriteLine($"loop {labelName(r.Label)}:");
                 using (writer.IndentedScope())
                 {
@@ -283,7 +204,7 @@ public static class ShaderModuleExtension
                 }
 
                 break;
-            case IfThenElse<IStructuredStackInstruction> r:
+            case IfThenElse r:
                 writer.WriteLine("if:");
                 using (writer.IndentedScope())
                 {
@@ -297,7 +218,7 @@ public static class ShaderModuleExtension
                 }
 
                 break;
-            case Block<IStructuredStackInstruction> r:
+            case Block r:
                 writer.WriteLine($"block {labelName(r.Label)}:");
                 using (writer.IndentedScope())
                 {
@@ -311,134 +232,110 @@ public static class ShaderModuleExtension
     }
 
 
-    public static async ValueTask<string> Dump(
-        this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module)
-    {
-        var sw = new StringWriter();
-        var isw = new IndentedTextWriter(sw);
-        isw.Write(module.GetType().CSharpFullName());
-        var visitor = new ModuleToCodeVisitor<StructuredStackInstructionFunctionBody>(isw, module, (b) =>
-        {
-            var labelIndex = b.Root.ReferencedLabels.Distinct().ToArray().Index()
-                              .ToDictionary(x => x.Item, x => x.Index);
-            var variables = b.Root.ReferencedLocalVariables.Distinct().Index()
-                             .ToDictionary(x => x.Item, x => x.Index);
+    // public static async ValueTask<string> Dump(
+    //     this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module)
+    // {
+    //     var sw = new StringWriter();
+    //     var isw = new IndentedTextWriter(sw);
+    //     isw.Write(module.GetType().CSharpFullName());
+    //     var visitor = new ModuleToCodeVisitor<StructuredStackInstructionFunctionBody>(isw, module, (b) =>
+    //     {
+    //         var labelIndex = b.Root.ReferencedLabels.Distinct().ToArray().Index()
+    //                           .ToDictionary(x => x.Item, x => x.Index);
+    //         var variables = b.Root.ReferencedLocalVariables.Distinct().Index()
+    //                          .ToDictionary(x => x.Item, x => x.Index);
+    //
+    //         string VariableName(VariableDeclaration variable) =>
+    //             variable.DeclarationScope == DeclarationScope.Function
+    //                 ? $"var#{variables[variable]} {variable}"
+    //                 : $"module var {variable.Name}";
+    //
+    //
+    //         string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
+    //
+    //         b.Root.Dump(LabelName, VariableName, isw);
+    //         return ValueTask.CompletedTask;
+    //     });
+    //     await module.Accept(visitor);
+    //     return sw.ToString();
+    // }
 
-            string VariableName(VariableDeclaration variable) =>
-                variable.DeclarationScope == DeclarationScope.Function
-                    ? $"var#{variables[variable]} {variable}"
-                    : $"module var {variable.Name}";
+    // public static async ValueTask<string> Dump(
+    //     this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>> module)
+    // {
+    //     var sw = new StringWriter();
+    //     var isw = new IndentedTextWriter(sw);
+    //     isw.Write(module.GetType().CSharpFullName());
+    //     var visitor = new ModuleToCodeVisitor<ControlFlowGraphFunctionBody<IInstruction>>(isw,
+    //         module, (b) =>
+    //         {
+    //             var instructions = b.Labels.SelectMany(l => b[l].Elements.ToArray()).ToArray();
+    //
+    //             var labelIndex = b.Labels.Index().ToDictionary(x => x.Item, x => x.Index);
+    //             var variables = instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>()
+    //                                         .Select(x => x.Target)
+    //                                         .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>()
+    //                                                             .Select(x => x.Target))
+    //                                         .Concat(instructions
+    //                                                 .OfType<LoadSymbolAddressInstruction<VariableDeclaration>>()
+    //                                                 .Select(x => x.Target))
+    //                                         .Where(v => v.DeclarationScope == DeclarationScope.Function)
+    //                                         .Distinct()
+    //                                         .Index()
+    //                                         .ToDictionary(x => x.Item, x => x.Index);
+    //
+    //             string VariableName(VariableDeclaration variable) =>
+    //                 variable.DeclarationScope == DeclarationScope.Function
+    //                     ? $"var#{variables[variable]} {variable}"
+    //                     : $"module var {variable.Name}";
+    //
+    //
+    //             string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
+    //
+    //
+    //             foreach (var (k, v) in variables)
+    //             {
+    //                 isw.WriteLine($"var#{v} {k}");
+    //             }
+    //
+    //             isw.WriteLine();
+    //
+    //             foreach (var l in b.Labels)
+    //             {
+    //                 isw.Write($"{LabelName(l)} : -> ");
+    //                 b.Successor(l).Dump(LabelName, isw);
+    //                 isw.WriteLine();
+    //                 using (isw.IndentedScope())
+    //                 {
+    //                     foreach (var instruction in b[l].Elements)
+    //                     {
+    //                         instruction.Dump(LabelName, VariableName, isw);
+    //                     }
+    //                 }
+    //
+    //                 isw.WriteLine();
+    //             }
+    //
+    //             return ValueTask.CompletedTask;
+    //         });
+    //     await module.Accept(visitor);
+    //     return sw.ToString();
+    // }
 
-
-            string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
-
-            b.Root.Dump(LabelName, VariableName, isw);
-            return ValueTask.CompletedTask;
-        });
-        await module.Accept(visitor);
-        return sw.ToString();
-    }
-
-    public static async ValueTask<string> Dump(
-        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStructuredStackInstruction>> module)
-    {
-        var sw = new StringWriter();
-        var isw = new IndentedTextWriter(sw);
-        isw.Write(module.GetType().CSharpFullName());
-        var visitor = new ModuleToCodeVisitor<ControlFlowGraphFunctionBody<IStructuredStackInstruction>>(isw,
-            module, (b) =>
-            {
-                var instructions = b.Labels.SelectMany(l => b[l].Elements.ToArray()).ToArray();
-
-                var labelIndex = b.Labels.Index().ToDictionary(x => x.Item, x => x.Index);
-                var variables = instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>()
-                                            .Select(x => x.Target)
-                                            .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>()
-                                                                .Select(x => x.Target))
-                                            .Concat(instructions
-                                                    .OfType<LoadSymbolAddressInstruction<VariableDeclaration>>()
-                                                    .Select(x => x.Target))
-                                            .Where(v => v.DeclarationScope == DeclarationScope.Function)
-                                            .Distinct()
-                                            .Index()
-                                            .ToDictionary(x => x.Item, x => x.Index);
-
-                string VariableName(VariableDeclaration variable) =>
-                    variable.DeclarationScope == DeclarationScope.Function
-                        ? $"var#{variables[variable]} {variable}"
-                        : $"module var {variable.Name}";
-
-
-                string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
-
-
-                foreach (var (k, v) in variables)
-                {
-                    isw.WriteLine($"var#{v} {k}");
-                }
-
-                isw.WriteLine();
-
-                foreach (var l in b.Labels)
-                {
-                    isw.Write($"{LabelName(l)} : -> ");
-                    b.Successor(l).Dump(LabelName, isw);
-                    isw.WriteLine();
-                    using (isw.IndentedScope())
-                    {
-                        foreach (var instruction in b[l].Elements)
-                        {
-                            instruction.Dump(LabelName, VariableName, isw);
-                        }
-                    }
-
-                    isw.WriteLine();
-                }
-
-                return ValueTask.CompletedTask;
-            });
-        await module.Accept(visitor);
-        return sw.ToString();
-    }
-
-    public static async ValueTask<string> Dump(
-        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> module)
-    {
-        var sw = new StringWriter();
-        var isw = new IndentedTextWriter(sw);
-        isw.Write(module.GetType().CSharpFullName());
-        var visitor = new ModuleToCodeVisitor<ControlFlowGraphFunctionBody<IStackStatement>>(isw, module, (cfg) =>
-        {
-            foreach (var (index, v) in cfg.LocalVariables.Index())
-            {
-                isw.WriteLine($"var#{index} {cfg.VariableName(v)} : {v.Type.Name}");
-            }
-
-            isw.WriteLine();
-
-            foreach (var (lableIndex, label) in cfg.Labels.Index())
-            {
-                isw.WriteLine($"label#{lableIndex} {cfg.LabelName(label)}");
-                using (isw.IndentedScope())
-                {
-                    foreach (var e in cfg[label].Elements)
-                    {
-                        isw.WriteLine(e);
-                    }
-                }
-            }
-
-            return ValueTask.CompletedTask;
-        });
-        await module.Accept(visitor);
-        return sw.ToString();
-    }
 
     public static async ValueTask Dump<TBody>(this ShaderModuleDeclaration<TBody> module, IndentedTextWriter writer)
         where TBody : IFunctionBody
     {
-        writer.Write(module.GetType().CSharpFullName());
-        var visitor = new ModuleToCodeVisitor<TBody>(writer, module, (b) => { return ValueTask.CompletedTask; });
+        writer.WriteLine(module.GetType().CSharpFullName());
+        var visitor = new ModuleToCodeVisitor<TBody>(writer, module, (body) =>
+        {
+            using (writer.IndentedScope())
+            {
+                body.Dump(writer);
+            }
+
+            return ValueTask.CompletedTask;
+        });
         await module.Accept(visitor);
     }
 

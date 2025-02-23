@@ -25,7 +25,7 @@ public interface IUnaryStatementOperation<TOperation> : IUnaryStatementOperation
         [new OperationMethodAttribute<TOperation>()]);
 
     FunctionDeclaration IOperation.Function => OperationFunction;
-    IStructuredStackInstruction IOperation.Instruction => UnaryStatementOperationInstruction<TOperation>.Instance;
+    IInstruction IOperation.Instruction => UnaryStatementOperationInstruction<TOperation>.Instance;
 }
 
 public interface IUnaryStatementOperation<TOperation, TSourceType> : IUnaryStatementOperation<TOperation>

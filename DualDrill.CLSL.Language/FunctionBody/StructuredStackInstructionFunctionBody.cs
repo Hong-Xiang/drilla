@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using System.CodeDom.Compiler;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 
@@ -10,34 +11,35 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 // TODO: refactor to simply FunctionBody<IStructuredControlFlowRegion<IStructuredStackInstruction>>
 public sealed class StructuredStackInstructionFunctionBody : IFunctionBody
 {
-    public IStructuredControlFlowRegion<IStructuredStackInstruction> Root { get; }
+    public IStructuredControlFlowRegion Root { get; }
 
-    public StructuredStackInstructionFunctionBody(IStructuredControlFlowRegion<IStructuredStackInstruction> root)
+    public StructuredStackInstructionFunctionBody(IStructuredControlFlowRegion root)
     {
         Root = root;
         Labels = [..Root.ReferencedLabels.Distinct()];
         LocalVariables = [..Root.ReferencedLocalVariables.Distinct()];
+        VariableIndices = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+        LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
     }
 
     public IEnumerable<VariableDeclaration> FunctionBodyDataLocalVariables => Root.ReferencedLocalVariables;
 
     public IEnumerable<Label> FunctionBodyDataLabels => Root.ReferencedLabels;
-
-    public void Dump(IFunctionBody context, IndentedTextWriter writer)
-    {
-        throw new NotImplementedException();
-    }
-
-    public int LabelIndex(Label label)
-    {
-        throw new NotImplementedException();
-    }
+    FrozenDictionary<VariableDeclaration, int> VariableIndices { get; }
+    FrozenDictionary<Label, int> LabelIndices { get; }
 
     public int VariableIndex(VariableDeclaration variable)
-    {
-        throw new NotImplementedException();
-    }
+        => VariableIndices[variable];
+
+    public int LabelIndex(Label label)
+        => LabelIndices[label];
+
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
+
+    public void Dump(IndentedTextWriter writer)
+    {
+        Root.Dump(this, writer);
+    }
 }

@@ -20,7 +20,7 @@ public interface IBinaryExpressionOperation<TSelf>
     , IOperation<TSelf>
     where TSelf : IBinaryExpressionOperation<TSelf>
 {
-    IStructuredStackInstruction IOperation.Instruction =>
+    IInstruction IOperation.Instruction =>
         BinaryExpressionOperationInstruction<TSelf>.Instance;
 }
 
