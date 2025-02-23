@@ -72,6 +72,7 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ITex
                 var bb = this[label];
                 bb.Dump(context, writer);
             }
+
             writer.WriteLine();
         }
     }
@@ -104,6 +105,19 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ITex
             Labels.ToFrozenDictionary(l => l, l => new ControlFlowGraph<BasicBlock<TResultElement>>.NodeDefinition(
                 Successor(l),
                 f(this[l])
+            ))
+        ));
+    }
+
+    public ControlFlowGraphFunctionBody<TResultElement> MapBody<TResultElement>(
+        Func<Label, BasicBlock<TElement>, BasicBlock<TResultElement>> f)
+        where TResultElement : IBasicBlockElement
+    {
+        return new ControlFlowGraphFunctionBody<TResultElement>(new ControlFlowGraph<BasicBlock<TResultElement>>(
+            Entry,
+            Labels.ToFrozenDictionary(l => l, l => new ControlFlowGraph<BasicBlock<TResultElement>>.NodeDefinition(
+                Successor(l),
+                f(l, this[l])
             ))
         ));
     }

@@ -37,7 +37,7 @@ public interface IStructuredControlFlowRegion : IStructuredControlFlowElement
         ) => new FuncVisitor<TResult>(block, loop, ifThenElse);
     }
 
-    //public TResult Accept<TResult>(IRegionPatternVisitor<TResult> pattern);
+    public TResult Accept<TResult>(IRegionPatternVisitor<TResult> pattern);
 }
 
 /// <summary>

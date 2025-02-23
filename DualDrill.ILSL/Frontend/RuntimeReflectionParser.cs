@@ -436,7 +436,8 @@ public sealed record class RuntimeReflectionParser(
 
 
             BasicBlocks.Add(l,
-                BasicBlock<IStackStatement>.Create([..visitor.Statements]));
+                new BasicBlock<IStackStatement>([..visitor.Statements], [..BasicBlockInputs[l]],
+                    [..BasicBlockOutputs[l]]));
         }
 
         var bodies = model.ControlFlowGraph.Labels().ToDictionary(l => l,

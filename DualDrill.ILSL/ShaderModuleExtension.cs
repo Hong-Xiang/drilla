@@ -11,7 +11,10 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
+using System.Collections.Frozen;
 using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using ICSharpCode.Decompiler.CSharp.Syntax;
 
 namespace DualDrill.CLSL;
 
@@ -28,6 +31,46 @@ public static class ShaderModuleExtension
         var parser = new RuntimeReflectionParser(context);
         return parser.ParseShaderModule(shader);
     }
+
+    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> EliminateBlockValueTransfer(
+        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> module
+    )
+        => module.MapBody((_, _, cfg) =>
+            cfg.MapBody((label, bb) =>
+            {
+                if (bb.Outputs.IsEmpty)
+                {
+                    return bb;
+                }
+
+                var pushStmt = bb.Elements.OfType<PushStatement>().SingleOrDefault();
+
+                var successorLabels = cfg.Successor(label).AllTargets();
+
+                var statements = new List<IStackStatement>();
+
+                statements.AddRange(bb.Elements.Where(s => s is not PushStatement));
+
+                foreach (var sl in successorLabels)
+                {
+                    var bt = cfg[sl];
+                    foreach (var (vo, vi) in bb.Outputs.Zip(bt.Inputs))
+                    {
+                        statements.Add(SyntaxFactory.AssignStatement(
+                            SyntaxFactory.VarIdentifier(vi),
+                            SyntaxFactory.VarIdentifier(vo)
+                        ));
+                    }
+                }
+
+                if (pushStmt is { } s)
+                {
+                    statements.Add(s);
+                }
+
+                return new BasicBlock<IStackStatement>([..statements], bb.Inputs, []);
+            })
+        );
 
     public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>>
         BasicBlockTransformStatementsToInstructions(
@@ -89,6 +132,22 @@ public static class ShaderModuleExtension
         });
     }
 
+    public static ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Simplify(
+        this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module
+    )
+    {
+        return module.MapBody((m, f, fBody) =>
+        {
+            var counter = new StructuredControlFlowVariableUsageCounter();
+            _ = fBody.Root.Accept(counter);
+            var vSt = counter.VariableStoreCount.ToFrozenDictionary();
+            var vLd = counter.VariableLoadCount.ToFrozenDictionary();
+            var simplifer = new StructuredControlFlowSimplifier(vLd, vSt);
+            var result = fBody.Root.Accept(simplifer);
+            return new StructuredStackInstructionFunctionBody(result);
+        });
+    }
+
 
     public static async ValueTask<string> EmitWgslCode(
         this ShaderModuleDeclaration<FunctionBody<CompoundStatement>> module
@@ -96,10 +155,8 @@ public static class ShaderModuleExtension
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
-        var bodyVisitor = new WgslFunctionBodyVisitor(isw);
-        ;
         var visitor = new ModuleToCodeVisitor<FunctionBody<CompoundStatement>>(isw, module,
-            b => bodyVisitor.VisitCompound(b.Body));
+            b => new WgslFunctionBodyVisitor(b, isw).VisitCompound(b.Body));
         await module.Accept<ValueTask>(visitor);
         return sw.ToString();
     }
@@ -116,24 +173,6 @@ public static class ShaderModuleExtension
                            .ToAbstractSyntaxTreeFunctionBody();
         var code = await module.EmitWgslCode();
         return code;
-    }
-
-    static void Dump(this ISuccessor successor, Func<Label, string> labelName, IndentedTextWriter writer)
-    {
-        switch (successor)
-        {
-            case UnconditionalSuccessor s:
-                writer.Write($"br {labelName(s.Target)}");
-                break;
-            case ConditionalSuccessor s:
-                writer.Write($"br_if {labelName(s.TrueTarget)} {labelName(s.FalseTarget)}");
-                break;
-            case TerminateSuccessor:
-                writer.Write($"return");
-                break;
-            default:
-                throw new NotSupportedException();
-        }
     }
 
     static void Dump(this IInstruction instruction, Func<Label, string> labelName,

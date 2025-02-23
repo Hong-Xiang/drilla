@@ -20,6 +20,9 @@ public sealed class Loop(
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Body.LocalVariables;
 
+    public TResult Accept<TResult>(IStructuredControlFlowRegion.IRegionPatternVisitor<TResult> pattern)
+        => pattern.VisitLoop(this);
+
     public IStatement BrCurrentStatement() => SyntaxFactory.Continue();
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)

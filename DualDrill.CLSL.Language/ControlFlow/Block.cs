@@ -17,6 +17,9 @@ public sealed class Block(
     public IEnumerable<Label> ReferencedLabels => [Label, .. Body.Labels];
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Body.LocalVariables;
 
+    public TResult Accept<TResult>(IStructuredControlFlowRegion.IRegionPatternVisitor<TResult> pattern)
+        => pattern.VisitBlock(this);
+
     public IStatement BrCurrentStatement() => SyntaxFactory.Break();
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)

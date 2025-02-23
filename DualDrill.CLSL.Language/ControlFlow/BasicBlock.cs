@@ -1,6 +1,8 @@
 ﻿using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.LinearInstruction;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 
@@ -11,26 +13,23 @@ public interface IBasicBlock<TElement, TResult, TTransfer>
 {
     public ImmutableArray<TElement> Elements { get; }
     public TResult? Result { get; }
-    public ImmutableArray<TTransfer> Inputs { get; }
-    public ImmutableArray<TTransfer> Outputs { get; }
+    public ImmutableStack<TTransfer> Inputs { get; }
+    public ImmutableStack<TTransfer> Outputs { get; }
 }
 
-public sealed class BasicBlock<TElement> : IBasicBlock<TElement, TElement, Unit>
+public sealed record class BasicBlock<TElement>(
+    ImmutableArray<TElement> Elements,
+    ImmutableStack<VariableDeclaration> Inputs,
+    ImmutableStack<VariableDeclaration> Outputs
+)
+    : IBasicBlock<TElement, IExpression, VariableDeclaration>
     where TElement : ILocalDeclarationReferencingElement
 {
-    public ImmutableArray<TElement> Elements { get; }
-    public TElement? Result => default;
-    public ImmutableArray<Unit> Inputs { get; } = [];
-    public ImmutableArray<Unit> Outputs { get; } = [];
-
-    public BasicBlock(ImmutableArray<TElement> elements)
-    {
-        Elements = elements;
-    }
+    public IExpression? Result { get; } = null;
 
     public static BasicBlock<TElement> Create(IEnumerable<TElement> instructions)
     {
-        return new([..instructions]);
+        return new([..instructions], [], []);
     }
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)

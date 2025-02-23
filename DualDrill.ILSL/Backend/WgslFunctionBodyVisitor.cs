@@ -4,12 +4,14 @@ using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Backend;
 
-public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
+public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, IndentedTextWriter Writer)
     : IStatementVisitor<ValueTask>
     , IExpressionVisitor<ValueTask>
 {
@@ -20,13 +22,21 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         {
             await stmt.Expr.Accept(this);
         }
+
         Writer.WriteLine(";");
+    }
+
+    string VariableIdentifier(VariableDeclaration variable)
+    {
+        return variable.DeclarationScope == DeclarationScope.Function
+            ? $"loc_{Context.VariableIndex(variable)}"
+            : variable.Name;
     }
 
     public async ValueTask VisitVariableOrValue(VariableOrValueStatement stmt)
     {
         Writer.Write("var ");
-        Writer.Write(stmt.Variable.Name);
+        Writer.Write(VariableIdentifier(stmt.Variable));
         Writer.Write(" : ");
         //await VisitTypeReference(stmt.Variable.Type);
         Writer.Write(stmt.Variable.Type.Name);
@@ -36,6 +46,7 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
             Writer.Write(" = ");
             await stmt.Variable.Initializer.Accept(this);
         }
+
         Writer.WriteLine(";");
     }
 
@@ -249,7 +260,18 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
 
     public async ValueTask VisitVariableIdentifierExpression(VariableIdentifierExpression expr)
     {
-        Writer.Write(expr.Variable.Name);
+        switch (expr.Variable)
+        {
+            case VariableDeclaration v:
+                Writer.Write(VariableIdentifier(v));
+                break;
+            case ParameterDeclaration p:
+                Writer.Write(p.Name);
+                break;
+            default:
+                Writer.Write(expr.Variable.Name);
+                break;
+        }
     }
 
     public async ValueTask VisitFormalParameterExpression(FormalParameterExpression expr)

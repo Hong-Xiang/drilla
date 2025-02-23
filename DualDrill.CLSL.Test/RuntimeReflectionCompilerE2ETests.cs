@@ -13,6 +13,11 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Output.WriteLine(await cfg.Dump());
         Output.WriteLine(sep);
 
+        cfg = cfg.EliminateBlockValueTransfer();
+        Output.WriteLine("=== Remove Outputs ===");
+        Output.WriteLine(await cfg.Dump());
+        Output.WriteLine(sep);
+
         var cfgOp = cfg.BasicBlockTransformStatementsToInstructions()
                        .ReplaceOperationCallsToOperationInstruction();
         Output.WriteLine("=== Parsed(Op) ===");
@@ -23,6 +28,10 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Output.WriteLine("=== SCF ===");
         Output.WriteLine(await scf.Dump());
         Output.WriteLine(sep);
+        // scf = scf.Simplify();
+        // Output.WriteLine("=== SCF (Simplified) ===");
+        // Output.WriteLine(await scf.Dump());
+        // Output.WriteLine(sep);
         var ast = scf.ToAbstractSyntaxTreeFunctionBody();
         Output.WriteLine("=== AST ===");
         Output.WriteLine(await ast.Dump());

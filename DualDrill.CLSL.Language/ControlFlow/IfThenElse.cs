@@ -21,6 +21,9 @@ public sealed class IfThenElse(
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
         TrueBody.LocalVariables.Concat(FalseBody.LocalVariables);
 
+    public TResult Accept<TResult>(IStructuredControlFlowRegion.IRegionPatternVisitor<TResult> pattern)
+        => pattern.VisitIfThenElse(this);
+
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
         writer.WriteLine("if:");
