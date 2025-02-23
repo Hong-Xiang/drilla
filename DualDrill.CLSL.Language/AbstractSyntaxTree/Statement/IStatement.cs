@@ -60,6 +60,12 @@ public interface IStatementVisitor<T>
         where TRank : IRank<TRank>
         where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
         where TElement : IScalarType<TElement>;
+
+    T VisitVectorComponentSet<TRank, TElement, TComponent>(VectorComponentSetStatement<TRank, TElement, TComponent> stmt)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>
+        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>;
+
 }
 
 public static class StatementExtension

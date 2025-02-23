@@ -64,7 +64,6 @@ public interface IExpressionVisitor<T>
         where TComponent : Swizzle.ISizedComponent<TRank, TComponent>;
 
     T VisitFormalParameterExpression(FormalParameterExpression expr);
-    T VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr);
     T VisitNamedComponentExpression(NamedComponentExpression expr);
 }
 

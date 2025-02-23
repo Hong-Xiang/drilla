@@ -267,19 +267,24 @@ public sealed class WgslFunctionBodyVisitor(IndentedTextWriter Writer)
         where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
     {
         await stmt.Target.Accept(this);
-        Writer.WriteLine(" = ");
+        Writer.Write(" = ");
         await stmt.Value.Accept(this);
     }
 
-    public async ValueTask VisitVectorSwizzleAccessExpression(VectorSwizzleAccessExpression expr)
+    public async ValueTask
+        VisitVectorComponentSet<TRank, TElement, TComponent>(
+            VectorComponentSetStatement<TRank, TElement, TComponent> stmt) where TRank : IRank<TRank>
+                                                                           where TElement : IScalarType<TElement>
+                                                                           where TComponent : Swizzle.ISizedComponent<
+                                                                               TRank, TComponent>
     {
-        await expr.Base.Accept(this);
-        Writer.Write('.');
-        foreach (SwizzleComponent c in expr.Components)
-        {
-            Writer.Write(c);
-        }
+        await stmt.Target.Accept(this);
+        Writer.Write(".");
+        Writer.Write(TComponent.Instance.Name);
+        Writer.Write(" = ");
+        await stmt.Value.Accept(this);
     }
+
 
     public async ValueTask VisitVectorSwizzleGetExpression<TPattern, TElement>(IUnaryExpression expr)
         where TPattern : Swizzle.IPattern<TPattern>

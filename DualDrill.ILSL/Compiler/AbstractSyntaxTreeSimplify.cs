@@ -1,12 +1,5 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using System;
-using System.Collections.Generic;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -26,6 +19,14 @@ internal sealed class AbstractSyntaxTreeSimplify
         where TRank : IRank<TRank>
         where TElement : IScalarType<TElement>
         where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
+        => stmt;
+
+    public IStatement
+        VisitVectorComponentSet<TRank, TElement, TComponent>(
+            VectorComponentSetStatement<TRank, TElement, TComponent> stmt) where TRank : IRank<TRank>
+                                                                           where TElement : IScalarType<TElement>
+                                                                           where TComponent : Swizzle.ISizedComponent<
+                                                                               TRank, TComponent>
         => stmt;
 
     public IStatement VisitBreak(BreakStatement stmt)

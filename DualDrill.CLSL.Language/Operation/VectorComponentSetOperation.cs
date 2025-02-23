@@ -46,12 +46,13 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
             => visitor.VisitVectorComponentSet<TRank, TVector, TComponent>();
     }
 
-    public IStatement CreateStatement(IExpression target, IExpression value)
+    record struct SizedVecStmtVisitor(IExpression Target, IExpression Value)
+        : ISizedVecType<TRank, TVector>.ISizedVisitor<IStatement>
     {
-        return new SimpleAssignmentStatement(
-            new VectorSwizzleAccessExpression(target, [TComponent.Instance.LegacySwizzleComponent]),
-            value,
-            AssignmentOp.Assign
-        );
+        public IStatement Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement>
+            => new VectorComponentSetStatement<TRank, TElement, TComponent>(Target, Value);
     }
+
+    public IStatement CreateStatement(IExpression target, IExpression value)
+        => TVector.Instance.Accept(new SizedVecStmtVisitor(target, value));
 }
