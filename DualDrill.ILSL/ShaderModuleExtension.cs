@@ -402,50 +402,29 @@ public static class ShaderModuleExtension
     }
 
     public static async ValueTask<string> Dump(
-        this ShaderModuleDeclaration<FunctionBody<UnstructuredStackInstructionSequence>> module)
+        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> module)
     {
         var sw = new StringWriter();
         var isw = new IndentedTextWriter(sw);
         isw.Write(module.GetType().CSharpFullName());
-        var visitor = new ModuleToCodeVisitor<FunctionBody<UnstructuredStackInstructionSequence>>(isw, module, (b) =>
+        var visitor = new ModuleToCodeVisitor<ControlFlowGraphFunctionBody<IStackStatement>>(isw, module, (cfg) =>
         {
-            var labelIndex = b.Body.Instructions.OfType<LabelInstruction>()
-                              .Select(inst => inst.Label)
-                              .Distinct()
-                              .Index()
-                              .ToDictionary(x => x.Item, x => x.Index);
-            var variables = b.Body.Instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>()
-                             .Select(x => x.Target)
-                             .Concat(b.Body.Instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>()
-                                      .Select(x => x.Target))
-                             .Concat(
-                                 b.Body.Instructions.OfType<LoadSymbolAddressInstruction<VariableDeclaration>>()
-                                  .Select(x => x.Target))
-                             .Where(v => v.DeclarationScope == DeclarationScope.Function)
-                             .Distinct()
-                             .Index()
-                             .ToDictionary(x => x.Item, x => x.Index);
-
-            string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
-
-            string VariableName(VariableDeclaration variable) =>
-                variable.DeclarationScope == DeclarationScope.Function
-                    ? $"var#{variables[variable]} {variable}"
-                    : $"module var {variable.Name}";
-
-            foreach (var (k, v) in variables)
+            foreach (var (index, v) in cfg.LocalVariables.Index())
             {
-                isw.WriteLine($"var#{v} {k}");
+                isw.WriteLine($"var#{index} {cfg.VariableName(v)} : {v.Type.Name}");
             }
 
             isw.WriteLine();
 
-            foreach (var instruction in b.Body.Instructions)
+            foreach (var (lableIndex, label) in cfg.Labels.Index())
             {
-                instruction.Dump(LabelName, VariableName, isw);
-                if (instruction is IJumpInstruction)
+                isw.WriteLine($"label#{lableIndex} {cfg.LabelName(label)}");
+                using (isw.IndentedScope())
                 {
-                    isw.WriteLine();
+                    foreach (var e in cfg[label].Elements)
+                    {
+                        isw.WriteLine(e);
+                    }
                 }
             }
 

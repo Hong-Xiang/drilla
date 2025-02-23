@@ -51,14 +51,6 @@ public sealed class FunctionBody<TBodyData>
     public int LabelIndex(Label label)
         => LabelIndices[label];
 
-    public string VariableName(VariableDeclaration variable)
-    {
-        return variable.DeclarationScope == DeclarationScope.Function
-            ? $"var%{VariableIndex(variable)} {variable}"
-            : $"module var {variable.Name}";
-    }
-
-    public string LabelName(Label label) => $"label%{LabelIndex(label)} {label}";
 
     public void Dump(IndentedTextWriter writer)
     {

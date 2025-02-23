@@ -13,8 +13,6 @@ namespace DualDrill.CLSL.Language.Declaration;
 [JsonDerivedType(typeof(MemberDeclaration), nameof(MemberDeclaration))]
 [JsonDerivedType(typeof(VariableDeclaration), nameof(VariableDeclaration))]
 [JsonDerivedType(typeof(ValueDeclaration), nameof(ValueDeclaration))]
-[JsonDerivedType(typeof(ShaderModuleDeclaration<FunctionBody<UnstructuredStackInstructionSequence>>),
-    nameof(ShaderModuleDeclaration<FunctionBody<UnstructuredStackInstructionSequence>>))]
 [JsonDerivedType(typeof(ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>),
     nameof(ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>))]
 [JsonDerivedType(typeof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>),

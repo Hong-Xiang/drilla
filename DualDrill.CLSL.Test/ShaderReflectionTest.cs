@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.Graphics;
 using System.Collections.Immutable;
 using System.Numerics;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Reflection;
 
 namespace DualDrill.CLSL.Test;
@@ -24,7 +25,7 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = ShaderModuleDeclaration<FunctionBody<UnstructuredStackInstructionSequence>>.Empty with
+        var module = ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>>.Empty with
         {
             Declarations =
             [

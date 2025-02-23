@@ -1,7 +1,6 @@
 ﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using Lokad.ILPack.IL;
@@ -451,49 +450,6 @@ public sealed record class RuntimeReflectionParser(
         );
 
         return new ControlFlowGraphFunctionBody<IStackStatement>(cfg);
-    }
-
-    public UnstructuredStackInstructionSequence ParseMethodBody(FunctionDeclaration f,
-        MethodBodyAnalysisModel model)
-    {
-        var methodTable = new CompilationContext(Context);
-        foreach (var v in model.LocalVariables)
-        {
-            _ = ParseLocalVariable(v, methodTable);
-        }
-
-        var visited = new bool[model.InstructionCount];
-        var results = new List<IStackInstruction>[model.InstructionCount];
-        for (var i = 0; i < results.Length; i++)
-        {
-            results[i] = [];
-        }
-
-        Stack<int> nexts = [];
-        nexts.Push(0);
-        while (nexts.Count > 0)
-        {
-            var ip = nexts.Pop();
-            if (visited[ip])
-            {
-                continue;
-            }
-
-            visited[ip] = true;
-            // visitor.Statements = results[ip];
-            throw new NotImplementedException();
-            // model.Accept<RuntimeReflectionParserInstructionVisitor, Unit>(visitor, ip);
-            int[] currentNexts = [];
-            foreach (var n in currentNexts)
-            {
-                if (n < model.InstructionCount && !visited[n])
-                {
-                    nexts.Push(n);
-                }
-            }
-        }
-
-        return new(results.SelectMany(x => x));
     }
 
     bool IsMethodDefinition(MethodBase m)

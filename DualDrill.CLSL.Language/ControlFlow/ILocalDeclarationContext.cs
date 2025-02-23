@@ -20,6 +20,19 @@ public interface ILocalDeclarationReferencingElement
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables { get; }
 }
 
+public static class LocalDeclarationContextExtensions
+{
+    public static string VariableName(this ILocalDeclarationContext context, VariableDeclaration variable)
+    {
+        return variable.DeclarationScope == DeclarationScope.Function
+            ? $"var%{context.VariableIndex(variable)} {variable}"
+            : $"module var {variable.Name}";
+    }
+
+    public static string LabelName(this ILocalDeclarationContext context, Label label) =>
+        $"label%{context.LabelIndex(label)} {label}";
+}
+
 public sealed class LocalDeclarationContext : ILocalDeclarationContext
 {
     public LocalDeclarationContext(IEnumerable<ILocalDeclarationReferencingElement> elements)
