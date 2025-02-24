@@ -69,6 +69,12 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ITex
             writer.WriteLine(this.LabelName(label));
             using (writer.IndentedScope())
             {
+                Graph.Successor(label).Dump(context, writer);
+            }
+
+            writer.WriteLine();
+            using (writer.IndentedScope())
+            {
                 var bb = this[label];
                 bb.Dump(context, writer);
             }

@@ -106,17 +106,20 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                 ifRegion => ifRegion.Should().Satisfy<IfThenElse>(
                     ifThenElse =>
                     {
-                        ifThenElse.TrueBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block>().Which.Body.Elements.Should()
+                        ifThenElse.TrueBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block>().Which
+                                  .Body.Elements.Should()
                                   .SatisfyRespectively(
                                       tInst => tInst
                                                .Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
                                                .Should().Be(1),
                                       ret => ret.Should().BeOfType<ReturnInstruction>()
                                   );
-                        ifThenElse.FalseBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block>().Which.Body.Elements.Should()
+                        ifThenElse.FalseBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block>().Which
+                                  .Body.Elements.Should()
                                   .SatisfyRespectively(
-                                      fInst => fInst.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
-                                                    .Should().Be(2),
+                                      fInst => fInst
+                                               .Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
+                                               .Should().Be(2),
                                       ret => ret.Should().BeOfType<ReturnInstruction>()
                                   );
                     })
@@ -189,6 +192,23 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                     .Which.Body.Elements.Should().ContainSingle()
                     .Which.Should().BeOfType<ReturnInstruction>()
         );
+    }
+
+    [Fact]
+    public void SimpleLoopShouldWork()
+    {
+        // cfg:
+        // b0  (loop init)
+        // /
+        // + ----------- +
+        // |             |
+        // v             |
+        // b1 - true -> b3
+        // |
+        // false
+        // |
+        // v
+        // b2
     }
 
     [Fact]

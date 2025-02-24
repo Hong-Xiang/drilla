@@ -6,10 +6,21 @@ namespace DualDrill.CLSL.Test.ShaderModule;
 
 internal sealed class DevelopShaderModule : ISharpShader
 {
+    // [Vertex]
+    // public static bool ImplicitConvertUIntMax(uint a)
+    // {
+    //     return a == uint.MaxValue;
+    // }
+
     [Vertex]
-    public static bool ImplicitConvertUIntMax(uint a)
+    public static int SimpleLoop(int x)
     {
-        return a == uint.MaxValue;
+        for (var i = 0; i < 300; i++)
+        {
+            x += 5;
+        }
+
+        return x;
     }
 }
 
@@ -23,7 +34,18 @@ internal sealed class DevelopTestShaderModule
     }
 
     [Vertex]
-    public static uint SimpleLoop(uint x)
+    public static int SimpleLoop(int x)
+    {
+        for (var i = 0; i < 300; i++)
+        {
+            x += 5;
+        }
+
+        return x;
+    }
+
+    [Vertex]
+    public static int LoopWithInnerConditionalBreak(int x)
     {
         for (var i = 0; i < 300; i++)
         {

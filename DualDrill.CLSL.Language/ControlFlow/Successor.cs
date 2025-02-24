@@ -1,7 +1,9 @@
-﻿using DotNext.Patterns;
+﻿using System.CodeDom.Compiler;
+using DotNext.Patterns;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.Common;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
@@ -14,6 +16,7 @@ public enum SuccessorKind
 }
 
 public interface ISuccessor
+    : ITextDumpable<ILocalDeclarationContext>
 {
     void Traverse(Action<Label> action);
 }
@@ -24,6 +27,11 @@ public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
     {
         action(Target);
     }
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine($"br -> {context.LabelName(Target)}");
+    }
 }
 
 public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTarget) : ISuccessor
@@ -33,12 +41,22 @@ public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTar
         action(TrueTarget);
         action(FalseTarget);
     }
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine($"br_if -> t: {context.LabelName(TrueTarget)} f: {context.LabelName(FalseTarget)}");
+    }
 }
 
 public sealed record class TerminateSuccessor() : ISuccessor
 {
     public void Traverse(Action<Label> action)
     {
+    }
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.WriteLine("return");
     }
 }
 
