@@ -152,6 +152,20 @@ public class ParseBodyTest
              );
     }
 
+    [Fact]
+    public void ParseImplicitConvertUIntMaxShouldWork()
+    {
+        var f = new FunctionDeclaration(
+            nameof(DevelopTestShaderModule.ImplicitConvertUIntMax),
+            [new ParameterDeclaration("a", ShaderType.U32, [])],
+            new FunctionReturn(ShaderType.U32, []),
+            []
+        );
+        var result = ParseMethod2(f,
+            MethodHelper.GetMethod<uint, bool>(DevelopTestShaderModule.ImplicitConvertUIntMax));
+
+        var entry = result[result.Entry];
+    }
 
     [Fact]
     public void BasicMethodInvocationParseShouldWork()

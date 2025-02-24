@@ -136,14 +136,33 @@ public static class ShaderModuleExtension
         this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module
     )
     {
+        // TODO: proper handling multiple run of simplify
+        for (int i = 0; i < 4; i++)
+        {
+            module = module.Simplify1();
+        }
+
+        return module;
+    }
+
+    public static ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Simplify1(
+        this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module
+    )
+    {
         return module.MapBody((m, f, fBody) =>
         {
-            var counter = new StructuredControlFlowVariableUsageCounter();
-            _ = fBody.Root.Accept(counter);
+            var result = fBody.Root;
+            var counter = new StructuredControlFlowLocalReferencesUsageCounter();
+            _ = result.Accept(counter);
             var vSt = counter.VariableStoreCount.ToFrozenDictionary();
             var vLd = counter.VariableLoadCount.ToFrozenDictionary();
-            var simplifer = new StructuredControlFlowSimplifier(vLd, vSt);
-            var result = fBody.Root.Accept(simplifer);
+
+            var simplifer = new StructuredControlFlowSimplifier(vLd, vSt,
+                counter.DirectJumpLabels.ToFrozenSet(),
+                counter.NestedJumpLabels.ToFrozenSet()
+            );
+            result = result.Accept(simplifer);
+
             return new StructuredStackInstructionFunctionBody(result);
         });
     }

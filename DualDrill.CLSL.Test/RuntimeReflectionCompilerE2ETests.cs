@@ -28,10 +28,10 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Output.WriteLine("=== SCF ===");
         Output.WriteLine(await scf.Dump());
         Output.WriteLine(sep);
-        // scf = scf.Simplify();
-        // Output.WriteLine("=== SCF (Simplified) ===");
-        // Output.WriteLine(await scf.Dump());
-        // Output.WriteLine(sep);
+        scf = scf.Simplify();
+        Output.WriteLine("=== SCF (Simplified) ===");
+        Output.WriteLine(await scf.Dump());
+        Output.WriteLine(sep);
         var ast = scf.ToAbstractSyntaxTreeFunctionBody();
         Output.WriteLine("=== AST ===");
         Output.WriteLine(await ast.Dump());
@@ -53,6 +53,13 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     public async Task MinimumTriangleShaderShouldWork()
     {
         var shader = new ShaderModule.MinimumHelloTriangleShaderModule();
+        await TestShader(shader);
+    }
+
+    [Fact]
+    public async Task AdHocDevelopTest()
+    {
+        var shader = new ShaderModule.DevelopShaderModule();
         await TestShader(shader);
     }
 

@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using DotNext.Collections.Generic;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
@@ -11,9 +12,13 @@ namespace DualDrill.CLSL.Compiler;
 public class
     StructuredControlFlowSimplifier(
         FrozenDictionary<VariableDeclaration, int> VariableLoadCount,
-        FrozenDictionary<VariableDeclaration, int> VariableStoreCount
-    ) : IStructuredControlFlowRegion.IRegionPatternVisitor<IStructuredControlFlowRegion>
+        FrozenDictionary<VariableDeclaration, int> VariableStoreCount,
+        FrozenSet<Label> DirectJumpTargets,
+        FrozenSet<Label> NestedJumpTargets)
+    : IStructuredControlFlowRegion.IRegionPatternVisitor<IStructuredControlFlowRegion>
 {
+    private FrozenSet<Label> JumpTargets = [..DirectJumpTargets, ..NestedJumpTargets];
+
     private Stack<Label?> LastTarget = [];
 
     public IStructuredControlFlowRegion VisitBlock(Block block)
@@ -37,13 +42,45 @@ public class
         var tb = ProcessSequence(ifThenElse.TrueBody);
         var fb = ProcessSequence(ifThenElse.FalseBody);
         return new IfThenElse(tb, fb);
+
+        // var headSame = 0;
+        // while (headSame < tb.Elements.Length
+        //        && headSame < fb.Elements.Length
+        //        && tb.Elements[headSame].Equals(fb.Elements[headSame]))
+        // {
+        //     headSame++;
+        // }
+        //
+        // var tailSame = 0;
+        // while (tailSame < tb.Elements.Length - headSame
+        //        && tailSame < fb.Elements.Length - headSame
+        //        && tb.Elements[^(tailSame + 1)].Equals(fb.Elements[^(tailSame + 1)]))
+        // {
+        //     tailSame++;
+        // }
+        //
+        // var head = tb.Elements[..headSame];
+        // var tail = tailSame > 0 ? tb.Elements[^tailSame..] : [];
+        //
+        // var tbMiddle = tb.Elements[headSame..(tb.Elements.Length - tailSame)];
+        // var fbMiddle = fb.Elements[headSame..(fb.Elements.Length - tailSame)];
+        //
+        // var newTb = new StructuredControlFlowElementSequence(tbMiddle);
+        // var newFb = new StructuredControlFlowElementSequence(fbMiddle);
+        //
+        // var result = new List<IStructuredControlFlowElement>(head);
+        // result.Add(new IfThenElse(newTb, newFb));
+        // result.AddRange(tail);
+        //
+        // return new Block(Label.Create(), new StructuredControlFlowElementSequence([..result]));
     }
 
     StructuredControlFlowElementSequence ProcessSequence(StructuredControlFlowElementSequence sequence)
     {
         var result = new List<IStructuredControlFlowElement>();
         var ip = 0;
-        while (ip < sequence.Elements.Length)
+        bool jumped = false;
+        while (ip < sequence.Elements.Length && !jumped)
         {
             var element = sequence.Elements[ip];
             var isLast = ip == sequence.Elements.Length - 1;
@@ -57,11 +94,17 @@ public class
                     }
 
                     result.Add(ifThenElse.Accept(this));
+
                     if (!isLast)
                     {
                         LastTarget.Pop();
                     }
 
+                    break;
+                }
+                case Block block when !JumpTargets.Contains(block.Label):
+                {
+                    result.AddRange(block.Body.Elements);
                     break;
                 }
                 case IStructuredControlFlowRegion region:
@@ -78,6 +121,7 @@ public class
                     }
 
                     result.Add(element);
+                    jumped = true;
                     break;
                 }
                 case BrIfInstruction { Target: var target }:
@@ -88,7 +132,9 @@ public class
                         continue;
                     }
 
+
                     result.Add(element);
+                    jumped = true;
                     break;
                 }
                 case StoreSymbolInstruction<VariableDeclaration> stloc:
@@ -103,11 +149,16 @@ public class
                             ip += 2;
                             continue;
                         }
+                        else
+                        {
+                            result.Add(stloc);
+                        }
                     }
                     else
                     {
                         result.Add(ShaderInstruction.Pop());
                     }
+
 
                     break;
                 }
@@ -123,20 +174,29 @@ public class
     }
 }
 
-public sealed class StructuredControlFlowVariableUsageCounter : IStructuredControlFlowRegion.IRegionPatternVisitor<Unit>
+public sealed class
+    StructuredControlFlowLocalReferencesUsageCounter : IStructuredControlFlowRegion.IRegionPatternVisitor<Unit>
 {
     public Dictionary<VariableDeclaration, int> VariableStoreCount { get; } = [];
     public Dictionary<VariableDeclaration, int> VariableLoadCount { get; } = [];
+    public HashSet<Label> NestedJumpLabels { get; } = [];
+    public HashSet<Label> DirectJumpLabels { get; } = [];
+
+    public Stack<Label> CurrentTarget = [];
 
     public Unit VisitBlock(Block block)
     {
+        CurrentTarget.Push(block.Label);
         ProcessSequence(block.Body);
+        CurrentTarget.Pop();
         return default;
     }
 
     public Unit VisitLoop(Loop loop)
     {
+        CurrentTarget.Push(loop.Label);
         ProcessSequence(loop.Body);
+        CurrentTarget.Pop();
         return default;
     }
 
@@ -159,6 +219,20 @@ public sealed class StructuredControlFlowVariableUsageCounter : IStructuredContr
             {
                 switch (e)
                 {
+                    case BrInstruction { Target: var target }:
+                    {
+                        // due to validation, target must exist in current stack
+                        if (CurrentTarget.Peek().Equals(target))
+                        {
+                            DirectJumpLabels.Add(target);
+                        }
+                        else
+                        {
+                            NestedJumpLabels.Add(target);
+                        }
+
+                        break;
+                    }
                     case LoadSymbolValueInstruction<VariableDeclaration> load:
                     {
                         if (VariableLoadCount.TryGetValue(load.Target, out int count))

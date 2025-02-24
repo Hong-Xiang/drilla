@@ -4,6 +4,15 @@ using System.Numerics;
 
 namespace DualDrill.CLSL.Test.ShaderModule;
 
+internal sealed class DevelopShaderModule : ISharpShader
+{
+    [Vertex]
+    public static bool ImplicitConvertUIntMax(uint a)
+    {
+        return a == uint.MaxValue;
+    }
+}
+
 internal sealed class DevelopTestShaderModule
     : ISharpShader
 {
@@ -13,6 +22,21 @@ internal sealed class DevelopTestShaderModule
         return x >= y ? x : uint.MaxValue;
     }
 
+    [Vertex]
+    public static uint SimpleLoop(uint x)
+    {
+        for (var i = 0; i < 300; i++)
+        {
+            if (x > 2048)
+            {
+                break;
+            }
+
+            x += 5;
+        }
+
+        return x;
+    }
 
     [Vertex]
     public static int MinimumIfThenElse(int a)
