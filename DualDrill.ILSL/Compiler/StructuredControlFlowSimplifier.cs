@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Collections.Immutable;
 using DotNext.Collections.Generic;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
@@ -15,33 +16,62 @@ public class
         FrozenDictionary<VariableDeclaration, int> VariableStoreCount,
         FrozenSet<Label> DirectJumpTargets,
         FrozenSet<Label> NestedJumpTargets)
-    : IStructuredControlFlowRegion.IRegionPatternVisitor<IStructuredControlFlowRegion>
+    : IStructuredControlFlowRegion.IRegionPatternVisitor<IEnumerable<IStructuredControlFlowElement>>
 {
     private FrozenSet<Label> JumpTargets = [..DirectJumpTargets, ..NestedJumpTargets];
 
     private Stack<Label?> LastTarget = [];
 
-    public IStructuredControlFlowRegion VisitBlock(Block block)
+    private HashSet<Label> UsedLabels = [];
+
+    public IEnumerable<IStructuredControlFlowElement> VisitBlock(Block block)
     {
         LastTarget.Push(block.Label);
         var seq = ProcessSequence(block.Body);
         LastTarget.Pop();
-        return new Block(block.Label, seq);
+        if (UsedLabels.Contains(block.Label))
+        {
+            UsedLabels.Remove(block.Label);
+            if (seq.Elements[^1] is BrInstruction { Target: var t }
+                && t.Equals(block.Label))
+            {
+                return [new Block(block.Label, new([..seq.Elements.Take(seq.Elements.Length - 1)]))];
+            }
+            else
+            {
+                return [new Block(block.Label, seq)];
+            }
+        }
+        else
+        {
+            return seq.Elements;
+        }
     }
 
-    public IStructuredControlFlowRegion VisitLoop(Loop loop)
+    public IEnumerable<IStructuredControlFlowElement> VisitLoop(Loop loop)
     {
         LastTarget.Push(null);
         var seq = ProcessSequence(loop.Body);
         LastTarget.Pop();
-        return new Loop(loop.Label, seq);
+        UsedLabels.Remove(loop.Label);
+        return [new Loop(loop.Label, seq)];
     }
 
-    public IStructuredControlFlowRegion VisitIfThenElse(IfThenElse ifThenElse)
+    public IEnumerable<IStructuredControlFlowElement> VisitIfThenElse(IfThenElse ifThenElse)
     {
         var tb = ProcessSequence(ifThenElse.TrueBody);
         var fb = ProcessSequence(ifThenElse.FalseBody);
-        return new IfThenElse(tb, fb);
+        if (tb.Elements.Length > 0
+            && fb.Elements.Length > 0
+            && tb.Elements[^1] is BrInstruction { Target: var tt }
+            && fb.Elements[^1] is BrInstruction { Target: var ft }
+            && tt.Equals(ft))
+        {
+            tb = new([..tb.Elements.Take(tb.Elements.Length - 1)]);
+            fb = new([..tb.Elements.Take(tb.Elements.Length - 1)]);
+        }
+
+        return [new IfThenElse(tb, fb)];
 
         // var headSame = 0;
         // while (headSame < tb.Elements.Length
@@ -93,7 +123,7 @@ public class
                         LastTarget.Push(null);
                     }
 
-                    result.Add(ifThenElse.Accept(this));
+                    result.AddRange(ifThenElse.Accept(this));
 
                     if (!isLast)
                     {
@@ -102,14 +132,9 @@ public class
 
                     break;
                 }
-                case Block block when !JumpTargets.Contains(block.Label):
-                {
-                    result.AddRange(block.Body.Elements);
-                    break;
-                }
                 case IStructuredControlFlowRegion region:
                 {
-                    result.Add(region.Accept(this));
+                    result.AddRange(region.Accept(this));
                     break;
                 }
                 case BrInstruction { Target: var target }:
@@ -119,6 +144,8 @@ public class
                         ip++;
                         continue;
                     }
+
+                    UsedLabels.Add(target);
 
                     result.Add(element);
                     jumped = true;
@@ -133,6 +160,7 @@ public class
                     }
 
 
+                    UsedLabels.Add(target);
                     result.Add(element);
                     jumped = true;
                     break;

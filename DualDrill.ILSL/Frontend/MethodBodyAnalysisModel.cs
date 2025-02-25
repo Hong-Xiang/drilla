@@ -132,13 +132,17 @@ public sealed class MethodBodyAnalysisModel
             }
         }
 
-        return builder.Build((label, range) => new CilInstructionBlock(
-            label,
-            range.Start,
-            range.Count,
-            Offsets[range.Start],
-            Offsets[range.Start + range.Count] - Offsets[range.Start]
-        ));
+        return builder.Build((label, range) =>
+        {
+            var count = range.Count;
+            return new CilInstructionBlock(
+                label,
+                range.Start,
+                range.Count,
+                Offsets[range.Start],
+                Offsets[range.Start + range.Count] - Offsets[range.Start]
+            );
+        });
 
         // var isLead = new bool[Instructions.Length];
         //

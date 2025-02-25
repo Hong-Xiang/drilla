@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -77,12 +78,30 @@ internal sealed class AbstractSyntaxTreeSimplify
 
     public IStatement VisitIf(IfStatement stmt)
     {
-        return new IfStatement(
-            stmt.Expr,
-            (CompoundStatement)stmt.TrueBody.Accept(this),
-            (CompoundStatement)stmt.FalseBody.Accept(this),
-            stmt.Attributes
-        );
+        var tb = (CompoundStatement)stmt.TrueBody.Accept(this);
+        var fb = (CompoundStatement)stmt.FalseBody.Accept(this);
+        if (stmt.Expr is IUnaryExpression
+            {
+                Operation: LogicalNotOperation,
+                Source: var expr
+            })
+        {
+            return new IfStatement(
+                expr,
+                fb,
+                tb,
+                stmt.Attributes
+            );
+        }
+        else
+        {
+            return new IfStatement(
+                stmt.Expr,
+                tb,
+                fb,
+                stmt.Attributes
+            );
+        }
     }
 
     public IStatement VisitIncrement(IncrementStatement stmt)

@@ -40,6 +40,7 @@ public sealed record class SimpleAssignmentStatement(
             {
                 L.Dump(context, writer);
             }
+
             writer.WriteLine("value:");
             using (writer.IndentedScope())
             {
@@ -71,6 +72,8 @@ public sealed record class SimpleAssignmentStatement(
             VariableIdentifierExpression { Variable: VariableDeclaration v } =>
                 [..R.ToInstructions(), ShaderInstruction.Store(v)],
             VariableIdentifierExpression { Variable: ParameterDeclaration p } =>
+                [..R.ToInstructions(), ShaderInstruction.Store(p)],
+            FormalParameterExpression { Parameter: var p } =>
                 [..R.ToInstructions(), ShaderInstruction.Store(p)],
             NamedComponentExpression
                 {

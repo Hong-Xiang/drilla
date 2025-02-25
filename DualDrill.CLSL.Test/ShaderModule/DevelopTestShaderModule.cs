@@ -12,11 +12,27 @@ internal sealed class DevelopShaderModule : ISharpShader
     //     return a == uint.MaxValue;
     // }
 
+    // [Vertex]
+    // public static int SimpleLoop(int x)
+    // {
+    //     for (var i = 0; i < 300; i++)
+    //     {
+    //         x += 5;
+    //     }
+    //
+    //     return x;
+    // }
+
     [Vertex]
-    public static int SimpleLoop(int x)
+    public static int LoopWithInnerConditionalBreak(int x)
     {
         for (var i = 0; i < 300; i++)
         {
+            if (x > 2048)
+            {
+                break;
+            }
+
             x += 5;
         }
 

@@ -198,17 +198,75 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     public void SimpleLoopShouldWork()
     {
         // cfg:
-        // b0  (loop init)
-        // /
-        // + ----------- +
-        // |             |
-        // v             |
-        // b1 - true -> b3
-        // |
-        // false
-        // |
-        // v
-        // b2
+        // b0  (loop init)--false-+
+        // |                      |
+        // true                   |
+        // |                      |
+        // + ----------- +        |
+        // |             |        |
+        // v             |        |
+        // b1 - true -> b2        |
+        // |                      |
+        // false                  |
+        // |                      |
+        // v                      |  
+        // b3<--------------------+
+
+        var b0 = Label.Create("b0");
+        var b1 = Label.Create("b1");
+        var b2 = Label.Create("b2");
+        var b3 = Label.Create("b3");
+
+        var v = new VariableDeclaration(DeclarationScope.Function, "v", ShaderType.I32, []);
+
+        var cfg = new ControlFlowGraph<BasicBlock<IInstruction>>(
+            b0,
+            ControlFlowGraph.CreateDefinitions<BasicBlock<Inst>>(new()
+            {
+                [b0] = new(Successor.Conditional(b1, b3), BasicBlock<Inst>.Create([
+                    ShaderInstruction.Const(Literal.Create(1)),
+                    ShaderInstruction.Store(v),
+                    ShaderInstruction.Const(Literal.Create(false))
+                ])),
+                [b1] = new(Successor.Conditional(b2, b3), BasicBlock<Inst>.Create([
+                    ShaderInstruction.Const(Literal.Create(true))
+                ])),
+                [b2] = new(Successor.Unconditional(b1), BasicBlock<Inst>.Create([
+                    ShaderInstruction.Const(Literal.Create(2)),
+                    ShaderInstruction.Store(v)
+                ])),
+                [b3] = new(Successor.Terminate(), BasicBlock<Inst>.Create([
+                    ShaderInstruction.Load(v),
+                ])),
+            })
+        );
+
+        cfg.Labels().Should().BeEquivalentTo([b0, b1, b2, b3]);
+        var dt = cfg.GetDominatorTree();
+        dt.GetChildren(b0).Should().BeEquivalentTo([b1, b3]);
+        dt.GetChildren(b1).Should().BeEquivalentTo([b2]);
+        cfg.IsMergeNode(b0).Should().Be(false);
+        cfg.IsMergeNode(b1).Should().Be(true);
+        cfg.IsMergeNode(b2).Should().Be(false);
+        cfg.IsMergeNode(b3).Should().Be(true);
+
+        // expected
+        // block @b0
+        //   ... b0 ...
+        //   if
+        //      loop @b1
+        //          ...b1
+        //          if
+        //              ... b2 ...
+        //              br b1
+        //          else
+        //          br b0
+        // block @b3
+        //   ...b3...
+
+        var result = cfg.ToStructuredControlFlow();
+
+        Dump(result);
     }
 
     [Fact]

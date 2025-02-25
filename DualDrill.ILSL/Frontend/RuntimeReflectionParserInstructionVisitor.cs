@@ -389,12 +389,16 @@ sealed class RuntimeReflectionParserInstructionVisitor(
     public Unit VisitStoreArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
         var v = CurrentStack.Pop();
-        if (!p.Type.Equals(v.Type))
+        if (p.Type.Equals(v.Type))
         {
             Statements.Add(SyntaxFactory.AssignStatement(
                 SyntaxFactory.ArgIdentifier(p),
                 v
             ));
+        }
+        else
+        {
+            throw new NotSupportedException($"store {v.Type.Name} to {p.Type.Name} arg");
         }
 
         return default;

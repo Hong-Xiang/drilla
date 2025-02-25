@@ -66,26 +66,25 @@ public static partial class ShaderModuleExtension
             return [DoTree(target)];
         }
 
-        Block ToBlock(
-            IEnumerable<IStructuredControlFlowElement> elements
-        )
-        {
-            ImmutableArray<IStructuredControlFlowElement> es = [.. elements];
-            return es switch
-            {
-                [Block b] => b,
-                _ => new Block(Label.Create(), new(es))
-            };
-        }
+        // Block ToBlock(
+        //     IEnumerable<IStructuredControlFlowElement> elements
+        // )
+        // {
+        //     ImmutableArray<IStructuredControlFlowElement> es = [.. elements];
+        //     return es switch
+        //     {
+        //         [Block b] => b,
+        //         _ => new Block(Label.Create(), new(es))
+        //     };
+        // }
 
         IEnumerable<IStructuredControlFlowElement> NodeWithin(Label target,
             ImmutableArray<Label> children)
         {
-            ImmutableArray<Label> childrenLabels = [.. children];
             var bb = controlFlowGraph[target];
 
 
-            return childrenLabels switch
+            return children switch
             {
                 [] => controlFlowGraph.Successor(target) switch
                 {
@@ -125,6 +124,7 @@ public static partial class ShaderModuleExtension
             var bb = controlFlowGraph[label];
             var mergeChildren = dt.GetChildren(label)
                                   .Where(controlFlowGraph.IsMergeNode)
+                                  .Reverse()
                                   .ToImmutableArray();
             if (cfr.IsLoop(label))
             {

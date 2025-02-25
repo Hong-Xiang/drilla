@@ -12,6 +12,7 @@ using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
+using System.Collections.Immutable;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using ICSharpCode.Decompiler.CSharp.Syntax;
@@ -161,7 +162,14 @@ public static class ShaderModuleExtension
                 counter.DirectJumpLabels.ToFrozenSet(),
                 counter.NestedJumpLabels.ToFrozenSet()
             );
-            result = result.Accept(simplifer);
+            var elements = result.Accept(simplifer).ToImmutableArray();
+            result = elements switch
+            {
+                [Block r] => r,
+                [Loop r] => r,
+                [IfThenElse r] => r,
+                _ => new Block(Label.Create(), new(elements))
+            };
 
             return new StructuredStackInstructionFunctionBody(result);
         });

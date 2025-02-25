@@ -158,7 +158,7 @@ public class ParseBodyTest
         var f = new FunctionDeclaration(
             nameof(DevelopTestShaderModule.ImplicitConvertUIntMax),
             [new ParameterDeclaration("a", ShaderType.U32, [])],
-            new FunctionReturn(ShaderType.U32, []),
+            new FunctionReturn(ShaderType.Bool, []),
             []
         );
         var result = ParseMethod2(f,

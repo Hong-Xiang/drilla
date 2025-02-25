@@ -77,9 +77,9 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
             }
         }
 
-        Writer.WriteLine("} else {");
         if (stmt.FalseBody.Statements.Length > 0)
         {
+            Writer.WriteLine("} else {");
             using (Writer.IndentedScope())
             {
                 await stmt.FalseBody.Accept(this);
