@@ -1,6 +1,9 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Mathematics;
 using System.Numerics;
+using static DualDrill.Mathematics.DMath;
+
+using vec3 = DualDrill.Mathematics.vec3f32;
 
 namespace DualDrill.CLSL.Test.ShaderModule;
 
@@ -24,20 +27,54 @@ internal sealed class DevelopShaderModule : ISharpShader
     // }
 
     [Vertex]
-    public static int LoopWithInnerConditionalBreak(int x)
+    static float SimpleConditionalSwizzle(vec3 p, bool cond)
     {
-        for (var i = 0; i < 300; i++)
-        {
-            if (x > 2048)
-            {
-                break;
-            }
+       // IL_0000: nop
+       // IL_0001: ldarga.s     p
+       // IL_0003: ldarg.1      // cond
+       // IL_0004: brtrue.s     IL_000f
+       //   outputs [ addr<vec3> ] <- stack-top
+       
+       //   inputs [ addr<vec3> ]
+       // IL_0006: ldarga.s     p
+       // IL_0008: call         instance valuetype [DualDrill.Mathematics]DualDrill.Mathematics.vec2f32 [DualDrill.Mathematics]DualDrill.Mathematics.vec3f32::get_xz()
+       // IL_000d: br.s         IL_0016
+       //   outputs [ addr<vec3>, vec2 ] <- stack-top
+       
+       //   inputs [ addr<vec3> ]
+       // IL_000f: ldarga.s     p
+       // IL_0011: call         instance valuetype [DualDrill.Mathematics]DualDrill.Mathematics.vec2f32 [DualDrill.Mathematics]DualDrill.Mathematics.vec3f32::get_zx()
+       //   outputs [ addr<vec3>, vec2 ] <- stack-top
+       
+       // IL_0016: call         instance void [DualDrill.Mathematics]DualDrill.Mathematics.vec3f32::set_xz(valuetype [DualDrill.Mathematics]DualDrill.Mathematics.vec2f32)
+       // IL_001b: nop
+       // IL_001c: ldarga.s     p
+       // IL_001e: call         instance float32 [DualDrill.Mathematics]DualDrill.Mathematics.vec3f32::get_x()
+       // IL_0023: stloc.0      // V_0
+       // IL_0024: br.s         IL_0026
 
-            x += 5;
-        }
-
-        return x;
+       // IL_0026: ldloc.0      // V_0
+       //  IL_0027: ret
+       
+        p.xz = cond ? p.zx : p.xz;
+        return p.x;
     }
+
+    // [Vertex]
+    // public static int LoopWithInnerConditionalBreak(int x)
+    // {
+    //     for (var i = 0; i < 300; i++)
+    //     {
+    //         if (x > 2048)
+    //         {
+    //             break;
+    //         }
+    //
+    //         x += 5;
+    //     }
+    //
+    //     return x;
+    // }
 }
 
 internal sealed class DevelopTestShaderModule

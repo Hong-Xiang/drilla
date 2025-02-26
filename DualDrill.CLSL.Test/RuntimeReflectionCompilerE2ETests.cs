@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Compiler;
+﻿using System.Collections.Immutable;
+using DualDrill.CLSL.Compiler;
 using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
@@ -54,6 +55,35 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     {
         var shader = new ShaderModule.MinimumHelloTriangleShaderModule();
         await TestShader(shader);
+    }
+
+    [Fact]
+    public void ImmutableStackTest()
+    {
+        var s = ImmutableStack<int>.Empty;
+        s = s.Push(1);
+        s = s.Push(2);
+
+        var stmt = new List<int>();
+        ImmutableStack<int> sout = [];
+        foreach (var (idx, v) in s.Index())
+        {
+            Output.WriteLine($"index {idx} -> {v}");
+            stmt.Add(v);
+            sout = sout.Push(v);
+        }
+
+        foreach (var sv in stmt)
+        {
+            Output.WriteLine(sv.ToString());
+        }
+
+        while (!sout.IsEmpty)
+        {
+            var ss = sout.Peek();
+            sout = sout.Pop();
+            Output.WriteLine(ss.ToString());
+        }
     }
 
     [Fact]

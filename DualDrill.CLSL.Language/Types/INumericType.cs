@@ -11,11 +11,16 @@ public interface INumericType : IScalarType
     IOperation GetVectorUnaryNumericOperation<TRank, TOp>()
         where TRank : IRank<TRank>
         where TOp : IUnaryOp<TOp>;
+
+    IUnaryExpressionOperation UnaryArithmeticOperation<TOp>() where TOp : UnaryArithmetic.IOp<TOp>;
 }
 
 public interface INumericType<TSelf> : INumericType, IScalarType<TSelf>
     where TSelf : INumericType<TSelf>
 {
+
+    IUnaryExpressionOperation INumericType.UnaryArithmeticOperation<TOp>()
+        => UnaryNumericArithmeticExpressionOperation<TSelf, TOp>.Instance;
     IOperation INumericType.GetVectorUnaryNumericOperation<TRank, TOp>()
         => VectorNumericUnaryOperation<TRank, TSelf, TOp>.Instance;
 

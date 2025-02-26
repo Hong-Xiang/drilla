@@ -48,7 +48,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
 {
 
     [ShaderMethod]
-    int ZERO()
+    static int ZERO()
     {
         return 0;
     }
@@ -86,25 +86,25 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     }
 
     //[ShaderMethod]
-    vec3 Mix(vec3 x, vec3 y, float a)
+    static vec3 Mix(vec3 x, vec3 y, float a)
     {
         return x * (1 - a) + y * a;
     }
 
     //[ShaderMethod]
-    vec3 Pow(vec3 x, vec3 y)
+    static vec3 Pow(vec3 x, vec3 y)
     {
         return vec3(pow(x.x, y.x), pow(x.y, y.y), pow(x.z, y.z));
     }
 
     //[ShaderMethod]
-    vec3 Sin(vec3 a)
+    static vec3 Sin(vec3 a)
     {
         return vec3(sin(a.x), sin(a.y), sin(a.z));
     }
 
     //[ShaderMethod]
-    vec3 Cos(vec3 a)
+    static vec3 Cos(vec3 a)
     {
         return vec3(cos(a.x), cos(a.y), cos(a.z));
     }
@@ -756,7 +756,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     //}
 
     // https://iquilezles.org/articles/boxfunctions
-    vec2f32 iBox(in vec3f32 ro, in vec3f32 rd, in vec3f32 rad)
+    static vec2f32 iBox(in vec3f32 ro, in vec3f32 rd, in vec3f32 rad)
     {
         var m = 1.0f / rd;
         var n = m * ro;
@@ -778,7 +778,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     //}
 
     [ShaderMethod]
-    vec2f32 raycast(vec3f32 ro, vec3f32 rd)
+    static vec2f32 raycast(vec3f32 ro, vec3f32 rd)
     {
         var res = vec2(-1.0f, -1.0f);
 
@@ -819,7 +819,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     }
 
     [ShaderMethod]
-    float checkersGradBox(vec2f32 p, vec2f32 dpdx, vec2f32 dpdy)
+    static float checkersGradBox(vec2f32 p, vec2f32 dpdx, vec2f32 dpdy)
     {
         // filter kernel
         var w = abs(dpdx) + abs(dpdy) + 0.001f;
@@ -836,7 +836,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     }
 
     [ShaderMethod]
-    vec3f32 calcNormal(vec3f32 pos)
+    static vec3f32 calcNormal(vec3f32 pos)
     {
         var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
         return normalize(e.xyy * map(pos + e.xyy).x +
@@ -853,7 +853,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     }
 
     [ShaderMethod]
-    float calcSoftshadow(vec3f32 ro, vec3f32 rd, float mint, float maxt)
+    static float calcSoftshadow(vec3f32 ro, vec3f32 rd, float mint, float maxt)
     {
         // bounding volume
         var tp = (0.8f - ro.y) / rd.y;
@@ -881,7 +881,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     }
 
     [ShaderMethod]
-    vec3f32 render(vec3f32 ro, vec3f32 rd, vec3f32 rdx, vec3f32 rdy)
+    static vec3f32 render(vec3f32 ro, vec3f32 rd, vec3f32 rdx, vec3f32 rdy)
     {
         // background
         float d = max(rd.y, 0.0f) * 0.3f;
@@ -976,23 +976,23 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     [Group(0)]
     [Binding(0)]
     [Uniform]
-    vec2f32 iResolution;
+    static vec2f32 iResolution;
 
     [Group(0)]
     [Binding(1)]
     [Uniform]
-    float iTime;
+    static float iTime;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    vec4f32 vs(VertexInput vert)
+    static vec4f32 vs(VertexInput vert)
     {
         return vec4(vert.position.xy, 0.0f, 1.0f);
     }
 
     [Fragment]
     [return: Location(0)]
-    vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 vertexIn)
+    static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 vertexIn)
     {
         int antialiasing = 3;
         var time = 32.0f + iTime * 1.5f;

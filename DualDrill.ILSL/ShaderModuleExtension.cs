@@ -69,7 +69,7 @@ public static class ShaderModuleExtension
                     statements.Add(s);
                 }
 
-                return new BasicBlock<IStackStatement>([..statements], bb.Inputs, []);
+                return new BasicBlock<IStackStatement>([.. statements], bb.Inputs, []);
             })
         );
 
@@ -165,9 +165,9 @@ public static class ShaderModuleExtension
             var elements = result.Accept(simplifer).ToImmutableArray();
             result = elements switch
             {
-                [Block r] => r,
-                [Loop r] => r,
-                [IfThenElse r] => r,
+            [Block r] => r,
+            [Loop r] => r,
+            [IfThenElse r] => r,
                 _ => new Block(Label.Create(), new(elements))
             };
 
@@ -194,10 +194,14 @@ public static class ShaderModuleExtension
     )
     {
         var module = shader.Parse()
+                           .EliminateBlockValueTransfer()
                            .BasicBlockTransformStatementsToInstructions()
                            .ReplaceOperationCallsToOperationInstruction()
                            .ToStructuredControlFlowStackModel()
-                           .ToAbstractSyntaxTreeFunctionBody();
+                           .Simplify()
+                           .ToAbstractSyntaxTreeFunctionBody()
+                           .Simplify();
+
         var code = await module.EmitWgslCode();
         return code;
     }

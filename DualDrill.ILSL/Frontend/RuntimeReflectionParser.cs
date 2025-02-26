@@ -423,7 +423,7 @@ public sealed record class RuntimeReflectionParser(
                     else
                     {
                         var inputs = ImmutableStack.Create<VariableDeclaration>();
-                        foreach (var (index, v) in visitor.Outputs.Index())
+                        foreach (var (index, v) in visitor.Outputs.Index().Reverse())
                         {
                             inputs = inputs.Push(new VariableDeclaration(DeclarationScope.Function,
                                 $"input({target.Name})#{index}", v.Type, []));

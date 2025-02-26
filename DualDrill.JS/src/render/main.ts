@@ -68,8 +68,8 @@ export async function BatchRenderMain() {
   //   : "SampleFragmentShader";
   //const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
 
-  // const demoShaderName = "SampleFragmentShader";
-  const shaderName = "MandelbrotDistanceShader";
+  const shaderName = "RaymarchingPrimitiveShader";
+  // const shaderName = "MandelbrotDistanceShader";
   const meshName = "ScreenQuad";
   const vertexBufferLayout = await (
     await fetch(`/ilsl/wgsl/vertexbufferlayout/${shaderName}`)

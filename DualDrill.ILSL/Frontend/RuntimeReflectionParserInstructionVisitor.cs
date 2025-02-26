@@ -18,7 +18,7 @@ using DualDrill.Common.Nat;
 namespace DualDrill.CLSL.Frontend;
 
 public sealed class ValidationException(string message, MethodBase method)
-    : Exception(message)
+    : Exception(message + $" @ {method.Name}")
 {
     public MethodBase Method { get; } = method;
 }
@@ -94,15 +94,15 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             case (_, { Type: BoolType }):
                 return op.CreateExpression(ToBoolExpr(left), ToBoolExpr(right));
             case ({ Type: INumericType lt }, { Type: INumericType rt }) when lt.Equals(rt):
-            {
-                if (TOp.Instance is BinaryLogical.IWithBitwiseOp withBitwiseOp)
                 {
-                    var bitwiseOp = withBitwiseOp.BitwiseOp;
-                    return bitwiseOp.GetNumericBinaryOperation(lt).CreateExpression(left, right);
-                }
+                    if (TOp.Instance is BinaryLogical.IWithBitwiseOp withBitwiseOp)
+                    {
+                        var bitwiseOp = withBitwiseOp.BitwiseOp;
+                        return bitwiseOp.GetNumericBinaryOperation(lt).CreateExpression(left, right);
+                    }
 
-                break;
-            }
+                    break;
+                }
             default:
                 throw new NotImplementedException();
         }
@@ -166,7 +166,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         }
 
         Outputs = ImmutableStack.Create<VariableDeclaration>();
-        foreach (var (index, expr) in CurrentStack.Index())
+        foreach (var (index, expr) in CurrentStack.Index().Reverse())
         {
             var v = new VariableDeclaration(DeclarationScope.Function, $"output({Label.Name})#{index}", expr.Type, []);
             Statements.Add(SyntaxFactory.AssignStatement(
@@ -234,28 +234,28 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             switch (opAttr.Operation)
             {
                 case IBinaryExpressionOperation be:
-                {
-                    var r = CurrentStack.Pop();
-                    var l = CurrentStack.Pop();
-                    var e = be.CreateExpression(l, r);
-                    CurrentStack.Push(e);
-                    return;
-                }
+                    {
+                        var r = CurrentStack.Pop();
+                        var l = CurrentStack.Pop();
+                        var e = be.CreateExpression(l, r);
+                        CurrentStack.Push(e);
+                        return;
+                    }
                 case IBinaryStatementOperation bs:
-                {
-                    var r = CurrentStack.Pop();
-                    var l = CurrentStack.Pop();
-                    var s = bs.CreateStatement(l, r);
-                    Statements.Add((IStackStatement)s);
-                    return;
-                }
+                    {
+                        var r = CurrentStack.Pop();
+                        var l = CurrentStack.Pop();
+                        var s = bs.CreateStatement(l, r);
+                        Statements.Add((IStackStatement)s);
+                        return;
+                    }
                 case IUnaryExpressionOperation ue:
-                {
-                    var s = CurrentStack.Pop();
-                    var e = ue.CreateExpression(s);
-                    CurrentStack.Push(e);
-                    return;
-                }
+                    {
+                        var s = CurrentStack.Pop();
+                        var e = ue.CreateExpression(s);
+                        CurrentStack.Push(e);
+                        return;
+                    }
             }
         }
 
@@ -275,7 +275,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
         args.Reverse();
 
-        var result = SyntaxFactory.Call(func, [..args]);
+        var result = SyntaxFactory.Call(func, [.. args]);
         if (isExpression)
         {
             CurrentStack.Push(result);
@@ -306,6 +306,12 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>
     {
+        var v = CurrentStack.Pop();
+        if (v.Type is INumericType type)
+        {
+            CurrentStack.Push(type.UnaryArithmeticOperation<TOp>().CreateExpression(v));
+            return default;
+        }
         throw new NotImplementedException();
     }
 
@@ -426,21 +432,21 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     val = ToBoolExpr(val);
                     break;
                 case (UIntType<N32>, LiteralValueExpression { Literal: I32Literal { Value: var i32Value } }):
-                {
-                    var u32Value = BitConverter.ToUInt32(BitConverter.GetBytes(i32Value));
-                    val = SyntaxFactory.Literal(u32Value);
-                    break;
-                }
+                    {
+                        var u32Value = BitConverter.ToUInt32(BitConverter.GetBytes(i32Value));
+                        val = SyntaxFactory.Literal(u32Value);
+                        break;
+                    }
                 case (IntType<N32>, IExpression { Type: UIntType<N32> }):
-                {
-                    val = ScalarConversionOperation<UIntType<N32>, IntType<N32>>.Instance.CreateExpression(val);
-                    break;
-                }
+                    {
+                        val = ScalarConversionOperation<UIntType<N32>, IntType<N32>>.Instance.CreateExpression(val);
+                        break;
+                    }
                 case (UIntType<N32>, IExpression { Type: IntType<N32> }):
-                {
-                    val = ScalarBitCastOperation<IntType<N32>, UIntType<N32>>.Instance.CreateExpression(val);
-                    break;
-                }
+                    {
+                        val = ScalarBitCastOperation<IntType<N32>, UIntType<N32>>.Instance.CreateExpression(val);
+                        break;
+                    }
                 default:
                     throw new NotSupportedException($"store {val.Type.Name} to loc : {v.Type.Name} is not supported");
             }

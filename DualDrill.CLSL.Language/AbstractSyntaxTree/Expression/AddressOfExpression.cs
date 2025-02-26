@@ -20,6 +20,7 @@ public sealed record class AddressOfExpression(IExpression Base) : IExpression
         {
             VariableIdentifierExpression { Variable: VariableDeclaration v } => [ShaderInstruction.Load(v)],
             FormalParameterExpression { Parameter: var p } => [ShaderInstruction.Load(p)],
+            NamedComponentExpression { Base: var be, Component: var m} => [..be.ToInstructions(), ShaderInstruction.Load(m)],
             _ => throw new NotImplementedException()
         };
     }
