@@ -20,11 +20,18 @@ public sealed record class VectorSwizzleSetStatement<TRank, TElement, TPattern>(
 {
     public IEnumerable<Label> ReferencedLabels => [];
 
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
-    [
-        ..Target.ReferencedVariables,
-        ..Value.ReferencedVariables
-    ];
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables
+    {
+        get
+        {
+            IEnumerable<VariableDeclaration> result =
+            [
+                ..Target.ReferencedVariables,
+                ..Value.ReferencedVariables
+            ];
+            return result;
+        }
+    }
 
     public IEnumerable<IInstruction> ToInstructions()
         =>
@@ -39,7 +46,7 @@ public sealed record class VectorSwizzleSetStatement<TRank, TElement, TPattern>(
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
-        writer.Write(VectorSwizzleSetOperation<TPattern, TElement>.Instance.Name);
+        writer.WriteLine(VectorSwizzleSetOperation<TPattern, TElement>.Instance.Name);
         using (writer.IndentedScope())
         {
             writer.WriteLine("target");

@@ -11,18 +11,18 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         var sep = $"\n{new string('-', 10)}\n";
         var cfg = shader.Parse();
         Output.WriteLine("=== Parsed ===");
-        // Output.WriteLine(await cfg.Dump());
+        Output.WriteLine(await cfg.Dump());
         Output.WriteLine(sep);
 
         cfg = cfg.EliminateBlockValueTransfer();
         Output.WriteLine("=== Remove Outputs ===");
-        // Output.WriteLine(await cfg.Dump());
+        Output.WriteLine(await cfg.Dump());
         Output.WriteLine(sep);
 
         var cfgOp = cfg.BasicBlockTransformStatementsToInstructions()
                        .ReplaceOperationCallsToOperationInstruction();
         Output.WriteLine("=== Parsed(Op) ===");
-        // Output.WriteLine(await cfgOp.Dump());
+        Output.WriteLine(await cfgOp.Dump());
         Output.WriteLine(sep);
 
         var scf = cfgOp.ToStructuredControlFlowStackModel();
@@ -35,13 +35,13 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Output.WriteLine(sep);
         var ast = scf.ToAbstractSyntaxTreeFunctionBody();
         Output.WriteLine("=== AST ===");
-        // Output.WriteLine(await ast.Dump());
+        Output.WriteLine(await ast.Dump());
 
         Output.WriteLine(sep);
 
         var astS = ast.Simplify();
         Output.WriteLine("=== AST(Simplified) ===");
-        // Output.WriteLine(await astS.Dump());
+        Output.WriteLine(await astS.Dump());
         Output.WriteLine(sep);
 
         var code = await astS.EmitWgslCode();

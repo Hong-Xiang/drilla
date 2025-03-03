@@ -237,7 +237,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     {
                         var r = CurrentStack.Pop();
                         var l = CurrentStack.Pop();
-                        var e = be.CreateExpression(l, r);
+                        var e = be.CreateExpression(r, l);
                         CurrentStack.Push(e);
                         return;
                     }
@@ -245,7 +245,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     {
                         var r = CurrentStack.Pop();
                         var l = CurrentStack.Pop();
-                        var s = bs.CreateStatement(l, r);
+                        var s = bs.CreateStatement(r, l);
                         Statements.Add((IStackStatement)s);
                         return;
                     }

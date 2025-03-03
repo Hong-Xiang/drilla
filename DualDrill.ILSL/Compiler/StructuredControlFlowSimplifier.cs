@@ -68,7 +68,7 @@ public class
             && tt.Equals(ft))
         {
             tb = new([..tb.Elements.Take(tb.Elements.Length - 1)]);
-            fb = new([..tb.Elements.Take(tb.Elements.Length - 1)]);
+            fb = new([..fb.Elements.Take(tb.Elements.Length - 1)]);
         }
 
         return [new IfThenElse(tb, fb)];

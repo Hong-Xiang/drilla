@@ -15,7 +15,10 @@ public interface IStructuredStackInstructionVisitor<TResult>
     TResult Visit(NopInstruction inst);
     TResult Visit<TLiteral>(ConstInstruction<TLiteral> inst) where TLiteral : ILiteral;
     TResult Visit(CallInstruction inst);
-
+    TResult VisitAddressOf<TInst>(TInst inst)
+        where TInst : IAddressOfInstruction;
+     TResult VisitIndirection<TInst>(TInst inst)
+         where TInst : IIndirectionInstruction;   
     TResult Visit<TTarget>(LoadSymbolValueInstruction<TTarget> inst)
         where TTarget : ILoadStoreTargetSymbol;
 

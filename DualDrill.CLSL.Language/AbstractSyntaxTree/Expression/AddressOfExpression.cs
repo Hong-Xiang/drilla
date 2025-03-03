@@ -12,15 +12,27 @@ public sealed record class AddressOfExpression(IExpression Base) : IExpression
     public IShaderType Type => Base.Type.GetPtrType();
 
     public TResult Accept<TResult>(IExpressionVisitor<TResult> visitor)
-        => throw new NotImplementedException();
+        => visitor.VisitAddressOfExpression(this);
 
     public IEnumerable<IInstruction> ToInstructions()
     {
         return Base switch
         {
-            VariableIdentifierExpression { Variable: VariableDeclaration v } => [ShaderInstruction.Load(v)],
-            FormalParameterExpression { Parameter: var p } => [ShaderInstruction.Load(p)],
-            NamedComponentExpression { Base: var be, Component: var m} => [..be.ToInstructions(), ShaderInstruction.Load(m)],
+            VariableIdentifierExpression { Variable: VariableDeclaration v } =>
+            [
+                ShaderInstruction.Load(v),
+                ShaderInstruction.AddressOf(v.Type)
+            ],
+            FormalParameterExpression { Parameter: var p } =>
+            [
+                ShaderInstruction.Load(p),
+                ShaderInstruction.AddressOf(p.Type)
+            ],
+            NamedComponentExpression { Base: var be, Component: var m } =>
+            [
+                ..be.ToInstructions(), ShaderInstruction.Load(m),
+                ShaderInstruction.AddressOf(m.Type)
+            ],
             _ => throw new NotImplementedException()
         };
     }

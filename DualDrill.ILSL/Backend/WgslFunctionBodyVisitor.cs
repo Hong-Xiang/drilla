@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
@@ -191,6 +192,20 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
         Writer.Write(')');
     }
 
+    public async ValueTask VisitIndirectionExpression(IndirectionExpression expr)
+    {
+        Writer.Write("*(");
+        await expr.Expr.Accept(this);
+        Writer.Write(")");
+    }
+
+    public async ValueTask VisitAddressOfExpression(AddressOfExpression expr)
+    {
+        Writer.Write("&(");
+        await expr.Base.Accept(this);
+        Writer.Write(")");
+    }
+
     public async ValueTask VisitBinaryExpression
         <TOperation>
         (BinaryOperationExpression<TOperation> expr)
@@ -292,7 +307,16 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
         where TElement : IScalarType<TElement>
         where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
     {
-        await stmt.Target.Accept(this);
+        switch (stmt.Target)
+        {
+            case AddressOfExpression { Base: var b }:
+                await b.Accept(this);
+                break;
+            default:
+                await SyntaxFactory.Indirection(stmt.Target).Accept(this);
+                break;
+        }
+
         Writer.Write('.');
         Writer.Write(TPattern.Instance.Name);
         Writer.Write(" = ");
@@ -307,7 +331,16 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
                                                                            where TComponent : Swizzle.ISizedComponent<
                                                                                TRank, TComponent>
     {
-        await stmt.Target.Accept(this);
+        switch (stmt.Target)
+        {
+            case AddressOfExpression { Base: var b }:
+                await b.Accept(this);
+                break;
+            default:
+                await SyntaxFactory.Indirection(stmt.Target).Accept(this);
+                break;
+        }
+
         Writer.Write(".");
         Writer.Write(TComponent.Instance.Name);
         Writer.Write(" = ");
@@ -320,7 +353,16 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
         where TPattern : Swizzle.IPattern<TPattern>
         where TElement : IScalarType<TElement>
     {
-        await expr.Source.Accept(this);
+        switch (expr.Source)
+        {
+            case AddressOfExpression { Base: var b }:
+                await b.Accept(this);
+                break;
+            default:
+                await SyntaxFactory.Indirection(expr).Accept(this);
+                break;
+        }
+
         Writer.Write('.');
         Writer.Write(TPattern.Instance.Name);
     }
@@ -330,7 +372,16 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
         where TVector : ISizedVecType<TRank, TVector>
         where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
     {
-        await expr.Source.Accept(this);
+        switch (expr.Source)
+        {
+            case AddressOfExpression { Base: var b }:
+                await b.Accept(this);
+                break;
+            default:
+                await SyntaxFactory.Indirection(expr).Accept(this);
+                break;
+        }
+
         Writer.Write('.');
         Writer.Write(TComponent.Instance.Name);
     }

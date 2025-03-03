@@ -9,6 +9,7 @@ namespace DualDrill.CLSL.Compiler;
 
 internal sealed class AbstractSyntaxTreeSimplify
     : IStatementVisitor<IStatement>
+    , IExpressionVisitor<IExpression>
 {
     public IStatement AppendSemicolon(IStatement t)
     {
@@ -146,4 +147,68 @@ internal sealed class AbstractSyntaxTreeSimplify
     {
         return stmt;
     }
+
+    public IExpression VisitLiteralValueExpression(LiteralValueExpression expr)
+        => expr;
+
+    public IExpression VisitVariableIdentifierExpression(VariableIdentifierExpression expr)
+        => expr;
+
+    public IExpression VisitFunctionCallExpression(FunctionCallExpression expr)
+        => expr;
+
+
+    public IExpression VisitIndirectionExpression(IndirectionExpression expr)
+        => expr.Expr switch
+        {
+            AddressOfExpression { Base: var e } => e,
+            _ => expr
+        };
+
+
+    public IExpression VisitAddressOfExpression(AddressOfExpression expr)
+        => expr.Base switch
+        {
+            IndirectionExpression { Expr: var e } => e,
+            _ => expr
+        };
+
+
+    public IExpression VisitBinaryExpression<TOperation>(BinaryOperationExpression<TOperation> expr)
+        where TOperation : IBinaryExpressionOperation<TOperation>
+        => expr;
+
+
+    public IExpression
+        VisitUnaryExpression<TOperation, TSourceType, TResultType, TOp>(UnaryOperationExpression<TOperation> expr)
+        where TOperation : IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>
+        where TSourceType : ISingletonShaderType<TSourceType>
+        where TResultType : ISingletonShaderType<TResultType>
+        where TOp : IUnaryOp<TOp>
+        => expr;
+
+
+    public IExpression VisitConversionExpression<TTarget>(IUnaryExpression expr)
+        where TTarget : ISingletonShaderType<TTarget>
+        => expr;
+
+
+    public IExpression VisitVectorSwizzleGetExpression<TPattern, TElement>(IUnaryExpression expr)
+        where TPattern : Swizzle.IPattern<TPattern> where TElement : IScalarType<TElement>
+        => expr;
+
+
+    public IExpression VisitVectorComponentGetExpression<TRank, TVector, TComponent>(IUnaryExpression expr)
+        where TRank : IRank<TRank>
+        where TVector : ISizedVecType<TRank, TVector>
+        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
+        => expr;
+
+
+    public IExpression VisitFormalParameterExpression(FormalParameterExpression expr)
+        => expr;
+
+
+    public IExpression VisitNamedComponentExpression(NamedComponentExpression expr)
+        => expr;
 }

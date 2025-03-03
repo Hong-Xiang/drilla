@@ -19,6 +19,8 @@ public sealed class UIntType<TBitWidth> : IUIntType, INumericType<UIntType<TBitW
 
     public static UIntType<TBitWidth> Instance { get; } = new();
 
+    static IPtrType PtrType { get; } = new PtrType(Instance);
+    public IPtrType GetPtrType() => PtrType;
     public string Name => $"u{BitWidth.Value}";
 
     public int ByteSize => BitWidth.Value / 8;

@@ -26,6 +26,9 @@ public sealed record class FloatType<TBitWidth> : IFloatType<FloatType<TBitWidth
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
+
+    static IPtrType PtrType { get; } = new PtrType(Instance);
+    public IPtrType GetPtrType() => PtrType;
 }
 
 public static partial class ShaderType

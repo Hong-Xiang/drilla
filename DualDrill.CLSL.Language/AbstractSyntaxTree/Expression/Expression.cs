@@ -38,6 +38,8 @@ public interface IExpressionVisitor<T>
     T VisitLiteralValueExpression(LiteralValueExpression expr);
     T VisitVariableIdentifierExpression(VariableIdentifierExpression expr);
     T VisitFunctionCallExpression(FunctionCallExpression expr);
+    T VisitIndirectionExpression(IndirectionExpression expr);
+    T VisitAddressOfExpression(AddressOfExpression expr);
 
     T VisitBinaryExpression
         <TOperation>

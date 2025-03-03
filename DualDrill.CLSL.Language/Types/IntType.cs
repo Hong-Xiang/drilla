@@ -19,6 +19,8 @@ public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
 {
     public static IntType<TBitWidth> Instance => new();
 
+    static IPtrType PtrType { get; } = new PtrType(Instance);
+    public IPtrType GetPtrType() => PtrType;
     public IBitWidth BitWidth => TBitWidth.BitWidth;
 
     public string Name => $"i{BitWidth.Value}";

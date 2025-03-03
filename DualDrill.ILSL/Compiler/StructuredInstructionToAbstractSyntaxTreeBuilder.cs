@@ -13,6 +13,7 @@ using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 namespace DualDrill.CLSL.Compiler;
 
@@ -356,6 +357,22 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 
         arguments.Reverse();
         Expressions.Push(SyntaxFactory.Call(inst.Callee, [.. arguments]));
+        return default;
+    }
+
+    public Unit VisitAddressOf<TInst>(TInst inst) where TInst : IAddressOfInstruction
+    {
+        var e = Expressions.Pop();
+        Debug.Assert(e.Type.Equals(inst.TargetType));
+        Expressions.Push(SyntaxFactory.AddressOf(e));
+        return default;
+    }
+
+    public Unit VisitIndirection<TInst>(TInst inst) where TInst : IIndirectionInstruction
+    {
+        var e = Expressions.Pop();
+        Debug.Assert(e.Type is IPtrType { BaseType: var bt } && bt.Equals(inst.TargetType));
+        Expressions.Push(SyntaxFactory.AddressOf(e));
         return default;
     }
 

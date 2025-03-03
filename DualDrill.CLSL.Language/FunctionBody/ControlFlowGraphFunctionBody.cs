@@ -59,7 +59,7 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ITex
     {
         foreach (var v in LocalVariables)
         {
-            writer.WriteLine($"{this.VariableName(v)} : {v.Type.Name}");
+            writer.WriteLine($"{context.VariableName(v)} : {v.Type.Name}");
         }
 
         writer.WriteLine();

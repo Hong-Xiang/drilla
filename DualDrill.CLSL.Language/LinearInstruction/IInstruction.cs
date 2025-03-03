@@ -18,7 +18,19 @@ public interface IInstruction : IBasicBlockElement
 
     void ITextDumpable<ILocalDeclarationContext>.Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
-        writer.WriteLine(ToString());
+        switch (this)
+        {
+            case StoreSymbolInstruction<VariableDeclaration> v:
+                writer.WriteLine($"store {context.VariableName(v.Target)}");
+                break;
+            case LoadSymbolValueInstruction<VariableDeclaration> v:
+                writer.WriteLine($"load {context.VariableName(v.Target)}");
+                break;
+
+            default:
+                writer.WriteLine(ToString());
+                break;
+        }
     }
 }
 
@@ -210,6 +222,8 @@ public static class ShaderInstruction
     public static IInstruction LogicalNot() => new LogicalNotInstruction();
     public static IInstruction Dup() => DupInstruction.Instance;
     public static IInstruction Pop() => DropInstruction.Instance;
+    public static IInstruction AddressOf(IShaderType t) => new AddressOfInstruction(t);
+    public static IInstruction Indirection(IShaderType t) => new IndirectionInstruction(t);
 
     public static LoadSymbolValueInstruction<ParameterDeclaration> Load(ParameterDeclaration decl) => new(decl);
     public static LoadSymbolValueInstruction<VariableDeclaration> Load(VariableDeclaration decl) => new(decl);

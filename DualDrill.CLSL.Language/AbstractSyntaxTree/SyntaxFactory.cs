@@ -26,7 +26,8 @@ public static class SyntaxFactory
     public static VariableIdentifierExpression VarIdentifier(VariableDeclaration variable) => new(variable);
     public static FormalParameterExpression ArgIdentifier(ParameterDeclaration parameter) => new(parameter);
 
-    public static AddressOfExpression AddressOf(IExpression expr) => new AddressOfExpression(expr);
+    public static AddressOfExpression AddressOf(IExpression expr) => new(expr);
+    public static IndirectionExpression Indirection(IExpression expr) => new(expr);
 
     public static ReturnStatement Return(IExpression? Expr) => new(Expr);
     public static BreakStatement Break() => new();

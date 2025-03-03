@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.Operation;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
@@ -16,11 +17,14 @@ public interface IShaderType<TSelf> : IShaderType
 {
 }
 
+public interface ISingletonShaderType : IShaderType
+{
+}
+
 public interface ISingletonShaderType<TSelf>
-    : IShaderType<TSelf>, ISingleton<TSelf>
+    : ISingletonShaderType, IShaderType<TSelf>, ISingleton<TSelf>
     where TSelf : ISingletonShaderType<TSelf>
 {
-    IPtrType IShaderType.GetPtrType() => new PtrType(TSelf.Instance);
     IRefType IShaderType.GetRefType() => throw new NotImplementedException();
 }
 
