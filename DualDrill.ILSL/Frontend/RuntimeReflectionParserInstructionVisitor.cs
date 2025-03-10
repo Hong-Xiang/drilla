@@ -94,15 +94,15 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             case (_, { Type: BoolType }):
                 return op.CreateExpression(ToBoolExpr(left), ToBoolExpr(right));
             case ({ Type: INumericType lt }, { Type: INumericType rt }) when lt.Equals(rt):
+            {
+                if (TOp.Instance is BinaryLogical.IWithBitwiseOp withBitwiseOp)
                 {
-                    if (TOp.Instance is BinaryLogical.IWithBitwiseOp withBitwiseOp)
-                    {
-                        var bitwiseOp = withBitwiseOp.BitwiseOp;
-                        return bitwiseOp.GetNumericBinaryOperation(lt).CreateExpression(left, right);
-                    }
-
-                    break;
+                    var bitwiseOp = withBitwiseOp.BitwiseOp;
+                    return bitwiseOp.GetNumericBinaryOperation(lt).CreateExpression(left, right);
                 }
+
+                break;
+            }
             default:
                 throw new NotImplementedException();
         }
@@ -234,28 +234,35 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             switch (opAttr.Operation)
             {
                 case IBinaryExpressionOperation be:
-                    {
-                        var r = CurrentStack.Pop();
-                        var l = CurrentStack.Pop();
-                        var e = be.CreateExpression(r, l);
-                        CurrentStack.Push(e);
-                        return;
-                    }
+                {
+                    var r = CurrentStack.Pop();
+                    var l = CurrentStack.Pop();
+                    var e = be.CreateExpression(l, r);
+                    CurrentStack.Push(e);
+                    return;
+                }
                 case IBinaryStatementOperation bs:
-                    {
-                        var r = CurrentStack.Pop();
-                        var l = CurrentStack.Pop();
-                        var s = bs.CreateStatement(r, l);
-                        Statements.Add((IStackStatement)s);
-                        return;
-                    }
+                {
+                    var r = CurrentStack.Pop();
+                    var l = CurrentStack.Pop();
+                    var s = bs.CreateStatement(l, r);
+                    Statements.Add((IStackStatement)s);
+                    return;
+                }
                 case IUnaryExpressionOperation ue:
-                    {
-                        var s = CurrentStack.Pop();
-                        var e = ue.CreateExpression(s);
-                        CurrentStack.Push(e);
-                        return;
-                    }
+                {
+                    var s = CurrentStack.Pop();
+                    var e = ue.CreateExpression(s);
+                    CurrentStack.Push(e);
+                    return;
+                }
+                case IVectorComponentSetOperation op:
+                {
+                    var value = CurrentStack.Pop();
+                    var target = CurrentStack.Pop();
+                    Statements.Add(op.CreateStatement(target, value));
+                    return;
+                }
             }
         }
 
@@ -312,6 +319,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             CurrentStack.Push(type.UnaryArithmeticOperation<TOp>().CreateExpression(v));
             return default;
         }
+
         throw new NotImplementedException();
     }
 
@@ -432,21 +440,21 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     val = ToBoolExpr(val);
                     break;
                 case (UIntType<N32>, LiteralValueExpression { Literal: I32Literal { Value: var i32Value } }):
-                    {
-                        var u32Value = BitConverter.ToUInt32(BitConverter.GetBytes(i32Value));
-                        val = SyntaxFactory.Literal(u32Value);
-                        break;
-                    }
+                {
+                    var u32Value = BitConverter.ToUInt32(BitConverter.GetBytes(i32Value));
+                    val = SyntaxFactory.Literal(u32Value);
+                    break;
+                }
                 case (IntType<N32>, IExpression { Type: UIntType<N32> }):
-                    {
-                        val = ScalarConversionOperation<UIntType<N32>, IntType<N32>>.Instance.CreateExpression(val);
-                        break;
-                    }
+                {
+                    val = ScalarConversionOperation<UIntType<N32>, IntType<N32>>.Instance.CreateExpression(val);
+                    break;
+                }
                 case (UIntType<N32>, IExpression { Type: IntType<N32> }):
-                    {
-                        val = ScalarBitCastOperation<IntType<N32>, UIntType<N32>>.Instance.CreateExpression(val);
-                        break;
-                    }
+                {
+                    val = ScalarBitCastOperation<IntType<N32>, UIntType<N32>>.Instance.CreateExpression(val);
+                    break;
+                }
                 default:
                     throw new NotSupportedException($"store {val.Type.Name} to loc : {v.Type.Name} is not supported");
             }

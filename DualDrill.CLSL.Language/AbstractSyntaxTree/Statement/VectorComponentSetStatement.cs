@@ -39,7 +39,7 @@ public sealed record class VectorComponentSetStatement<TRank, TElement, TCompone
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
-        writer.Write(VectorComponentSetOperation<TRank, VecType<TRank, TElement>, TComponent>.Instance.Name);
+        writer.WriteLine(VectorComponentSetOperation<TRank, VecType<TRank, TElement>, TComponent>.Instance.Name);
         using (writer.IndentedScope())
         {
             writer.WriteLine("target");

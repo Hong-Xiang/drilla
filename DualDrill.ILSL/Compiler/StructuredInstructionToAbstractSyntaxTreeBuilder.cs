@@ -185,20 +185,30 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
             return SyntaxFactory.If(
                 eq.CreateExpression(
                     SyntaxFactory.VarIdentifier(BrDepth),
-                    SyntaxFactory.Literal(0)
+                    SyntaxFactory.Literal(-1)
                 ),
+                SyntaxFactory.CompoundStatement(),
                 SyntaxFactory.CompoundStatement(
-                    SyntaxFactory.AssignStatement(SyntaxFactory.VarIdentifier(BrDepth), SyntaxFactory.Literal(-1)),
-                    region.BrCurrentStatement()),
-                SyntaxFactory.CompoundStatement(
-                    SyntaxFactory.AssignStatement(
-                        SyntaxFactory.VarIdentifier(BrDepth),
-                        sub.CreateExpression(
+                    SyntaxFactory.If(
+                        eq.CreateExpression(
                             SyntaxFactory.VarIdentifier(BrDepth),
-                            SyntaxFactory.Literal(1)
+                            SyntaxFactory.Literal(0)
+                        ),
+                        SyntaxFactory.CompoundStatement(
+                            SyntaxFactory.AssignStatement(SyntaxFactory.VarIdentifier(BrDepth),
+                                SyntaxFactory.Literal(-1)),
+                            region.BrCurrentStatement()),
+                        SyntaxFactory.CompoundStatement(
+                            SyntaxFactory.AssignStatement(
+                                SyntaxFactory.VarIdentifier(BrDepth),
+                                sub.CreateExpression(
+                                    SyntaxFactory.VarIdentifier(BrDepth),
+                                    SyntaxFactory.Literal(1)
+                                )
+                            ),
+                            SyntaxFactory.Break()
                         )
-                    ),
-                    SyntaxFactory.Break()
+                    )
                 )
             );
         }
@@ -500,7 +510,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         var value = Expressions.Pop();
         var vec = Expressions.Pop();
         var stmt = VectorComponentSetOperation<TRank, TVector, TComponent>.Instance.CreateStatement(vec, value);
-        Statements.Add(stmt);
+        Statements.Add((IStatement)stmt);
         return default;
     }
 

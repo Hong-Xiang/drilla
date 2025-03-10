@@ -6,7 +6,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="ClangSharp" />
 		<PackageReference Include="ICSharpCode.Decompiler" />
+		<PackageReference Include="LLVMSharp" />
 		<PackageReference Include="Lokad.ILPack" />
 	</ItemGroup>
 

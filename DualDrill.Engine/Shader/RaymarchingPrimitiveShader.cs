@@ -4,14 +4,10 @@ using DualDrill.Graphics;
 using DualDrill.Mathematics;
 using Silk.NET.SDL;
 using System.Collections.Immutable;
-using System.Numerics;
 using static DualDrill.Mathematics.DMath;
-
 using vec4 = DualDrill.Mathematics.vec4f32;
 using vec3 = DualDrill.Mathematics.vec3f32;
 using vec2 = DualDrill.Mathematics.vec2f32;
-using DirectShowLib.DES;
-using DirectShowLib.BDA;
 using DualDrill.CLSL.Reflection;
 
 
@@ -22,6 +18,7 @@ namespace DualDrill.Engine.Shader;
 public class RaymarchingPrimitivesShaderReflection : IReflection
 {
     private IShaderModuleReflection _shaderModuleReflection;
+
     public RaymarchingPrimitivesShaderReflection()
     {
         _shaderModuleReflection = new ShaderModuleReflection();
@@ -29,7 +26,8 @@ public class RaymarchingPrimitivesShaderReflection : IReflection
 
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout()
     {
-        var vertexBufferLayoutBuilder = _shaderModuleReflection.GetVertexBufferLayoutBuilder<RaymarchingPrimitiveShader.VertexInput>();
+        var vertexBufferLayoutBuilder =
+            _shaderModuleReflection.GetVertexBufferLayoutBuilder<RaymarchingPrimitiveShader.VertexInput>();
         return vertexBufferLayoutBuilder.Build();
     }
 
@@ -46,16 +44,26 @@ public class RaymarchingPrimitivesShaderReflection : IReflection
 
 public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
 {
-
     [ShaderMethod]
     static int ZERO()
     {
         return 0;
     }
 
-    static float dot2(vec2 v) { return dot(v, v); }
-    static float dot2(vec3 v) { return dot(v, v); }
-    static float ndot(vec2 a, vec2 b) { return a.x * b.x - a.y * b.y; }
+    static float dot2_v2(vec2 v)
+    {
+        return dot(v, v);
+    }
+
+    static float dot2_v3(vec3 v)
+    {
+        return dot(v, v);
+    }
+
+    static float ndot(vec2 a, vec2 b)
+    {
+        return a.x * b.x - a.y * b.y;
+    }
 
     //[ShaderMethod]
     static float Length(vec3f32 a)
@@ -144,16 +152,18 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         return min(max(d.x, max(d.y, d.z)), 0.0f) + length(max(d, vec3(0.0f)));
     }
 
-    static float sdBoxFrame(vec3 p, vec3 b, float e)
+    static float sdBoxFrame(vec3 pa, vec3 b, float e)
     {
+        var p = pa;
         p = abs(p) - b;
         vec3 q = abs(p + e) - e;
 
         return min(min(
-            length(max(vec3(p.x, q.y, q.z), vec3(0.0f))) + min(max(p.x, max(q.y, q.z)), 0.0f),
-            length(max(vec3(q.x, p.y, q.z), vec3(0.0f))) + min(max(q.x, max(p.y, q.z)), 0.0f)),
+                length(max(vec3(p.x, q.y, q.z), vec3(0.0f))) + min(max(p.x, max(q.y, q.z)), 0.0f),
+                length(max(vec3(q.x, p.y, q.z), vec3(0.0f))) + min(max(q.x, max(p.y, q.z)), 0.0f)),
             length(max(vec3(q.x, q.y, p.z), vec3(0.0f))) + min(max(q.x, max(q.y, p.z)), 0.0f));
     }
+
     static float sdEllipsoid(vec3f32 p, vec3f32 r) // approximated
     {
         float k0 = length(p / r);
@@ -166,38 +176,42 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         return length(vec2(length(p.xz) - t.x, p.y)) - t.y;
     }
 
-    static float sdCappedTorus(vec3 p, vec2 sc, float ra, float rb)
+    static float sdCappedTorus(vec3 pa, vec2 sc, float ra, float rb)
     {
+        var p = pa;
         p.x = abs(p.x);
         float k = (sc.y * p.x > sc.x * p.y) ? dot(p.xy, sc) : length(p.xy);
         return sqrt(dot(p, p) + ra * ra - 2.0f * ra * k) - rb;
     }
 
-    static float sdHexPrism(vec3 p, vec2 h)
+    static float sdHexPrism(vec3 pa, vec2 h)
     {
+        var p = vec3(pa.x, pa.y, pa.z);
         vec3 q = abs(p);
 
         vec3 k = vec3(-0.8660254f, 0.5f, 0.57735f);
         p = abs(p);
-        p.xy -= 2.0f * min(dot(k.xy, p.xy), 0.0f) * k.xy;
+        p = vec3(p.xy - 2.0f * min(dot(k.xy, p.xy), 0.0f) * k.xy, p.z);
         vec2 d = vec2(
-           length(p.xy - vec2(clamp(p.x, -k.z * h.x, k.z * h.x), h.x)) * sign(p.y - h.x),
-           p.z - h.y);
+            length(p.xy - vec2(clamp(p.x, -k.z * h.x, k.z * h.x), h.x)) * sign(p.y - h.x),
+            p.z - h.y);
         return min(max(d.x, d.y), 0.0f) + length(max(d, vec2(0.0f)));
     }
 
-    static float sdOctogonPrism(vec3 p, float r, float h)
+    static float sdOctogonPrism(vec3 pa, float r, float h)
     {
-        vec3 k = vec3(-0.9238795325f,   // sqrt(2+sqrt(2))/2 
-                      0.3826834323f,   // sqrt(2-sqrt(2))/2
-                      0.4142135623f); // sqrt(2)-1 
-                                      // reflections
-        p = abs(p);
-        p.xy -= 2.0f * min(dot(vec2(k.x, k.y), p.xy), 0.0f) * vec2(k.x, k.y);
-        p.xy -= 2.0f * min(dot(vec2(-k.x, k.y), p.xy), 0.0f) * vec2(-k.x, k.y);
+        vec3 k = vec3(-0.9238795325f, // sqrt(2+sqrt(2))/2 
+            0.3826834323f, // sqrt(2-sqrt(2))/2
+            0.4142135623f); // sqrt(2)-1 
+        // reflections
+        // reflections
+        var p = abs(pa);
+        var v = p.xy;
+        v = v - 2.0f * min(dot(vec2(k.x, k.y), v), 0.0f) * vec2(k.x, k.y);
+        v = v - 2.0f * min(dot(vec2(-k.x, k.y), v), 0.0f) * vec2(-k.x, k.y);
         // polygon side
-        p.xy -= vec2(clamp(p.x, -k.z * r, k.z * r), r);
-        vec2 d = vec2(length(p.xy) * sign(p.y), p.z - h);
+        v = v - vec2(clamp(v.x, -k.z * r, k.z * r), r);
+        vec2 d = vec2(length(v) * sign(v.y), p.z - h);
         return min(max(d.x, d.y), 0.0f) + length(max(d, vec2(0.0f)));
     }
 
@@ -208,7 +222,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         return length(pa - ba * h) - r;
     }
 
-    static float sdRoundCone(vec3 p, float r1, float r2, float h)
+    static float sdRoundCone_s1(vec3 p, float r1, float r2, float h)
     {
         vec2 q = vec2(length(p.xz), p.y);
 
@@ -216,13 +230,13 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         float a = sqrt(1.0f - b * b);
         float k = dot(q, vec2(-b, a));
 
-        if (k < 0.0) return length(q) - r1;
+        if (k < 0.0f) return length(q) - r1;
         if (k > a * h) return length(q - vec2(0.0f, h)) - r2;
 
         return dot(q, vec2(a, b)) - r1;
     }
 
-    static float sdRoundCone(vec3 p, vec3 a, vec3 b, float r1, float r2)
+    static float sdRoundCone_s2(vec3 p, vec3 a, vec3 b, float r1, float r2)
     {
         // sampling independent computations (only depend on shape)
         vec3 ba = b - a;
@@ -235,7 +249,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         vec3 pa = p - a;
         float y = dot(pa, ba);
         float z = y - l2;
-        float x2 = dot2(pa * l2 - ba * y);
+        float x2 = dot2_v3(pa * l2 - ba * y);
         float y2 = y * y * l2;
         float z2 = z * z * l2;
 
@@ -246,29 +260,36 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         return (sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
     }
 
-    static float sdTriPrism(vec3 p, vec2 h)
+    static float sdTriPrism(vec3 pa, vec2 ha)
     {
         float k = sqrt(3.0f);
-        h.x *= 0.5f * k;
-        p.xy /= h.x;
+        // h.x *= 0.5f * k;
+        // TODO: correctly handle in place assignments
+        var h = vec2(ha.x * 0.5f * k, ha.y);
+        var p = vec3(pa.xy / h.x, pa.z);
         p.x = abs(p.x) - 1.0f;
         p.y = p.y + 1.0f / k;
-        if (p.x + k * p.y > 0.0) p.xy = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0f;
-        p.x -= clamp(p.x, -2.0f, 0.0f);
+        if (p.x + k * p.y > 0.0f)
+        {
+            p = vec3(vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0f, p.z);
+        }
+
+        p.x = p.x - clamp(p.x, -2.0f, 0.0f);
         float d1 = length(p.xy) * sign(-p.y) * h.x;
         float d2 = abs(p.z) - h.y;
         return length(max(vec2(d1, d2), vec2(0.0f))) + min(max(d1, d2), 0.0f);
     }
 
+    // TODO: support overloadding renamming
     // vertical
-    static float sdCylinder(vec3 p, vec2 h)
+    static float sdCylinder1(vec3 p, vec2 h)
     {
         vec2 d = abs(vec2(length(p.xz), p.y)) - h;
         return min(max(d.x, d.y), 0.0f) + length(max(d, vec2(0.0f)));
     }
 
     // arbitrary orientation
-    static float sdCylinder(vec3 p, vec3 a, vec3 b, float r)
+    static float sdCylinder2(vec3 p, vec3 a, vec3 b, float r)
     {
         vec3 pa = p - a;
         vec3 ba = b - a;
@@ -297,19 +318,19 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         return sqrt(d) * sign(s);
     }
 
-    static float sdCappedCone(vec3 p, float h, float r1, float r2)
+    static float sdCappedCone1(vec3 p, float h, float r1, float r2)
     {
         vec2 q = vec2(length(p.xz), p.y);
 
         vec2 k1 = vec2(r2, h);
         vec2 k2 = vec2(r2 - r1, 2.0f * h);
         vec2 ca = vec2(q.x - min(q.x, (q.y < 0.0f) ? r1 : r2), abs(q.y) - h);
-        vec2 cb = q - k1 + k2 * clamp(dot(k1 - q, k2) / dot2(k2), 0.0f, 1.0f);
+        vec2 cb = q - k1 + k2 * clamp(dot(k1 - q, k2) / dot2_v2(k2), 0.0f, 1.0f);
         float s = (cb.x < 0.0f && ca.y < 0.0f) ? -1.0f : 1.0f;
-        return s * sqrt(min(dot2(ca), dot2(cb)));
+        return s * sqrt(min(dot2_v2(ca), dot2_v2(cb)));
     }
 
-    static float sdCappedCone(vec3 p, vec3 a, vec3 b, float ra, float rb)
+    static float sdCappedCone2(vec3 p, vec3 a, vec3 b, float ra, float rb)
     {
         float rba = rb - ra;
         float baba = dot(b - a, b - a);
@@ -330,7 +351,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         float s = (cbx < 0.0f && cay < 0.0f) ? -1.0f : 1.0f;
 
         return s * sqrt(min(cax * cax + cay * cay * baba,
-                           cbx * cbx + cby * cby * baba));
+            cbx * cbx + cby * cby * baba));
     }
 
     // c is the sin/cos of the desired cone angle
@@ -342,9 +363,9 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         return max(l, m * sign(c.y * p.x - c.x * p.y));
     }
 
-    static float sdOctahedron0(vec3 p, float s)
+    static float sdOctahedron0(vec3 pa, float s)
     {
-        p = abs(p);
+        var p = abs(pa);
         float m = p.x + p.y + p.z - s;
 
         // exact distance
@@ -372,14 +393,18 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     }
 
 
-    static float sdPyramid(vec3 p, float h)
+    static float sdPyramid(vec3 pa, float h)
     {
         float m2 = h * h + 0.25f;
 
+        var v = pa.xz;
+
         // symmetry
-        p.xz = abs(p.xz);
-        p.xz = (p.z > p.x) ? p.zx : p.xz;
-        p.xz -= 0.5f;
+        v = abs(v);
+        v = (v.y > v.x) ? v.yx : v;
+        v = v - 0.5f;
+
+        var p = vec3(v.x, pa.y, v.y);
 
         // project into face plane (2D)
         vec3 q = vec3(p.z, h * p.y - 0.5f * p.x, h * p.x + 0.5f * p.y);
@@ -390,33 +415,71 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         float a = m2 * (q.x + s) * (q.x + s) + q.y * q.y;
         float b = m2 * (q.x + 0.5f * t) * (q.x + 0.5f * t) + (q.y - m2 * t) * (q.y - m2 * t);
 
-        float d2 = min(q.y, -q.x * m2 - q.y * 0.5f) > 0.0f ? 0.0f : min(a, b);
+        float d2;
+        if (min(q.y, -q.x * m2 - q.y * 0.5f) > 0.0f)
+        {
+            d2 = 0.0f;
+        }
+        else
+        {
+            d2 = min(a, b);
+        }
 
         // recover 3D and scale, and add sign
-        return sqrt((d2 + q.z * q.z) / m2) * sign(max(q.z, -p.y)); ;
+        return sqrt((d2 + q.z * q.z) / m2) * sign(max(q.z, -p.y));
+        ;
     }
 
     // la,lb=semi axis, h=height, ra=corner
-    static float sdRhombus(vec3 p, float la, float lb, float h, float ra)
+    static float sdRhombus(vec3 pa, float la, float lb, float h, float ra)
     {
+        var p = pa;
         p = abs(p);
         vec2 b = vec2(la, lb);
         float f = clamp((ndot(b, b - 2.0f * p.xz)) / dot(b, b), -1.0f, 1.0f);
-        vec2 q = vec2(length(p.xz - 0.5f * b * vec2(1.0f - f, 1.0f + f)) * sign(p.x * b.y + p.z * b.x - b.x * b.y) - ra, p.y - h);
+        vec2 q = vec2(length(p.xz - 0.5f * b * vec2(1.0f - f, 1.0f + f)) * sign(p.x * b.y + p.z * b.x - b.x * b.y) - ra,
+            p.y - h);
         return min(max(q.x, q.y), 0.0f) + length(max(q, vec2(0.0f)));
     }
 
-    static float sdHorseshoe(vec3 p, vec2 c, float r, float le, vec2 w)
+    static float sdHorseshoe(vec3 pa, vec2 c, float r, float le, vec2 w)
     {
-        p.x = abs(p.x);
+        var p = vec3(abs(pa.x), pa.yz);
         float l = length(p.xy);
         var c0 = vec2(-c.x, c.y);
         var c1 = vec2(c.y, c.x);
         //p.xy = mat2(-c.x, c.y,
         //          c.y, c.x) * p.xy;
-        p.xy = p.x * c0 + p.y * c1;
-        p.xy = vec2((p.y > 0.0 || p.x > 0.0) ? p.x : l * sign(-c.x),
-                    (p.x > 0.0) ? p.y : l);
+        p = vec3(p.x * c0 + p.y * c1, p.z);
+        // TODO: use ternary operator when CLSL compiler support it correctly
+        //p.xy = vec2((p.y > 0.0 || p.x > 0.0) ? p.x : l * sign(-c.x),
+        //(p.x > 0.0) ? p.y : l);
+        {
+            var px = 0.0f;
+            var pxf = p.y > 0.0f || p.x > 0.0f;
+            if (pxf)
+            {
+                px = p.x;
+            }
+            else
+            {
+                px = l * sign(-c.x);
+            }
+
+            var py = 0.0f;
+            var pyf = p.x > 0.0f;
+            if (pyf)
+            {
+                py = p.y;
+            }
+            else
+            {
+                py = l;
+            }
+
+            p.xy = vec2(px, py);
+        }
+
         p.xy = vec2(p.x, abs(p.y - r)) - vec2(le, 0.0f);
 
         vec2 q = vec2(length(max(p.xy, vec2(0.0f))) + min(0.0f, max(p.x, p.y)), p.z);
@@ -647,6 +710,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         {
             return d1;
         }
+
         return d2;
     }
 
@@ -654,21 +718,28 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     static vec2 map(vec3 pos)
     {
         var res = vec2(pos.y, 0.0f);
+        //var res = vec2(pos.y, 0.0f);
+        //return vec2(0.0f, pos.y);
 
         // bounding box
         if (sdBox(pos - vec3(-2.0f, 0.3f, 0.25f), vec3(0.3f, 0.3f, 1.0f)) < res.x)
         {
             res = opU(res, vec2(sdSphere(pos - vec3(-2.0f, 0.25f, 0.0f), 0.25f), 26.9f));
+            //return vec2(sdSphere(pos - vec3(-2.0f, 0.25f, 0.0f), 0.25f), 26.9f);
+            //return vec2(0.0f, 20.5f);
             res = opU(res, vec2(sdRhombus((pos - vec3(-2.0f, 0.25f, 1.0f)).xzy, 0.15f, 0.25f, 0.04f, 0.08f), 17.0f));
         }
 
         // bounding box
         if (sdBox(pos - vec3(0.0f, 0.3f, -1.0f), vec3(0.35f, 0.3f, 2.5f)) < res.x)
         {
-            res = opU(res, vec2(sdCappedTorus((pos - vec3(0.0f, 0.30f, 1.0f)) * vec3(1.0f, -1.0f, 1.0f), vec2(0.866025f, -0.5f), 0.25f, 0.05f), 25.0f));
+            res = opU(res,
+                vec2(
+                    sdCappedTorus((pos - vec3(0.0f, 0.30f, 1.0f)) * vec3(1.0f, -1.0f, 1.0f), vec2(0.866025f, -0.5f),
+                        0.25f, 0.05f), 25.0f));
             res = opU(res, vec2(sdBoxFrame(pos - vec3(0.0f, 0.25f, 0.0f), vec3(0.3f, 0.25f, 0.2f), 0.025f), 16.9f));
             res = opU(res, vec2(sdCone(pos - vec3(0.0f, 0.45f, -1.0f), vec2(0.6f, 0.8f), 0.45f), 55.0f));
-            res = opU(res, vec2(sdCappedCone(pos - vec3(0.0f, 0.25f, -2.0f), 0.25f, 0.25f, 0.1f), 13.67f));
+            res = opU(res, vec2(sdCappedCone1(pos - vec3(0.0f, 0.25f, -2.0f), 0.25f, 0.25f, 0.1f), 13.67f));
             res = opU(res, vec2(sdSolidAngle(pos - vec3(0.0f, 0.0f, -3.0f), vec2(3.0f, 4.0f) / 5.0f, 0.4f), 49.13f));
         }
 
@@ -677,8 +748,10 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         {
             res = opU(res, vec2(sdTorus((pos - vec3(1.0f, 0.30f, 1.0f)).xzy, vec2(0.25f, 0.05f)), 7.1f));
             res = opU(res, vec2(sdBox(pos - vec3(1.0f, 0.25f, 0.0f), vec3(0.3f, 0.25f, 0.1f)), 3.0f));
-            res = opU(res, vec2(sdCapsule(pos - vec3(1.0f, 0.0f, -1.0f), vec3(-0.1f, 0.1f, -0.1f), vec3(0.2f, 0.4f, 0.2f), 0.1f), 31.9f));
-            res = opU(res, vec2(sdCylinder(pos - vec3(1.0f, 0.25f, -2.0f), vec2(0.15f, 0.25f)), 8.0f));
+            res = opU(res,
+                vec2(sdCapsule(pos - vec3(1.0f, 0.0f, -1.0f), vec3(-0.1f, 0.1f, -0.1f), vec3(0.2f, 0.4f, 0.2f), 0.1f),
+                    31.9f));
+            res = opU(res, vec2(sdCylinder1(pos - vec3(1.0f, 0.25f, -2.0f), vec2(0.15f, 0.25f)), 8.0f));
             res = opU(res, vec2(sdHexPrism(pos - vec3(1.0f, 0.2f, -3.0f), vec2(0.2f, 0.05f)), 18.4f));
         }
 
@@ -689,17 +762,26 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
             res = opU(res, vec2(sdOctahedron0(pos - vec3(-1.0f, 0.15f, -2.0f), 0.35f), 23.56f));
             res = opU(res, vec2(sdTriPrism(pos - vec3(-1.0f, 0.15f, -1.0f), vec2(0.3f, 0.05f)), 43.5f));
             res = opU(res, vec2(sdEllipsoid(pos - vec3(-1.0f, 0.25f, 0.0f), vec3(0.2f, 0.25f, 0.05f)), 43.17f));
-            res = opU(res, vec2(sdHorseshoe(pos - vec3(-1.0f, 0.25f, 1.0f), vec2(cos(1.3f), sin(1.3f)), 0.2f, 0.3f, vec2(0.03f, 0.08f)), 11.5f));
+            //res = opU(res, vec2(sdHorseshoe(pos - vec3(-1.0f, 0.25f, 1.0f), vec2(cos(1.3f), sin(1.3f)), 0.2f, 0.3f, vec2(0.03f, 0.08f)), 11.5f));
         }
 
         // bounding box
         if (sdBox(pos - vec3(2.0f, 0.3f, -1.0f), vec3(0.35f, 0.3f, 2.5f)) < res.x)
         {
             res = opU(res, vec2(sdOctogonPrism(pos - vec3(2.0f, 0.2f, -3.0f), 0.2f, 0.05f), 51.8f));
-            res = opU(res, vec2(sdCylinder(pos - vec3(2.0f, 0.14f, -2.0f), vec3(0.1f, -0.1f, 0.0f), vec3(-0.2f, 0.35f, 0.1f), 0.08f), 31.2f));
-            res = opU(res, vec2(sdCappedCone(pos - vec3(2.0f, 0.09f, -1.0f), vec3(0.1f, 0.0f, 0.0f), vec3(-0.2f, 0.40f, 0.1f), 0.15f, 0.05f), 46.1f));
-            res = opU(res, vec2(sdRoundCone(pos - vec3(2.0f, 0.15f, 0.0f), vec3(0.1f, 0.0f, 0.0f), vec3(-0.1f, 0.35f, 0.1f), 0.15f, 0.05f), 51.7f));
-            res = opU(res, vec2(sdRoundCone(pos - vec3(2.0f, 0.20f, 1.0f), 0.2f, 0.1f, 0.3f), 37.0f));
+            res = opU(res,
+                vec2(
+                    sdCylinder2(pos - vec3(2.0f, 0.14f, -2.0f), vec3(0.1f, -0.1f, 0.0f), vec3(-0.2f, 0.35f, 0.1f),
+                        0.08f), 31.2f));
+            res = opU(res,
+                vec2(
+                    sdCappedCone2(pos - vec3(2.0f, 0.09f, -1.0f), vec3(0.1f, 0.0f, 0.0f), vec3(-0.2f, 0.40f, 0.1f),
+                        0.15f, 0.05f), 46.1f));
+            res = opU(res,
+                vec2(
+                    sdRoundCone_s2(pos - vec3(2.0f, 0.15f, 0.0f), vec3(0.1f, 0.0f, 0.0f), vec3(-0.1f, 0.35f, 0.1f),
+                        0.15f, 0.05f), 51.7f));
+            res = opU(res, vec2(sdRoundCone_s1(pos - vec3(2.0f, 0.20f, 1.0f), 0.2f, 0.1f, 0.3f), 37.0f));
         }
 
         return res;
@@ -756,7 +838,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     //}
 
     // https://iquilezles.org/articles/boxfunctions
-    static vec2f32 iBox(in vec3f32 ro, in vec3f32 rd, in vec3f32 rad)
+    static vec2f32 iBox(vec3f32 ro, vec3f32 rd, vec3f32 rad)
     {
         var m = 1.0f / rd;
         var n = m * ro;
@@ -764,7 +846,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         var t1 = -n - k;
         var t2 = -n + k;
         return vec2(max(max(t1.x, t1.y), t1.z),
-                     min(min(t2.x, t2.y), t2.z));
+            min(min(t2.x, t2.y), t2.z));
     }
     //[ShaderMethod]
     //Vector2 iBox(Vector3 ro, Vector3 rd, Vector3 rad)
@@ -786,7 +868,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         var tmax = 20.0f;
 
         // raytrace floor plane
-        float tp1 = (0.0f - ro.x) / rd.y;
+        float tp1 = (0.0f - ro.y) / rd.y;
 
         if (tp1 > 0.0f)
         {
@@ -796,17 +878,22 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         //else return res;
 
         // raymarch primitives   
-        var tb = iBox(ro - vec3(0.0f, 0.4f, -0.5f), rd, vec3(2.5f, 0.41f, 3.0f));
-        if (tb.x < tb.y && tb.x > 0.0f && tb.x < tmax)
+        //var tb = iBox(ro - vec3(0.0f, 0.4f, -0.5f), rd, vec3(2.5f, 0.41f, 3.0f));
+        var tb = iBox(ro, rd, vec3(2.5f, 0.5f, 2.5f));
+        var cond = tb.x < tb.y && tb.y > 0.0f && tb.x < tmax;
+        if (cond)
         {
-            //return vec2(tb.x,2.0);
+            //return vec2(tb.y, 2.0f);
+
             tmin = max(tb.x, tmin);
-            tmax = max(tb.y, tmax);
+            tmax = min(tb.y, tmax);
+
 
             var t = tmin;
             for (var i = 0; i < 70 && t < tmax; i = i + 1)
             {
                 var h = map(ro + rd * t);
+                //return vec2(tb.y, (rd * t).z);
                 if (abs(h.x) < (0.0001f * t))
                 {
                     res = vec2(t, h.y);
@@ -814,6 +901,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
                 }
                 t = t + h.x;
             }
+            //return res;
         }
         return res;
     }
@@ -840,9 +928,9 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     {
         var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
         return normalize(e.xyy * map(pos + e.xyy).x +
-                          e.yyx * map(pos + e.yyx).x +
-                          e.yxy * map(pos + e.yxy).x +
-                          e.xxx * map(pos + e.xxx).x);
+                         e.yyx * map(pos + e.yyx).x +
+                         e.yxy * map(pos + e.yxy).x +
+                         e.xxx * map(pos + e.xxx).x);
         //var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
         //return Normalize(
         //    e.xyy * map(pos + e.xyy).X + e.yyx * map(pos + e.yyx).X + e.yxy * map(pos + e.yxy).X + e.xxx * map
@@ -850,6 +938,14 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         //    new Vector3(e.Y, e.Y, e.X) * map(pos + new Vector3(e.Y, e.Y, e.X)).X +
         //    new Vector3(e.Y, e.X, e.Y) * map(pos + new Vector3(e.Y, e.X, e.Y)).X +
         //new Vector3(e.X, e.X, e.X) * map(pos + new Vector3(e.X, e.X, e.X)).X);
+        //vec3 n = vec3(0.0f);
+        //for (int i = 0; i < 4; i++)
+        //{
+        //    vec3 e = 0.5773 * (2.0f * vec3((((i + 3) >> 1) & 1), ((i >> 1) & 1), (i & 1)) - 1.0);
+        //    n += e * map(pos + 0.0005f * e).x;
+        //    //if( n.x+n.y+n.z>100.0 ) break;
+        //}
+        //return normalize(n);
     }
 
     [ShaderMethod]
@@ -871,11 +967,13 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
             var s = clamp(8.0f * h / t, 0.0f, 1.0f);
             res = min(res, s);
             t = t + clamp(h, 0.01f, 0.2f);
-            if (res < 0.004f || t > tmax)
+            var cond = res < 0.004f || t > tmax;
+            if (cond)
             {
                 break;
             }
         }
+
         res = clamp(res, 0.0f, 1.0f);
         return res * res * (3.0f - 2.0f * res);
     }
@@ -901,13 +999,15 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
             //}
             if (m >= 1.5f)
             {
-                nor = calcNormal(pos);
+                //nor = calcNormal(pos);
+                nor = vec3(0.0f, 1.0f, 0.0f);
             }
+
             var reflection = reflect(rd, nor);
 
             // material        
             var s = vec3(m * 2.0f) + vec3(0.0f, 1.0f, 2.0f);
-            col = vec3(0.2f) + 0.2f * sin(s);
+            col = vec3(0.3f) + 0.3f * sin(s);
             var ks = 1.0f;
 
             if (m < 1.5f)
@@ -916,14 +1016,26 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
                 var dpdx = ro.y * (rd / rd.y - rdx / rdx.y);
                 var dpdy = ro.y * (rd / rd.y - rdy / rdy.y);
 
-                var f = checkersGradBox(3.0F * vec2(pos.x, pos.z), 3.0f * vec2(dpdx.x, dpdx.z), 3.0f * vec2(dpdy.x, dpdy.z));
+                var f = checkersGradBox(3.0F * vec2(pos.x, pos.z), 3.0f * vec2(dpdx.x, dpdx.z),
+                    3.0f * vec2(dpdy.x, dpdy.z));
                 col = vec3(0.15f) + f * vec3(0.05f);
                 ks = 0.4f;
             }
+            //else
+            //{
+            //    col = vec3(0.5f);
+            //}
+            //return vec3(clamp(col.x, 0.0f, 1.0f), clamp(col.y, 0.0f, 1.0f), clamp(col.z, 0.0f, 1.0f));
+            //else
+            //{
+            //    col = vec3(m / 10.0f);
+            //}
+            //return col;
 
             // lighting
 
             var lin = vec3(0.0f);
+            //var lin = col;
 
             int sun = 1;
             int sky = 1;
@@ -936,6 +1048,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
                 var dif = clamp(dot(nor, lig), 0.0f, 1.0f);
 
                 dif *= calcSoftshadow(pos, lig, 0.02f, 2.5f);
+
                 var spe = pow(clamp(dot(nor, hal), 0.0f, 1.0f), 16.0f);
                 spe *= dif;
                 spe *= 0.04f + 0.96f * pow(clamp(1.0f - dot(hal, lig), 0.0f, 1.0f), 5.0f);
@@ -943,6 +1056,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
                 lin += col * 2.20f * dif * vec3(1.30f, 1.00f, 0.70f);
                 lin += 5.0f * spe * vec3(1.30f, 1.00f, 0.70f) * ks;
             }
+
             // sky
             if (sky == 1)
             {
@@ -953,6 +1067,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
                 lin += col * 0.60f * dif * vec3(0.40f, 0.60f, 1.15f);
                 lin += 2.00f * spe * vec3(0.40f, 0.60f, 1.30f) * ks;
             }
+
             col = lin;
             col = mix(col, vec3(0.7f, 0.7f, 0.9f), vec3(1.0f - exp(-0.0001f * t * t * t)));
         }
@@ -969,19 +1084,12 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
 
     public struct VertexInput
     {
-        [Location(0)]
-        public vec2f32 position;
+        [Location(0)] public vec2f32 position;
     }
 
-    [Group(0)]
-    [Binding(0)]
-    [Uniform]
-    static vec2f32 iResolution;
+    [Group(0)][Binding(0)][Uniform] static vec2f32 iResolution;
 
-    [Group(0)]
-    [Binding(1)]
-    [Uniform]
-    static float iTime;
+    [Group(0)][Binding(1)][Uniform] static float iTime;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
@@ -994,7 +1102,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     [return: Location(0)]
     static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 vertexIn)
     {
-        int antialiasing = 3;
+        int antialiasing = 1;
         var time = 32.0f + iTime * 1.5f;
         var fragCoord = iResolution - vertexIn.xy;
         var ta = vec3(0.25f, -0.75f, -0.75f);
@@ -1007,32 +1115,39 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         var cv = cross(cu, cw);
 
         var tot = vec3(0.0f);
-        for (int m = ZERO(); m < antialiasing; m++)
+        // TODO: implement correct nested loop support
+        for (var loop = 0; loop < antialiasing * antialiasing; ++loop)
         {
-            for (int n = ZERO(); n < antialiasing; n++)
-            {
-                var o = vec2((float)(m) * 1.0f, (float)(n) * 1.0f) / (float)(antialiasing * 1.0f) - vec2(0.5f);
-                var p = vec2(2.0f * fragCoord.x - iResolution.x, 2.0F * fragCoord.y - iResolution.y) / iResolution.y;
-                // focal length
-                var fl = 2.5f;
+            var m = loop / antialiasing;
+            var n = loop % antialiasing;
+            // for (int m = ZERO(); m < antialiasing; m++)
+            // {
+            //     for (int n = ZERO(); n < antialiasing; n++)
+            //     {
+            var o = vec2((float)(m) * 1.0f, (float)(n) * 1.0f) / (float)(antialiasing * 1.0f) - vec2(0.5f);
+            var p = vec2(2.0f * fragCoord.x - iResolution.x, 2.0F * fragCoord.y - iResolution.y) / iResolution.y;
+            // focal length
+            var fl = 2.5f;
 
-                // ray direction
-                var rd = MatrixMultiplyVector(cu, cv, cw, normalize(vec3(p.x, p.y, fl)));
+            // ray direction
+            var rd = MatrixMultiplyVector(cu, cv, cw, normalize(vec3(p.x, p.y, fl)));
 
-                // ray differentials
-                var px = (2.0f * (fragCoord + vec2(1.0f, 0.0f)) - vec2(iResolution.x, iResolution.y)) / iResolution.y;
-                var py = (2.0f * (fragCoord + vec2(0.0f, 1.0f)) - vec2(iResolution.x, iResolution.y)) / iResolution.y;
-                var rdx = MatrixMultiplyVector(cu, cv, cw, normalize(vec3(px, fl)));
-                var rdy = MatrixMultiplyVector(cu, cv, cw, normalize(vec3(py, fl)));
+            // ray differentials
+            var px = (2.0f * (fragCoord + vec2(1.0f, 0.0f)) - vec2(iResolution.x, iResolution.y)) / iResolution.y;
+            var py = (2.0f * (fragCoord + vec2(0.0f, 1.0f)) - vec2(iResolution.x, iResolution.y)) / iResolution.y;
+            var rdx = MatrixMultiplyVector(cu, cv, cw, normalize(vec3(px, fl)));
+            var rdy = MatrixMultiplyVector(cu, cv, cw, normalize(vec3(py, fl)));
 
-                var col = render(ro, rd, rdx, rdy);
+            var col = render(ro, rd, rdx, rdy);
 
-                // gamma correction
-                col = pow(col, vec3(0.4545f));
+            // gamma correction
+            col = pow(col, vec3(0.4545f));
 
-                tot = tot + col;
-            }
+            tot = tot + col;
+            //     }
+            // }
         }
+
         tot /= (float)(antialiasing * antialiasing * 1.0f);
         return vec4(tot, 1.0f);
     }

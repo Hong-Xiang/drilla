@@ -50,7 +50,12 @@ public sealed class VectorNumericUnaryOperation<TRank, TElement, TOp>
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<VectorNumericUnaryOperation<TRank, TElement, TOp>> expr)
     {
-        throw new NotImplementedException();
+        return visitor.VisitUnaryExpression<
+VectorNumericUnaryOperation<TRank, TElement, TOp>,
+VecType<TRank, TElement>,
+VecType<TRank, TElement>,
+TOp
+            >(expr);
     }
 }
 

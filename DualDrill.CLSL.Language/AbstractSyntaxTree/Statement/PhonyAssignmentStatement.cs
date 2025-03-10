@@ -29,12 +29,10 @@ public sealed record class PhonyAssignmentStatement(
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
-        writer.Write("\t");
+        writer.WriteLine("phony assign");
         using (writer.IndentedScope())
         {
             Expr.Dump(context, writer);
         }
-
-        writer.WriteLine(";");
     }
 }

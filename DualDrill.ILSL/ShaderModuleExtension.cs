@@ -16,6 +16,10 @@ using System.Collections.Immutable;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using ICSharpCode.Decompiler.CSharp.Syntax;
+using DualDrill.Mathematics;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
+using DualDrill.CLSL.Language.Operation;
 
 namespace DualDrill.CLSL;
 
@@ -57,10 +61,30 @@ public static class ShaderModuleExtension
                     var bt = cfg[sl];
                     foreach (var (vo, vi) in bb.Outputs.Zip(bt.Inputs))
                     {
-                        statements.Add(SyntaxFactory.AssignStatement(
-                            SyntaxFactory.VarIdentifier(vi),
-                            SyntaxFactory.VarIdentifier(vo)
-                        ));
+                        switch (vo.Type, vi.Type)
+                        {
+                            case (var l, var r) when l.Equals(r):
+                            case (UIntType<N32>, IntType<N32>):
+                            case (IntType<N32>, UIntType<N32>):
+                                statements.Add(SyntaxFactory.AssignStatement(
+                                    SyntaxFactory.VarIdentifier(vi),
+                                    SyntaxFactory.VarIdentifier(vo)
+                                ));
+                                break;
+                            case (IntType<N32>, BoolType):
+                                IBinaryExpressionOperation op =
+                                    NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Ne>.Instance;
+                                statements.Add(SyntaxFactory.AssignStatement(
+                                    SyntaxFactory.VarIdentifier(vi),
+                                    op.CreateExpression(
+                                        SyntaxFactory.VarIdentifier(vo),
+                                        SyntaxFactory.Literal(0)
+                                    )
+                                ));
+                                break;
+                            default:
+                                throw new NotSupportedException();
+                        }
                     }
                 }
 
@@ -165,9 +189,9 @@ public static class ShaderModuleExtension
             var elements = result.Accept(simplifer).ToImmutableArray();
             result = elements switch
             {
-            [Block r] => r,
-            [Loop r] => r,
-            [IfThenElse r] => r,
+                [Block r] => r,
+                [Loop r] => r,
+                [IfThenElse r] => r,
                 _ => new Block(Label.Create(), new(elements))
             };
 

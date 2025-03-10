@@ -359,7 +359,7 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
                 await b.Accept(this);
                 break;
             default:
-                await SyntaxFactory.Indirection(expr).Accept(this);
+                await SyntaxFactory.Indirection(expr.Source).Accept(this);
                 break;
         }
 
@@ -378,7 +378,7 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
                 await b.Accept(this);
                 break;
             default:
-                await SyntaxFactory.Indirection(expr).Accept(this);
+                await SyntaxFactory.Indirection(expr.Source).Accept(this);
                 break;
         }
 
@@ -388,7 +388,15 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
 
     public async ValueTask VisitNamedComponentExpression(NamedComponentExpression expr)
     {
-        await expr.Base.Accept(this);
+        switch (expr.Base)
+        {
+            case AddressOfExpression { Base: var b }:
+                await b.Accept(this);
+                break;
+            default:
+                await SyntaxFactory.Indirection(expr.Base).Accept(this);
+                break;
+        }
         Writer.Write(".");
         Writer.Write(expr.Component.Name);
     }

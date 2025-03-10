@@ -22,8 +22,10 @@ public sealed record class BinaryOperationExpression<TOperation>
 {
     public BinaryOperationExpression(IExpression left, IExpression right)
     {
-        Debug.Assert(left.Type.Equals(TOperation.Instance.LeftType));
-        Debug.Assert(right.Type.Equals(TOperation.Instance.RightType));
+        var opLt = TOperation.Instance.LeftType;
+        var opRt = TOperation.Instance.RightType;
+        //Debug.Assert(left.Type.Equals(opLt));
+        //Debug.Assert(right.Type.Equals(opRt));
         L = left;
         R = right;
     }

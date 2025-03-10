@@ -392,7 +392,7 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
     label: shaderName,
     // code,
     // code: minimumTriangleCode,
-    code : code,
+    code: code,
     //     code: `
     // @vertex
     // fn vs (@builtin (vertex_index) vertexIndex:u32) -> @builtin(position) vec4<f32>
@@ -429,7 +429,11 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
   );
   const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
+    // entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
+    entries: [
+      { binding: 0, resource: { buffer: resolutionBuffer } },
+      { binding: 1, resource: { buffer: timeBuffer } },
+    ],
   });
 
   const pipelineLayout = device.createPipelineLayout({

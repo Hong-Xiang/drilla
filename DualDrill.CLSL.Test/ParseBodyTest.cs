@@ -16,10 +16,12 @@ using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.CLSL.Language.ControlFlow;
+using System.CodeDom.Compiler;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
-public class ParseBodyTest
+public class ParseBodyTest(ITestOutputHelper Output)
 {
     IExpression? ParseExpressionBodyMethod(MethodBase m)
     {
@@ -67,6 +69,65 @@ public class ParseBodyTest
              .Which.Expr.Should().BeOfType<LiteralValueExpression>()
              .Which.Literal.Should().BeOfType<I32Literal>()
              .Which.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public void VectorComponentSetShouldWork()
+    {
+        var f = new FunctionDeclaration(nameof(DevelopTestShaderModule.SetComponent), [
+                new ParameterDeclaration("x", ShaderType.F32, []),
+                new ParameterDeclaration("y", ShaderType.F32, [])
+            ],
+            new FunctionReturn(ShaderType.Vec2F32, []), []);
+        var result = ParseMethod2(f,
+            MethodHelper.GetMethod<float, float, vec2f32>(DevelopTestShaderModule.SetComponent));
+        var sw = new StringWriter();
+        var isw = new IndentedTextWriter(sw);
+        result.Dump(isw);
+        Output.WriteLine(sw.ToString());
+        var entry = result[result.Entry];
+        entry.Elements.Should().SatisfyRespectively(
+            s => s.Should().BeOfType<SimpleAssignmentStatement>(),
+            s => s.Should().Satisfy<VectorComponentSetStatement<N2, FloatType<N32>, Swizzle.X>>(assign =>
+            {
+                assign.Target.Should().BeOfType<AddressOfExpression>()
+                      .Which.Base.Should().BeOfType<VariableIdentifierExpression>();
+                assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(f.Parameters[0]));
+            }),
+            s => s.Should().Satisfy<VectorComponentSetStatement<N2, FloatType<N32>, Swizzle.Y>>(assign =>
+            {
+                assign.Target.Should().BeOfType<AddressOfExpression>()
+                      .Which.Base.Should().BeOfType<VariableIdentifierExpression>();
+                assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(f.Parameters[1]));
+            }),
+            s => s.Should().BeOfType<SimpleAssignmentStatement>()
+        );
+    }
+
+    [Fact]
+    public void BroadcastVectorMulShouldWork()
+    {
+        var f = new FunctionDeclaration(nameof(DevelopTestShaderModule.BroadcastVectorOperation), [
+                new ParameterDeclaration("a", ShaderType.Vec2F32, []),
+                new ParameterDeclaration("b", ShaderType.F32, [])
+            ],
+            new FunctionReturn(ShaderType.Vec2F32, []), []);
+        var result = ParseMethod2(f,
+            MethodHelper.GetMethod<vec2f32, float, vec2f32>(DevelopTestShaderModule.BroadcastVectorOperation));
+        var entry = result[result.Entry];
+        entry.Elements.Should().ContainSingle()
+             .Which.Should().BeOfType<PushStatement>()
+             .Which.Expr.Should().Satisfy<BinaryOperationExpression<
+                 VectorScalarExpressionNumericOperation<N2, FloatType<N32>, BinaryArithmetic.Mul>>>(
+                 expr =>
+                 {
+                     expr.L.Should().BeOfType<FormalParameterExpression>()
+                         .Which.Parameter.Should().Be(f.Parameters[0]);
+                     expr.R.Should().BeOfType<FormalParameterExpression>()
+                         .Which.Parameter.Should().Be(f.Parameters[1]);
+                     expr.Operation.LeftType.Should().BeOfType<VecType<N2, FloatType<N32>>>();
+                     expr.Operation.RightType.Should().BeOfType<FloatType<N32>>();
+                 });
     }
 
     [Fact]

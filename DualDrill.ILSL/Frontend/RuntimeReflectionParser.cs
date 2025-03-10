@@ -412,6 +412,8 @@ public sealed record class RuntimeReflectionParser(
                             {
                                 case (IntType<N32>, UIntType<N32>):
                                 case (UIntType<N32>, IntType<N32>):
+                                case (IntType<N32>, BoolType):
+                                case (BoolType, IntType<N32>):
                                     continue;
                                 default:
                                     throw new ValidationException(
@@ -436,8 +438,8 @@ public sealed record class RuntimeReflectionParser(
 
 
             BasicBlocks.Add(l,
-                new BasicBlock<IStackStatement>([..visitor.Statements], [..BasicBlockInputs[l]],
-                    [..BasicBlockOutputs[l]]));
+                new BasicBlock<IStackStatement>([.. visitor.Statements], [.. BasicBlockInputs[l]],
+                    [.. BasicBlockOutputs[l]]));
         }
 
         var bodies = model.ControlFlowGraph.Labels().ToDictionary(l => l,

@@ -10,8 +10,14 @@ using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
 
+public interface IVectorComponentSetOperation
+{
+    IStackStatement CreateStatement(IExpression target, IExpression value);
+}
+
 public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
-    : IOperation<VectorComponentSetOperation<TRank, TVector, TComponent>>
+    : IVectorComponentSetOperation
+    , IOperation<VectorComponentSetOperation<TRank, TVector, TComponent>>
     where TRank : IRank<TRank>
     where TVector : ISizedVecType<TRank, TVector>
     where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
@@ -47,12 +53,12 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
     }
 
     record struct SizedVecStmtVisitor(IExpression Target, IExpression Value)
-        : ISizedVecType<TRank, TVector>.ISizedVisitor<IStatement>
+        : ISizedVecType<TRank, TVector>.ISizedVisitor<IStackStatement>
     {
-        public IStatement Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement>
+        public IStackStatement Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement>
             => new VectorComponentSetStatement<TRank, TElement, TComponent>(Target, Value);
     }
 
-    public IStatement CreateStatement(IExpression target, IExpression value)
+    public IStackStatement CreateStatement(IExpression target, IExpression value)
         => TVector.Instance.Accept(new SizedVecStmtVisitor(target, value));
 }
