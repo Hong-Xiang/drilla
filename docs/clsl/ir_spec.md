@@ -8,9 +8,9 @@ CLSL IR is a hybrid intermediate representation designed specifically for shader
 
 It has multiple different kinds of representations of function bodies,
 while the declarations are represented using `ShaderModuleDeclaration`, `FunctionDeclaration` etc,
-the function bodies are represented using differnt kinds of types implemented `IFunctionBody`, including:
+the function bodies are represented using different kinds of types implemented `IFunctionBody`, including:
 
-* `UnstructedStackInstruction` stack byte code with `LabelInstruction` and `BrInstruction`, `BrInstruction` is allowed to jump to any label inside current function.
+* `UnstructuredStackInstruction` stack byte code with `LabelInstruction` and `BrInstruction`, `BrInstruction` is allowed to jump to any label inside current function.
 * `StructuredControlFlowRegion` structured control flow region with `Block`, `Loop`, `If`, `Else`, `Switch` etc, `BrInstruction` is only allowed to jump to the outer regions of current region.
 * `ControlFlowGraph` a control flow graph representation of the function body,
 with `Label`s associated with `BasicBlock`s,
@@ -32,7 +32,7 @@ and `BasicBlock`s are connected with `ISuccessor`s.
 3. **Structured Control Flow**
    - Block-based nesting
    - Direct mapping to high-level constructs
-   - Natural translation to shader languages
+   - Natural translation to shader languages (shader language like HLSL, WGSL does not support unstructured control flow)
 
 ## Instruction Set
 

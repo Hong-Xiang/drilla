@@ -7,6 +7,7 @@
     <PackageVersion Include="ClangSharp" Version="18.1.0.3" />
     <PackageVersion Include="DotNext" Version="5.16.1" />
     <PackageVersion Include="DotNext.Unsafe" Version="5.14.0" />
+    <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.2.1" />
     <PackageVersion Include="FluentAssertions" Version="8.0.1" />
     <PackageVersion Include="LLVMSharp" Version="16.0.0" />
     <PackageVersion Include="Silk.NET" Version="$(SilkNETVersion)" />

@@ -55,5 +55,5 @@ public sealed class LocalDeclarationContext : ILocalDeclarationContext
     public int LabelIndex(Label label) => LabelIndexLookup[label];
     public int VariableIndex(VariableDeclaration variable) => VariableIndexLookup[variable];
 
-    public static LocalDeclarationContext Empty { get; } = new([]);
+    //public static LocalDeclarationContext Empty { get; } = new([]);
 }

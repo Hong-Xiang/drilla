@@ -8,11 +8,34 @@ using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
+public sealed record class BasicBlock2<TElement, TInput, TOutput>(
+    Label Label,
+     ImmutableArray<TElement> Elements,
+     ImmutableArray<TInput> Inputs,
+     ImmutableArray<TOutput> Outputs,
+     ISuccessor Successor
+)
+    where TElement : ILocalDeclarationReferencingElement
+{
+    public static BasicBlock<TElement> Create(IEnumerable<TElement> instructions)
+    {
+        return new([.. instructions], [], []);
+    }
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        foreach (var e in Elements)
+        {
+            e.Dump(context, writer);
+        }
+    }
+}
+
+
 public interface IBasicBlock<TElement, TResult, TTransfer>
     : ITextDumpable<ILocalDeclarationContext>
 {
     public ImmutableArray<TElement> Elements { get; }
-    public TResult? Result { get; }
     public ImmutableStack<TTransfer> Inputs { get; }
     public ImmutableStack<TTransfer> Outputs { get; }
 }
@@ -25,11 +48,9 @@ public sealed record class BasicBlock<TElement>(
     : IBasicBlock<TElement, IExpression, VariableDeclaration>
     where TElement : ILocalDeclarationReferencingElement
 {
-    public IExpression? Result { get; } = null;
-
     public static BasicBlock<TElement> Create(IEnumerable<TElement> instructions)
     {
-        return new([..instructions], [], []);
+        return new([.. instructions], [], []);
     }
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)

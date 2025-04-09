@@ -15,7 +15,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 /// LabelIndex(Entry) = 0
 /// </summary>
 /// <typeparam name="TElement"></typeparam>
-public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ITextDumpable
+public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody
     where TElement : IBasicBlockElement
 {
     public ControlFlowGraph<BasicBlock<TElement>> Graph { get; }

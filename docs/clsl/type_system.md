@@ -9,6 +9,9 @@ enabling seamless translation of C# code to shader code.
 Additional shader attributes are introduced to add more shader specific information to C# types.
 Additional shader meta attributes are introduced to add more information about how to connect C# types/methods to CLSL types/methods.
 
+We are trying to use the JIT nature of csharp that allows arbitrary generic types to be constructed at runtime,
+to represent the shader types directly using csharp types.
+
 ## Core Type Interfaces
 
 ### Base Types

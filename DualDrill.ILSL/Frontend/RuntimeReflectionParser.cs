@@ -333,22 +333,22 @@ public sealed record class RuntimeReflectionParser(
         return result;
     }
 
-    ILocalDeclarationContext GetMethodLocalDeclaration(MethodBase method)
-    {
-        var methodBody = method.GetMethodBody();
-        if (methodBody is null)
-        {
-            return LocalDeclarationContext.Empty;
-        }
+    //ILocalDeclarationContext GetMethodLocalDeclaration(MethodBase method)
+    //{
+    //    var methodBody = method.GetMethodBody();
+    //    if (methodBody is null)
+    //    {
+    //        return LocalDeclarationContext.Empty;
+    //    }
 
-        var instructions = method.GetInstructions();
-        if (instructions is null)
-        {
-            return LocalDeclarationContext.Empty;
-        }
+    //    var instructions = method.GetInstructions();
+    //    if (instructions is null)
+    //    {
+    //        return LocalDeclarationContext.Empty;
+    //    }
 
-        throw new NotImplementedException();
-    }
+    //    throw new NotImplementedException();
+    //}
 
     public ControlFlowGraphFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f,
         MethodBodyAnalysisModel model)
@@ -403,7 +403,7 @@ public sealed record class RuntimeReflectionParser(
                     {
                         foreach (var (c, e) in visitor.Outputs.Zip(existed))
                         {
-                            if (c.Type.Equals(e.Type))
+                            if (c.Type == e.Type)
                             {
                                 continue;
                             }

@@ -11,9 +11,7 @@ public interface IFunctionBody : ILocalDeclarationContext, ITextDumpable
 {
 }
 
-public sealed class FunctionBody<TBodyData>
-    : IFunctionBody
-    , ITextDumpable
+public sealed class FunctionBody<TBodyData> : IFunctionBody
     where TBodyData : ILocalDeclarationReferencingElement
 {
     public TBodyData Body { get; }
@@ -26,8 +24,8 @@ public sealed class FunctionBody<TBodyData>
     public FunctionBody(TBodyData body)
     {
         Body = body;
-        LocalVariables = [..body.ReferencedLocalVariables.Distinct()];
-        Labels = [..body.ReferencedLabels.Distinct()];
+        LocalVariables = [.. body.ReferencedLocalVariables.Distinct()];
+        Labels = [.. body.ReferencedLabels.Distinct()];
         VariableIndices = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
         LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
     }

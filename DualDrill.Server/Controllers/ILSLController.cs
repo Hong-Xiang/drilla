@@ -4,6 +4,7 @@ using DualDrill.Engine.Shader;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
+using System.Text.Json;
 
 namespace DualDrill.Server.Controllers;
 
@@ -57,7 +58,8 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
             return NotFound();
         }
         var ir = shader.Parse();
-        return Ok(ir.Dump());
+        //return Ok(ir.Dump());
+        return Ok(JsonSerializer.Serialize(ir));
     }
 
     [HttpGet("compile/{name}/wgsl")]

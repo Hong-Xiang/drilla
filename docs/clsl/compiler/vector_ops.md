@@ -4,7 +4,7 @@
 
 ## Overview
 
-CLSL implements a sophisticated vector operation system with full swizzling support, SIMD optimization where possible, and zero-cost abstractions for basic operations. The implementation is parameterized over vector rank and element type, providing a flexible yet performant foundation for shader computations.
+CLSL implements a vector operation system with full swizzling support, SIMD optimization where possible, and zero-cost abstractions for basic operations. The implementation is parameterized over vector rank and element type, providing a flexible yet performant foundation for shader computations.
 
 ## Vector Implementation Strategies
 
