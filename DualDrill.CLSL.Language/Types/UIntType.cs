@@ -7,6 +7,7 @@ namespace DualDrill.CLSL.Language.Types;
 
 public interface IUIntType : IIntegerType, IScalarType
 {
+    IIntType SameWidthIntType { get; }
 }
 
 [DebuggerDisplay("{Name}")]
@@ -31,6 +32,8 @@ public sealed class UIntType<TBitWidth> : IUIntType, INumericType<UIntType<TBitW
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
+
+    public IIntType SameWidthIntType => IntType<TBitWidth>.Instance;
 }
 
 public static partial class ShaderType

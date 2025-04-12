@@ -48,7 +48,7 @@ public static class Swizzle
 
     public static IEnumerable<ISizedComponent<TRank>> Components<TRank>()
         where TRank : IRank<TRank>
-        => ((IEnumerable<IComponent>) [X.Instance, Y.Instance, Z.Instance, W.Instance])
+        => ((IEnumerable<IComponent>)[X.Instance, Y.Instance, Z.Instance, W.Instance])
             .OfType<ISizedComponent<TRank>>();
 
     public static IEnumerable<ISizedPattern<TRank>> SwizzlePatterns<TRank>()
@@ -250,9 +250,5 @@ public static class Swizzle
 
 public interface IVectorSizzleOperation<TSelf> : IOperation<TSelf>
     where TSelf : IVectorSizzleOperation<TSelf>
-{
-}
-
-public interface IVectorSwizzleGetOperation
 {
 }

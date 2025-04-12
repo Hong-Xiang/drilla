@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 
@@ -51,12 +52,15 @@ public sealed class VectorNumericUnaryOperation<TRank, TElement, TOp>
         UnaryOperationExpression<VectorNumericUnaryOperation<TRank, TElement, TOp>> expr)
     {
         return visitor.VisitUnaryExpression<
-VectorNumericUnaryOperation<TRank, TElement, TOp>,
-VecType<TRank, TElement>,
-VecType<TRank, TElement>,
-TOp
-            >(expr);
+            VectorNumericUnaryOperation<TRank, TElement, TOp>,
+            VecType<TRank, TElement>,
+            VecType<TRank, TElement>,
+            TOp
+        >(expr);
     }
+
+    public IInstruction Instruction =>
+        UnaryExpressionOperationInstruction<VectorNumericUnaryOperation<TRank, TElement, TOp>>.Instance;
 }
 
 public sealed class VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>

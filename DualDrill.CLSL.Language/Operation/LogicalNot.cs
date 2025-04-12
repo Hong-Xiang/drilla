@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 
@@ -23,4 +24,6 @@ public sealed record class LogicalNotOperation
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<LogicalNotOperation> expr)
         => visitor.VisitUnaryExpression<LogicalNotOperation, BoolType, BoolType, LogicalNot>(expr);
+
+    public IInstruction Instruction => LogicalNotInstruction.Instance;
 }

@@ -6,7 +6,7 @@ public sealed record class MatType(
     IScalarType ElementType,
     IRank Row,
     IRank Column)
-    : IShaderType, IStorableType
+    : IShaderType<MatType>, IStorableType
 {
     public string Name => $"mat{Row.Value}x{Column.Value}{ElementType.ElementName()}";
 

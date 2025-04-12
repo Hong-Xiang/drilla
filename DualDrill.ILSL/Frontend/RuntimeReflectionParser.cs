@@ -13,6 +13,8 @@ using DotNext.Collections.Generic;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.StackInstruction;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
@@ -26,7 +28,7 @@ namespace DualDrill.CLSL.Frontend;
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
-    Dictionary<FunctionDeclaration, ControlFlowGraphFunctionBody<IStackStatement>> MethodBodies)
+    Dictionary<FunctionDeclaration, StackInstructionFunctionBody> MethodBodies)
 {
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
@@ -188,7 +190,7 @@ public sealed record class RuntimeReflectionParser(
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
-    public ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> ParseShaderModule(
+    public ShaderModuleDeclaration<StackInstructionFunctionBody> ParseShaderModule(
         ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -313,7 +315,7 @@ public sealed record class RuntimeReflectionParser(
         return decl;
     }
 
-    public ControlFlowGraphFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f)
+    public StackInstructionFunctionBody ParseMethodBody2(FunctionDeclaration f)
     {
         var model = Context.GetFunctionDefinition(f);
         return ParseMethodBody2(f, model);
@@ -350,7 +352,7 @@ public sealed record class RuntimeReflectionParser(
     //    throw new NotImplementedException();
     //}
 
-    public ControlFlowGraphFunctionBody<IStackStatement> ParseMethodBody2(FunctionDeclaration f,
+    public StackInstructionFunctionBody ParseMethodBody2(FunctionDeclaration f,
         MethodBodyAnalysisModel model)
     {
         var methodTable = new CompilationContext(Context);
@@ -358,7 +360,6 @@ public sealed record class RuntimeReflectionParser(
         {
             _ = ParseLocalVariable(v, methodTable);
         }
-
 
         {
             foreach (var (index, p) in f.Parameters.Index())
@@ -368,19 +369,20 @@ public sealed record class RuntimeReflectionParser(
         }
 
 
-        Dictionary<Label, ImmutableStack<VariableDeclaration>> BasicBlockInputs = new()
+        Dictionary<Label, ImmutableArray<IShaderType>> BasicBlockInputs = new()
         {
             [model.ControlFlowGraph.EntryLabel] = []
         };
-        Dictionary<Label, ImmutableStack<VariableDeclaration>> BasicBlockOutputs = [];
-        Dictionary<Label, BasicBlock<IStackStatement>> BasicBlocks = [];
+        Dictionary<Label, ImmutableArray<IShaderType>> BasicBlockOutputs = [];
+        Dictionary<Label, StackInstructionBasicBlock> basicBlocks = [];
 
         foreach (var l in model.ControlFlowGraph.Labels())
         {
             var visitor = new RuntimeReflectionParserInstructionVisitor(f,
                 model,
                 l,
-                BasicBlockInputs[l]
+                BasicBlockInputs[l],
+                model.ControlFlowGraph.Successor(l)
             );
             var ilRange = model.ControlFlowGraph[l];
             for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
@@ -390,6 +392,7 @@ public sealed record class RuntimeReflectionParser(
             }
 
             visitor.FlushOutputs();
+
 
             BasicBlockOutputs.Add(l, visitor.Outputs);
 
@@ -401,58 +404,55 @@ public sealed record class RuntimeReflectionParser(
                 {
                     if (BasicBlockInputs.TryGetValue(target, out var existed))
                     {
+                        if (visitor.Outputs.Length != existed.Length)
+                        {
+                            throw new ValidationException(
+                                $"Successor's input stack size {existed.Length} not matching current output {visitor.Outputs.Length}",
+                                model.Method);
+                        }
+
+
+                        if (!visitor.Outputs.SequenceEqual(existed))
+                        {
+                        }
+
                         foreach (var (c, e) in visitor.Outputs.Zip(existed))
                         {
-                            if (c.Type == e.Type)
+                            if (!c.Equals(e))
                             {
-                                continue;
-                            }
-
-                            switch (c.Type, e.Type)
-                            {
-                                case (IntType<N32>, UIntType<N32>):
-                                case (UIntType<N32>, IntType<N32>):
-                                case (IntType<N32>, BoolType):
-                                case (BoolType, IntType<N32>):
-                                    continue;
-                                default:
-                                    throw new ValidationException(
-                                        $"Successor's input type {e.Type.Name} not matching current output {c.Type.Name}",
-                                        model.Method);
+                                throw new ValidationException(
+                                    $"Successor's input stack size {e.Name} not matching current output {c.Name}",
+                                    model.Method);
                             }
                         }
                     }
                     else
                     {
-                        var inputs = ImmutableStack.Create<VariableDeclaration>();
-                        foreach (var (index, v) in visitor.Outputs.Index().Reverse())
-                        {
-                            inputs = inputs.Push(new VariableDeclaration(DeclarationScope.Function,
-                                $"input({target.Name})#{index}", v.Type, []));
-                        }
-
-                        BasicBlockInputs.Add(target, inputs);
+                        BasicBlockInputs.Add(target, visitor.Outputs);
                     }
                 }
+
+                basicBlocks.Add(l,
+                    new StackInstructionBasicBlock(
+                        l,
+                        [..visitor.Instructions],
+                        BasicBlockInputs[l],
+                        BasicBlockOutputs[l],
+                        successor));
             }
-
-
-            BasicBlocks.Add(l,
-                new BasicBlock<IStackStatement>([.. visitor.Statements], [.. BasicBlockInputs[l]],
-                    [.. BasicBlockOutputs[l]]));
         }
 
         var bodies = model.ControlFlowGraph.Labels().ToDictionary(l => l,
             l =>
-                new ControlFlowGraph<BasicBlock<IStackStatement>>.NodeDefinition(
+                new ControlFlowGraph<StackInstructionBasicBlock>.NodeDefinition(
                     model.ControlFlowGraph.Successor(l),
-                    BasicBlocks[l]));
-        var cfg = new ControlFlowGraph<BasicBlock<IStackStatement>>(
+                    basicBlocks[l]));
+        var cfg = new ControlFlowGraph<StackInstructionBasicBlock>(
             model.ControlFlowGraph.EntryLabel,
             bodies
         );
 
-        return new ControlFlowGraphFunctionBody<IStackStatement>(cfg);
+        return new StackInstructionFunctionBody(cfg);
     }
 
     bool IsMethodDefinition(MethodBase m)

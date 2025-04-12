@@ -1,4 +1,5 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -20,6 +21,9 @@ public sealed class VectorComponentGetOperation<TRank, TVector, TComponent>
 
     IUnaryExpression IUnaryExpressionOperation.CreateExpression(IExpression expr)
         => new UnaryOperationExpression<VectorComponentGetOperation<TRank, TVector, TComponent>>(expr);
+
+    public IInstruction Instruction =>
+        UnaryExpressionOperationInstruction<VectorComponentGetOperation<TRank, TVector, TComponent>>.Instance;
 
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,

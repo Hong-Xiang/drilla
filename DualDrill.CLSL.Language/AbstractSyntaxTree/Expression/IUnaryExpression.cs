@@ -34,7 +34,7 @@ public sealed record class UnaryOperationExpression<TOperation>
         => TOperation.Instance.EvaluateExpression(visitor, this);
 
     public IEnumerable<IInstruction> ToInstructions()
-        => [..Source.ToInstructions(), TOperation.Instance.Instruction];
+        => [..Source.ToInstructions(), ((IOperation)TOperation.Instance).Instruction];
 
     public IEnumerable<VariableDeclaration> ReferencedVariables => Source.ReferencedVariables;
 

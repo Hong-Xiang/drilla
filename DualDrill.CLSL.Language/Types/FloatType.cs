@@ -18,7 +18,7 @@ public interface IFloatType<TSelf> : IFloatType, INumericType<TSelf>
 public sealed record class FloatType<TBitWidth> : IFloatType<FloatType<TBitWidth>>
     where TBitWidth : IBitWidth
 {
-    public static FloatType<TBitWidth> Instance => new();
+    public static FloatType<TBitWidth> Instance { get; } = new();
 
     public string Name => $"f{BitWidth.Value}";
     public IBitWidth BitWidth => TBitWidth.BitWidth;

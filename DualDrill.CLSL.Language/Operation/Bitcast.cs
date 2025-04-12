@@ -32,4 +32,7 @@ public sealed class ScalarBitCastOperation<TSource, TTarget>
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<ScalarBitCastOperation<TSource, TTarget>> expr)
         => visitor.VisitConversionExpression<TTarget>(expr);
+
+    public IInstruction Instruction =>
+        UnaryExpressionOperationInstruction<ScalarBitCastOperation<TSource, TTarget>>.Instance;
 }

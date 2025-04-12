@@ -1,7 +1,7 @@
 ﻿using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 
-namespace DualDrill.CLSL.Language;
+namespace DualDrill.CLSL.Language.Value;
 
 public interface IValue
 {

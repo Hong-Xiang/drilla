@@ -7,7 +7,7 @@ public interface IPtrType : IShaderType
     IShaderType BaseType { get; }
 }
 
-public sealed record class PtrType(IShaderType BaseType) : IPtrType
+public sealed record class PtrType(IShaderType BaseType) : IPtrType, IShaderType<PtrType>
 {
     public string Name => $"ptr<{BaseType.Name}>";
 
@@ -22,7 +22,7 @@ public sealed record class PtrType(IShaderType BaseType) : IPtrType
     }
 }
 
-sealed class SingletonPtrType<TBaseType> : IPtrType, ISingleton<SingletonPtrType<TBaseType>>
+sealed class SingletonPtrType<TBaseType> : IPtrType, ISingleton<SingletonPtrType<TBaseType>>, IShaderType<SingletonPtrType<TBaseType>>
     where TBaseType : IShaderType, ISingleton<TBaseType>
 {
     public static SingletonPtrType<TBaseType> Instance { get; } = new();

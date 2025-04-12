@@ -28,7 +28,7 @@ namespace DualDrill.CLSL;
 /// </summary>
 public static class ShaderModuleExtension
 {
-    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> Parse(
+    public static ShaderModuleDeclaration<StackInstructionFunctionBody> Parse(
         this ISharpShader shader
     )
     {
@@ -217,17 +217,19 @@ public static class ShaderModuleExtension
         this ISharpShader shader
     )
     {
-        var module = shader.Parse()
-                           .EliminateBlockValueTransfer()
-                           .BasicBlockTransformStatementsToInstructions()
-                           .ReplaceOperationCallsToOperationInstruction()
-                           .ToStructuredControlFlowStackModel()
-                           .Simplify()
-                           .ToAbstractSyntaxTreeFunctionBody()
-                           .Simplify();
+        // var module = shader.Parse()
+        // var module = shader.Parse()
+        //                    .EliminateBlockValueTransfer()
+        //                    .BasicBlockTransformStatementsToInstructions()
+        //                    .ReplaceOperationCallsToOperationInstruction()
+        //                    .ToStructuredControlFlowStackModel()
+        //                    .Simplify()
+        //                    .ToAbstractSyntaxTreeFunctionBody()
+        //                    .Simplify();
+        throw new NotImplementedException();
 
-        var code = await module.EmitWgslCode();
-        return code;
+        // var code = await module.EmitWgslCode();
+        // return code;
     }
 
     static void Dump(this IInstruction instruction, Func<Label, string> labelName,
@@ -239,7 +241,7 @@ public static class ShaderModuleExtension
                 writer.WriteLine($"br {labelName(br.Target)};");
                 break;
             case BrIfInstruction brIf:
-                writer.WriteLine($"brIf {labelName(brIf.Target)};");
+                writer.WriteLine($"brIf {labelName(brIf.TrueTarget)};");
                 break;
             case ReturnInstruction:
                 writer.WriteLine("return");

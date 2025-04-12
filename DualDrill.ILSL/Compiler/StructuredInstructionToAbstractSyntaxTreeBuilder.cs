@@ -97,7 +97,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
                     yield return br.Target;
                     break;
                 case BrIfInstruction brIf:
-                    yield return brIf.Target;
+                    yield return brIf.TrueTarget;
                     break;
                 case IStructuredControlFlowRegion region:
                     foreach (var l in GetUsedBrLabels(region))
@@ -302,7 +302,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
 
     public Unit Visit(BrIfInstruction inst)
     {
-        var target = LabelTargetsContext.Index().Single(x => x.Item.Item1.Equals(inst.Target));
+        var target = LabelTargetsContext.Index().Single(x => x.Item.Item1.Equals(inst.TrueTarget));
         var (index, (_, region)) = target;
         if (index == 0)
         {

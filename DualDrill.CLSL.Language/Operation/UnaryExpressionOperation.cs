@@ -12,6 +12,7 @@ public interface IUnaryExpressionOperation
     IShaderType SourceType { get; }
     IShaderType ResultType { get; }
     IUnaryExpression CreateExpression(IExpression expr);
+    IInstruction Instruction { get; }
 }
 
 public interface IUnaryOperation<TSelf> : IUnaryExpressionOperation, IOperation<TSelf>

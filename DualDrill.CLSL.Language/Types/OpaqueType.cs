@@ -4,7 +4,7 @@
 /// Special type for C#'s type place holder, useful for methods argument which is not actually used
 /// </summary>
 /// <param name="Type"></param>
-public sealed class OpaqueType : IShaderType
+public sealed class OpaqueType : IShaderType<OpaqueType>
 {
     public Type? Type { get; }
     public OpaqueType(Type? type)

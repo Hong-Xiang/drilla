@@ -6,6 +6,7 @@ namespace DualDrill.CLSL.Language.Types;
 
 public interface IIntType : IIntegerType
 {
+    IUIntType SameWidthUIntType { get; }
 }
 
 public interface IIntType<TSelf> : IIntType, INumericType<TSelf>
@@ -14,10 +15,14 @@ public interface IIntType<TSelf> : IIntType, INumericType<TSelf>
 }
 
 [DebuggerDisplay("{Name}")]
-public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
+public sealed class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
     where TBitWidth : IBitWidth
 {
-    public static IntType<TBitWidth> Instance => new();
+    public static IntType<TBitWidth> Instance { get; } = new();
+
+    private IntType()
+    {
+    }
 
     static IPtrType PtrType { get; } = new PtrType(Instance);
     public IPtrType GetPtrType() => PtrType;
@@ -28,6 +33,8 @@ public sealed record class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
+
+    public IUIntType SameWidthUIntType => UIntType<TBitWidth>.Instance;
 }
 
 public static partial class ShaderType

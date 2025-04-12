@@ -1,7 +1,12 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation;
+
+public interface IVectorSwizzleGetOperation
+{
+}
 
 public sealed class VectorSwizzleGetOperation<TPattern, TElement>
     : IVectorSizzleOperation<VectorSwizzleGetOperation<TPattern, TElement>>
@@ -14,6 +19,9 @@ public sealed class VectorSwizzleGetOperation<TPattern, TElement>
     public string Name => $"get.{TPattern.Instance.Name}.{TElement.Instance.Name}";
     public IShaderType SourceType => TPattern.Instance.SourceType<TElement>().GetPtrType();
     public IShaderType ResultType => TPattern.Instance.TargetType<TElement>();
+
+    public IInstruction Instruction =>
+        UnaryExpressionOperationInstruction<VectorSwizzleGetOperation<TPattern, TElement>>.Instance;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<VectorSwizzleGetOperation<TPattern, TElement>> expr)

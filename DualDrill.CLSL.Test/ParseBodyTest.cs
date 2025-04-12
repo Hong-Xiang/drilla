@@ -17,6 +17,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.CLSL.Language.ControlFlow;
 using System.CodeDom.Compiler;
+using DualDrill.Common.CodeTextWriter;
 using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
@@ -43,7 +44,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
     }
 
 
-    ControlFlowGraphFunctionBody<IStackStatement> ParseMethod2(FunctionDeclaration f, MethodBase m)
+    StackInstructionFunctionBody ParseMethod2(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
         context.AddFunctionDefinition(Symbol.Function(m), f);
@@ -54,7 +55,9 @@ public class ParseBodyTest(ITestOutputHelper Output)
         }
 
         var parser = new RuntimeReflectionParser(context);
-        return parser.ParseMethodBody2(f);
+        var result = parser.ParseMethodBody2(f);
+        Output.WriteLine(result.Dump());
+        return result;
     }
 
     [Fact]
@@ -64,11 +67,11 @@ public class ParseBodyTest(ITestOutputHelper Output)
             new FunctionReturn(ShaderType.I32, []), []);
         var result = ParseMethod2(f, MethodHelper.GetMethod(DevelopTestShaderModule.Return42));
         var entry = result[result.Entry];
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<PushStatement>()
-             .Which.Expr.Should().BeOfType<LiteralValueExpression>()
-             .Which.Literal.Should().BeOfType<I32Literal>()
-             .Which.Value.Should().Be(42);
+        entry.Elements.Should().SatisfyRespectively(
+            s => s.Should().BeOfType<ConstInstruction<I32Literal>>()
+                  .Which.Literal.Value.Should().Be(42),
+            s => s.Should().BeOfType<ReturnInstruction>()
+        );
     }
 
     [Fact]
@@ -81,10 +84,6 @@ public class ParseBodyTest(ITestOutputHelper Output)
             new FunctionReturn(ShaderType.Vec2F32, []), []);
         var result = ParseMethod2(f,
             MethodHelper.GetMethod<float, float, vec2f32>(DevelopTestShaderModule.SetComponent));
-        var sw = new StringWriter();
-        var isw = new IndentedTextWriter(sw);
-        result.Dump(isw);
-        Output.WriteLine(sw.ToString());
         var entry = result[result.Entry];
         entry.Elements.Should().SatisfyRespectively(
             s => s.Should().BeOfType<SimpleAssignmentStatement>(),
@@ -115,19 +114,15 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = ParseMethod2(f,
             MethodHelper.GetMethod<vec2f32, float, vec2f32>(DevelopTestShaderModule.BroadcastVectorOperation));
         var entry = result[result.Entry];
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<PushStatement>()
-             .Which.Expr.Should().Satisfy<BinaryOperationExpression<
-                 VectorScalarExpressionNumericOperation<N2, FloatType<N32>, BinaryArithmetic.Mul>>>(
-                 expr =>
-                 {
-                     expr.L.Should().BeOfType<FormalParameterExpression>()
-                         .Which.Parameter.Should().Be(f.Parameters[0]);
-                     expr.R.Should().BeOfType<FormalParameterExpression>()
-                         .Which.Parameter.Should().Be(f.Parameters[1]);
-                     expr.Operation.LeftType.Should().BeOfType<VecType<N2, FloatType<N32>>>();
-                     expr.Operation.RightType.Should().BeOfType<FloatType<N32>>();
-                 });
+        entry.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(f.Parameters[0]),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(f.Parameters[1]),
+            x => x.Should().BeOfType<BinaryExpressionOperationInstruction<
+                VectorScalarExpressionNumericOperation<N2, FloatType<N32>, BinaryArithmetic.Mul>>>(),
+            x => x.Should().BeOfType<ReturnInstruction>()
+        );
     }
 
     [Fact]
@@ -141,10 +136,11 @@ public class ParseBodyTest(ITestOutputHelper Output)
             []);
         var result = ParseMethod2(f, MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.LoadArg));
         var entry = result[result.Entry];
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<PushStatement>()
-             .Which.Expr.Should().BeOfType<FormalParameterExpression>()
-             .Which.Parameter.Should().Be(a);
+        entry.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<ReturnInstruction>()
+        );
     }
 
     [Fact]
@@ -158,21 +154,16 @@ public class ParseBodyTest(ITestOutputHelper Output)
             []);
         var result = ParseMethod2(f, MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.APlus1));
         var entry = result[result.Entry];
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<PushStatement>()
-             .Which.Expr.Should().Satisfy<IBinaryExpression>(e =>
-             {
-                 e.Operation.Should().Satisfy<IBinaryExpressionOperation>(operation =>
-                 {
-                     operation.LeftType.Should().BeOfType<IntType<N32>>();
-                     operation.RightType.Should().BeOfType<IntType<N32>>();
-                     operation.BinaryOp.Should().BeOfType<BinaryArithmetic.Add>();
-                 });
-                 e.L.Should().BeOfType<FormalParameterExpression>()
-                  .Which.Parameter.Should().Be(a);
-                 e.R.Should().BeOfType<LiteralValueExpression>()
-                  .Which.Literal.Should().Be(Literal.Create(1));
-             });
+
+        entry.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<ConstInstruction<I32Literal>>()
+                  .Which.Literal.Value.Should().Be(1),
+            x => x.Should().BeOfType<BinaryExpressionOperationInstruction<
+                NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>>>(),
+            x => x.Should().BeOfType<ReturnInstruction>()
+        );
     }
 
 
@@ -187,30 +178,19 @@ public class ParseBodyTest(ITestOutputHelper Output)
         );
         var result = ParseMethod2(f, MethodHelper.GetMethod(DevelopTestShaderModule.SystemNumericVector4Creation));
         var entry = result[result.Entry];
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<PushStatement>()
-             .Which.Expr.Should().Satisfy<FunctionCallExpression>(
-                 call =>
-                 {
-                     call.Callee.Return.Type.Should().BeOfType<VecType<N4, FloatType<N32>>>();
-                     call.Callee.Parameters.Should().HaveCount(4)
-                         .And.OnlyContain(p => p.Type is FloatType<N32>);
-                     call.Arguments.Should().SatisfyRespectively(
-                         x => x.Should().BeOfType<LiteralValueExpression>()
-                               .Which.Literal.Should().BeOfType<F32Literal>()
-                               .Which.Value.Should().Be(1.0f),
-                         x => x.Should().BeOfType<LiteralValueExpression>()
-                               .Which.Literal.Should().BeOfType<F32Literal>()
-                               .Which.Value.Should().Be(2.0f),
-                         x => x.Should().BeOfType<LiteralValueExpression>()
-                               .Which.Literal.Should().BeOfType<F32Literal>()
-                               .Which.Value.Should().Be(3.0f),
-                         x => x.Should().BeOfType<LiteralValueExpression>()
-                               .Which.Literal.Should().BeOfType<F32Literal>()
-                               .Which.Value.Should().Be(4.0f)
-                     );
-                 }
-             );
+        entry.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<ConstInstruction<F32Literal>>()
+                  .Which.Literal.Value.Should().Be(1.0f),
+            x => x.Should().BeOfType<ConstInstruction<F32Literal>>()
+                  .Which.Literal.Value.Should().Be(2.0f),
+            x => x.Should().BeOfType<ConstInstruction<F32Literal>>()
+                  .Which.Literal.Value.Should().Be(3.0f),
+            x => x.Should().BeOfType<ConstInstruction<F32Literal>>()
+                  .Which.Literal.Value.Should().Be(4.0f),
+            x => x.Should().BeOfType<CallInstruction>()
+                  .Which.Callee.Return.Type.Should().Be(VecType<N4, FloatType<N32>>.Instance),
+            x => x.Should().BeOfType<ReturnInstruction>()
+        );
     }
 
     [Fact]
@@ -226,7 +206,29 @@ public class ParseBodyTest(ITestOutputHelper Output)
             MethodHelper.GetMethod<uint, bool>(DevelopTestShaderModule.ImplicitConvertUIntMax));
 
         var entry = result[result.Entry];
+        entry.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(f.Parameters[0]),
+            x => x.Should().BeOfType<ConstInstruction<I32Literal>>()
+                  .Which.Literal.Value.Should().Be(-1),
+            x => x.Should().BeOfType<BinaryExpressionOperationInstruction<
+                NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>>(),
+            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+            x => x.Should().BeOfType<BrInstruction>()
+        );
+
+        entry.Successor.Should().BeOfType<UnconditionalSuccessor>()
+             .Which.Target.Should().Satisfy<Label>(l =>
+             {
+                 var successor = result[l];
+                 successor.Should().BeAssignableTo<IBasicBlock2<IInstruction, IShaderType, IShaderType>>()
+                          .Which.Elements.Should().SatisfyRespectively(
+                              x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+                              x => x.Should().BeOfType<ReturnInstruction>()
+                          );
+             });
     }
+
 
     [Fact]
     public void BasicMethodInvocationParseShouldWork()
@@ -248,23 +250,17 @@ public class ParseBodyTest(ITestOutputHelper Output)
         context.AddFunctionDefinition(Symbol.Function(method), fCall);
         var parser = new RuntimeReflectionParser(context);
         var result = parser.ParseMethodBody2(fCall);
+        Output.WriteLine(result.Dump());
         var entry = result[result.Entry];
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<PushStatement>()
-             .Which.Expr.Should().Satisfy<FunctionCallExpression>(
-                 call =>
-                 {
-                     call.Callee.Should().Be(fAdd);
-                     call.Arguments.Should().SatisfyRespectively(
-                         a => a.Should().BeOfType<LiteralValueExpression>()
-                               .Which.Literal.Should().BeOfType<I32Literal>()
-                               .Which.Value.Should().Be(1),
-                         b => b.Should().BeOfType<LiteralValueExpression>()
-                               .Which.Literal.Should().BeOfType<I32Literal>()
-                               .Which.Value.Should().Be(2)
-                     );
-                 }
-             );
+
+        entry.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<ConstInstruction<I32Literal>>()
+                  .Which.Literal.Value.Should().Be(1),
+            x => x.Should().BeOfType<ConstInstruction<I32Literal>>()
+                  .Which.Literal.Value.Should().Be(2),
+            x => x.Should().BeOfType<CallInstruction>().Which.Callee.Should().Be(fAdd),
+            x => x.Should().BeOfType<ReturnInstruction>()
+        );
     }
 
     [Fact]
@@ -309,7 +305,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var l11 = labels[2];
         var l16 = labels[3];
 
-        result.Successor(result.Entry).Should().Satisfy<ConditionalSuccessor>(sIf =>
+        result[result.Entry].Successor.Should().Satisfy<ConditionalSuccessor>(sIf =>
         {
             sIf.TrueTarget.Should().Be(l11);
             sIf.FalseTarget.Should().Be(l0c);
@@ -514,36 +510,55 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var entry = result[result.Entry];
 
         entry.Elements.Should().SatisfyRespectively(
-            s =>
-            {
-                s.Should()
-                 .Satisfy<VectorSwizzleSetStatement<N4, FloatType<N32>, Swizzle.Pattern<N4, Swizzle.X, Swizzle.Y>>>(
-                     assign =>
-                     {
-                         assign.Target.Should().BeOfType<AddressOfExpression>()
-                               .Which.Base.Should().BeOfType<FormalParameterExpression>()
-                               .Which.Parameter.Should().Be(pa);
-                         assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(pb));
-                     });
-            },
-            s =>
-            {
-                s.Should().Satisfy<SimpleAssignmentStatement>(assign =>
-                {
-                    assign.L.Should().BeOfType<VariableIdentifierExpression>()
-                          .Which.Variable.Should().Be(loc0);
-                    assign.R.Should().BeOfType<FormalParameterExpression>()
-                          .Which.Parameter.Should().Be(pa);
-                });
-            }
+            // x => x.Should().BeOfType<NopInstruction>(),
+            //  IL_0001: ldarga @a
+            x => x.Should().BeOfType<LoadSymbolAddressInstruction<ParameterDeclaration>>().Which.Target.Should().Be(pa),
+            //  IL_0003: ldarg @b
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(pb),
+            //  IL_0005: swizzle.set.vec4f32.xy
+            x => x.Should()
+                  .BeOfType<BinaryStatementOperationInstruction<VectorSwizzleSetOperation<
+                      Swizzle.Pattern<N4, Swizzle.X, Swizzle.Y>, FloatType<N32>>>>(),
+            //  IL_0010: ldarg.0
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(pa),
+            //  IL_0011: stloc.0
+            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+            //  IL_0012: br IL_0014
+            x => x.Should().BeOfType<BrInstruction>()
+            // s =>
+            // {
+            //     s.Should()
+            //      .Satisfy<VectorSwizzleSetStatement<N4, FloatType<N32>, Swizzle.Pattern<N4, Swizzle.X, Swizzle.Y>>>(
+            //          assign =>
+            //          {
+            //              assign.Target.Should().BeOfType<AddressOfExpression>()
+            //                    .Which.Base.Should().BeOfType<FormalParameterExpression>()
+            //                    .Which.Parameter.Should().Be(pa);
+            //              assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(pb));
+            //          });
+            // },
+            // s =>
+            // {
+            //     s.Should().Satisfy<SimpleAssignmentStatement>(assign =>
+            //     {
+            //         assign.L.Should().BeOfType<VariableIdentifierExpression>()
+            //               .Which.Variable.Should().Be(loc0);
+            //         assign.R.Should().BeOfType<FormalParameterExpression>()
+            //               .Which.Parameter.Should().Be(pa);
+            //     });
+            // }
         );
 
-        result.Successor(result.Entry).Should().Satisfy<UnconditionalSuccessor>(s =>
+        entry.Successor.Should().Satisfy<UnconditionalSuccessor>(s =>
         {
-            var bb = result[s.Target];
-            bb.Elements.Should().ContainSingle()
-              .Which.Should().BeOfType<PushStatement>()
-              .Which.Expr.Should().Satisfy<VariableIdentifierExpression>(e => e.Variable.Should().Be(loc0));
+            result[s.Target].Elements.Should().SatisfyRespectively(
+                x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+                x => x.Should().BeOfType<ReturnInstruction>()
+            );
+            // var bb = result[s.Target];
+            // bb.Elements.Should().ContainSingle()
+            //   .Which.Should().BeOfType<PushStatement>()
+            //   .Which.Expr.Should().Satisfy<VariableIdentifierExpression>(e => e.Variable.Should().Be(loc0));
         });
 
 
@@ -560,7 +575,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_0015: ret
 
 
-        // result.Instructions.Should().SatisfyRespectively(
+        // result[result.Entry].Elements.Should().SatisfyRespectively(
         //     //  IL_0000: nop
         //     x => x.Should().BeOfType<NopInstruction>(),
         //     //  IL_0001: ldarga @a
@@ -578,11 +593,9 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //     x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
         //     //  IL_0012: br IL_0014
         //     x => x.Should().BeOfType<BrInstruction>(),
-        //     x => x.Should().BeOfType<LabelInstruction>(),
+        //     // x => x.Should().BeOfType<LabelInstruction>(),
         //     //  IL_0014: ldloc.0
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-        //     //  IL_0015: ret
-        //     x => x.Should().BeOfType<ReturnInstruction>()
+        //
         // );
     }
 
@@ -600,37 +613,37 @@ public class ParseBodyTest(ITestOutputHelper Output)
             MethodHelper.GetMethod<Vector4, Vector4, float>(DevelopTestShaderModule.Vector4Dot));
         var entry = result[result.Entry];
 
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<PushStatement>()
-             .Which.Expr.Should().Satisfy<FunctionCallExpression>(
-                 call =>
-                 {
-                     call.Callee.Return.Type.Should().BeOfType<FloatType<N32>>();
-                     call.Callee.Parameters.Should().HaveCount(2)
-                         .And.OnlyContain(p => p.Type is VecType<N4, FloatType<N32>>);
-                     call.Arguments.Should().SatisfyRespectively(
-                         x => x.Should().BeOfType<FormalParameterExpression>()
-                               .Which.Parameter.Should().Be(a),
-                         x => x.Should().BeOfType<FormalParameterExpression>()
-                               .Which.Parameter.Should().Be(b)
-                     );
-                 }
-             );
+        // entry.Elements.Should().ContainSingle()
+        //      .Which.Should().BeOfType<PushStatement>()
+        //      .Which.Expr.Should().Satisfy<FunctionCallExpression>(
+        //          call =>
+        //          {
+        //              call.Callee.Return.Type.Should().BeOfType<FloatType<N32>>();
+        //              call.Callee.Parameters.Should().HaveCount(2)
+        //                  .And.OnlyContain(p => p.Type is VecType<N4, FloatType<N32>>);
+        //              call.Arguments.Should().SatisfyRespectively(
+        //                  x => x.Should().BeOfType<FormalParameterExpression>()
+        //                        .Which.Parameter.Should().Be(a),
+        //                  x => x.Should().BeOfType<FormalParameterExpression>()
+        //                        .Which.Parameter.Should().Be(b)
+        //              );
+        //          }
+        //      );
 
         // //  IL_0000: ldarg.0
         // //  IL_0001: ldarg.1
         // //  IL_0002: call dot.vec4f32
         // //  IL_0007: ret
-        // result.Instructions.Should().SatisfyRespectively(
-        //     //  IL_0000: ldarg.0
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
-        //     //  IL_0001: ldarg.1
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
-        //     //  IL_0002: call dot.vec4f32
-        //     x => x.Should().BeOfType<CallInstruction>(),
-        //     //  IL_0007: ret
-        //     x => x.Should().BeOfType<ReturnInstruction>()
-        // );
+        result[result.Entry].Elements.Should().SatisfyRespectively(
+            //  IL_0000: ldarg.0
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            //  IL_0001: ldarg.1
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+            //  IL_0002: call dot.vec4f32
+            x => x.Should().BeOfType<CallInstruction>(),
+            //  IL_0007: ret
+            x => x.Should().BeOfType<ReturnInstruction>()
+        );
     }
 
     [Fact]

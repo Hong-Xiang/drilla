@@ -10,7 +10,7 @@ using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
 
-public interface IVectorComponentSetOperation
+public interface IVectorComponentSetOperation : IOperation
 {
     IStackStatement CreateStatement(IExpression target, IExpression value);
 }

@@ -32,4 +32,7 @@ public sealed class ScalarConversionOperation<TSource, TTarget>
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<ScalarConversionOperation<TSource, TTarget>> expr)
         => visitor.VisitConversionExpression<TTarget>(expr);
+
+    public IInstruction Instruction =>
+        UnaryExpressionOperationInstruction<ScalarConversionOperation<TSource, TTarget>>.Instance;
 }

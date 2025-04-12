@@ -1,7 +1,7 @@
 ﻿namespace DualDrill.CLSL.Language.Types;
 
 public interface IRefType : IShaderType { }
-public sealed record class RefType<TShaderType>(TShaderType BaseType) : IRefType
+public sealed record class RefType<TShaderType>(TShaderType BaseType) : IRefType, IShaderType<RefType<TShaderType>>
     where TShaderType : IShaderType
 {
     public string Name => $"ref<{BaseType.Name}>";

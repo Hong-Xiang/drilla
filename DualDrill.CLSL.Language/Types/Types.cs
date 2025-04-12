@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.Operation;
+﻿using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
@@ -10,11 +9,30 @@ public interface IShaderType
     string Name { get; }
     IRefType GetRefType();
     IPtrType GetPtrType();
+
+    TResult Accept<TVisitor, TResult>(TVisitor visitor)
+        where TVisitor : IShaderTypeVisitor1<TResult>;
 }
 
 public interface IShaderType<TSelf> : IShaderType
     where TSelf : IShaderType<TSelf>
 {
+    TResult IShaderType.Accept<TVisitor, TResult>(TVisitor visitor)
+    {
+        return visitor.Visit((TSelf)this);
+    }
+}
+
+public interface IShaderTypeVisitor1<out TResult>
+{
+    TResult Visit<TType>(TType type) where TType : IShaderType<TType>;
+}
+
+public interface IShaderTypeMatcher2<out TResult>
+{
+    TResult Match<TTypeL, TTypeR>(TTypeL typeL, TTypeR typeR)
+        where TTypeL : IShaderType<TTypeL>
+        where TTypeR : IShaderType<TTypeR>;
 }
 
 public interface ISingletonShaderType : IShaderType
@@ -80,14 +98,6 @@ public interface IIntegerType : IScalarType
 public interface IIntegerType<TBitwidth, TSign> : IIntegerType
     where TBitwidth : IBitWidth
     where TSign : ISignedness<TSign>
-{
-}
-
-public sealed record class FixedSizedArrayType(IPlainType ElementType, int Size)
-{
-}
-
-public sealed record class RuntimeSizedArrayType(IScalarType ElementType)
 {
 }
 

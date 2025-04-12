@@ -151,7 +151,7 @@ public class
                     jumped = true;
                     break;
                 }
-                case BrIfInstruction { Target: var target }:
+                case BrIfInstruction { TrueTarget: var target }:
                 {
                     if (isLast && target.Equals(LastTarget.Peek()))
                     {

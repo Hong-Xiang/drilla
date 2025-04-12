@@ -6,12 +6,13 @@ using DualDrill.CLSL.Backend;
 using System.CodeDom.Compiler;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using ICSharpCode.Decompiler.IL;
 
 namespace DualDrill.CLSL;
 
 public interface ICLSLCompiler
 {
-    public ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> Reflect(ISharpShader shader);
+    public ShaderModuleDeclaration<StackInstructionFunctionBody> Reflect(ISharpShader shader);
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader);
     public ValueTask<string> EmitWGSL(ISharpShader module);
 }
@@ -25,7 +26,8 @@ public sealed class CLSLCompiler() : ICLSLCompiler
         return await shader.EmitWgslCode();
     }
 
-    public ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> Reflect(ISharpShader shader)
+    // TODO: reflect should not parse function body
+    public ShaderModuleDeclaration<StackInstructionFunctionBody> Reflect(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
         return parser.ParseShaderModule(shader);
@@ -34,8 +36,10 @@ public sealed class CLSLCompiler() : ICLSLCompiler
     public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
-        var module = parser.ParseShaderModule(shader).BasicBlockTransformStatementsToInstructions()
-                           .ReplaceOperationCallsToOperationInstruction();
-        return module.ToStructuredControlFlowStackModel();
+        // var module = parser.ParseShaderModule(shader)
+        //                    .BasicBlockTransformStatementsToInstructions()
+        //                    .ReplaceOperationCallsToOperationInstruction();
+        // return module.ToStructuredControlFlowStackModel();
+        throw new NotImplementedException();
     }
 }

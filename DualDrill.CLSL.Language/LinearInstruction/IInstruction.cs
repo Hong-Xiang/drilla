@@ -49,14 +49,14 @@ public sealed record class BrInstruction(Label Target) : IJumpInstruction
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }
 
-public sealed record class BrIfInstruction(Label Target) : IJumpInstruction
+public sealed record class BrIfInstruction(Label TrueTarget, Label FalseTarget) : IJumpInstruction
 {
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public override string ToString() => $"br_if {Target}";
-    public IEnumerable<Label> ReferencedLabels => [Target];
+    public override string ToString() => $"br_if {TrueTarget} {FalseTarget}";
+    public IEnumerable<Label> ReferencedLabels => [TrueTarget];
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }
 
@@ -213,7 +213,9 @@ public static class ShaderInstruction
 {
     public static IInstruction Nop() => new NopInstruction();
     public static IInstruction Br(Label target) => new BrInstruction(target);
-    public static IInstruction BrIf(Label target) => new BrIfInstruction(target);
+
+    public static IInstruction BrIf(Label trueTarget, Label falseTarget) =>
+        new BrIfInstruction(trueTarget, falseTarget);
 
     public static IInstruction I32Eq() =>
         BinaryExpressionOperationInstruction<NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>
@@ -233,6 +235,7 @@ public static class ShaderInstruction
         new(decl);
 
     public static LoadSymbolAddressInstruction<VariableDeclaration> LoadAddress(VariableDeclaration decl) => new(decl);
+    public static LoadSymbolAddressInstruction<MemberDeclaration> LoadAddress(MemberDeclaration decl) => new(decl);
     public static StoreSymbolInstruction<ParameterDeclaration> Store(ParameterDeclaration decl) => new(decl);
     public static StoreSymbolInstruction<VariableDeclaration> Store(VariableDeclaration decl) => new(decl);
     public static StoreSymbolInstruction<MemberDeclaration> Store(MemberDeclaration decl) => new(decl);

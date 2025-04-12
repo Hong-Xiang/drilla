@@ -12,6 +12,7 @@ using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.StackInstruction;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
@@ -23,164 +24,149 @@ public sealed class ValidationException(string message, MethodBase method)
     public MethodBase Method { get; } = method;
 }
 
+public sealed class BinaryOperationEvaluationStackTypeNotMatchValidationException(
+    IBinaryOp op,
+    IShaderType lType,
+    IShaderType rType,
+    MethodBase method
+) : Exception($"Binary op {op.Name} with {lType.Name} and {rType.Name} inputs is not valid @ {method.Name}")
+{
+}
+
 sealed class RuntimeReflectionParserInstructionVisitor(
     FunctionDeclaration Function,
     MethodBodyAnalysisModel Model,
     Label Label,
-    ImmutableStack<VariableDeclaration> Inputs)
+    ImmutableArray<IShaderType> Inputs,
+    ISuccessor successor)
     : ICilInstructionVisitor<Unit>
 {
     //public List<int> Nexts { get; private set; } = [];
 
-    public List<IStackStatement> Statements { get; set; } = [];
+    public List<IInstruction> Instructions { get; } = [];
 
+    Stack<IShaderType> EvaluationStack = new(Inputs);
 
-    Stack<IExpression> CurrentStack = new(Inputs.Select(v => SyntaxFactory.VarIdentifier(v)));
+    public ImmutableArray<IShaderType> Outputs { get; private set; } = [];
+    public bool HasTerminatorInstruction { get; private set; } = false;
 
-    public ImmutableStack<VariableDeclaration> Outputs { get; private set; } = [];
-
-
-    static IExpression ToBinaryArithmeticExpression<TOp>(IExpression left, IExpression right)
-        where TOp : BinaryArithmetic.IOp<TOp>
+    void PushToEvaluationStack(IShaderType type)
     {
-        (IExpression l, IExpression r, IBinaryExpressionOperation op) = (left, right) switch
+        switch (type)
         {
-            ({ Type: INumericType tl }, { Type: INumericType tr }) when tl.Equals(tr) => (left, right,
-                tl.ArithmeticOperation<TOp>()),
-            ({ Type: UIntType<N32> ut }, LiteralValueExpression { Literal: I32Literal { Value: var value } })
-                => (left, SyntaxFactory.Literal(Literal.Create((uint)value)),
-                    ((INumericType)ut).ArithmeticOperation<TOp>()),
-            _ => throw new NotSupportedException()
-        };
-        return op.CreateExpression(l, r);
-    }
-
-    static IExpression HandleBinaryRelationalExpression<TOp>(IExpression left, IExpression right)
-        where TOp : BinaryRelational.IOp<TOp>
-    {
-        switch (left, right)
-        {
-            case ({ Type: INumericType nt }, _) when left.Type.Equals(right.Type):
-                IBinaryExpressionOperation op = nt.RelationalOperation<TOp>();
-                return op.CreateExpression(left, right);
-            case ({ Type: UIntType<N32> lt }, LiteralValueExpression { Literal: I32Literal { Value: var value } }):
-                var ur = new LiteralValueExpression(Literal.Create((uint)value));
-                return ((INumericType)lt).RelationalOperation<TOp>().CreateExpression(left, ur);
-            case ({ Type: BoolType }, LiteralValueExpression):
-            case (LiteralValueExpression, { Type: BoolType }):
-                switch (TOp.Instance)
-                {
-                    case BinaryRelational.Eq:
-                        return ToLogicalBinaryExpression<BinaryRelational.Eq>(left, right);
-                    case BinaryRelational.Ne:
-                        return ToLogicalBinaryExpression<BinaryRelational.Ne>(left, right);
-                }
-
+            case BoolType:
+                EvaluationStack.Push(IntType<N32>.Instance);
                 break;
-        }
-
-
-        throw new NotSupportedException(
-            $"relational operator {TOp.Instance.Name} for {left.Type.Name} and {right.Type.Name} is not supported");
-    }
-
-    static IExpression ToLogicalBinaryExpression<TOp>(IExpression left, IExpression right)
-        where TOp : BinaryLogical.IOp<TOp>
-    {
-        IBinaryExpressionOperation op = LogicalBinaryOperation<TOp>.Instance;
-        switch (left, right)
-        {
-            case ({ Type: BoolType }, _):
-            case (_, { Type: BoolType }):
-                return op.CreateExpression(ToBoolExpr(left), ToBoolExpr(right));
-            case ({ Type: INumericType lt }, { Type: INumericType rt }) when lt.Equals(rt):
-            {
-                if (TOp.Instance is BinaryLogical.IWithBitwiseOp withBitwiseOp)
-                {
-                    var bitwiseOp = withBitwiseOp.BitwiseOp;
-                    return bitwiseOp.GetNumericBinaryOperation(lt).CreateExpression(left, right);
-                }
-
+            case IUIntType ui:
+                EvaluationStack.Push(ui.SameWidthIntType);
                 break;
-            }
             default:
-                throw new NotImplementedException();
+                EvaluationStack.Push(type);
+                break;
+        }
+    }
+
+    bool IsImplicitCompatible(IShaderType value, IShaderType target)
+    {
+        return (value, target) switch
+        {
+            _ when value == target => true,
+            (IntType<N32>, BoolType) => true,
+            (IIntType st, IUIntType ut) when st.BitWidth == ut.BitWidth => true,
+            _ => false
+        };
+    }
+
+    Unit EvaluateBinaryOperation<TOp>(
+        Func<TOp, IShaderType, IBinaryExpressionOperation?> factory
+    )
+        where TOp : IBinaryOp<TOp>
+    {
+        var r = EvaluationStack.Pop();
+        var l = EvaluationStack.Pop();
+        if (!l.Equals(r) || factory(TOp.Instance, l) is not { } operation)
+        {
+            throw new BinaryOperationEvaluationStackTypeNotMatchValidationException(TOp.Instance, l, r, Model.Method);
         }
 
-        throw new NotImplementedException();
+        Instructions.Add(operation.Instruction);
+        PushToEvaluationStack(operation.ResultType);
+        return default;
     }
 
     public Unit VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
-        where TOp : BinaryArithmetic.IOp<TOp>
-    {
-        var r = CurrentStack.Pop();
-        var l = CurrentStack.Pop();
-        var e = ToBinaryArithmeticExpression<TOp>(l, r);
-        CurrentStack.Push(e);
-        return default;
-    }
-
-
-    static IExpression ToBoolExpr(IExpression expr)
-    {
-        return expr switch
-        {
-            LiteralValueExpression { Literal: I32Literal { Value: 0 } } => new LiteralValueExpression(
-                Literal.Create(false)),
-            LiteralValueExpression { Literal: I32Literal } => new LiteralValueExpression(
-                Literal.Create(true)),
-            { Type: BoolType } _ => expr,
-            _ => throw new NotSupportedException()
-        };
-    }
+        where TOp : BinaryArithmetic.IOp<TOp> =>
+        EvaluateBinaryOperation<TOp>((_, t) =>
+            t switch
+            {
+                IIntType it when isUn => ((INumericType)it.SameWidthUIntType).ArithmeticOperation<TOp>(),
+                _ when isUn => null,
+                INumericType nt => nt.ArithmeticOperation<TOp>(),
+                _ => null
+            });
 
 
     public Unit VisitBinaryLogical<TOp>(CilInstructionInfo inst)
-        where TOp : BinaryLogical.IOp<TOp>
-    {
-        var r = CurrentStack.Pop();
-        var l = CurrentStack.Pop();
-        var e = ToLogicalBinaryExpression<TOp>(l, r);
-        CurrentStack.Push(e);
-        return default;
-    }
+        where TOp : BinaryLogical.IOp<TOp> =>
+        EvaluateBinaryOperation<TOp>(static (_, t) =>
+            t switch
+            {
+                BoolType => Operation.LogicalBinaryOperation<TOp>(),
+                _ => null
+            });
 
 
     public Unit VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
         where TOp : BinaryRelational.IOp<TOp>
-    {
-        var r = CurrentStack.Pop();
-        var l = CurrentStack.Pop();
-        var e = HandleBinaryRelationalExpression<TOp>(l, r);
-        CurrentStack.Push(e);
-        return default;
-    }
+        => EvaluateBinaryOperation<TOp>((_, t) =>
+            t switch
+            {
+                IIntType it when isUn => ((INumericType)it.SameWidthUIntType).RelationalOperation<TOp>(),
+                _ when isUn => null,
+                INumericType nt => nt.RelationalOperation<TOp>(),
+                _ => null
+            });
 
     public void FlushOutputs()
     {
-        if (CurrentStack.Count == 0)
+        if (!HasTerminatorInstruction)
+        {
+            switch (successor)
+            {
+                case UnconditionalSuccessor { Target: var target }:
+                    Instructions.Add(ShaderInstruction.Br(target));
+                    HasTerminatorInstruction = true;
+                    break;
+                default:
+                    throw new ValidationException($"successor mismatch, expected br, got {successor}", Model.Method);
+            }
+        }
+
+        if (EvaluationStack.Count == 0)
             return;
+
         if (!Outputs.IsEmpty)
         {
             throw new NotSupportedException("multiple flush outputs are not expected");
         }
 
-        Outputs = ImmutableStack.Create<VariableDeclaration>();
-        foreach (var (index, expr) in CurrentStack.Index().Reverse())
-        {
-            var v = new VariableDeclaration(DeclarationScope.Function, $"output({Label.Name})#{index}", expr.Type, []);
-            Statements.Add(SyntaxFactory.AssignStatement(
-                SyntaxFactory.VarIdentifier(v),
-                expr));
-            Outputs = Outputs.Push(v);
-        }
-
-        CurrentStack.Clear();
+        Outputs = [..EvaluationStack];
+        EvaluationStack.Clear();
     }
 
     public Unit VisitBranch(CilInstructionInfo inst, int jumpOffset)
     {
-        FlushOutputs();
+        if (successor is UnconditionalSuccessor { Target: var target })
+        {
+            Instructions.Add(ShaderInstruction.Br(target));
+            HasTerminatorInstruction = true;
+            FlushOutputs();
+        }
+        else
+        {
+            throw new ValidationException($"successor mismatch, expected br, got {successor}", Model.Method);
+        }
+
         return default;
     }
 
@@ -191,21 +177,23 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitBranchIf(CilInstructionInfo inst, int jumpOffset, bool value)
     {
-        var v = ToBoolExpr(CurrentStack.Pop());
-
+        _ = EvaluationStack.Pop();
         // bf.false
         if (value == false)
         {
-            v = LogicalNotOperation.Instance.CreateExpression(v);
+            Instructions.Add(LogicalNotInstruction.Instance);
         }
 
-        if (CurrentStack.Count > 0)
+        if (successor is ConditionalSuccessor { TrueTarget: var trueTarget, FalseTarget: var falseTarget })
         {
+            Instructions.Add(ShaderInstruction.BrIf(trueTarget, falseTarget));
+            HasTerminatorInstruction = true;
             FlushOutputs();
         }
-
-        Statements.Add(new PushStatement(v));
-
+        else
+        {
+            throw new ValidationException($"successor mismatch, expected br, got {successor}", Model.Method);
+        }
 
         return default;
     }
@@ -213,19 +201,29 @@ sealed class RuntimeReflectionParserInstructionVisitor(
     public Unit VisitBranchIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false)
         where TOp : BinaryRelational.IOp<TOp>
     {
-        var r = CurrentStack.Pop();
-        var l = CurrentStack.Pop();
-        // TODO: handle isUn = true
-        var e = HandleBinaryRelationalExpression<TOp>(l, r);
-
-        if (CurrentStack.Count > 0)
+        EvaluateBinaryOperation<TOp>((_, t) =>
+            t switch
+            {
+                IIntType it when isUn => ((INumericType)it.SameWidthUIntType).RelationalOperation<TOp>(),
+                _ when isUn => null,
+                INumericType nt => nt.RelationalOperation<TOp>(),
+                _ => null
+            });
+        _ = EvaluationStack.Pop(); // condition
+        if (successor is ConditionalSuccessor { TrueTarget: var trueTarget, FalseTarget: var falseTarget })
         {
+            Instructions.Add(ShaderInstruction.BrIf(trueTarget, falseTarget));
+            HasTerminatorInstruction = true;
             FlushOutputs();
         }
+        else
+        {
+            throw new ValidationException($"successor mismatch, expected br, got {successor}", Model.Method);
+        }
 
-        Statements.Add(new PushStatement(e));
         return default;
     }
+
 
     void VisitCallFunction(FunctionDeclaration func, bool isExpression)
     {
@@ -235,61 +233,61 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             {
                 case IBinaryExpressionOperation be:
                 {
-                    var r = CurrentStack.Pop();
-                    var l = CurrentStack.Pop();
-                    var e = be.CreateExpression(l, r);
-                    CurrentStack.Push(e);
+                    var r = EvaluationStack.Pop();
+                    var l = EvaluationStack.Pop();
+                    if (!l.Equals(be.LeftType) || !r.Equals(be.RightType))
+                    {
+                        throw new ValidationException($"{be} operation stack : {l.Name}, {r.Name}", Model.Method);
+                    }
+
+                    Instructions.Add(be.Instruction);
+                    EvaluationStack.Push(be.ResultType);
                     return;
                 }
                 case IBinaryStatementOperation bs:
                 {
-                    var r = CurrentStack.Pop();
-                    var l = CurrentStack.Pop();
-                    var s = bs.CreateStatement(l, r);
-                    Statements.Add((IStackStatement)s);
+                    var r = EvaluationStack.Pop();
+                    var l = EvaluationStack.Pop();
+                    if (!l.Equals(bs.LeftType) || !r.Equals(bs.RightType))
+                    {
+                        throw new ValidationException($"{bs} operation stack : {l.Name}, {r.Name}", Model.Method);
+                    }
+
+                    Instructions.Add(bs.Instruction);
                     return;
                 }
                 case IUnaryExpressionOperation ue:
                 {
-                    var s = CurrentStack.Pop();
-                    var e = ue.CreateExpression(s);
-                    CurrentStack.Push(e);
+                    var s = EvaluationStack.Pop();
+                    Instructions.Add(ue.Instruction);
+                    PushToEvaluationStack(ue.ResultType);
                     return;
                 }
                 case IVectorComponentSetOperation op:
                 {
-                    var value = CurrentStack.Pop();
-                    var target = CurrentStack.Pop();
-                    Statements.Add(op.CreateStatement(target, value));
+                    var value = EvaluationStack.Pop();
+                    var target = EvaluationStack.Pop();
+                    Instructions.Add(op.Instruction);
                     return;
                 }
             }
         }
 
-        var args = new List<IExpression>(func.Parameters.Length);
         foreach (var p in func.Parameters.Reverse())
         {
-            var ve = CurrentStack.Pop();
-            if (!ve.Type.Equals(p.Type))
+            var ve = EvaluationStack.Pop();
+            if (!ve.Equals(p.Type))
             {
                 throw new ValidationException(
-                    $"parameter {p} not match: stack {ve.Type.Name} declaration {p.Type.Name}",
+                    $"parameter {p} not match: stack {ve.Name} declaration {p.Type.Name}",
                     Model.Method);
             }
-
-            args.Add(ve);
         }
 
-        args.Reverse();
-
-        var result = SyntaxFactory.Call(func, [.. args]);
+        Instructions.Add(ShaderInstruction.Call(func));
         if (isExpression)
         {
-            CurrentStack.Push(result);
-        }
-        else
-        {
-            Statements.Add(SyntaxFactory.ExpressionStatement(result));
+            PushToEvaluationStack(func.Return.Type);
         }
     }
 
@@ -301,22 +299,26 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitLoadArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        CurrentStack.Push(SyntaxFactory.ArgIdentifier(p));
+        Instructions.Add(ShaderInstruction.Load(p));
+        PushToEvaluationStack(p.Type);
         return default;
     }
 
     public Unit VisitLoadArgumentAddress(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        CurrentStack.Push(SyntaxFactory.AddressOf(SyntaxFactory.ArgIdentifier(p)));
+        Instructions.Add(ShaderInstruction.LoadAddress(p));
+        PushToEvaluationStack(p.Type.GetPtrType());
         return default;
     }
 
     public Unit VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>
     {
-        var v = CurrentStack.Pop();
-        if (v.Type is INumericType type)
+        var v = EvaluationStack.Pop();
+        if (v is INumericType type)
         {
-            CurrentStack.Push(type.UnaryArithmeticOperation<TOp>().CreateExpression(v));
+            var operation = type.UnaryArithmeticOperation<TOp>();
+            Instructions.Add(operation.Instruction);
+            PushToEvaluationStack(operation.ResultType);
             return default;
         }
 
@@ -340,13 +342,15 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitLoadLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
-        CurrentStack.Push(SyntaxFactory.VarIdentifier(v));
+        Instructions.Add(ShaderInstruction.Load(v));
+        PushToEvaluationStack(v.Type);
         return default;
     }
 
     public Unit VisitLoadLocalAddress(CilInstructionInfo inst, VariableDeclaration v)
     {
-        CurrentStack.Push(SyntaxFactory.AddressOf(SyntaxFactory.VarIdentifier(v)));
+        Instructions.Add(ShaderInstruction.LoadAddress(v));
+        PushToEvaluationStack(v.Type.GetPtrType());
         return default;
     }
 
@@ -357,7 +361,8 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitLiteral<TLiteral>(CilInstructionInfo info, TLiteral literal) where TLiteral : ILiteral
     {
-        CurrentStack.Push(SyntaxFactory.Literal(literal));
+        Instructions.Add(ShaderInstruction.Const(literal));
+        EvaluationStack.Push(literal.Type);
         return default;
     }
 
@@ -374,47 +379,57 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitReturn(CilInstructionInfo info)
     {
-        switch (CurrentStack.Count)
+        switch (Function.Return.Type)
         {
-            case 0:
-                if (Function.Return.Type is not UnitType)
+            case UnitType:
+                if (EvaluationStack.Count != 0)
                 {
                     throw new ValidationException("return when stack is empty requires unit type", Model.Method);
                 }
 
-                return default;
-            case 1:
-                var e = CurrentStack.Pop();
-                var rt = Function.Return.Type;
-                if (!rt.Equals(e.Type))
+                break;
+            case { } r:
+                var e = EvaluationStack.Pop();
+                if (!IsImplicitCompatible(e, r))
                 {
                     throw new ValidationException(
-                        $"return when statck type {e.Type.Name} is not consistent with function signature return {rt.Name}",
+                        $"return when statck type {e.Name} is not consistent with function signature return {r.Name}",
                         Model.Method);
                 }
 
-                Statements.Add(new PushStatement(e));
-                return default;
+                break;
             default:
                 throw new ValidationException("return when stack.Count > 1", Model.Method);
         }
+
+        Instructions.Add(ShaderInstruction.Return());
+        HasTerminatorInstruction = true;
+        FlushOutputs();
+        return default;
+    }
+
+    bool IsValidToStore(IShaderType valType, IShaderType varType)
+    {
+        return (valType, varType) switch
+        {
+            (IntType<N32>, BoolType) => true,
+            (IntType<N32> tv, IUIntType ui) when ui.BitWidth.Equals(tv.BitWidth) => true,
+            _ when valType == varType => true,
+            _ => false
+        };
     }
 
     public Unit VisitStoreArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        var v = CurrentStack.Pop();
-        if (p.Type.Equals(v.Type))
+        var v = EvaluationStack.Pop();
+        if (!IsImplicitCompatible(v, p.Type))
         {
-            Statements.Add(SyntaxFactory.AssignStatement(
-                SyntaxFactory.ArgIdentifier(p),
-                v
-            ));
-        }
-        else
-        {
-            throw new NotSupportedException($"store {v.Type.Name} to {p.Type.Name} arg");
+            throw new ValidationException($"store value of type {v.Name} to parameter of type{p.Type} is not valid",
+                Model.Method);
         }
 
+
+        Instructions.Add(ShaderInstruction.Store(p));
         return default;
     }
 
@@ -430,40 +445,14 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
-        var val = CurrentStack.Pop();
-
-        if (!v.Type.Equals(val.Type))
+        var value = EvaluationStack.Pop();
+        if (!IsValidToStore(value, v.Type))
         {
-            switch (v.Type, val)
-            {
-                case (BoolType, LiteralValueExpression):
-                    val = ToBoolExpr(val);
-                    break;
-                case (UIntType<N32>, LiteralValueExpression { Literal: I32Literal { Value: var i32Value } }):
-                {
-                    var u32Value = BitConverter.ToUInt32(BitConverter.GetBytes(i32Value));
-                    val = SyntaxFactory.Literal(u32Value);
-                    break;
-                }
-                case (IntType<N32>, IExpression { Type: UIntType<N32> }):
-                {
-                    val = ScalarConversionOperation<UIntType<N32>, IntType<N32>>.Instance.CreateExpression(val);
-                    break;
-                }
-                case (UIntType<N32>, IExpression { Type: IntType<N32> }):
-                {
-                    val = ScalarBitCastOperation<IntType<N32>, UIntType<N32>>.Instance.CreateExpression(val);
-                    break;
-                }
-                default:
-                    throw new NotSupportedException($"store {val.Type.Name} to loc : {v.Type.Name} is not supported");
-            }
+            throw new ValidationException($"store value of type {v.Name} to variable of type{v.Type} is not valid",
+                Model.Method);
         }
 
-        Statements.Add(SyntaxFactory.AssignStatement(
-            SyntaxFactory.VarIdentifier(v),
-            val
-        ));
+        Instructions.Add(ShaderInstruction.Store(v));
         return default;
     }
 
@@ -479,33 +468,28 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitDup(CilInstructionInfo inst)
     {
-        if (CurrentStack.Count == 0)
-            throw new ValidationException("Cannot dup when stack is empty", Model.Method);
-
-        var top = CurrentStack.Pop();
-        var v = new VariableDeclaration(DeclarationScope.Function, "", top.Type, []);
-        Statements.Add(SyntaxFactory.AssignStatement(SyntaxFactory.VarIdentifier(v), top));
-        CurrentStack.Push(SyntaxFactory.VarIdentifier(v));
-        CurrentStack.Push(SyntaxFactory.VarIdentifier(v));
+        var t = EvaluationStack.Pop();
+        Instructions.Add(ShaderInstruction.Dup());
+        PushToEvaluationStack(t);
+        PushToEvaluationStack(t);
         return default;
     }
 
     public Unit VisitPop(CilInstructionInfo inst)
     {
-        if (CurrentStack.Count == 0)
-            throw new ValidationException("Cannot pop when stack is empty", Model.Method);
-
-        var e = CurrentStack.Pop();
-        Statements.Add(SyntaxFactory.ExpressionStatement(e));
+        _ = EvaluationStack.Pop();
+        Instructions.Add(ShaderInstruction.Pop());
         return default;
     }
 
     public Unit VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>
     {
-        var e = CurrentStack.Pop();
-        if (e.Type is IScalarType nt)
+        var e = EvaluationStack.Pop();
+        if (e is IScalarType nt)
         {
-            CurrentStack.Push(nt.GetConversionToOperation<TTarget>().CreateExpression(e));
+            var operation = nt.GetConversionToOperation<TTarget>();
+            Instructions.Add(operation.Instruction);
+            PushToEvaluationStack(operation.ResultType);
             return default;
         }
 
@@ -514,23 +498,28 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitLogicalNot(CilInstructionInfo inst)
     {
-        var v = CurrentStack.Pop();
-        switch (v.Type)
+        var v = EvaluationStack.Pop();
+        IUnaryExpressionOperation operation;
+        switch (v)
         {
             case BoolType:
-                CurrentStack.Push(LogicalNotOperation.Instance.CreateExpression(v));
+                operation = LogicalNotOperation.Instance;
                 break;
             default:
                 throw new NotImplementedException();
         }
 
+        Instructions.Add(operation.Instruction);
+        PushToEvaluationStack(operation.ResultType);
         return default;
     }
 
+    // TODO: remove this method?
     public Unit VisitLdThis(CilInstructionInfo inst)
     {
         var p = Function.Parameters[0];
-        CurrentStack.Push(SyntaxFactory.ArgIdentifier(p));
+        Instructions.Add(ShaderInstruction.Load(p));
+        EvaluationStack.Push(p.Type);
         return default;
     }
 
@@ -541,26 +530,29 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitLoadField(CilInstructionInfo inst, MemberDeclaration m)
     {
-        var o = CurrentStack.Pop();
-        if (o.Type is not IPtrType)
+        var o = EvaluationStack.Pop();
+        if (o is not IPtrType)
         {
             throw new ValidationException("ldfld expect current stack to have ptr type", Model.Method);
         }
 
-        CurrentStack.Push(SyntaxFactory.FieldIdentifier(o, m));
+        Instructions.Add(ShaderInstruction.Load(m));
+        PushToEvaluationStack(m.Type);
         return default;
     }
 
+
     public Unit VisitLoadFieldAddress(CilInstructionInfo inst, MemberDeclaration m)
     {
-        var o = CurrentStack.Pop();
-        if (o.Type is not IPtrType)
+        var o = EvaluationStack.Pop();
+        if (o is not IPtrType)
         {
             throw new ValidationException("ldfld expect current stack to have ptr type", Model.Method);
         }
 
         // TODO: check o is a structure type and m is member of it
-        CurrentStack.Push(SyntaxFactory.AddressOf(SyntaxFactory.FieldIdentifier(o, m)));
+        Instructions.Add(ShaderInstruction.LoadAddress(m));
+        PushToEvaluationStack(m.Type.GetPtrType());
         return default;
     }
 
@@ -572,13 +564,15 @@ sealed class RuntimeReflectionParserInstructionVisitor(
 
     public Unit VisitLoadStaticField(CilInstructionInfo inst, VariableDeclaration v)
     {
-        CurrentStack.Push(SyntaxFactory.VarIdentifier(v));
+        Instructions.Add(ShaderInstruction.Load(v));
+        PushToEvaluationStack(v.Type);
         return default;
     }
 
     public Unit VisitLoadStaticFieldAddress(CilInstructionInfo inst, VariableDeclaration v)
     {
-        CurrentStack.Push(SyntaxFactory.AddressOf(SyntaxFactory.VarIdentifier(v)));
+        Instructions.Add(ShaderInstruction.LoadAddress(v));
+        PushToEvaluationStack(v.Type.GetPtrType());
         return default;
     }
 }
