@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
@@ -43,11 +44,6 @@ public sealed record class IfStatement(
         }
     }
 
-    public IEnumerable<Label> ReferencedLabels =>
-    [
-        ..TrueBody.ReferencedLabels,
-        ..FalseBody.ReferencedLabels
-    ];
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
     [

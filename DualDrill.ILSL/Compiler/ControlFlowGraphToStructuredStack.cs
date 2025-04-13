@@ -91,7 +91,7 @@ public static partial class ShaderModuleExtension
                     TerminateSuccessor ret =>
                     [
                         .. bb.Elements,
-                        ShaderInstruction.Return()
+                        ShaderInstruction.ReturnResult()
                     ],
                     UnconditionalSuccessor unc => [..bb.Elements, .. DoBranch(target, unc.Target)],
                     ConditionalSuccessor brIf =>

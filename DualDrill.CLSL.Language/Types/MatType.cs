@@ -21,4 +21,6 @@ public sealed record class MatType(
     {
         throw new NotImplementedException();
     }
+
+    public static MatType Instance => throw new NotImplementedException();
 }

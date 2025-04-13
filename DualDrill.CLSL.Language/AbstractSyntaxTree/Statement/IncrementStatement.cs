@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
@@ -18,6 +19,5 @@ public sealed record class IncrementStatement(
         throw new NotImplementedException();
     }
 
-    public IEnumerable<Label> ReferencedLabels { get; }
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables { get; }
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Expr.ReferencedVariables;
 }

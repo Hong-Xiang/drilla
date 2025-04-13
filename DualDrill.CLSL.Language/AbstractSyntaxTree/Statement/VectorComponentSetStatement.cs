@@ -2,6 +2,7 @@ using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
@@ -18,8 +19,6 @@ public sealed record class VectorComponentSetStatement<TRank, TElement, TCompone
     where TElement : IScalarType<TElement>
     where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
 {
-    public IEnumerable<Label> ReferencedLabels => [];
-
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
     [
         ..Target.ReferencedVariables,

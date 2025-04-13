@@ -25,7 +25,7 @@ public partial struct vec3f32
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [RuntimeVectorSwizzleGetMethodAttribute([DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.x])]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentGetOperation<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>, DualDrill.CLSL.Language.Operation.Swizzle.X>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentGetExpressionOperation<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>, DualDrill.CLSL.Language.Operation.Swizzle.X>>]
         get => Data[0];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,7 +42,7 @@ public partial struct vec3f32
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [RuntimeVectorSwizzleGetMethodAttribute([DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.y])]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentGetOperation<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>, DualDrill.CLSL.Language.Operation.Swizzle.Y>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentGetExpressionOperation<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>, DualDrill.CLSL.Language.Operation.Swizzle.Y>>]
         get => Data[1];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -59,7 +59,7 @@ public partial struct vec3f32
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [RuntimeVectorSwizzleGetMethodAttribute([DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.z])]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentGetOperation<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>, DualDrill.CLSL.Language.Operation.Swizzle.Z>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentGetExpressionOperation<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>, DualDrill.CLSL.Language.Operation.Swizzle.Z>>]
         get => Data[2];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -187,14 +187,14 @@ public partial struct vec3f32
     public vec2f32 xx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(x, x);
     }
 
     public vec2f32 xy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(x, y);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -210,7 +210,7 @@ public partial struct vec3f32
     public vec2f32 xz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(x, z);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -226,7 +226,7 @@ public partial struct vec3f32
     public vec2f32 yx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(y, x);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -242,14 +242,14 @@ public partial struct vec3f32
     public vec2f32 yy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(y, y);
     }
 
     public vec2f32 yz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(y, z);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -265,7 +265,7 @@ public partial struct vec3f32
     public vec2f32 zx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(z, x);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -281,7 +281,7 @@ public partial struct vec3f32
     public vec2f32 zy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(z, y);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -297,49 +297,49 @@ public partial struct vec3f32
     public vec2f32 zz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec2(z, z);
     }
 
     public vec3f32 xxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, x, x);
     }
 
     public vec3f32 xxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, x, y);
     }
 
     public vec3f32 xxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, x, z);
     }
 
     public vec3f32 xyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, y, x);
     }
 
     public vec3f32 xyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, y, y);
     }
 
     public vec3f32 xyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, y, z);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -356,14 +356,14 @@ public partial struct vec3f32
     public vec3f32 xzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, z, x);
     }
 
     public vec3f32 xzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, z, y);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -380,28 +380,28 @@ public partial struct vec3f32
     public vec3f32 xzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(x, z, z);
     }
 
     public vec3f32 yxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, x, x);
     }
 
     public vec3f32 yxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, x, y);
     }
 
     public vec3f32 yxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, x, z);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -418,28 +418,28 @@ public partial struct vec3f32
     public vec3f32 yyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, y, x);
     }
 
     public vec3f32 yyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, y, y);
     }
 
     public vec3f32 yyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, y, z);
     }
 
     public vec3f32 yzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, z, x);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -456,28 +456,28 @@ public partial struct vec3f32
     public vec3f32 yzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, z, y);
     }
 
     public vec3f32 yzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(y, z, z);
     }
 
     public vec3f32 zxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, x, x);
     }
 
     public vec3f32 zxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, x, y);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -494,14 +494,14 @@ public partial struct vec3f32
     public vec3f32 zxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, x, z);
     }
 
     public vec3f32 zyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, y, x);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -518,602 +518,602 @@ public partial struct vec3f32
     public vec3f32 zyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, y, y);
     }
 
     public vec3f32 zyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, y, z);
     }
 
     public vec3f32 zzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, z, x);
     }
 
     public vec3f32 zzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, z, y);
     }
 
     public vec3f32 zzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec3(z, z, z);
     }
 
     public vec4f32 xxxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, x, x);
     }
 
     public vec4f32 xxxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, x, y);
     }
 
     public vec4f32 xxxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, x, z);
     }
 
     public vec4f32 xxyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, y, x);
     }
 
     public vec4f32 xxyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, y, y);
     }
 
     public vec4f32 xxyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, y, z);
     }
 
     public vec4f32 xxzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, z, x);
     }
 
     public vec4f32 xxzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, z, y);
     }
 
     public vec4f32 xxzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, x, z, z);
     }
 
     public vec4f32 xyxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, x, x);
     }
 
     public vec4f32 xyxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, x, y);
     }
 
     public vec4f32 xyxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, x, z);
     }
 
     public vec4f32 xyyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, y, x);
     }
 
     public vec4f32 xyyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, y, y);
     }
 
     public vec4f32 xyyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, y, z);
     }
 
     public vec4f32 xyzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, z, x);
     }
 
     public vec4f32 xyzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, z, y);
     }
 
     public vec4f32 xyzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, y, z, z);
     }
 
     public vec4f32 xzxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, x, x);
     }
 
     public vec4f32 xzxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, x, y);
     }
 
     public vec4f32 xzxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, x, z);
     }
 
     public vec4f32 xzyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, y, x);
     }
 
     public vec4f32 xzyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, y, y);
     }
 
     public vec4f32 xzyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, y, z);
     }
 
     public vec4f32 xzzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, z, x);
     }
 
     public vec4f32 xzzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, z, y);
     }
 
     public vec4f32 xzzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(x, z, z, z);
     }
 
     public vec4f32 yxxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, x, x);
     }
 
     public vec4f32 yxxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, x, y);
     }
 
     public vec4f32 yxxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, x, z);
     }
 
     public vec4f32 yxyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, y, x);
     }
 
     public vec4f32 yxyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, y, y);
     }
 
     public vec4f32 yxyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, y, z);
     }
 
     public vec4f32 yxzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, z, x);
     }
 
     public vec4f32 yxzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, z, y);
     }
 
     public vec4f32 yxzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, x, z, z);
     }
 
     public vec4f32 yyxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, x, x);
     }
 
     public vec4f32 yyxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, x, y);
     }
 
     public vec4f32 yyxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, x, z);
     }
 
     public vec4f32 yyyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, y, x);
     }
 
     public vec4f32 yyyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, y, y);
     }
 
     public vec4f32 yyyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, y, z);
     }
 
     public vec4f32 yyzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, z, x);
     }
 
     public vec4f32 yyzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, z, y);
     }
 
     public vec4f32 yyzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, y, z, z);
     }
 
     public vec4f32 yzxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, x, x);
     }
 
     public vec4f32 yzxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, x, y);
     }
 
     public vec4f32 yzxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, x, z);
     }
 
     public vec4f32 yzyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, y, x);
     }
 
     public vec4f32 yzyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, y, y);
     }
 
     public vec4f32 yzyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, y, z);
     }
 
     public vec4f32 yzzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, z, x);
     }
 
     public vec4f32 yzzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, z, y);
     }
 
     public vec4f32 yzzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(y, z, z, z);
     }
 
     public vec4f32 zxxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, x, x);
     }
 
     public vec4f32 zxxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, x, y);
     }
 
     public vec4f32 zxxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, x, z);
     }
 
     public vec4f32 zxyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, y, x);
     }
 
     public vec4f32 zxyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, y, y);
     }
 
     public vec4f32 zxyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, y, z);
     }
 
     public vec4f32 zxzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, z, x);
     }
 
     public vec4f32 zxzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, z, y);
     }
 
     public vec4f32 zxzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, x, z, z);
     }
 
     public vec4f32 zyxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, x, x);
     }
 
     public vec4f32 zyxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, x, y);
     }
 
     public vec4f32 zyxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, x, z);
     }
 
     public vec4f32 zyyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, y, x);
     }
 
     public vec4f32 zyyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, y, y);
     }
 
     public vec4f32 zyyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, y, z);
     }
 
     public vec4f32 zyzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, z, x);
     }
 
     public vec4f32 zyzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, z, y);
     }
 
     public vec4f32 zyzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, y, z, z);
     }
 
     public vec4f32 zzxx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, x, x);
     }
 
     public vec4f32 zzxy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, x, y);
     }
 
     public vec4f32 zzxz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, x, z);
     }
 
     public vec4f32 zzyx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, y, x);
     }
 
     public vec4f32 zzyy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, y, y);
     }
 
     public vec4f32 zzyz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, y, z);
     }
 
     public vec4f32 zzzx
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.X>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, z, x);
     }
 
     public vec4f32 zzzy
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Y>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, z, y);
     }
 
     public vec4f32 zzzz
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
+        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N3, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z, DualDrill.CLSL.Language.Operation.Swizzle.Z>, DualDrill.CLSL.Language.Types.FloatType<DualDrill.Common.Nat.N32>>>]
         get => vec4(z, z, z, z);
     }
 

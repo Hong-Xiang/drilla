@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Value;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
@@ -12,15 +13,20 @@ public interface IShaderType
 
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IShaderTypeVisitor1<TResult>;
+
+    IBlockArgumentValue CreateBlockArgumentValue();
 }
 
-public interface IShaderType<TSelf> : IShaderType
+public interface IShaderType<TSelf> : IShaderType, ISingleton<TSelf>
     where TSelf : IShaderType<TSelf>
 {
     TResult IShaderType.Accept<TVisitor, TResult>(TVisitor visitor)
     {
         return visitor.Visit((TSelf)this);
     }
+
+    IBlockArgumentValue IShaderType.CreateBlockArgumentValue()
+        => new BlockArgumentValue<TSelf>();
 }
 
 public interface IShaderTypeVisitor1<out TResult>

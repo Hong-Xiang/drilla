@@ -1,38 +1,58 @@
-﻿using DualDrill.CLSL.Language.Operation;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Language.ValueInstruction;
+using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.Value;
 
-public interface IValue
+public interface IValue : ITextDumpable<ILocalDeclarationContext>
 {
+    IShaderType Type { get; }
+
+    IReturnResultValueInstruction GetReturnResultValueInstruction();
 }
 
-public interface IValueInstruction
-{
-}
-
-public interface IValue<TValueType>
+public interface IValue<TValueType> : IValue
     where TValueType : IShaderType<TValueType>
 {
+    IShaderType IValue.Type => TValueType.Instance;
+
+    IReturnResultValueInstruction IValue.GetReturnResultValueInstruction()
+        => ValueInstructionFactory.ReturnResult(this);
 }
 
-public sealed record class UnaryOperationValue<TOperation, TSource, TResult>(
-    IValue<TSource> Oprand
-) : IValue<TResult>
-    where TOperation : IUnaryExpressionOperation
-    where TSource : IShaderType<TSource>
-    where TResult : IShaderType<TResult>
+public interface IBlockArgumentValue : IValue
 {
 }
 
-public sealed record class BinaryOperationValue<TOperation, TA, TB, TResult>(
-    IValue<TA> FstOperand,
-    IValue<TB> SndOperand
-) : IValue<TResult>
-    where TOperation : IBinaryExpressionOperation
-    where TA : IShaderType<TA>
-    where TB : IShaderType<TB>
-    where TResult : IShaderType<TResult>
+public sealed class BlockArgumentValue<TValueType> : IBlockArgumentValue, IValue<TValueType>
+    where TValueType : IShaderType<TValueType>
+{
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.Write($"%{context.ValueIndex(this)} : {TValueType.Instance.Name}");
+    }
+}
+
+public interface IOperationValue : IValue
 {
 }
 
+public sealed class OperationValue<TValueType> : IOperationValue, IValue<TValueType>
+    where TValueType : IShaderType<TValueType>
+{
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.Write($"%{context.ValueIndex(this)} : {TValueType.Instance.Name}");
+    }
+}
+
+public static class OperationValue
+{
+    public static OperationValue<TShaderType> Create<TShaderType>()
+        where TShaderType : IShaderType<TShaderType>
+        => new();
+}

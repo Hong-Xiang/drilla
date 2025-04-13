@@ -17,6 +17,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.CLSL.Language.ControlFlow;
 using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.CommonInstruction;
 using DualDrill.Common.CodeTextWriter;
 using Xunit.Abstractions;
 
@@ -70,7 +71,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         entry.Elements.Should().SatisfyRespectively(
             s => s.Should().BeOfType<ConstInstruction<I32Literal>>()
                   .Which.Literal.Value.Should().Be(42),
-            s => s.Should().BeOfType<ReturnInstruction>()
+            s => s.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
 
@@ -85,22 +86,54 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = ParseMethod2(f,
             MethodHelper.GetMethod<float, float, vec2f32>(DevelopTestShaderModule.SetComponent));
         var entry = result[result.Entry];
-        entry.Elements.Should().SatisfyRespectively(
-            s => s.Should().BeOfType<SimpleAssignmentStatement>(),
-            s => s.Should().Satisfy<VectorComponentSetStatement<N2, FloatType<N32>, Swizzle.X>>(assign =>
-            {
-                assign.Target.Should().BeOfType<AddressOfExpression>()
-                      .Which.Base.Should().BeOfType<VariableIdentifierExpression>();
-                assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(f.Parameters[0]));
-            }),
-            s => s.Should().Satisfy<VectorComponentSetStatement<N2, FloatType<N32>, Swizzle.Y>>(assign =>
-            {
-                assign.Target.Should().BeOfType<AddressOfExpression>()
-                      .Which.Base.Should().BeOfType<VariableIdentifierExpression>();
-                assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(f.Parameters[1]));
-            }),
-            s => s.Should().BeOfType<SimpleAssignmentStatement>()
+
+        result[result.Entry].Elements.Should().SatisfyRespectively(
+            s => s.Should().BeOfType<ConstInstruction<F32Literal>>()
+                  .Which.Literal.Value.Should().Be(0.0f),
+            s => s.Should().BeOfType<CallInstruction>()
+                  .Which.Callee.Return.Type.Should().Be(ShaderType.Vec2F32),
+            s => s.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+            s => s.Should().BeOfType<LoadSymbolAddressInstruction<VariableDeclaration>>(),
+            s => s.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(f.Parameters[0]),
+            s => s.Should().BeOfType<BinaryStatementOperationInstruction<VectorComponentSetOperation<N2, VecType<N2, FloatType<N32>>, Swizzle.X>>>(),
+            s => s.Should().BeOfType<LoadSymbolAddressInstruction<VariableDeclaration>>(),
+            s => s.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(f.Parameters[1]),
+            s => s.Should().BeOfType<BinaryStatementOperationInstruction<VectorComponentSetOperation<N2, VecType<N2, FloatType<N32>>, Swizzle.Y>>>(),
+            s => s.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+            s => s.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+            s => s.Should().BeOfType<BrInstruction>()
         );
+
+        result[result.Entry].Successor.Should().BeOfType<UnconditionalSuccessor>()
+             .Which.Target.Should().Satisfy<Label>(l =>
+             {
+                 var successor = result[l];
+                 successor.Should().BeAssignableTo<IBasicBlock2<IInstruction, IShaderType, IShaderType>>()
+                          .Which.Elements.Should().SatisfyRespectively(
+                              x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+                              x => x.Should().BeOfType<ReturnResultStackInstruction>()
+                          );
+             });
+
+
+        // entry.Elements.Should().SatisfyRespectively(
+        //     s => s.Should().BeOfType<SimpleAssignmentStatement>(),
+        //     s => s.Should().Satisfy<VectorComponentSetStatement<N2, FloatType<N32>, Swizzle.X>>(assign =>
+        //     {
+        //         assign.Target.Should().BeOfType<AddressOfExpression>()
+        //               .Which.Base.Should().BeOfType<VariableIdentifierExpression>();
+        //         assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(f.Parameters[0]));
+        //     }),
+        //     s => s.Should().Satisfy<VectorComponentSetStatement<N2, FloatType<N32>, Swizzle.Y>>(assign =>
+        //     {
+        //         assign.Target.Should().BeOfType<AddressOfExpression>()
+        //               .Which.Base.Should().BeOfType<VariableIdentifierExpression>();
+        //         assign.Value.Should().Satisfy<FormalParameterExpression>(e => e.Parameter.Should().Be(f.Parameters[1]));
+        //     }),
+        //     s => s.Should().BeOfType<SimpleAssignmentStatement>()
+        // );
     }
 
     [Fact]
@@ -121,7 +154,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
                   .Which.Target.Should().Be(f.Parameters[1]),
             x => x.Should().BeOfType<BinaryExpressionOperationInstruction<
                 VectorScalarExpressionNumericOperation<N2, FloatType<N32>, BinaryArithmetic.Mul>>>(),
-            x => x.Should().BeOfType<ReturnInstruction>()
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
 
@@ -139,7 +172,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         entry.Elements.Should().SatisfyRespectively(
             x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
                   .Which.Target.Should().Be(a),
-            x => x.Should().BeOfType<ReturnInstruction>()
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
 
@@ -162,7 +195,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
                   .Which.Literal.Value.Should().Be(1),
             x => x.Should().BeOfType<BinaryExpressionOperationInstruction<
                 NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>>>(),
-            x => x.Should().BeOfType<ReturnInstruction>()
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
 
@@ -189,7 +222,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
                   .Which.Literal.Value.Should().Be(4.0f),
             x => x.Should().BeOfType<CallInstruction>()
                   .Which.Callee.Return.Type.Should().Be(VecType<N4, FloatType<N32>>.Instance),
-            x => x.Should().BeOfType<ReturnInstruction>()
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
 
@@ -224,7 +257,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
                  successor.Should().BeAssignableTo<IBasicBlock2<IInstruction, IShaderType, IShaderType>>()
                           .Which.Elements.Should().SatisfyRespectively(
                               x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-                              x => x.Should().BeOfType<ReturnInstruction>()
+                              x => x.Should().BeOfType<ReturnResultStackInstruction>()
                           );
              });
     }
@@ -259,9 +292,10 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<ConstInstruction<I32Literal>>()
                   .Which.Literal.Value.Should().Be(2),
             x => x.Should().BeOfType<CallInstruction>().Which.Callee.Should().Be(fAdd),
-            x => x.Should().BeOfType<ReturnInstruction>()
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
+ 
 
     [Fact]
     public void ParseMaxByIfThenElseShouldWork()
@@ -319,62 +353,62 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var loc0 = variables[0];
         var loc1 = variables[1];
 
-        var entryBB = result[result.Entry];
 
-        entryBB.Elements.Should().SatisfyRespectively(
-            s => s.Should().Satisfy<SimpleAssignmentStatement>(s_ =>
-            {
-                s_.L.Should().BeOfType<VariableIdentifierExpression>()
-                  .Which.Variable.Should().Be(loc0);
-                s_.R.Should().Satisfy<BinaryOperationExpression<LogicalBinaryOperation<BinaryRelational.Eq>>>(elt =>
-                {
-                    elt.L.Should()
-                       .Satisfy<BinaryOperationExpression<
-                           NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>>>(
-                           clt =>
-                           {
-                               clt.L.Should().BeOfType<FormalParameterExpression>()
-                                  .Which.Parameter.Should().Be(a);
-                               clt.R.Should().BeOfType<FormalParameterExpression>()
-                                  .Which.Parameter.Should().Be(b);
-                           }
-                       );
-                    elt.R.Should().BeOfType<LiteralValueExpression>()
-                       .Which.Literal.Should().BeOfType<BoolLiteral>()
-                       .Which.Value.Should().Be(false);
-                });
-            }),
-            s => s.Should().BeOfType<PushStatement>()
-                  .Which.Expr.Should().BeOfType<UnaryOperationExpression<LogicalNotOperation>>()
-                  .Which.Source.Should().BeOfType<VariableIdentifierExpression>()
-                  .Which.Variable.Should().Be(loc0)
-        );
 
-        result[l0c].Elements.Should().ContainSingle()
-                   .Which.Should().Satisfy<SimpleAssignmentStatement>(
-                       s =>
-                       {
-                           s.L.Should().BeOfType<VariableIdentifierExpression>()
-                            .Which.Variable.Should().Be(loc1);
-                           s.R.Should().BeOfType<FormalParameterExpression>()
-                            .Which.Parameter.Should().Be(a);
-                       }
-                   );
+        // entryBB.Elements.Should().SatisfyRespectively(
+        //     s => s.Should().Satisfy<SimpleAssignmentStatement>(s_ =>
+        //     {
+        //         s_.L.Should().BeOfType<VariableIdentifierExpression>()
+        //           .Which.Variable.Should().Be(loc0);
+        //         s_.R.Should().Satisfy<BinaryOperationExpression<LogicalBinaryOperation<BinaryRelational.Eq>>>(elt =>
+        //         {
+        //             elt.L.Should()
+        //                .Satisfy<BinaryOperationExpression<
+        //                    NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>>>(
+        //                    clt =>
+        //                    {
+        //                        clt.L.Should().BeOfType<FormalParameterExpression>()
+        //                           .Which.Parameter.Should().Be(a);
+        //                        clt.R.Should().BeOfType<FormalParameterExpression>()
+        //                           .Which.Parameter.Should().Be(b);
+        //                    }
+        //                );
+        //             elt.R.Should().BeOfType<LiteralValueExpression>()
+        //                .Which.Literal.Should().BeOfType<BoolLiteral>()
+        //                .Which.Value.Should().Be(false);
+        //         });
+        //     }),
+        //     s => s.Should().BeOfType<PushStatement>()
+        //           .Which.Expr.Should().BeOfType<UnaryOperationExpression<LogicalNotOperation>>()
+        //           .Which.Source.Should().BeOfType<VariableIdentifierExpression>()
+        //           .Which.Variable.Should().Be(loc0)
+        // );
 
-        result[l11].Elements.Should().ContainSingle()
-                   .Which.Should().Satisfy<SimpleAssignmentStatement>(
-                       s =>
-                       {
-                           s.L.Should().BeOfType<VariableIdentifierExpression>()
-                            .Which.Variable.Should().Be(loc1);
-                           s.R.Should().BeOfType<FormalParameterExpression>()
-                            .Which.Parameter.Should().Be(b);
-                       }
-                   );
-        result[l16].Elements.Should().ContainSingle()
-                   .Which.Should().BeOfType<PushStatement>()
-                   .Which.Expr.Should().BeOfType<VariableIdentifierExpression>()
-                   .Which.Variable.Should().Be(loc1);
+        // result[l0c].Elements.Should().ContainSingle()
+        //            .Which.Should().Satisfy<SimpleAssignmentStatement>(
+        //                s =>
+        //                {
+        //                    s.L.Should().BeOfType<VariableIdentifierExpression>()
+        //                     .Which.Variable.Should().Be(loc1);
+        //                    s.R.Should().BeOfType<FormalParameterExpression>()
+        //                     .Which.Parameter.Should().Be(a);
+        //                }
+        //            );
+
+        // result[l11].Elements.Should().ContainSingle()
+        //            .Which.Should().Satisfy<SimpleAssignmentStatement>(
+        //                s =>
+        //                {
+        //                    s.L.Should().BeOfType<VariableIdentifierExpression>()
+        //                     .Which.Variable.Should().Be(loc1);
+        //                    s.R.Should().BeOfType<FormalParameterExpression>()
+        //                     .Which.Parameter.Should().Be(b);
+        //                }
+        //            );
+        // result[l16].Elements.Should().ContainSingle()
+        //            .Which.Should().BeOfType<PushStatement>()
+        //            .Which.Expr.Should().BeOfType<VariableIdentifierExpression>()
+        //            .Which.Variable.Should().Be(loc1);
 
         // ImmutableArray<LabelInstruction> labels = [.. result.Instructions.OfType<LabelInstruction>()];
         //
@@ -383,53 +417,64 @@ public class ParseBodyTest(ITestOutputHelper Output)
         // var l11 = labels[0];
         // var l16 = labels[1];
         //
-        // result.Instructions.Should().SatisfyRespectively(
-        //     //  IL_0000: nop
-        //     x => x.Should().BeOfType<NopInstruction>(),
-        //     //  IL_0001: ldarg.0
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
-        //     //  IL_0002: ldarg.1
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
-        //     // IL_0003: clt
-        //     x => x.Should()
-        //           .BeOfType<BinaryExpressionOperationInstruction<
-        //               NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>>>(),
-        //     // IL_0005: ldc.i4.0
-        //     x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(0),
-        //     // IL_0006: ceq
-        //     x => x.Should()
-        //           .BeOfType<BinaryExpressionOperationInstruction<
-        //               NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>>(),
-        //     // IL_0008: stloc.0
-        //     x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-        //     // IL_0009: ldloc.0
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-        //     // IL_000a: brfalse.s IL_0011
-        //     x => x.Should().BeOfType<BrIfInstruction>().Which.Target.Should().Be(l11),
-        //
-        //     // IL_000c: nop
-        //     x => x.Should().BeOfType<NopInstruction>(),
-        //     // IL_000d: ldarg.0
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
-        //     // IL_000e: stloc.1
-        //     x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-        //     // IL_000f: br.s IL_0016
-        //     x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l16),
-        //     x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l11),
-        //     // IL_0011: nop
-        //     x => x.Should().BeOfType<NopInstruction>(),
-        //     // IL_0012: ldarg.1
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
-        //     // IL_0013: stloc.1
-        //     x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-        //     // IL_0014: br.s IL_0016
-        //     x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l16),
-        //     x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l16),
-        //     // IL_0016: ldloc.1
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-        //     // IL_0017: ret
-        //     x => x.Should().BeOfType<ReturnInstruction>()
-        // );
+        result[result.Entry].Elements.Should().SatisfyRespectively(
+            //  IL_0000: nop
+            // x => x.Should().BeOfType<NopInstruction>(),
+            //  IL_0001: ldarg.0
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            //  IL_0002: ldarg.1
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+            // IL_0003: clt
+            x => x.Should()
+                  .BeOfType<BinaryExpressionOperationInstruction<
+                      NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>>>(),
+            // IL_0005: ldc.i4.0
+            x => x.Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value.Should().Be(0),
+            // IL_0006: ceq
+            x => x.Should()
+                  .BeOfType<BinaryExpressionOperationInstruction<
+                      NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>>>(),
+            // IL_0008: stloc.0
+            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+            // IL_0009: ldloc.0
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+            x => x.Should().BeOfType<UnaryExpressionOperationInstruction<LogicalNotOperation>>(),
+            // IL_000a: brfalse.s IL_0011
+            x =>
+            {
+                var bif = x.Should().BeOfType<BrIfInstruction>();
+                bif.Which.TrueTarget.Should().Be(l11);
+                bif.Which.FalseTarget.Should().Be(l0c);
+            }
+        );
+        result[l0c].Elements.Should().SatisfyRespectively(
+            // IL_000c: nop
+            // x => x.Should().BeOfType<NopInstruction>(),
+            // IL_000d: ldarg.0
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(a),
+            // IL_000e: stloc.1
+            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+            // IL_000f: br.s IL_0016
+            x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l16)
+        );
+        result[l11].Elements.Should().SatisfyRespectively(
+            // x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l11),
+            // IL_0011: nop
+            // x => x.Should().BeOfType<NopInstruction>(),
+            // IL_0012: ldarg.1
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>().Which.Target.Should().Be(b),
+            // IL_0013: stloc.1
+            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+            // IL_0014: br.s IL_0016
+            x => x.Should().BeOfType<BrInstruction>().Which.Target.Should().Be(l16)
+        );
+        result[l16].Elements.Should().SatisfyRespectively(
+            // x => x.Should().BeOfType<LabelInstruction>().Which.Label.Should().Be(l16),
+            // IL_0016: ldloc.1
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+            // IL_0017: ret
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
+        );
     }
 
     [Fact]
@@ -456,37 +501,38 @@ public class ParseBodyTest(ITestOutputHelper Output)
 
         var entry = result[result.Entry];
 
-        entry.Elements.Should().ContainSingle()
-             .Which.Should().BeOfType<PushStatement>()
-             .Which.Expr.Should().Satisfy<IUnaryExpression>(e =>
-             {
-                 e.Operation.Should().BeOfType<VectorSwizzleGetOperation<
-                     Swizzle.Pattern<N2, Swizzle.X, Swizzle.Y, Swizzle.X>,
-                     FloatType<N32>
-                 >>();
-             });
+        // entry.Elements.Should().ContainSingle()
+        //      .Which.Should().BeOfType<PushStatement>()
+        //      .Which.Expr.Should().Satisfy<IUnaryExpression>(e =>
+        //      {
+        //          e.Operation.Should().BeOfType<VectorSwizzleGetOperation<
+        //              Swizzle.Pattern<N2, Swizzle.X, Swizzle.Y, Swizzle.X>,
+        //              FloatType<N32>
+        //          >>();
+        //      });
 
 
-        // result.Instructions.Should().SatisfyRespectively(
-        //     //  IL_0000: nop
-        //     x => x.Should().BeOfType<NopInstruction>(),
-        //     //  IL_0001: ldarga.s a
-        //     x => x.Should().BeOfType<LoadSymbolAddressInstruction<ParameterDeclaration>>().Which.Target.Should().Be(v),
-        //     //  IL_0003: swizzle.vec4f32.xyx [ref<vec4f32>] -> [vec3f32]
-        //     x => x.Should()
-        //           .BeOfType<
-        //               VectorSwizzleGetOperation<Swizzle.Pattern<N4, Swizzle.X, Swizzle.Y, Swizzle.X>,
-        //                   FloatType<N32>>>(),
-        //     //  IL_0008: stloc.0
-        //     x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
-        //     //  IL_0009: br.s IL_000b
-        //     x => x.Should().BeOfType<BrInstruction>(),
-        //     x => x.Should().BeOfType<LabelInstruction>(),
-        //     //  IL_000b: ldloc.0
-        //     x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-        //     //  IL_000c: ret
-        //     x => x.Should().BeOfType<ReturnInstruction>()
-        // );
+        result[result.Entry].Elements.Should().SatisfyRespectively(
+            //  IL_0000: nop
+            // x => x.Should().BeOfType<NopInstruction>(),
+            //  IL_0001: ldarga.s a
+            x => x.Should().BeOfType<LoadSymbolAddressInstruction<ParameterDeclaration>>().Which.Target.Should().Be(v),
+            //  IL_0003: swizzle.vec4f32.xyx [ref<vec4f32>] -> [vec3f32]
+            x => x.Should()
+                  .BeOfType<
+                      UnaryExpressionOperationInstruction<
+                      VectorSwizzleGetExpressionOperation<Swizzle.Pattern<N2, Swizzle.X, Swizzle.Y, Swizzle.X>,
+                          FloatType<N32>>>>(),
+            //  IL_0008: stloc.0
+            // x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
+            //  IL_0009: br.s IL_000b
+            // x => x.Should().BeOfType<BrInstruction>(),
+            // x => x.Should().BeOfType<LabelInstruction>(),
+            //  IL_000b: ldloc.0
+            // x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+            //  IL_000c: ret
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
+        );
     }
 
     [Fact]
@@ -553,7 +599,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         {
             result[s.Target].Elements.Should().SatisfyRespectively(
                 x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-                x => x.Should().BeOfType<ReturnInstruction>()
+                x => x.Should().BeOfType<ReturnResultStackInstruction>()
             );
             // var bb = result[s.Target];
             // bb.Elements.Should().ContainSingle()
@@ -642,7 +688,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
             //  IL_0002: call dot.vec4f32
             x => x.Should().BeOfType<CallInstruction>(),
             //  IL_0007: ret
-            x => x.Should().BeOfType<ReturnInstruction>()
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
 
@@ -695,62 +741,104 @@ public class ParseBodyTest(ITestOutputHelper Output)
               .Which.Target.Should().Be(l9);
         result.Successor(l9).Should().BeOfType<UnconditionalSuccessor>()
               .Which.Target.Should().Be(lc);
+        var ebb = result[result.Entry];
+        var eSucc = Assert.IsType<ConditionalSuccessor>(ebb.Successor);
+        var tbb = result[eSucc.TrueTarget];
+        var fbb = result[eSucc.FalseTarget];
+        var mbb = result[Assert.IsType<UnconditionalSuccessor>(tbb.Successor).Target];
+        fbb.Successor.Should().BeOfType<UnconditionalSuccessor>()
+             .Which.Target.Should().Be(mbb.Label);
+        var rbb = result[Assert.IsType<UnconditionalSuccessor>(mbb.Successor).Target];
 
         var variables = result.LocalVariables;
 
-        result[l0].Elements.Should().ContainSingle()
-                  .Which.Should().BeOfType<PushStatement>()
-                  .Which.Expr.Should().Satisfy<IBinaryExpression>(e =>
-                  {
-                      e.Operation.Should().Satisfy<IBinaryExpressionOperation>(operation =>
-                      {
-                          operation.LeftType.Should().BeOfType<IntType<N32>>();
-                          operation.RightType.Should().BeOfType<IntType<N32>>();
-                          operation.BinaryOp.Should().BeOfType<BinaryRelational.Ge>();
-                      });
-                      e.L.Should().BeOfType<FormalParameterExpression>()
-                       .Which.Parameter.Should().Be(a);
-                      e.R.Should().BeOfType<FormalParameterExpression>()
-                       .Which.Parameter.Should().Be(b);
-                  });
+        ebb.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(b),
+            x => x.Should().BeOfType<BinaryExpressionOperationInstruction<
+                NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Ge>>>(),
+                x => x.Should().BeOfType<BrIfInstruction>()
+        );
 
-        result[l5].Elements.Should().ContainSingle()
-                  .Which.Should().Satisfy<SimpleAssignmentStatement>(
-                      s =>
-                      {
-                          s.L.Should().BeOfType<VariableIdentifierExpression>()
-                           .Which.Variable.Should().Be(variables[0]);
-                          s.R.Should().BeOfType<FormalParameterExpression>()
-                           .Which.Parameter.Should().Be(b);
-                      }
-                  );
+        tbb.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(a),
+            x => x.Should().BeOfType<BrInstruction>()
+        );
 
-        result[l8].Elements.Should().ContainSingle()
-                  .Which.Should().Satisfy<SimpleAssignmentStatement>(
-                      s =>
-                      {
-                          s.L.Should().BeOfType<VariableIdentifierExpression>()
-                           .Which.Variable.Should().Be(variables[1]);
-                          s.R.Should().BeOfType<FormalParameterExpression>()
-                           .Which.Parameter.Should().Be(a);
-                      }
-                  );
+        fbb.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
+                  .Which.Target.Should().Be(b),
+            x => x.Should().BeOfType<BrInstruction>()
+        );
 
-        result[l9].Elements.Should().ContainSingle()
-                  .Which.Should().Satisfy<SimpleAssignmentStatement>(
-                      s =>
-                      {
-                          s.L.Should().BeOfType<VariableIdentifierExpression>()
-                           .Which.Variable.Should().Be(variables[2]);
-                          s.R.Should().BeOfType<VariableIdentifierExpression>()
-                           .Which.Variable.Should().Be(variables[3]);
-                      }
-                  );
+        mbb.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>()
+                  .Which.Target.Should().Be(variables[0]),
+            x => x.Should().BeOfType<BrInstruction>()
+        );
 
-        result[lc].Elements.Should().ContainSingle()
-                  .Which.Should().BeOfType<PushStatement>()
-                  .Which.Expr.Should().BeOfType<VariableIdentifierExpression>()
-                  .Which.Variable.Should().Be(variables[2]);
+        rbb.Elements.Should().SatisfyRespectively(
+            x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>()
+                  .Which.Target.Should().Be(variables[0]),
+            x => x.Should().BeOfType<ReturnResultStackInstruction>()
+        );
+
+        // result[l0].Elements.Should().ContainSingle()
+        //           .Which.Should().BeOfType<PushStatement>()
+        //           .Which.Expr.Should().Satisfy<IBinaryExpression>(e =>
+        //           {
+        //               e.Operation.Should().Satisfy<IBinaryExpressionOperation>(operation =>
+        //               {
+        //                   operation.LeftType.Should().BeOfType<IntType<N32>>();
+        //                   operation.RightType.Should().BeOfType<IntType<N32>>();
+        //                   operation.BinaryOp.Should().BeOfType<BinaryRelational.Ge>();
+        //               });
+        //               e.L.Should().BeOfType<FormalParameterExpression>()
+        //                .Which.Parameter.Should().Be(a);
+        //               e.R.Should().BeOfType<FormalParameterExpression>()
+        //                .Which.Parameter.Should().Be(b);
+        //           });
+
+        // result[l5].Elements.Should().ContainSingle()
+        //           .Which.Should().Satisfy<SimpleAssignmentStatement>(
+        //               s =>
+        //               {
+        //                   s.L.Should().BeOfType<VariableIdentifierExpression>()
+        //                    .Which.Variable.Should().Be(variables[0]);
+        //                   s.R.Should().BeOfType<FormalParameterExpression>()
+        //                    .Which.Parameter.Should().Be(b);
+        //               }
+        //           );
+
+        // result[l8].Elements.Should().ContainSingle()
+        //           .Which.Should().Satisfy<SimpleAssignmentStatement>(
+        //               s =>
+        //               {
+        //                   s.L.Should().BeOfType<VariableIdentifierExpression>()
+        //                    .Which.Variable.Should().Be(variables[1]);
+        //                   s.R.Should().BeOfType<FormalParameterExpression>()
+        //                    .Which.Parameter.Should().Be(a);
+        //               }
+        //           );
+
+        // result[l9].Elements.Should().ContainSingle()
+        //           .Which.Should().Satisfy<SimpleAssignmentStatement>(
+        //               s =>
+        //               {
+        //                   s.L.Should().BeOfType<VariableIdentifierExpression>()
+        //                    .Which.Variable.Should().Be(variables[2]);
+        //                   s.R.Should().BeOfType<VariableIdentifierExpression>()
+        //                    .Which.Variable.Should().Be(variables[3]);
+        //               }
+        //           );
+
+        // result[lc].Elements.Should().ContainSingle()
+        //           .Which.Should().BeOfType<PushStatement>()
+        //           .Which.Expr.Should().BeOfType<VariableIdentifierExpression>()
+        //           .Which.Variable.Should().Be(variables[2]);
 
         // var labels = result.Instructions.OfType<LabelInstruction>().ToArray();
         // labels.Should().HaveCount(3).And.OnlyHaveUniqueItems();

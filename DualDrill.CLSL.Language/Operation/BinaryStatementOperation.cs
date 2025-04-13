@@ -4,6 +4,8 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Language.Value;
+using DualDrill.CLSL.Language.ValueInstruction;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -12,6 +14,8 @@ public interface IBinaryStatementOperation : IOperation
     public IShaderType LeftType { get; }
     public IShaderType RightType { get; }
     public IStatement CreateStatement(IExpression l, IExpression r);
+
+    public IStatementOperationValueInstruction ToValueInstruction(IValue l, IValue r);
 }
 
 public interface IBinaryStatementOperation<TOperation> : IBinaryStatementOperation, IOperation<TOperation>

@@ -2,6 +2,7 @@ using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
@@ -18,8 +19,6 @@ public sealed record class VectorSwizzleSetStatement<TRank, TElement, TPattern>(
     where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
     where TElement : IScalarType<TElement>
 {
-    public IEnumerable<Label> ReferencedLabels => [];
-
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables
     {
         get
@@ -38,7 +37,7 @@ public sealed record class VectorSwizzleSetStatement<TRank, TElement, TPattern>(
         [
             ..Target.ToInstructions(),
             ..Value.ToInstructions(),
-            ((IOperation)VectorSwizzleSetOperation<TPattern, TElement>.Instance).Instruction
+            VectorSwizzleSetOperation<TPattern, TElement>.Instance.GetInstruction()
         ];
 
     public T Accept<T>(IStatementVisitor<T> visitor)

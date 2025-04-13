@@ -1,8 +1,11 @@
 ﻿using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Language.Value;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
@@ -25,6 +28,10 @@ public interface IStatement
     : IShaderAstNode, ILocalDeclarationReferencingElement
 {
     T Accept<T>(IStatementVisitor<T> visitor);
+
+    IEnumerable<IValue> ILocalDeclarationReferencingElement.ReferencedValues => [];
+    IEnumerable<Label> ILocalDeclarationReferencingElement.ReferencedLabels => [];
+    IEnumerable<VariableDeclaration> ILocalDeclarationReferencingElement.ReferencedLocalVariables => [];
 }
 
 public interface IStackStatement : IBasicBlockElement
@@ -63,11 +70,11 @@ public interface IStatementVisitor<T>
         where TPattern : Swizzle.ISizedPattern<TRank, TPattern>
         where TElement : IScalarType<TElement>;
 
-    T VisitVectorComponentSet<TRank, TElement, TComponent>(VectorComponentSetStatement<TRank, TElement, TComponent> stmt)
+    T VisitVectorComponentSet<TRank, TElement, TComponent>(
+        VectorComponentSetStatement<TRank, TElement, TComponent> stmt)
         where TRank : IRank<TRank>
         where TElement : IScalarType<TElement>
         where TComponent : Swizzle.ISizedComponent<TRank, TComponent>;
-
 }
 
 public static class StatementExtension

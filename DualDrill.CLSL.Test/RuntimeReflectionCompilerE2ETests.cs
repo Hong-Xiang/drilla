@@ -14,6 +14,8 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Output.WriteLine(await cfg.Dump());
         Output.WriteLine(sep);
 
+        throw new NotImplementedException();
+
         // cfg = cfg.EliminateBlockValueTransfer();
         // Output.WriteLine("=== Remove Outputs ===");
         // Output.WriteLine(await cfg.Dump());
@@ -55,35 +57,6 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     {
         var shader = new ShaderModule.MinimumHelloTriangleShaderModule();
         await TestShader(shader);
-    }
-
-    [Fact]
-    public void ImmutableStackTest()
-    {
-        var s = ImmutableStack<int>.Empty;
-        s = s.Push(1);
-        s = s.Push(2);
-
-        var stmt = new List<int>();
-        ImmutableStack<int> sout = [];
-        foreach (var (idx, v) in s.Index())
-        {
-            Output.WriteLine($"index {idx} -> {v}");
-            stmt.Add(v);
-            sout = sout.Push(v);
-        }
-
-        foreach (var sv in stmt)
-        {
-            Output.WriteLine(sv.ToString());
-        }
-
-        while (!sout.IsEmpty)
-        {
-            var ss = sout.Peek();
-            sout = sout.Pop();
-            Output.WriteLine(ss.ToString());
-        }
     }
 
     [Fact]

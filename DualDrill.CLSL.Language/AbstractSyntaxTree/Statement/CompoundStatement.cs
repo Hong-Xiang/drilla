@@ -4,23 +4,15 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Language.Value;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
 public sealed record class CompoundStatement(ImmutableArray<IStatement> Statements)
     : IStatement
-    , ILocalDeclarationReferencingElement
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
-        Statements.SelectMany(s =>
-            s switch
-            {
-                CompoundStatement x => x.ReferencedLocalVariables,
-                VariableOrValueStatement x => [x.Variable],
-                _ => []
-            });
-
-    public IEnumerable<Label> ReferencedLabels => [];
+        Statements.SelectMany(s => s.ReferencedLocalVariables);
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {

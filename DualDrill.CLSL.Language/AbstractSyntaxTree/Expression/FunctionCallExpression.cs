@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.Common.CodeTextWriter;
 

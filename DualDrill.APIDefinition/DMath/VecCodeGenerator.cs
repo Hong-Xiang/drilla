@@ -425,7 +425,7 @@ public sealed record class VecCodeGenerator<TRank, TElement>
             {
                 Writer.WriteAggressiveInlining();
                 //Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute(cps).GetCSharpUsageCode()}]");
-                CLSL.Language.Operation.IOperation getOperation = VectorSwizzleGetOperation<TPattern, TElement>.Instance;
+                CLSL.Language.Operation.IOperation getOperation = VectorSwizzleGetExpressionOperation<TPattern, TElement>.Instance;
                 Writer.WriteLine($"[{getOperation.GetOperationMethodAttribute().GetCSharpUsageCode()}]");
                 Writer.Write($"get => vec{rv.Size.Value}(");
                 Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. pattern.Components.Select(c => c.Name)]);

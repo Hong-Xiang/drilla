@@ -5,11 +5,12 @@ using System.CodeDom.Compiler;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlowGraph;
+using DualDrill.CLSL.Language.Value;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
 // TODO: refactor to simply FunctionBody<IStructuredControlFlowRegion<IStructuredStackInstruction>>
-public sealed class StructuredStackInstructionFunctionBody : IFunctionBody
+public sealed class StructuredStackInstructionFunctionBody : IFunctionBody, ILocalDeclarationContext
 {
     public IStructuredControlFlowRegion Root { get; }
 
@@ -28,6 +29,11 @@ public sealed class StructuredStackInstructionFunctionBody : IFunctionBody
     FrozenDictionary<VariableDeclaration, int> VariableIndices { get; }
     FrozenDictionary<Label, int> LabelIndices { get; }
 
+    public int ValueIndex(IValue value)
+    {
+        throw new NotImplementedException();
+    }
+
     public int VariableIndex(VariableDeclaration variable)
         => VariableIndices[variable];
 
@@ -37,9 +43,12 @@ public sealed class StructuredStackInstructionFunctionBody : IFunctionBody
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
+    public ImmutableArray<IValue> Values { get; }
 
     public void Dump(IndentedTextWriter writer)
     {
         Root.Dump(this, writer);
     }
+
+    public ILocalDeclarationContext LocalContext => this;
 }

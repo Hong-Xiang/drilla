@@ -14,7 +14,6 @@ using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.StackInstruction;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
@@ -432,27 +431,29 @@ public sealed record class RuntimeReflectionParser(
                     }
                 }
 
-                basicBlocks.Add(l,
-                    new StackInstructionBasicBlock(
-                        l,
-                        [..visitor.Instructions],
-                        BasicBlockInputs[l],
-                        BasicBlockOutputs[l],
-                        successor));
+                var bb = new StackInstructionBasicBlock(
+                    l,
+                    [..visitor.Instructions],
+                    BasicBlockInputs[l],
+                    BasicBlockOutputs[l]);
+
+                Debug.Assert(successor.IsCompatible(bb.Terminator));
+
+                basicBlocks.Add(l, bb);
             }
         }
 
-        var bodies = model.ControlFlowGraph.Labels().ToDictionary(l => l,
-            l =>
-                new ControlFlowGraph<StackInstructionBasicBlock>.NodeDefinition(
-                    model.ControlFlowGraph.Successor(l),
-                    basicBlocks[l]));
-        var cfg = new ControlFlowGraph<StackInstructionBasicBlock>(
-            model.ControlFlowGraph.EntryLabel,
-            bodies
-        );
+        // var bodies = model.ControlFlowGraph.Labels().ToDictionary(l => l,
+        //     l =>
+        //         new ControlFlowGraph<StackInstructionBasicBlock>.NodeDefinition(
+        //             model.ControlFlowGraph.Successor(l),
+        //             basicBlocks[l]));
+        // var cfg = new ControlFlowGraph<StackInstructionBasicBlock>(
+        //     model.ControlFlowGraph.EntryLabel,
+        //     bodies
+        // );
 
-        return new StackInstructionFunctionBody(cfg);
+        return UnifiedFunctionBody.Create(basicBlocks.Values);
     }
 
     bool IsMethodDefinition(MethodBase m)

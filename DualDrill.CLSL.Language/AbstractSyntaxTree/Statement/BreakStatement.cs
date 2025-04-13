@@ -1,6 +1,7 @@
 ﻿using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
@@ -13,7 +14,4 @@ public sealed record class BreakStatement : IStatement
     {
         writer.WriteLine("break");
     }
-
-    public IEnumerable<Label> ReferencedLabels => [];
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }

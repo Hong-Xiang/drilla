@@ -1,6 +1,8 @@
 ﻿using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Value;
+using DualDrill.CLSL.Language.ValueInstruction;
 
 namespace DualDrill.CLSL.Language.Literal;
 
@@ -16,13 +18,19 @@ public interface ILiteral
     IShaderType Type { get; }
     string Name { get; }
     IInstruction GetInstruction();
+    IExpressionValueInstruction CreateValueInstruction();
+}
+
+public interface ILiteral<TShaderType> : ILiteral
+    where TShaderType : IShaderType<TShaderType>
+{
 }
 
 public interface INumericLiteral : ILiteral
 {
 }
 
-public interface ILiteral<TSelf, TCSharpType, TShaderType> : ILiteral
+public interface ILiteral<TSelf, TCSharpType, TShaderType> : ILiteral<TShaderType>
     where TSelf : ILiteral<TSelf, TCSharpType, TShaderType>
     where TShaderType : IScalarType<TShaderType>
 {
@@ -30,6 +38,9 @@ public interface ILiteral<TSelf, TCSharpType, TShaderType> : ILiteral
     string ILiteral.Name => $"{TShaderType.Instance.Name}({Value})";
     IShaderType ILiteral.Type => TShaderType.Instance;
     IInstruction ILiteral.GetInstruction() => ShaderInstruction.Const((TSelf)this);
+
+    IExpressionValueInstruction ILiteral.CreateValueInstruction() =>
+        ValueInstructionFactory.Const(OperationValue.Create<TShaderType>(), (TSelf)this);
 }
 
 public static class Literal

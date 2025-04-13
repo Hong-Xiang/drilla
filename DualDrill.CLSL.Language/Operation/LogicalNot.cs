@@ -25,5 +25,5 @@ public sealed record class LogicalNotOperation
         UnaryOperationExpression<LogicalNotOperation> expr)
         => visitor.VisitUnaryExpression<LogicalNotOperation, BoolType, BoolType, LogicalNot>(expr);
 
-    public IInstruction Instruction => LogicalNotInstruction.Instance;
+    public IInstruction Instruction => UnaryExpressionOperationInstruction<LogicalNotOperation>.Instance;
 }

@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
@@ -24,12 +25,6 @@ public sealed record class SwitchStatement(
             Expr.Dump(context, writer);
         }
     }
-
-    public IEnumerable<Label> ReferencedLabels =>
-    [
-        ..Cases.SelectMany(c => c.Body.ReferencedLabels),
-        ..DefaultCase.ReferencedLabels,
-    ];
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
     [

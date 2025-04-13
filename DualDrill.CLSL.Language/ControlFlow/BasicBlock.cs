@@ -1,58 +1,33 @@
 ﻿using System.CodeDom.Compiler;
-using DualDrill.CLSL.Language.LinearInstruction;
 using System.Collections.Immutable;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Types;
-using DualDrill.Common;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public interface IBasicBlock2<TElement, TInput, TOutput>
+// for stack instruction, BasicBlock<IStackInstruction, IShaderType, IShaderType>
+// for value instruction, BasicBlock<IValueInstruction, ??? (maybe IValue, or dedicate BlockArgumentValue?), IValue>
+// for statement, BasicBlock<IStatement, Unit, Unit>, implies empty Inputs and Outputs
+
+public interface IBasicBlock2
     : ITextDumpable<ILocalDeclarationContext>
-    where TElement : ILocalDeclarationReferencingElement
+    , ILocalDeclarationReferencingElement
 {
     Label Label { get; }
+    ISuccessor Successor { get; }
+
+    IEnumerable<Label> ILocalDeclarationReferencingElement.ReferencedLabels =>
+        [Label, ..Successor.GetReferencedLabels()];
+}
+
+public interface IBasicBlock2<TElement, TInput, TOutput>
+    : IBasicBlock2
+    where TElement : ILocalDeclarationReferencingElement
+{
     ImmutableArray<TElement> Elements { get; }
     ImmutableArray<TInput> Inputs { get; }
     ImmutableArray<TOutput> Outputs { get; }
-    ISuccessor Successor { get; }
-}
-
-public sealed record class StackInstructionBasicBlock(
-    Label Label,
-    ImmutableArray<IInstruction> Elements,
-    ImmutableArray<IShaderType> Inputs,
-    ImmutableArray<IShaderType> Outputs,
-    ISuccessor Successor)
-    : IBasicBlock2<IInstruction, IShaderType, IShaderType>
-{
-    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
-    {
-        writer.Write($"block %{context.LabelName(Label)}: [");
-        writer.Write(string.Join(", ", Inputs.Select(t => t.Name)));
-        writer.Write("] -> [");
-        writer.Write(string.Join(", ", Outputs.Select(t => t.Name)));
-        writer.WriteLine("]");
-
-        using (writer.IndentedScope())
-        {
-            foreach (var e in Elements)
-            {
-                e.Dump(context, writer);
-            }
-        }
-    }
-}
-
-public interface IBasicBlock<TElement, TResult, TTransfer>
-    : ITextDumpable<ILocalDeclarationContext>
-{
-    public ImmutableArray<TElement> Elements { get; }
-    public ImmutableStack<TTransfer> Inputs { get; }
-    public ImmutableStack<TTransfer> Outputs { get; }
 }
 
 public sealed record class BasicBlock<TElement>(
@@ -60,7 +35,7 @@ public sealed record class BasicBlock<TElement>(
     ImmutableStack<VariableDeclaration> Inputs,
     ImmutableStack<VariableDeclaration> Outputs
 )
-    : IBasicBlock<TElement, IExpression, VariableDeclaration>
+    : ITextDumpable<ILocalDeclarationContext>
     where TElement : ILocalDeclarationReferencingElement
 {
     public static BasicBlock<TElement> Create(IEnumerable<TElement> instructions)

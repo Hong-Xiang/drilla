@@ -14,6 +14,7 @@ using DualDrill.Common.Nat;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using DualDrill.CLSL.Language.CommonInstruction;
 
 namespace DualDrill.CLSL.Compiler;
 
@@ -332,7 +333,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         return default;
     }
 
-    public Unit Visit(ReturnInstruction inst)
+    public Unit Visit(ReturnResultStackInstruction inst)
     {
         if (Expressions.Count == 0)
         {
@@ -474,7 +475,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         return default;
     }
 
-    public Unit Visit(LogicalNotInstruction inst)
+    public Unit Visit(UnaryExpressionOperationInstruction<LogicalNotOperation> inst)
     {
         var e = Expressions.Pop();
         var r = new UnaryLogicalExpression(e, UnaryLogicalOp.Not);
@@ -483,7 +484,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     }
 
     public Unit VisitUnaryOperation<TOperation>(UnaryExpressionOperationInstruction<TOperation> inst)
-        where TOperation : IUnaryOperation<TOperation>
+        where TOperation : IUnaryExpressionOperation<TOperation>
     {
         var e = Expressions.Pop();
         var r = TOperation.Instance.CreateExpression(e);
@@ -497,7 +498,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
     {
         var value = Expressions.Pop();
-        var expr = VectorComponentGetOperation<TRank, TVector, TComponent>.Instance.CreateExpression(value);
+        var expr = VectorComponentGetExpressionOperation<TRank, TVector, TComponent>.Instance.CreateExpression(value);
         Expressions.Push(expr);
         return default;
     }
@@ -519,7 +520,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         where TElement : Language.Types.IScalarType<TElement>
     {
         var value = Expressions.Pop();
-        var expr = VectorSwizzleGetOperation<TPattern, TElement>.Instance.CreateExpression(value);
+        var expr = VectorSwizzleGetExpressionOperation<TPattern, TElement>.Instance.CreateExpression(value);
         Expressions.Push(expr);
         return default;
     }

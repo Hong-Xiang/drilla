@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 
@@ -22,6 +23,6 @@ public sealed record class WhileStatement(
         throw new NotImplementedException();
     }
 
-    public IEnumerable<Label> ReferencedLabels { get; }
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables { get; }
+    public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
+        [..Expr.ReferencedVariables, ..Statement.ReferencedLocalVariables];
 }

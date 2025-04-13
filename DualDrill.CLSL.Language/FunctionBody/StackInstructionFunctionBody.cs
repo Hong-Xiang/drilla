@@ -1,9 +1,11 @@
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Value;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
@@ -12,8 +14,6 @@ public class StackInstructionFunctionBody : IFunctionBody
 {
     ControlFlowGraph<StackInstructionBasicBlock> Graph { get; }
     DominatorTree DominatorTree { get; }
-    private readonly FrozenDictionary<Label, int> LabelIndices;
-    private readonly FrozenDictionary<VariableDeclaration, int> LocalVariableIndices;
 
     public StackInstructionFunctionBody(
         ControlFlowGraph<StackInstructionBasicBlock> graph
@@ -22,25 +22,11 @@ public class StackInstructionFunctionBody : IFunctionBody
         Graph = graph;
         DominatorTree = DominatorTree.CreateFromControlFlowGraph(Graph);
         Labels = [..graph.Labels()];
-        LocalVariables =
-        [
-            ..Labels.Select(l => graph[l]).SelectMany(b => b.Elements)
-                    .SelectMany(e => e.ReferencedLocalVariables)
-                    .Where(v => v.DeclarationScope == DeclarationScope.Function)
-                    .Distinct()
-        ];
-        LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
-        LocalVariableIndices = LocalVariables.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+        LocalContext = new LocalDeclarationContext(Labels.Select(l => graph[l]));
     }
 
     public Label Entry => Graph.EntryLabel;
     public StackInstructionBasicBlock this[Label label] => Graph[label];
-
-    public int LabelIndex(Label label)
-        => LabelIndices[label];
-
-    public int VariableIndex(VariableDeclaration variable)
-        => LocalVariableIndices[variable];
 
 
     public ISuccessor Successor(Label label)
@@ -48,13 +34,14 @@ public class StackInstructionFunctionBody : IFunctionBody
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
+    public ImmutableArray<IValue> Values { get; }
 
     public void Dump(IndentedTextWriter writer)
     {
-        Dump(this, writer);
+        Dump(LocalContext, writer);
     }
 
-    public void Dump(IFunctionBody context, IndentedTextWriter writer)
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
         foreach (var v in LocalVariables)
         {
@@ -63,26 +50,12 @@ public class StackInstructionFunctionBody : IFunctionBody
 
         writer.WriteLine();
 
-        foreach (var label in Labels)
+        foreach (var bb in Labels.Select(label => this[label]))
         {
-            writer.WriteLine(this.LabelName(label));
-            using (writer.IndentedScope())
-            {
-                writer.WriteLine("successor: ");
-                using (writer.IndentedScope())
-                {
-                    Graph.Successor(label).Dump(context, writer);
-                }
-            }
-
-            writer.WriteLine();
-            using (writer.IndentedScope())
-            {
-                var bb = this[label];
-                bb.Dump(context, writer);
-            }
-
+            bb.Dump(context, writer);
             writer.WriteLine();
         }
     }
+
+    public ILocalDeclarationContext LocalContext { get; }
 }

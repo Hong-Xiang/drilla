@@ -1,6 +1,6 @@
 ﻿namespace DualDrill.CLSL.Language.ControlFlow;
 
-public interface ILabel<TSelf> : IEquatable<TSelf>
+public interface ILabel<TSelf>
     where TSelf : ILabel<TSelf>
 {
 }
@@ -20,6 +20,7 @@ public sealed class Label : ILabel<Label>
     {
         Name = name;
     }
+
     public string? Name { get; }
 
     public static Label Create(string name) => new(name);
@@ -27,25 +28,9 @@ public sealed class Label : ILabel<Label>
     public static Label FromIndex(int index) => new($"#{index}");
     public static Label Create() => new(null);
 
-    public bool Equals(Label? other)
-    {
-        return ReferenceEquals(this, other);
-    }
-
-    public override bool Equals(object? obj)
-    {
-        return obj is Label l && Equals(l);
-    }
-
-    public override int GetHashCode()
-    {
-        return base.GetHashCode();
-    }
 
     public override string ToString()
     {
         return $"Label({Name})";
     }
 }
-
-

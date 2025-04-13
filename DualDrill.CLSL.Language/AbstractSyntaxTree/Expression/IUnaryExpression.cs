@@ -2,6 +2,7 @@ using System.CodeDom.Compiler;
 using System.Diagnostics;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
@@ -17,7 +18,7 @@ public interface IUnaryExpression : IExpression
 
 public sealed record class UnaryOperationExpression<TOperation>
     : IUnaryExpression
-    where TOperation : IUnaryOperation<TOperation>
+    where TOperation : IUnaryExpressionOperation<TOperation>
 {
     public UnaryOperationExpression(IExpression source)
     {

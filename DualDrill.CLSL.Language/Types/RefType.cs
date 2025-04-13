@@ -1,6 +1,9 @@
 ﻿namespace DualDrill.CLSL.Language.Types;
 
-public interface IRefType : IShaderType { }
+public interface IRefType : IShaderType
+{
+}
+
 public sealed record class RefType<TShaderType>(TShaderType BaseType) : IRefType, IShaderType<RefType<TShaderType>>
     where TShaderType : IShaderType
 {
@@ -15,4 +18,6 @@ public sealed record class RefType<TShaderType>(TShaderType BaseType) : IRefType
     {
         throw new NotImplementedException();
     }
+
+    public static RefType<TShaderType> Instance => throw new NotImplementedException();
 }

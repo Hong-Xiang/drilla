@@ -1,7 +1,7 @@
-﻿using DualDrill.CLSL.Language.ControlFlow;
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using DualDrill.CLSL.Language.ControlFlow;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 

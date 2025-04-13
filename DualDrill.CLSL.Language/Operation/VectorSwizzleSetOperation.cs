@@ -1,11 +1,8 @@
-using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Language.Value;
+using DualDrill.CLSL.Language.ValueInstruction;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -23,4 +20,9 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
 
     public IStatement CreateStatement(IExpression target, IExpression value)
         => TPattern.Instance.CreateSwizzleSetStatement<TElement>(target, value);
+
+    public IStatementOperationValueInstruction ToValueInstruction(IValue l, IValue r)
+    {
+        throw new NotImplementedException();
+    }
 }

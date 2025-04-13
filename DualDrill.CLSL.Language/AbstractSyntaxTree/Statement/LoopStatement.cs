@@ -1,6 +1,7 @@
 ﻿using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
@@ -19,6 +20,5 @@ public sealed record class LoopStatement(CompoundStatement Body) : IStatement
         }
     }
 
-    public IEnumerable<Label> ReferencedLabels => Body.ReferencedLabels;
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Body.ReferencedLocalVariables;
 }

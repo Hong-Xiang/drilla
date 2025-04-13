@@ -1,7 +1,9 @@
 ﻿using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Value;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
@@ -16,10 +18,12 @@ public sealed class IfThenElse(
 
 
     public IEnumerable<Label> ReferencedLabels =>
-        TrueBody.Labels.Concat(FalseBody.Labels);
+        [..TrueBody.Labels, ..FalseBody.Labels];
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
-        TrueBody.LocalVariables.Concat(FalseBody.LocalVariables);
+        [..TrueBody.LocalVariables, ..FalseBody.LocalVariables];
+
+    public IEnumerable<IValue> ReferencedValues => [..TrueBody.LocalValues, ..FalseBody.LocalValues];
 
     public TResult Accept<TResult>(IStructuredControlFlowRegion.IRegionPatternVisitor<TResult> pattern)
         => pattern.VisitIfThenElse(this);

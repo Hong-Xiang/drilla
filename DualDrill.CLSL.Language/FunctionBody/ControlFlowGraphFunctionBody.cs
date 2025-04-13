@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Value;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
@@ -15,7 +16,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 /// LabelIndex(Entry) = 0
 /// </summary>
 /// <typeparam name="TElement"></typeparam>
-public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody
+public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ILocalDeclarationContext
     where TElement : IBasicBlockElement
 {
     public ControlFlowGraph<BasicBlock<TElement>> Graph { get; }
@@ -44,18 +45,24 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody
     public int LabelIndex(Label label)
         => LabelIndices[label];
 
+    public int ValueIndex(IValue value)
+    {
+        throw new NotImplementedException();
+    }
+
     public int VariableIndex(VariableDeclaration variable)
         => LocalVariableIndices[variable];
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
+    public ImmutableArray<IValue> Values { get; }
 
     public void Dump(IndentedTextWriter writer)
     {
         Dump(this, writer);
     }
 
-    public void Dump(IFunctionBody context, IndentedTextWriter writer)
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
         foreach (var v in LocalVariables)
         {
@@ -127,4 +134,6 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody
             ))
         ));
     }
+
+    public ILocalDeclarationContext LocalContext => this;
 }

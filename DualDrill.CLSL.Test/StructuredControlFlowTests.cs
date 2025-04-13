@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.LinearInstruction;
 using Xunit.Abstractions;
 using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.CommonInstruction;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
@@ -112,7 +113,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                                       tInst => tInst
                                                .Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
                                                .Should().Be(1),
-                                      ret => ret.Should().BeOfType<ReturnInstruction>()
+                                      ret => ret.Should().BeOfType<ReturnResultStackInstruction>()
                                   );
                         ifThenElse.FalseBody.Elements.Should().ContainSingle().Which.Should().BeOfType<Block>().Which
                                   .Body.Elements.Should()
@@ -120,7 +121,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                                       fInst => fInst
                                                .Should().BeOfType<ConstInstruction<I32Literal>>().Which.Literal.Value
                                                .Should().Be(2),
-                                      ret => ret.Should().BeOfType<ReturnInstruction>()
+                                      ret => ret.Should().BeOfType<ReturnResultStackInstruction>()
                                   );
                     })
             );
@@ -190,7 +191,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                     }),
             b1 => b1.Should().BeOfType<Block>()
                     .Which.Body.Elements.Should().ContainSingle()
-                    .Which.Should().BeOfType<ReturnInstruction>()
+                    .Which.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
 

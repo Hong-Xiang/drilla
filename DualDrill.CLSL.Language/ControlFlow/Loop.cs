@@ -3,6 +3,8 @@ using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Value;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
@@ -19,6 +21,7 @@ public sealed class Loop(
     public IEnumerable<Label> ReferencedLabels => [Label, .. Body.Labels];
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Body.LocalVariables;
+    public IEnumerable<IValue> ReferencedValues => Body.LocalValues;
 
     public TResult Accept<TResult>(IStructuredControlFlowRegion.IRegionPatternVisitor<TResult> pattern)
         => pattern.VisitLoop(this);

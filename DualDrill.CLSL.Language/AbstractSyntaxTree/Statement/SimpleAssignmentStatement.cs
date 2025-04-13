@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.Common.CodeTextWriter;
 
@@ -56,8 +57,6 @@ public sealed record class SimpleAssignmentStatement(
 
     public T Accept<T>(IStatementVisitor<T> visitor)
         => visitor.VisitSimpleAssignment(this);
-
-    public IEnumerable<Label> ReferencedLabels => [];
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
     [

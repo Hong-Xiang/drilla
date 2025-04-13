@@ -71,7 +71,7 @@ public static class Swizzle
         where TSelf : ISizedComponent<TRank, TSelf>
     {
         IOperation ISizedComponent<TRank>.ComponentGetOperation<TVector, TElement>()
-            => VectorComponentGetOperation<TRank, TVector, TSelf>.Instance;
+            => VectorComponentGetExpressionOperation<TRank, TVector, TSelf>.Instance;
 
         IOperation ISizedComponent<TRank>.ComponentSetOperation<TVector, TElement>()
             => VectorComponentSetOperation<TRank, TVector, TSelf>.Instance;

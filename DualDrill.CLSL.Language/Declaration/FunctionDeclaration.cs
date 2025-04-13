@@ -23,7 +23,7 @@ public sealed class FunctionDeclaration : IDeclaration
     public override string ToString()
     {
         var parameters = string.Join(", ", Parameters.Select(p => $"{p.Name}: {p.Type.Name}"));
-        return $"{Name} : {parameters} -> {Return.Type.Name}";
+        return $"{Name} : ({parameters}) -> {Return.Type.Name}";
     }
 
     public CompoundStatement? Body { get; set; } = null;

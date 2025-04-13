@@ -31,7 +31,7 @@ public sealed class ShaderModuleToAbstractSyntaxTreeTests(ITestOutputHelper Outp
                 Label.Create(),
                 new([
                     ShaderInstruction.Const(Literal.Create(42)),
-                    ShaderInstruction.Return()
+                    ShaderInstruction.ReturnResult()
                 ])
             )
         );

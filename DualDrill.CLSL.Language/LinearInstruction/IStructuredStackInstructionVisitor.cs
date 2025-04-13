@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.CommonInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
@@ -11,7 +12,7 @@ public interface IStructuredStackInstructionVisitor<TResult>
 {
     TResult Visit(BrInstruction inst);
     TResult Visit(BrIfInstruction inst);
-    TResult Visit(ReturnInstruction inst);
+    TResult Visit(ReturnResultStackInstruction inst);
     TResult Visit(NopInstruction inst);
     TResult Visit<TLiteral>(ConstInstruction<TLiteral> inst) where TLiteral : ILiteral;
     TResult Visit(CallInstruction inst);
@@ -34,12 +35,12 @@ public interface IStructuredStackInstructionVisitor<TResult>
     TResult VisitBinaryStatement<TOperation>(BinaryStatementOperationInstruction<TOperation> inst)
         where TOperation : IBinaryStatementOperation<TOperation>;
 
-    TResult Visit(LogicalNotInstruction inst);
+    TResult Visit(UnaryExpressionOperationInstruction<LogicalNotOperation> inst);
     TResult Visit(DupInstruction inst);
     TResult Visit(DropInstruction inst);
 
     TResult VisitUnaryOperation<TOperation>(UnaryExpressionOperationInstruction<TOperation> inst)
-        where TOperation : IUnaryOperation<TOperation>;
+        where TOperation : IUnaryExpressionOperation<TOperation>;
 
     TResult VisitVectorComponentGet<TRank, TVector, TComponent>()
         where TRank : IRank<TRank>

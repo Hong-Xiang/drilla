@@ -12,7 +12,6 @@ using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.StackInstruction;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 
@@ -150,7 +149,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             throw new NotSupportedException("multiple flush outputs are not expected");
         }
 
-        Outputs = [..EvaluationStack];
+        Outputs = [..EvaluationStack.Reverse()];
         EvaluationStack.Clear();
     }
 
@@ -181,7 +180,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
         // bf.false
         if (value == false)
         {
-            Instructions.Add(LogicalNotInstruction.Instance);
+            Instructions.Add(LogicalNotOperation.Instance.Instruction);
         }
 
         if (successor is ConditionalSuccessor { TrueTarget: var trueTarget, FalseTarget: var falseTarget })
@@ -261,13 +260,6 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     var s = EvaluationStack.Pop();
                     Instructions.Add(ue.Instruction);
                     PushToEvaluationStack(ue.ResultType);
-                    return;
-                }
-                case IVectorComponentSetOperation op:
-                {
-                    var value = EvaluationStack.Pop();
-                    var target = EvaluationStack.Pop();
-                    Instructions.Add(op.Instruction);
                     return;
                 }
             }
@@ -387,6 +379,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                     throw new ValidationException("return when stack is empty requires unit type", Model.Method);
                 }
 
+                Instructions.Add(ShaderInstruction.ReturnVoid());
                 break;
             case { } r:
                 var e = EvaluationStack.Pop();
@@ -397,12 +390,12 @@ sealed class RuntimeReflectionParserInstructionVisitor(
                         Model.Method);
                 }
 
+                Instructions.Add(ShaderInstruction.ReturnResult());
                 break;
             default:
                 throw new ValidationException("return when stack.Count > 1", Model.Method);
         }
 
-        Instructions.Add(ShaderInstruction.Return());
         HasTerminatorInstruction = true;
         FlushOutputs();
         return default;

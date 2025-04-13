@@ -1,6 +1,8 @@
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Value;
+using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.LinearInstruction;
@@ -8,7 +10,7 @@ namespace DualDrill.CLSL.Language.LinearInstruction;
 public sealed record class UnaryExpressionOperationInstruction<TOperation>
     : IInstruction
     , ISingleton<UnaryExpressionOperationInstruction<TOperation>>
-    where TOperation : IUnaryOperation<TOperation>
+    where TOperation : IUnaryExpressionOperation<TOperation>
 {
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
     public IEnumerable<Label> ReferencedLabels => [];
@@ -20,5 +22,13 @@ public sealed record class UnaryExpressionOperationInstruction<TOperation>
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.VisitUnaryOperation(this);
 
-    public override string ToString() => $"{Operation}";
+    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
+    {
+        var v = stack.Pop();
+        var result = TOperation.Instance.CreateValueInstruction(v);
+        stack.Push(result.ResultValue);
+        return [result];
+    }
+
+    public override string ToString() => $"{Operation.Name}";
 }

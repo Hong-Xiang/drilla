@@ -243,7 +243,7 @@ public static class ShaderModuleExtension
             case BrIfInstruction brIf:
                 writer.WriteLine($"brIf {labelName(brIf.TrueTarget)};");
                 break;
-            case ReturnInstruction:
+            case ReturnResultStackInstruction:
                 writer.WriteLine("return");
                 break;
             case LoadSymbolValueInstruction<VariableDeclaration> inst:

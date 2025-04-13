@@ -1,6 +1,8 @@
 ﻿using System.CodeDom.Compiler;
 using DotNext.Patterns;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
@@ -19,6 +21,8 @@ public interface ISuccessor
     : ITextDumpable<ILocalDeclarationContext>
 {
     void Traverse(Action<Label> action);
+    bool IsCompatible(ITerminatorStackInstruction terminator);
+    IEnumerable<Label> GetReferencedLabels();
 }
 
 public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
@@ -28,6 +32,12 @@ public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
         action(Target);
     }
 
+    public bool IsCompatible(ITerminatorStackInstruction terminator)
+        => terminator is BrInstruction { Target: var target } && target == Target;
+
+    public IEnumerable<Label> GetReferencedLabels() => [Target];
+
+
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
         writer.WriteLine($"br -> {context.LabelName(Target)}");
@@ -36,11 +46,17 @@ public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
 
 public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTarget) : ISuccessor
 {
+    public IEnumerable<Label> GetReferencedLabels() => [TrueTarget, FalseTarget];
+
     public void Traverse(Action<Label> action)
     {
         action(TrueTarget);
         action(FalseTarget);
     }
+
+    public bool IsCompatible(ITerminatorStackInstruction terminator)
+        => terminator is BrIfInstruction { TrueTarget: var tt, FalseTarget: var ft } && TrueTarget == tt &&
+           FalseTarget == ft;
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
@@ -50,9 +66,14 @@ public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTar
 
 public sealed record class TerminateSuccessor() : ISuccessor
 {
+    public IEnumerable<Label> GetReferencedLabels() => [];
+
     public void Traverse(Action<Label> action)
     {
     }
+
+    public bool IsCompatible(ITerminatorStackInstruction terminator)
+        => terminator is ReturnResultStackInstruction;
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {

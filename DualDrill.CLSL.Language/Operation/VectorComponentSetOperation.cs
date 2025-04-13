@@ -1,30 +1,37 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Common;
+using DualDrill.CLSL.Language.Value;
+using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
 
-public interface IVectorComponentSetOperation : IOperation
+public interface IVectorComponentSetOperation
+    : IBinaryStatementOperation
 {
-    IStackStatement CreateStatement(IExpression target, IExpression value);
+}
+
+public interface IVectorComponentSetOperation<TSelf>
+    : IVectorComponentSetOperation
+    , IBinaryStatementOperation<TSelf>
+    where TSelf : IVectorComponentSetOperation<TSelf>
+{
+    IInstruction IOperation.Instruction => BinaryStatementOperationInstruction<TSelf>.Instance;
 }
 
 public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
-    : IVectorComponentSetOperation
-    , IOperation<VectorComponentSetOperation<TRank, TVector, TComponent>>
+    : IVectorComponentSetOperation<VectorComponentSetOperation<TRank, TVector, TComponent>>
     where TRank : IRank<TRank>
     where TVector : ISizedVecType<TRank, TVector>
     where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
 {
     public static VectorComponentSetOperation<TRank, TVector, TComponent> Instance { get; } = new();
 
-    public FunctionDeclaration Function { get; } = new FunctionDeclaration(
+    public FunctionDeclaration Function { get; } = new(
         $"set_{TComponent.Instance.Name}_{TVector.Instance.Name}",
         [
             new ParameterDeclaration("v", TVector.Instance.GetPtrType(), []),
@@ -35,30 +42,22 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
 
     public string Name => $"set.{TComponent.Instance.Name}.{TVector.Instance.Name}";
 
-    IInstruction IOperation.Instruction => Instruction.Instance;
-
-    public sealed class Instruction
-        : ISingleton<Instruction>
-        , IInstruction
-    {
-        public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
-
-        public IEnumerable<Label> ReferencedLabels => [];
-
-        public static Instruction Instance { get; } = new();
-
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor)
-            where TVisitor : IStructuredStackInstructionVisitor<TResult>
-            => visitor.VisitVectorComponentSet<TRank, TVector, TComponent>();
-    }
 
     record struct SizedVecStmtVisitor(IExpression Target, IExpression Value)
-        : ISizedVecType<TRank, TVector>.ISizedVisitor<IStackStatement>
+        : ISizedVecType<TRank, TVector>.ISizedVisitor<IStatement>
     {
-        public IStackStatement Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement>
+        public IStatement Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement>
             => new VectorComponentSetStatement<TRank, TElement, TComponent>(Target, Value);
     }
 
-    public IStackStatement CreateStatement(IExpression target, IExpression value)
+    public IShaderType LeftType => TVector.Instance.GetPtrType();
+    public IShaderType RightType => TVector.Instance.ElementType;
+
+    public IStatement CreateStatement(IExpression target, IExpression value)
         => TVector.Instance.Accept(new SizedVecStmtVisitor(target, value));
+
+    public IStatementOperationValueInstruction ToValueInstruction(IValue l, IValue r)
+    {
+        throw new NotImplementedException();
+    }
 }

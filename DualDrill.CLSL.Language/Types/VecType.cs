@@ -25,7 +25,7 @@ public interface IVecType : IShaderType
     public TResult Accept<TResult>(IVisitor<TResult> visitor);
 }
 
-public interface IVecType<TSelf> : IVecType, ISingleton<TSelf>
+public interface IVecType<TSelf> : IVecType, IShaderType<TSelf>
     where TSelf : IVecType<TSelf>
 {
     IShaderType SwizzleResultType<TPattern>() where TPattern : Swizzle.IPattern<TPattern>;

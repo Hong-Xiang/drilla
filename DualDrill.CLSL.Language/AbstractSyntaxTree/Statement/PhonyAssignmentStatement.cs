@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.Common.CodeTextWriter;
 
@@ -18,7 +19,6 @@ public sealed record class PhonyAssignmentStatement(
     IExpression Expr
 ) : IStatement, IStackStatement, IForInit, IForUpdate
 {
-    public IEnumerable<Label> ReferencedLabels => [];
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Expr.ReferencedVariables;
 
     public IEnumerable<IInstruction> ToInstructions()

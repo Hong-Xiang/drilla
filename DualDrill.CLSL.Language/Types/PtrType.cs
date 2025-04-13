@@ -20,9 +20,12 @@ public sealed record class PtrType(IShaderType BaseType) : IPtrType, IShaderType
     {
         throw new NotImplementedException();
     }
+
+    public static PtrType Instance => throw new NotImplementedException();
 }
 
-sealed class SingletonPtrType<TBaseType> : IPtrType, ISingleton<SingletonPtrType<TBaseType>>, IShaderType<SingletonPtrType<TBaseType>>
+sealed class SingletonPtrType<TBaseType> : IPtrType, ISingleton<SingletonPtrType<TBaseType>>,
+                                           IShaderType<SingletonPtrType<TBaseType>>
     where TBaseType : IShaderType, ISingleton<TBaseType>
 {
     public static SingletonPtrType<TBaseType> Instance { get; } = new();
