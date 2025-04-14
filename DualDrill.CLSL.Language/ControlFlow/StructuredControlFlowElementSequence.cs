@@ -9,6 +9,7 @@ namespace DualDrill.CLSL.Language.ControlFlow;
 
 public interface IStructuredControlFlowElement : ILocalDeclarationReferencingElement
 {
+    // IEnumerable<Label> ExternalBranchTargets { get; }
 }
 
 public readonly record struct StructuredControlFlowElementSequence(

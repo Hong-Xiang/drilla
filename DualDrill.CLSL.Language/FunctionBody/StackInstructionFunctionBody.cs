@@ -1,12 +1,8 @@
 using System.CodeDom.Compiler;
-using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
-using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Value;
-using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
@@ -16,13 +12,25 @@ public class StackInstructionFunctionBody : IFunctionBody
     DominatorTree DominatorTree { get; }
 
     public StackInstructionFunctionBody(
-        ControlFlowGraph<StackInstructionBasicBlock> graph
+        IEnumerable<StackInstructionBasicBlock> blocks
+        // ControlFlowGraph<StackInstructionBasicBlock> graph
     )
     {
+        ImmutableArray<StackInstructionBasicBlock> bks = [..blocks];
+        Debug.Assert(bks.Length > 0);
+        var graph = new ControlFlowGraph<StackInstructionBasicBlock>(
+            bks[0].Label,
+            bks.ToDictionary(
+                b => b.Label,
+                b => new ControlFlowGraph<StackInstructionBasicBlock>.NodeDefinition(b.Successor, b))
+        );
         Graph = graph;
         DominatorTree = DominatorTree.CreateFromControlFlowGraph(Graph);
-        Labels = [..graph.Labels()];
-        LocalContext = new LocalDeclarationContext(Labels.Select(l => graph[l]));
+        LocalContext = new LocalDeclarationContext(graph.Labels().Select(l => graph[l]));
+        foreach (var l in LocalContext.Labels)
+        {
+            Debug.Assert(graph[l].Successor == graph.Successor(l));
+        }
     }
 
     public Label Entry => Graph.EntryLabel;
@@ -32,10 +40,6 @@ public class StackInstructionFunctionBody : IFunctionBody
     public ISuccessor Successor(Label label)
         => Graph.Successor(label);
 
-    public ImmutableArray<VariableDeclaration> LocalVariables { get; }
-    public ImmutableArray<Label> Labels { get; }
-    public ImmutableArray<IValue> Values { get; }
-
     public void Dump(IndentedTextWriter writer)
     {
         Dump(LocalContext, writer);
@@ -43,14 +47,14 @@ public class StackInstructionFunctionBody : IFunctionBody
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
-        foreach (var v in LocalVariables)
+        foreach (var v in context.LocalVariables)
         {
             writer.WriteLine($"{context.VariableName(v)} : {v.Type.Name}");
         }
 
         writer.WriteLine();
 
-        foreach (var bb in Labels.Select(label => this[label]))
+        foreach (var bb in context.Labels.Select(label => this[label]))
         {
             bb.Dump(context, writer);
             writer.WriteLine();

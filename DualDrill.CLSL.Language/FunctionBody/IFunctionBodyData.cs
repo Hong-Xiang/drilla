@@ -1,15 +1,45 @@
 ﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Value;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public interface IFunctionBody : ITextDumpable
+public interface IBasicBlockTransform<TBasicBlock>
 {
-    ILocalDeclarationContext LocalContext { get; }
+}
+
+public interface IBasicBlockTraverser<TBasicBlock>
+{
+    record struct Context(
+        LocalDeclarationContext DeclarationContext,
+        ImmutableStack<IStructuredControlFlowRegion> Regions
+    )
+    {
+    }
+
+    void Visit(Context context, TBasicBlock basicBlock);
+}
+
+public interface IStackInstructionTraverser
+{
+    record struct Context(
+        LocalDeclarationContext DeclarationContext,
+        ImmutableStack<IStructuredControlFlowRegion> Regions,
+        StackInstructionBasicBlock BasicBlock,
+        int Index
+    )
+    {
+    }
+
+    void Visit(Context context);
+}
+
+public interface IFunctionBody2 : IFunctionBody
+{
+    IFunctionBody2 ApplyTransform<TBasicBlock>(IBasicBlockTransform<TBasicBlock> transform);
 }
 
 public sealed class FunctionBody<TBodyData> : IFunctionBody, ILocalDeclarationContext

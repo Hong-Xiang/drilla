@@ -96,26 +96,31 @@ public class ParseBodyTest(ITestOutputHelper Output)
             s => s.Should().BeOfType<LoadSymbolAddressInstruction<VariableDeclaration>>(),
             s => s.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
                   .Which.Target.Should().Be(f.Parameters[0]),
-            s => s.Should().BeOfType<BinaryStatementOperationInstruction<VectorComponentSetOperation<N2, VecType<N2, FloatType<N32>>, Swizzle.X>>>(),
+            s => s.Should()
+                  .BeOfType<BinaryStatementOperationInstruction<
+                      VectorComponentSetOperation<N2, VecType<N2, FloatType<N32>>, Swizzle.X>>>(),
             s => s.Should().BeOfType<LoadSymbolAddressInstruction<VariableDeclaration>>(),
             s => s.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
                   .Which.Target.Should().Be(f.Parameters[1]),
-            s => s.Should().BeOfType<BinaryStatementOperationInstruction<VectorComponentSetOperation<N2, VecType<N2, FloatType<N32>>, Swizzle.Y>>>(),
+            s => s.Should()
+                  .BeOfType<BinaryStatementOperationInstruction<
+                      VectorComponentSetOperation<N2, VecType<N2, FloatType<N32>>, Swizzle.Y>>>(),
             s => s.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
             s => s.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
             s => s.Should().BeOfType<BrInstruction>()
         );
 
         result[result.Entry].Successor.Should().BeOfType<UnconditionalSuccessor>()
-             .Which.Target.Should().Satisfy<Label>(l =>
-             {
-                 var successor = result[l];
-                 successor.Should().BeAssignableTo<IBasicBlock2<IInstruction, IShaderType, IShaderType>>()
-                          .Which.Elements.Should().SatisfyRespectively(
-                              x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
-                              x => x.Should().BeOfType<ReturnResultStackInstruction>()
-                          );
-             });
+                            .Which.Target.Should().Satisfy<Label>(l =>
+                            {
+                                var successor = result[l];
+                                successor
+                                    .Should().BeAssignableTo<IBasicBlock2<IInstruction, IShaderType, IShaderType>>()
+                                    .Which.Elements.Should().SatisfyRespectively(
+                                        x => x.Should().BeOfType<LoadSymbolValueInstruction<VariableDeclaration>>(),
+                                        x => x.Should().BeOfType<ReturnResultStackInstruction>()
+                                    );
+                            });
 
 
         // entry.Elements.Should().SatisfyRespectively(
@@ -295,7 +300,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
- 
+
 
     [Fact]
     public void ParseMaxByIfThenElseShouldWork()
@@ -332,11 +337,11 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_0016: ldloc.1
         //  IL_0017: ret
 
-        var labels = result.Labels;
+        var labels = result.LocalContext.Labels;
         labels.Should().HaveCount(4);
         labels[0].Should().Be(result.Entry);
-        var l0c = labels[1];
-        var l11 = labels[2];
+        var l11 = labels[1];
+        var l0c = labels[2];
         var l16 = labels[3];
 
         result[result.Entry].Successor.Should().Satisfy<ConditionalSuccessor>(sIf =>
@@ -348,11 +353,10 @@ public class ParseBodyTest(ITestOutputHelper Output)
         result.Successor(l11).Should().BeOfType<UnconditionalSuccessor>().Which.Target.Should().Be(l16);
         result.Successor(l0c).Should().BeOfType<UnconditionalSuccessor>().Which.Target.Should().Be(l16);
 
-        var variables = result.LocalVariables;
+        var variables = result.LocalContext.LocalVariables;
         variables.Should().HaveCount(2);
         var loc0 = variables[0];
         var loc1 = variables[1];
-
 
 
         // entryBB.Elements.Should().SatisfyRespectively(
@@ -521,8 +525,8 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should()
                   .BeOfType<
                       UnaryExpressionOperationInstruction<
-                      VectorSwizzleGetExpressionOperation<Swizzle.Pattern<N2, Swizzle.X, Swizzle.Y, Swizzle.X>,
-                          FloatType<N32>>>>(),
+                          VectorSwizzleGetExpressionOperation<Swizzle.Pattern<N2, Swizzle.X, Swizzle.Y, Swizzle.X>,
+                              FloatType<N32>>>>(),
             //  IL_0008: stloc.0
             // x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
             //  IL_0009: br.s IL_000b
@@ -548,9 +552,9 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = ParseMethod2(f,
             MethodHelper.GetMethod<vec4f32, vec2f32, vec4f32>(DevelopTestShaderModule.VecSwizzleSetter));
 
-        result.LocalVariables.Should().ContainSingle();
+        result.LocalContext.LocalVariables.Should().ContainSingle();
 
-        var loc0 = result.LocalVariables[0];
+        var loc0 = result.LocalContext.LocalVariables[0];
         loc0.Type.Should().Be(ShaderType.Vec4F32);
 
         var entry = result[result.Entry];
@@ -721,12 +725,12 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = ParseMethod2(f,
             MethodHelper.GetMethod<int, int, int>(DevelopTestShaderModule.MaxByTernaryOperator));
 
-        var labels = result.Labels;
+        var labels = result.LocalContext.Labels;
         labels.Should().HaveCount(5);
 
         var l0 = result.Entry;
-        var l5 = labels[1];
-        var l8 = labels[2];
+        var l5 = labels[2];
+        var l8 = labels[1];
         var l9 = labels[3];
         var lc = labels[4];
 
@@ -747,10 +751,10 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var fbb = result[eSucc.FalseTarget];
         var mbb = result[Assert.IsType<UnconditionalSuccessor>(tbb.Successor).Target];
         fbb.Successor.Should().BeOfType<UnconditionalSuccessor>()
-             .Which.Target.Should().Be(mbb.Label);
+           .Which.Target.Should().Be(mbb.Label);
         var rbb = result[Assert.IsType<UnconditionalSuccessor>(mbb.Successor).Target];
 
-        var variables = result.LocalVariables;
+        var variables = result.LocalContext.LocalVariables;
 
         ebb.Elements.Should().SatisfyRespectively(
             x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
@@ -759,7 +763,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
                   .Which.Target.Should().Be(b),
             x => x.Should().BeOfType<BinaryExpressionOperationInstruction<
                 NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Ge>>>(),
-                x => x.Should().BeOfType<BrIfInstruction>()
+            x => x.Should().BeOfType<BrIfInstruction>()
         );
 
         tbb.Elements.Should().SatisfyRespectively(
@@ -785,6 +789,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
                   .Which.Target.Should().Be(variables[0]),
             x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
+
 
         // result[l0].Elements.Should().ContainSingle()
         //           .Which.Should().BeOfType<PushStatement>()

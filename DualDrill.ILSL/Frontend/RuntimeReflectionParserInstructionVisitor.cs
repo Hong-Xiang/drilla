@@ -83,6 +83,7 @@ sealed class RuntimeReflectionParserInstructionVisitor(
     {
         var r = EvaluationStack.Pop();
         var l = EvaluationStack.Pop();
+
         if (!l.Equals(r) || factory(TOp.Instance, l) is not { } operation)
         {
             throw new BinaryOperationEvaluationStackTypeNotMatchValidationException(TOp.Instance, l, r, Model.Method);
@@ -111,6 +112,8 @@ sealed class RuntimeReflectionParserInstructionVisitor(
             t switch
             {
                 BoolType => Operation.LogicalBinaryOperation<TOp>(),
+                IntType<N32> _ when TOp.Instance is BinaryLogical.IWithBitwiseOp bOp => bOp.BitwiseOp
+                    .GetNumericBinaryOperation(IntType<N32>.Instance),
                 _ => null
             });
 
