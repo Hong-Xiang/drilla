@@ -10,8 +10,8 @@ namespace DualDrill.CLSL.Language.CommonInstruction;
 
 interface ICommonInstruction : IInstruction, IValueInstruction
 {
-    IEnumerable<Label> ILocalDeclarationReferencingElement.ReferencedLabels => [];
-    IEnumerable<VariableDeclaration> ILocalDeclarationReferencingElement.ReferencedLocalVariables => [];
+    IEnumerable<Label> IDeclarationUser.ReferencedLabels => [];
+    IEnumerable<VariableDeclaration> IDeclarationUser.ReferencedLocalVariables => [];
 
     void ITextDumpable<ILocalDeclarationContext>.Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {

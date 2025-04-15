@@ -141,13 +141,15 @@ public static partial class ShaderModuleExtension
         return DoTree(controlFlowGraph.EntryLabel);
     }
 
-    public static ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> ToStructuredControlFlowStackModel(
-        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>> module
-    )
+    public static ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>
+        ToStructuredControlFlowStackModel(
+            this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>> module
+        )
     {
-        return module.MapBody(
-            (m, f, b) => new StructuredStackInstructionFunctionBody(
-                b.Graph.ToStructuredControlFlow()
-            ));
+        throw new NotImplementedException();
+        // return module.MapBody(
+        //     (m, f, b) => new StackInstructionFunctionBody(
+        //         b.Graph.ToStructuredControlFlow()
+        //     ));
     }
 }

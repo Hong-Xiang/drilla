@@ -8,10 +8,10 @@ using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ValueInstruction;
 
-public interface IValueInstruction : ILocalDeclarationReferencingElement
+public interface IValueInstruction : IDeclarationUser
 {
-    IEnumerable<Label> ILocalDeclarationReferencingElement.ReferencedLabels => [];
-    IEnumerable<VariableDeclaration> ILocalDeclarationReferencingElement.ReferencedLocalVariables => [];
+    IEnumerable<Label> IDeclarationUser.ReferencedLabels => [];
+    IEnumerable<VariableDeclaration> IDeclarationUser.ReferencedLocalVariables => [];
 
     void ITextDumpable<ILocalDeclarationContext>.Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
@@ -31,7 +31,7 @@ public interface IOperationValueInstruction : IValueInstruction
 
 public interface IExpressionValueInstruction : IValueInstruction
 {
-    IEnumerable<IValue> ILocalDeclarationReferencingElement.ReferencedValues => [ResultValue];
+    IEnumerable<IValue> IDeclarationUser.ReferencedValues => [ResultValue];
     IOperationValue ResultValue { get; }
 }
 

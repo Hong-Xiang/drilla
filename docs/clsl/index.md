@@ -35,8 +35,8 @@ The compiler frontend is primarily based on runtime reflection, analyzing csharp
 ```csharp
 public interface ICLSLCompiler
 {
-    ShaderModuleDeclaration<UnstructuredStackInstructionFunctionBody> Reflect(ISharpShader shader);
-    ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader);
+    ShaderModuleDeclaration<UnstructuredIUnifiedFunctionBody<StackInstructionBasicBlock>> Reflect(ISharpShader shader);
+    ShaderModuleDeclaration<StructuredIUnifiedFunctionBody<StackInstructionBasicBlock>> Compile(ISharpShader shader);
     ValueTask<string> EmitWGSL(ISharpShader module);
 }
 ```

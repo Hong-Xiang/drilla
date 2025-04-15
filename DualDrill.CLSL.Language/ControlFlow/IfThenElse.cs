@@ -12,6 +12,7 @@ public sealed class IfThenElse(
     StructuredControlFlowElementSequence TrueBody,
     StructuredControlFlowElementSequence FalseBody
 ) : IStructuredControlFlowRegion
+  , IControlFlowElement<IfThenElse>
 {
     public StructuredControlFlowElementSequence TrueBody { get; } = TrueBody;
     public StructuredControlFlowElementSequence FalseBody { get; } = FalseBody;
@@ -27,6 +28,11 @@ public sealed class IfThenElse(
 
     public TResult Accept<TResult>(IStructuredControlFlowRegion.IRegionPatternVisitor<TResult> pattern)
         => pattern.VisitIfThenElse(this);
+
+    public IfThenElse ApplyTransform<TSourceBasicBlock, TResultBasicBlock>(
+        IBasicBlockTransform<TSourceBasicBlock, TResultBasicBlock> transform)
+        where TSourceBasicBlock : IBasicBlock2 where TResultBasicBlock : IBasicBlock2
+        => new(TrueBody.ApplyTransform(transform), FalseBody.ApplyTransform(transform));
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {

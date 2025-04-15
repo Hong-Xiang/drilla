@@ -6,7 +6,6 @@ using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.Value;
 using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common.Nat;
 using FluentAssertions;
@@ -16,6 +15,8 @@ namespace DualDrill.CLSL.Test;
 
 public class StackInstructionToValueInstructionTests(ITestOutputHelper testOutput)
 {
+    private StackBasicBlockToValueBasicBlockTransform Transform = new();
+
     [Fact]
     public void Return42BasicBlockShouldWork()
     {
@@ -28,7 +29,7 @@ public class StackInstructionToValueInstructionTests(ITestOutputHelper testOutpu
             [],
             []
         );
-        var vbb = sbb.ToValueInstructionBasicBlock();
+        var vbb = Transform.Apply(sbb);
         testOutput.WriteLine(vbb.Dump());
         var values = vbb.OperationValues.ToImmutableArray();
         vbb.Elements.Should().SatisfyRespectively(
@@ -51,7 +52,7 @@ public class StackInstructionToValueInstructionTests(ITestOutputHelper testOutpu
             [],
             []
         );
-        var vbb = sbb.ToValueInstructionBasicBlock();
+        var vbb = Transform.Apply(sbb);
         testOutput.WriteLine(vbb.Dump());
         var values = vbb.OperationValues.ToImmutableArray();
         vbb.Elements.Should().SatisfyRespectively(

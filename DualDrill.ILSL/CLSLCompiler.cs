@@ -6,14 +6,15 @@ using DualDrill.CLSL.Backend;
 using System.CodeDom.Compiler;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.ControlFlow;
 using ICSharpCode.Decompiler.IL;
 
 namespace DualDrill.CLSL;
 
 public interface ICLSLCompiler
 {
-    public ShaderModuleDeclaration<StackInstructionFunctionBody> Reflect(ISharpShader shader);
-    public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader);
+    public ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> Reflect(ISharpShader shader);
+    public ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> Compile(ISharpShader shader);
     public ValueTask<string> EmitWGSL(ISharpShader module);
 }
 
@@ -27,13 +28,13 @@ public sealed class CLSLCompiler() : ICLSLCompiler
     }
 
     // TODO: reflect should not parse function body
-    public ShaderModuleDeclaration<StackInstructionFunctionBody> Reflect(ISharpShader shader)
+    public ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> Reflect(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
         return parser.ParseShaderModule(shader);
     }
 
-    public ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Compile(ISharpShader shader)
+    public ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> Compile(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
         // var module = parser.ParseShaderModule(shader)

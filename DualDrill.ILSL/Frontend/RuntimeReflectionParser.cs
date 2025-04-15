@@ -27,7 +27,7 @@ namespace DualDrill.CLSL.Frontend;
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
-    Dictionary<FunctionDeclaration, StackInstructionFunctionBody> MethodBodies)
+    Dictionary<FunctionDeclaration, IUnifiedFunctionBody<StackInstructionBasicBlock>> MethodBodies)
 {
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
@@ -189,7 +189,7 @@ public sealed record class RuntimeReflectionParser(
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
-    public ShaderModuleDeclaration<StackInstructionFunctionBody> ParseShaderModule(
+    public ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> ParseShaderModule(
         ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -314,7 +314,7 @@ public sealed record class RuntimeReflectionParser(
         return decl;
     }
 
-    public StackInstructionFunctionBody ParseMethodBody2(FunctionDeclaration f)
+    public IUnifiedFunctionBody<StackInstructionBasicBlock> ParseMethodBody2(FunctionDeclaration f)
     {
         var model = Context.GetFunctionDefinition(f);
         return ParseMethodBody2(f, model);
@@ -351,7 +351,7 @@ public sealed record class RuntimeReflectionParser(
     //    throw new NotImplementedException();
     //}
 
-    public StackInstructionFunctionBody ParseMethodBody2(FunctionDeclaration f,
+    public IUnifiedFunctionBody<StackInstructionBasicBlock> ParseMethodBody2(FunctionDeclaration f,
         MethodBodyAnalysisModel model)
     {
         var methodTable = new CompilationContext(Context);
@@ -453,7 +453,7 @@ public sealed record class RuntimeReflectionParser(
         //     bodies
         // );
 
-        return UnifiedFunctionBody.Create(basicBlocks.Values);
+        return UnifiedFunctionBody.Create<StackInstructionBasicBlock>(basicBlocks.Values);
     }
 
     bool IsMethodDefinition(MethodBase m)

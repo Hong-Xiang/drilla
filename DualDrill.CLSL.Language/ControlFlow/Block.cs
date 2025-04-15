@@ -13,6 +13,7 @@ public sealed class Block(
     Label Label,
     StructuredControlFlowElementSequence Body
 ) : ILabeledStructuredControlFlowRegion
+  , IControlFlowElement<Block>
 {
     public Label Label { get; } = Label;
     public StructuredControlFlowElementSequence Body { get; } = Body;
@@ -24,6 +25,11 @@ public sealed class Block(
         => pattern.VisitBlock(this);
 
     public IStatement BrCurrentStatement() => SyntaxFactory.Break();
+
+    public Block ApplyTransform<TSourceBasicBlock, TResultBasicBlock>(
+        IBasicBlockTransform<TSourceBasicBlock, TResultBasicBlock> transform)
+        where TSourceBasicBlock : IBasicBlock2 where TResultBasicBlock : IBasicBlock2
+        => new(Label, Body.ApplyTransform(transform));
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {

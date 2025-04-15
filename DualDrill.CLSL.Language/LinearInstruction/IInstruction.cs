@@ -38,7 +38,7 @@ public interface IInstruction : IBasicBlockElement
     }
 
     IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack);
-    IEnumerable<IValue> ILocalDeclarationReferencingElement.ReferencedValues => [];
+    IEnumerable<IValue> IDeclarationUser.ReferencedValues => [];
 }
 
 public interface IOperationStackInstruction : IInstruction

@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
+using DualDrill.CLSL.Language.ControlFlow;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -13,8 +14,8 @@ namespace DualDrill.CLSL.Language.Declaration;
 [JsonDerivedType(typeof(MemberDeclaration), nameof(MemberDeclaration))]
 [JsonDerivedType(typeof(VariableDeclaration), nameof(VariableDeclaration))]
 [JsonDerivedType(typeof(ValueDeclaration), nameof(ValueDeclaration))]
-[JsonDerivedType(typeof(ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>),
-    nameof(ShaderModuleDeclaration<StructuredStackInstructionFunctionBody>))]
+[JsonDerivedType(typeof(ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>),
+    nameof(ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>))]
 [JsonDerivedType(typeof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>),
     nameof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>))]
 public interface IDeclaration : IShaderAstNode

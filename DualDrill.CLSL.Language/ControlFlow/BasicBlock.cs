@@ -6,15 +6,13 @@ using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-
-
 public sealed record class BasicBlock<TElement>(
     ImmutableArray<TElement> Elements,
     ImmutableStack<VariableDeclaration> Inputs,
     ImmutableStack<VariableDeclaration> Outputs
 )
     : ITextDumpable<ILocalDeclarationContext>
-    where TElement : ILocalDeclarationReferencingElement
+    where TElement : IDeclarationUser
 {
     public static BasicBlock<TElement> Create(IEnumerable<TElement> instructions)
     {

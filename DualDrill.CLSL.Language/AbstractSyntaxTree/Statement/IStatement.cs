@@ -25,13 +25,13 @@ namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 [JsonDerivedType(typeof(SwitchStatement), nameof(SwitchStatement))]
 [JsonDerivedType(typeof(LoopStatement), nameof(LoopStatement))]
 public interface IStatement
-    : IShaderAstNode, ILocalDeclarationReferencingElement
+    : IShaderAstNode, IDeclarationUser
 {
     T Accept<T>(IStatementVisitor<T> visitor);
 
-    IEnumerable<IValue> ILocalDeclarationReferencingElement.ReferencedValues => [];
-    IEnumerable<Label> ILocalDeclarationReferencingElement.ReferencedLabels => [];
-    IEnumerable<VariableDeclaration> ILocalDeclarationReferencingElement.ReferencedLocalVariables => [];
+    IEnumerable<IValue> IDeclarationUser.ReferencedValues => [];
+    IEnumerable<Label> IDeclarationUser.ReferencedLabels => [];
+    IEnumerable<VariableDeclaration> IDeclarationUser.ReferencedLocalVariables => [];
 }
 
 public interface IStackStatement : IBasicBlockElement

@@ -45,7 +45,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
     }
 
 
-    StackInstructionFunctionBody ParseMethod2(FunctionDeclaration f, MethodBase m)
+    IUnifiedFunctionBody<StackInstructionBasicBlock> ParseMethod2(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
         context.AddFunctionDefinition(Symbol.Function(m), f);
@@ -337,7 +337,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_0016: ldloc.1
         //  IL_0017: ret
 
-        var labels = result.LocalContext.Labels;
+        var labels = result.DeclarationContext.Labels;
         labels.Should().HaveCount(4);
         labels[0].Should().Be(result.Entry);
         var l11 = labels[1];
@@ -353,7 +353,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         result.Successor(l11).Should().BeOfType<UnconditionalSuccessor>().Which.Target.Should().Be(l16);
         result.Successor(l0c).Should().BeOfType<UnconditionalSuccessor>().Which.Target.Should().Be(l16);
 
-        var variables = result.LocalContext.LocalVariables;
+        var variables = result.DeclarationContext.LocalVariables;
         variables.Should().HaveCount(2);
         var loc0 = variables[0];
         var loc1 = variables[1];
@@ -552,9 +552,9 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = ParseMethod2(f,
             MethodHelper.GetMethod<vec4f32, vec2f32, vec4f32>(DevelopTestShaderModule.VecSwizzleSetter));
 
-        result.LocalContext.LocalVariables.Should().ContainSingle();
+        result.DeclarationContext.LocalVariables.Should().ContainSingle();
 
-        var loc0 = result.LocalContext.LocalVariables[0];
+        var loc0 = result.DeclarationContext.LocalVariables[0];
         loc0.Type.Should().Be(ShaderType.Vec4F32);
 
         var entry = result[result.Entry];
@@ -725,7 +725,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = ParseMethod2(f,
             MethodHelper.GetMethod<int, int, int>(DevelopTestShaderModule.MaxByTernaryOperator));
 
-        var labels = result.LocalContext.Labels;
+        var labels = result.DeclarationContext.Labels;
         labels.Should().HaveCount(5);
 
         var l0 = result.Entry;
@@ -754,7 +754,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
            .Which.Target.Should().Be(mbb.Label);
         var rbb = result[Assert.IsType<UnconditionalSuccessor>(mbb.Successor).Target];
 
-        var variables = result.LocalContext.LocalVariables;
+        var variables = result.DeclarationContext.LocalVariables;
 
         ebb.Elements.Should().SatisfyRespectively(
             x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()

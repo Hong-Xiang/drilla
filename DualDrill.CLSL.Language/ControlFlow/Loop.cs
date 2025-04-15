@@ -13,6 +13,7 @@ public sealed class Loop(
     Label label,
     StructuredControlFlowElementSequence body)
     : ILabeledStructuredControlFlowRegion
+    , IControlFlowElement<Loop>
 {
     public Label Label { get; } = label;
     public StructuredControlFlowElementSequence Body { get; } = body;
@@ -22,6 +23,13 @@ public sealed class Loop(
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Body.LocalVariables;
     public IEnumerable<IValue> ReferencedValues => Body.LocalValues;
+
+    public Loop ApplyTransform<TSourceBasicBlock, TResultBasicBlock>(
+        IBasicBlockTransform<TSourceBasicBlock, TResultBasicBlock> transform)
+        where TSourceBasicBlock : IBasicBlock2 where TResultBasicBlock : IBasicBlock2
+    {
+        return new(Label, Body.ApplyTransform(transform));
+    }
 
     public TResult Accept<TResult>(IStructuredControlFlowRegion.IRegionPatternVisitor<TResult> pattern)
         => pattern.VisitLoop(this);

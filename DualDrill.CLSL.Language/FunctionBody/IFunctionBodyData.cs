@@ -4,11 +4,15 @@ using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Value;
+using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public interface IBasicBlockTransform<TBasicBlock>
+public interface IBasicBlockTransform<TSourceBasicBlock, TResultBasicBlock>
+    where TSourceBasicBlock : IBasicBlock2
+    where TResultBasicBlock : IBasicBlock2
 {
+    TResultBasicBlock Apply(TSourceBasicBlock basicBlock);
 }
 
 public interface IBasicBlockTraverser<TBasicBlock>
@@ -37,13 +41,8 @@ public interface IStackInstructionTraverser
     void Visit(Context context);
 }
 
-public interface IFunctionBody2 : IFunctionBody
-{
-    IFunctionBody2 ApplyTransform<TBasicBlock>(IBasicBlockTransform<TBasicBlock> transform);
-}
-
 public sealed class FunctionBody<TBodyData> : IFunctionBody, ILocalDeclarationContext
-    where TBodyData : ILocalDeclarationReferencingElement
+    where TBodyData : IDeclarationUser
 {
     public TBodyData Body { get; }
 
@@ -75,5 +74,5 @@ public sealed class FunctionBody<TBodyData> : IFunctionBody, ILocalDeclarationCo
         Body.Dump(LocalDeclarationContext, writer);
     }
 
-    public ILocalDeclarationContext LocalContext => this;
+    public ILocalDeclarationContext DeclarationContext => this;
 }

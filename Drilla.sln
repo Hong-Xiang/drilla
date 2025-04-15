@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticAnalysisTest", "Sem
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DualDrill.CLSL.Test", "DualDrill.CLSL.Test\DualDrill.CLSL.Test.csproj", "{FA047928-8BDE-4D9C-9F84-FC885C71F766}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalExperiment", "FunctionalExperiment\FunctionalExperiment.csproj", "{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -151,6 +153,14 @@ Global
 		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Release|x64.ActiveCfg = Release|Any CPU
 		{FA047928-8BDE-4D9C-9F84-FC885C71F766}.Release|x64.Build.0 = Release|Any CPU
+		{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}.Debug|x64.Build.0 = Debug|Any CPU
+		{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}.Release|x64.ActiveCfg = Release|Any CPU
+		{472D327F-8CB3-4BB2-AA96-C9A52E014AE2}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

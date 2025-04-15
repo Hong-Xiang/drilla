@@ -28,7 +28,7 @@ namespace DualDrill.CLSL;
 /// </summary>
 public static class ShaderModuleExtension
 {
-    public static ShaderModuleDeclaration<StackInstructionFunctionBody> Parse(
+    public static ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> Parse(
         this ISharpShader shader
     )
     {

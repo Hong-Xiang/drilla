@@ -4,5 +4,5 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 
 public interface IFunctionBody : ITextDumpable
 {
-    ILocalDeclarationContext LocalContext { get; }
+    ILocalDeclarationContext DeclarationContext { get; }
 }

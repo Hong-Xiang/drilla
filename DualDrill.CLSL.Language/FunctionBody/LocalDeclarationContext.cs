@@ -9,10 +9,10 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 public sealed class LocalDeclarationContext : ILocalDeclarationContext
 {
     public LocalDeclarationContext(
-        IEnumerable<ILocalDeclarationReferencingElement> elements
+        IEnumerable<IDeclarationUser> elements
     )
     {
-        ImmutableArray<ILocalDeclarationReferencingElement> els = [..elements];
+        ImmutableArray<IDeclarationUser> els = [..elements];
         Labels = [..els.SelectMany(e => e.ReferencedLabels).Distinct()];
         LocalVariables = [..els.SelectMany(e => e.ReferencedLocalVariables).Distinct()];
         Values = [..els.SelectMany(e => e.ReferencedValues).Distinct()];

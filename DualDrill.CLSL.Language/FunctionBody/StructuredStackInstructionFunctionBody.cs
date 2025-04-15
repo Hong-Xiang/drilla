@@ -50,5 +50,5 @@ public sealed class StructuredStackInstructionFunctionBody : IFunctionBody, ILoc
         Root.Dump(this, writer);
     }
 
-    public ILocalDeclarationContext LocalContext => this;
+    public ILocalDeclarationContext DeclarationContext => this;
 }

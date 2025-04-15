@@ -135,5 +135,5 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ILoc
         ));
     }
 
-    public ILocalDeclarationContext LocalContext => this;
+    public ILocalDeclarationContext DeclarationContext => this;
 }

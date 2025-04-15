@@ -17,7 +17,7 @@ public interface ILocalDeclarationContext
     ImmutableArray<IValue> Values { get; }
 }
 
-public interface ILocalDeclarationReferencingElement : ITextDumpable<ILocalDeclarationContext>
+public interface IDeclarationUser : ITextDumpable<ILocalDeclarationContext>
 {
     public IEnumerable<Label> ReferencedLabels { get; }
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables { get; }
@@ -26,7 +26,7 @@ public interface ILocalDeclarationReferencingElement : ITextDumpable<ILocalDecla
 
 public static class LocalDeclarationContextExtensions
 {
-    public static string Dump(this ILocalDeclarationReferencingElement self)
+    public static string Dump(this IDeclarationUser self)
     {
         var context = new LocalDeclarationContext([self]);
         return self.Dump(context);
@@ -35,8 +35,8 @@ public static class LocalDeclarationContextExtensions
     public static string VariableName(this ILocalDeclarationContext context, VariableDeclaration variable)
     {
         return variable.DeclarationScope == DeclarationScope.Function
-            ? $"var %{context.VariableIndex(variable)} : {variable.Type.Name} {variable.Name}"
-            : $"module var {variable.Name}";
+            ? $"var<f> %{context.VariableIndex(variable)} : {variable.Type.Name} {variable.Name}"
+            : $"var<m> {variable.Name}";
     }
 
     public static string ValueName(this ILocalDeclarationContext context, IValue value)
