@@ -13,7 +13,7 @@ interface IAlgebra2<out TKind, in TA, in TB, out TC>
 interface IKind2<in TKind, out TA, out TB>
     where TKind : IKind2<TKind>
 {
-    TResult Evaluate<TResult>(IAlgebra2<TKind, TA, TB, TResult> algebra);
+    TR Evaluate<TR>(IAlgebra2<TKind, TA, TB, TR> algebra);
 }
 
 interface IProfunctor<TKind> : IKind2<TKind>
