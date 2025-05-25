@@ -6,9 +6,9 @@ namespace FunctionalExperiment.IntLang;
 
 static class IntLang
 {
-    public interface Kind : IKind<Kind>
+    public interface Kind : IKind1<Kind>
     {
-        static IKindAlgebra1<Kind, T, IK<Kind, T>> IKind<Kind>.FreeFactory<T>()
+        static IKindAlgebra1<Kind, T, IK<Kind, T>> IKind1<Kind>.FreeFactory<T>()
             => FreeFactoryAlgebra<T>.Instance;
     }
 
