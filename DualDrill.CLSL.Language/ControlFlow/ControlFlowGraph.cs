@@ -108,3 +108,60 @@ public static class ControlFlowGraph
         return graph.Predecessor(label).Count > 1;
     }
 }
+
+interface IControlFlowGraphAlgebra<TBasicBlockI, TBasicBlockO, TSuccessorI, TSuccessorO>
+{
+    TBasicBlockO BasicBlock(Label label, TSuccessorI successor);
+    TSuccessorO Successor();
+}
+
+interface IListAlgebra<TE, TLI, TLO>
+{
+    TLO Nil();
+    TLO Cons(TE head, TLI tail);
+}
+
+interface IFoldLAlgebra<in TE, in TI, out TO>
+{
+    TO Stop(TI seed);
+    TO Step(TI accu, TE curr);
+}
+
+// foldl :: (b -> a -> b) -> b -> [a] -> b
+
+// State s a = s -> (a, s)
+
+// sequence of instructions -> basic blocks (stack instruction) sequence (unstructed control flow)
+//                          -> map all basic blocks to SSA value instruction?
+//                          -> to structured control flow
+//                          -> transforms inter/intra basic blocks (need access to instructions)
+
+// sequence of element -> nested structured control flow
+//                     -> basic block transform // is it possible to working on different subset of language?
+
+
+// cata (b :: B) (f :: (A, B) -> B) -> A[] -> B ~ alg <A, A, B>
+// ana  (p :: B -> bool) (g :: B -> (A, B)) -> B -> A[] ~ b -> alg < A, B  >
+//        (b -> Nil | Cons a b)
+
+// ana (a -> f a) -> a -> Fix f
+
+
+// f a ~ forall r. F<a, r> -> r
+// g a ~ forall r. G<a, r> -> r
+// f (g a) ~ f (forall r. G<a, r> -> r) ~ forall v. F<forall r. G<a, r> -> r, v> -> v
+
+// Comonad d 
+// counit :: D<a, a>, comult :: D<a, d (d a)>
+
+// Functor f, Comonad d
+//      dist :: f (d a) -> d (f a)
+//          dist :: forall a. F<d a, d (f a)>
+
+
+// ControlFlowGraph
+//    Entry B
+//  | 
+
+//  DFS Tree?
+//  Leaf Label, Successor visited

@@ -6,6 +6,7 @@ using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
+[Obsolete("Migrate to FunctionBody.IBasicBlock2")]
 public sealed record class BasicBlock<TElement>(
     ImmutableArray<TElement> Elements,
     ImmutableStack<VariableDeclaration> Inputs,
