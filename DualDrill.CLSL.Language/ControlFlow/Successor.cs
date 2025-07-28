@@ -1,11 +1,7 @@
-﻿using System.CodeDom.Compiler;
-using DotNext.Patterns;
-using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.FunctionBody;
+﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Literal;
-using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
+using System.CodeDom.Compiler;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 

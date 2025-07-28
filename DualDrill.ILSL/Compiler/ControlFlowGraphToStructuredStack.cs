@@ -5,6 +5,8 @@ using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Region;
+using DualDrill.Common;
 
 namespace DualDrill.CLSL.Compiler;
 
@@ -93,7 +95,7 @@ public static partial class ShaderModuleExtension
                         .. bb.Elements,
                         ShaderInstruction.ReturnResult()
                     ],
-                    UnconditionalSuccessor unc => [..bb.Elements, .. DoBranch(target, unc.Target)],
+                    UnconditionalSuccessor unc => [.. bb.Elements, .. DoBranch(target, unc.Target)],
                     ConditionalSuccessor brIf =>
                     [
                         ..bb.Elements,
@@ -139,6 +141,23 @@ public static partial class ShaderModuleExtension
         }
 
         return DoTree(controlFlowGraph.EntryLabel);
+    }
+
+    public static RegionDefinition<Label, TP, TB> ToLambdaIR<TP, TB>(
+        this ControlFlowGraph<Unit> cfg,
+        IReadOnlyDictionary<Label, RegionDefinition<Label, TP, TB>> regions)
+    {
+        // TODO: argument validation
+
+        var dt = DominatorTree.CreateFromControlFlowGraph(cfg);
+
+        RegionDefinition<Label, TP, TB> ToRegion(Label l)
+        {
+            var children = dt.GetChildren(l);
+            var childrenExpressions = children.Select(ToRegion).ToImmutableArray();
+            return regions[l].WithBindings(childrenExpressions);
+        }
+        return ToRegion(cfg.EntryLabel);
     }
 
     public static ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>

@@ -1,4 +1,5 @@
-﻿using System.Collections.Frozen;
+﻿using DualDrill.CLSL.Language.Region;
+using System.Collections.Frozen;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
@@ -72,6 +73,20 @@ public static class ControlFlowGraph
     public static IReadOnlyDictionary<Label, ControlFlowGraph<TData>.NodeDefinition> CreateDefinitions<TData>(
         Dictionary<Label, ControlFlowGraph<TData>.NodeDefinition> definitions
     ) => definitions;
+
+    public static IReadOnlyDictionary<Label, ControlFlowGraph<IRegionDefinition<Label, TP, TB>>.NodeDefinition> CreateDefinitions<TP, TB>(
+        IEnumerable<IRegionDefinition<Label, TP, TB>> regions,
+        Func<TB, ISuccessor> successor
+    )
+    {
+        return regions.ToDictionary(
+            r => r.Label,
+            r => new ControlFlowGraph<IRegionDefinition<Label, TP, TB>>.NodeDefinition(
+                successor(r.Body),
+                r
+            )
+        );
+    }
 
 
     public static void Traverse<TNode>(this ControlFlowGraph<TNode> graph, Action<Label> beforeSuccessor,

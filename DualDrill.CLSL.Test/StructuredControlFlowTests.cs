@@ -1,20 +1,29 @@
-﻿using DualDrill.CLSL.Language.Literal;
-using DualDrill.CLSL.Compiler;
+﻿using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.LinearInstruction;
-using Xunit.Abstractions;
-using System.CodeDom.Compiler;
-using DualDrill.CLSL.Language.CommonInstruction;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common;
 using DualDrill.Common.Nat;
 using FluentAssertions;
+using System.CodeDom.Compiler;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
 using Inst = IInstruction;
+
+sealed class RegionBuilder : IRegionDefinitionSemantic<Label, Unit, ISuccessor, RegionDefinition<Label, Unit, ISuccessor>>
+{
+    public RegionDefinition<Label, Unit, ISuccessor> Block(Label label, Unit parameters, ISuccessor body)
+        => Region.Block<Label, Unit, ISuccessor>(label, [], [], body);
+    public RegionDefinition<Label, Unit, ISuccessor> Loop(Label label, Unit parameters, ISuccessor body)
+        => Region.Loop<Label, Unit, ISuccessor>(label, [], [], body);
+}
 
 public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
 {
@@ -33,6 +42,31 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         Dump(ir);
         var b = Assert.IsType<Block>(ir);
     }
+
+    [Fact]
+    public void SimpleSingleBasicBlockShouldWork2()
+    {
+        var b = new RegionBuilder();
+        var e = Label.Create("e");
+        var definitions = new Dictionary<Label, RegionDefinition<Label, Unit, ISuccessor>>
+        {
+            [e] = b.Block(e, default, Successor.Terminate())
+        };
+        var cfg = new ControlFlowGraph<Unit>(
+            e,
+            ControlFlowGraph.CreateDefinitions<Unit>(new()
+            {
+                [e] = new()
+                {
+                    Data = default,
+                    Successor = Successor.Terminate()
+                }
+            })
+        );
+        var ir = cfg.ToLambdaIR(definitions);
+        Output.WriteLine(ir.ToString());
+    }
+
 
     [Fact]
     public void SimpleSingleSelfLoopBasicBlockShouldWork()
