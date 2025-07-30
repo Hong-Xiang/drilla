@@ -17,14 +17,6 @@ namespace DualDrill.CLSL.Test;
 
 using Inst = IInstruction;
 
-sealed class RegionBuilder : IRegionDefinitionSemantic<Label, Unit, ISuccessor, RegionDefinition<Label, Unit, ISuccessor>>
-{
-    public RegionDefinition<Label, Unit, ISuccessor> Block(Label label, Unit parameters, ISuccessor body)
-        => Region.Block<Label, Unit, ISuccessor>(label, [], [], body);
-    public RegionDefinition<Label, Unit, ISuccessor> Loop(Label label, Unit parameters, ISuccessor body)
-        => Region.Loop<Label, Unit, ISuccessor>(label, [], [], body);
-}
-
 public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
 {
     [Fact]
@@ -46,27 +38,12 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     [Fact]
     public void SimpleSingleBasicBlockShouldWork2()
     {
-        var b = new RegionBuilder();
         var e = Label.Create("e");
-        var definitions = new Dictionary<Label, RegionDefinition<Label, Unit, ISuccessor>>
-        {
-            [e] = b.Block(e, default, Successor.Terminate())
-        };
-        var cfg = new ControlFlowGraph<Unit>(
-            e,
-            ControlFlowGraph.CreateDefinitions<Unit>(new()
-            {
-                [e] = new()
-                {
-                    Data = default,
-                    Successor = Successor.Terminate()
-                }
-            })
-        );
-        var ir = cfg.ToLambdaIR(definitions);
+        var ir = RegionDefinition.Create<Unit, ISuccessor>(e, x => x,
+            (e, [], Successor.Terminate()));
         Output.WriteLine(ir.ToString());
+        Assert.Equal(0, ir.Definition.Body.Count);
     }
-
 
     [Fact]
     public void SimpleSingleSelfLoopBasicBlockShouldWork()
@@ -96,6 +73,18 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var b = Assert.IsType<Loop>(ir);
         Assert.Equal(e, b.Label);
     }
+
+
+    [Fact]
+    public void SimpleSingleSelfLoopBasicBlockShouldWork2()
+    {
+        var e = Label.Create("e");
+        var ir = RegionDefinition.Create<Unit, ISuccessor>(e, x => x,
+            (e, [], Successor.Unconditional(e)));
+        Output.WriteLine(ir.ToString());
+        Assert.Equal(e, ir.Label);
+    }
+
 
     void Dump(IStructuredControlFlowRegion result)
     {
@@ -169,6 +158,42 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         // var bbt = Assert.IsType<BasicBlock<Inst>>(rt.Body.Elements[0]);
         // var rf = Assert.IsType<Block<Inst>>(rif.FalseBody);
         // var bbf = Assert.IsType<BasicBlock<Inst>>(rf.Body.Elements[0]);
+    }
+
+    [Fact]
+    public void MinimumIfThenElseShouldWork2()
+    {
+        var e = Label.Create("e");
+        var f = Label.Create("f");
+        var t = Label.Create("t");
+        var ir = RegionDefinition.Create<Unit, ISuccessor>(e, x => x,
+            (e, [], Successor.Conditional(t, f)),
+            (t, [], Successor.Terminate()),
+            (f, [], Successor.Terminate()));
+        Output.WriteLine(ir.ToString());
+        Assert.Equal(2, ir.Bindings.Count());
+    }
+
+    [Fact]
+    public void MinimumIfThenElseMergeShouldWork2()
+    {
+        //  e
+        //  |\
+        //  f t 
+        //  |/
+        //  m
+        var e = Label.Create("e");
+        var f = Label.Create("f");
+        var t = Label.Create("t");
+        var m = Label.Create("m");
+        var ir = RegionDefinition.Create<Unit, ISuccessor>(e, x => x,
+            (e, [], Successor.Conditional(t, f)),
+            (t, [], Successor.Unconditional(m)),
+            (f, [], Successor.Unconditional(m)),
+            (m, [], Successor.Terminate()));
+        Output.WriteLine(ir.ToString());
+        Assert.Equal(3, ir.Bindings.Count());
+        Assert.Equal(m, ir.Bindings.First().Label);
     }
 
     [Fact]
@@ -305,6 +330,48 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     }
 
     [Fact]
+    public void SimpleLoopShouldWork2()
+    {
+        // cfg:
+        // b0  (loop init)--false-+
+        // |                      |
+        // true                   |
+        // |                      |
+        // + ----------- +        |
+        // |             |        |
+        // v             |        |
+        // b1 - true -> b2        |
+        // |                      |
+        // false                  |
+        // |                      |
+        // v                      |  
+        // b3<--------------------+
+
+        var b0 = Label.Create("b0");
+        var b1 = Label.Create("b1");
+        var b2 = Label.Create("b2");
+        var b3 = Label.Create("b3");
+
+        // block ^b0
+        //    block ^b3
+        //      ret
+        //    loop ^b1
+        //      block ^b2
+        //        br b1
+        //      brif b2 b3
+        //    brif b1 b3 
+        var ir = RegionDefinition.Create<Unit, ISuccessor>(b0, x => x,
+            (b0, [], Successor.Conditional(b1, b3)),
+            (b1, [], Successor.Conditional(b2, b3)),
+            (b2, [], Successor.Unconditional(b1)),
+            (b3, [], Successor.Terminate())
+            );
+
+        Output.WriteLine(ir.ToString());
+        Assert.Equal(2, ir.Bindings.Count());
+    }
+
+    [Fact]
     public void MinimumConditionalLoopShouldWork()
     {
         // cfg:
@@ -365,5 +432,32 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
                   x => x.Should().BeOfType<StoreSymbolInstruction<VariableDeclaration>>(),
                   (b) => b.Should().BeOfType<Block>()
               );
+    }
+
+    [Fact]
+    public void MinimumConditionalLoopShouldWork2()
+    {
+        // cfg:
+        //  a <-*
+        //  |   |
+        //  v   |
+        //  b --*  
+        //  |
+        //  v
+        //  c
+
+        // dominator tree
+        // a <- b <- c
+        var a = Label.Create("a"); // children (b, c) into loop
+        var b = Label.Create("b"); // children (c) into if-else
+        var c = Label.Create("c"); // inside else branch
+
+        var ir = RegionDefinition.Create<Unit, ISuccessor>(a, x => x,
+            (a, [], Successor.Unconditional(b)),
+            (b, [], Successor.Conditional(a, c)),
+            (c, [], Successor.Terminate()));
+
+        Output.WriteLine(ir.ToString());
+        Assert.Equal(1, ir.Bindings.Count());
     }
 }

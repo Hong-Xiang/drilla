@@ -143,7 +143,7 @@ public static partial class ShaderModuleExtension
         return DoTree(controlFlowGraph.EntryLabel);
     }
 
-    public static RegionDefinition<Label, TP, TB> ToLambdaIR<TP, TB>(
+    public static RegionDefinition<Label, TP, TB> ToShaderIR<TP, TB>(
         this ControlFlowGraph<Unit> cfg,
         IReadOnlyDictionary<Label, RegionDefinition<Label, TP, TB>> regions)
     {
