@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using FluentAssertions;
 using System.Collections.Immutable;

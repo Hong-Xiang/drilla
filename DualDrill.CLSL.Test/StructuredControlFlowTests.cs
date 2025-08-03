@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Compiler;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
@@ -6,11 +7,13 @@ using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using FluentAssertions;
 using System.CodeDom.Compiler;
+using System.Collections.Immutable;
 using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
@@ -19,6 +22,8 @@ using Inst = IInstruction;
 
 public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
 {
+    static ITerminatorSemantic<Unit, Label, Unit, ITerminator<Label, Unit>> T { get; } = Terminator.Factory<Label, Unit>();
+
     [Fact]
     public void SimpleSingleBasicBlockShouldWork()
     {
@@ -39,9 +44,9 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     public void SimpleSingleBasicBlockShouldWork2()
     {
         var e = Label.Create("e");
-        var ir = RegionDefinition.Create<Unit, ISuccessor>(e, x => x,
-            (e, [], Successor.Terminate()));
-        Output.WriteLine(ir.ToString());
+        var ir = RegionDefinition.Create<ISuccessor>(e, x => x,
+            (e, Successor.Terminate()));
+        Output.WriteLine(ir.Show());
         Assert.Equal(0, ir.Definition.Body.Count);
     }
 
@@ -79,9 +84,9 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     public void SimpleSingleSelfLoopBasicBlockShouldWork2()
     {
         var e = Label.Create("e");
-        var ir = RegionDefinition.Create<Unit, ISuccessor>(e, x => x,
-            (e, [], Successor.Unconditional(e)));
-        Output.WriteLine(ir.ToString());
+        var ir = RegionDefinition.Create<ISuccessor>(e, x => x,
+            (e, Successor.Unconditional(e)));
+        Output.WriteLine(ir.Show());
         Assert.Equal(e, ir.Label);
     }
 
@@ -166,11 +171,11 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var e = Label.Create("e");
         var f = Label.Create("f");
         var t = Label.Create("t");
-        var ir = RegionDefinition.Create<Unit, ISuccessor>(e, x => x,
-            (e, [], Successor.Conditional(t, f)),
-            (t, [], Successor.Terminate()),
-            (f, [], Successor.Terminate()));
-        Output.WriteLine(ir.ToString());
+        var ir = RegionDefinition.Create<ISuccessor>(e, x => x,
+            (e, Successor.Conditional(t, f)),
+            (t, Successor.Terminate()),
+            (f, Successor.Terminate()));
+        Output.WriteLine(ir.Show());
         Assert.Equal(2, ir.Bindings.Count());
     }
 
@@ -186,12 +191,12 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var f = Label.Create("f");
         var t = Label.Create("t");
         var m = Label.Create("m");
-        var ir = RegionDefinition.Create<Unit, ISuccessor>(e, x => x,
-            (e, [], Successor.Conditional(t, f)),
-            (t, [], Successor.Unconditional(m)),
-            (f, [], Successor.Unconditional(m)),
-            (m, [], Successor.Terminate()));
-        Output.WriteLine(ir.ToString());
+        var ir = RegionDefinition.Create<ITerminator<Label, Unit>>(e, x => x.ToSuccessor(),
+            (e, Terminator.B.BrIf(default(Unit), t, f)),
+            (t, Terminator.B.Br<Label, Unit>(m)),
+            (f, Terminator.B.Br<Label, Unit>(m)),
+            (m, Terminator.B.ReturnVoid<Label, Unit>()));
+        Output.WriteLine(ir.Show());
         Assert.Equal(3, ir.Bindings.Count());
         Assert.Equal(m, ir.Bindings.First().Label);
     }
@@ -360,14 +365,14 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //        br b1
         //      brif b2 b3
         //    brif b1 b3 
-        var ir = RegionDefinition.Create<Unit, ISuccessor>(b0, x => x,
-            (b0, [], Successor.Conditional(b1, b3)),
-            (b1, [], Successor.Conditional(b2, b3)),
-            (b2, [], Successor.Unconditional(b1)),
-            (b3, [], Successor.Terminate())
+        var ir = RegionDefinition.Create<ISuccessor>(b0, x => x,
+            (b0, Successor.Conditional(b1, b3)),
+            (b1, Successor.Conditional(b2, b3)),
+            (b2, Successor.Unconditional(b1)),
+            (b3, Successor.Terminate())
             );
 
-        Output.WriteLine(ir.ToString());
+        Output.WriteLine(ir.Show());
         Assert.Equal(2, ir.Bindings.Count());
     }
 
@@ -452,12 +457,12 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var b = Label.Create("b"); // children (c) into if-else
         var c = Label.Create("c"); // inside else branch
 
-        var ir = RegionDefinition.Create<Unit, ISuccessor>(a, x => x,
-            (a, [], Successor.Unconditional(b)),
-            (b, [], Successor.Conditional(a, c)),
-            (c, [], Successor.Terminate()));
+        var ir = RegionDefinition.Create<ITerminator<Label, Unit>>(a, x => x.ToSuccessor(),
+            (a, Terminator.B.Br<Label, Unit>(b)),
+            (b, Terminator.B.BrIf(default(Unit), a, c)),
+            (c, Terminator.B.ReturnVoid<Label, Unit>()));
 
-        Output.WriteLine(ir.ToString());
-        Assert.Equal(1, ir.Bindings.Count());
+        Output.WriteLine(ir.Show());
+        var rb = Assert.Single(ir.Bindings);
     }
 }

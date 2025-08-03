@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;
 

@@ -1,5 +1,6 @@
 using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
 
 namespace DualDrill.CLSL.Test;

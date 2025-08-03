@@ -20,6 +20,7 @@ using DualDrill.Mathematics;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL;
 

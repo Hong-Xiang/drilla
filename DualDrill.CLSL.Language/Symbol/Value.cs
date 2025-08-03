@@ -1,12 +1,10 @@
-﻿using System.CodeDom.Compiler;
-using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Operation;
+﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common.CodeTextWriter;
+using System.CodeDom.Compiler;
 
-namespace DualDrill.CLSL.Language.Value;
+namespace DualDrill.CLSL.Language.Symbol;
 
 public interface IValue : ITextDumpable<ILocalDeclarationContext>
 {
@@ -55,4 +53,15 @@ public static class OperationValue
     public static OperationValue<TShaderType> Create<TShaderType>()
         where TShaderType : IShaderType<TShaderType>
         => new();
+}
+
+public sealed class ShaderValue(string? name)
+{
+    public ShaderValue() : this(null)
+    {
+    }
+
+    public static ShaderValue Create() => new();
+    public static ShaderValue Create(string name) => new(name);
+    public string? Name => name;
 }

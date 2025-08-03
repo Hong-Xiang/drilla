@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Declaration;

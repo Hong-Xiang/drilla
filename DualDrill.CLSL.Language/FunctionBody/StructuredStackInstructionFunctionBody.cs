@@ -1,11 +1,10 @@
-﻿using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlowGraph;
-using DualDrill.CLSL.Language.Value;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 

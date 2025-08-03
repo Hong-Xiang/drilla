@@ -2,7 +2,8 @@
 
 namespace DualDrill.CLSL.Language.Expression;
 
-public sealed record class LiteralExpression<TLiteral, T>(TLiteral Literal) : IExpression<T>
+public sealed record class LiteralExpression<TLiteral, T>(TLiteral Literal)
+    : IExpression<T>
     where TLiteral : ILiteral
 {
     public TR Evaluate<TR>(IExpressionSemantic<T, TR> semantic)
@@ -10,4 +11,7 @@ public sealed record class LiteralExpression<TLiteral, T>(TLiteral Literal) : IE
 
     public IExpression<TR> Select<TR>(Func<T, TR> f)
         => new LiteralExpression<TLiteral, TR>(Literal);
+
+    public override string ToString()
+        => $"lit({Literal})";
 }

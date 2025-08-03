@@ -1,14 +1,43 @@
-﻿namespace DualDrill.CLSL.Language.Statement;
+﻿using DualDrill.CLSL.Language.Symbol;
+using DualDrill.Common;
 
-public interface IStatementSemantic<in TV, in TM, in TE, out TO>
+namespace DualDrill.CLSL.Language.Statement;
+
+public interface IStatementSemantic<in TX, in TV, in TE, in TM, in TF, out TO>
 {
-    TO Bind(TV value, TE expr);
-    TO Load(TV value, TM memory);
-    TO Store(TM memory, TV value);
+    TO Nop(TX context);
+    TO Let(TX context, TV result, TE expr);
+    TO Get(TX context, TV result, TM source);
+    TO Set(TX context, TM target, TV source);
+    TO Mov(TX context, TM target, TM source);
+    TO Dup(TX context, TV result, TV source);
+    TO Pop(TX context, TV target);
+    TO Call(TX context, TV result, TF f, IReadOnlyList<TE> arguments);
 }
 
-public interface IStatement<out TV, out TM, out TE>
+public interface IStatement<out TV, out TE, out TM, out TF>
 {
-    public TR Evalute<TR>(IStatementSemantic<TV, TM, TE, TR> semantic);
-    public IStatement<TVR, TMR, TER> Select<TVR, TMR, TER>(Func<TV, TVR> fv, Func<TM, TMR> fm, Func<TE, TER> fe);
+    public TR Evaluate<TX, TR>(IStatementSemantic<TX, TV, TE, TM, TF, TR> semantic, TX context);
+}
+
+public sealed record class GetStatement<TV, TE, TM, TF>(TV Result, TM Source) : IStatement<TV, TE, TM, TF>
+{
+    public TR Evaluate<TX, TR>(IStatementSemantic<TX, TV, TE, TM, TF, TR> semantic, TX context)
+        => semantic.Get(context, Result, Source);
+}
+
+public static class Statement
+{
+    public static IStatementSemantic<Unit, TV, TE, TM, TF, IStatement<TV, TE, TM, TF>> Factory<TV, TE, TM, TF>()
+    {
+        throw new NotImplementedException();
+    }
+
+    public static Seq<IStatement<TV, TE, TM, TF>, TV> ToSeq<TV, TE, TM, TF>(
+        this IStatement<TV, TE, TM, TF> stmt
+    )
+        where TV : new()
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -6,6 +6,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
 
 namespace DualDrill.CLSL.Compiler;
@@ -143,15 +144,15 @@ public static partial class ShaderModuleExtension
         return DoTree(controlFlowGraph.EntryLabel);
     }
 
-    public static RegionDefinition<Label, TP, TB> ToShaderIR<TP, TB>(
+    public static RegionDefinition<Label, TB> ToShaderIR<TP, TB>(
         this ControlFlowGraph<Unit> cfg,
-        IReadOnlyDictionary<Label, RegionDefinition<Label, TP, TB>> regions)
+        IReadOnlyDictionary<Label, RegionDefinition<Label, TB>> regions)
     {
         // TODO: argument validation
 
         var dt = DominatorTree.CreateFromControlFlowGraph(cfg);
 
-        RegionDefinition<Label, TP, TB> ToRegion(Label l)
+        RegionDefinition<Label, TB> ToRegion(Label l)
         {
             var children = dt.GetChildren(l);
             var childrenExpressions = children.Select(ToRegion).ToImmutableArray();

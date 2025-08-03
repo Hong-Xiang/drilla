@@ -4,7 +4,6 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
-using DualDrill.CLSL.Language.Value;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 

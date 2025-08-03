@@ -1,8 +1,8 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.Value;
 using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common.Nat;
 

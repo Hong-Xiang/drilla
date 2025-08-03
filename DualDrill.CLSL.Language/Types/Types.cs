@@ -1,5 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.Value;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 

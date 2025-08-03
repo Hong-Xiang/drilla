@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 

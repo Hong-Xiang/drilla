@@ -15,6 +15,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using DualDrill.CLSL.Language.CommonInstruction;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Compiler;
 

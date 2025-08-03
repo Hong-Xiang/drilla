@@ -14,6 +14,7 @@ using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Frontend;
 

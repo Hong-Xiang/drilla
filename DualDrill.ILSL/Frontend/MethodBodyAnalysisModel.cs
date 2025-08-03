@@ -12,7 +12,7 @@ using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.Common;
-using Label = DualDrill.CLSL.Language.ControlFlow.Label;
+using Label = DualDrill.CLSL.Language.Symbol.Label;
 
 namespace DualDrill.CLSL.Frontend;
 

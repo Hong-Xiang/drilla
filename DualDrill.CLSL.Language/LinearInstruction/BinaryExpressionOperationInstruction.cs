@@ -1,7 +1,6 @@
-using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.Value;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common;
 

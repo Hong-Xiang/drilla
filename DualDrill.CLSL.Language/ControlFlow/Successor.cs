@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 
@@ -13,6 +14,20 @@ public enum SuccessorKind
     Terminate
 }
 
+
+public interface ISuccessorSemantic<in TX, in TI, out TO>
+{
+    TO Unconditional(TX context, TI target);
+    TO Conditional(TX context, TI trueTarget, TI falseTarget);
+    TO Terminate(TX context);
+}
+
+public interface ISuccessor<T>
+{
+    TR Evaluate<TX, TR>(ISuccessorSemantic<TX, T, TR> semantic, TX context);
+}
+
+
 public interface ISuccessor
     : ITextDumpable<ILocalDeclarationContext>
 {
@@ -23,6 +38,8 @@ public interface ISuccessor
 
 public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
 {
+    public override string ToString()
+        => $"br -> ^{Target.Name}";
     public void Traverse(Action<Label> action)
     {
         action(Target);
@@ -42,6 +59,9 @@ public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
 
 public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTarget) : ISuccessor
 {
+    public override string ToString()
+        => $"br_if -> t: ^{TrueTarget.Name} f: ^{FalseTarget.Name}";
+
     public IEnumerable<Label> GetReferencedLabels() => [TrueTarget, FalseTarget];
 
     public void Traverse(Action<Label> action)
@@ -62,6 +82,9 @@ public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTar
 
 public sealed record class TerminateSuccessor() : ISuccessor
 {
+    public override string ToString()
+        => "return";
+
     public IEnumerable<Label> GetReferencedLabels() => [];
 
     public void Traverse(Action<Label> action)

@@ -4,8 +4,8 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.Value;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;

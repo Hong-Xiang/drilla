@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
 using System.Collections.Frozen;
 
@@ -84,14 +85,14 @@ public static class ControlFlowGraph
         Dictionary<Label, ControlFlowGraph<TData>.NodeDefinition> definitions
     ) => definitions;
 
-    public static IReadOnlyDictionary<Label, ControlFlowGraph<IRegionDefinition<Label, TP, TB>>.NodeDefinition> CreateDefinitions<TP, TB>(
-        IEnumerable<IRegionDefinition<Label, TP, TB>> regions,
+    public static IReadOnlyDictionary<Label, ControlFlowGraph<IRegionDefinition<Label, TB>>.NodeDefinition> CreateDefinitions<TP, TB>(
+        IEnumerable<IRegionDefinition<Label, TB>> regions,
         Func<TB, ISuccessor> successor
     )
     {
         return regions.ToDictionary(
             r => r.Label,
-            r => new ControlFlowGraph<IRegionDefinition<Label, TP, TB>>.NodeDefinition(
+            r => new ControlFlowGraph<IRegionDefinition<Label, TB>>.NodeDefinition(
                 successor(r.Body),
                 r
             )

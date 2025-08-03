@@ -14,4 +14,3 @@ public interface IExpression<out T>
     TR Evaluate<TR>(IExpressionSemantic<T, TR> semantic);
     IExpression<TR> Select<TR>(Func<T, TR> f);
 }
-

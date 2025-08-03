@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common.Nat;

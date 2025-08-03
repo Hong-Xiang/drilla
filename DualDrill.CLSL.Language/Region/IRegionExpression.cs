@@ -1,23 +1,26 @@
 ﻿namespace DualDrill.CLSL.Language.Region;
 
 
-public abstract record class RegionExpression<TL, TP, TB>(TL Label)
+public abstract record class RegionExpression<TL, TB>(TL Label)
 {
 }
 
-sealed record class LabelRegionExpression<TL, TP, TB>(TL Label) : RegionExpression<TL, TP, TB>(Label)
+sealed record class LabelRegionExpression<TL, TB>(TL Label) : RegionExpression<TL, TB>(Label)
 {
 }
 
-sealed record class DefinitionRegionExpression<TL, TP, TB>(RegionDefinition<TL, TP, TB> Region) : RegionExpression<TL, TP, TB>(Region.Label)
+sealed record class DefinitionRegionExpression<TL, TB>(RegionDefinition<TL, TB> Region) : RegionExpression<TL, TB>(Region.Label)
 {
 }
 
-public static class Region
+public static class RegionExpression
 {
+    public static RegionExpression<TL, TB> Label<TL, TB>(TL label)
+        => new LabelRegionExpression<TL, TB>(label);
+    public static RegionExpression<TL, TB> Definition<TL, TB>(RegionDefinition<TL, TB> region)
+        => new DefinitionRegionExpression<TL, TB>(region);
 
-    public static RegionDefinition<TL, TP, TB> Block<TL, TP, TB>(TL label, ReadOnlySpan<RegionDefinition<TL, TP, TB>> regions, IReadOnlyList<TP> parameters, TB body) =>
-      RegionDefinition<TL, TP, TB>.Block(label, regions, parameters, body);
-    public static RegionDefinition<TL, TP, TB> Loop<TL, TP, TB>(TL label, ReadOnlySpan<RegionDefinition<TL, TP, TB>> regions, IReadOnlyList<TP> parameters, TB body) =>
-      RegionDefinition<TL, TP, TB>.Loop(label, regions, parameters, body);
+    public static RegionExpression<TL, TB> AsRegionExpression<TL, TP, TB>(this RegionDefinition<TL, TB> region)
+        => Definition(region);
 }
+

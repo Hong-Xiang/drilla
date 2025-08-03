@@ -1,7 +1,7 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.Value;
 using DualDrill.CLSL.Language.ValueInstruction;
 
 namespace DualDrill.CLSL.Language.Operation;

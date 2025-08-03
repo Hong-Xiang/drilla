@@ -3,8 +3,8 @@ using DualDrill.CLSL.Language.Declaration;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlowGraph;
-using DualDrill.CLSL.Language.Value;
 using DualDrill.Common;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 

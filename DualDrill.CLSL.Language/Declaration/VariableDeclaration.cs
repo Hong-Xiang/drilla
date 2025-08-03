@@ -25,3 +25,11 @@ public sealed record class VariableDeclaration(
         return $"var@{scope}({Name}: {Type.Name})";
     }
 }
+
+public sealed record class LocalVariableDeclaration(
+    string? Name,
+    IShaderType Type,
+    IReadOnlyList<IShaderAttribute> Attributes
+)
+{
+}

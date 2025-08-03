@@ -1,8 +1,8 @@
 ﻿using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Value;
 using DualDrill.CLSL.Language.ValueInstruction;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Literal;
 
@@ -13,7 +13,7 @@ namespace DualDrill.CLSL.Language.Literal;
 [JsonDerivedType(typeof(U64Literal), nameof(U64Literal))]
 [JsonDerivedType(typeof(F32Literal), nameof(F32Literal))]
 [JsonDerivedType(typeof(F64Literal), nameof(F64Literal))]
-public interface ILiteral
+public interface ILiteral : IPrintable
 {
     IShaderType Type { get; }
     string Name { get; }

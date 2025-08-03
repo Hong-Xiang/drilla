@@ -1,9 +1,4 @@
-﻿namespace DualDrill.CLSL.Language.ControlFlow;
-
-public interface ILabel<TSelf>
-    where TSelf : ILabel<TSelf>
-{
-}
+﻿namespace DualDrill.CLSL.Language.Symbol;
 
 public interface ILabeledEntity
 {
@@ -14,7 +9,7 @@ sealed class LabelNotFoundException(Label Label) : Exception($"Label {Label.Name
 {
 }
 
-public sealed class Label : ILabel<Label>
+public sealed class Label
 {
     Label(string? name)
     {
@@ -32,5 +27,26 @@ public sealed class Label : ILabel<Label>
     public override string ToString()
     {
         return $"Label({Name})";
+    }
+}
+
+public interface ILabelMap<in TS, out TR>
+{
+    TR MapLabel(TS label);
+}
+
+public static class LabelMap
+{
+    sealed class FuncLabelMap<TS, TR>(Func<TS, TR> f) : ILabelMap<TS, TR>
+    {
+        public TR MapLabel(TS label) => f(label);
+    }
+    public static ILabelMap<TS, TR> Create<TS, TR>(Func<TS, TR> f)
+    {
+        return new FuncLabelMap<TS, TR>(f);
+    }
+    public static ILabelMap<Label, T> Create<T>(Func<Label, T> f)
+    {
+        return new FuncLabelMap<Label, T>(f);
     }
 }

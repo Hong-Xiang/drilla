@@ -2,7 +2,7 @@
 
 namespace DualDrill.CLSL.Language;
 
-public interface ISeqSemantic<in TH, in TL, in TX, in TI, out TO>
+public interface ISeqSemantic<in TX, in TH, in TL, in TI, out TO>
     where TH : allows ref struct
     where TL : allows ref struct
     where TX : allows ref struct
@@ -18,13 +18,13 @@ public interface ISeq<TH, TL, TS>
     where TL : allows ref struct
     where TS : allows ref struct
 {
-    public TR Evaluate<TX, TR>(ISeqSemantic<TH, TL, TX, TS, TR> semantic, TX context);
+    public TR Evaluate<TX, TR>(ISeqSemantic<TX, TH, TL, TS, TR> semantic, TX context);
     public ISeq<THR, TLR, TSR> Select<THR, TLR, TSR>(Func<TH, THR> fh, Func<TL, TLR> fl, Func<TS, TSR> fs);
 }
 
 sealed record class SingleSeq<TH, TL, TS>(TL Last) : ISeq<TH, TL, TS>
 {
-    public TR Evaluate<TX, TR>(ISeqSemantic<TH, TL, TX, TS, TR> semantic, TX ctx)
+    public TR Evaluate<TX, TR>(ISeqSemantic<TX, TH, TL, TS, TR> semantic, TX ctx)
         => semantic.Single(ctx, Last);
 
     public ISeq<THR, TLR, TSR> Select<THR, TLR, TSR>(Func<TH, THR> fh, Func<TL, TLR> fl, Func<TS, TSR> fs)
@@ -33,7 +33,7 @@ sealed record class SingleSeq<TH, TL, TS>(TL Last) : ISeq<TH, TL, TS>
 
 sealed record class NestedSeq<TH, TL, TS>(TH Head, TS Next) : ISeq<TH, TL, TS>
 {
-    public TR Evaluate<TX, TR>(ISeqSemantic<TH, TL, TX, TS, TR> semantic, TX ctx)
+    public TR Evaluate<TX, TR>(ISeqSemantic<TX, TH, TL, TS, TR> semantic, TX ctx)
         => semantic.Nested(ctx, Head, Next);
 
     public ISeq<THR, TLR, TSR> Select<THR, TLR, TSR>(Func<TH, THR> fh, Func<TL, TLR> fl, Func<TS, TSR> fs)
@@ -57,17 +57,20 @@ public readonly record struct Seq<TH, TL>(ISeq<TH, TL, Seq<TH, TL>> Value)
     public IEnumerable<TH> Elements => Fold(Seq.Semantic<TH, TL, IEnumerable<TH>, IEnumerable<TH>>(x => [], (h, s) => [h, .. s]), default);
     public Seq<THR, TLR> Select<THR, TLR>(Func<TH, THR> f, Func<TL, TLR> g)
         => new(Value.Select(f, g, s => s.Select(f, g)));
+    public Seq<TH, TLR> Select<TLR>(Func<TL, TLR> f)
+         => new(Value.Select(x => x, f, s => s.Select(x => x, f)));
 
-    public T Fold<TX, T>(ISeqSemantic<TH, TL, TX, T, T> semantic, TX ctx)
+
+    public T Fold<TX, T>(ISeqSemantic<TX, TH, TL, T, T> semantic, TX ctx)
         => Value.Evaluate(new FoldSemantic<TX, TH, TL, T>(semantic), ctx);
-    public T Fold<TX, T>(ISeqSemantic<TH, TL, TX, Func<TX, T>, T> semantic, TX ctx)
+    public T Fold<TX, T>(ISeqSemantic<TX, TH, TL, Func<TX, T>, T> semantic, TX ctx)
         => Value.Evaluate(new StatefulFoldSemantic<TX, TH, TL, T>(semantic), ctx);
 
 
-    public delegate TR UnfoldStep<TA, TR>(ISeqSemantic<TH, TL, Unit, TA, TR> builder, TA value)
+    public delegate TR UnfoldStep<TA, TR>(ISeqSemantic<Unit, TH, TL, TA, TR> builder, TA value)
         where TA : allows ref struct;
 
-    sealed class UnfolderSemantic<TA>(UnfoldStep<TA, Seq<TH, TL>> step) : ISeqSemantic<TH, TL, Unit, TA, Seq<TH, TL>>
+    sealed class UnfolderSemantic<TA>(UnfoldStep<TA, Seq<TH, TL>> step) : ISeqSemantic<Unit, TH, TL, TA, Seq<TH, TL>>
         where TA : allows ref struct
     {
         public Seq<TH, TL> Single(Unit _, TL value)
@@ -88,7 +91,7 @@ public readonly record struct Seq<TH, TL>(ISeq<TH, TL, Seq<TH, TL>> Value)
         => Fold(new SelectManySemantic<TH, TL, TR>(f), default);
 }
 
-sealed class SelectManySemantic<TH, TL, TR>(Func<TL, Seq<TH, TR>> f) : ISeqSemantic<TH, TL, Unit, Seq<TH, TR>, Seq<TH, TR>>
+sealed class SelectManySemantic<TH, TL, TR>(Func<TL, Seq<TH, TR>> f) : ISeqSemantic<Unit, TH, TL, Seq<TH, TR>, Seq<TH, TR>>
 {
     public Seq<TH, TR> Nested(Unit context, TH head, Seq<TH, TR> next)
         => new(new NestedSeq<TH, TR, Seq<TH, TR>>(head, next));
@@ -97,26 +100,26 @@ sealed class SelectManySemantic<TH, TL, TR>(Func<TL, Seq<TH, TR>> f) : ISeqSeman
         => f(value);
 }
 
-sealed class FoldSemantic<TC, TH, TL, T>(ISeqSemantic<TH, TL, TC, T, T> semantic) : ISeqSemantic<TH, TL, TC, Seq<TH, TL>, T>
+sealed class FoldSemantic<TX, TH, TL, T>(ISeqSemantic<TX, TH, TL, T, T> semantic) : ISeqSemantic<TX, TH, TL, Seq<TH, TL>, T>
 {
-    public T Nested(TC context, TH head, Seq<TH, TL> next)
+    public T Nested(TX context, TH head, Seq<TH, TL> next)
         => semantic.Nested(context, head, next.Value.Evaluate(this, context));
 
-    public T Single(TC context, TL value)
+    public T Single(TX context, TL value)
         => semantic.Single(context, value);
 }
 
-sealed class StatefulFoldSemantic<TC, TH, TL, T>(ISeqSemantic<TH, TL, TC, Func<TC, T>, T> semantic) : ISeqSemantic<TH, TL, TC, Seq<TH, TL>, T>
+sealed class StatefulFoldSemantic<TX, TH, TL, T>(ISeqSemantic<TX, TH, TL, Func<TX, T>, T> semantic) : ISeqSemantic<TX, TH, TL, Seq<TH, TL>, T>
 {
-    public T Nested(TC context, TH head, Seq<TH, TL> next)
+    public T Nested(TX context, TH head, Seq<TH, TL> next)
         => semantic.Nested(context, head, ctx => next.Value.Evaluate(this, ctx));
 
-    public T Single(TC context, TL value)
+    public T Single(TX context, TL value)
         => semantic.Single(context, value);
 }
 
 
-sealed class LastSemantic<TH, TL> : ISeqSemantic<TH, TL, Unit, TL, TL>
+sealed class LastSemantic<TH, TL> : ISeqSemantic<Unit, TH, TL, TL, TL>
 {
     public TL Nested(Unit _, TH head, TL next)
         => next;
@@ -125,17 +128,14 @@ sealed class LastSemantic<TH, TL> : ISeqSemantic<TH, TL, Unit, TL, TL>
         => value;
 }
 
-sealed class FormatSemantic<TH, TL> : ISeqSemantic<TH, TL, bool, Func<bool, string>, string>
+sealed class FormatSemantic<TH, TL> : ISeqSemantic<bool, TH, TL, Func<bool, string>, string>
 {
-
     public string Nested(bool isFirst, TH head, Func<bool, string> next)
         => isFirst ? $"[{head}, {next(false)}]" : $"{head}, {next(false)}";
 
     public string Single(bool isFirst, TL value)
         => isFirst ? $"[; {value}]" : $"; {value}";
 }
-
-
 
 public static class Seq
 {
@@ -145,7 +145,7 @@ public static class Seq
     public static Seq<TH, TL> Single<TH, TL>(TL last) => Seq<TH, TL>.Single(last);
     public static Seq<TH, TL> Nested<TH, TL>(TH head, Seq<TH, TL> next) => Seq<TH, TL>.Nested(head, next);
 
-    sealed class SeqSemantic<TH, TL, TS, TO>(Func<TL, TO> single, Func<TH, TS, TO> concat) : ISeqSemantic<TH, TL, Unit, TS, TO>
+    sealed class SeqSemantic<TH, TL, TS, TO>(Func<TL, TO> single, Func<TH, TS, TO> concat) : ISeqSemantic<Unit, TH, TL, TS, TO>
     {
         public TO Nested(Unit _, TH head, TS seq)
             => concat(head, seq);
@@ -154,7 +154,7 @@ public static class Seq
             => single(value);
     }
 
-    public static ISeqSemantic<TH, TL, Unit, TS, TO> Semantic<TH, TL, TS, TO>(Func<TL, TO> single, Func<TH, TS, TO> concat)
+    public static ISeqSemantic<Unit, TH, TL, TS, TO> Semantic<TH, TL, TS, TO>(Func<TL, TO> single, Func<TH, TS, TO> concat)
         => new SeqSemantic<TH, TL, TS, TO>(single, concat);
 }
 

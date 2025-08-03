@@ -1,6 +1,6 @@
-using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.Common.CodeTextWriter;
+using DualDrill.CLSL.Language.Symbol;
+using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 

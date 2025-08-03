@@ -5,6 +5,8 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -22,4 +24,41 @@ public interface IDeclaration : IShaderAstNode
 {
     string Name { get; }
     ImmutableHashSet<IShaderAttribute> Attributes { get; }
+}
+
+// module = (symbol, decl)[], (function_symbol, body)[]
+// decl = module_value | module_variable | structure | function
+// module_value = type_ref, attribute[], literal_expr
+// module_variable = type_ref, attribute[]
+// structure = (symbol, member)[], attribute[], function_ref
+// member = type, attribute[]
+// function = (symbol, parameter)[], return_type
+// parameter = type_ref, attribute[]
+
+// body = (symbol, local_variable)[], region
+// region uses type_ref, function_ref
+
+public interface IDeclarationSemantic<in TX, in TD, out TR>
+{
+    TR Value(TX ctx);
+    TR Variable(TX ctx);
+    TR Function(TX ctx, IReadOnlyList<TD> parameters, TD ret);
+    TR Parameter(TX ctx);
+    TR Return(TX ctx);
+    TR Structure(TX ctx, IReadOnlyList<TD> members);
+    TR Member(TX ctx);
+}
+
+public interface IDeclaration<TD>
+{
+    TR Evaluate<TX, TR>(IDeclarationSemantic<TX, TD, TR> semantic, TX context);
+}
+
+public sealed record class ShaderDeclaration(
+    string? Name,
+    IShaderType Type,
+    IDeclaration<IShaderSymbol<ShaderDeclaration>> Declaration,
+    IReadOnlyList<IShaderAttribute> Attributes
+)
+{
 }

@@ -2,8 +2,8 @@ using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.CommonInstruction;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.Value;
 using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ValueInstruction;

@@ -1,21 +1,16 @@
-﻿using DualDrill.CLSL.Language.ControlFlow;
+﻿using DotNext.Collections.Generic;
+using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using Lokad.ILPack.IL;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using DotNext.Collections.Generic;
-using DualDrill.CLSL.Frontend.SymbolTable;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.Common;
-using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Frontend;
 

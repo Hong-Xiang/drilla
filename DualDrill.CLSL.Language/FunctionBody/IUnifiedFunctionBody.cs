@@ -1,4 +1,5 @@
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 

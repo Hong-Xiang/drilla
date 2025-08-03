@@ -1,6 +1,6 @@
 using DualDrill.CLSL.Language.Literal;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.Value;
 
 namespace DualDrill.CLSL.Language.ValueInstruction;
 

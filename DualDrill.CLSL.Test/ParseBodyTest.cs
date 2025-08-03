@@ -20,6 +20,12 @@ using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language.CommonInstruction;
 using DualDrill.Common.CodeTextWriter;
 using Xunit.Abstractions;
+using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Memory;
+using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Statement;
+using DualDrill.CLSL.Language.Expression;
+using DualDrill.Common;
 
 namespace DualDrill.CLSL.Test;
 
@@ -180,6 +186,40 @@ public class ParseBodyTest(ITestOutputHelper Output)
             x => x.Should().BeOfType<ReturnResultStackInstruction>()
         );
     }
+
+
+
+    [Fact]
+    public void MinimumLoadArgumentRegion()
+    {
+        var stackBuilder = Statement.Factory<Unit, IExpression<Unit>, string, string>();
+        var shaderBuilder = Statement.Factory<ShaderValue, ExpressionTree<ShaderValue>, string, string>();
+
+        var stackBB = Language.StackInstructionBasicBlock.Create<string, string>(
+            b => [b.Get(default, default, "a")],
+            b => b.ReturnExpr(default, default)
+        );
+
+        // stack based ir
+        // stmt.get unit parameter("a")
+        // terminator.return unit
+
+        // ssa based ir
+        // from v in stmt.get parameter("a“）
+        // terminator.return expr.val(v)
+        var source =
+            Seq.Create(
+                [
+                    stackBuilder.Get(default, default, "a")
+                ],
+                Terminator.B.ReturnExpr<string, Unit>(default)
+            );
+
+        var expected =
+            from x in shaderBuilder.Get(default, ShaderValue.Create(), "a").ToSeq()
+            select Terminator.B.ReturnExpr<string, ShaderValue>(x);
+    }
+
 
     [Fact]
     public void LoadArgPlus1ShouldWork()
