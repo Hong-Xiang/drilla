@@ -16,10 +16,10 @@ namespace DualDrill.CLSL.Language.Declaration;
 [JsonDerivedType(typeof(MemberDeclaration), nameof(MemberDeclaration))]
 [JsonDerivedType(typeof(VariableDeclaration), nameof(VariableDeclaration))]
 [JsonDerivedType(typeof(ValueDeclaration), nameof(ValueDeclaration))]
-[JsonDerivedType(typeof(ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>),
-    nameof(ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>))]
-[JsonDerivedType(typeof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>),
-    nameof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>))]
+//[JsonDerivedType(typeof(ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>),
+//    nameof(ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>))]
+//[JsonDerivedType(typeof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>),
+//    nameof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>))]
 public interface IDeclaration : IShaderAstNode
 {
     string Name { get; }
@@ -54,11 +54,19 @@ public interface IDeclaration<TD>
     TR Evaluate<TX, TR>(IDeclarationSemantic<TX, TD, TR> semantic, TX context);
 }
 
-public sealed record class ShaderDeclaration(
+public interface IShaderDeclaration
+{
+
+}
+
+public sealed record class ShaderDeclaration<T>(
     string? Name,
     IShaderType Type,
-    IDeclaration<IShaderSymbol<ShaderDeclaration>> Declaration,
+    T Declaration,
     IReadOnlyList<IShaderAttribute> Attributes
-)
+) : IShaderDeclaration
+     where T : IDeclaration<IShaderSymbol<IShaderDeclaration>>
 {
+    public TR Evaluate<TR>(IDeclarationSemantic<ShaderDeclaration<T>, IShaderSymbol<IShaderDeclaration>, TR> semantic)
+        => Declaration.Evaluate(semantic, this);
 }

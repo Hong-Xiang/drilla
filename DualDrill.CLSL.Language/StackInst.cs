@@ -11,7 +11,7 @@ public sealed record class StackInstructionBasicBlock<TM, TF>(
 {
 }
 
-public static class StackInstructionBasicBlock
+public abstract class StackInstructionBasicBlock
 {
     public static StackInstructionBasicBlock<TM, TF> Create<TM, TF>(
         Func<IStatementSemantic<Unit, Unit, IExpression<Unit>, TM, TF, IStatement<Unit, IExpression<Unit>, TM, TF>>, IEnumerable<IStatement<Unit, IExpression<Unit>, TM, TF>>> makeStatements,
