@@ -1,12 +1,9 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using System.Collections.Immutable;
-using System.Text.Json.Serialization;
-using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -40,33 +37,86 @@ public interface IDeclaration : IShaderAstNode
 
 public interface IDeclarationSemantic<in TX, in TD, out TR>
 {
-    TR Value(TX ctx);
-    TR Variable(TX ctx);
+    TR Val(TX ctx);
+    TR Var(TX ctx);
     TR Function(TX ctx, IReadOnlyList<TD> parameters, TD ret);
-    TR Parameter(TX ctx);
-    TR Return(TX ctx);
-    TR Structure(TX ctx, IReadOnlyList<TD> members);
-    TR Member(TX ctx);
+    TR Parameter(TX ctx, TD function, int index);
+    TR Return(TX ctx, TD function);
+    TR Struct(TX ctx, IReadOnlyList<TD> members);
+    TR Member(TX ctx, TD structure, int index);
+    TR Module(TX ctx, IReadOnlyList<TD> values, IReadOnlyList<TD> variables, IReadOnlyList<TD> structures, IReadOnlyList<TD> functions);
 }
 
-public interface IDeclaration<TD>
+
+
+public interface IDeclaration<out TD>
 {
     TR Evaluate<TX, TR>(IDeclarationSemantic<TX, TD, TR> semantic, TX context);
 }
 
-public interface IShaderDeclaration
+public sealed record class ValDecl<T>() : IDeclaration<T>
 {
-
+    public TR Evaluate<TX, TR>(IDeclarationSemantic<TX, T, TR> semantic, TX context)
+        => semantic.Val(context);
 }
 
-public sealed record class ShaderDeclaration<T>(
-    string? Name,
-    IShaderType Type,
-    T Declaration,
-    IReadOnlyList<IShaderAttribute> Attributes
-) : IShaderDeclaration
-     where T : IDeclaration<IShaderSymbol<IShaderDeclaration>>
+public sealed record class VarDecl<T>() : IDeclaration<T>
 {
-    public TR Evaluate<TR>(IDeclarationSemantic<ShaderDeclaration<T>, IShaderSymbol<IShaderDeclaration>, TR> semantic)
+    public TR Evaluate<TX, TR>(IDeclarationSemantic<TX, T, TR> semantic, TX context)
+        => semantic.Var(context);
+}
+
+public sealed record class FunctionDecl<T>(IReadOnlyList<T> Parameters, T Return) : IDeclaration<T>
+{
+    public TR Evaluate<TX, TR>(IDeclarationSemantic<TX, T, TR> semantic, TX context)
+        => semantic.Function(context, Parameters, Return);
+}
+
+public sealed record class ParameterDecl<T>(T Function, int Index) : IDeclaration<T>
+{
+    public TR Evaluate<TX, TR>(IDeclarationSemantic<TX, T, TR> semantic, TX context)
+        => semantic.Parameter(context, Function, Index);
+}
+public sealed record class ReturnDecl<T>(T Function) : IDeclaration<T>
+{
+    public TR Evaluate<TX, TR>(IDeclarationSemantic<TX, T, TR> semantic, TX context)
+        => semantic.Return(context, Function);
+}
+
+public sealed record class StructDecl<T>(IReadOnlyList<T> Members) : IDeclaration<T>
+{
+    public TR Evaluate<TX, TR>(IDeclarationSemantic<TX, T, TR> semantic, TX context)
+        => semantic.Struct(context, Members);
+}
+
+public sealed record class MemberDecl<T>(T Structure, int Index) : IDeclaration<T>
+{
+    public TR Evaluate<TX, TR>(IDeclarationSemantic<TX, T, TR> semantic, TX context)
+        => semantic.Member(context, Structure, Index);
+}
+
+public sealed record class ModuleDecl<T>(IReadOnlyList<T> Values, IReadOnlyList<T> Variables, IReadOnlyList<T> Structures, IReadOnlyList<T> Functions) : IDeclaration<T>
+{
+    public TR Evaluate<TX, TR>(IDeclarationSemantic<TX, T, TR> semantic, TX context)
+        => semantic.Module(context, Values, Variables, Structures, Functions);
+}
+
+public sealed record class DeclarationData<T>(
+    string? Name,
+    IShaderSymbol<IShaderType> Type,
+    IDeclaration<T> Declaration,
+    IReadOnlyList<IShaderAttribute> Attributes
+)
+{
+}
+
+public sealed record class ShaderDecl(
+    string? Name,
+    IShaderSymbol<IShaderType> Type,
+    IDeclaration<IShaderSymbol> Declaration,
+    IReadOnlyList<IShaderAttribute> Attributes
+)
+{
+    public TR Evaluate<TR>(IDeclarationSemantic<ShaderDecl, IShaderSymbol, TR> semantic)
         => Declaration.Evaluate(semantic, this);
 }

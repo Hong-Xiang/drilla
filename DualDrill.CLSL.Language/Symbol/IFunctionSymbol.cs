@@ -1,17 +1,13 @@
-using System.Reflection;
+using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.Declaration;
+using System.Reflection;
 
 namespace DualDrill.CLSL.Language.Symbol;
 
-public interface IFunctionSymbol
-    : IShaderSymbol<FunctionDeclaration>
-{
-    FunctionDeclaration? IShaderSymbol<FunctionDeclaration>.Lookup(ISymbolTableView table)
-        => table[this];
-}
 
-public sealed record class CSharpMethodFunctionSymbol(
-    MethodBase Method
-) : IFunctionSymbol
+public sealed record class CSharpMethodFunctionSymbol(MethodBase Method)
+    : IShaderSymbol<FunctionDecl<IShaderSymbol<ShaderDecl>>>
 {
+    public FunctionDecl<IShaderSymbol<ShaderDecl>>? Lookup(ISymbolTableView2 table)
+        => table.GetDeclaration(this);
 }

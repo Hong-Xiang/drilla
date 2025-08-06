@@ -1,18 +1,12 @@
+using DualDrill.CLSL.Frontend.SymbolTable;
+
 namespace DualDrill.CLSL.Language.Symbol;
 
 public interface IShaderSymbol
 {
-    //string? Name { get; }
+    // string? Name { get; }
 }
 
-
-public interface IShaderSymbol<out TResult> : IShaderSymbol
+public interface IShaderSymbol<out T> : IShaderSymbol
 {
-    TResult? Lookup(ISymbolTableView table);
-}
-
-public sealed record class SimpleNamedSymbol<TTarget>(string Name, TTarget Value) : IShaderSymbol<TTarget>
-{
-    public TTarget? Lookup(ISymbolTableView table)
-        => Value;
 }
