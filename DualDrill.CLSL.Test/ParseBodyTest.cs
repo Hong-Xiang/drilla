@@ -51,7 +51,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
     }
 
 
-    IUnifiedFunctionBody<StackInstructionBasicBlock> ParseMethod2(FunctionDeclaration f, MethodBase m)
+    IUnifiedFunctionBody<Language.ControlFlow.StackInstructionBasicBlock> ParseMethod2(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
         context.AddFunctionDefinition(Symbol.Function(m), f);

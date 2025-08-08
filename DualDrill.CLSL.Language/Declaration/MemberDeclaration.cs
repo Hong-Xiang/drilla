@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 
@@ -16,3 +17,9 @@ public sealed class MemberDeclaration(
     public IShaderType Type { get; } = Type;
     public override string ToString() => $"member {Name} : {Type.Name}";
 }
+
+public interface IMemberSymbol : ISymbol
+{
+    IShaderType Type { get; }
+}
+

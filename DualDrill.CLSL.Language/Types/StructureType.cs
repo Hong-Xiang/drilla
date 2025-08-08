@@ -33,5 +33,5 @@ public sealed class StructureType
     public IPtrType GetPtrType() => PtrType.Value;
 
     public FunctionDeclaration ZeroConstructor { get; }
-    public static StructureType Instance => throw new NotImplementedException();
+    public static StructureType Instance => throw new NotSupportedException();
 }

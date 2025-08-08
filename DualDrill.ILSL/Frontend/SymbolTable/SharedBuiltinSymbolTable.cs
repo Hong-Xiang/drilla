@@ -149,7 +149,7 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
     // all entities in shared builtin context can only be directly refrenced
     // declarations is not allowed
     public VariableDeclaration? this[IVariableSymbol symbol] => null;
-    public ParameterDeclaration? this[IParameterSymbol parameter] => null;
+    public ParameterDeclaration? this[SymbolTable.IParameterSymbol parameter] => null;
 
     public MemberDeclaration? this[FieldInfo method] => null;
 
@@ -160,7 +160,7 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
     public IEnumerable<FunctionDeclaration> FunctionDeclarations => [];
 
 
-    public FunctionDeclaration? this[IFunctionSymbol symbol] => symbol switch
+    public FunctionDeclaration? this[SymbolTable.IFunctionSymbol symbol] => symbol switch
     {
         CSharpMethodFunctionSymbol { Method: var m } => RuntimeMethods.TryGetValue(m, out var f) ? f : null,
         _ => throw new NotImplementedException()

@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -7,7 +8,8 @@ using System.Diagnostics;
 namespace DualDrill.CLSL.Language.Declaration;
 
 [DebuggerDisplay("{DebugDisplay()}")]
-public sealed class FunctionDeclaration : IDeclaration
+public sealed class FunctionDeclaration
+    : IDeclaration
 {
     public FunctionDeclaration(string name,
         ImmutableArray<ParameterDeclaration> parameters,
@@ -41,4 +43,31 @@ public sealed class FunctionDeclaration : IDeclaration
 
 public sealed record class FunctionReturn(IShaderType Type, ImmutableHashSet<IShaderAttribute> Attributes)
 {
+}
+
+public interface IFunctionSymbol : ISymbol
+{
+    ImmutableArray<IParameterSymbol> Parameters { get; }
+    IFunctionReturnSymbol Return { get; }
+    bool IsInstanceMethod { get; }
+    bool IsPure { get; }
+}
+
+public interface IFunctionBodySymbol : ISymbol
+{
+    ImmutableArray<ILocalVariableSymbol> LocalVariables { get; }
+    ImmutableArray<Label> Labels { get; }
+}
+
+public interface IFunctionDefinitionSymbol<TBody> : IFunctionSymbol
+    where TBody : IFunctionBodySymbol
+{
+    TBody Body { get; }
+}
+
+public interface IFunctionReturnSymbol
+{
+    IFunctionSymbol Function { get; }
+    bool IsVoid { get; }
+    IShaderType Type { get; }
 }

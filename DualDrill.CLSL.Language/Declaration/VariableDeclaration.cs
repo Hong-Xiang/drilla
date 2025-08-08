@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 
@@ -32,4 +33,14 @@ public sealed record class LocalVariableDeclaration(
     IReadOnlyList<IShaderAttribute> Attributes
 )
 {
+}
+
+public interface IModuleVariableSymbol : ISymbol
+{
+    IShaderType Type { get; }
+}
+
+public interface ILocalVariableSymbol : ISymbol
+{
+    IShaderType Type { get; }
 }

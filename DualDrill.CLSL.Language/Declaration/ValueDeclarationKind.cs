@@ -7,3 +7,6 @@ public enum ValueDeclarationKind
     Let,
     FormalParameter
 }
+
+public interface IConstValueSymbol { }
+public interface IOverrideValueSymbol { }

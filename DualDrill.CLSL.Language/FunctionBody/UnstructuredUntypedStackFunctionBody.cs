@@ -9,7 +9,6 @@ using System.Collections.Immutable;
 namespace DualDrill.CLSL.Language.FunctionBody;
 
 public sealed record class UnstructuredUntypedStackFunctionBody(
-    ISymbolTableView SymbolTable,
     Label Entry,
     IReadOnlyDictionary<Label, Seq<
         IStatement<
@@ -22,7 +21,6 @@ public sealed record class UnstructuredUntypedStackFunctionBody(
 }
 
 public sealed record class UnstructuredTypedStackFunctionBody(
-    ISymbolTableView SymbolTable,
     Label Entry,
     IReadOnlyDictionary<Label, UnstructuredTypedStackFunctionBody.Instruction> BasicBlocks)
 {

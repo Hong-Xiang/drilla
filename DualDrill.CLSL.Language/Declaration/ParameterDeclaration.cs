@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 
@@ -21,4 +22,11 @@ public sealed class ParameterDeclaration : IDeclaration, IVariableIdentifierSymb
     public string Name { get; }
     public IShaderType Type { get; }
     public ImmutableHashSet<IShaderAttribute> Attributes { get; }
+}
+
+public interface IParameterSymbol : ISymbol
+{
+    IFunctionSymbol Function { get; }
+    int Index { get; }
+    bool IsThis { get; }
 }

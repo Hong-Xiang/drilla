@@ -1,8 +1,9 @@
 ﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -10,6 +11,21 @@ public interface IShaderModuleDeclaration
 {
     ImmutableArray<IDeclaration> Declarations { get; init; }
 }
+
+public interface IShaderModuleSymbol : ISymbol
+{
+}
+
+public interface IModuleSymbol<TBodySymbol> : ISymbol
+    where TBodySymbol : IFunctionBodySymbol
+{
+    //ImmutableArray<IModuleVariableSymbol> ModuleVariables { get; }
+    ImmutableArray<IStructureSymbol> Structures { get; }
+    ImmutableArray<IFunctionDefinitionSymbol<TBodySymbol>> Functions { get; }
+    ImmutableArray<IFunctionDefinitionSymbol<TBodySymbol>> EntryFunctions { get; }
+}
+
+
 
 public sealed record class ShaderModuleDeclaration<TBody>(
     ImmutableArray<IDeclaration> Declarations,

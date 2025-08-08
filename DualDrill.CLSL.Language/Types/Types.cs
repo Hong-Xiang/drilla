@@ -93,7 +93,6 @@ public interface IScalarType<TSelf> : IScalarType, ISingletonShaderType<TSelf>
     IConversionOperation IScalarType.GetConversionToOperation<TTarget>() =>
         ScalarConversionOperation<TSelf, TTarget>.Instance;
 
-
     IVecType IScalarType.GetVecType<TRank>() => VecType<TRank, TSelf>.Instance;
 }
 

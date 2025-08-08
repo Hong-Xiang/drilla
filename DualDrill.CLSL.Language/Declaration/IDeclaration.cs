@@ -101,22 +101,14 @@ public sealed record class ModuleDecl<T>(IReadOnlyList<T> Values, IReadOnlyList<
         => semantic.Module(context, Values, Variables, Structures, Functions);
 }
 
-public sealed record class DeclarationData<T>(
-    string? Name,
-    IShaderSymbol<IShaderType> Type,
-    IDeclaration<T> Declaration,
-    IReadOnlyList<IShaderAttribute> Attributes
-)
-{
-}
 
 public sealed record class ShaderDecl(
     string? Name,
     IShaderSymbol<IShaderType> Type,
-    IDeclaration<IShaderSymbol> Declaration,
+    IDeclaration<Symbol.ISymbol> Declaration,
     IReadOnlyList<IShaderAttribute> Attributes
 )
 {
-    public TR Evaluate<TR>(IDeclarationSemantic<ShaderDecl, IShaderSymbol, TR> semantic)
+    public TR Evaluate<TR>(IDeclarationSemantic<ShaderDecl, Symbol.ISymbol, TR> semantic)
         => Declaration.Evaluate(semantic, this);
 }
