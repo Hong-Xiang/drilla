@@ -32,7 +32,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     }
 
     [Fact]
-    public void SimpleSingleSelfLoopBasicBlockShouldWork2()
+    public void SimpleSingleSelfLoopBasicBlockShouldWork()
     {
         // === cfg ==
         // e <-+
@@ -58,7 +58,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
 
 
     [Fact]
-    public void MinimumIfThenElseShouldWork2()
+    public void MinimumIfThenElseShouldWork()
     {
         // === cfg ===
         // e
@@ -92,7 +92,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     }
 
     [Fact]
-    public void MinimumIfThenElseMergeShouldWork2()
+    public void MinimumIfThenElseMergeShouldWork()
     {
         // === cfg ===
         //  e
@@ -137,7 +137,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
 
 
     [Fact]
-    public void SimpleLoopShouldWork2()
+    public void SimpleLoopShouldWork()
     {
         // === cfg ===
         // b0  (loop init)--false-+
@@ -189,7 +189,7 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
     }
 
     [Fact]
-    public void MinimumConditionalLoopShouldWork2()
+    public void MinimumConditionalLoopShouldWork()
     {
         // === cfg ===
         //  a <-+
