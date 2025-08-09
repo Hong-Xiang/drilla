@@ -16,40 +16,40 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 
         throw new NotImplementedException();
 
-        // cfg = cfg.EliminateBlockValueTransfer();
-        // Output.WriteLine("=== Remove Outputs ===");
-        // Output.WriteLine(await cfg.Dump());
-        // Output.WriteLine(sep);
-        //
-        // var cfgOp = cfg.BasicBlockTransformStatementsToInstructions()
-        //                .ReplaceOperationCallsToOperationInstruction();
-        // Output.WriteLine("=== Parsed(Op) ===");
-        // Output.WriteLine(await cfgOp.Dump());
-        // Output.WriteLine(sep);
-        //
-        // var scf = cfgOp.ToStructuredControlFlowStackModel();
-        // Output.WriteLine("=== SCF ===");
-        // Output.WriteLine(await scf.Dump());
-        // Output.WriteLine(sep);
-        // scf = scf.Simplify();
-        // Output.WriteLine("=== SCF (Simplified) ===");
-        // Output.WriteLine(await scf.Dump());
-        // Output.WriteLine(sep);
-        // var ast = scf.ToAbstractSyntaxTreeFunctionBody();
-        // Output.WriteLine("=== AST ===");
-        // Output.WriteLine(await ast.Dump());
-        //
-        // Output.WriteLine(sep);
-        //
-        // var astS = ast.Simplify();
-        // Output.WriteLine("=== AST(Simplified) ===");
-        // Output.WriteLine(await astS.Dump());
-        // Output.WriteLine(sep);
-        //
-        // var code = await astS.EmitWgslCode();
-        // Output.WriteLine("=== WGSL ===");
-        // Output.WriteLine(code);
-        // Output.WriteLine(sep);
+        //cfg = cfg.EliminateBlockValueTransfer();
+        //Output.WriteLine("=== Remove Outputs ===");
+        //Output.WriteLine(await cfg.Dump());
+        //Output.WriteLine(sep);
+
+        //var cfgOp = cfg.BasicBlockTransformStatementsToInstructions()
+        //               .ReplaceOperationCallsToOperationInstruction();
+        //Output.WriteLine("=== Parsed(Op) ===");
+        //Output.WriteLine(await cfgOp.Dump());
+        //Output.WriteLine(sep);
+
+        //var scf = cfgOp.ToStructuredControlFlowStackModel();
+        //Output.WriteLine("=== SCF ===");
+        //Output.WriteLine(await scf.Dump());
+        //Output.WriteLine(sep);
+        //scf = scf.Simplify();
+        //Output.WriteLine("=== SCF (Simplified) ===");
+        //Output.WriteLine(await scf.Dump());
+        //Output.WriteLine(sep);
+        //var ast = scf.ToAbstractSyntaxTreeFunctionBody();
+        //Output.WriteLine("=== AST ===");
+        //Output.WriteLine(await ast.Dump());
+
+        //Output.WriteLine(sep);
+
+        //var astS = ast.Simplify();
+        //Output.WriteLine("=== AST(Simplified) ===");
+        //Output.WriteLine(await astS.Dump());
+        //Output.WriteLine(sep);
+
+        //var code = await astS.EmitWgslCode();
+        //Output.WriteLine("=== WGSL ===");
+        //Output.WriteLine(code);
+        //Output.WriteLine(sep);
     }
 
     [Fact]

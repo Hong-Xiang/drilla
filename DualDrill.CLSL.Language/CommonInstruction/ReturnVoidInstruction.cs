@@ -1,8 +1,8 @@
 using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.ValueInstruction;
+using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.CommonInstruction;
 
@@ -19,4 +19,7 @@ public sealed record class ReturnVoidInstruction() : ITermintorCommonInstruction
         => Successor.Terminate();
 
     public override string ToString() => "return";
+
+    public ITerminator<Label, Unit> ToTerminator()
+        => Terminator.B.ReturnVoid<Label, Unit>();
 }

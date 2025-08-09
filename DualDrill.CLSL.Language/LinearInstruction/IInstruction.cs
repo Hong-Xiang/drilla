@@ -49,6 +49,7 @@ public interface IOperationStackInstruction : IInstruction
 public interface ITerminatorStackInstruction : IInstruction
 {
     ISuccessor ToSuccessor();
+    ITerminator<Label, Unit> ToTerminator();
 }
 
 public sealed record class BrInstruction(Label Target) : ITerminatorStackInstruction
@@ -73,6 +74,9 @@ public sealed record class BrInstruction(Label Target) : ITerminatorStackInstruc
     {
         throw new NotImplementedException();
     }
+
+    public ITerminator<Label, Unit> ToTerminator()
+        => Terminator.B.Br<Label, Unit>(Target);
 }
 
 public sealed record class BrIfInstruction(Label TrueTarget, Label FalseTarget) : ITerminatorStackInstruction
@@ -97,6 +101,9 @@ public sealed record class BrIfInstruction(Label TrueTarget, Label FalseTarget) 
     {
         throw new NotImplementedException();
     }
+
+    public ITerminator<Label, Unit> ToTerminator()
+        => Terminator.B.BrIf<Label, Unit>(default, TrueTarget, FalseTarget);
 }
 
 public sealed record class ReturnResultStackInstruction() : ITerminatorStackInstruction
@@ -115,6 +122,10 @@ public sealed record class ReturnResultStackInstruction() : ITerminatorStackInst
         => Successor.Terminate();
 
     public override string ToString() => "return";
+
+    public ITerminator<Label, Unit> ToTerminator()
+        => Terminator.B.ReturnExpr<Label, Unit>(default);
+
     public IEnumerable<Label> ReferencedLabels => [];
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 }

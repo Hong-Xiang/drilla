@@ -20,18 +20,10 @@ public interface IStatement<out TV, out TE, out TM, out TF>
     public TR Evaluate<TX, TR>(IStatementSemantic<TX, TV, TE, TM, TF, TR> semantic, TX context);
 }
 
-public sealed record class GetStatement<TV, TE, TM, TF>(TV Result, TM Source) : IStatement<TV, TE, TM, TF>
-{
-    public TR Evaluate<TX, TR>(IStatementSemantic<TX, TV, TE, TM, TF, TR> semantic, TX context)
-        => semantic.Get(context, Result, Source);
-}
-
 public static class Statement
 {
     public static IStatementSemantic<Unit, TV, TE, TM, TF, IStatement<TV, TE, TM, TF>> Factory<TV, TE, TM, TF>()
-    {
-        throw new NotImplementedException();
-    }
+        => new StatementFactorySemantic<TV, TE, TM, TF>();
 
     public static Seq<IStatement<TV, TE, TM, TF>, TV> ToSeq<TV, TE, TM, TF>(
         this IStatement<TV, TE, TM, TF> stmt

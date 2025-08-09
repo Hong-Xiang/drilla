@@ -314,7 +314,10 @@ public sealed record class RuntimeReflectionParser(
         var model = Context.GetFunctionDefinition(f);
         return ParseMethodBody2(f, model);
     }
-
+    public FunctionBody3 ParseMethodBody3(FunctionDeclaration f)
+    {
+        return ParseMethodBody2(f).ToNestedRegionInstructionFunctionBody();
+    }
 
     VariableDeclaration ParseLocalVariable(LocalVariableInfo info, ISymbolTable methodTable)
     {
@@ -428,7 +431,7 @@ public sealed record class RuntimeReflectionParser(
 
                 var bb = new StackInstructionBasicBlock(
                     l,
-                    [..visitor.Instructions],
+                    [.. visitor.Instructions],
                     BasicBlockInputs[l],
                     BasicBlockOutputs[l]);
 

@@ -1,26 +1,24 @@
 ﻿using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Frontend;
+using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
+using DualDrill.Common.Nat;
 using System.CodeDom.Compiler;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
-using DualDrill.CLSL.Frontend.SymbolTable;
-using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using ICSharpCode.Decompiler.CSharp.Syntax;
-using DualDrill.Mathematics;
-using DualDrill.CLSL.Language.Types;
-using DualDrill.Common.Nat;
-using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL;
 

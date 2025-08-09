@@ -1,10 +1,9 @@
-﻿using System.CodeDom.Compiler;
-using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.CodeTextWriter;
+using System.CodeDom.Compiler;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 

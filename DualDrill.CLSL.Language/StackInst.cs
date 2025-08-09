@@ -5,15 +5,15 @@ using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language;
 
-public sealed record class StackInstructionBasicBlock<TM, TF>(
+public sealed record class StackInstructionBasicBlockBody<TM, TF>(
     Seq<IStatement<Unit, IExpression<Unit>, TM, TF>, ITerminator<Label, Unit>> Body
 )
 {
 }
 
-public abstract class StackInstructionBasicBlock
+public abstract class StackInstructionBasicBlockBody
 {
-    public static StackInstructionBasicBlock<TM, TF> Create<TM, TF>(
+    public static StackInstructionBasicBlockBody<TM, TF> Create<TM, TF>(
         Func<IStatementSemantic<Unit, Unit, IExpression<Unit>, TM, TF, IStatement<Unit, IExpression<Unit>, TM, TF>>, IEnumerable<IStatement<Unit, IExpression<Unit>, TM, TF>>> makeStatements,
         Func<ITerminatorSemantic<Unit, Label, Unit, ITerminator<Label, Unit>>,
              ITerminator<Label, Unit>> makeTerminator

@@ -195,7 +195,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var stackBuilder = Statement.Factory<Unit, IExpression<Unit>, string, string>();
         var shaderBuilder = Statement.Factory<ShaderValue, ExpressionTree<ShaderValue>, string, string>();
 
-        var stackBB = Language.StackInstructionBasicBlock.Create<string, string>(
+        var stackBB = Language.StackInstructionBasicBlockBody.Create<string, string>(
             b => [b.Get(default, default, "a")],
             b => b.ReturnExpr(default, default)
         );
@@ -307,6 +307,14 @@ public class ParseBodyTest(ITestOutputHelper Output)
              });
     }
 
+    void DumpNew(IUnifiedFunctionBody<StackInstructionBasicBlock> fbody)
+    {
+        var result = fbody.ToNestedRegionInstructionFunctionBody();
+        var sw = new StringWriter();
+        var tw = new IndentedTextWriter(sw);
+        result.Dump(tw);
+        Output.WriteLine(sw.ToString());
+    }
 
     [Fact]
     public void BasicMethodInvocationParseShouldWork()
@@ -329,6 +337,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var parser = new RuntimeReflectionParser(context);
         var result = parser.ParseMethodBody2(fCall);
         Output.WriteLine(result.Dump());
+        DumpNew(result);
         var entry = result[result.Entry];
 
         entry.Elements.Should().SatisfyRespectively(

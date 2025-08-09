@@ -144,15 +144,15 @@ public static partial class ShaderModuleExtension
         return DoTree(controlFlowGraph.EntryLabel);
     }
 
-    public static RegionDefinition<Label, TB> ToShaderIR<TP, TB>(
+    public static RegionTree<Label, TB> ToShaderIR<TP, TB>(
         this ControlFlowGraph<Unit> cfg,
-        IReadOnlyDictionary<Label, RegionDefinition<Label, TB>> regions)
+        IReadOnlyDictionary<Label, RegionTree<Label, TB>> regions)
     {
         // TODO: argument validation
 
         var dt = DominatorTree.CreateFromControlFlowGraph(cfg);
 
-        RegionDefinition<Label, TB> ToRegion(Label l)
+        RegionTree<Label, TB> ToRegion(Label l)
         {
             var children = dt.GetChildren(l);
             var childrenExpressions = children.Select(ToRegion).ToImmutableArray();

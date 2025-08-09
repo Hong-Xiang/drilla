@@ -1,20 +1,15 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.Types;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
-using DualDrill.CLSL.Language.Symbol;
+using System.Collections.Immutable;
+using System.Reflection;
 
 namespace DualDrill.CLSL.Frontend;
 

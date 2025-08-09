@@ -30,6 +30,7 @@ public interface ISuccessor<T>
 
 public interface ISuccessor
     : ITextDumpable<ILocalDeclarationContext>
+    , ISuccessor<Label>
 {
     void Traverse(Action<Label> action);
     bool IsCompatible(ITerminatorStackInstruction terminator);
@@ -55,6 +56,9 @@ public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
     {
         writer.WriteLine($"br -> {context.LabelName(Target)}");
     }
+
+    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context)
+        => semantic.Unconditional(context, Target);
 }
 
 public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTarget) : ISuccessor
@@ -78,6 +82,9 @@ public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTar
     {
         writer.WriteLine($"br_if -> t: {context.LabelName(TrueTarget)} f: {context.LabelName(FalseTarget)}");
     }
+
+    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context)
+        => semantic.Conditional(context, TrueTarget, FalseTarget);
 }
 
 public sealed record class TerminateSuccessor() : ISuccessor
@@ -98,6 +105,9 @@ public sealed record class TerminateSuccessor() : ISuccessor
     {
         writer.WriteLine("return");
     }
+
+    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context)
+        => semantic.Terminate(context);
 }
 
 public static class Successor

@@ -1,17 +1,11 @@
-﻿using System.Collections.Frozen;
-using DualDrill.CLSL.Language.Literal;
-using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.Types;
-using DualDrill.Common.Nat;
+﻿using DualDrill.CLSL.Compiler;
+using DualDrill.CLSL.Language.ControlFlow;
 using Lokad.ILPack.IL;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
-using DualDrill.CLSL.Compiler;
-using DualDrill.CLSL.Frontend.SymbolTable;
-using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.Common;
 using Label = DualDrill.CLSL.Language.Symbol.Label;
 
 namespace DualDrill.CLSL.Frontend;

@@ -32,7 +32,7 @@ public interface IStackInstructionTraverser
     record struct Context(
         LocalDeclarationContext DeclarationContext,
         ImmutableStack<IStructuredControlFlowRegion> Regions,
-        StackInstructionBasicBlock BasicBlock,
+        StackInstructionBasicBlockBody BasicBlock,
         int Index
     )
     {
