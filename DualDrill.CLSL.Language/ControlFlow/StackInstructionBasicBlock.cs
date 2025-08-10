@@ -9,7 +9,8 @@ using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public sealed class StackInstructionBasicBlock : IBasicBlock2<IInstruction, IShaderType, IShaderType>
+public sealed class StackInstructionBasicBlock
+    : IBasicBlock2<IInstruction, IShaderType, IShaderType>
 {
     public StackInstructionBasicBlock(Label label,
         ImmutableArray<IInstruction> elements,

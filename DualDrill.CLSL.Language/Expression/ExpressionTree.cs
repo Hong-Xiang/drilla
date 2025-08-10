@@ -35,13 +35,6 @@ public static class ExpressionTreeExtension
 
 public static class SyntaxFactory<TValue>
 {
-    public static ExpressionTree<TValue> ValueExpr(TValue value)
-        => new LeafExpression<TValue>(value);
-
-    public static ExpressionTree<TValue> BinaryScalarExpr<TOperation>(ExpressionTree<TValue> l, ExpressionTree<TValue> r)
-        where TOperation : IBinaryExpressionOperation<TOperation>
-        => new BinaryExpression<TOperation, ExpressionTree<TValue>>(l, r).AsNode();
-
     public static ExpressionTree<TValue> LiteralExpr<TLiteral>(TLiteral literal)
         where TLiteral : ILiteral
         => new LiteralExpression<TLiteral, ExpressionTree<TValue>>(literal).AsNode();

@@ -8,7 +8,6 @@ using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
@@ -37,7 +36,6 @@ public interface IInstruction : IBasicBlockElement
         }
     }
 
-    IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack);
     IEnumerable<IValue> IDeclarationUser.ReferencedValues => [];
 }
 
@@ -70,10 +68,6 @@ public sealed record class BrInstruction(Label Target) : ITerminatorStackInstruc
         writer.WriteLine($"br {context.LabelName(Target)}");
     }
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        throw new NotImplementedException();
-    }
 
     public ITerminator<Label, Unit> ToTerminator()
         => Terminator.B.Br<Label, Unit>(Target);
@@ -97,10 +91,6 @@ public sealed record class BrIfInstruction(Label TrueTarget, Label FalseTarget) 
         writer.WriteLine($"br_if t: {context.LabelName(TrueTarget)}, f: {context.LabelName(FalseTarget)}");
     }
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        throw new NotImplementedException();
-    }
 
     public ITerminator<Label, Unit> ToTerminator()
         => Terminator.B.BrIf<Label, Unit>(default, TrueTarget, FalseTarget);
@@ -112,11 +102,6 @@ public sealed record class ReturnResultStackInstruction() : ITerminatorStackInst
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        var v = stack.Pop();
-        return [v.GetReturnResultValueInstruction()];
-    }
 
     public ISuccessor ToSuccessor()
         => Successor.Terminate();
@@ -140,11 +125,6 @@ public sealed record class NopInstruction
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        throw new NotImplementedException();
-    }
-
     public override string ToString() => "nop";
     public IEnumerable<Label> ReferencedLabels => [];
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
@@ -160,10 +140,6 @@ public sealed record class CallInstruction(FunctionDeclaration Callee) : IInstru
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        throw new NotImplementedException();
-    }
 
     public override string ToString() => $"call @{Callee}";
 }
@@ -180,10 +156,6 @@ public sealed record class LoadSymbolValueInstruction<TTarget>(TTarget Target) :
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        throw new NotImplementedException();
-    }
 
     public override string ToString()
     {
@@ -203,10 +175,6 @@ public sealed record class LoadSymbolAddressInstruction<TTarget>(TTarget Target)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        throw new NotImplementedException();
-    }
 
     public override string ToString()
     {
@@ -226,10 +194,6 @@ public sealed record class StoreSymbolInstruction<TTarget>(TTarget Target) : IIn
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        throw new NotImplementedException();
-    }
 
     public override string ToString()
     {
@@ -248,13 +212,6 @@ public sealed record class DupInstruction : IInstruction, ISingleton<DupInstruct
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
 
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        var v = stack.Pop();
-        stack.Push(v);
-        stack.Push(v);
-        return [];
-    }
 
     public override string ToString() => "dup";
 }
@@ -269,12 +226,6 @@ public sealed record class DropInstruction : IInstruction, ISingleton<DropInstru
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
-
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        _ = stack.Pop();
-        return [];
-    }
 
     public override string ToString() => "drop";
 }

@@ -33,7 +33,8 @@ public static class ShaderModuleExtension
     {
         var context = CompilationContext.Create();
         var parser = new RuntimeReflectionParser(context);
-        return parser.ParseShaderModule(shader);
+        //return parser.ParseShaderModule(shader);
+        throw new NotImplementedException();
     }
 
     public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> EliminateBlockValueTransfer(
@@ -216,7 +217,10 @@ public static class ShaderModuleExtension
         this ISharpShader shader
     )
     {
-        // var module = shader.Parse()
+        var module = shader.Parse();
+
+
+        ShaderModuleDeclaration<FunctionBody<CompoundStatement>> ast = null;
         // var module = shader.Parse()
         //                    .EliminateBlockValueTransfer()
         //                    .BasicBlockTransformStatementsToInstructions()
@@ -225,10 +229,10 @@ public static class ShaderModuleExtension
         //                    .Simplify()
         //                    .ToAbstractSyntaxTreeFunctionBody()
         //                    .Simplify();
-        throw new NotImplementedException();
 
-        // var code = await module.EmitWgslCode();
-        // return code;
+        ast = ast.Simplify();
+        var code = await ast.EmitWgslCode();
+        return code;
     }
 
     static void Dump(this IInstruction instruction, Func<Label, string> labelName,

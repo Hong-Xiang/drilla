@@ -1,8 +1,7 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.ValueInstruction;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -19,17 +18,8 @@ public sealed class VectorSwizzleGetExpressionOperation<TPattern, TElement>
     public override string ToString() => Name;
     public static VectorSwizzleGetExpressionOperation<TPattern, TElement> Instance { get; } = new();
     public string Name => $"get.{TPattern.Instance.Name}.{TElement.Instance.Name}";
-    public IShaderType SourceType => TPattern.Instance.SourceType<TElement>().GetPtrType();
-    public IShaderType ResultType => TPattern.Instance.TargetType<TElement>();
-    public IExpressionValueInstruction CreateValueInstruction(IValue operand)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IExpressionValueInstruction CreateValueInstruction(IOperationValue result, IValue operand)
-    {
-        throw new NotImplementedException();
-    }
+    public IShaderType SourceType => TPattern.Instance.CalleeVecType<TElement>().GetPtrType();
+    public IShaderType ResultType => TPattern.Instance.ValueVecType<TElement>();
 
     public IInstruction Instruction =>
         UnaryExpressionOperationInstruction<VectorSwizzleGetExpressionOperation<TPattern, TElement>>.Instance;
@@ -37,4 +27,17 @@ public sealed class VectorSwizzleGetExpressionOperation<TPattern, TElement>
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<VectorSwizzleGetExpressionOperation<TPattern, TElement>> expr)
         => visitor.VisitVectorSwizzleGetExpression<TPattern, TElement>(expr);
+
+    sealed class UnwrappPattern<TX, TR>(
+        IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context
+    ) : Swizzle.IPatternSemantic<TR>
+    {
+        public TR Pattern<TRank, TSP>()
+            where TRank : IRank<TRank>
+            where TSP : Swizzle.ISizedPattern<TRank, TSP>
+            => semantic.VectorSwizzleGet<TRank, TElement, TSP>(context);
+    }
+
+    public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context)
+        => TPattern.Instance.Evaluate(new UnwrappPattern<TX, TR>(semantic, context));
 }

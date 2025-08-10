@@ -1,4 +1,5 @@
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 
 namespace DualDrill.CLSL.Language.Types;

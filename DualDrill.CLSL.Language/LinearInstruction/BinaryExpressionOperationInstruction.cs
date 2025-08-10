@@ -1,7 +1,6 @@
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Symbol;
-using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.LinearInstruction;
@@ -20,15 +19,6 @@ public sealed record class BinaryExpressionOperationInstruction<TOperation>
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => visitor.Visit(this);
-
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-    {
-        var r = stack.Pop();
-        var l = stack.Pop();
-        var result = TOperation.Instance.CreateValueInstruction(l, r);
-        stack.Push(result.ResultValue);
-        return [result];
-    }
 
     public override string ToString() => TOperation.Instance.Name;
 }

@@ -31,7 +31,8 @@ public sealed class CLSLCompiler() : ICLSLCompiler
     public ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> Reflect(ISharpShader shader)
     {
         var parser = new RuntimeReflectionParser(Context);
-        return parser.ParseShaderModule(shader);
+        var module = parser.ParseShaderModule(shader);
+        throw new NotImplementedException();
     }
 
     public ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> Compile(ISharpShader shader)

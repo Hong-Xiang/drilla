@@ -1,8 +1,10 @@
-﻿using DualDrill.Common;
+﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Statement;
 
-sealed class StatementFactorySemantic<TV, TE, TM, TF> : IStatementSemantic<Unit, TV, TE, TM, TF, IStatement<TV, TE, TM, TF>>
+sealed class StatementFactorySemantic<TV, TE, TM, TF>
+    : IStatementSemantic<Unit, TV, TE, TM, TF, IStatement<TV, TE, TM, TF>>
 {
     public IStatement<TV, TE, TM, TF> Call(Unit context, TV result, TF f, IReadOnlyList<TE> arguments)
         => new CallStatement<TV, TE, TM, TF>(result, f, arguments);
@@ -26,5 +28,8 @@ sealed class StatementFactorySemantic<TV, TE, TM, TF> : IStatementSemantic<Unit,
 
     public IStatement<TV, TE, TM, TF> Set(Unit context, TM target, TV source)
         => new SetStatement<TV, TE, TM, TF>(target, source);
+
+    public IStatement<TV, TE, TM, TF> SetVecSwizzle(Unit context, IVectorSwizzleSetOperation operation, TV target, TV value)
+        => new SetVectorSwizzleStatement<TV, TE, TM, TF>(operation, target, value);
 }
 

@@ -8,20 +8,18 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Frozen;
-using System.Collections.Immutable;
 using System.Diagnostics;
-using DualDrill.CLSL.Language.CommonInstruction;
-using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Compiler;
 
 using IScfElement = IStructuredControlFlowElement;
-using ScfElements = StructuredControlFlowElementSequence;
 using IScfLabelRegion = ILabeledStructuredControlFlowRegion;
+using ScfElements = StructuredControlFlowElementSequence;
 
 public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     : IStructuredStackInstructionVisitor<Unit>

@@ -1,9 +1,7 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.ValueInstruction;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -14,8 +12,6 @@ public interface IBinaryExpressionOperation : IOperation
     public IShaderType ResultType { get; }
     public IExpression CreateExpression(IExpression l, IExpression r);
     public IBinaryOp BinaryOp { get; }
-
-    public IExpressionValueInstruction CreateValueInstruction(IValue l, IValue r);
 }
 
 public interface IBinaryExpressionOperation<TSelf>
@@ -41,24 +37,6 @@ public interface IBinaryExpressionOperation<TSelf, TLeftType, TRightType, TResul
 
     IExpression IBinaryExpressionOperation.CreateExpression(IExpression l, IExpression r) =>
         new BinaryOperationExpression<TSelf>(l, r);
-
-    IExpressionValueInstruction IBinaryExpressionOperation.CreateValueInstruction(IValue l, IValue r)
-    {
-        if (l is not IValue<TLeftType> lv)
-        {
-            throw new ArgumentException(
-                $"Invalid operand1 type, expected {TLeftType.Instance.Name}, got {l.Type.Name}", nameof(l));
-        }
-
-        if (r is not IValue<TRightType> rv)
-        {
-            throw new ArgumentException(
-                $"Invalid operand2 type, expected {TRightType.Instance.Name}, got {r.Type.Name}", nameof(r));
-        }
-
-        var result = OperationValue.Create<TResultType>();
-        return new ExpressionOperation2ValueInstruction<TSelf, TLeftType, TRightType, TResultType>(result, lv, rv);
-    }
 
     IBinaryOp IBinaryExpressionOperation.BinaryOp => TOp.Instance;
 

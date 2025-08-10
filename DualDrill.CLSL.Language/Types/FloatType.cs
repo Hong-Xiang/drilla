@@ -29,6 +29,7 @@ public sealed record class FloatType<TBitWidth> : IFloatType<FloatType<TBitWidth
 
     static IPtrType PtrType { get; } = new PtrType(Instance);
     public IPtrType GetPtrType() => PtrType;
+
 }
 
 public static partial class ShaderType

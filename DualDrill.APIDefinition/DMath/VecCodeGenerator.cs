@@ -418,7 +418,7 @@ public sealed record class VecCodeGenerator<TRank, TElement>
         {
 
             var pattern = TPattern.Instance;
-            var rv = pattern.TargetType<TElement>();
+            var rv = pattern.ValueVecType<TElement>();
             Writer.Write($"public {Config.GetCSharpTypeName(rv)} {TPattern.Instance.Name} ");
             //var cps = sw.Select(Enum.Parse<SwizzleComponent>).ToArray();
             using (Writer.IndentedScopeWithBracket())

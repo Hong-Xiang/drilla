@@ -23,8 +23,3 @@ public interface IBasicBlock2<TElement, TInput, TOutput> : IBasicBlock2
     ImmutableArray<TInput> Inputs { get; }
     ImmutableArray<TOutput> Outputs { get; }
 }
-
-public interface IBasicBlock2<TElement, TTransfer> : IBasicBlock2<TElement, TTransfer, TTransfer>
-    where TElement : IDeclarationUser
-{
-}

@@ -384,7 +384,7 @@ internal sealed class DevelopTestShaderModule
     // while in many target IR
     // declare a local variable for general ptr type is not allowed
     [Vertex]
-    static float TernaryConditionalSwizzle(vec3 p, bool cond)
+    public static float TernaryConditionalSwizzle(vec3 p, bool cond)
     {
         // IL_0000: nop
         // IL_0001: ldarga.s     p

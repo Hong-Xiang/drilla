@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.Symbol;
+﻿using DualDrill.CLSL.Language.Operation;
 using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Statement;
@@ -10,9 +10,11 @@ public interface IStatementSemantic<in TX, in TV, in TE, in TM, in TF, out TO>
     TO Get(TX context, TV result, TM source);
     TO Set(TX context, TM target, TV source);
     TO Mov(TX context, TM target, TM source);
+    TO Call(TX context, TV result, TF f, IReadOnlyList<TE> arguments);
     TO Dup(TX context, TV result, TV source);
     TO Pop(TX context, TV target);
-    TO Call(TX context, TV result, TF f, IReadOnlyList<TE> arguments);
+
+    TO SetVecSwizzle(TX context, IVectorSwizzleSetOperation operation, TV target, TV value);
 }
 
 public interface IStatement<out TV, out TE, out TM, out TF>
@@ -24,12 +26,20 @@ public static class Statement
 {
     public static IStatementSemantic<Unit, TV, TE, TM, TF, IStatement<TV, TE, TM, TF>> Factory<TV, TE, TM, TF>()
         => new StatementFactorySemantic<TV, TE, TM, TF>();
+}
 
-    public static Seq<IStatement<TV, TE, TM, TF>, TV> ToSeq<TV, TE, TM, TF>(
-        this IStatement<TV, TE, TM, TF> stmt
-    )
-        where TV : new()
+public sealed class StatementSeqBuilder<TV, TE, TM, TF>
+    where TV : new()
+{
+    public Seq<IStatement<TV, TE, TM, TF>, Unit> Nop() => Seq.Create<IStatement<TV, TE, TM, TF>, Unit>([
+        new NopStatement<TV, TE, TM, TF>()
+        ], default);
+
+    public Seq<IStatement<TV, TE, TM, TF>, TV> Let(TE expr)
     {
-        throw new NotImplementedException();
+        var value = new TV();
+        return Seq.Create<IStatement<TV, TE, TM, TF>, TV>([
+            new LetStatement<TV, TE, TM, TF>(value, expr)
+        ], value);
     }
 }

@@ -1,7 +1,6 @@
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Symbol;
-using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.CommonInstruction;
@@ -11,9 +10,6 @@ public sealed record class ReturnVoidInstruction() : ITermintorCommonInstruction
     public TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IStructuredStackInstructionVisitor<TResult>
         => throw new NotImplementedException();
-
-    public IEnumerable<IValueInstruction> CreateValueInstruction(Stack<IValue> stack)
-        => [this];
 
     public ISuccessor ToSuccessor()
         => Successor.Terminate();

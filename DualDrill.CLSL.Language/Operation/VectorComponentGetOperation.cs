@@ -1,9 +1,6 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
@@ -25,51 +22,21 @@ public sealed class VectorComponentGetExpressionOperation<TRank, TVector, TCompo
     IUnaryExpression IUnaryExpressionOperation.CreateExpression(IExpression expr)
         => new UnaryOperationExpression<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>>(expr);
 
-    record struct ValueInstructionVisitor(
-        IOperationValue Result,
-        IValue<TVector> Operand
-    )
-        : IShaderTypeVisitor1<IExpressionValueInstruction>
-    {
-        public IExpressionValueInstruction Visit<TType>(TType type) where TType : IShaderType<TType>
-        {
-            return new ExpressionOperation1ValueInstruction<
-                VectorComponentGetExpressionOperation<TRank, TVector, TComponent>,
-                TVector,
-                TType
-            >((OperationValue<TType>)Result, Operand);
-        }
-    }
-
-    public IExpressionValueInstruction CreateValueInstruction(IOperationValue result, IValue operand)
-    {
-        if (result.Type != TVector.Instance.ElementType)
-        {
-            throw new ArgumentException(
-                $"The result type is expected to be{TVector.Instance.ElementType.Name}, got {result.Type.Name}",
-                nameof(result));
-        }
-
-        if (operand is not IValue<TVector> o)
-        {
-            throw new ArgumentException(
-                $"The operand type is expected {TVector.Instance.Name}, got {operand.Type.Name}",
-                nameof(result));
-        }
-
-        return TVector.Instance.ElementType.Accept<ValueInstructionVisitor, IExpressionValueInstruction>(
-            new ValueInstructionVisitor(result, o));
-    }
-
-    public IExpressionValueInstruction CreateValueInstruction(IValue operand)
-    {
-        throw new NotImplementedException();
-    }
-
     public IInstruction Instruction =>
         UnaryExpressionOperationInstruction<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>>.Instance;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>> expr)
         => visitor.VisitVectorComponentGetExpression<TRank, TVector, TComponent>(expr);
+
+    sealed class SizedVecVisitor<TX, TR>(
+        IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context
+    ) : ISizedVecType<TRank, TVector>.ISizedVisitor<TR>
+    {
+        public TR Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement>
+            => semantic.VectorComponentGet<TRank, TElement, TComponent>(context);
+    }
+
+    public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context)
+        => TVector.Instance.Accept(new SizedVecVisitor<TX, TR>(semantic, context));
 }

@@ -45,4 +45,7 @@ public static class LocalDeclarationContextExtensions
 
     public static string LabelName(this ILocalDeclarationContext context, Label label) =>
         $"^{context.LabelIndex(label)} ({label.Name})";
+
+    public static string LabelName2(this ILocalDeclarationContext context, Label label) =>
+        $"^{context.LabelIndex(label)}:{label.Name}";
 }

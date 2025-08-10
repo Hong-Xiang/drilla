@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.FunctionBody;
+﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Declaration;

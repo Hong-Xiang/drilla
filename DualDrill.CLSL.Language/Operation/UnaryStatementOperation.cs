@@ -5,7 +5,6 @@ using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.ValueInstruction;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -14,7 +13,6 @@ public interface IUnaryStatementOperation : IOperation
     public IShaderType SourceType { get; }
     public IStatement CreateStatement(IExpression expression);
     
-    public IStatementValueInstruction ToValueInstruction(IValue value);
 }
 
 public interface IUnaryStatementOperation<TOperation> : IUnaryStatementOperation, IOperation<TOperation>

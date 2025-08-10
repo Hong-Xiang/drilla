@@ -3,9 +3,7 @@ using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
@@ -13,6 +11,10 @@ namespace DualDrill.CLSL.Language.Operation;
 public interface IVectorComponentSetOperation
     : IBinaryStatementOperation
 {
+    IRank Range { get; }
+    IScalarType ElementType { get; }
+    IVecType VecType { get; }
+    Swizzle.IComponent Component { get; }
 }
 
 public interface IVectorComponentSetOperation<TSelf>
@@ -53,11 +55,15 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
     public IShaderType LeftType => TVector.Instance.GetPtrType();
     public IShaderType RightType => TVector.Instance.ElementType;
 
+    public IRank Range => TRank.Instance;
+
+    public IScalarType ElementType => TVector.Instance.ElementType;
+
+    public Swizzle.IComponent Component => TComponent.Instance;
+
+    public IVecType VecType => TVector.Instance;
+
     public IStatement CreateStatement(IExpression target, IExpression value)
         => TVector.Instance.Accept(new SizedVecStmtVisitor(target, value));
 
-    public IStatementOperationValueInstruction ToValueInstruction(IValue l, IValue r)
-    {
-        throw new NotImplementedException();
-    }
 }

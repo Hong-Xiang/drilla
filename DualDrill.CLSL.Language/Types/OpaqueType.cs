@@ -1,4 +1,6 @@
-﻿namespace DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.Operation;
+
+namespace DualDrill.CLSL.Language.Types;
 
 /// <summary>
 /// Special type for C#'s type place holder, useful for methods argument which is not actually used
@@ -23,5 +25,6 @@ public sealed class OpaqueType : IShaderType<OpaqueType>
 
     Lazy<IPtrType> PtrType { get; }
     public IPtrType GetPtrType() => PtrType.Value;
+
     public static OpaqueType Instance => throw new NotImplementedException();
 }

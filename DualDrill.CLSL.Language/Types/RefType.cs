@@ -1,4 +1,6 @@
-﻿namespace DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.Operation;
+
+namespace DualDrill.CLSL.Language.Types;
 
 public interface IRefType : IShaderType
 {
@@ -18,6 +20,8 @@ public sealed record class RefType<TShaderType>(TShaderType BaseType) : IRefType
     {
         throw new NotImplementedException();
     }
+
+    public IUnaryExpressionOperation? CilStackConversion() => null;
 
     public static RefType<TShaderType> Instance => throw new NotImplementedException();
 }

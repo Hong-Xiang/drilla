@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL;
 using Silk.NET.Maths;
 using System.Numerics;
 

@@ -1,4 +1,8 @@
-﻿namespace DualDrill.CLSL.Language.Symbol;
+﻿using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.Common.CodeTextWriter;
+using System.CodeDom.Compiler;
+
+namespace DualDrill.CLSL.Language.Symbol;
 
 public interface ILabeledEntity
 {
@@ -9,7 +13,7 @@ sealed class LabelNotFoundException(Label Label) : Exception($"Label {Label.Name
 {
 }
 
-public sealed class Label
+public sealed class Label : ITextDumpable<ILocalDeclarationContext>
 {
     Label(string? name)
     {
@@ -27,6 +31,16 @@ public sealed class Label
     public override string ToString()
     {
         return $"Label({Name})";
+    }
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        writer.Write('^');
+        writer.Write(context.LabelIndex(this));
+        if (Name is not null)
+        {
+            writer.Write($":{Name}");
+        }
     }
 }
 

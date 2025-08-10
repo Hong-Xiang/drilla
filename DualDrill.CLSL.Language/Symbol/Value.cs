@@ -1,6 +1,5 @@
 ﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
 
@@ -10,16 +9,12 @@ public interface IValue : ITextDumpable<ILocalDeclarationContext>
 {
     IShaderType Type { get; }
 
-    IReturnResultValueInstruction GetReturnResultValueInstruction();
 }
 
 public interface IValue<TValueType> : IValue
     where TValueType : IShaderType<TValueType>
 {
     IShaderType IValue.Type => TValueType.Instance;
-
-    IReturnResultValueInstruction IValue.GetReturnResultValueInstruction()
-        => ValueInstructionFactory.ReturnResult(this);
 }
 
 public interface IBlockArgumentValue : IValue

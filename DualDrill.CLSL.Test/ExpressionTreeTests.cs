@@ -1,9 +1,4 @@
 ﻿using DualDrill.CLSL.Language.Literal;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 using static DualDrill.CLSL.Language.Expression.SyntaxFactory<DualDrill.CLSL.Language.Symbol.Label>;

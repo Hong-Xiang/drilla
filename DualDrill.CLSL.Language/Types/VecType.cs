@@ -1,6 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Operation;
-using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Diagnostics;
 using static DualDrill.CLSL.Language.Operation.Swizzle;
@@ -76,7 +75,7 @@ public sealed class VecType<TRank, TElement>
     public IPtrType GetPtrType() => SingletonPtrType<VecType<TRank, TElement>>.Instance;
 
     public IShaderType SwizzleResultType<TPattern>() where TPattern : Swizzle.IPattern<TPattern>
-        => TPattern.Instance.TargetType<TElement>();
+        => TPattern.Instance.ValueVecType<TElement>();
 
     public IOperation ComponentGetOperation(IComponent c)
     {

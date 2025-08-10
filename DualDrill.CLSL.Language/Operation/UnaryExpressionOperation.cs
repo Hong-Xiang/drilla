@@ -1,11 +1,9 @@
-using System.Diagnostics;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Language.ValueInstruction;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -14,7 +12,26 @@ public interface IUnaryExpressionOperation : IOperation
     IShaderType SourceType { get; }
     IShaderType ResultType { get; }
     IUnaryExpression CreateExpression(IExpression expr);
-    IExpressionValueInstruction CreateValueInstruction(IValue operand);
+    TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context);
+}
+
+public interface IUnaryExpressionOperationSemantic<in TX, out TO>
+{
+    TO OpOperation<TOperation, TSourceType, TResultType, TOp>(TX context, TOperation operation)
+        where TOperation : IUnaryExpressionOperation<TOperation, TSourceType, TResultType, TOp>
+        where TSourceType : ISingletonShaderType<TSourceType>
+        where TResultType : ISingletonShaderType<TResultType>
+        where TOp : IUnaryOp<TOp>;
+
+    TO VectorComponentGet<TRank, TElement, TComponent>(TX context)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>
+        where TComponent : Swizzle.ISizedComponent<TRank, TComponent>;
+
+    TO VectorSwizzleGet<TRank, TElement, TPattern>(TX context)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>
+        where TPattern : Swizzle.IPattern<TPattern>;
 }
 
 public interface IUnaryExpressionOperation<TSelf> : IUnaryExpressionOperation, IOperation<TSelf>
@@ -46,17 +63,6 @@ public interface IUnaryExpressionOperation<TSelf, TSourceType, TResultType>
     where TSourceType : ISingletonShaderType<TSourceType>
     where TResultType : ISingletonShaderType<TResultType>
 {
-    IExpressionValueInstruction IUnaryExpressionOperation.CreateValueInstruction(IValue operand)
-    {
-        if (operand is not IValue<TSourceType> o)
-        {
-            throw new ArgumentException(
-                $"The result is required be {TResultType.Instance.Name}, got {operand.Type.Name}");
-        }
-
-        return new ExpressionOperation1ValueInstruction<TSelf, TSourceType, TResultType>(
-            OperationValue.Create<TResultType>(), o);
-    }
 }
 
 public interface IUnaryExpressionOperation<TSelf, TSourceType, TResultType, TOp>
@@ -69,4 +75,8 @@ public interface IUnaryExpressionOperation<TSelf, TSourceType, TResultType, TOp>
     IShaderType IUnaryExpressionOperation.SourceType => TSourceType.Instance;
     IShaderType IUnaryExpressionOperation.ResultType => TResultType.Instance;
     string IOperation.Name => $"{TOp.Instance.Name}.{TSourceType.Instance.Name}.{TResultType.Instance.Name}";
+
+
+    TR IUnaryExpressionOperation.Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context)
+        => semantic.OpOperation<TSelf, TSourceType, TResultType, TOp>(context, TSelf.Instance);
 }

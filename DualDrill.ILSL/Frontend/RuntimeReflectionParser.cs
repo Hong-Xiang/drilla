@@ -1,11 +1,13 @@
 ﻿using DotNext.Collections.Generic;
 using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -22,7 +24,7 @@ namespace DualDrill.CLSL.Frontend;
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
-    Dictionary<FunctionDeclaration, IUnifiedFunctionBody<StackInstructionBasicBlock>> MethodBodies)
+    Dictionary<FunctionDeclaration, StackIRFunctionBody3> MethodBodies)
 {
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
@@ -184,7 +186,7 @@ public sealed record class RuntimeReflectionParser(
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
-    public ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>> ParseShaderModule(
+    public ShaderModuleDeclaration<StackIRFunctionBody3> ParseShaderModule(
         ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -298,7 +300,7 @@ public sealed record class RuntimeReflectionParser(
 
             if (model.Body is not null)
             {
-                MethodBodies.Add(decl, ParseMethodBody2(decl, model));
+                MethodBodies.Add(decl, ParseMethodBody3(decl));
             }
         }
         else
@@ -309,15 +311,6 @@ public sealed record class RuntimeReflectionParser(
         return decl;
     }
 
-    public IUnifiedFunctionBody<StackInstructionBasicBlock> ParseMethodBody2(FunctionDeclaration f)
-    {
-        var model = Context.GetFunctionDefinition(f);
-        return ParseMethodBody2(f, model);
-    }
-    public FunctionBody3 ParseMethodBody3(FunctionDeclaration f)
-    {
-        return ParseMethodBody2(f).ToNestedRegionInstructionFunctionBody();
-    }
 
     VariableDeclaration ParseLocalVariable(LocalVariableInfo info, ISymbolTable methodTable)
     {
@@ -330,6 +323,105 @@ public sealed record class RuntimeReflectionParser(
         );
         methodTable.AddVariable(Symbol.Variable(info), result);
         return result;
+    }
+
+    public StackIRFunctionBody3 ParseMethodBody3(FunctionDeclaration f)
+    {
+        var model = Context.GetFunctionDefinition(f);
+        var methodTable = new CompilationContext(Context);
+        foreach (var v in model.LocalVariables)
+        {
+            _ = ParseLocalVariable(v, methodTable);
+        }
+
+        {
+            foreach (var (index, p) in f.Parameters.Index())
+            {
+                methodTable.AddParameter(Symbol.Parameter(index), p);
+            }
+        }
+
+        var localVariables = new VariableDeclaration[model.LocalVariables.Length];
+        foreach (var v in model.LocalVariables)
+        {
+            var decl = new VariableDeclaration(
+                DeclarationScope.Function,
+                $"loc_{v.LocalIndex}",
+                ParseType(v.LocalType),
+                []
+            );
+            localVariables[v.LocalIndex] = decl;
+        }
+
+        Dictionary<Label, ImmutableStack<IShaderType>> BasicBlockInputs = new()
+        {
+            [model.ControlFlowGraph.EntryLabel] = []
+        };
+        Dictionary<Label, ImmutableStack<IShaderType>> BasicBlockOutputs = [];
+        Dictionary<Label, StackIRBasicBlock> basicBlocks = [];
+
+        foreach (var l in model.ControlFlowGraph.Labels())
+        {
+            var visitor = new RuntimeReflectionInstructionParserVisitor3(
+                model,
+                f,
+                model.ControlFlowGraph.Successor(l),
+                BasicBlockInputs[l],
+                localVariables,
+                f.Parameters
+            );
+            var ilRange = model.ControlFlowGraph[l];
+            for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
+            {
+                var cilInst = model[i];
+                cilInst.Evaluate(visitor, model.IsStatic, methodTable);
+            }
+
+            BasicBlockOutputs.Add(l, visitor.Stack);
+
+            ITerminator<Label, Unit>? terminator = visitor.Terminator;
+
+
+            {
+                var successor = model.ControlFlowGraph.Successor(l);
+                terminator ??= Terminator.B.Br<Label, Unit>(successor.AllTargets().Single());
+
+                foreach (var tl in successor.AllTargets())
+                {
+                    if (BasicBlockInputs.TryGetValue(tl, out var existed))
+                    {
+                        if (visitor.Stack.Count() != existed.Count())
+                        {
+                            throw new ValidationException(
+                                $"Successor's input stack size {existed.Count()} not matching current output {visitor.Stack.Count()}",
+                                model.Method);
+                        }
+                        if (!visitor.Stack.SequenceEqual(existed))
+                        {
+                            throw new ValidationException(
+                                $"Successor's input stack not match",
+                                model.Method);
+                        }
+                    }
+                    else
+                    {
+                        BasicBlockInputs.Add(tl, visitor.Stack);
+                    }
+                }
+
+                basicBlocks.Add(l, new StackIRBasicBlock(
+                    l,
+                    terminator ?? throw new NotSupportedException("failed to resolve terminator"),
+                    BasicBlockInputs[l],
+                    BasicBlockOutputs[l],
+                    [.. visitor.Instructions]
+                ));
+            }
+        }
+        return new StackIRFunctionBody3(
+            model.ControlFlowGraph.EntryLabel,
+            basicBlocks.ToFrozenDictionary()
+        );
     }
 
     //ILocalDeclarationContext GetMethodLocalDeclaration(MethodBase method)
@@ -348,111 +440,6 @@ public sealed record class RuntimeReflectionParser(
 
     //    throw new NotImplementedException();
     //}
-
-    public IUnifiedFunctionBody<StackInstructionBasicBlock> ParseMethodBody2(FunctionDeclaration f,
-        MethodBodyAnalysisModel model)
-    {
-        var methodTable = new CompilationContext(Context);
-        foreach (var v in model.LocalVariables)
-        {
-            _ = ParseLocalVariable(v, methodTable);
-        }
-
-        {
-            foreach (var (index, p) in f.Parameters.Index())
-            {
-                methodTable.AddParameter(Symbol.Parameter(index), p);
-            }
-        }
-
-
-        Dictionary<Label, ImmutableArray<IShaderType>> BasicBlockInputs = new()
-        {
-            [model.ControlFlowGraph.EntryLabel] = []
-        };
-        Dictionary<Label, ImmutableArray<IShaderType>> BasicBlockOutputs = [];
-        Dictionary<Label, StackInstructionBasicBlock> basicBlocks = [];
-
-        foreach (var l in model.ControlFlowGraph.Labels())
-        {
-            var visitor = new RuntimeReflectionParserInstructionVisitor(f,
-                model,
-                l,
-                BasicBlockInputs[l],
-                model.ControlFlowGraph.Successor(l)
-            );
-            var ilRange = model.ControlFlowGraph[l];
-            for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
-            {
-                var cilInst = model[i];
-                cilInst.Evaluate(visitor, model.IsStatic, methodTable);
-            }
-
-            visitor.FlushOutputs();
-
-
-            BasicBlockOutputs.Add(l, visitor.Outputs);
-
-
-            {
-                var successor = model.ControlFlowGraph.Successor(l);
-
-                foreach (var target in successor.AllTargets())
-                {
-                    if (BasicBlockInputs.TryGetValue(target, out var existed))
-                    {
-                        if (visitor.Outputs.Length != existed.Length)
-                        {
-                            throw new ValidationException(
-                                $"Successor's input stack size {existed.Length} not matching current output {visitor.Outputs.Length}",
-                                model.Method);
-                        }
-
-
-                        if (!visitor.Outputs.SequenceEqual(existed))
-                        {
-                        }
-
-                        foreach (var (c, e) in visitor.Outputs.Zip(existed))
-                        {
-                            if (!c.Equals(e))
-                            {
-                                throw new ValidationException(
-                                    $"Successor's input stack size {e.Name} not matching current output {c.Name}",
-                                    model.Method);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        BasicBlockInputs.Add(target, visitor.Outputs);
-                    }
-                }
-
-                var bb = new StackInstructionBasicBlock(
-                    l,
-                    [.. visitor.Instructions],
-                    BasicBlockInputs[l],
-                    BasicBlockOutputs[l]);
-
-                Debug.Assert(successor.IsCompatible(bb.Terminator));
-
-                basicBlocks.Add(l, bb);
-            }
-        }
-
-        // var bodies = model.ControlFlowGraph.Labels().ToDictionary(l => l,
-        //     l =>
-        //         new ControlFlowGraph<StackInstructionBasicBlock>.NodeDefinition(
-        //             model.ControlFlowGraph.Successor(l),
-        //             basicBlocks[l]));
-        // var cfg = new ControlFlowGraph<StackInstructionBasicBlock>(
-        //     model.ControlFlowGraph.EntryLabel,
-        //     bodies
-        // );
-
-        return UnifiedFunctionBody.Create<StackInstructionBasicBlock>(basicBlocks.Values);
-    }
 
     bool IsMethodDefinition(MethodBase m)
     {

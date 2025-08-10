@@ -1,10 +1,8 @@
-﻿using DualDrill.CLSL.Language.ControlFlow;
+﻿using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Symbol;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
-using DualDrill.CLSL.Language.ControlFlowGraph;
-using DualDrill.Common;
-using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
@@ -25,20 +23,6 @@ public interface IBasicBlockTraverser<TBasicBlock>
     }
 
     void Visit(Context context, TBasicBlock basicBlock);
-}
-
-public interface IStackInstructionTraverser
-{
-    record struct Context(
-        LocalDeclarationContext DeclarationContext,
-        ImmutableStack<IStructuredControlFlowRegion> Regions,
-        StackInstructionBasicBlockBody BasicBlock,
-        int Index
-    )
-    {
-    }
-
-    void Visit(Context context);
 }
 
 public sealed class FunctionBody<TBodyData> : IFunctionBody, ILocalDeclarationContext

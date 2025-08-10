@@ -33,6 +33,7 @@ public sealed class UIntType<TBitWidth> : IUIntType, INumericType<UIntType<TBitW
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
 
+ 
     public IIntType SameWidthIntType => IntType<TBitWidth>.Instance;
 }
 

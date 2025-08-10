@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
@@ -129,19 +128,29 @@ public static class Swizzle
         public string Name => "w";
     }
 
-    public interface IPattern<TSelf> : ISingleton<TSelf>
-        where TSelf : IPattern<TSelf>
+    public interface IPattern
     {
         IEnumerable<IComponent> Components { get; }
-
         string Name { get; }
-
-        IVecType SourceType<TElement>() where TElement : IScalarType<TElement>;
-        IVecType TargetType<TElement>() where TElement : IScalarType<TElement>;
+        IVecType CalleeVecType<TElement>() where TElement : IScalarType<TElement>;
+        IVecType ValueVecType<TElement>() where TElement : IScalarType<TElement>;
         bool HasDuplicateComponent { get; }
 
         public ICommonStatement CreateSwizzleSetStatement<TElement>(IExpression target, IExpression value)
             where TElement : IScalarType<TElement>;
+        public T Evaluate<T>(IPatternSemantic<T> semantic);
+    }
+
+    public interface IPattern<TSelf> : ISingleton<TSelf>, IPattern
+        where TSelf : IPattern<TSelf>
+    {
+    }
+
+    public interface IPatternSemantic<T>
+    {
+        T Pattern<TRank, TPattern>()
+            where TRank : IRank<TRank>
+            where TPattern : ISizedPattern<TRank, TPattern>;
     }
 
     public interface ISizedPattern<TRank>
@@ -167,12 +176,14 @@ public static class Swizzle
         TResult ISizedPattern<TRank>.Accept<TResult>(ISizedPatternVisitor<TResult> visitor)
             => visitor.Visit<TSelf>();
 
-        IVecType IPattern<TSelf>.SourceType<TElement>() => VecType<TRank, TElement>.Instance;
+        IVecType IPattern.CalleeVecType<TElement>() => VecType<TRank, TElement>.Instance;
 
-        ICommonStatement IPattern<TSelf>.CreateSwizzleSetStatement<TElement>(IExpression target, IExpression value)
+        ICommonStatement IPattern.CreateSwizzleSetStatement<TElement>(IExpression target, IExpression value)
         {
             return new VectorSwizzleSetStatement<TRank, TElement, TSelf>(target, value);
         }
+
+        T IPattern.Evaluate<T>(IPatternSemantic<T> semantic) => semantic.Pattern<TRank, TSelf>();
     }
 
     public sealed class Pattern<TRank, TX, TY> : ISizedPattern<TRank, Pattern<TRank, TX, TY>>
@@ -187,7 +198,7 @@ public static class Swizzle
 
         public string Name => $"{TX.Instance.Name}{TY.Instance.Name}";
 
-        public IVecType TargetType<TElement>()
+        public IVecType ValueVecType<TElement>()
             where TElement : IScalarType<TElement>
             => VecType<N2, TElement>.Instance;
 
@@ -206,7 +217,7 @@ public static class Swizzle
         public static Pattern<TRank, TX, TY, TZ> Instance { get; } = new();
         public IEnumerable<IComponent> Components => [TX.Instance, TY.Instance, TZ.Instance];
 
-        public IVecType TargetType<TElement>()
+        public IVecType ValueVecType<TElement>()
             where TElement : IScalarType<TElement>
             => VecType<N3, TElement>.Instance;
 
@@ -231,7 +242,7 @@ public static class Swizzle
         public static Pattern<TRank, TX, TY, TZ, TW> Instance { get; } = new();
         public IEnumerable<IComponent> Components => [TX.Instance, TY.Instance, TZ.Instance, TW.Instance];
 
-        public IVecType TargetType<TElement>()
+        public IVecType ValueVecType<TElement>()
             where TElement : IScalarType<TElement>
             => VecType<N4, TElement>.Instance;
 

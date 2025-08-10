@@ -1,7 +1,6 @@
 ﻿using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.ValueInstruction;
 using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Literal;
@@ -18,7 +17,6 @@ public interface ILiteral : IPrintable
     IShaderType Type { get; }
     string Name { get; }
     IInstruction GetInstruction();
-    IExpressionValueInstruction CreateValueInstruction();
 }
 
 public interface ILiteral<TShaderType> : ILiteral
@@ -38,9 +36,6 @@ public interface ILiteral<TSelf, TCSharpType, TShaderType> : ILiteral<TShaderTyp
     string ILiteral.Name => $"{TShaderType.Instance.Name}({Value})";
     IShaderType ILiteral.Type => TShaderType.Instance;
     IInstruction ILiteral.GetInstruction() => ShaderInstruction.Const((TSelf)this);
-
-    IExpressionValueInstruction ILiteral.CreateValueInstruction() =>
-        ValueInstructionFactory.Const(OperationValue.Create<TShaderType>(), (TSelf)this);
 }
 
 public static class Literal
