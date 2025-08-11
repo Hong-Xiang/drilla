@@ -27,13 +27,13 @@ sealed record class StackInstructionFormatter
 {
     internal static StackInstructionFormatter Instance { get; } = new();
 
-    public Unit AddressOfChain(IndentedTextWriter ctx, IAddressOfChainOperation operation, Unit e)
+    public Unit AddressOfChain(IndentedTextWriter ctx, IAccessChainOperation operation, Unit e)
     {
         ctx.WriteLine(operation.Name);
         return default;
     }
 
-    public Unit AddressOfIndex(IndentedTextWriter ctx, IAddressOfChainOperation operation, Unit e, Unit index)
+    public Unit AddressOfIndex(IndentedTextWriter ctx, IAccessChainOperation operation, Unit e, Unit index)
     {
         throw new NotImplementedException();
     }

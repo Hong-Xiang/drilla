@@ -13,6 +13,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using ValueDeclaration = DualDrill.CLSL.Language.Symbol.ValueDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -329,15 +330,19 @@ public sealed record class RuntimeReflectionParser(
     {
         var model = Context.GetFunctionDefinition(f);
         var methodTable = new CompilationContext(Context);
+        Dictionary<VariableDeclaration, ValueDeclaration> localValues = [];
+        Dictionary<ParameterDeclaration, IParameterBinding> parameterBindings = [];
         foreach (var v in model.LocalVariables)
         {
-            _ = ParseLocalVariable(v, methodTable);
+            var loc = ParseLocalVariable(v, methodTable);
+            localValues.Add(loc, new(ShaderValue.Create($"loc_{v.LocalIndex}"), loc.Type.GetPtrType()));
         }
 
         {
             foreach (var (index, p) in f.Parameters.Index())
             {
                 methodTable.AddParameter(Symbol.Parameter(index), p);
+                parameterBindings.Add(p, new ParameterPointerBinding(ShaderValue.Create(p.Name), p));
             }
         }
 
@@ -367,8 +372,8 @@ public sealed record class RuntimeReflectionParser(
                 f,
                 model.ControlFlowGraph.Successor(l),
                 BasicBlockInputs[l],
-                localVariables,
-                f.Parameters
+                localValues,
+                parameterBindings
             );
             var ilRange = model.ControlFlowGraph[l];
             for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
@@ -396,6 +401,7 @@ public sealed record class RuntimeReflectionParser(
                                 $"Successor's input stack size {existed.Count()} not matching current output {visitor.Stack.Count()}",
                                 model.Method);
                         }
+
                         if (!visitor.Stack.SequenceEqual(existed))
                         {
                             throw new ValidationException(
@@ -418,6 +424,7 @@ public sealed record class RuntimeReflectionParser(
                 ));
             }
         }
+
         return new StackIRFunctionBody3(
             model.ControlFlowGraph.EntryLabel,
             basicBlocks.ToFrozenDictionary()

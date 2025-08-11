@@ -8,7 +8,6 @@ namespace DualDrill.CLSL.Language.Symbol;
 public interface IValue : ITextDumpable<ILocalDeclarationContext>
 {
     IShaderType Type { get; }
-
 }
 
 public interface IValue<TValueType> : IValue

@@ -96,30 +96,3 @@ public sealed class StackIRFunctionBody3
         throw new NotImplementedException();
     }
 }
-
-public static class FunctionBody3Extension
-{
-
-    public static StackIRFunctionBody3 ToStackInstructionFunctionBody(this IUnifiedFunctionBody<StackInstructionBasicBlock> body)
-    {
-        var blocks = new Dictionary<Label, StackIRBasicBlock>();
-        var queue = new Queue<Label>();
-        queue.Enqueue(body.Entry);
-        while (queue.Count > 0)
-        {
-            var label = queue.Dequeue();
-            var block = body[label];
-            var nestedBlock = block.ToStackInstructionBasicBlock();
-            blocks.Add(label, nestedBlock);
-
-            foreach (var successor in body.Successor(label).AllTargets())
-            {
-                if (!blocks.ContainsKey(successor))
-                {
-                    queue.Enqueue(successor);
-                }
-            }
-        }
-        return new StackIRFunctionBody3(body.Entry, blocks.ToFrozenDictionary());
-    }
-}

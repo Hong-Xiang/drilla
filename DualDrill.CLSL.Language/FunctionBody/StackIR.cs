@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.Literal;
@@ -15,32 +14,6 @@ using StackInstruction = IStatement<Unit, IExpression<Unit>, IExpression<Unit>, 
 
 public static class StackIR
 {
-    public static StackIRBasicBlock ToStackInstructionBasicBlock(this StackInstructionBasicBlock bb)
-    {
-        throw new NotImplementedException();
-        //var stmts = new List<StackInstruction>();
-        //var visitor = new StackInstructionToStmtVisitor();
-        //foreach (var it in bb.Elements)
-        //{
-        //    if (it is not ITerminatorStackInstruction)
-        //    {
-        //        stmts.Add(it.Accept<StackInstructionToStmtVisitor, StackInstruction>(visitor));
-        //    }
-        //    else
-        //    {
-        //        break;
-        //    }
-        //}
-
-        //return new StackIRBasicBlock(
-        //    bb.Label,
-        //    bb.Terminator.ToTerminator(),
-        //    bb.Inputs,
-        //    bb.Outputs,
-        //    [.. stmts]
-        //);
-    }
-
     public static class Terminator
     {
         static ITerminatorSemantic<Unit, Label, Unit, ITerminator<Label, Unit>> Factory
@@ -61,7 +34,7 @@ public static class StackIR
     public static class Instruction
     {
         static IStatementSemantic<Unit, Unit, IExpression<Unit>, IExpression<Unit>, FunctionDeclaration, StackInstruction> Stmt { get; } = Statement.Statement.Factory<Unit, IExpression<Unit>, IExpression<Unit>, FunctionDeclaration>();
-        static IExpressionSemantic<Unit, Unit, IExpression<Unit>> Expr = Expression.Expression.Factory<Unit, Unit>();
+        static IExpressionSemantic<Unit, Unit, IExpression<Unit>> Expr = Expression.Expression.Factory<Unit>();
         static PointerOperationFactory Pointer = new();
 
         // Statement factory methods

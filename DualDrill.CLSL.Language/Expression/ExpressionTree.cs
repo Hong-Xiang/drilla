@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language.Literal;
-using DualDrill.CLSL.Language.Operation;
 
 namespace DualDrill.CLSL.Language.Expression;
 

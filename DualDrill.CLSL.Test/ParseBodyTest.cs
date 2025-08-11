@@ -250,15 +250,6 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //     });
     }
 
-    void DumpNew(IUnifiedFunctionBody<StackInstructionBasicBlock> fbody)
-    {
-        var result = fbody.ToStackInstructionFunctionBody();
-        var sw = new StringWriter();
-        var tw = new IndentedTextWriter(sw);
-        result.Dump(tw);
-        Output.WriteLine(sw.ToString());
-    }
-
     [Fact]
     public void BasicMethodInvocationParseShouldWork()
     {

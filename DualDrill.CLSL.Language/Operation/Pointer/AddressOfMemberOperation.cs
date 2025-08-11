@@ -7,7 +7,7 @@ using DualDrill.CLSL.Language.Types;
 namespace DualDrill.CLSL.Language.Operation.Pointer;
 
 public sealed class AddressOfMemberOperation(MemberDeclaration Member)
-    : IAddressOfChainOperation
+    : IAccessChainOperation
 {
     public FunctionDeclaration Function => throw new NotImplementedException();
 
@@ -17,7 +17,7 @@ public sealed class AddressOfMemberOperation(MemberDeclaration Member)
 
     public IShaderType SourceType => throw new NotImplementedException();
 
-    public IShaderType ResultType => Member.Type;
+    public IShaderType ResultType => Member.Type.GetPtrType();
 
     public IUnaryExpression CreateExpression(IExpression expr)
     {

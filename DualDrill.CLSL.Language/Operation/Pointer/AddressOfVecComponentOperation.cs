@@ -8,7 +8,7 @@ namespace DualDrill.CLSL.Language.Operation.Pointer;
 
 public sealed record class AddressOfVecComponentOperation(
     IVecType Target,
-    Swizzle.IComponent Component) : IAddressOfChainOperation
+    Swizzle.IComponent Component) : IAccessChainOperation
 {
     public IShaderType SourceType => Target.GetPtrType();
 

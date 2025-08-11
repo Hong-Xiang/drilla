@@ -4,13 +4,13 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
+using ValueDeclaration = DualDrill.CLSL.Language.Symbol.ValueDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -21,22 +21,21 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     public FunctionDeclaration Function { get; }
     public ISuccessor Successor { get; }
     public ImmutableStack<IShaderType> Stack { get; private set; }
-    public IReadOnlyList<VariableDeclaration> Locals { get; }
-    public IReadOnlyList<ParameterDeclaration> Parameters { get; }
+    public IReadOnlyDictionary<VariableDeclaration, ValueDeclaration> Locals { get; }
+    public IReadOnlyDictionary<ParameterDeclaration, IParameterBinding> Parameters { get; }
 
     public ITerminator<Label, Unit>? Terminator { get; private set; } = null;
     public IReadOnlyList<StackIRInstruction> Instructions => instructions;
 
     List<StackIRInstruction> instructions = [];
-    PointerOperationFactory Pointer = new();
 
     public RuntimeReflectionInstructionParserVisitor3(
         MethodBodyAnalysisModel model,
         FunctionDeclaration function,
         ISuccessor successor,
         ImmutableStack<IShaderType> inputStack,
-        IReadOnlyList<VariableDeclaration> locals,
-        IReadOnlyList<ParameterDeclaration> parameters
+        IReadOnlyDictionary<VariableDeclaration, ValueDeclaration> locals,
+        IReadOnlyDictionary<ParameterDeclaration, IParameterBinding> parameters
     )
     {
         Model = model;
