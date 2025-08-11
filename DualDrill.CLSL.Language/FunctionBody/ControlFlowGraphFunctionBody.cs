@@ -45,7 +45,7 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ILoc
     public int LabelIndex(Label label)
         => LabelIndices[label];
 
-    public int ValueIndex(IValue value)
+    public int ValueIndex(IShaderValue value)
     {
         throw new NotImplementedException();
     }
@@ -55,7 +55,7 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ILoc
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
-    public ImmutableArray<IValue> Values { get; }
+    public ImmutableArray<IShaderValue> Values { get; }
 
     public void Dump(IndentedTextWriter writer)
     {

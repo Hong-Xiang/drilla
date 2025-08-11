@@ -57,7 +57,7 @@ public sealed class StackIRFunctionBody3
     public ImmutableArray<Label> Labels { get; }
     FrozenDictionary<Label, int> LabelIndeices { get; }
 
-    public ImmutableArray<IValue> Values => [];
+    public ImmutableArray<IShaderValue> Values => [];
 
     public IUnifiedFunctionBody<TResultBasicBlock> ApplyTransform<TResultBasicBlock>(IBasicBlockTransform<StackIRBasicBlock, TResultBasicBlock> transform)
         where TResultBasicBlock : IBasicBlock2
@@ -86,7 +86,7 @@ public sealed class StackIRFunctionBody3
         throw new NotImplementedException();
     }
 
-    public int ValueIndex(IValue value)
+    public int ValueIndex(IShaderValue value)
     {
         throw new NotImplementedException();
     }

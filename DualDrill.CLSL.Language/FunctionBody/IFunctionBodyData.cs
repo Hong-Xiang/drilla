@@ -32,9 +32,9 @@ public sealed class FunctionBody<TBodyData> : IFunctionBody, ILocalDeclarationCo
 
     public ImmutableArray<VariableDeclaration> LocalVariables => LocalDeclarationContext.LocalVariables;
     public ImmutableArray<Label> Labels => LocalDeclarationContext.Labels;
-    public ImmutableArray<IValue> Values { get; }
+    public ImmutableArray<IShaderValue> Values { get; }
 
-    public int ValueIndex(IValue value)
+    public int ValueIndex(IShaderValue value)
     {
         throw new NotImplementedException();
     }

@@ -36,7 +36,7 @@ public interface IInstruction : IBasicBlockElement
         }
     }
 
-    IEnumerable<IValue> IDeclarationUser.ReferencedValues => [];
+    IEnumerable<IShaderValue> IDeclarationUser.ReferencedValues => [];
 }
 
 public interface IOperationStackInstruction : IInstruction

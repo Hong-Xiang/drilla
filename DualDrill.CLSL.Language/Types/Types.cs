@@ -14,7 +14,6 @@ public interface IShaderType
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IShaderTypeVisitor1<TResult>;
 
-    IBlockArgumentValue CreateBlockArgumentValue();
 }
 
 public interface IShaderType<TSelf> : IShaderType, ISingleton<TSelf>
@@ -25,8 +24,6 @@ public interface IShaderType<TSelf> : IShaderType, ISingleton<TSelf>
         return visitor.Visit((TSelf)this);
     }
 
-    IBlockArgumentValue IShaderType.CreateBlockArgumentValue()
-        => new BlockArgumentValue<TSelf>();
 }
 
 public interface IShaderTypeVisitor1<out TResult>

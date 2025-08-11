@@ -76,7 +76,7 @@ public readonly record struct StructuredControlFlowElementSequence(
 {
     public IEnumerable<Label> Labels => Elements.SelectMany(e => e.ReferencedLabels);
     public IEnumerable<VariableDeclaration> LocalVariables => Elements.SelectMany(e => e.ReferencedLocalVariables);
-    public IEnumerable<IValue> LocalValues => Elements.SelectMany(e => e.ReferencedValues);
+    public IEnumerable<IShaderValue> LocalValues => Elements.SelectMany(e => e.ReferencedValues);
 
     public StructuredControlFlowElementSequence ApplyTransform<TSourceBasicBlock, TResultBasicBlock>(
         IBasicBlockTransform<TSourceBasicBlock, TResultBasicBlock> transform)

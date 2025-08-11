@@ -21,7 +21,7 @@ public sealed record class StackIRBasicBlock(
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
 
-    public IEnumerable<IValue> ReferencedValues => [];
+    public IEnumerable<IShaderValue> ReferencedValues => [];
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {

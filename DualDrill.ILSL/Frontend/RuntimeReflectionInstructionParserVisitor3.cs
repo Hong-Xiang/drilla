@@ -10,9 +10,16 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
-using ValueDeclaration = DualDrill.CLSL.Language.Symbol.ValueDeclaration;
+using ClangSharp;
+using DualDrill.CLSL.Language.Expression;
+using DualDrill.CLSL.Language.Operation.Pointer;
+using DualDrill.CLSL.Language.Statement;
+using LLVMSharp;
+using ShaderValueDeclaration = DualDrill.CLSL.Language.Symbol.ShaderValueDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
+
+using ShaderExpr = IExpressionTree<ShaderValue>;
 
 sealed class RuntimeReflectionInstructionParserVisitor3
     : ICilInstructionVisitor<Unit>
@@ -20,31 +27,62 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     public MethodBodyAnalysisModel Model { get; }
     public FunctionDeclaration Function { get; }
     public ISuccessor Successor { get; }
-    public ImmutableStack<IShaderType> Stack { get; private set; }
-    public IReadOnlyDictionary<VariableDeclaration, ValueDeclaration> Locals { get; }
+    public ImmutableStack<ShaderValue> Stack { get; private set; }
+    public IReadOnlyDictionary<VariableDeclaration, ShaderValueDeclaration> Locals { get; }
     public IReadOnlyDictionary<ParameterDeclaration, IParameterBinding> Parameters { get; }
 
-    public ITerminator<Label, Unit>? Terminator { get; private set; } = null;
-    public IReadOnlyList<StackIRInstruction> Instructions => instructions;
+    public ITerminator<RegionJump, ShaderValue>? Terminator { get; private set; } = null;
+    public IReadOnlyList<ShaderStmt> Statements => statements;
 
-    List<StackIRInstruction> instructions = [];
+    List<ShaderStmt> statements = [];
+
+    private IStatementSemantic<Unit, ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, ShaderStmt> Stmt { get; }
+        = Statement.Factory<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration>();
+
+    private ITerminatorSemantic<Unit, RegionJump, ShaderValue, ITerminator<RegionJump, ShaderValue>> TermF { get; }
+        = Language.Terminator.Factory<RegionJump, ShaderValue>();
+
+    private IExpressionSemantic<Unit, IExpressionTree<ShaderValue>, IExpression<ShaderExpr>> ExprF { get; } =
+        Language.Expression.Expression.Factory<IExpressionTree<ShaderValue>>();
+
+    IExpressionSemantic<Unit, ShaderExpr, IExpression<ShaderExpr>> Expr = Expression.Factory<ShaderExpr>();
+    private Dictionary<ShaderValue, IShaderType> ValueTypes = [];
+    private PointerOperationFactory Pointer = new();
+    public IShaderType GetValueType(ShaderValue value) => ValueTypes[value];
+
 
     public RuntimeReflectionInstructionParserVisitor3(
         MethodBodyAnalysisModel model,
         FunctionDeclaration function,
         ISuccessor successor,
-        ImmutableStack<IShaderType> inputStack,
-        IReadOnlyDictionary<VariableDeclaration, ValueDeclaration> locals,
+        ImmutableStack<ShaderValueDeclaration> inputStack,
+        IReadOnlyDictionary<VariableDeclaration, ShaderValueDeclaration> locals,
         IReadOnlyDictionary<ParameterDeclaration, IParameterBinding> parameters
     )
     {
         Model = model;
         Function = function;
         Successor = successor;
-        Stack = inputStack;
+        Stack = ImmutableStack.CreateRange(inputStack.Select(x => x.Value));
         Locals = locals;
         Parameters = parameters;
+        foreach (var p in parameters.Values)
+        {
+            ValueTypes.Add(p.Value, p.Type);
+        }
+
+        foreach (var v in locals.Values)
+        {
+            ValueTypes.Add(v.Value, v.Type);
+        }
+
+        foreach (var v in inputStack)
+        {
+            ValueTypes.Add(v.Value, v.Type);
+        }
     }
+
+    ShaderExpr CreateValueExpr(ShaderValue v) => ExpressionTree.Value(v);
 
     IShaderType ConvertToCilStackType(IShaderType type)
     {
@@ -67,6 +105,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         {
             return null;
         }
+
         return (target, source) switch
         {
             (BoolType, IntType<N32>) => ScalarConversionOperation<IntType<N32>, BoolType>.Instance,
@@ -80,12 +119,23 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         };
     }
 
-    void PrepareStore(IShaderType source, IShaderType target)
+    void DoStore(ShaderValue target, ShaderValue value)
     {
-        var conv = StoreConversion(target, source);
-        if (conv is not null)
+        var vt = GetValueType(value);
+        var tt = GetValueType(target);
+        if (tt is IPtrType ptt)
         {
-            //Emit(StackIR.Instruction.Expr1(conv));
+            var conv = StoreConversion(ptt.BaseType, vt);
+            if (conv is not null)
+            {
+                value = EmitLet(conv.ResultType, ExprF.Operation1(default, conv, CreateValueExpr(value)));
+            }
+
+            Emit(Stmt.Set(default, target, value));
+        }
+        else
+        {
+            throw new ValidationException($"can not store to non ptr type value {tt}", Model.Method);
         }
     }
 
@@ -105,32 +155,93 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         };
     }
 
-    void Push(IShaderType type)
+    ShaderValue CreateValue(IShaderType t)
     {
+        var v = ShaderValue.Create();
+        ShaderValueDeclaration r = new(v, t);
+        ValueTypes.Add(v, t);
+        return v;
+    }
+
+    void Push(ShaderValue v)
+    {
+        var type = GetValueType(v);
         var stackType = ConvertToCilStackType(type);
-        Stack = Stack.Push(stackType);
         var conv = ConvertToCilStackTypeOperation(type);
         if (conv is not null)
         {
-            //Emit(StackIR.Instruction.Expr1(conv));
+            var cv = EmitLet(stackType, ExprF.Operation1(default, conv, CreateValueExpr(v)));
+            Stack = Stack.Push(cv);
+        }
+        else
+        {
+            Stack = Stack.Push(v);
         }
     }
 
-    void Emit(StackIRInstruction inst)
+    ShaderValue EvalExpr2(Func<IShaderType, IShaderType, IBinaryExpressionOperation> parseOp)
     {
-        instructions.Add(inst);
+        var rv = Pop();
+        var lv = Pop();
+        var r = GetValueType(rv);
+        var l = GetValueType(lv);
+        var op = parseOp(l, r);
+        return EmitLet(op.ResultType, ExprF.Operation2(default, op, CreateValueExpr(lv), CreateValueExpr(rv)));
+    }
+
+
+    ShaderValue Pop()
+    {
+        Stack = Stack.Pop(out var r);
+        return r;
+    }
+
+    void Emit(ShaderStmt inst)
+    {
+        statements.Add(inst);
+    }
+
+    ShaderValue EmitLet(IShaderType t, IExpression<ShaderExpr> e)
+    {
+        var value = CreateValue(t);
+        statements.Add(Stmt.Let(default, value, e.AsNode()));
+        return value;
+    }
+
+
+    void PushEmitLet2(IBinaryExpressionOperation op, ShaderValue l, ShaderValue r)
+    {
+        var v = CreateValue(op.ResultType);
+        EmitLet(op.ResultType, ExprF.Operation2(default, op, CreateValueExpr(l), CreateValueExpr(r)));
+        Push(v);
+    }
+
+
+    void DoLoad(ShaderValue p)
+    {
+        var t = GetValueType(p);
+        if (t is IPtrType pt)
+        {
+            var r = CreateValue(pt.BaseType);
+            Emit(Stmt.Get(default, r, p));
+            Push(r);
+        }
+        else
+        {
+            throw new ValidationException($"can not load from non-ptr type value {p} : {t}", Model.Method);
+        }
     }
 
     public Unit VisitLiteral<TLiteral>(CilInstructionInfo info, TLiteral literal) where TLiteral : ILiteral
     {
-        Emit(StackIR.Instruction.Literal(literal));
-        Push(literal.Type);
+        var val = EmitLet(literal.Type, ExprF.Literal(default, literal));
+        Push(val);
         return default;
     }
 
     public Unit VisitPop(CilInstructionInfo inst)
     {
-        Emit(StackIR.Instruction.Pop());
+        Emit(Stmt.Pop(default, ShaderValue.Create()));
         Pop();
         return default;
     }
@@ -143,7 +254,8 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             {
                 throw new ValidationException("Function return type is not Unit, but stack is empty.", Model.Method);
             }
-            Terminator = StackIR.Terminator.ReturnVoid();
+
+            Terminator = TermF.ReturnVoid(default);
         }
         else
         {
@@ -151,19 +263,22 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             {
                 throw new ValidationException("Function return type is Unit, but stack is empty.", Model.Method);
             }
-            Pop();
-            Terminator = StackIR.Terminator.ReturnExpr();
+
+            var v = Pop();
+            Terminator = TermF.ReturnExpr(default, v);
             if (!Stack.IsEmpty)
             {
-                throw new ValidationException("Function return type is Unit, but stack has more than one element.", Model.Method);
+                throw new ValidationException("Function return type is Unit, but stack has more than one element.",
+                    Model.Method);
             }
         }
+
         return default;
     }
 
     public Unit VisitNop(CilInstructionInfo inst)
     {
-        Emit(StackIR.Instruction.Nop());
+        Emit(Stmt.Nop(default));
         return default;
     }
 
@@ -174,66 +289,63 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitLoadArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        Emit(StackIR.Instruction.GetParameter(p));
-        Push(p.Type);
+        var val = Parameters[p];
+        DoLoad(val.Value);
         return default;
     }
 
 
-    IShaderType Pop()
-    {
-        Stack = Stack.Pop(out var r);
-        return r;
-    }
-
-    public Unit VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryArithmetic.IOp<TOp>
+    public Unit VisitBinaryArithmetic<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
+        where TOp : BinaryArithmetic.IOp<TOp>
     {
         var r = Pop();
         var l = Pop();
-        if (!l.Equals(r))
+        var lt = GetValueType(l);
+        var rt = GetValueType(r);
+        if (!lt.Equals(rt))
         {
             throw new ValidationException($"binary op type not match {l} != {r}", Model.Method);
         }
-        switch (l)
+
+        switch (lt)
         {
             case IntType<N32> when isUn:
-                Emit(StackIR.Instruction.Expr2(NumericBinaryArithmeticOperation<UIntType<N32>, TOp>.Instance));
+                PushEmitLet2(NumericBinaryArithmeticOperation<UIntType<N32>, TOp>.Instance, l, r);
                 break;
             case IntType<N32>:
-                Emit(StackIR.Instruction.Expr2(NumericBinaryArithmeticOperation<IntType<N32>, TOp>.Instance));
+                PushEmitLet2(NumericBinaryArithmeticOperation<IntType<N32>, TOp>.Instance, l, r);
                 break;
             case IntType<N64> when isUn:
-                Emit(StackIR.Instruction.Expr2(NumericBinaryArithmeticOperation<UIntType<N64>, TOp>.Instance));
+                PushEmitLet2(NumericBinaryArithmeticOperation<UIntType<N64>, TOp>.Instance, l, r);
                 break;
             case IntType<N64>:
-                Emit(StackIR.Instruction.Expr2(NumericBinaryArithmeticOperation<IntType<N64>, TOp>.Instance));
+                PushEmitLet2(NumericBinaryArithmeticOperation<IntType<N64>, TOp>.Instance, l, r);
                 break;
             case FloatType<N32>:
-                Emit(StackIR.Instruction.Expr2(NumericBinaryArithmeticOperation<FloatType<N32>, TOp>.Instance));
+                PushEmitLet2(NumericBinaryArithmeticOperation<FloatType<N32>, TOp>.Instance, l, r);
                 break;
             case FloatType<N64>:
-                Emit(StackIR.Instruction.Expr2(NumericBinaryArithmeticOperation<FloatType<N64>, TOp>.Instance));
+                PushEmitLet2(NumericBinaryArithmeticOperation<FloatType<N64>, TOp>.Instance, l, r);
                 break;
             default:
                 throw new ValidationException($"op {TOp.Instance.Name} not support in type {l}", Model.Method);
         }
 
-        Push(l);
         return default;
     }
 
     public Unit VisitLoadArgumentAddress(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        Emit(StackIR.Instruction.GetParameterAddress(p));
-        Push(p.Type.GetPtrType());
+        var v = Parameters[p];
+        Push(v.Value);
         return default;
     }
 
     public Unit VisitStoreArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        var t = Pop();
-        PrepareStore(t, p.Type);
-        Emit(StackIR.Instruction.SetParameter(p));
+        var t = Parameters[p];
+        var v = Pop();
+        DoStore(t.Value, v);
         return default;
     }
 
@@ -249,75 +361,76 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitLoadLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
-        Emit(StackIR.Instruction.GetLocal(v));
-        Push(v.Type);
+        DoLoad(Locals[v].Value);
         return default;
     }
 
     public Unit VisitLoadLocalAddress(CilInstructionInfo inst, VariableDeclaration v)
     {
-        Emit(StackIR.Instruction.GetLocalAddress(v));
-        Push(v.Type.GetPtrType());
+        Push(Locals[v].Value);
         return default;
     }
 
     public Unit VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
-        var t = Pop();
-        PrepareStore(t, v.Type);
-        Emit(StackIR.Instruction.SetLocal(v));
+        var t = Locals[v].Value;
+        var val = Pop();
+        DoStore(t, val);
         return default;
     }
 
+    ShaderValue GetMemberPointer(ShaderValue o, MemberDeclaration m)
+    {
+        var t = GetValueType(o);
+        if (!(t is IPtrType ptr && ptr.BaseType is StructureType))
+        {
+            throw new ValidationException($"can not load field from {o}, expected ptr to structure type", Model.Method);
+        }
+
+        return EmitLet(m.Type.GetPtrType(), Expr.Operation1(default, Pointer.Member(m), CreateValueExpr(o)));
+    }
 
     public Unit VisitLoadField(CilInstructionInfo inst, MemberDeclaration m)
     {
-        var t = Pop();
-        if (!(t is IPtrType ptr && ptr.BaseType is StructureType))
-        {
-            throw new ValidationException($"can not load field from {t}, expected ptr to structure type", Model.Method);
-        }
-        Emit(StackIR.Instruction.GetMember(m));
-        Push(m.Type);
+        var o = Pop();
+        var mp = GetMemberPointer(o, m);
+        var rv = CreateValue(m.Type);
+        Emit(Stmt.Get(default, rv, mp));
+        Push(rv);
         return default;
     }
 
     public Unit VisitLoadFieldAddress(CilInstructionInfo inst, MemberDeclaration m)
     {
-        var t = Pop();
-        if (!(t is IPtrType ptr && ptr.BaseType is StructureType))
-        {
-            throw new ValidationException($"can not load field from {t}, expected ptr to structure type", Model.Method);
-        }
-        Emit(StackIR.Instruction.GetMemberAddress(m));
-        Push(m.Type.GetPtrType());
+        var o = Pop();
+        var mp = GetMemberPointer(o, m);
+        Push(mp);
         return default;
     }
 
     public Unit VisitStoreField(CilInstructionInfo inst, MemberDeclaration m)
     {
-        var t = Pop();
-        if (!(t is IPtrType ptr && ptr.BaseType is StructureType))
-        {
-            throw new ValidationException($"can not load field from {t}, expected ptr to structure type", Model.Method);
-        }
-        Emit(StackIR.Instruction.SetMember(m));
-        Push(m.Type);
+        var v = Pop();
+        var o = Pop();
+        var mp = GetMemberPointer(o, m);
+        Emit(Stmt.Set(default, mp, v));
         return default;
     }
 
     public Unit VisitLoadStaticField(CilInstructionInfo inst, VariableDeclaration v)
     {
-        Emit(StackIR.Instruction.GetLocal(v));
-        Push(v.Type);
-        return default;
+        throw new NotImplementedException();
+        // Emit(StackIR.Instruction.GetLocal(v));
+        // Push(v.Type);
+        // return default;
     }
 
     public Unit VisitLoadStaticFieldAddress(CilInstructionInfo inst, VariableDeclaration v)
     {
-        Emit(StackIR.Instruction.GetLocalAddress(v));
-        Push(v.Type.GetPtrType());
-        return default;
+        throw new NotImplementedException();
+        // Emit(StackIR.Instruction.GetLocalAddress(v));
+        // Push(v.Type.GetPtrType());
+        // return default;
     }
 
     public Unit VisitLoadNull(CilInstructionInfo info)
@@ -335,12 +448,13 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                     {
                         var r = Pop();
                         var l = Pop();
-                        if (!l.Equals(be.LeftType) || !r.Equals(be.RightType))
+                        var lt = GetValueType(l);
+                        var rt = GetValueType(r);
+                        if (!lt.Equals(be.LeftType) || !rt.Equals(be.RightType))
                         {
                             throw new ValidationException($"{be} operation stack : {l.Name}, {r.Name}", Model.Method);
                         }
-                        Emit(StackIR.Instruction.Expr2(be));
-                        Push(be.ResultType);
+                        PushEmitLet2(be, l, r);
                         return;
                     }
                 case IBinaryStatementOperation bs:
@@ -351,17 +465,21 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                         {
                             throw new ValidationException($"{bs} operation stack : {l.Name}, {r.Name}", Model.Method);
                         }
+
                         if (bs is IVectorComponentSetOperation vcs)
                         {
-                            Emit(StackIR.Instruction.SetVecComponent(vcs));
+                            //Emit(StackIR.Instruction.SetVecComponent(vcs));
+                            throw new NotImplementedException();
                             return;
                         }
+
                         if (bs is IVectorSwizzleSetOperation vss)
                         {
-                            Emit(StackIR.Instruction.SetVecSwizzle(vss));
+                            //Emit(StackIR.Instruction.SetVecSwizzle(vss));
+                            throw new NotImplementedException();
                             return;
-
                         }
+
                         throw new NotSupportedException($"binary statement {bs.Name}");
                     }
                 case IUnaryExpressionOperation ue:
@@ -371,30 +489,36 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                         {
                             throw new ValidationException($"{ue} operation stack : {s.Name}", Model.Method);
                         }
-                        Emit(StackIR.Instruction.Expr1(ue));
-                        Push(ue.ResultType);
+
+                        //Emit(StackIR.Instruction.Expr1(ue));
+                        //Push(ue.ResultType);
+                        throw new NotImplementedException();
                         return;
                     }
             }
         }
 
+        List<ShaderValue> args = [];
         foreach (var p in func.Parameters.Reverse())
         {
             var ve = Pop();
-            if (!ve.Equals(p.Type))
+            if (!GetValueType(ve).Equals(p.Type))
             {
                 throw new ValidationException(
                     $"parameter {p} not match: stack {ve.Name} declaration {p.Type.Name}",
                     Model.Method);
             }
+            args.Add(ve);
         }
+        var rv = CreateValue(UnitType.Instance);
+        Emit(Stmt.Call(default, rv, func, [.. args.Select(v => CreateValueExpr(v))]));
 
-        Emit(StackIR.Instruction.Call(func));
+        //throw new NotImplementedException();
+        //Emit(StackIR.Instruction.Call(func));
         if (isExpression)
         {
-            Push(func.Return.Type);
+            Push(rv);
         }
-
     }
 
     public Unit VisitCall(CilInstructionInfo info, FunctionDeclaration func)
@@ -409,11 +533,19 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         return default;
     }
 
+    ImmutableArray<ShaderValue> FlushStackToOutput()
+    {
+        var result = Stack.ToImmutableArray();
+        Stack = [];
+        return result;
+    }
+
     public Unit VisitBranch(CilInstructionInfo inst, int jumpOffset)
     {
         if (Successor is UnconditionalSuccessor { Target: var target })
         {
-            Terminator = StackIR.Terminator.Br(target);
+            var args = FlushStackToOutput();
+            Terminator = TermF.Br(default, new(target, args));
             return default;
         }
         else
@@ -424,21 +556,26 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitBranchIf(CilInstructionInfo inst, int jumpOffset, bool value)
     {
-        var t = Pop();
+        var v = Pop();
+        var t = GetValueType(v);
         if (t is not IntType<N32>)
         {
             throw new ValidationException($"br if expecte a i32 stack value, got {t}", Model.Method);
         }
+
         if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
         {
+            var c = Pop();
+            var args = FlushStackToOutput();
             if (value)
             {
-                Terminator = StackIR.Terminator.BrIf(tt, ft);
+                Terminator = TermF.BrIf(default, c, new(tt, args), new(ft, args));
             }
             else
             {
-                Terminator = StackIR.Terminator.BrIf(ft, tt);
+                Terminator = TermF.BrIf(default, c, new(ft, args), new(tt, args));
             }
+
             return default;
         }
         else
@@ -447,41 +584,45 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         }
     }
 
-    public Unit VisitBranchIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false) where TOp : BinaryRelational.IOp<TOp>
+    public Unit VisitBranchIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false)
+        where TOp : BinaryRelational.IOp<TOp>
     {
-        var r = Pop();
-        var l = Pop();
-        switch (l, r)
+        var v = EvalExpr2((lt, rt) =>
         {
-            case (IntType<N32>, IntType<N32>) when isUn:
-                Emit(StackIR.Instruction.Expr2(NumericBinaryRelationalOperation<UIntType<N32>, TOp>.Instance));
-                break;
-            case (IntType<N32>, IntType<N32>):
-                Emit(StackIR.Instruction.Expr2(NumericBinaryRelationalOperation<IntType<N32>, TOp>.Instance));
-                break;
-            case (IntType<N64>, IntType<N64>) when isUn:
-                Emit(StackIR.Instruction.Expr2(NumericBinaryRelationalOperation<UIntType<N64>, TOp>.Instance));
-                break;
-            case (IntType<N64>, IntType<N64>):
-                Emit(StackIR.Instruction.Expr2(NumericBinaryRelationalOperation<IntType<N64>, TOp>.Instance));
-                break;
-            case (FloatType<N32>, FloatType<N32>):
-                Emit(StackIR.Instruction.Expr2(NumericBinaryRelationalOperation<FloatType<N32>, TOp>.Instance));
-                break;
-            case (FloatType<N64>, FloatType<N64>):
-                Emit(StackIR.Instruction.Expr2(NumericBinaryRelationalOperation<FloatType<N64>, TOp>.Instance));
-                break;
-            default:
-                throw new ValidationException($"Unsupported relational operand {l}, {r} for op {TOp.Instance.Name}", Model.Method);
-        }
+            if (!lt.Equals(rt))
+            {
+                throw new ValidationException($"binary relational op type not match {lt.Name} {rt.Name}", Model.Method);
+            }
+            return lt switch
+            {
+                IntType<N32> when isUn =>
+                    NumericBinaryRelationalOperation<UIntType<N32>, TOp>.Instance,
+                IntType<N32> =>
+                NumericBinaryRelationalOperation<IntType<N32>, TOp>.Instance,
+                IntType<N64> when isUn =>
+                   NumericBinaryRelationalOperation<UIntType<N64>, TOp>.Instance,
+                IntType<N64> =>
+                    NumericBinaryRelationalOperation<IntType<N64>, TOp>.Instance,
+                FloatType<N32> =>
+                    NumericBinaryRelationalOperation<FloatType<N32>, TOp>.Instance,
+                FloatType<N64> =>
+                    NumericBinaryRelationalOperation<FloatType<N64>, TOp>.Instance,
+                _ =>
+                    throw new ValidationException($"Unsupported relational operand {lt}, {rt} for op {TOp.Instance.Name}", Model.Method)
+            };
+        });
+
         if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
         {
-            Terminator = StackIR.Terminator.BrIf(tt, ft);
+            var c = Pop();
+            var args = FlushStackToOutput();
+            Terminator = TermF.BrIf(default, v, new(tt, args), new(ft, args));
         }
         else
         {
             throw new ValidationException($"successor mismatch, expected br_if, got {Successor}", Model.Method);
         }
+
         return default;
     }
 
@@ -498,17 +639,18 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         {
             throw new ValidationException($"logical op requires i32 operands, got {l}, {r}", Model.Method);
         }
+
         if (TOp.Instance is BinaryLogical.IWithBitwiseOp bOp)
         {
-            Emit(StackIR.Instruction.Expr2(bOp.BitwiseOp.GetNumericBinaryOperation(IntType<N32>.Instance)));
+            PushEmitLet2(bOp.BitwiseOp.GetNumericBinaryOperation(IntType<N32>.Instance), l, r);
         }
         else
         {
             throw new ValidationException($"Not support op {TOp.Instance}", Model.Method);
         }
+
         return default;
     }
-
 
 
     IBinaryExpressionOperation BinaryRelationalOperation<TOp>(IShaderType l, IShaderType r, bool isUn)
@@ -524,30 +666,35 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             (FloatType<N64>, FloatType<N64>, false) => NumericBinaryRelationalOperation<FloatType<N64>, TOp>.Instance,
             (IntType<N32>, IntType<N32>, true) => NumericBinaryRelationalOperation<UIntType<N32>, TOp>.Instance,
             (IntType<N64>, IntType<N64>, true) => NumericBinaryRelationalOperation<UIntType<N64>, TOp>.Instance,
-            _ => throw new ValidationException($"binary relational op {TOp.Instance.Name} not support in type {l}, {r}", Model.Method)
+            _ => throw new ValidationException($"binary relational op {TOp.Instance.Name} not support in type {l}, {r}",
+                Model.Method)
         };
     }
 
-    public Unit VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false) where TOp : BinaryRelational.IOp<TOp>
+    public Unit VisitBinaryRelation<TOp>(CilInstructionInfo inst, bool isUn = false, bool isChecked = false)
+        where TOp : BinaryRelational.IOp<TOp>
     {
         var r = Pop();
         var l = Pop();
-        var op = BinaryRelationalOperation<TOp>(l, r, isUn);
-        Emit(StackIR.Instruction.Expr2(op));
-        Push(op.ResultType);
+        var lt = GetValueType(l);
+        var rt = GetValueType(r);
+        var op = BinaryRelationalOperation<TOp>(lt, rt, isUn);
+        PushEmitLet2(op, l, r);
         return default;
     }
 
     public Unit VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>
     {
-        var t = Pop();
+        var v = Pop();
+        var t = GetValueType(v);
         if (t is IScalarType nt)
         {
             var operation = nt.GetConversionToOperation<TTarget>();
-            Emit(StackIR.Instruction.Expr1(operation));
-            Push(TTarget.Instance);
+            var r = EmitLet(operation.ResultType, Expr.Operation1(default, operation, CreateValueExpr(v)));
+            Push(r);
             return default;
         }
+
         throw new NotImplementedException();
     }
 

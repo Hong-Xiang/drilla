@@ -33,5 +33,5 @@ public sealed class ControlFlowGraphNodeBasicBlock : IBasicBlock2
     public Label Label { get; }
     public ISuccessor Successor { get; }
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => [];
-    public IEnumerable<IValue> ReferencedValues => [];
+    public IEnumerable<IShaderValue> ReferencedValues => [];
 }

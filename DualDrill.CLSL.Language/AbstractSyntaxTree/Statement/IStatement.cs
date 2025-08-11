@@ -29,7 +29,7 @@ public interface IStatement
 {
     T Accept<T>(IStatementVisitor<T> visitor);
 
-    IEnumerable<IValue> IDeclarationUser.ReferencedValues => [];
+    IEnumerable<IShaderValue> IDeclarationUser.ReferencedValues => [];
     IEnumerable<Label> IDeclarationUser.ReferencedLabels => [];
     IEnumerable<VariableDeclaration> IDeclarationUser.ReferencedLocalVariables => [];
 }

@@ -22,7 +22,7 @@ namespace DualDrill.CLSL.Test;
 
 public class ParseBodyTest(ITestOutputHelper Output)
 {
-    StackIRFunctionBody3 ParseMethod(FunctionDeclaration f, MethodBase m)
+    FunctionBody4 ParseMethod(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
         context.AddFunctionDefinition(Symbol.Function(m), f);
@@ -226,7 +226,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var result = ParseMethod(f,
             MethodHelper.GetMethod<uint, bool>(DevelopTestShaderModule.ImplicitConvertUIntMax));
 
-        var entry = result[result.Entry];
+        //var entry = result[result.Entry];
         //entry.Elements.Should().SatisfyRespectively(
         //    x => x.Should().BeOfType<LoadSymbolValueInstruction<ParameterDeclaration>>()
         //          .Which.Target.Should().Be(f.Parameters[0]),

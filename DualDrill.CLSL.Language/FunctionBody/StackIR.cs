@@ -27,13 +27,19 @@ public static class StackIR
 
         public static ITerminator<Label, Unit> Br(Label label)
             => Factory.Br(default, label);
+
         public static ITerminator<Label, Unit> BrIf(Label t, Label f)
             => Factory.BrIf(default, default, t, f);
     }
 
     public static class Instruction
     {
-        static IStatementSemantic<Unit, Unit, IExpression<Unit>, IExpression<Unit>, FunctionDeclaration, StackInstruction> Stmt { get; } = Statement.Statement.Factory<Unit, IExpression<Unit>, IExpression<Unit>, FunctionDeclaration>();
+        static IStatementSemantic<Unit, Unit, IExpression<Unit>, IExpression<Unit>, FunctionDeclaration,
+            StackInstruction> Stmt { get; } = Statement.Statement
+                                                       .Factory<Unit, IExpression<Unit>, IExpression<Unit>,
+                                                           FunctionDeclaration>();
+
+
         static IExpressionSemantic<Unit, Unit, IExpression<Unit>> Expr = Expression.Expression.Factory<Unit>();
         static PointerOperationFactory Pointer = new();
 
@@ -46,31 +52,39 @@ public static class StackIR
 
         public static StackIRInstruction GetParameter(ParameterDeclaration target)
             => new(Stmt.Get(default, default, Expr.AddressOfSymbol(default, Pointer.Parameter(target))));
+
         public static StackIRInstruction GetLocal(VariableDeclaration target)
             => new(Stmt.Get(default, default, Expr.AddressOfSymbol(default, Pointer.LocalVariable(target))));
+
         public static StackIRInstruction GetParameterAddress(ParameterDeclaration target)
             => new(Stmt.Let(default, default, Expr.AddressOfSymbol(default, Pointer.Parameter(target))));
+
         public static StackIRInstruction GetLocalAddress(VariableDeclaration target)
             => new(Stmt.Let(default, default, Expr.AddressOfSymbol(default, Pointer.LocalVariable(target))));
 
 
         public static StackIRInstruction SetVecComponent(IVectorComponentSetOperation operation)
-            => new(Stmt.Set(default, Expr.AddressOfChain(default, Pointer.VecComponent(operation.VecType, operation.Component), default), default));
+            => new(Stmt.Set(default,
+                Expr.AddressOfChain(default, Pointer.VecComponent(operation.VecType, operation.Component), default),
+                default));
+
         public static StackIRInstruction SetVecSwizzle(IVectorSwizzleSetOperation operation)
             => new(Stmt.SetVecSwizzle(default, operation, default, default));
+
         public static StackIRInstruction SetParameter(ParameterDeclaration target)
             => new(Stmt.Set(default, Expr.AddressOfSymbol(default, Pointer.Parameter(target)), default));
+
         public static StackIRInstruction SetLocal(VariableDeclaration target)
             => new(Stmt.Set(default, Expr.AddressOfSymbol(default, Pointer.LocalVariable(target)), default));
 
         public static StackIRInstruction GetMember(MemberDeclaration target)
             => new(Stmt.Get(default, default, Expr.Operation1(default, Pointer.Member(target), default)));
+
         public static StackIRInstruction GetMemberAddress(MemberDeclaration target)
             => new(Stmt.Let(default, default, Expr.Operation1(default, Pointer.Member(target), default)));
+
         public static StackIRInstruction SetMember(MemberDeclaration target)
             => new(Stmt.Set(default, Expr.Operation1(default, Pointer.Member(target), default), default));
-
-
 
 
         public static StackIRInstruction Mov(ILoadStoreTargetSymbol target, ILoadStoreTargetSymbol source)
@@ -90,8 +104,6 @@ public static class StackIR
             where TLiteral : ILiteral
             => new(Stmt.Let(default, default, Expr.Literal(default, literal)));
 
-        public static StackIRInstruction Expr2(IBinaryExpressionOperation operation)
-            => new(Stmt.Let(default, default, Expr.Operation2(default, operation, default, default)));
 
         public static StackIRInstruction Expr1(IUnaryExpressionOperation operation)
             => new(Stmt.Let(default, default, Expr.Operation1(default, operation, default)));

@@ -28,7 +28,7 @@ public sealed class StructuredStackInstructionFunctionBody : IFunctionBody, ILoc
     FrozenDictionary<VariableDeclaration, int> VariableIndices { get; }
     FrozenDictionary<Label, int> LabelIndices { get; }
 
-    public int ValueIndex(IValue value)
+    public int ValueIndex(IShaderValue value)
     {
         throw new NotImplementedException();
     }
@@ -42,7 +42,7 @@ public sealed class StructuredStackInstructionFunctionBody : IFunctionBody, ILoc
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
-    public ImmutableArray<IValue> Values { get; }
+    public ImmutableArray<IShaderValue> Values { get; }
 
     public void Dump(IndentedTextWriter writer)
     {

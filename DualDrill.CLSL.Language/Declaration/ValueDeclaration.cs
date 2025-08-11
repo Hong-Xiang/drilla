@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
+[Obsolete]
 public sealed record class ValueDeclaration(
     DeclarationScope DeclarationScope,
     string Name,

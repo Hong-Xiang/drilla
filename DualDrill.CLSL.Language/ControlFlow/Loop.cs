@@ -22,7 +22,7 @@ public sealed class Loop(
     public IEnumerable<Label> ReferencedLabels => [Label, .. Body.Labels];
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => Body.LocalVariables;
-    public IEnumerable<IValue> ReferencedValues => Body.LocalValues;
+    public IEnumerable<IShaderValue> ReferencedValues => Body.LocalValues;
 
     public Loop ApplyTransform<TSourceBasicBlock, TResultBasicBlock>(
         IBasicBlockTransform<TSourceBasicBlock, TResultBasicBlock> transform)

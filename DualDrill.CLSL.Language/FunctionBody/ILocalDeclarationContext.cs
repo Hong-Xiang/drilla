@@ -8,19 +8,19 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 public interface ILocalDeclarationContext
 {
     int LabelIndex(Label label);
-    int ValueIndex(IValue value);
+    int ValueIndex(IShaderValue value);
     int VariableIndex(VariableDeclaration variable);
 
     ImmutableArray<VariableDeclaration> LocalVariables { get; }
     ImmutableArray<Label> Labels { get; }
-    ImmutableArray<IValue> Values { get; }
+    ImmutableArray<IShaderValue> Values { get; }
 }
 
 public interface IDeclarationUser : ITextDumpable<ILocalDeclarationContext>
 {
     public IEnumerable<Label> ReferencedLabels { get; }
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables { get; }
-    public IEnumerable<IValue> ReferencedValues { get; }
+    public IEnumerable<IShaderValue> ReferencedValues { get; }
 }
 
 public static class LocalDeclarationContextExtensions
@@ -38,7 +38,7 @@ public static class LocalDeclarationContextExtensions
             : $"var<m> {variable.Name}";
     }
 
-    public static string ValueName(this ILocalDeclarationContext context, IValue value)
+    public static string ValueName(this ILocalDeclarationContext context, IShaderValue value)
     {
         return $"let %{context.ValueIndex(value)} : {value.Type.Name}";
     }

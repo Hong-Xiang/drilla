@@ -9,7 +9,7 @@ namespace DualDrill.CLSL.Language.Region;
 
 
 
-public interface IRegionDefinitionFoldSemantic<TX, TL, TB, TS, T>
+public interface IRegionTreeFoldSemantic<TX, TL, TB, TS, T>
     : ISeqSemantic<TX, T, TB, Func<TX, TS>, TS>
     , IRegionDefinitionSemantic<TX, TL, Func<TX, TS>, T>
 {
@@ -29,11 +29,11 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
     public RegionTree<TL, TB> WithBindings(IEnumerable<RegionTree<TL, TB>> regions)
         => new(Definition.Select(seq => Seq.Create([.. regions], seq.Last)));
 
-    public T Fold<TX, TS, T>(IRegionDefinitionFoldSemantic<TX, TL, TB, TS, T> semantic, TX context)
+    public T Fold<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic, TX context)
         => Definition.Evaluate(new FoldImplSemantic<TX, TS, T>(semantic), context);
 
 
-    sealed class FoldImplSemantic<TX, TS, T>(IRegionDefinitionFoldSemantic<TX, TL, TB, TS, T> semantic)
+    sealed class FoldImplSemantic<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic)
         : IRegionDefinitionSemantic<TX, TL, Seq<RegionTree<TL, TB>, TB>, T>
         , ISeqSemantic<TX, RegionTree<TL, TB>, TB, Func<TX, TS>, TS>
     {
@@ -51,7 +51,7 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
 
 
     sealed class MapFoldSemantic<TLR, TBR>(Func<TL, TLR> l, Func<TB, TBR> b)
-        : IRegionDefinitionFoldSemantic<Unit, TL, TB, Seq<RegionTree<TLR, TBR>, TBR>, RegionTree<TLR, TBR>>
+        : IRegionTreeFoldSemantic<Unit, TL, TB, Seq<RegionTree<TLR, TBR>, TBR>, RegionTree<TLR, TBR>>
     {
         public RegionTree<TLR, TBR> Block(Unit context, TL label, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> body)
         {
@@ -110,7 +110,7 @@ public static class RegionTree
 
 }
 sealed class RegionDefinitionFormatter
-   : IRegionDefinitionFoldSemantic<int, string, IEnumerable<string>, IEnumerable<string>, IEnumerable<string>>
+   : IRegionTreeFoldSemantic<int, string, IEnumerable<string>, IEnumerable<string>, IEnumerable<string>>
 {
     string Indent(int count) => new string('\t', count);
 
@@ -132,7 +132,7 @@ sealed class RegionDefinitionFormatter
 }
 
 sealed class RegionDefinitionDefinedLabelsSemantic<TB>
-    : IRegionDefinitionFoldSemantic<Unit, Label, TB, IEnumerable<Label>, IEnumerable<Label>>
+    : IRegionTreeFoldSemantic<Unit, Label, TB, IEnumerable<Label>, IEnumerable<Label>>
 {
     public IEnumerable<Label> Block(Unit context, Label label, Func<Unit, IEnumerable<Label>> body)
         => [label, .. body(default)];

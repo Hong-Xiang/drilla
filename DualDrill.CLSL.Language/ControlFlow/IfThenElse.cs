@@ -24,7 +24,7 @@ public sealed class IfThenElse(
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
         [..TrueBody.LocalVariables, ..FalseBody.LocalVariables];
 
-    public IEnumerable<IValue> ReferencedValues => [..TrueBody.LocalValues, ..FalseBody.LocalValues];
+    public IEnumerable<IShaderValue> ReferencedValues => [..TrueBody.LocalValues, ..FalseBody.LocalValues];
 
     public TResult Accept<TResult>(IStructuredControlFlowRegion.IRegionPatternVisitor<TResult> pattern)
         => pattern.VisitIfThenElse(this);

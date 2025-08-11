@@ -65,5 +65,5 @@ public sealed class StackInstructionBasicBlock
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables =>
         Elements.SelectMany(e => e.ReferencedLocalVariables);
 
-    public IEnumerable<IValue> ReferencedValues => [];
+    public IEnumerable<IShaderValue> ReferencedValues => [];
 }

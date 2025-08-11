@@ -13,7 +13,8 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using ValueDeclaration = DualDrill.CLSL.Language.Symbol.ValueDeclaration;
+using DualDrill.CLSL.Language.Region;
+using ShaderValueDeclaration = DualDrill.CLSL.Language.Symbol.ShaderValueDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -25,7 +26,7 @@ namespace DualDrill.CLSL.Frontend;
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
-    Dictionary<FunctionDeclaration, StackIRFunctionBody3> MethodBodies)
+    Dictionary<FunctionDeclaration, FunctionBody4> MethodBodies)
 {
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
@@ -187,7 +188,7 @@ public sealed record class RuntimeReflectionParser(
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
-    public ShaderModuleDeclaration<StackIRFunctionBody3> ParseShaderModule(
+    public ShaderModuleDeclaration<FunctionBody4> ParseShaderModule(
         ISharpShader module)
     {
         var moduleType = module.GetType();
@@ -326,44 +327,38 @@ public sealed record class RuntimeReflectionParser(
         return result;
     }
 
-    public StackIRFunctionBody3 ParseMethodBody3(FunctionDeclaration f)
+    public FunctionBody4 ParseMethodBody3(FunctionDeclaration f)
     {
         var model = Context.GetFunctionDefinition(f);
         var methodTable = new CompilationContext(Context);
-        Dictionary<VariableDeclaration, ValueDeclaration> localValues = [];
+        Dictionary<VariableDeclaration, ShaderValueDeclaration> localValues = [];
         Dictionary<ParameterDeclaration, IParameterBinding> parameterBindings = [];
+        List<ShaderValueDeclaration> localVariableDeclarations = [];
         foreach (var v in model.LocalVariables)
         {
             var loc = ParseLocalVariable(v, methodTable);
-            localValues.Add(loc, new(ShaderValue.Create($"loc_{v.LocalIndex}"), loc.Type.GetPtrType()));
+            var valueDecl = new ShaderValueDeclaration(ShaderValue.Create($"loc_{v.LocalIndex}"), loc.Type.GetPtrType());
+            localValues.Add(loc, valueDecl);
+            localVariableDeclarations.Add(valueDecl);
         }
 
+        List<IParameterBinding> parameterBindingsList = [];
         {
             foreach (var (index, p) in f.Parameters.Index())
             {
                 methodTable.AddParameter(Symbol.Parameter(index), p);
-                parameterBindings.Add(p, new ParameterPointerBinding(ShaderValue.Create(p.Name), p));
+                var binding = new ParameterPointerBinding(ShaderValue.Create(p.Name), p);
+                parameterBindings.Add(p, binding);
+                parameterBindingsList.Add(binding);
             }
         }
 
-        var localVariables = new VariableDeclaration[model.LocalVariables.Length];
-        foreach (var v in model.LocalVariables)
-        {
-            var decl = new VariableDeclaration(
-                DeclarationScope.Function,
-                $"loc_{v.LocalIndex}",
-                ParseType(v.LocalType),
-                []
-            );
-            localVariables[v.LocalIndex] = decl;
-        }
-
-        Dictionary<Label, ImmutableStack<IShaderType>> BasicBlockInputs = new()
+        Dictionary<Label, ImmutableStack<ShaderValueDeclaration>> basicBlockInputs = new()
         {
             [model.ControlFlowGraph.EntryLabel] = []
         };
-        Dictionary<Label, ImmutableStack<IShaderType>> BasicBlockOutputs = [];
-        Dictionary<Label, StackIRBasicBlock> basicBlocks = [];
+        //Dictionary<Label, ImmutableStack<ValueDeclaration>> basicBlockOutputs = [];
+        Dictionary<Label, ShaderRegionBody> basicBlocks = [];
 
         foreach (var l in model.ControlFlowGraph.Labels())
         {
@@ -371,7 +366,7 @@ public sealed record class RuntimeReflectionParser(
                 model,
                 f,
                 model.ControlFlowGraph.Successor(l),
-                BasicBlockInputs[l],
+                basicBlockInputs[l],
                 localValues,
                 parameterBindings
             );
@@ -382,52 +377,65 @@ public sealed record class RuntimeReflectionParser(
                 cilInst.Evaluate(visitor, model.IsStatic, methodTable);
             }
 
-            BasicBlockOutputs.Add(l, visitor.Stack);
+            //basicBlockOutputs.Add(l, visitor.Stack);
 
-            ITerminator<Label, Unit>? terminator = visitor.Terminator;
+            ITerminator<RegionJump, ShaderValue>? terminator = visitor.Terminator;
 
 
             {
                 var successor = model.ControlFlowGraph.Successor(l);
-                terminator ??= Terminator.B.Br<Label, Unit>(successor.AllTargets().Single());
+                var args = visitor.Stack.ToImmutableArray();
+                terminator ??= Terminator.B.Br<RegionJump, ShaderValue>(new(successor.AllTargets().Single(), args));
 
                 foreach (var tl in successor.AllTargets())
                 {
-                    if (BasicBlockInputs.TryGetValue(tl, out var existed))
+                    if (basicBlockInputs.TryGetValue(tl, out var existed))
                     {
-                        if (visitor.Stack.Count() != existed.Count())
-                        {
-                            throw new ValidationException(
-                                $"Successor's input stack size {existed.Count()} not matching current output {visitor.Stack.Count()}",
-                                model.Method);
-                        }
-
-                        if (!visitor.Stack.SequenceEqual(existed))
-                        {
-                            throw new ValidationException(
-                                $"Successor's input stack not match",
-                                model.Method);
-                        }
+                        // if (visitor.Stack.Count() != existed.Count())
+                        // {
+                        //     throw new ValidationException(
+                        //         $"Successor's input stack size {existed.Count()} not matching current output {visitor.Stack.Count()}",
+                        //         model.Method);
+                        // }
+                        //
+                        // if (!visitor.Stack.SequenceEqual(existed))
+                        // {
+                        //     throw new ValidationException(
+                        //         $"Successor's input stack not match",
+                        //         model.Method);
+                        // }
+                        // TODO: should we add validation here?
                     }
                     else
                     {
-                        BasicBlockInputs.Add(tl, visitor.Stack);
+                        var inputs = ImmutableStack.CreateRange(visitor.Stack.Select(v => new ShaderValueDeclaration(ShaderValue.Create(), visitor.GetValueType(v))));
+                        basicBlockInputs.Add(tl, inputs);
                     }
                 }
 
-                basicBlocks.Add(l, new StackIRBasicBlock(
+                basicBlocks.Add(l, new ShaderRegionBody(
                     l,
-                    terminator ?? throw new NotSupportedException("failed to resolve terminator"),
-                    BasicBlockInputs[l],
-                    BasicBlockOutputs[l],
-                    [.. visitor.Instructions]
+                    [.. basicBlockInputs[l]],
+                    Seq.Create(
+                        [.. visitor.Statements],
+                        terminator ?? throw new NotSupportedException("failed to resolve terminator")
+                    )
                 ));
             }
         }
 
-        return new StackIRFunctionBody3(
-            model.ControlFlowGraph.EntryLabel,
-            basicBlocks.ToFrozenDictionary()
+        // return new StackIRFunctionBody3(
+        //     model.ControlFlowGraph.EntryLabel,
+        //     basicBlocks.ToFrozenDictionary()
+        // );
+        return new FunctionBody4(
+            [.. parameterBindingsList],
+            [.. localVariableDeclarations],
+            RegionTree.Create<ShaderRegionBody>(
+                model.ControlFlowGraph.EntryLabel,
+                x => x.Body.Last.ToSuccessor(),
+                basicBlocks.Select(kv => (kv.Key, kv.Value))
+            )
         );
     }
 

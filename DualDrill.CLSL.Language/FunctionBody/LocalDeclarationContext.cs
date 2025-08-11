@@ -27,14 +27,14 @@ public sealed class LocalDeclarationContext : ILocalDeclarationContext
     public int VariableIndex(VariableDeclaration variable)
         => LocalVariableIndices[variable];
 
-    public int ValueIndex(IValue value)
+    public int ValueIndex(IShaderValue value)
         => ValueIndices[value];
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
-    public ImmutableArray<IValue> Values { get; }
+    public ImmutableArray<IShaderValue> Values { get; }
 
     private readonly FrozenDictionary<Label, int> LabelIndices;
     private readonly FrozenDictionary<VariableDeclaration, int> LocalVariableIndices;
-    private readonly FrozenDictionary<IValue, int> ValueIndices;
+    private readonly FrozenDictionary<IShaderValue, int> ValueIndices;
 }

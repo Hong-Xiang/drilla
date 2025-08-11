@@ -17,8 +17,8 @@ public static class ExprTransform
         return new FuncExprTransform<TS, TR>(f);
     }
 
-    public static IExprTransform<ExpressionTree<T>, T> Create<T>(Func<ExpressionTree<T>, T> f)
+    public static IExprTransform<IExpressionTree<T>, T> Create<T>(Func<IExpressionTree<T>, T> f)
     {
-        return new FuncExprTransform<ExpressionTree<T>, T>(f);
+        return new FuncExprTransform<IExpressionTree<T>, T>(f);
     }
 }

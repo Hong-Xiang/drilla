@@ -1,16 +1,10 @@
 ﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Expression;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language;
-
-public interface IJump<out TT, out TE>
-{
-    TT TargetRegion { get; }
-    IReadOnlyList<TE> Arguments { get; }
-}
-
 
 public interface ITerminatorSemantic<in TX, in TT, in TE, out TO>
 {
@@ -23,8 +17,6 @@ public interface ITerminatorSemantic<in TX, in TT, in TE, out TO>
 public interface ITerminator<TT, TE> : ISuccessor<TT>
 {
     public TR Evaluate<TX, TR>(ITerminatorSemantic<TX, TT, TE, TR> semantic, TX context);
-
-
     public ITerminator<TTR, TER> Select<TTR, TER>(Func<TT, TTR> f, Func<TE, TER> g);
 }
 
@@ -54,6 +46,7 @@ public abstract class Terminator
 
             public TR Evaluate<TX, TR>(ITerminatorSemantic<TX, TT, TE, TR> semantic, TX context)
                 => semantic.ReturnExpr(context, Expr);
+
             public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, TT, TR> semantic, TX context)
                 => semantic.Terminate(context);
 
@@ -68,6 +61,7 @@ public abstract class Terminator
         {
             public TR Evaluate<TX, TR>(ITerminatorSemantic<TX, TT, TE, TR> semantic, TX context)
                 => semantic.Br(context, Target);
+
             public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, TT, TR> semantic, TX context)
                 => semantic.Unconditional(context, Target);
 
@@ -83,6 +77,7 @@ public abstract class Terminator
         {
             public TR Evaluate<TX, TR>(ITerminatorSemantic<TX, TT, TE, TR> semantic, TX context)
                 => semantic.BrIf(context, Condition, TrueTarget, FalseTarget);
+
             public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, TT, TR> semantic, TX context)
                 => semantic.Conditional(context, TrueTarget, FalseTarget);
 
@@ -124,7 +119,9 @@ public abstract class Terminator
         public ITerminator<TT, TE> ReturnVoid(Unit context)
             => B.ReturnVoid<TT, TE>();
     }
-    public static ITerminatorSemantic<Unit, TT, TE, ITerminator<TT, TE>> Factory<TT, TE>() => new FactorySemantic<TT, TE>();
+
+    public static ITerminatorSemantic<Unit, TT, TE, ITerminator<TT, TE>> Factory<TT, TE>() =>
+        new FactorySemantic<TT, TE>();
 }
 
 public static class TerminatorExtension
@@ -133,15 +130,22 @@ public static class TerminatorExtension
     {
         public ISuccessor Br(Unit context, Label target)
             => new UnconditionalSuccessor(target);
+
         public ISuccessor BrIf(Unit context, TE condition, Label trueTarget, Label falseTarget)
             => new ConditionalSuccessor(trueTarget, falseTarget);
+
         public ISuccessor ReturnExpr(Unit context, TE expr)
             => new TerminateSuccessor();
+
         public ISuccessor ReturnVoid(Unit context)
             => new TerminateSuccessor();
     }
+
     public static ISuccessor ToSuccessor<TE>(this ITerminator<Label, TE> t)
         => t.Evaluate(new ToSuccessorSemantic<TE>(), default);
+
+    public static ISuccessor ToSuccessor<TE>(this ITerminator<RegionJump, TE> t)
+        => t.Select(l => l.Label, e => e).Evaluate(new ToSuccessorSemantic<TE>(), default);
 
     public static ITerminator<TR, TE> Map<TT, TE, TR>(this ITerminator<TT, TE> t, ILabelMap<TT, TR> f)
         => t.Select(f.MapLabel, static x => x);
