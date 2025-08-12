@@ -211,8 +211,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     void PushEmitLet2(IBinaryExpressionOperation op, ShaderValue l, ShaderValue r)
     {
-        var v = CreateValue(op.ResultType);
-        EmitLet(op.ResultType, ExprF.Operation2(default, op, CreateValueExpr(l), CreateValueExpr(r)));
+        var v = EmitLet(op.ResultType, ExprF.Operation2(default, op, CreateValueExpr(l), CreateValueExpr(r)));
         Push(v);
     }
 
@@ -461,22 +460,21 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                     {
                         var r = Pop();
                         var l = Pop();
-                        if (!l.Equals(bs.LeftType) || !r.Equals(bs.RightType))
+                        if (!GetValueType(l).Equals(bs.LeftType) || !GetValueType(r).Equals(bs.RightType))
                         {
                             throw new ValidationException($"{bs} operation stack : {l.Name}, {r.Name}", Model.Method);
                         }
 
                         if (bs is IVectorComponentSetOperation vcs)
                         {
-                            //Emit(StackIR.Instruction.SetVecComponent(vcs));
-                            throw new NotImplementedException();
+                            var cp = EmitLet(vcs.ElementType.GetPtrType(), ExprF.AddressOfChain(default, new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), CreateValueExpr(l)));
+                            Emit(Stmt.Set(default, cp, r));
                             return;
                         }
 
                         if (bs is IVectorSwizzleSetOperation vss)
                         {
-                            //Emit(StackIR.Instruction.SetVecSwizzle(vss));
-                            throw new NotImplementedException();
+                            Emit(Stmt.SetVecSwizzle(default, vss, l, r));
                             return;
                         }
 
@@ -485,15 +483,18 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                 case IUnaryExpressionOperation ue:
                     {
                         var s = Pop();
-                        if (!s.Equals(ue.SourceType))
+                        if (!GetValueType(s).Equals(ue.SourceType))
                         {
                             throw new ValidationException($"{ue} operation stack : {s.Name}", Model.Method);
                         }
 
+                        var v = EmitLet(ue.ResultType, ExprF.Operation1(default, ue, CreateValueExpr(s)));
+                        Push(v);
+                        return;
+
                         //Emit(StackIR.Instruction.Expr1(ue));
                         //Push(ue.ResultType);
-                        throw new NotImplementedException();
-                        return;
+                        //throw new NotImplementedException($"unary expression {ue} not implemented");
                     }
             }
         }
@@ -510,6 +511,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             }
             args.Add(ve);
         }
+        args.Reverse();
         var rv = CreateValue(UnitType.Instance);
         Emit(Stmt.Call(default, rv, func, [.. args.Select(v => CreateValueExpr(v))]));
 
@@ -533,10 +535,10 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         return default;
     }
 
-    ImmutableArray<ShaderValue> FlushStackToOutput()
+    public ImmutableArray<ShaderValue> GetStackOutput()
     {
-        var result = Stack.ToImmutableArray();
-        Stack = [];
+        var result = Stack.Reverse().ToImmutableArray();
+        //Stack = [];
         return result;
     }
 
@@ -544,7 +546,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     {
         if (Successor is UnconditionalSuccessor { Target: var target })
         {
-            var args = FlushStackToOutput();
+            var args = GetStackOutput();
             Terminator = TermF.Br(default, new(target, args));
             return default;
         }
@@ -565,15 +567,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
         if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
         {
-            var c = Pop();
-            var args = FlushStackToOutput();
+            var args = GetStackOutput();
             if (value)
             {
-                Terminator = TermF.BrIf(default, c, new(tt, args), new(ft, args));
+                Terminator = TermF.BrIf(default, v, new(tt, args), new(ft, args));
             }
             else
             {
-                Terminator = TermF.BrIf(default, c, new(ft, args), new(tt, args));
+                Terminator = TermF.BrIf(default, v, new(ft, args), new(tt, args));
             }
 
             return default;
@@ -614,8 +615,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
         if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
         {
-            var c = Pop();
-            var args = FlushStackToOutput();
+            var args = GetStackOutput();
             Terminator = TermF.BrIf(default, v, new(tt, args), new(ft, args));
         }
         else

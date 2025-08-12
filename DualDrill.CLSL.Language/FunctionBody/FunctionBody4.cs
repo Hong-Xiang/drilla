@@ -81,7 +81,19 @@ public sealed record class FunctionBody4(
     }
 
     public ImmutableArray<VariableDeclaration> LocalVariables => [];
-    public ImmutableArray<Label> Labels { get; }
+    public ImmutableArray<Label> Labels { get; } = GetLabels(Body);
+
+    static ImmutableArray<Label> GetLabels(RegionTree<Label, ShaderRegionBody> body)
+    {
+        var labels = ImmutableArray.CreateBuilder<Label>();
+        body.Traverse((l, b) =>
+        {
+            labels.Add(l);
+            return false;
+        });
+        return labels.ToImmutable();
+    }
+
     public ImmutableArray<IShaderValue> Values { get; }
 
     public IUnifiedFunctionBody<TResultBasicBlock> ApplyTransform<TResultBasicBlock>(
@@ -98,10 +110,29 @@ public sealed record class FunctionBody4(
 
     public Label Entry => Body.Label;
 
-    public ShaderRegionBody this[Label label] => throw new NotImplementedException();
+    public ShaderRegionBody this[Label label]
+    {
+        get
+        {
+            ShaderRegionBody? found = null;
+            Body.Traverse((l, b) =>
+            {
+                if (l == label)
+                {
+                    found = b;
+                    return true;
+                }
+                return false;
+            });
+            if (found is null)
+            {
+                throw new KeyNotFoundException($"region with label {label} not found");
+            }
+            return found;
+        }
+    }
+
 
     public ISuccessor Successor(Label label)
-    {
-        throw new NotImplementedException();
-    }
+        => this[label].Successor;
 }

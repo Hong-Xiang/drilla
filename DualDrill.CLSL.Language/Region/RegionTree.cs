@@ -32,6 +32,22 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
     public T Fold<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic, TX context)
         => Definition.Evaluate(new FoldImplSemantic<TX, TS, T>(semantic), context);
 
+    public bool Traverse(Func<TL, TB, bool> f)
+    {
+        var r = f(Definition.Label, Definition.Body.Last);
+        if (!r)
+        {
+            foreach (var b in Definition.Body.Elements.Reverse())
+            {
+                if (b.Traverse(f))
+                {
+                    return true;
+                }
+            }
+        }
+        return r;
+    }
+
 
     sealed class FoldImplSemantic<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic)
         : IRegionDefinitionSemantic<TX, TL, Seq<RegionTree<TL, TB>, TB>, T>

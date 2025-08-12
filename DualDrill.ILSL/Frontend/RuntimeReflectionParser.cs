@@ -362,6 +362,7 @@ public sealed record class RuntimeReflectionParser(
 
         foreach (var l in model.ControlFlowGraph.Labels())
         {
+            Debug.WriteLine($"Label {l} == ");
             var visitor = new RuntimeReflectionInstructionParserVisitor3(
                 model,
                 f,
@@ -374,7 +375,10 @@ public sealed record class RuntimeReflectionParser(
             for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
             {
                 var cilInst = model[i];
+                Debug.Write($"parse {cilInst.Instruction.OpCode}");
                 cilInst.Evaluate(visitor, model.IsStatic, methodTable);
+                Debug.Write($" -> ");
+                Debug.WriteLine(string.Join(", ", visitor.Stack.Select(v => visitor.GetValueType(v).Name)));
             }
 
             //basicBlockOutputs.Add(l, visitor.Stack);
@@ -384,7 +388,7 @@ public sealed record class RuntimeReflectionParser(
 
             {
                 var successor = model.ControlFlowGraph.Successor(l);
-                var args = visitor.Stack.ToImmutableArray();
+                var args = visitor.GetStackOutput();
                 terminator ??= Terminator.B.Br<RegionJump, ShaderValue>(new(successor.AllTargets().Single(), args));
 
                 foreach (var tl in successor.AllTargets())
