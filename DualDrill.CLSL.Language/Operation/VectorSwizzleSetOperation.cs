@@ -1,6 +1,5 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
-using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation;
@@ -33,11 +32,6 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
     public IVecType ValueVecType => (IVecType)RightType;
 
     public IScalarType ElementType => TElement.Instance;
-
-    public StackIRInstruction CreateStackInstruction()
-    {
-        throw new NotImplementedException();
-    }
 
     public IStatement CreateStatement(IExpression target, IExpression value)
         => TPattern.Instance.CreateSwizzleSetStatement<TElement>(target, value);

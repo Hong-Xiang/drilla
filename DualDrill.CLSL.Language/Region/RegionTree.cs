@@ -9,11 +9,20 @@ namespace DualDrill.CLSL.Language.Region;
 
 
 
-public interface IRegionTreeFoldSemantic<TX, TL, TB, TS, T>
-    : ISeqSemantic<T, TB, Func<TX, TS>, TS>
-    , IRegionDefinitionSemantic<TX, TL, Func<TX, TS>, T>
+public interface IRegionTreeFoldSemantic<TL, TB, TS, T>
+    : ISeqSemantic<T, TB, Func<TS>, TS>
+    , IRegionDefinitionSemantic<TL, Func<TS>, T>
 {
 }
+
+public interface IRegionTreeFoldLazySemantic<TL, TB, TS, T>
+    : ISeqSemantic<Func<T>, TB, Func<TS>, TS>
+    , IRegionDefinitionSemantic<TL, Func<TS>, T>
+{
+}
+
+
+
 
 public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>> Definition)
 {
@@ -29,8 +38,11 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
     public RegionTree<TL, TB> WithBindings(IEnumerable<RegionTree<TL, TB>> regions)
         => new(Definition.Select(seq => Seq.Create([.. regions], seq.Last)));
 
-    public T Fold<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic)
-        => Definition.Evaluate(new FoldImplSemantic<TX, TS, T>(semantic));
+    public T Fold<TS, T>(IRegionTreeFoldSemantic<TL, TB, TS, T> semantic)
+        => Definition.Evaluate(new FoldImplSemantic<TS, T>(semantic));
+    public T Fold<TS, T>(IRegionTreeFoldLazySemantic<TL, TB, TS, T> semantic)
+        => Definition.Evaluate(new FoldLazyImplSemantic<TS, T>(semantic))();
+
 
     public bool Traverse(Func<TL, TB, bool> f)
     {
@@ -48,17 +60,35 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
         return r;
     }
 
+    sealed class FoldLazyImplSemantic<TS, T>(IRegionTreeFoldLazySemantic<TL, TB, TS, T> semantic)
+        : IRegionDefinitionSemantic<TL, Seq<RegionTree<TL, TB>, TB>, Func<T>>
+        , ISeqSemantic<RegionTree<TL, TB>, TB, Func<TS>, Func<TS>>
+    {
+        public Func<T> Block(TL label, Seq<RegionTree<TL, TB>, TB> body)
+            => () => semantic.Block(label, body.Fold(this));
+        public Func<T> Loop(TL label, Seq<RegionTree<TL, TB>, TB> body)
+            => () => semantic.Loop(label, body.Fold(this));
 
-    sealed class FoldImplSemantic<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic)
-        : IRegionDefinitionSemantic<TX, TL, Seq<RegionTree<TL, TB>, TB>, T>
-        , ISeqSemantic<RegionTree<TL, TB>, TB, Func<TX, TS>, TS>
+        public Func<TS> Nested(RegionTree<TL, TB> head, Func<TS> next)
+            => () => semantic.Nested(head.Definition.Evaluate(this), next);
+
+        public Func<TS> Single(TB value)
+           => () => semantic.Single(value);
+    }
+
+
+
+
+    sealed class FoldImplSemantic<TS, T>(IRegionTreeFoldSemantic<TL, TB, TS, T> semantic)
+        : IRegionDefinitionSemantic<TL, Seq<RegionTree<TL, TB>, TB>, T>
+        , ISeqSemantic<RegionTree<TL, TB>, TB, Func<TS>, TS>
     {
         public T Block(TL label, Seq<RegionTree<TL, TB>, TB> body)
-            => semantic.Block(label, ctx => body.Fold(this));
+            => semantic.Block(label, () => body.FoldLazy(this));
         public T Loop(TL label, Seq<RegionTree<TL, TB>, TB> body)
-            => semantic.Loop(label, ctx => body.Fold(this));
+            => semantic.Loop(label, () => body.FoldLazy(this));
 
-        public TS Nested(RegionTree<TL, TB> head, Func<TX, TS> next)
+        public TS Nested(RegionTree<TL, TB> head, Func<TS> next)
             => semantic.Nested(head.Definition.Evaluate(this), next);
 
         public TS Single(TB value)
@@ -67,21 +97,21 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
 
 
     sealed class MapFoldSemantic<TLR, TBR>(Func<TL, TLR> l, Func<TB, TBR> b)
-        : IRegionTreeFoldSemantic<Unit, TL, TB, Seq<RegionTree<TLR, TBR>, TBR>, RegionTree<TLR, TBR>>
+        : IRegionTreeFoldSemantic<TL, TB, Seq<RegionTree<TLR, TBR>, TBR>, RegionTree<TLR, TBR>>
     {
-        public RegionTree<TLR, TBR> Block(TL label, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> body)
+        public RegionTree<TLR, TBR> Block(TL label, Func<Seq<RegionTree<TLR, TBR>, TBR>> body)
         {
-            var bd = body(default);
+            var bd = body();
             return RegionTree<TLR, TBR>.Block(l(label), [.. bd.Elements], bd.Last);
         }
-        public RegionTree<TLR, TBR> Loop(TL label, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> body)
+        public RegionTree<TLR, TBR> Loop(TL label, Func<Seq<RegionTree<TLR, TBR>, TBR>> body)
         {
-            var bd = body(default);
+            var bd = body();
             return RegionTree<TLR, TBR>.Loop(l(label), [.. bd.Elements], bd.Last);
         }
 
-        public Seq<RegionTree<TLR, TBR>, TBR> Nested(RegionTree<TLR, TBR> head, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> next)
-            => Seq<RegionTree<TLR, TBR>, TBR>.Nested(head, next(default));
+        public Seq<RegionTree<TLR, TBR>, TBR> Nested(RegionTree<TLR, TBR> head, Func<Seq<RegionTree<TLR, TBR>, TBR>> next)
+            => Seq<RegionTree<TLR, TBR>, TBR>.Nested(head, next());
 
         public Seq<RegionTree<TLR, TBR>, TBR> Single(TB value)
             => Seq<RegionTree<TLR, TBR>, TBR>.Single(b(value));
@@ -125,38 +155,46 @@ public static class RegionTree
     }
 
 }
-sealed class RegionDefinitionFormatter(int context)
-   : IRegionTreeFoldSemantic<int, string, IEnumerable<string>, IEnumerable<string>, IEnumerable<string>>
+sealed class RegionDefinitionFormatter(int indent)
+   : IRegionTreeFoldSemantic<string, IEnumerable<string>, IEnumerable<string>, IEnumerable<string>>
 {
-    string Indent(int count) => new string('\t', count);
+    string IndentStr => new string('\t', Indent);
 
-    public IEnumerable<string> Block(string label, Func<int, IEnumerable<string>> body)
+    private int Indent = indent;
+
+    public IEnumerable<string> Block(string label, Func<IEnumerable<string>> body)
     {
-        return [Indent(context) + $"block {label}", .. body(context + 1)];
+        Indent++;
+        var b = body();
+        Indent--;
+        return [IndentStr + $"block {label}", .. b];
     }
 
-    public IEnumerable<string> Loop(string label, Func<int, IEnumerable<string>> body)
+    public IEnumerable<string> Loop(string label, Func<IEnumerable<string>> body)
     {
-        return [Indent(context) + $"loop {label}", .. body(context + 1)];
+        Indent++;
+        var b = body();
+        Indent--;
+        return [IndentStr + $"loop {label}", .. body()];
     }
 
-    public IEnumerable<string> Nested(IEnumerable<string> head, Func<int, IEnumerable<string>> next)
-        => [.. head, .. next(context)];
+    public IEnumerable<string> Nested(IEnumerable<string> head, Func<IEnumerable<string>> next)
+        => [.. head, .. next()];
 
     public IEnumerable<string> Single(IEnumerable<string> value)
-        => value.Select(v => Indent(context) + v);
+        => value.Select(v => IndentStr + v);
 }
 
 sealed class RegionDefinitionDefinedLabelsSemantic<TB>
-    : IRegionTreeFoldSemantic<Unit, Label, TB, IEnumerable<Label>, IEnumerable<Label>>
+    : IRegionTreeFoldSemantic<Label, TB, IEnumerable<Label>, IEnumerable<Label>>
 {
-    public IEnumerable<Label> Block(Label label, Func<Unit, IEnumerable<Label>> body)
-        => [label, .. body(default)];
-    public IEnumerable<Label> Loop(Label label, Func<Unit, IEnumerable<Label>> body)
-        => [label, .. body(default)];
+    public IEnumerable<Label> Block(Label label, Func<IEnumerable<Label>> body)
+        => [label, .. body()];
+    public IEnumerable<Label> Loop(Label label, Func<IEnumerable<Label>> body)
+        => [label, .. body()];
 
-    public IEnumerable<Label> Nested(IEnumerable<Label> head, Func<Unit, IEnumerable<Label>> next)
-        => [.. head, .. next(default)];
+    public IEnumerable<Label> Nested(IEnumerable<Label> head, Func<IEnumerable<Label>> next)
+        => [.. head, .. next()];
 
     public IEnumerable<Label> Single(TB value)
         => [];

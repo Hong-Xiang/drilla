@@ -38,15 +38,6 @@ public class ParseBodyTest(ITestOutputHelper Output)
         return result;
     }
 
-    void AssertBasicBlockEquals(StackIRBasicBlock expected, StackIRBasicBlock actual)
-    {
-        Assert.Equal(expected.Label, actual.Label);
-        Assert.Equal(expected.Terminator, actual.Terminator);
-        Assert.Equal(expected.Inputs, actual.Inputs);
-        Assert.Equal(expected.Outputs, actual.Outputs);
-        expected.Instructions.Should().Equal(actual.Instructions);
-    }
-
 
     [Fact]
     public void ParseBasicLiteralExpressionBodyShouldWork()

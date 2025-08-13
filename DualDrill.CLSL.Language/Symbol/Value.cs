@@ -10,14 +10,11 @@ public interface IShaderValue : ITextDumpable<ILocalDeclarationContext>
     IShaderType Type { get; }
 }
 
-public sealed class ShaderValue(string? name) : IShaderValue
+public sealed class ShaderValue(IShaderType type, string? name) : IShaderValue
 {
-    public ShaderValue() : this(null)
-    {
-    }
-
-    public static ShaderValue Create() => new();
-    public static ShaderValue Create(string name) => new(name);
+    public IShaderType Type { get; } = type;
+    public static ShaderValue Create(IShaderType type) => new(type, null);
+    public static ShaderValue Create(IShaderType type, string name) => new(type, name);
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
@@ -29,6 +26,4 @@ public sealed class ShaderValue(string? name) : IShaderValue
     }
 
     public string? Name => name;
-
-    public IShaderType Type => throw new NotImplementedException();
 }

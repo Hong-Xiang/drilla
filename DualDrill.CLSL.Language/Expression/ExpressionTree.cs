@@ -47,7 +47,11 @@ public interface IExpressionTreeFoldSemantic<TValue, T>
     T Value(TValue value);
 }
 
-
+public interface IExpressionTreeLazyFoldSemantic<TValue, T>
+    : IExpressionSemantic<Func<T>, T>
+{
+    T Value(TValue value);
+}
 
 public static class ExpressionTreeExtension
 {
@@ -61,6 +65,40 @@ public static class ExpressionTreeExtension
             NodeExpression<T> node => node.Node.Select(e => e.Fold(semantic)).Evaluate(semantic),
             _ => throw new InvalidOperationException("Unknown expression tree type")
         };
+    }
+
+    sealed class FoldLazyImplSemantic<TValue, T>(IExpressionTreeLazyFoldSemantic<TValue, T> semantic)
+        : IExpressionSemantic<IExpressionTree<TValue>, T>
+        , IExpressionTreeVisitor<TValue, T>
+    {
+        public T AddressOfChain(IAccessChainOperation operation, IExpressionTree<TValue> e)
+            => semantic.AddressOfChain(operation, () => e.Accept(this));
+
+        public T AddressOfIndex(IAccessChainOperation operation, IExpressionTree<TValue> e, IExpressionTree<TValue> index)
+            => semantic.AddressOfIndex(operation, () => e.Accept(this), () => index.Accept(this));
+
+        public T AddressOfSymbol(IAddressOfSymbolOperation operation)
+            => semantic.AddressOfSymbol(operation);
+
+        public T Literal<TLiteral>(TLiteral literal) where TLiteral : ILiteral
+            => semantic.Literal(literal);
+
+        public T Operation1(IUnaryExpressionOperation operation, IExpressionTree<TValue> e)
+            => semantic.Operation1(operation, () => e.Accept(this));
+
+        public T Operation2(IBinaryExpressionOperation operation, IExpressionTree<TValue> l, IExpressionTree<TValue> r)
+            => semantic.Operation2(operation, () => l.Accept(this), () => r.Accept(this));
+
+        public T VisitLeaf(TValue value)
+            => semantic.Value(value);
+
+        public T VisitNode(IExpression<IExpressionTree<TValue>> node)
+            => node.Select<Func<T>>(e => () => e.Accept(this)).Evaluate(semantic);
+    }
+
+    public static TR Fold<T, TR>(this IExpressionTree<T> e, IExpressionTreeLazyFoldSemantic<T, TR> semantic)
+    {
+        return e.Accept(new FoldLazyImplSemantic<T, TR>(semantic));
     }
 }
 

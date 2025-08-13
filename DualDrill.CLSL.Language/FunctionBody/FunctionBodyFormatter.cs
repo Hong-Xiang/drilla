@@ -6,18 +6,18 @@ using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
-using System.Reactive;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
 sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
-    : IRegionTreeFoldSemantic<Unit, Label, ShaderRegionBody, Action, Action>
-    , ISeqSemantic<ShaderStmt, ITerminator<RegionJump, ShaderValue>, Action, Action>
-    , ITerminatorSemantic<RegionJump, ShaderValue, Action>
-    , IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>
-    , IExpressionTreeFoldSemantic<ShaderValue, Action>
+    : IRegionTreeFoldLazySemantic<Label, ShaderRegionBody, Unit, Unit>
+    , ISeqSemantic<ShaderStmt, ITerminator<RegionJump, ShaderValue>, Func<Unit>, Unit>
+    , ITerminatorSemantic<RegionJump, ShaderValue, Unit>
+    , IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>
+    , IExpressionTreeLazyFoldSemantic<ShaderValue, Unit>
 {
     int ValueCount = 0;
     Dictionary<IShaderValue, int> ValueIndex = [];
@@ -100,80 +100,35 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
             Writer.WriteLine();
         }
 
-        body.Body.Fold(this)();
+        body.Body.Fold(this);
     }
 
-    public Action Single(ShaderRegionBody value)
-        => () =>
-        {
-            foreach (var (i, p) in value.Parameters.Index())
-            {
-                Dump(p.Value, p.Type);
-                Writer.Write(" = region $");
-                Writer.WriteLine(i);
-            }
-            Writer.WriteLine();
-            value.Body.Fold<Action>(this)();
-        };
-
-    public Action Nested(Action head, Func<Unit, Action> next)
-        => () =>
-        {
-            head();
-            Writer.WriteLine();
-            next(default)();
-        };
-
-    public Action Block(Label label, Func<Unit, Action> body)
-        => () =>
-        {
-            Writer.Write("block ");
-            Dump(label);
-            Writer.WriteLine(":");
-            using (Writer.IndentedScope())
-            {
-                body(default)();
-            }
-        };
-
-    public Action Loop(Label label, Func<Unit, Action> body)
-        => () =>
-        {
-            Writer.Write("loop ");
-            Dump(label);
-            Writer.WriteLine(":");
-            using (Writer.IndentedScope())
-            {
-                body(default)();
-            }
-        };
-
-    public Action Single(ITerminator<RegionJump, ShaderValue> value)
-    => () =>
+    public Unit Single(ITerminator<RegionJump, ShaderValue> value)
     {
-        value.Evaluate(this)();
-    };
+        value.Evaluate(this);
+        return default;
+    }
 
-    public Action Nested(ShaderStmt head, Action next)
-    => () =>
+    public Unit Nested(ShaderStmt head, Func<Unit> next)
     {
-        head.Evaluate(this)();
+        head.Evaluate(this);
         next();
-    };
+        return default;
+    }
 
-    Action ITerminatorSemantic<RegionJump, ShaderValue, Action>.ReturnVoid()
-        => () =>
-        {
-            Writer.WriteLine("return");
-        };
+    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.ReturnVoid()
+    {
+        Writer.WriteLine("return");
+        return default;
+    }
 
-    Action ITerminatorSemantic<RegionJump, ShaderValue, Action>.ReturnExpr(ShaderValue expr)
-        => () =>
-        {
-            Writer.Write("return ");
-            Dump(expr);
-            Writer.WriteLine();
-        };
+    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.ReturnExpr(ShaderValue expr)
+    {
+        Writer.Write("return ");
+        Dump(expr);
+        Writer.WriteLine();
+        return default;
+    }
 
     void Dump(RegionJump target)
     {
@@ -190,170 +145,222 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
         Writer.Write(')');
     }
 
-    Action ITerminatorSemantic<RegionJump, ShaderValue, Action>.Br(RegionJump target)
-        => () =>
-        {
-            Writer.Write("br ");
-            Dump(target);
-            Writer.WriteLine();
-        };
+    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.Br(RegionJump target)
+    {
+        Writer.Write("br ");
+        Dump(target);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action ITerminatorSemantic<RegionJump, ShaderValue, Action>.BrIf(ShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
-        => () =>
-        {
-            Writer.Write("br_if ");
-            Dump(condition);
-            Writer.Write(' ');
-            Dump(trueTarget);
-            Writer.Write(' ');
-            Dump(falseTarget);
-            Writer.WriteLine();
-        };
+    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.BrIf(ShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
+    {
+        Writer.Write("br_if ");
+        Dump(condition);
+        Writer.Write(' ');
+        Dump(trueTarget);
+        Writer.Write(' ');
+        Dump(falseTarget);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.Nop()
-        => () =>
-        {
-            Writer.WriteLine("nop");
-        };
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Nop()
+    {
+        Writer.WriteLine("nop");
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.Let(ShaderValue result, ShaderExpr expr)
-        => () =>
-        {
-            Dump(result);
-            Writer.Write(" = ");
-            expr.Fold(this)();
-            Writer.WriteLine();
-        };
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Let(ShaderValue result, ShaderExpr expr)
+    {
+        Dump(result);
+        Writer.Write(" : ");
+        Writer.Write(result.Type.Name);
+        Writer.Write(" = ");
+        expr.Fold(this);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.Get(ShaderValue result, ShaderValue source)
-        => () =>
-        {
-            Dump(result);
-            Writer.Write(" = load ");
-            Dump(source);
-            Writer.WriteLine();
-        };
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Get(ShaderValue result, ShaderValue source)
+    {
+        Dump(result);
+        Writer.Write(" : ");
+        Writer.Write(result.Type.Name);
+        Writer.Write(" = load ");
+        Dump(source);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.Set(ShaderValue target, ShaderValue source)
-        => () =>
-        {
-            Dump(target);
-            Writer.Write(" := ");
-            Dump(source);
-            Writer.WriteLine();
-        };
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Set(ShaderValue target, ShaderValue source)
+    {
+        Dump(target);
+        Writer.Write(" := ");
+        Dump(source);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.Mov(ShaderValue target, ShaderValue source)
-        => () =>
-        {
-            Dump(target);
-            Writer.Write(" <- ");
-            Dump(source);
-            Writer.WriteLine();
-        };
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Mov(ShaderValue target, ShaderValue source)
+    {
+        Dump(target);
+        Writer.Write(" <- ");
+        Dump(source);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.Call(ShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
-        => () =>
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Call(ShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
+    {
+        Dump(result);
+        Writer.Write(" : ");
+        Writer.Write(result.Type.Name);
+        Writer.Write(" = call ");
+        Writer.Write(f.Name);
+        Writer.Write('(');
+        foreach (var (i, a) in arguments.Index())
         {
-            Dump(result);
-            Writer.Write(" = call ");
-            Writer.Write(f.Name);
-            Writer.Write('(');
-            foreach (var (i, a) in arguments.Index())
+            if (i > 0)
             {
-                if (i > 0)
-                {
-                    Writer.Write(", ");
-                }
-                a.Fold(this)();
+                Writer.Write(", ");
             }
-            Writer.WriteLine(')');
-        };
+            a.Fold(this);
+        }
+        Writer.WriteLine(')');
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.Dup(ShaderValue result, ShaderValue source)
-        => () =>
-        {
-            Writer.Write("dup ");
-            Dump(result);
-            Writer.Write(" <- ");
-            Dump(source);
-            Writer.WriteLine();
-        };
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Dup(ShaderValue result, ShaderValue source)
+    {
+        Writer.Write("dup ");
+        Dump(result);
+        Writer.Write(" <- ");
+        Dump(source);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.Pop(ShaderValue target)
-        => () =>
-        {
-            Writer.Write("pop ");
-            Dump(target);
-            Writer.WriteLine();
-        };
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Pop(ShaderValue target)
+    {
+        Writer.Write("pop ");
+        Dump(target);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Action>.SetVecSwizzle(IVectorSwizzleSetOperation operation, ShaderValue target, ShaderValue value)
-        => () =>
-        {
-            Dump(target);
-            Writer.Write('.');
-            Writer.Write(operation.Pattern.Name);
-            Writer.Write(" := ");
-            Dump(value);
-            Writer.WriteLine();
-        };
+    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, ShaderValue target, ShaderValue value)
+    {
+        Dump(target);
+        Writer.Write('.');
+        Writer.Write(operation.Pattern.Name);
+        Writer.Write(" := ");
+        Dump(value);
+        Writer.WriteLine();
+        return default;
+    }
 
-    Action IExpressionTreeFoldSemantic<ShaderValue, Action>.Value(ShaderValue value)
-        => () =>
-        {
-            Dump(value);
-        };
+    Unit IExpressionTreeLazyFoldSemantic<ShaderValue, Unit>.Value(ShaderValue value)
+    {
+        Dump(value);
+        return default;
+    }
 
-    Action IExpressionSemantic<Action, Action>.Literal<TLiteral>(TLiteral literal)
-        => () =>
-        {
-            Writer.Write(literal.Name);
-        };
+    Unit IExpressionSemantic<Func<Unit>, Unit>.Literal<TLiteral>(TLiteral literal)
+    {
+        Writer.Write(literal.Name);
+        return default;
+    }
 
-    Action IExpressionSemantic<Action, Action>.AddressOfSymbol(IAddressOfSymbolOperation operation)
-        => () =>
-        {
-            Writer.Write("&");
-            Writer.Write(operation);
-        };
+    Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfSymbol(IAddressOfSymbolOperation operation)
+    {
+        Writer.Write("&");
+        Writer.Write(operation);
+        return default;
+    }
 
-    Action IExpressionSemantic<Action, Action>.AddressOfChain(IAccessChainOperation operation, Action e)
-        => () =>
-        {
-            Writer.Write("ref ");
-            e();
-            Writer.Write('.');
-            Writer.Write(operation.Name);
-        };
+    Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
+    {
+        Writer.Write("ref ");
+        // e is already evaluated - no need to call it
+        Writer.Write('.');
+        Writer.Write(operation.Name);
+        return default;
+    }
 
-    Action IExpressionSemantic<Action, Action>.AddressOfIndex(IAccessChainOperation operation, Action e, Action index)
-        => () =>
-        {
-            Writer.Write("ref ");
-            e();
-            Writer.Write('[');
-            index();
-            Writer.Write(']');
-        };
+    Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfIndex(IAccessChainOperation operation, Func<Unit> e, Func<Unit> index)
+    {
+        Writer.Write("ref ");
+        e();
+        Writer.Write('[');
+        index();
+        Writer.Write(']');
+        return default;
+    }
 
-    Action IExpressionSemantic<Action, Action>.Operation1(IUnaryExpressionOperation operation, Action e)
-        => () =>
-        {
-            Writer.Write(operation.Name);
-            Writer.Write(' ');
-            e();
-        };
+    Unit IExpressionSemantic<Func<Unit>, Unit>.Operation1(IUnaryExpressionOperation operation, Func<Unit> e)
+    {
+        Writer.Write(operation.Name);
+        Writer.Write(' ');
+        e();
+        return default;
+    }
 
-    Action IExpressionSemantic<Action, Action>.Operation2(IBinaryExpressionOperation operation, Action l, Action r)
-        => () =>
+    Unit IExpressionSemantic<Func<Unit>, Unit>.Operation2(IBinaryExpressionOperation operation, Func<Unit> l, Func<Unit> r)
+    {
+        Writer.Write('(');
+        l();
+        Writer.Write(' ');
+        Writer.Write(operation.Name);
+        Writer.Write(' ');
+        r();
+        Writer.Write(')');
+        return default;
+    }
+
+
+    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Block(Label label, Func<Unit> body)
+    {
+        Writer.Write("block ");
+        Dump(label);
+        Writer.WriteLine(":");
+        using (Writer.IndentedScope())
         {
-            Writer.Write('(');
-            l();
-            Writer.Write(' ');
-            Writer.Write(operation.Name);
-            Writer.Write(' ');
-            r();
-            Writer.Write(')');
-        };
+            body();
+        }
+        return default;
+    }
+
+    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Loop(Label label, Func<Unit> body)
+    {
+        Writer.Write("loop ");
+        Dump(label);
+        Writer.WriteLine(":");
+        using (Writer.IndentedScope())
+        {
+            body();
+        }
+        return default;
+    }
+
+    Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Single(ShaderRegionBody value)
+    {
+        foreach (var (i, p) in value.Parameters.Index())
+        {
+            Dump(p.Value, p.Type);
+            Writer.Write(" = region $");
+            Writer.WriteLine(i);
+        }
+        Writer.WriteLine();
+        value.Body.FoldLazy<Unit>(this);
+        return default;
+    }
+
+    Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Nested(Func<Unit> head, Func<Unit> next)
+    {
+        head();
+        Writer.WriteLine();
+        next();
+        return default;
+    }
 }

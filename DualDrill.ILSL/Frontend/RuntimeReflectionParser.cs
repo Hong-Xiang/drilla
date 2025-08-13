@@ -337,7 +337,7 @@ public sealed record class RuntimeReflectionParser(
         foreach (var v in model.LocalVariables)
         {
             var loc = ParseLocalVariable(v, methodTable);
-            var valueDecl = new ShaderValueDeclaration(ShaderValue.Create($"loc_{v.LocalIndex}"), loc.Type.GetPtrType());
+            var valueDecl = new ShaderValueDeclaration(ShaderValue.Create(loc.Type.GetPtrType(), $"loc_{v.LocalIndex}"), loc.Type.GetPtrType());
             localValues.Add(loc, valueDecl);
             localVariableDeclarations.Add(valueDecl);
         }
@@ -347,7 +347,7 @@ public sealed record class RuntimeReflectionParser(
             foreach (var (index, p) in f.Parameters.Index())
             {
                 methodTable.AddParameter(Symbol.Parameter(index), p);
-                var binding = new ParameterPointerBinding(ShaderValue.Create(p.Name), p);
+                var binding = new ParameterPointerBinding(ShaderValue.Create(p.Type.GetPtrType(), p.Name), p);
                 parameterBindings.Add(p, binding);
                 parameterBindingsList.Add(binding);
             }
@@ -412,7 +412,7 @@ public sealed record class RuntimeReflectionParser(
                     }
                     else
                     {
-                        var inputs = ImmutableStack.CreateRange(visitor.Stack.Select(v => new ShaderValueDeclaration(ShaderValue.Create(), visitor.GetValueType(v))));
+                        var inputs = ImmutableStack.CreateRange(visitor.Stack.Select(v => new ShaderValueDeclaration(ShaderValue.Create(v.Type), visitor.GetValueType(v))));
                         basicBlockInputs.Add(tl, inputs);
                     }
                 }

@@ -48,7 +48,8 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     IExpressionSemantic<ShaderExpr, IExpression<ShaderExpr>> Expr = Expression.Factory<ShaderExpr>();
     private Dictionary<ShaderValue, IShaderType> ValueTypes = [];
     private PointerOperationFactory Pointer = new();
-    public IShaderType GetValueType(ShaderValue value) => ValueTypes[value];
+    //public IShaderType GetValueType(ShaderValue value) => ValueTypes[value];
+    public IShaderType GetValueType(ShaderValue value) => value.Type;
 
 
     public RuntimeReflectionInstructionParserVisitor3(
@@ -157,10 +158,11 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     ShaderValue CreateValue(IShaderType t)
     {
-        var v = ShaderValue.Create();
-        ShaderValueDeclaration r = new(v, t);
-        ValueTypes.Add(v, t);
-        return v;
+        //var v = ShaderValue.Create(t);
+        //ShaderValueDeclaration r = new(v, t);
+        //ValueTypes.Add(v, t);
+        //return v;
+        return ShaderValue.Create(t);
     }
 
     void Push(ShaderValue v)
@@ -240,8 +242,8 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitPop(CilInstructionInfo inst)
     {
-        Emit(Stmt.Pop(ShaderValue.Create()));
-        Pop();
+        var v = Pop();
+        Emit(Stmt.Pop(ShaderValue.Create(v.Type)));
         return default;
     }
 

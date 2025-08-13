@@ -3,7 +3,7 @@
 sealed record class LoopRegionDefinition<TL, TB>(TL Label, TB Body) : IRegionDefinition<TL, TB>
 {
     public RegionKind Kind => RegionKind.Loop;
-    public TR Evaluate<TX, TR>(IRegionDefinitionSemantic<TX, TL, TB, TR> semantic)
+    public TR Evaluate<TR>(IRegionDefinitionSemantic<TL, TB, TR> semantic)
       => semantic.Loop(Label, Body);
 
     public IRegionDefinition<TL, TR> Select<TR>(Func<TB, TR> f)

@@ -60,9 +60,8 @@ public readonly record struct Seq<TH, TL>(ISeq<TH, TL, Seq<TH, TL>> Value)
 
     public T Fold<T>(ISeqSemantic<TH, TL, T, T> semantic)
         => Value.Evaluate(new FoldSemantic<TH, TL, T>(semantic));
-    public T Fold<TX, T>(ISeqSemantic<TH, TL, Func<TX, T>, T> semantic)
-        => Value.Evaluate(new StatefulFoldSemantic<TX, TH, TL, T>(semantic));
-
+    public T FoldLazy<T>(ISeqSemantic<TH, TL, Func<T>, T> semantic)
+        => Value.Evaluate(new StatefulFoldSemantic<TH, TL, T>(semantic));
 
     public delegate TR UnfoldStep<TA, TR>(ISeqSemantic<TH, TL, TA, TR> builder, TA value)
         where TA : allows ref struct;
@@ -82,7 +81,7 @@ public readonly record struct Seq<TH, TL>(ISeq<TH, TL, Seq<TH, TL>> Value)
             => unfolder(new UnfolderSemantic<TA>(unfolder), value);
 
     public override string ToString()
-        => Fold(new FormatSemantic<TH, TL>(true));
+        => FoldLazy(new FormatSemantic<TH, TL>(true));
 
     public Seq<TH, TR> SelectMany<TR>(Func<TL, Seq<TH, TR>> f)
         => Fold(new SelectManySemantic<TH, TL, TR>(f));
@@ -106,11 +105,11 @@ sealed class FoldSemantic<TH, TL, T>(ISeqSemantic<TH, TL, T, T> semantic) : ISeq
         => semantic.Single(value);
 }
 
-sealed class StatefulFoldSemantic<TX, TH, TL, T>(ISeqSemantic<TH, TL, Func<TX, T>, T> semantic)
+sealed class StatefulFoldSemantic<TH, TL, T>(ISeqSemantic<TH, TL, Func<T>, T> semantic)
     : ISeqSemantic<TH, TL, Seq<TH, TL>, T>
 {
     public T Nested(TH head, Seq<TH, TL> next)
-        => semantic.Nested(head, ctx => next.Value.Evaluate(this));
+        => semantic.Nested(head, () => next.Value.Evaluate(this));
 
     public T Single(TL value)
         => semantic.Single(value);
@@ -126,13 +125,28 @@ sealed class LastSemantic<TH, TL> : ISeqSemantic<TH, TL, TL, TL>
         => value;
 }
 
-sealed class FormatSemantic<TH, TL>(bool isFirst) : ISeqSemantic<TH, TL, Func<bool, string>, string>
+sealed class FormatSemantic<TH, TL>(bool isFirst) : ISeqSemantic<TH, TL, Func<string>, string>
 {
-    public string Nested(TH head, Func<bool, string> next)
-        => isFirst ? $"[{head}, {next(false)}]" : $"{head}, {next(false)}";
+    public bool IsFirst { get; private set; } = isFirst;
+
+    public string Nested(TH head, Func<string> next)
+    {
+        if (IsFirst)
+        {
+            IsFirst = false;
+            return $"[{head}, {next()}]";
+        }
+        else
+        {
+            IsFirst = false;
+            return $"{head}, {next()}";
+        }
+    }
 
     public string Single(TL value)
-        => isFirst ? $"[; {value}]" : $"; {value}";
+    {
+        return IsFirst ? $"[; {value}]" : $"; {value}";
+    }
 }
 
 public static class Seq
