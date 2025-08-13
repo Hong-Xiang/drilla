@@ -194,50 +194,54 @@ internal sealed class DevelopShaderModule : ISharpShader
     //
     //     return col;
     // }
-
-    //[Vertex]
-    //public static int NestedLoop(int x, int y, int nx, int ny)
-    //{
-    //    var result = 0;
-    //    if (2 > 1)
-    //    {
-    //        for (var ix = 0; ix < nx; ix++)
-    //        {
-    //            for (var iy = 0; iy < ny; iy++)
-    //            {
-    //                result += y;
-    //            }
-
-    //            result += x;
-    //        }
-    //    }
-
-
-    //    var result2 = result + 1;
-
-    //    return result2 - 1;
-    //}
-
-    //[Vertex]
-    //public static int NestedLoopFlat(int x, int y, int nx, int ny)
-    //{
-    //    var result = 0;
-    //    for (var i = 0; i < nx * ny; i++)
-    //    {
-    //        var ix = i / ny;
-    //        var iy = i % ny;
-    //        result += y;
-
-    //        result += x;
-    //    }
-
-    //    return result;
-    //}
 }
 
 internal sealed class DevelopTestShaderModule
     : ISharpShader
 {
+  public  static vec3 Foo(vec3 pos)
+    {
+        return pos;
+    }
+  public  static vec3f32 NestedExpressionWithFunctionCall(vec3f32 pos)
+    {
+        var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
+        return normalize(e.xyy * Foo(pos + e.xyy).x +
+                         e.yyx * Foo(pos + e.yyx).x +
+                         e.yxy * Foo(pos + e.yxy).x +
+                         e.xxx * Foo(pos + e.xxx).x);
+        //var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
+        //return Normalize(
+        //    e.xyy * map(pos + e.xyy).X + e.yyx * map(pos + e.yyx).X + e.yxy * map(pos + e.yxy).X + e.xxx * map
+        //    new Vector3(e.X, e.Y, e.Y) * map(pos + new Vector3(e.X, e.Y, e.Y)).X +
+        //    new Vector3(e.Y, e.Y, e.X) * map(pos + new Vector3(e.Y, e.Y, e.X)).X +
+        //    new Vector3(e.Y, e.X, e.Y) * map(pos + new Vector3(e.Y, e.X, e.Y)).X +
+        //new Vector3(e.X, e.X, e.X) * map(pos + new Vector3(e.X, e.X, e.X)).X);
+        //vec3 n = vec3(0.0f);
+        //for (int i = 0; i < 4; i++)
+        //{
+        //    vec3 e = 0.5773 * (2.0f * vec3((((i + 3) >> 1) & 1), ((i >> 1) & 1), (i & 1)) - 1.0);
+        //    n += e * map(pos + 0.0005f * e).x;
+        //    //if( n.x+n.y+n.z>100.0 ) break;
+        //}
+        //return normalize(n);
+    }
+
+    [Vertex]
+    public static int NestedLoopFlat(int x, int y, int nx, int ny)
+    {
+        var result = 0;
+        for (var i = 0; i < nx * ny; i++)
+        {
+            var ix = i / ny;
+            var iy = i % ny;
+            result += y;
+
+            result += x;
+        }
+
+        return result;
+    }
     [Vertex]
     public static uint StackTransferedValuesWithLiteralImplicitConversion(uint x, uint y)
     {

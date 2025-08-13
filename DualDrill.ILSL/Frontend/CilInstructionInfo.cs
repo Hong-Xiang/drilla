@@ -96,7 +96,7 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Pop => visitor.VisitPop(this),
             ILOpCode.Jmp => throw new NotImplementedException(),
             ILOpCode.Call => visitor.VisitCall(this,
-                table[Symbol.Function((MethodInfo)instruction.Operand)] ?? throw new NotSupportedException()),
+                table[Symbol.Function((MethodInfo)instruction.Operand)] ?? throw new KeyNotFoundException($"method {instruction.Operand} not found in symbol table")),
             ILOpCode.Calli => throw new NotSupportedException(),
             ILOpCode.Ret => visitor.VisitReturn(this),
             ILOpCode.Br_s => visitor.VisitBranch(this, (sbyte)instruction.Operand),

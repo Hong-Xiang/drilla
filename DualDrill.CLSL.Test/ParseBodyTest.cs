@@ -890,4 +890,63 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var entry = result[result.Entry];
     }
 
+    [Fact]
+    public void NestedLoopShouldWork()
+    {
+        var px = new ParameterDeclaration("x", ShaderType.I32, []);
+        var py = new ParameterDeclaration("y", ShaderType.I32, []);
+        var pnx = new ParameterDeclaration("nx", ShaderType.I32, []);
+        var pny = new ParameterDeclaration("ny", ShaderType.I32, []);
+        var f = new FunctionDeclaration(
+            nameof(DevelopTestShaderModule.NestedLoop),
+            [px, py, pnx, pny],
+            new FunctionReturn(ShaderType.I32, []),
+            []);
+        var result = ParseMethod(f,
+            MethodHelper.GetMethod<int, int, int, int, int>(DevelopTestShaderModule.NestedLoop));
+    }
+    [Fact]
+    public void NestedLoopFlatShouldWork()
+    {
+        var px = new ParameterDeclaration("x", ShaderType.I32, []);
+        var py = new ParameterDeclaration("y", ShaderType.I32, []);
+        var pnx = new ParameterDeclaration("nx", ShaderType.I32, []);
+        var pny = new ParameterDeclaration("ny", ShaderType.I32, []);
+        var f = new FunctionDeclaration(
+            nameof(DevelopTestShaderModule.NestedLoopFlat),
+            [px, py, pnx, pny],
+            new FunctionReturn(ShaderType.I32, []),
+            []);
+        var result = ParseMethod(f,
+            MethodHelper.GetMethod<int, int, int, int, int>(DevelopTestShaderModule.NestedLoop));
+    }
+    [Fact]
+    public void NestedExpressionWithFunctionCallShouldWork()
+    {
+        var context = CompilationContext.Create();
+        var foo = new FunctionDeclaration(
+            nameof(DevelopTestShaderModule.Foo),
+            [
+                new ParameterDeclaration("pos", ShaderType.Vec3F32, []),
+            ],
+            new FunctionReturn(ShaderType.Vec3F32, []),
+            []);
+        var fooM = MethodHelper.GetMethod<vec3f32, vec3f32>(DevelopTestShaderModule.Foo);
+        context.AddFunctionDeclaration(Symbol.Function(fooM), foo);
+        var ppos = new ParameterDeclaration("pos", ShaderType.Vec3F32, []);
+        var f = new FunctionDeclaration(
+            nameof(DevelopTestShaderModule.NestedLoopFlat),
+            [ppos],
+            new FunctionReturn(ShaderType.Vec3F32, []),
+            []);
+
+        var method =
+            MethodHelper.GetMethod<vec3f32, vec3f32>(DevelopTestShaderModule.NestedExpressionWithFunctionCall);
+        context.AddFunctionDefinition(Symbol.Function(method), f);
+        var parser = new RuntimeReflectionParser(context);
+        var result = parser.ParseMethodBody3(f);
+        Output.WriteLine(result.Dump());
+    }
+
+
 }

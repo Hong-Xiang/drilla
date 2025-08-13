@@ -512,7 +512,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             args.Add(ve);
         }
         args.Reverse();
-        var rv = CreateValue(UnitType.Instance);
+        var rv = CreateValue(func.Return.Type);
         Emit(Stmt.Call(default, rv, func, [.. args.Select(v => CreateValueExpr(v))]));
 
         //throw new NotImplementedException();

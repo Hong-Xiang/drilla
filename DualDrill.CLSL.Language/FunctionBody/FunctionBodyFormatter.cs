@@ -107,16 +107,14 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
     public Action Single(Unit context, ShaderRegionBody value)
         => () =>
         {
-            using (Writer.IndentedScope())
+            foreach (var (i, p) in value.Parameters.Index())
             {
-                foreach (var (i, p) in value.Parameters.Index())
-                {
-                    Dump(p.Value, p.Type);
-                    Writer.Write(" = b$");
-                    Writer.WriteLine(i);
-                }
-                value.Body.Fold<Unit, Action>(this, context)();
+                Dump(p.Value, p.Type);
+                Writer.Write(" = region $");
+                Writer.WriteLine(i);
             }
+            Writer.WriteLine();
+            value.Body.Fold<Unit, Action>(this, context)();
         };
 
     public Action Nested(Unit context, Action head, Func<Unit, Action> next)
@@ -232,7 +230,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
         => () =>
         {
             Dump(result);
-            Writer.Write(" =* ");
+            Writer.Write(" = load ");
             Dump(source);
             Writer.WriteLine();
         };
@@ -241,7 +239,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
         => () =>
         {
             Dump(target);
-            Writer.Write(" <- ");
+            Writer.Write(" := ");
             Dump(source);
             Writer.WriteLine();
         };
@@ -296,8 +294,8 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
         {
             Dump(target);
             Writer.Write('.');
-            Writer.Write(operation.Name);
-            Writer.Write(" <- ");
+            Writer.Write(operation.Pattern.Name);
+            Writer.Write(" := ");
             Dump(value);
             Writer.WriteLine();
         };
@@ -324,7 +322,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
     Action IExpressionSemantic<Unit, Action, Action>.AddressOfChain(Unit ctx, IAccessChainOperation operation, Action e)
         => () =>
         {
-            Writer.Write("&");
+            Writer.Write("ref ");
             e();
             Writer.Write('.');
             Writer.Write(operation.Name);
@@ -333,7 +331,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
     Action IExpressionSemantic<Unit, Action, Action>.AddressOfIndex(Unit ctx, IAccessChainOperation operation, Action e, Action index)
         => () =>
         {
-            Writer.Write("&");
+            Writer.Write("ref ");
             e();
             Writer.Write('[');
             index();
