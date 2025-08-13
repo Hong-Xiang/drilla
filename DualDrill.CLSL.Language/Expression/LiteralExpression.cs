@@ -6,8 +6,8 @@ public sealed record class LiteralExpression<TLiteral, T>(TLiteral Literal)
     : IExpression<T>
     where TLiteral : ILiteral
 {
-    public TR Evaluate<TX, TR>(IExpressionSemantic<TX, T, TR> semantic, TX ctx)
-        => semantic.Literal(ctx, Literal);
+    public TR Evaluate<TR>(IExpressionSemantic<T, TR> semantic)
+        => semantic.Literal(Literal);
 
     public IExpression<TR> Select<TR>(Func<T, TR> f)
         => new LiteralExpression<TLiteral, TR>(Literal);

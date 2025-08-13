@@ -4,8 +4,8 @@ sealed record class BlockRegionDefinition<TL, TB>(TL Label, TB Body) : IRegionDe
 {
     public RegionKind Kind => RegionKind.Block;
 
-    public TR Evaluate<TX, TR>(IRegionDefinitionSemantic<TX, TL, TB, TR> semantic, TX context)
-      => semantic.Block(context, Label, Body);
+    public TR Evaluate<TX, TR>(IRegionDefinitionSemantic<TX, TL, TB, TR> semantic)
+      => semantic.Block(Label, Body);
 
     public IRegionDefinition<TL, TR> Select<TR>(Func<TB, TR> f)
         => new BlockRegionDefinition<TL, TR>(Label, f(Body));

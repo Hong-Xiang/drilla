@@ -2,7 +2,7 @@
 
 public sealed record class GetStatement<TV, TE, TM, TF>(TV Result, TM Source) : IStatement<TV, TE, TM, TF>
 {
-    public TR Evaluate<TX, TR>(IStatementSemantic<TX, TV, TE, TM, TF, TR> semantic, TX context)
-        => semantic.Get(context, Result, Source);
+    public TR Evaluate<TR>(IStatementSemantic<TV, TE, TM, TF, TR> semantic)
+        => semantic.Get(Result, Source);
 }
 

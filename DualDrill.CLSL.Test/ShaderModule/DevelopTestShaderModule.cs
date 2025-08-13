@@ -199,11 +199,11 @@ internal sealed class DevelopShaderModule : ISharpShader
 internal sealed class DevelopTestShaderModule
     : ISharpShader
 {
-  public  static vec3 Foo(vec3 pos)
+    public static vec3 Foo(vec3 pos)
     {
         return pos;
     }
-  public  static vec3f32 NestedExpressionWithFunctionCall(vec3f32 pos)
+    public static vec3f32 NestedExpressionWithFunctionCall(vec3f32 pos)
     {
         var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
         return normalize(e.xyy * Foo(pos + e.xyy).x +
@@ -246,6 +246,17 @@ internal sealed class DevelopTestShaderModule
     public static uint StackTransferedValuesWithLiteralImplicitConversion(uint x, uint y)
     {
         return x >= y ? x : uint.MaxValue;
+    }
+
+    [Vertex]
+    public static int MinimumLoop(int n)
+    {
+        var r = 0;
+        for (var i = 0; i < n; i++)
+        {
+            r += 1;
+        }
+        return r;
     }
 
     [Vertex]

@@ -10,7 +10,7 @@ namespace DualDrill.CLSL.Language.Region;
 
 
 public interface IRegionTreeFoldSemantic<TX, TL, TB, TS, T>
-    : ISeqSemantic<TX, T, TB, Func<TX, TS>, TS>
+    : ISeqSemantic<T, TB, Func<TX, TS>, TS>
     , IRegionDefinitionSemantic<TX, TL, Func<TX, TS>, T>
 {
 }
@@ -29,8 +29,8 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
     public RegionTree<TL, TB> WithBindings(IEnumerable<RegionTree<TL, TB>> regions)
         => new(Definition.Select(seq => Seq.Create([.. regions], seq.Last)));
 
-    public T Fold<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic, TX context)
-        => Definition.Evaluate(new FoldImplSemantic<TX, TS, T>(semantic), context);
+    public T Fold<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic)
+        => Definition.Evaluate(new FoldImplSemantic<TX, TS, T>(semantic));
 
     public bool Traverse(Func<TL, TB, bool> f)
     {
@@ -51,44 +51,44 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
 
     sealed class FoldImplSemantic<TX, TS, T>(IRegionTreeFoldSemantic<TX, TL, TB, TS, T> semantic)
         : IRegionDefinitionSemantic<TX, TL, Seq<RegionTree<TL, TB>, TB>, T>
-        , ISeqSemantic<TX, RegionTree<TL, TB>, TB, Func<TX, TS>, TS>
+        , ISeqSemantic<RegionTree<TL, TB>, TB, Func<TX, TS>, TS>
     {
-        public T Block(TX context, TL label, Seq<RegionTree<TL, TB>, TB> body)
-            => semantic.Block(context, label, ctx => body.Fold(this, ctx));
-        public T Loop(TX context, TL label, Seq<RegionTree<TL, TB>, TB> body)
-            => semantic.Loop(context, label, ctx => body.Fold(this, ctx));
+        public T Block(TL label, Seq<RegionTree<TL, TB>, TB> body)
+            => semantic.Block(label, ctx => body.Fold(this));
+        public T Loop(TL label, Seq<RegionTree<TL, TB>, TB> body)
+            => semantic.Loop(label, ctx => body.Fold(this));
 
-        public TS Nested(TX context, RegionTree<TL, TB> head, Func<TX, TS> next)
-            => semantic.Nested(context, head.Definition.Evaluate(this, context), next);
+        public TS Nested(RegionTree<TL, TB> head, Func<TX, TS> next)
+            => semantic.Nested(head.Definition.Evaluate(this), next);
 
-        public TS Single(TX context, TB value)
-           => semantic.Single(context, value);
+        public TS Single(TB value)
+           => semantic.Single(value);
     }
 
 
     sealed class MapFoldSemantic<TLR, TBR>(Func<TL, TLR> l, Func<TB, TBR> b)
         : IRegionTreeFoldSemantic<Unit, TL, TB, Seq<RegionTree<TLR, TBR>, TBR>, RegionTree<TLR, TBR>>
     {
-        public RegionTree<TLR, TBR> Block(Unit context, TL label, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> body)
+        public RegionTree<TLR, TBR> Block(TL label, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> body)
         {
             var bd = body(default);
             return RegionTree<TLR, TBR>.Block(l(label), [.. bd.Elements], bd.Last);
         }
-        public RegionTree<TLR, TBR> Loop(Unit context, TL label, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> body)
+        public RegionTree<TLR, TBR> Loop(TL label, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> body)
         {
             var bd = body(default);
             return RegionTree<TLR, TBR>.Loop(l(label), [.. bd.Elements], bd.Last);
         }
 
-        public Seq<RegionTree<TLR, TBR>, TBR> Nested(Unit context, RegionTree<TLR, TBR> head, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> next)
+        public Seq<RegionTree<TLR, TBR>, TBR> Nested(RegionTree<TLR, TBR> head, Func<Unit, Seq<RegionTree<TLR, TBR>, TBR>> next)
             => Seq<RegionTree<TLR, TBR>, TBR>.Nested(head, next(default));
 
-        public Seq<RegionTree<TLR, TBR>, TBR> Single(Unit context, TB value)
+        public Seq<RegionTree<TLR, TBR>, TBR> Single(TB value)
             => Seq<RegionTree<TLR, TBR>, TBR>.Single(b(value));
     }
 
     public RegionTree<TLR, TBR> Map<TLR, TBR>(Func<TL, TLR> l, Func<TB, TBR> b)
-        => Fold(new MapFoldSemantic<TLR, TBR>(l, b), default);
+        => Fold(new MapFoldSemantic<TLR, TBR>(l, b));
 }
 
 public static class RegionTree
@@ -125,40 +125,40 @@ public static class RegionTree
     }
 
 }
-sealed class RegionDefinitionFormatter
+sealed class RegionDefinitionFormatter(int context)
    : IRegionTreeFoldSemantic<int, string, IEnumerable<string>, IEnumerable<string>, IEnumerable<string>>
 {
     string Indent(int count) => new string('\t', count);
 
-    public IEnumerable<string> Block(int context, string label, Func<int, IEnumerable<string>> body)
+    public IEnumerable<string> Block(string label, Func<int, IEnumerable<string>> body)
     {
         return [Indent(context) + $"block {label}", .. body(context + 1)];
     }
 
-    public IEnumerable<string> Loop(int context, string label, Func<int, IEnumerable<string>> body)
+    public IEnumerable<string> Loop(string label, Func<int, IEnumerable<string>> body)
     {
         return [Indent(context) + $"loop {label}", .. body(context + 1)];
     }
 
-    public IEnumerable<string> Nested(int context, IEnumerable<string> head, Func<int, IEnumerable<string>> next)
+    public IEnumerable<string> Nested(IEnumerable<string> head, Func<int, IEnumerable<string>> next)
         => [.. head, .. next(context)];
 
-    public IEnumerable<string> Single(int context, IEnumerable<string> value)
+    public IEnumerable<string> Single(IEnumerable<string> value)
         => value.Select(v => Indent(context) + v);
 }
 
 sealed class RegionDefinitionDefinedLabelsSemantic<TB>
     : IRegionTreeFoldSemantic<Unit, Label, TB, IEnumerable<Label>, IEnumerable<Label>>
 {
-    public IEnumerable<Label> Block(Unit context, Label label, Func<Unit, IEnumerable<Label>> body)
+    public IEnumerable<Label> Block(Label label, Func<Unit, IEnumerable<Label>> body)
         => [label, .. body(default)];
-    public IEnumerable<Label> Loop(Unit context, Label label, Func<Unit, IEnumerable<Label>> body)
+    public IEnumerable<Label> Loop(Label label, Func<Unit, IEnumerable<Label>> body)
         => [label, .. body(default)];
 
-    public IEnumerable<Label> Nested(Unit context, IEnumerable<Label> head, Func<Unit, IEnumerable<Label>> next)
+    public IEnumerable<Label> Nested(IEnumerable<Label> head, Func<Unit, IEnumerable<Label>> next)
         => [.. head, .. next(default)];
 
-    public IEnumerable<Label> Single(Unit context, TB value)
+    public IEnumerable<Label> Single(TB value)
         => [];
 }
 
@@ -167,7 +167,7 @@ public static class RegionDefinitionExtension
 {
     public static string Show<TE>(this RegionTree<Label, ITerminator<Label, TE>> region)
     {
-        var labels = region.Fold(new RegionDefinitionDefinedLabelsSemantic<ITerminator<Label, TE>>(), default).Distinct()
+        var labels = region.Fold(new RegionDefinitionDefinedLabelsSemantic<ITerminator<Label, TE>>()).Distinct()
                            .Select((l, i) => (l, i))
                            .ToFrozenDictionary(x => x.l, x => x.i);
 
@@ -176,7 +176,7 @@ public static class RegionDefinitionExtension
         var sir = region.Map<string, IEnumerable<string>>(
             labelToName.MapLabel, s =>
             [s.Map(labelToName).ToString() ?? string.Empty]);
-        var lines = sir.Fold(new RegionDefinitionFormatter(), 0);
+        var lines = sir.Fold(new RegionDefinitionFormatter(0));
         return string.Join(Environment.NewLine, lines);
     }
 
@@ -197,14 +197,14 @@ public static class RegionDefinitionExtension
 
     public static string Show(this RegionTree<Label, ISuccessor> region)
     {
-        var labels = region.Fold(new RegionDefinitionDefinedLabelsSemantic<ISuccessor>(), default).Distinct()
+        var labels = region.Fold(new RegionDefinitionDefinedLabelsSemantic<ISuccessor>()).Distinct()
                            .Select((l, i) => (l, i))
                            .ToFrozenDictionary(x => x.l, x => x.i);
 
         var stepFormatter = new SuccessorFormatSemantic(labels);
 
         var sir = region.Map<string, IEnumerable<string>>(stepFormatter.LabelName, s => [s.Evaluate(stepFormatter, default)]);
-        var lines = sir.Fold(new RegionDefinitionFormatter(), 0);
+        var lines = sir.Fold(new RegionDefinitionFormatter(0));
         return string.Join(Environment.NewLine, lines);
     }
 }

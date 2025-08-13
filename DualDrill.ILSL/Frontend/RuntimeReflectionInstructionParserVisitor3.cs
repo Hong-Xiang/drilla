@@ -36,16 +36,16 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     List<ShaderStmt> statements = [];
 
-    private IStatementSemantic<Unit, ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, ShaderStmt> Stmt { get; }
+    private IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, ShaderStmt> Stmt { get; }
         = Statement.Factory<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration>();
 
-    private ITerminatorSemantic<Unit, RegionJump, ShaderValue, ITerminator<RegionJump, ShaderValue>> TermF { get; }
+    private ITerminatorSemantic<RegionJump, ShaderValue, ITerminator<RegionJump, ShaderValue>> TermF { get; }
         = Language.Terminator.Factory<RegionJump, ShaderValue>();
 
-    private IExpressionSemantic<Unit, IExpressionTree<ShaderValue>, IExpression<ShaderExpr>> ExprF { get; } =
+    private IExpressionSemantic<IExpressionTree<ShaderValue>, IExpression<ShaderExpr>> ExprF { get; } =
         Language.Expression.Expression.Factory<IExpressionTree<ShaderValue>>();
 
-    IExpressionSemantic<Unit, ShaderExpr, IExpression<ShaderExpr>> Expr = Expression.Factory<ShaderExpr>();
+    IExpressionSemantic<ShaderExpr, IExpression<ShaderExpr>> Expr = Expression.Factory<ShaderExpr>();
     private Dictionary<ShaderValue, IShaderType> ValueTypes = [];
     private PointerOperationFactory Pointer = new();
     public IShaderType GetValueType(ShaderValue value) => ValueTypes[value];
@@ -128,10 +128,10 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             var conv = StoreConversion(ptt.BaseType, vt);
             if (conv is not null)
             {
-                value = EmitLet(conv.ResultType, ExprF.Operation1(default, conv, CreateValueExpr(value)));
+                value = EmitLet(conv.ResultType, ExprF.Operation1(conv, CreateValueExpr(value)));
             }
 
-            Emit(Stmt.Set(default, target, value));
+            Emit(Stmt.Set(target, value));
         }
         else
         {
@@ -170,7 +170,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         var conv = ConvertToCilStackTypeOperation(type);
         if (conv is not null)
         {
-            var cv = EmitLet(stackType, ExprF.Operation1(default, conv, CreateValueExpr(v)));
+            var cv = EmitLet(stackType, ExprF.Operation1(conv, CreateValueExpr(v)));
             Stack = Stack.Push(cv);
         }
         else
@@ -186,7 +186,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         var r = GetValueType(rv);
         var l = GetValueType(lv);
         var op = parseOp(l, r);
-        return EmitLet(op.ResultType, ExprF.Operation2(default, op, CreateValueExpr(lv), CreateValueExpr(rv)));
+        return EmitLet(op.ResultType, ExprF.Operation2(op, CreateValueExpr(lv), CreateValueExpr(rv)));
     }
 
 
@@ -204,14 +204,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     ShaderValue EmitLet(IShaderType t, IExpression<ShaderExpr> e)
     {
         var value = CreateValue(t);
-        statements.Add(Stmt.Let(default, value, e.AsNode()));
+        statements.Add(Stmt.Let(value, e.AsNode()));
         return value;
     }
 
 
     void PushEmitLet2(IBinaryExpressionOperation op, ShaderValue l, ShaderValue r)
     {
-        var v = EmitLet(op.ResultType, ExprF.Operation2(default, op, CreateValueExpr(l), CreateValueExpr(r)));
+        var v = EmitLet(op.ResultType, ExprF.Operation2(op, CreateValueExpr(l), CreateValueExpr(r)));
         Push(v);
     }
 
@@ -222,7 +222,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         if (t is IPtrType pt)
         {
             var r = CreateValue(pt.BaseType);
-            Emit(Stmt.Get(default, r, p));
+            Emit(Stmt.Get(r, p));
             Push(r);
         }
         else
@@ -233,14 +233,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitLiteral<TLiteral>(CilInstructionInfo info, TLiteral literal) where TLiteral : ILiteral
     {
-        var val = EmitLet(literal.Type, ExprF.Literal(default, literal));
+        var val = EmitLet(literal.Type, ExprF.Literal(literal));
         Push(val);
         return default;
     }
 
     public Unit VisitPop(CilInstructionInfo inst)
     {
-        Emit(Stmt.Pop(default, ShaderValue.Create()));
+        Emit(Stmt.Pop(ShaderValue.Create()));
         Pop();
         return default;
     }
@@ -254,7 +254,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                 throw new ValidationException("Function return type is not Unit, but stack is empty.", Model.Method);
             }
 
-            Terminator = TermF.ReturnVoid(default);
+            Terminator = TermF.ReturnVoid();
         }
         else
         {
@@ -264,7 +264,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             }
 
             var v = Pop();
-            Terminator = TermF.ReturnExpr(default, v);
+            Terminator = TermF.ReturnExpr(v);
             if (!Stack.IsEmpty)
             {
                 throw new ValidationException("Function return type is Unit, but stack has more than one element.",
@@ -277,7 +277,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitNop(CilInstructionInfo inst)
     {
-        Emit(Stmt.Nop(default));
+        Emit(Stmt.Nop());
         return default;
     }
 
@@ -386,7 +386,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             throw new ValidationException($"can not load field from {o}, expected ptr to structure type", Model.Method);
         }
 
-        return EmitLet(m.Type.GetPtrType(), Expr.Operation1(default, Pointer.Member(m), CreateValueExpr(o)));
+        return EmitLet(m.Type.GetPtrType(), Expr.Operation1(Pointer.Member(m), CreateValueExpr(o)));
     }
 
     public Unit VisitLoadField(CilInstructionInfo inst, MemberDeclaration m)
@@ -394,7 +394,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         var o = Pop();
         var mp = GetMemberPointer(o, m);
         var rv = CreateValue(m.Type);
-        Emit(Stmt.Get(default, rv, mp));
+        Emit(Stmt.Get(rv, mp));
         Push(rv);
         return default;
     }
@@ -412,7 +412,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         var v = Pop();
         var o = Pop();
         var mp = GetMemberPointer(o, m);
-        Emit(Stmt.Set(default, mp, v));
+        Emit(Stmt.Set(mp, v));
         return default;
     }
 
@@ -467,14 +467,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
                         if (bs is IVectorComponentSetOperation vcs)
                         {
-                            var cp = EmitLet(vcs.ElementType.GetPtrType(), ExprF.AddressOfChain(default, new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), CreateValueExpr(l)));
-                            Emit(Stmt.Set(default, cp, r));
+                            var cp = EmitLet(vcs.ElementType.GetPtrType(), ExprF.AddressOfChain(new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), CreateValueExpr(l)));
+                            Emit(Stmt.Set(cp, r));
                             return;
                         }
 
                         if (bs is IVectorSwizzleSetOperation vss)
                         {
-                            Emit(Stmt.SetVecSwizzle(default, vss, l, r));
+                            Emit(Stmt.SetVecSwizzle(vss, l, r));
                             return;
                         }
 
@@ -488,7 +488,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                             throw new ValidationException($"{ue} operation stack : {s.Name}", Model.Method);
                         }
 
-                        var v = EmitLet(ue.ResultType, ExprF.Operation1(default, ue, CreateValueExpr(s)));
+                        var v = EmitLet(ue.ResultType, ExprF.Operation1(ue, CreateValueExpr(s)));
                         Push(v);
                         return;
 
@@ -513,7 +513,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         }
         args.Reverse();
         var rv = CreateValue(func.Return.Type);
-        Emit(Stmt.Call(default, rv, func, [.. args.Select(v => CreateValueExpr(v))]));
+        Emit(Stmt.Call(rv, func, [.. args.Select(v => CreateValueExpr(v))]));
 
         //throw new NotImplementedException();
         //Emit(StackIR.Instruction.Call(func));
@@ -547,7 +547,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         if (Successor is UnconditionalSuccessor { Target: var target })
         {
             var args = GetStackOutput();
-            Terminator = TermF.Br(default, new(target, args));
+            Terminator = TermF.Br(new(target, args));
             return default;
         }
         else
@@ -570,11 +570,11 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             var args = GetStackOutput();
             if (value)
             {
-                Terminator = TermF.BrIf(default, v, new(tt, args), new(ft, args));
+                Terminator = TermF.BrIf(v, new(tt, args), new(ft, args));
             }
             else
             {
-                Terminator = TermF.BrIf(default, v, new(ft, args), new(tt, args));
+                Terminator = TermF.BrIf(v, new(ft, args), new(tt, args));
             }
 
             return default;
@@ -616,7 +616,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
         {
             var args = GetStackOutput();
-            Terminator = TermF.BrIf(default, v, new(tt, args), new(ft, args));
+            Terminator = TermF.BrIf(v, new(tt, args), new(ft, args));
         }
         else
         {
@@ -690,7 +690,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         if (t is IScalarType nt)
         {
             var operation = nt.GetConversionToOperation<TTarget>();
-            var r = EmitLet(operation.ResultType, Expr.Operation1(default, operation, CreateValueExpr(v)));
+            var r = EmitLet(operation.ResultType, Expr.Operation1(operation, CreateValueExpr(v)));
             Push(r);
             return default;
         }

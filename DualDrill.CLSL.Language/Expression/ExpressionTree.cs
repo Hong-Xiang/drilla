@@ -41,10 +41,10 @@ public sealed record class NodeExpression<TValue>(IExpression<IExpressionTree<TV
         => new NodeExpression<TR>(Node.Select(e => e.SelectMany(f)));
 }
 
-public interface IExpressionTreeFoldSemantic<in TX, TValue, T>
-    : IExpressionSemantic<TX, T, T>
+public interface IExpressionTreeFoldSemantic<TValue, T>
+    : IExpressionSemantic<T, T>
 {
-    T Value(TX context, TValue value);
+    T Value(TValue value);
 }
 
 
@@ -53,12 +53,12 @@ public static class ExpressionTreeExtension
 {
     public static NodeExpression<T> AsNode<T>(this IExpression<IExpressionTree<T>> e) => new(e);
 
-    public static TR Fold<TX, T, TR>(this IExpressionTree<T> e, IExpressionTreeFoldSemantic<TX, T, TR> semantic, TX context)
+    public static TR Fold<T, TR>(this IExpressionTree<T> e, IExpressionTreeFoldSemantic<T, TR> semantic)
     {
         return e switch
         {
-            LeafExpression<T> leaf => semantic.Value(context, leaf.Value),
-            NodeExpression<T> node => node.Node.Select(e => e.Fold(semantic, context)).Evaluate(semantic, context),
+            LeafExpression<T> leaf => semantic.Value(leaf.Value),
+            NodeExpression<T> node => node.Node.Select(e => e.Fold(semantic)).Evaluate(semantic),
             _ => throw new InvalidOperationException("Unknown expression tree type")
         };
     }

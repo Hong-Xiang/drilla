@@ -3,28 +3,28 @@ using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Statement;
 
-public interface IStatementSemantic<in TX, in TV, in TE, in TM, in TF, out TO>
+public interface IStatementSemantic<in TV, in TE, in TM, in TF, out TO>
 {
-    TO Nop(TX context);
-    TO Let(TX context, TV result, TE expr);
-    TO Get(TX context, TV result, TM source);
-    TO Set(TX context, TM target, TV source);
-    TO Mov(TX context, TM target, TM source);
-    TO Call(TX context, TV result, TF f, IReadOnlyList<TE> arguments);
-    TO Dup(TX context, TV result, TV source);
-    TO Pop(TX context, TV target);
+    TO Nop();
+    TO Let(TV result, TE expr);
+    TO Get(TV result, TM source);
+    TO Set(TM target, TV source);
+    TO Mov(TM target, TM source);
+    TO Call(TV result, TF f, IReadOnlyList<TE> arguments);
+    TO Dup(TV result, TV source);
+    TO Pop(TV target);
 
-    TO SetVecSwizzle(TX context, IVectorSwizzleSetOperation operation, TV target, TV value);
+    TO SetVecSwizzle(IVectorSwizzleSetOperation operation, TV target, TV value);
 }
 
 public interface IStatement<out TV, out TE, out TM, out TF>
 {
-    public TR Evaluate<TX, TR>(IStatementSemantic<TX, TV, TE, TM, TF, TR> semantic, TX context);
+    public TR Evaluate<TR>(IStatementSemantic<TV, TE, TM, TF, TR> semantic);
 }
 
 public static class Statement
 {
-    public static IStatementSemantic<Unit, TV, TE, TM, TF, IStatement<TV, TE, TM, TF>> Factory<TV, TE, TM, TF>()
+    public static IStatementSemantic<TV, TE, TM, TF, IStatement<TV, TE, TM, TF>> Factory<TV, TE, TM, TF>()
         => new StatementFactorySemantic<TV, TE, TM, TF>();
 }
 

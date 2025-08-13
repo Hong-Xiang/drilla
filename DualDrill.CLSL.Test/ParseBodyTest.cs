@@ -891,6 +891,18 @@ public class ParseBodyTest(ITestOutputHelper Output)
     }
 
     [Fact]
+    public void MinimumLoopShouldWork()
+    {
+        var pn = new ParameterDeclaration("n", ShaderType.I32, []);
+        var f = new FunctionDeclaration(
+            nameof(DevelopTestShaderModule.MinimumLoop),
+            [pn],
+            new FunctionReturn(ShaderType.I32, []),
+            []);
+        var result = ParseMethod(f, MethodHelper.GetMethod<int, int>(DevelopTestShaderModule.MinimumLoop));
+    }
+
+    [Fact]
     public void NestedLoopShouldWork()
     {
         var px = new ParameterDeclaration("x", ShaderType.I32, []);

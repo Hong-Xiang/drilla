@@ -2,7 +2,7 @@
 
 public sealed record class NopStatement<TV, TE, TM, TF>() : IStatement<TV, TE, TM, TF>
 {
-    public TR Evaluate<TX, TR>(IStatementSemantic<TX, TV, TE, TM, TF, TR> semantic, TX context)
-        => semantic.Nop(context);
+    public TR Evaluate<TR>(IStatementSemantic<TV, TE, TM, TF, TR> semantic)
+        => semantic.Nop();
 }
 
