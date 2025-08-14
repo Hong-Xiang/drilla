@@ -12,27 +12,25 @@ using System.CodeDom.Compiler;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
+sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Function)
     : IRegionTreeFoldLazySemantic<Label, ShaderRegionBody, Unit, Unit>
     , ISeqSemantic<ShaderStmt, ITerminator<RegionJump, ShaderValue>, Func<Unit>, Unit>
     , ITerminatorSemantic<RegionJump, ShaderValue, Unit>
     , IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>
     , IExpressionTreeLazyFoldSemantic<ShaderValue, Unit>
 {
+
+    SemanticModel Model = new(Function);
+
     int ValueCount = 0;
     Dictionary<IShaderValue, int> ValueIndex = [];
     int LabelCount = 0;
     Dictionary<Label, int> LabelIndex = [];
+    Stack<bool> ShouldDumpBody = [];
 
     void Dump(IShaderValue value)
     {
-        var index = 0;
-        if (!ValueIndex.TryGetValue(value, out index))
-        {
-            ValueIndex.Add(value, ValueCount);
-            index = ValueCount;
-            ValueCount++;
-        }
+        var index = Model.ValueIndex(value);
 
         Writer.Write($"%{index}");
         if (value is ShaderValue sv && sv.Name is not null)
@@ -45,13 +43,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
 
     void Dump(Label l)
     {
-        var index = 0;
-        if (!LabelIndex.TryGetValue(l, out index))
-        {
-            LabelIndex.Add(l, LabelCount);
-            index = LabelCount;
-            LabelCount++;
-        }
+        var index = Model.LabelIndex(l);
 
         Writer.Write($"^{index}");
         if (l.Name is not null)
@@ -85,22 +77,22 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
         Dump(decl.Value, decl.Type);
     }
 
-    public void Dump(FunctionBody4 body)
+    public void Dump()
     {
-        foreach (var (i, p) in body.Parameters.Index())
+        foreach (var (i, p) in Function.Parameters.Index())
         {
             Dump(p.Value, p.Type);
             Dump(i, p);
             Writer.WriteLine();
         }
 
-        foreach (var decl in body.LocalVariableValues)
+        foreach (var decl in Function.LocalVariableValues)
         {
             Dump(decl);
             Writer.WriteLine();
         }
 
-        body.Body.Fold(this);
+        Function.Body.Fold(this);
     }
 
     public Unit Single(ITerminator<RegionJump, ShaderValue> value)
@@ -157,11 +149,19 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
     {
         Writer.Write("br_if ");
         Dump(condition);
-        Writer.Write(' ');
-        Dump(trueTarget);
-        Writer.Write(' ');
-        Dump(falseTarget);
         Writer.WriteLine();
+        using (Writer.IndentedScope())
+        {
+            Dump(trueTarget);
+            Writer.WriteLine();
+        }
+        Writer.WriteLine("else");
+        using (Writer.IndentedScope())
+        {
+            Dump(falseTarget);
+            Writer.WriteLine();
+        }
+
         return default;
     }
 
@@ -343,16 +343,24 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer)
         return default;
     }
 
-    Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Single(ShaderRegionBody value)
+    void Dump(ShaderRegionBody body)
     {
-        foreach (var (i, p) in value.Parameters.Index())
+        foreach (var (i, p) in body.Parameters.Index())
         {
             Dump(p.Value, p.Type);
             Writer.Write(" = region $");
             Writer.WriteLine(i);
         }
         Writer.WriteLine();
-        value.Body.FoldLazy<Unit>(this);
+        body.Body.FoldLazy<Unit>(this);
+    }
+
+    Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Single(ShaderRegionBody value)
+    {
+        if (ShouldDumpBody.Pop())
+        {
+            Dump(value);
+        }
         return default;
     }
 

@@ -60,7 +60,7 @@ public sealed record class FunctionBody4(
 {
     public void Dump(IndentedTextWriter writer)
     {
-        new FunctionBodyFormatter(writer).Dump(this);
+        new FunctionBodyFormatter(writer, this).Dump();
     }
 
     public ILocalDeclarationContext DeclarationContext => this;
