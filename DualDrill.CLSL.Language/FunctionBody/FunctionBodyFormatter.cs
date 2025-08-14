@@ -22,12 +22,6 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
 
     SemanticModel Model = new(Function);
 
-    int ValueCount = 0;
-    Dictionary<IShaderValue, int> ValueIndex = [];
-    int LabelCount = 0;
-    Dictionary<Label, int> LabelIndex = [];
-    Stack<bool> ShouldDumpBody = [];
-
     void Dump(IShaderValue value)
     {
         var index = Model.ValueIndex(value);
@@ -357,10 +351,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
 
     Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Single(ShaderRegionBody value)
     {
-        if (ShouldDumpBody.Pop())
-        {
-            Dump(value);
-        }
+        Dump(value);
         return default;
     }
 

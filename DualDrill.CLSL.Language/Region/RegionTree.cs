@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
 using System.Collections.Frozen;
@@ -127,6 +128,15 @@ public static class RegionTree
         => RegionTree<TL, TB>.Block(label, regions, body);
     public static RegionTree<TL, TB> Loop<TL, TB>(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body)
         => RegionTree<TL, TB>.Loop(label, regions, body);
+
+    public static void Traverse(this RegionTree<Label, ShaderRegionBody> region, Action<RegionTree<Label, ShaderRegionBody>> f)
+    {
+        f(region);
+        foreach (var child in region.Bindings)
+        {
+            child.Traverse(f);
+        }
+    }
 
     public static RegionTree<Label, TB> Create<TB>(
         Label entry,

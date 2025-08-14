@@ -33,10 +33,9 @@ public sealed class SemanticModel
 
     Dictionary<Label, ImmutableArray<ITerminator<RegionJump, ShaderValue>>> LabelUsage = [];
     Dictionary<ShaderValue, int> ValueUsage = [];
-    Dictionary<Label, ShaderRegionBody> RegionBody = [];
+    Dictionary<Label, RegionTree<Label, ShaderRegionBody>> RegionBody = [];
 
     Stack<ITerminator<RegionJump, ShaderValue>> VisitingTerminator = [];
-    Stack<ShaderRegionBody> VisitedRegionBodies = [];
 
     readonly record struct ValueDefInfoData(
         ValueDefKind Kind,
@@ -49,12 +48,16 @@ public sealed class SemanticModel
 
     public SemanticModel(FunctionBody4 body)
     {
-        Body = body;
-        Analysis(Body);
-        Body.Body.Fold(this);
+        FunctionBody = body;
+        AnalysisFunctionLevelValues(FunctionBody);
+        FunctionBody.Body.Fold(this);
+        FunctionBody.Body.Traverse(r =>
+        {
+            RegionBody.Add(r.Label, r);
+        });
     }
 
-    public FunctionBody4 Body { get; }
+    public FunctionBody4 FunctionBody { get; }
 
 
     void ValueDef(IShaderValue value, ValueDefKind kind, int? infoIndex)
@@ -98,7 +101,7 @@ public sealed class SemanticModel
 
     public int LabelIndex(Label l) => LabelDefIndex[l];
 
-    void Analysis(FunctionBody4 body)
+    void AnalysisFunctionLevelValues(FunctionBody4 body)
     {
         foreach (var (i, p) in body.Parameters.Index())
         {
@@ -118,7 +121,6 @@ public sealed class SemanticModel
             ValueDef(p.Value, ValueDefKind.RegionParameter, i);
         }
         value.Body.FoldLazy<Unit>(this);
-        VisitedRegionBodies.Push(value);
         return default;
     }
 
@@ -133,7 +135,6 @@ public sealed class SemanticModel
     {
         LabelDef(label);
         body();
-        RegionBody.Add(label, VisitedRegionBodies.Pop());
         return default;
     }
 
@@ -141,7 +142,6 @@ public sealed class SemanticModel
     {
         LabelDef(label);
         body();
-        RegionBody.Add(label, VisitedRegionBodies.Pop());
         return default;
     }
 
