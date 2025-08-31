@@ -1,6 +1,7 @@
 ﻿using DotNext.Collections.Generic;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -329,8 +330,9 @@ public sealed record class RuntimeReflectionParser(
     public FunctionBody4 ParseMethodBody3(FunctionDeclaration f)
     {
         var model = Context.GetFunctionDefinition(f);
+        // TODO: avoid duplicate
+        var cfa = model.ControlFlowGraph.ControlFlowAnalysis();
         var methodTable = new CompilationContext(Context);
-        Dictionary<ParameterDeclaration, IParameterBinding> parameterBindings = [];
         foreach (var v in model.LocalVariables)
         {
             var loc = ParseLocalVariable(v, methodTable);
@@ -367,10 +369,7 @@ public sealed record class RuntimeReflectionParser(
                 Debug.WriteLine(string.Join(", ", visitor.Stack.Select(v => visitor.GetValueType(v).Name)));
             }
 
-            //basicBlockOutputs.Add(l, visitor.Stack);
-
             ITerminator<RegionJump, IShaderValue>? terminator = visitor.Terminator;
-
 
             {
                 var successor = model.ControlFlowGraph.Successor(l);
@@ -379,37 +378,28 @@ public sealed record class RuntimeReflectionParser(
 
                 foreach (var tl in successor.AllTargets())
                 {
+                    ImmutableStack<IShaderValue> output = [.. visitor.Stack.Select(v => (IShaderValue)ShaderValue.Create(v.Type)).Reverse()];
                     if (basicBlockInputs.TryGetValue(tl, out var existed))
                     {
-                        // if (visitor.Stack.Count() != existed.Count())
-                        // {
-                        //     throw new ValidationException(
-                        //         $"Successor's input stack size {existed.Count()} not matching current output {visitor.Stack.Count()}",
-                        //         model.Method);
-                        // }
-                        //
-                        // if (!visitor.Stack.SequenceEqual(existed))
-                        // {
-                        //     throw new ValidationException(
-                        //         $"Successor's input stack not match",
-                        //         model.Method);
-                        // }
-                        // TODO: should we add validation here?
+                        if (!existed.Select(v => v.Type).SequenceEqual(output.Select(v => v.Type)))
+                        {
+                            throw new ValidationException($"Stack output mismatch", model.Method);
+                        }
                     }
                     else
                     {
-                        var inputs = ImmutableStack.CreateRange(visitor.Stack.Select(v => (IShaderValue)ShaderValue.Create(v.Type)).Reverse());
-                        basicBlockInputs.Add(tl, inputs);
+                        basicBlockInputs.Add(tl, output);
                     }
                 }
 
                 basicBlocks.Add(l, new ShaderRegionBody(
                     l,
-                    [.. basicBlockInputs[l]],
+                    [.. basicBlockInputs[l].Reverse()],
                     Seq.Create(
                         [.. visitor.Statements],
                         terminator ?? throw new NotSupportedException("failed to resolve terminator")
-                    )
+                    ),
+                    cfa.PostDominatorTree.ImmediatePostDominator(l)
                 ));
             }
         }
@@ -421,8 +411,7 @@ public sealed record class RuntimeReflectionParser(
         return new FunctionBody4(
             f,
             RegionTree.Create(
-                model.ControlFlowGraph.EntryLabel,
-                x => x.Body.Last.ToSuccessor(),
+                cfa,
                 basicBlocks.Select(kv => (kv.Key, kv.Value))
             )
         );

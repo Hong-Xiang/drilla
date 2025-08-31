@@ -2,7 +2,6 @@
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
-using DualDrill.CLSL.Language.Types;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 
@@ -15,7 +14,8 @@ public sealed record class RegionJump(Label Label, ImmutableArray<IShaderValue> 
 public sealed record class ShaderRegionBody(
     Label Label,
     ImmutableArray<IShaderValue> Parameters,
-    Seq<ShaderStmt, ITerminator<RegionJump, IShaderValue>> Body
+    Seq<ShaderStmt, ITerminator<RegionJump, IShaderValue>> Body,
+    Label? ImmediatePostDominator
 ) : IBasicBlock2
 {
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
@@ -30,22 +30,7 @@ public sealed record class ShaderRegionBody(
     public ISuccessor Successor => Body.Last.ToSuccessor();
 }
 
-public interface IParameterBinding
-{
-    IShaderValue Value { get; }
-    IShaderType Type { get; }
-}
-
-
-public sealed record class ParameterPointerBinding(
-    IShaderValue Value,
-    ParameterDeclaration Parameter
-) : IParameterBinding
-{
-    public IShaderType Type => Parameter.Type.GetPtrType();
-}
-
-public sealed record class FunctionBody4(FunctionDeclaration Declaration, RegionTree<Label, ShaderRegionBody> Body) 
+public sealed record class FunctionBody4(FunctionDeclaration Declaration, RegionTree<Label, ShaderRegionBody> Body)
     : IFunctionBody, ILocalDeclarationContext, IUnifiedFunctionBody<ShaderRegionBody>
 {
     public void Dump(IndentedTextWriter writer)

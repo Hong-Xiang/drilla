@@ -23,7 +23,7 @@ public sealed class DominatorTree : IComparer<Label>
     {
         return AllLabelDominators[label] switch
         {
-        [.., var d, _] => d,
+            [.., var d, _] => d,
             _ => null
         };
     }
@@ -47,6 +47,7 @@ public sealed class DominatorTree : IComparer<Label>
     /// <param name="labels">labels of tree, ordered by reverse postorder numbering</param>
     /// <param name="donminatorSets">dominator sets of all labels, must be consistency with labels ordering</param>
     public DominatorTree(
+        ControlFlowDFSTree tree,
         IEnumerable<Label> labels,
         IReadOnlyDictionary<Label, IEnumerable<Label>> dominatorSets
     )
@@ -95,15 +96,15 @@ public sealed class DominatorTree : IComparer<Label>
         }
     }
 
-    public static DominatorTree CreateFromControlFlowGraph<TNode>(ControlFlowGraph<TNode> graph)
+    public static DominatorTree CreateFromControlFlowGraph(ControlFlowDFSTree tree)
     {
-        ImmutableArray<Label> labels = [.. graph.Labels()];
+        ImmutableArray<Label> labels = tree.Labels;
         var dominatorSets = new Dictionary<Label, HashSet<Label>>();
         foreach (var label in labels)
         {
             dominatorSets[label] = [.. labels];
         }
-        var e = graph.EntryLabel;
+        var e = tree.ControlFlowGraph.EntryLabel;
         dominatorSets[e] = [e];
 
         var changed = true;
@@ -117,7 +118,7 @@ public sealed class DominatorTree : IComparer<Label>
                     continue;
                 }
                 HashSet<Label> tmp = [.. labels];
-                foreach (var p in graph.Predecessor(label))
+                foreach (var p in tree.ControlFlowGraph.GetPred(label))
                 {
                     tmp.IntersectWith(dominatorSets[p]);
                 }
@@ -131,7 +132,7 @@ public sealed class DominatorTree : IComparer<Label>
             }
         }
         Dictionary<Label, IEnumerable<Label>> ds = dominatorSets.Select(kv => KeyValuePair.Create(kv.Key, (IEnumerable<Label>)kv.Value)).ToDictionary();
-        return new DominatorTree(labels, ds);
+        return new DominatorTree(tree, labels, ds);
     }
 
     public int Compare(Label? x, Label? y)
@@ -148,8 +149,8 @@ public sealed class DominatorTree : IComparer<Label>
 
 public static partial class StructuredControlFlow
 {
-    public static DominatorTree GetDominatorTree<TData>(
-        this ControlFlowGraph<TData> controlFlowGraph
+    public static DominatorTree GetDominatorTree(
+        this ControlFlowDFSTree tree
     )
-        => DominatorTree.CreateFromControlFlowGraph(controlFlowGraph);
+        => DominatorTree.CreateFromControlFlowGraph(tree);
 }

@@ -5,15 +5,31 @@ using System.Collections.Frozen;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
-public sealed class ControlFlowGraph<TData>
+public interface IControlFlowGraph
+{
+    public Label EntryLabel { get; }
+    public int LabelCount { get; }
+    public IEnumerable<Label> GetPred(Label label);
+    public IEnumerable<Label> GetSucc(Label label);
+}
+
+public sealed class ControlFlowGraph<TData> : IControlFlowGraph
 {
     public Label EntryLabel { get; }
     public int Count => Nodes.Count;
     public IReadOnlySet<Label> Predecessor(Label label) => Nodes[label].Predecessors;
     public ISuccessor Successor(Label label) => Nodes[label].Successor;
 
+    public IEnumerable<Label> GetPred(Label label)
+        => Predecessor(label);
+
+    public IEnumerable<Label> GetSucc(Label label)
+        => Successor(label).AllTargets();
+
     public TData this[Label label] => Nodes[label].Data;
     FrozenDictionary<Label, NodeData> Nodes { get; }
+
+    public int LabelCount => throw new NotImplementedException();
 
     readonly record struct NodeData(
         ISuccessor Successor,

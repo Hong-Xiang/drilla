@@ -37,7 +37,7 @@ public class UnifiedFunctionBody<TBasicBlock> : IUnifiedFunctionBody<TBasicBlock
                 b => new ControlFlowGraph<TBasicBlock>.NodeDefinition(b.Successor, b))
         );
         Graph = graph;
-        DominatorTree = DominatorTree.CreateFromControlFlowGraph(Graph);
+        DominatorTree = DominatorTree.CreateFromControlFlowGraph(Graph.GetDFSTree());
         DeclarationContext = new LocalDeclarationContext(graph.Labels().Select(l => (IDeclarationUser)graph[l]));
         foreach (var l in DeclarationContext.Labels)
         {

@@ -1,19 +1,15 @@
-﻿using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.ControlFlowGraph;
+﻿using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.CLSL.Test;
 
-public sealed class LoopDetectionTests
+public sealed class ControlFlowAnalysisTests
 {
+
     [Fact]
-    public void SimpleSelfLoopNodeShouldNotBeLoop()
+    public void SimpleSingleNode()
     {
         var e = Label.Create("e");
         var cfg = new ControlFlowGraph<Unit>(e, ControlFlowGraph.CreateDefinitions<Unit>(new()
@@ -23,11 +19,12 @@ public sealed class LoopDetectionTests
 
         var cfr = cfg.ControlFlowAnalysis();
 
+        Assert.Equal(0, cfr.IndexOf(e));
         Assert.False(cfr.IsLoop(e));
     }
 
     [Fact]
-    public void SimpleSelfLoopNodeShouldBeLoop()
+    public void SimpleSelfLoopNode()
     {
         var e = Label.Create("e");
         var cfg = new ControlFlowGraph<Unit>(e, ControlFlowGraph.CreateDefinitions<Unit>(new()
@@ -37,11 +34,12 @@ public sealed class LoopDetectionTests
 
         var cfr = cfg.ControlFlowAnalysis();
 
+        Assert.Equal(0, cfr.IndexOf(e));
         Assert.True(cfr.IsLoop(e));
     }
 
     [Fact]
-    public void SimpleConditionalLoopShouldWork()
+    public void SimpleConditionalLoop()
     {
         // cfg:
         //  a <-*
@@ -66,6 +64,10 @@ public sealed class LoopDetectionTests
         );
 
         var cfr = cfg.ControlFlowAnalysis();
+
+        Assert.Equal(0, cfr.IndexOf(a));
+        Assert.Equal(1, cfr.IndexOf(b));
+        Assert.Equal(2, cfr.IndexOf(c));
 
         Assert.True(cfr.IsLoop(a));
         Assert.False(cfr.IsLoop(b));

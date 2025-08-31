@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Symbol;
 
@@ -7,6 +8,7 @@ namespace DualDrill.CLSL.Language.ControlFlowGraph;
 /// <summary>
 /// Encoding of Loop | Block | IfThenElse
 /// </summary>
+[Obsolete]
 public interface IStructuredControlFlowRegion : IStructuredControlFlowElement
 {
     sealed class FuncVisitor<TResult>(
@@ -44,6 +46,7 @@ public interface IStructuredControlFlowRegion : IStructuredControlFlowElement
 /// Encoding of Block | Loop
 /// </summary>
 /// <typeparam name="TInstruction"></typeparam>
+[Obsolete]
 public interface ILabeledStructuredControlFlowRegion
     : IStructuredControlFlowRegion
     , ILabeledEntity
@@ -51,27 +54,3 @@ public interface ILabeledStructuredControlFlowRegion
     IStatement BrCurrentStatement();
 }
 
-public sealed class ControlFlowAnalysisResult<TData>
-{
-    public ControlFlowGraph<TData> ControlFlowGraph { get; }
-    public DominatorTree DominatorTree { get; }
-
-    public ControlFlowAnalysisResult(ControlFlowGraph<TData> controlFlowGraph)
-    {
-        ControlFlowGraph = controlFlowGraph;
-        DominatorTree = ControlFlowGraph.GetDominatorTree();
-    }
-
-    public bool IsLoop(Label label)
-    {
-        var predecessors = ControlFlowGraph.Predecessor(label);
-        return predecessors.Any(l => DominatorTree.Compare(label, l) <= 0);
-    }
-}
-
-static partial class StructuredControlFlow
-{
-    public static ControlFlowAnalysisResult<TData> ControlFlowAnalysis<TData>(
-        this ControlFlowGraph<TData> controlFlowGraph)
-        => new ControlFlowAnalysisResult<TData>(controlFlowGraph);
-}

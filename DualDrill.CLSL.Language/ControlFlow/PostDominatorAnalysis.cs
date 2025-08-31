@@ -1,4 +1,4 @@
-﻿using DualDrill.CLSL.Language.ControlFlowGraph;
+﻿using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
 using System.Collections.Immutable;

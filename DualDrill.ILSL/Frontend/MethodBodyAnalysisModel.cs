@@ -76,7 +76,7 @@ public sealed class MethodBodyAnalysisModel
         LabelIndices = ControlFlowGraph.Labels().ToFrozenDictionary(l => l, l => ControlFlowGraph[l].InstructionIndex);
         LabelCounts = ControlFlowGraph.Labels().ToFrozenDictionary(l => l, l => ControlFlowGraph[l].InstructionCount);
         OffsetLabels = LabelIndices.ToFrozenDictionary(x => Offsets[x.Value], x => x.Key);
-        Labels = [..LabelIndices.OrderBy(x => x.Value).Select(x => x.Key)];
+        Labels = [.. LabelIndices.OrderBy(x => x.Value).Select(x => x.Key)];
     }
 
     public IEnumerable<MethodBase> CalledMethods()
@@ -137,35 +137,6 @@ public sealed class MethodBodyAnalysisModel
                 Offsets[range.Start + range.Count] - Offsets[range.Start]
             );
         });
-
-        // var isLead = new bool[Instructions.Length];
-        //
-        // foreach (var (index, inst) in Instructions.Index())
-        // {
-
-        // }
-        //
-        // foreach (var (idx, head) in isLead.Index())
-        // {
-        //     if (!head)
-        //     {
-        //         continue;
-        //     }
-        //
-        //     var offset = Offsets[idx];
-        //     yield return (Label.Create(offset), idx);
-        // }
     }
-
-    ParameterInfo GetArg(int index)
-    {
-        return Parameters[IsStatic ? index : index - 1];
-    }
-
-    LocalVariableInfo GetLoc(int index)
-    {
-        return LocalVariables[index];
-    }
-
     public CilInstructionInfo this[int index] => new(index, Offsets[index], Offsets[index + 1], Instructions[index]);
 }

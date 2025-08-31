@@ -371,6 +371,17 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
 
     void Dump(ShaderRegionBody body)
     {
+        Writer.Write($"|=> ");
+        if (body.ImmediatePostDominator is null)
+        {
+            Writer.WriteLine("exit");
+        }
+        else
+        {
+            Dump(body.ImmediatePostDominator);
+            Writer.WriteLine();
+        }
+        Writer.WriteLine();
         foreach (var (i, p) in body.Parameters.Index())
         {
             Dump(p);

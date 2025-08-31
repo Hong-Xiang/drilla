@@ -5,7 +5,7 @@ using DualDrill.Common;
 
 namespace DualDrill.CLSL.Test;
 
-public sealed class DominatorTreeTests
+public sealed class PostDominatorTreeTests
 {
     [Fact]
     public void SimpleSingleNodeShouldWork()
@@ -18,11 +18,9 @@ public sealed class DominatorTreeTests
 
 
         var cfa = cfg.ControlFlowAnalysis();
-        var dt = cfa.DominatorTree;
+        var pdt = cfa.PostDominatorTree;
 
-        Assert.Empty(dt.GetChildren(e));
-        Assert.Null(dt.ImmediateDominator(e));
-        Assert.Equal([e], dt.Dominators(e));
+        Assert.Null(pdt.ImmediatePostDominator(e));
     }
 
     [Fact]
@@ -34,12 +32,11 @@ public sealed class DominatorTreeTests
             [e] = new(Successor.Unconditional(e), default)
         }));
 
-        var cfa = cfg.ControlFlowAnalysis();
-        var dt = cfa.DominatorTree;
 
-        Assert.Empty(dt.GetChildren(e));
-        Assert.Null(dt.ImmediateDominator(e));
-        Assert.Equal([e], dt.Dominators(e));
+        var cfa = cfg.ControlFlowAnalysis();
+        var pdt = cfa.PostDominatorTree;
+
+        Assert.Null(pdt.ImmediatePostDominator(e));
     }
 
     [Fact]
@@ -55,18 +52,12 @@ public sealed class DominatorTreeTests
             [b] = new(Successor.Terminate(), default)
         }));
 
+
         var cfa = cfg.ControlFlowAnalysis();
-        var dt = cfa.DominatorTree;
+        var pdt = cfa.PostDominatorTree;
 
-        Assert.Equal(b, Assert.Single(dt.GetChildren(a)));
-        Assert.Null(dt.ImmediateDominator(a));
-        Assert.Equal([a], dt.Dominators(a));
-
-        Assert.Empty(dt.GetChildren(b));
-        Assert.Equal(a, dt.ImmediateDominator(b));
-        Assert.Equal([a, b], dt.Dominators(b));
-
-        Assert.True(dt.Compare(a, b) < 0);
+        Assert.Equal(b, pdt.ImmediatePostDominator(a));
+        Assert.Null(pdt.ImmediatePostDominator(b));
     }
 
     [Fact]
@@ -106,32 +97,15 @@ public sealed class DominatorTreeTests
             [f] = new(Successor.Terminate(), default),
         }));
 
+
         var cfa = cfg.ControlFlowAnalysis();
-        var dt = cfa.DominatorTree;
+        var pdt = cfa.PostDominatorTree;
 
-        Assert.Equal([b, d, e, f], dt.GetChildren(a));
-        Assert.Equal([c], dt.GetChildren(b));
-        Assert.Empty(dt.GetChildren(c));
-        Assert.Empty(dt.GetChildren(d));
-        Assert.Empty(dt.GetChildren(e));
-        Assert.Empty(dt.GetChildren(f));
-
-        Assert.Equal([a], dt.Dominators(a));
-        Assert.Equal([a, b], dt.Dominators(b));
-        Assert.Equal([a, b, c], dt.Dominators(c));
-        Assert.Equal([a, d], dt.Dominators(d));
-        Assert.Equal([a, e], dt.Dominators(e));
-        Assert.Equal([a, f], dt.Dominators(f));
-
-        Assert.Null(dt.ImmediateDominator(a));
-        Assert.Equal(a, dt.ImmediateDominator(b));
-        Assert.Equal(b, dt.ImmediateDominator(c));
-        Assert.Equal(a, dt.ImmediateDominator(d));
-        Assert.Equal(a, dt.ImmediateDominator(e));
-        Assert.Equal(a, dt.ImmediateDominator(f));
-
-        var sorted = new List<Label> { a, b, c, d, e, f };
-        sorted.Sort(dt);
-        Assert.Equal([a, b, c, d, e, f], sorted);
+        Assert.Equal(f, pdt.ImmediatePostDominator(a));
+        Assert.Equal(f, pdt.ImmediatePostDominator(b));
+        Assert.Equal(f, pdt.ImmediatePostDominator(c));
+        Assert.Equal(f, pdt.ImmediatePostDominator(d));
+        Assert.Equal(f, pdt.ImmediatePostDominator(e));
+        Assert.Null(pdt.ImmediatePostDominator(f));
     }
 }

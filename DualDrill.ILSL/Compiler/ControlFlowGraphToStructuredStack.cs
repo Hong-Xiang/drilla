@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.ControlFlow;
+﻿using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -149,7 +150,7 @@ public static partial class ShaderModuleExtension
     {
         // TODO: argument validation
 
-        var dt = DominatorTree.CreateFromControlFlowGraph(cfg);
+        var dt = DominatorTree.CreateFromControlFlowGraph(cfg.GetDFSTree());
 
         RegionTree<Label, TB> ToRegion(Label l)
         {

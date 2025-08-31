@@ -1,5 +1,5 @@
 ﻿using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.ControlFlowGraph;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
@@ -138,9 +138,7 @@ public static class RegionTree
         }
     }
 
-    public static RegionTree<Label, TB> Create<TB>(
-        Label entry,
-        Func<TB, ControlFlow.ISuccessor> successor,
+    public static RegionTree<Label, TB> Create<TB>(ControlFlowAnalysis controlFlowAnalysis,
         params IEnumerable<(Label Label, TB Body)> regions
     )
     {
@@ -148,19 +146,17 @@ public static class RegionTree
         // TODO: argument validation :
         // labels are unique in regions.
         // all successor target labels are defined in region labels.
-        var cfg = ControlFlow.ControlFlowGraph.Create(entry, regions_.ToDictionary(x => x.Key, x => successor(x.Value.Body)));
-        var cfr = cfg.ControlFlowAnalysis();
-        var dt = cfr.DominatorTree;
+        var dt = controlFlowAnalysis.DominatorTree;
 
         RegionTree<Label, TB> ToRegion(Label l)
         {
             var children = dt.GetChildren(l);
             var childrenExpressions = children.Reverse().Select(ToRegion).ToImmutableArray();
-            return cfr.IsLoop(l)
+            return controlFlowAnalysis.IsLoop(l)
                 ? Loop(l, [.. childrenExpressions], regions_[l].Body)
                 : Block(l, [.. childrenExpressions], regions_[l].Body);
         }
-        return ToRegion(cfg.EntryLabel);
+        return ToRegion(controlFlowAnalysis.ControlFlowGraph.EntryLabel);
 
     }
 

@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
@@ -23,7 +24,11 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //     return
 
         var e = Label.Create("e");
-        var ir = RegionTree.Create(e, x => x,
+        var cfg = new ControlFlowGraph<Unit>(e, ControlFlowGraph.CreateDefinitions<Unit>(new()
+        {
+            [e] = new(Successor.Terminate(), default)
+        }));
+        var ir = RegionTree.Create(cfg.ControlFlowAnalysis(),
             (e, Successor.Terminate()));
         Output.WriteLine(ir.Show());
         Assert.Equal(e, ir.Label);
@@ -47,7 +52,11 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         //   br e
 
         var e = Label.Create("e");
-        var ir = RegionTree.Create(e, x => x,
+        var cfg = new ControlFlowGraph<Unit>(e, ControlFlowGraph.CreateDefinitions<Unit>(new()
+        {
+            [e] = new(Successor.Unconditional(e), default)
+        }));
+        var ir = RegionTree.Create(cfg.ControlFlowAnalysis(),
             (e, Successor.Unconditional(e)));
         Output.WriteLine(ir.Show());
         Assert.Equal(e, ir.Label);
@@ -81,7 +90,13 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var e = Label.Create("e");
         var f = Label.Create("f");
         var t = Label.Create("t");
-        var ir = RegionTree.Create<ISuccessor>(e, x => x,
+        var cfg = new ControlFlowGraph<Unit>(e, ControlFlowGraph.CreateDefinitions<Unit>(new()
+        {
+            [e] = new(Successor.Conditional(t, f), default),
+            [t] = new(Successor.Terminate(), default),
+            [f] = new(Successor.Terminate(), default)
+        }));
+        var ir = RegionTree.Create<ISuccessor>(cfg.ControlFlowAnalysis(),
             (e, Successor.Conditional(t, f)),
             (t, Successor.Terminate()),
             (f, Successor.Terminate()));
@@ -121,7 +136,14 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var f = Label.Create("f");
         var t = Label.Create("t");
         var m = Label.Create("m");
-        var ir = RegionTree.Create<ITerminator<Label, Unit>>(e, x => x.ToSuccessor(),
+        var cfg = new ControlFlowGraph<Unit>(e, ControlFlowGraph.CreateDefinitions<Unit>(new()
+        {
+            [e] = new(Successor.Conditional(t, f), default),
+            [t] = new(Successor.Unconditional(m), default),
+            [f] = new(Successor.Unconditional(m), default),
+            [m] = new(Successor.Terminate(), default)
+        }));
+        var ir = RegionTree.Create<ITerminator<Label, Unit>>(cfg.ControlFlowAnalysis(),
             (e, Terminator.B.BrIf(default(Unit), t, f)),
             (t, Terminator.B.Br<Label, Unit>(m)),
             (f, Terminator.B.Br<Label, Unit>(m)),
@@ -174,8 +196,15 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var b1 = Label.Create("b1");
         var b2 = Label.Create("b2");
         var b3 = Label.Create("b3");
+        var cfg = new ControlFlowGraph<Unit>(b0, ControlFlowGraph.CreateDefinitions<Unit>(new()
+        {
+            [b0] = new(Successor.Conditional(b1, b3), default),
+            [b1] = new(Successor.Conditional(b2, b3), default),
+            [b2] = new(Successor.Unconditional(b1), default),
+            [b3] = new(Successor.Terminate(), default)
+        }));
 
-        var ir = RegionTree.Create<ISuccessor>(b0, x => x,
+        var ir = RegionTree.Create<ISuccessor>(cfg.ControlFlowAnalysis(),
             (b0, Successor.Conditional(b1, b3)),
             (b1, Successor.Conditional(b2, b3)),
             (b2, Successor.Unconditional(b1)),
@@ -217,7 +246,14 @@ public sealed class StructuredControlFlowTests(ITestOutputHelper Output)
         var b = Label.Create("b"); // loop body
         var c = Label.Create("c"); // loop exit
 
-        var ir = RegionTree.Create<ITerminator<Label, Unit>>(a, x => x.ToSuccessor(),
+        var cfg = new ControlFlowGraph<Unit>(a, ControlFlowGraph.CreateDefinitions<Unit>(new()
+        {
+            [a] = new(Successor.Unconditional(b), default),
+            [b] = new(Successor.Conditional(a, c), default),
+            [c] = new(Successor.Terminate(), default)
+        }));
+
+        var ir = RegionTree.Create<ITerminator<Label, Unit>>(cfg.ControlFlowAnalysis(),
             (a, Terminator.B.Br<Label, Unit>(b)),
             (b, Terminator.B.BrIf(default(Unit), a, c)),
             (c, Terminator.B.ReturnVoid<Label, Unit>()));

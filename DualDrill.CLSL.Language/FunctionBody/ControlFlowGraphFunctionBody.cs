@@ -28,7 +28,7 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ILoc
     public ControlFlowGraphFunctionBody(ControlFlowGraph<BasicBlock<TElement>> graph)
     {
         Graph = graph;
-        DominatorTree = DominatorTree.CreateFromControlFlowGraph(Graph);
+        DominatorTree = DominatorTree.CreateFromControlFlowGraph(Graph.GetDFSTree());
         Labels = [..graph.Labels()];
         Entry = graph.EntryLabel;
         LocalVariables =

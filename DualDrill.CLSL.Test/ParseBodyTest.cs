@@ -314,8 +314,8 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var labels = result.DeclarationContext.Labels;
         labels.Should().HaveCount(4);
         labels[0].Should().Be(result.Entry);
-        var l11 = labels[1];
-        var l0c = labels[2];
+        var l0c = labels[1];
+        var l11 = labels[2];
         var l16 = labels[3];
 
         result[result.Entry].Successor.Should().Satisfy<ConditionalSuccessor>(sIf =>

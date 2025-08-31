@@ -9,6 +9,7 @@ using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
+[Obsolete]
 public sealed class Block(
     Label Label,
     StructuredControlFlowElementSequence Body

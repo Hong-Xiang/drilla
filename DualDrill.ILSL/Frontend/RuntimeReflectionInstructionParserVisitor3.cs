@@ -26,7 +26,6 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     public FunctionDeclaration Function { get; }
     public ISuccessor Successor { get; }
     public ImmutableStack<IShaderValue> Stack { get; private set; }
-    public IReadOnlyDictionary<ParameterDeclaration, IParameterBinding> Parameters { get; }
 
     public ITerminator<RegionJump, IShaderValue>? Terminator { get; private set; } = null;
     public IReadOnlyList<ShaderStmt> Statements => statements;

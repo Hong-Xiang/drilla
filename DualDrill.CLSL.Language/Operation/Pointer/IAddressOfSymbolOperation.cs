@@ -5,10 +5,12 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 
 namespace DualDrill.CLSL.Language.Operation.Pointer;
 
+[Obsolete]
 public interface IAddressOfSymbolOperation : IOperation
 {
 }
 
+[Obsolete]
 public sealed record class AddressOfSymbolOperation(ILoadStoreTargetSymbol Symbol) : IAddressOfSymbolOperation
 {
     public FunctionDeclaration Function => throw new NotImplementedException();
