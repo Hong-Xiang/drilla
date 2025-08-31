@@ -25,13 +25,13 @@ public sealed class FunctionDeclaration
     public override string ToString()
     {
         var parameters = string.Join(", ", Parameters.Select(p => $"{p.Name}: {p.Type.Name}"));
-        return $"{Name} : ({parameters}) -> {Return.Type.Name}";
+        return $"func {Name} : ({parameters}) -> {Return.Type.Name}";
     }
 
     public CompoundStatement? Body { get; set; } = null;
     public string Name { get; }
     public ImmutableArray<ParameterDeclaration> Parameters { get; }
-    public FunctionReturn @Return { get; }
+    public FunctionReturn Return { get; }
     public ImmutableHashSet<IShaderAttribute> Attributes { get; }
 
     private string DebugDisplay()
@@ -39,35 +39,12 @@ public sealed class FunctionDeclaration
         var parameters = string.Join(", ", Parameters.Select(p => $"{p.Name} : {p.Type.Name}"));
         return $"func {Return.Type.Name} {Name} ({parameters})";
     }
+
+    public T Evaluate<T>(IDeclarationSemantic<T> semantic)
+        => semantic.VisitFunction(this, null);
 }
 
 public sealed record class FunctionReturn(IShaderType Type, ImmutableHashSet<IShaderAttribute> Attributes)
 {
 }
 
-public interface IFunctionSymbol : ISymbol
-{
-    ImmutableArray<IParameterSymbol> Parameters { get; }
-    IFunctionReturnSymbol Return { get; }
-    bool IsInstanceMethod { get; }
-    bool IsPure { get; }
-}
-
-public interface IFunctionBodySymbol : ISymbol
-{
-    ImmutableArray<ILocalVariableSymbol> LocalVariables { get; }
-    ImmutableArray<Label> Labels { get; }
-}
-
-public interface IFunctionDefinitionSymbol<TBody> : IFunctionSymbol
-    where TBody : IFunctionBodySymbol
-{
-    TBody Body { get; }
-}
-
-public interface IFunctionReturnSymbol
-{
-    IFunctionSymbol Function { get; }
-    bool IsVoid { get; }
-    IShaderType Type { get; }
-}

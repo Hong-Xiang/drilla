@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Diagnostics;
-using DualDrill.CLSL.Language.ControlFlow;
+﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -8,6 +6,7 @@ using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
+using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Compiler;
 

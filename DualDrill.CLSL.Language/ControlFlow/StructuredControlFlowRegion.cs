@@ -1,6 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.ControlFlowGraph;

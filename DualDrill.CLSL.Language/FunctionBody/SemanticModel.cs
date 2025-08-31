@@ -1,4 +1,6 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using DotNext.Collections.Generic;
+using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
@@ -10,67 +12,155 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-
-public enum ValueDefKind
+sealed class UsedExternalLabelSemantic
+    : IRegionTreeFoldSemantic<Label, ShaderRegionBody, ImmutableDictionary<Label, ImmutableHashSet<Label>>, ImmutableDictionary<Label, ImmutableHashSet<Label>>>
+    , ITerminatorSemantic<RegionJump, IShaderValue, ImmutableHashSet<Label>>
 {
-    Normal,
-    FunctionParameter,
-    RegionParameter
+    Stack<Label> Scope = [];
+    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Block(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body)
+    {
+        return OnScope(label, body);
+
+    }
+    ImmutableDictionary<Label, ImmutableHashSet<Label>> OnScope(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body)
+    {
+        Scope.Push(label);
+        var result = body();
+        if (!result.ContainsKey(label))
+        {
+            result = result.Add(label, []);
+        }
+        Scope.Pop();
+        //result = result.ToImmutableDictionary(x => x.Key, x => x.Value.Remove(label));
+        HashSet<Label> rself = [.. result[label]];
+        var count = result.Count;
+        var changed = true;
+        while (changed)
+        {
+            List<Label> toAdd = [];
+            foreach (var l in rself)
+            {
+                if (result.TryGetValue(l, out var v))
+                {
+                    toAdd.AddAll(v);
+                }
+            }
+            rself.AddAll(toAdd);
+            changed = rself.Count > count;
+            count = rself.Count;
+        }
+        rself.Remove(label);
+        foreach (var k in result.Keys)
+        {
+            rself.Remove(k);
+        }
+        result = result.SetItem(label, [.. rself]);
+        return result;
+    }
+    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Loop(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body)
+    {
+        return OnScope(label, body);
+    }
+
+    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Nested(ImmutableDictionary<Label, ImmutableHashSet<Label>> head, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> next)
+    {
+        var rn = next();
+        ImmutableHashSet<Label> keys = [.. head.Keys, .. rn.Keys];
+        var dct = new Dictionary<Label, HashSet<Label>>();
+        foreach (var k in keys)
+        {
+            dct.Add(k, []);
+        }
+        foreach (var (k, v) in head)
+        {
+            dct[k].AddAll(v);
+        }
+        foreach (var (k, v) in rn)
+        {
+            dct[k].AddAll(v);
+        }
+        var s = Scope.Peek();
+        if (!dct.ContainsKey(s))
+        {
+            dct.Add(s, []);
+        }
+        dct[s].AddAll(dct.Values.SelectMany(x => x));
+
+        return dct.ToImmutableDictionary(x => x.Key, x => x.Value.ToImmutableHashSet());
+    }
+
+
+    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Single(ShaderRegionBody value)
+    {
+        var used = value.Body.Last.Evaluate(this);
+        var s = Scope.Peek();
+        return ImmutableDictionary<Label, ImmutableHashSet<Label>>.Empty.Add(s, used);
+    }
+
+    public ImmutableHashSet<Label> ReturnVoid()
+        => [];
+
+    public ImmutableHashSet<Label> ReturnExpr(IShaderValue expr)
+        => [];
+
+    public ImmutableHashSet<Label> Br(RegionJump target)
+        => [target.Label];
+
+    public ImmutableHashSet<Label> BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
+        => [trueTarget.Label, falseTarget.Label];
 }
 
 public sealed class SemanticModel
     : IRegionTreeFoldLazySemantic<Label, ShaderRegionBody, Unit, Unit>
-    , ISeqSemantic<ShaderStmt, ITerminator<RegionJump, ShaderValue>, Func<Unit>, Unit>
-    , ITerminatorSemantic<RegionJump, ShaderValue, Unit>
-    , IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>
-    , IExpressionTreeLazyFoldSemantic<ShaderValue, Unit>
+    , ISeqSemantic<ShaderStmt, ITerminator<RegionJump, IShaderValue>, Func<Unit>, Unit>
+    , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
+    , IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>
+    , IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>
 
 {
     int ValueCount = 0;
-    Dictionary<IShaderValue, ValueDefInfoData> ValueDefInfo = [];
+    Dictionary<IShaderValue, int> ValueIndices = [];
     int LabelCount = 0;
     Dictionary<Label, int> LabelDefIndex = [];
+    HashSet<Label> LoopLabels = [];
+    Dictionary<Label, ImmutableStack<Label>> DefinedScope = [];
+    Dictionary<Label, HashSet<Label>> LabelUsage = [];
 
-    Dictionary<Label, ImmutableArray<ITerminator<RegionJump, ShaderValue>>> LabelUsage = [];
-    Dictionary<ShaderValue, int> ValueUsage = [];
-    Dictionary<Label, RegionTree<Label, ShaderRegionBody>> RegionBody = [];
 
-    Stack<ITerminator<RegionJump, ShaderValue>> VisitingTerminator = [];
+    Dictionary<IShaderValue, int> ValueUsage = [];
+    Dictionary<Label, RegionTree<Label, ShaderRegionBody>> RegionTreeDefinitions = [];
 
-    readonly record struct ValueDefInfoData(
-        ValueDefKind Kind,
-        int ValueIndex,
-        int? InfoIndex
-    )
-    {
-    }
+    Stack<ITerminator<RegionJump, IShaderValue>> VisitingTerminator = [];
+    ImmutableStack<Label> Scope = [];
 
+    public RegionTree<Label, ShaderRegionBody> RegionTree(Label label) => RegionTreeDefinitions[label];
+
+    public ImmutableDictionary<Label, ImmutableHashSet<Label>> UsedExternalLabels { get; }
 
     public SemanticModel(FunctionBody4 body)
     {
         FunctionBody = body;
-        AnalysisFunctionLevelValues(FunctionBody);
+        ValueIndices = (body.GetValueDefinitions().Concat(body.GetUsedValues())).Distinct().Select((v, i) => (v, i)).ToDictionary(x => x.v, x => x.i);
         FunctionBody.Body.Fold(this);
         FunctionBody.Body.Traverse(r =>
         {
-            RegionBody.Add(r.Label, r);
+            RegionTreeDefinitions.Add(r.Label, r);
         });
+        UsedExternalLabels = FunctionBody.Body.Fold(new UsedExternalLabelSemantic());
+        foreach (var l in LabelDefIndex.Keys)
+        {
+            if (!LabelUsage.ContainsKey(l))
+            {
+                LabelUsage.Add(l, []);
+            }
+        }
+
     }
 
     public FunctionBody4 FunctionBody { get; }
 
 
-    void ValueDef(IShaderValue value, ValueDefKind kind, int? infoIndex)
-    {
-        ValueDefInfo.Add(value, new(kind, ValueCount, infoIndex));
-        ValueCount++;
-    }
-    void ValueDef(IShaderValue value)
-    {
-        ValueDef(value, ValueDefKind.Normal, null);
-    }
-
-    void ValueUse(ShaderValue value, object? user)
+    void ValueUse(IShaderValue value, object? user)
     {
         if (!ValueUsage.TryGetValue(value, out var count))
         {
@@ -79,47 +169,37 @@ public sealed class SemanticModel
         ValueUsage[value]++;
     }
     public int ValueIndex(IShaderValue value)
-        => ValueDefInfo[value].ValueIndex;
+        => ValueIndices[value];
 
     void LabelDef(Label label)
     {
+        DefinedScope.Add(label, Scope);
         LabelDefIndex.Add(label, LabelCount);
         LabelCount++;
     }
-    void LabelUse(Label label, ITerminator<RegionJump, ShaderValue> terminator)
+    Label? CurrentScope => Scope.IsEmpty ? null : Scope.Peek();
+    void LabelUse(Label label, ITerminator<RegionJump, IShaderValue> terminator)
     {
-        if (!LabelUsage.TryGetValue(label, out var usages))
+        if (LabelUsage.TryGetValue(label, out var usages))
         {
-            usages = [];
-            LabelUsage.Add(label, usages);
+            usages.Add(CurrentScope ?? throw new NullReferenceException());
         }
-        usages.Add(terminator);
+        else
+        {
+            LabelUsage.Add(label, [CurrentScope ?? throw new NullReferenceException()]);
+        }
     }
-    public int LabelUsageCount(Label label)
-        => LabelUsage[label].Length;
 
 
     public int LabelIndex(Label l) => LabelDefIndex[l];
 
-    void AnalysisFunctionLevelValues(FunctionBody4 body)
-    {
-        foreach (var (i, p) in body.Parameters.Index())
-        {
-            ValueDef(p.Value, ValueDefKind.FunctionParameter, i);
-        }
+    public bool IsUsedOnce(Label l) => LabelUsage[l].Count() == 1;
+    public bool IsUsedInJoin(Label l) => false;
+    public bool IsLoop(Label l) => LoopLabels.Contains(l);
 
-        foreach (var decl in body.LocalVariableValues)
-        {
-            ValueDef(decl.Value, ValueDefKind.RegionParameter, null);
-        }
-    }
 
     Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Single(ShaderRegionBody value)
     {
-        foreach (var (i, p) in value.Parameters.Index())
-        {
-            ValueDef(p.Value, ValueDefKind.RegionParameter, i);
-        }
         value.Body.FoldLazy<Unit>(this);
         return default;
     }
@@ -134,18 +214,23 @@ public sealed class SemanticModel
     Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Block(Label label, Func<Unit> body)
     {
         LabelDef(label);
+        Scope = Scope.Push(label);
         body();
+        Scope = Scope.Pop();
         return default;
     }
 
     Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Loop(Label label, Func<Unit> body)
     {
         LabelDef(label);
+        LoopLabels.Add(label);
+        Scope = Scope.Push(label);
         body();
+        Scope = Scope.Pop();
         return default;
     }
 
-    Unit ISeqSemantic<ShaderStmt, ITerminator<RegionJump, ShaderValue>, Func<Unit>, Unit>.Single(ITerminator<RegionJump, ShaderValue> value)
+    Unit ISeqSemantic<ShaderStmt, ITerminator<RegionJump, IShaderValue>, Func<Unit>, Unit>.Single(ITerminator<RegionJump, IShaderValue> value)
     {
         VisitingTerminator.Push(value);
         value.Evaluate(this);
@@ -153,38 +238,38 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit ISeqSemantic<ShaderStmt, ITerminator<RegionJump, ShaderValue>, Func<Unit>, Unit>.Nested(ShaderStmt head, Func<Unit> next)
+    Unit ISeqSemantic<ShaderStmt, ITerminator<RegionJump, IShaderValue>, Func<Unit>, Unit>.Nested(ShaderStmt head, Func<Unit> next)
     {
         head.Evaluate(this);
         next();
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.ReturnVoid()
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid()
     {
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.ReturnExpr(ShaderValue expr)
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
     {
         ValueUse(expr, null);
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.Br(RegionJump target)
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)
     {
         LabelUse(target.Label, VisitingTerminator.Peek());
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.BrIf(ShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
     {
         LabelUse(trueTarget.Label, VisitingTerminator.Peek());
         LabelUse(falseTarget.Label, VisitingTerminator.Peek());
         return default;
     }
 
-    Unit IExpressionTreeLazyFoldSemantic<ShaderValue, Unit>.Value(ShaderValue value)
+    Unit IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>.Value(IShaderValue value)
     {
         ValueUse(value, null);
         return default;
@@ -226,42 +311,38 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Nop()
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Nop()
     {
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Let(ShaderValue result, ShaderExpr expr)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Let(IShaderValue result, ShaderExpr expr)
     {
-        ValueDef(result);
         expr.Fold(this);
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Get(ShaderValue result, ShaderValue source)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Get(IShaderValue result, IShaderValue source)
     {
-        ValueDef(result);
         ValueUse(source, null);
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Set(ShaderValue target, ShaderValue source)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Set(IShaderValue target, IShaderValue source)
     {
         ValueUse(target, null);
         ValueUse(source, null);
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Mov(ShaderValue target, ShaderValue source)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Mov(IShaderValue target, IShaderValue source)
     {
-        ValueDef(target);
         ValueUse(source, null);
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Call(ShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
     {
-        ValueDef(result);
         foreach (var a in arguments)
         {
             a.Fold(this);
@@ -269,20 +350,19 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Dup(ShaderValue result, ShaderValue source)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Dup(IShaderValue result, IShaderValue source)
     {
-        ValueDef(result);
         ValueUse(source, null);
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Pop(ShaderValue target)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Pop(IShaderValue target)
     {
         ValueUse(target, null);
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, ShaderValue target, ShaderValue value)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, IShaderValue target, IShaderValue value)
     {
         ValueUse(target, null);
         ValueUse(value, null);

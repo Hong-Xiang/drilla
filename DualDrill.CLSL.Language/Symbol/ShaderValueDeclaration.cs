@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Symbol;
 
+[Obsolete]
 public readonly record struct ShaderValueDeclaration(ShaderValue Value, IShaderType Type)
 {
     public IExpressionTree<ShaderValue> ValueExpr => ExpressionTree.Value(Value);

@@ -8,14 +8,14 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed record class RegionJump(Label Label, ImmutableArray<ShaderValue> Arguments)
+public sealed record class RegionJump(Label Label, ImmutableArray<IShaderValue> Arguments)
 {
 }
 
 public sealed record class ShaderRegionBody(
     Label Label,
-    ImmutableArray<Symbol.ShaderValueDeclaration> Parameters,
-    Seq<ShaderStmt, ITerminator<RegionJump, ShaderValue>> Body
+    ImmutableArray<IShaderValue> Parameters,
+    Seq<ShaderStmt, ITerminator<RegionJump, IShaderValue>> Body
 ) : IBasicBlock2
 {
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
@@ -25,38 +25,28 @@ public sealed record class ShaderRegionBody(
 
     public IEnumerable<VariableDeclaration> ReferencedLocalVariables => throw new NotSupportedException();
     public IEnumerable<IShaderValue> ReferencedValues => [
-        ..Parameters.Select(p => p.Value)
+        ..Parameters
     ];
     public ISuccessor Successor => Body.Last.ToSuccessor();
 }
 
 public interface IParameterBinding
 {
-    ShaderValue Value { get; }
+    IShaderValue Value { get; }
     IShaderType Type { get; }
 }
 
-public sealed record class ParameterValueBinding(
-    ShaderValue Value,
-    ParameterDeclaration Parameter
-) : IParameterBinding
-{
-    public IShaderType Type => Parameter.Type;
-}
 
 public sealed record class ParameterPointerBinding(
-    ShaderValue Value,
+    IShaderValue Value,
     ParameterDeclaration Parameter
 ) : IParameterBinding
 {
     public IShaderType Type => Parameter.Type.GetPtrType();
 }
 
-public sealed record class FunctionBody4(
-    ImmutableArray<IParameterBinding> Parameters,
-    ImmutableArray<Symbol.ShaderValueDeclaration> LocalVariableValues,
-    RegionTree<Label, ShaderRegionBody> Body
-) : IFunctionBody, ILocalDeclarationContext, IUnifiedFunctionBody<ShaderRegionBody>
+public sealed record class FunctionBody4(FunctionDeclaration Declaration, RegionTree<Label, ShaderRegionBody> Body) 
+    : IFunctionBody, ILocalDeclarationContext, IUnifiedFunctionBody<ShaderRegionBody>
 {
     public void Dump(IndentedTextWriter writer)
     {

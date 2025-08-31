@@ -37,6 +37,15 @@ public static class ShaderModuleExtension
         throw new NotImplementedException();
     }
 
+    public static ShaderModuleDeclaration<FunctionBody4> Parse4(
+            this ISharpShader shader
+        )
+    {
+        var context = CompilationContext.Create();
+        var parser = new RuntimeReflectionParser(context);
+        return parser.ParseShaderModule(shader);
+    }
+
     public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> EliminateBlockValueTransfer(
         this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> module
     )
@@ -436,6 +445,11 @@ public static class ShaderModuleExtension
             return ValueTask.CompletedTask;
         });
         await module.Accept(visitor);
+    }
+
+    public static string Dump(this ShaderModuleDeclaration<FunctionBody4> module)
+    {
+        throw new NotImplementedException();
     }
 
     public static async ValueTask<string> Dump<TBody>(this ShaderModuleDeclaration<TBody> module)

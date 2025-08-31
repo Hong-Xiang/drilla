@@ -19,4 +19,5 @@ public interface IDeclaration : IShaderAstNode
 {
     string Name { get; }
     ImmutableHashSet<IShaderAttribute> Attributes { get; }
+    T Evaluate<T>(IDeclarationSemantic<T> semantic);
 }

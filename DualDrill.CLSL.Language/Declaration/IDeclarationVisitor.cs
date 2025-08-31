@@ -17,6 +17,17 @@ public interface IDeclarationVisitor<TBody, T> : IDeclarationVisitor<T>
     where TBody : IFunctionBody
 {
     T VisitModule(ShaderModuleDeclaration<TBody> decl);
+
+}
+
+public interface IDeclarationSemantic<T>
+{
+    T VisitVariable(VariableDeclaration decl);
+    T VisitFunction(FunctionDeclaration decl, FunctionBody4? body);
+    T VisitParameter(ParameterDeclaration decl);
+    T VisitStructure(StructureDeclaration decl);
+    T VisitMember(MemberDeclaration decl);
+    T VisitModule(ShaderModuleDeclaration<FunctionBody4> decl);
 }
 
 public interface ITypeReferenceVisitor<T>

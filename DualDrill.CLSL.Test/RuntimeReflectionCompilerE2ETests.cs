@@ -1,20 +1,27 @@
-﻿using System.Collections.Immutable;
-using DualDrill.CLSL.Compiler;
+﻿using DualDrill.CLSL.Backend;
+using DualDrill.CLSL.Language;
 using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
 public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 {
-    async Task TestShader(ISharpShader shader)
+    void TestShader(ISharpShader shader)
     {
         var sep = $"\n{new string('-', 10)}\n";
-        var cfg = shader.Parse();
-        Output.WriteLine("=== Parsed ===");
-        Output.WriteLine(await cfg.Dump());
-        Output.WriteLine(sep);
+        var module = shader.Parse4();
 
-        throw new NotImplementedException();
+        var formatter = new ShaderModuleFormatter();
+        Output.WriteLine("=== IR ===");
+        module.Accept(formatter);
+        Output.WriteLine(formatter.Dump());
+
+        var emitter = new SPIRVEmitter();
+
+        var code = emitter.Emit(module);
+        Output.WriteLine("=== SPIRV ===");
+        Output.WriteLine(code);
+
 
         //cfg = cfg.EliminateBlockValueTransfer();
         //Output.WriteLine("=== Remove Outputs ===");
@@ -56,34 +63,34 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     public async Task MinimumTriangleShaderShouldWork()
     {
         var shader = new ShaderModule.MinimumHelloTriangleShaderModule();
-        await TestShader(shader);
+        TestShader(shader);
     }
 
     [Fact]
     public async Task AdHocDevelopTest()
     {
         var shader = new ShaderModule.DevelopShaderModule();
-        await TestShader(shader);
+        TestShader(shader);
     }
 
     [Fact]
     public async Task DevelopTestShaderModuleShouldWork()
     {
         var shader = new ShaderModule.DevelopTestShaderModule();
-        await TestShader(shader);
+        TestShader(shader);
     }
 
     [Fact]
     public async Task MandelbrotDistanceShaderModuleShouldWork()
     {
         var shader = new ShaderModule.MandelbrotDistanceShaderModule();
-        await TestShader(shader);
+        TestShader(shader);
     }
 
     [Fact]
     public async Task SimpleUniformShaderShouldWork()
     {
         var shader = new ShaderModule.SimpleStructUniformShaderModule();
-        await TestShader(shader);
+        TestShader(shader);
     }
 }

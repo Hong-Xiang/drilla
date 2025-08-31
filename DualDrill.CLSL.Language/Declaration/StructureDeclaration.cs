@@ -13,6 +13,9 @@ public sealed class StructureDeclaration : IDeclaration
     public StructureDeclaration()
     {
     }
+
+    public T Evaluate<T>(IDeclarationSemantic<T> semantic)
+        => semantic.VisitStructure(this);
 }
 
 public interface IStructureSymbol : ISymbol

@@ -3,7 +3,7 @@
 namespace DualDrill.CLSL.Language;
 
 public sealed record class PrettyPrintOption(
-    string IndentString,
+    string TabString,
     bool LiteralSuffix,
     bool ShowTypes
 )

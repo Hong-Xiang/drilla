@@ -1,25 +1,23 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
-using ClangSharp;
-using DualDrill.CLSL.Language.Expression;
-using DualDrill.CLSL.Language.Operation.Pointer;
-using DualDrill.CLSL.Language.Statement;
-using LLVMSharp;
 using ShaderValueDeclaration = DualDrill.CLSL.Language.Symbol.ShaderValueDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
 
-using ShaderExpr = IExpressionTree<ShaderValue>;
+using ShaderExpr = IExpressionTree<IShaderValue>;
 
 sealed class RuntimeReflectionInstructionParserVisitor3
     : ICilInstructionVisitor<Unit>
@@ -27,63 +25,42 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     public MethodBodyAnalysisModel Model { get; }
     public FunctionDeclaration Function { get; }
     public ISuccessor Successor { get; }
-    public ImmutableStack<ShaderValue> Stack { get; private set; }
-    public IReadOnlyDictionary<VariableDeclaration, ShaderValueDeclaration> Locals { get; }
+    public ImmutableStack<IShaderValue> Stack { get; private set; }
     public IReadOnlyDictionary<ParameterDeclaration, IParameterBinding> Parameters { get; }
 
-    public ITerminator<RegionJump, ShaderValue>? Terminator { get; private set; } = null;
+    public ITerminator<RegionJump, IShaderValue>? Terminator { get; private set; } = null;
     public IReadOnlyList<ShaderStmt> Statements => statements;
 
     List<ShaderStmt> statements = [];
 
-    private IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, ShaderStmt> Stmt { get; }
-        = Statement.Factory<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration>();
+    private IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, ShaderStmt> Stmt { get; }
+        = Statement.Factory<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration>();
 
-    private ITerminatorSemantic<RegionJump, ShaderValue, ITerminator<RegionJump, ShaderValue>> TermF { get; }
-        = Language.Terminator.Factory<RegionJump, ShaderValue>();
+    private ITerminatorSemantic<RegionJump, IShaderValue, ITerminator<RegionJump, IShaderValue>> TermF { get; }
+        = Language.Terminator.Factory<RegionJump, IShaderValue>();
 
-    private IExpressionSemantic<IExpressionTree<ShaderValue>, IExpression<ShaderExpr>> ExprF { get; } =
-        Language.Expression.Expression.Factory<IExpressionTree<ShaderValue>>();
+    private IExpressionSemantic<IExpressionTree<IShaderValue>, IExpression<ShaderExpr>> ExprF { get; } =
+        Language.Expression.Expression.Factory<IExpressionTree<IShaderValue>>();
 
     IExpressionSemantic<ShaderExpr, IExpression<ShaderExpr>> Expr = Expression.Factory<ShaderExpr>();
-    private Dictionary<ShaderValue, IShaderType> ValueTypes = [];
     private PointerOperationFactory Pointer = new();
-    //public IShaderType GetValueType(ShaderValue value) => ValueTypes[value];
-    public IShaderType GetValueType(ShaderValue value) => value.Type;
+    //public IShaderType GetValueType(IShaderValue value) => ValueTypes[value];
+    public IShaderType GetValueType(IShaderValue value) => value.Type;
 
 
     public RuntimeReflectionInstructionParserVisitor3(
         MethodBodyAnalysisModel model,
         FunctionDeclaration function,
         ISuccessor successor,
-        ImmutableStack<ShaderValueDeclaration> inputStack,
-        IReadOnlyDictionary<VariableDeclaration, ShaderValueDeclaration> locals,
-        IReadOnlyDictionary<ParameterDeclaration, IParameterBinding> parameters
-    )
+        ImmutableStack<IShaderValue> inputStack)
     {
         Model = model;
         Function = function;
         Successor = successor;
-        Stack = ImmutableStack.CreateRange(inputStack.Select(x => x.Value));
-        Locals = locals;
-        Parameters = parameters;
-        foreach (var p in parameters.Values)
-        {
-            ValueTypes.Add(p.Value, p.Type);
-        }
-
-        foreach (var v in locals.Values)
-        {
-            ValueTypes.Add(v.Value, v.Type);
-        }
-
-        foreach (var v in inputStack)
-        {
-            ValueTypes.Add(v.Value, v.Type);
-        }
+        Stack = inputStack;
     }
 
-    ShaderExpr CreateValueExpr(ShaderValue v) => ExpressionTree.Value(v);
+    ShaderExpr CreateValueExpr(IShaderValue v) => ExpressionTree.Value(v);
 
     IShaderType ConvertToCilStackType(IShaderType type)
     {
@@ -120,7 +97,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         };
     }
 
-    void DoStore(ShaderValue target, ShaderValue value)
+    void DoStore(IShaderValue target, IShaderValue value)
     {
         var vt = GetValueType(value);
         var tt = GetValueType(target);
@@ -156,16 +133,16 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         };
     }
 
-    ShaderValue CreateValue(IShaderType t)
+    IShaderValue CreateValue(IShaderType t)
     {
-        //var v = ShaderValue.Create(t);
+        //var v = IShaderValue.Create(t);
         //ShaderValueDeclaration r = new(v, t);
         //ValueTypes.Add(v, t);
         //return v;
         return ShaderValue.Create(t);
     }
 
-    void Push(ShaderValue v)
+    void Push(IShaderValue v)
     {
         var type = GetValueType(v);
         var stackType = ConvertToCilStackType(type);
@@ -181,7 +158,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         }
     }
 
-    ShaderValue EvalExpr2(Func<IShaderType, IShaderType, IBinaryExpressionOperation> parseOp)
+    IShaderValue EvalExpr2(Func<IShaderType, IShaderType, IBinaryExpressionOperation> parseOp)
     {
         var rv = Pop();
         var lv = Pop();
@@ -192,7 +169,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     }
 
 
-    ShaderValue Pop()
+    IShaderValue Pop()
     {
         Stack = Stack.Pop(out var r);
         return r;
@@ -203,7 +180,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         statements.Add(inst);
     }
 
-    ShaderValue EmitLet(IShaderType t, IExpression<ShaderExpr> e)
+    IShaderValue EmitLet(IShaderType t, IExpression<ShaderExpr> e)
     {
         var value = CreateValue(t);
         statements.Add(Stmt.Let(value, e.AsNode()));
@@ -211,17 +188,16 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     }
 
 
-    void PushEmitLet2(IBinaryExpressionOperation op, ShaderValue l, ShaderValue r)
+    void PushEmitLet2(IBinaryExpressionOperation op, IShaderValue l, IShaderValue r)
     {
         var v = EmitLet(op.ResultType, ExprF.Operation2(op, CreateValueExpr(l), CreateValueExpr(r)));
         Push(v);
     }
 
 
-    void DoLoad(ShaderValue p)
+    void DoLoad(IShaderValue p)
     {
-        var t = GetValueType(p);
-        if (t is IPtrType pt)
+        if (p.Type is IPtrType pt)
         {
             var r = CreateValue(pt.BaseType);
             Emit(Stmt.Get(r, p));
@@ -229,7 +205,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         }
         else
         {
-            throw new ValidationException($"can not load from non-ptr type value {p} : {t}", Model.Method);
+            throw new ValidationException($"can not load from non-ptr type value {p} : {p.Type}", Model.Method);
         }
     }
 
@@ -290,8 +266,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitLoadArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        var val = Parameters[p];
-        DoLoad(val.Value);
+        DoLoad(p.Value);
         return default;
     }
 
@@ -337,16 +312,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitLoadArgumentAddress(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        var v = Parameters[p];
-        Push(v.Value);
+        Push(p.Value);
         return default;
     }
 
     public Unit VisitStoreArgument(CilInstructionInfo inst, ParameterDeclaration p)
     {
-        var t = Parameters[p];
         var v = Pop();
-        DoStore(t.Value, v);
+        DoStore(p.Value, v);
         return default;
     }
 
@@ -362,25 +335,25 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitLoadLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
-        DoLoad(Locals[v].Value);
+        DoLoad(v.Value);
         return default;
     }
 
     public Unit VisitLoadLocalAddress(CilInstructionInfo inst, VariableDeclaration v)
     {
-        Push(Locals[v].Value);
+        Push(v.Value);
         return default;
     }
 
     public Unit VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration v)
     {
-        var t = Locals[v].Value;
+        var t = v.Value;
         var val = Pop();
         DoStore(t, val);
         return default;
     }
 
-    ShaderValue GetMemberPointer(ShaderValue o, MemberDeclaration m)
+    IShaderValue GetMemberPointer(IShaderValue o, MemberDeclaration m)
     {
         var t = GetValueType(o);
         if (!(t is IPtrType ptr && ptr.BaseType is StructureType))
@@ -439,7 +412,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         throw new NotImplementedException();
     }
 
-    void VisitCallFunction(FunctionDeclaration func, bool isExpression)
+    void VisitCallFunction(FunctionDeclaration func, bool hasReturnValue)
     {
         if (func.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } opAttr)
         {
@@ -453,7 +426,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                         var rt = GetValueType(r);
                         if (!lt.Equals(be.LeftType) || !rt.Equals(be.RightType))
                         {
-                            throw new ValidationException($"{be} operation stack : {l.Name}, {r.Name}", Model.Method);
+                            throw new ValidationException($"{be} operation stack : {l}, {r}", Model.Method);
                         }
                         PushEmitLet2(be, l, r);
                         return;
@@ -464,7 +437,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                         var l = Pop();
                         if (!GetValueType(l).Equals(bs.LeftType) || !GetValueType(r).Equals(bs.RightType))
                         {
-                            throw new ValidationException($"{bs} operation stack : {l.Name}, {r.Name}", Model.Method);
+                            throw new ValidationException($"{bs} operation stack : {l}, {r}", Model.Method);
                         }
 
                         if (bs is IVectorComponentSetOperation vcs)
@@ -487,7 +460,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                         var s = Pop();
                         if (!GetValueType(s).Equals(ue.SourceType))
                         {
-                            throw new ValidationException($"{ue} operation stack : {s.Name}", Model.Method);
+                            throw new ValidationException($"{ue} operation stack : {s}", Model.Method);
                         }
 
                         var v = EmitLet(ue.ResultType, ExprF.Operation1(ue, CreateValueExpr(s)));
@@ -501,14 +474,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             }
         }
 
-        List<ShaderValue> args = [];
+        List<IShaderValue> args = [];
         foreach (var p in func.Parameters.Reverse())
         {
             var ve = Pop();
             if (!GetValueType(ve).Equals(p.Type))
             {
                 throw new ValidationException(
-                    $"parameter {p} not match: stack {ve.Name} declaration {p.Type.Name}",
+                    $"parameter {p} not match: stack {ve} declaration {p.Type.Name}",
                     Model.Method);
             }
             args.Add(ve);
@@ -517,9 +490,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         var rv = CreateValue(func.Return.Type);
         Emit(Stmt.Call(rv, func, [.. args.Select(v => CreateValueExpr(v))]));
 
-        //throw new NotImplementedException();
-        //Emit(StackIR.Instruction.Call(func));
-        if (isExpression)
+        if (hasReturnValue)
         {
             Push(rv);
         }
@@ -537,7 +508,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         return default;
     }
 
-    public ImmutableArray<ShaderValue> GetStackOutput()
+    public ImmutableArray<IShaderValue> GetStackOutput()
     {
         var result = Stack.Reverse().ToImmutableArray();
         //Stack = [];
@@ -570,13 +541,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
         {
             var args = GetStackOutput();
+            var vb = EmitLet(ShaderType.Bool, Expr.Operation1(ScalarConversionOperation<IntType<N32>, BoolType>.Instance, CreateValueExpr(v)));
             if (value)
             {
-                Terminator = TermF.BrIf(v, new(tt, args), new(ft, args));
+                Terminator = TermF.BrIf(vb, new(tt, args), new(ft, args));
             }
             else
             {
-                Terminator = TermF.BrIf(v, new(ft, args), new(tt, args));
+                Terminator = TermF.BrIf(vb, new(ft, args), new(tt, args));
             }
 
             return default;
@@ -618,7 +590,8 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
         {
             var args = GetStackOutput();
-            Terminator = TermF.BrIf(v, new(tt, args), new(ft, args));
+            var vb = EmitLet(ShaderType.Bool, Expr.Operation1(ScalarConversionOperation<IntType<N32>, BoolType>.Instance, CreateValueExpr(v)));
+            Terminator = TermF.BrIf(vb, new(tt, args), new(ft, args));
         }
         else
         {
@@ -637,7 +610,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     {
         var r = Pop();
         var l = Pop();
-        if (!(l is IntType<N32> && r is IntType<N32>))
+        if (!(l.Type is IntType<N32> && r.Type is IntType<N32>))
         {
             throw new ValidationException($"logical op requires i32 operands, got {l}, {r}", Model.Method);
         }
@@ -736,11 +709,6 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     }
 
     public Unit VisitDup(CilInstructionInfo inst)
-    {
-        throw new NotImplementedException();
-    }
-
-    Unit ICilInstructionVisitor<Unit>.VisitPop(CilInstructionInfo inst)
     {
         throw new NotImplementedException();
     }

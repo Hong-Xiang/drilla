@@ -15,6 +15,10 @@ public sealed class MemberDeclaration(
     public string Name { get; } = Name;
     public ImmutableHashSet<IShaderAttribute> Attributes { get; } = Attributes;
     public IShaderType Type { get; } = Type;
+
+    public T Evaluate<T>(IDeclarationSemantic<T> semantic)
+        => semantic.VisitMember(this);
+
     public override string ToString() => $"member {Name} : {Type.Name}";
 }
 

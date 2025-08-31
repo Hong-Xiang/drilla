@@ -1,7 +1,5 @@
 ﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Symbol;
-using DualDrill.CLSL.Language.Types;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
@@ -11,21 +9,6 @@ public interface IShaderModuleDeclaration
 {
     ImmutableArray<IDeclaration> Declarations { get; init; }
 }
-
-public interface IShaderModuleSymbol : ISymbol
-{
-}
-
-public interface IModuleSymbol<TBodySymbol> : ISymbol
-    where TBodySymbol : IFunctionBodySymbol
-{
-    //ImmutableArray<IModuleVariableSymbol> ModuleVariables { get; }
-    ImmutableArray<IStructureSymbol> Structures { get; }
-    ImmutableArray<IFunctionDefinitionSymbol<TBodySymbol>> Functions { get; }
-    ImmutableArray<IFunctionDefinitionSymbol<TBodySymbol>> EntryFunctions { get; }
-}
-
-
 
 public sealed record class ShaderModuleDeclaration<TBody>(
     ImmutableArray<IDeclaration> Declarations,
@@ -64,4 +47,13 @@ public sealed record class ShaderModuleDeclaration<TBody>(
 
     public TResult Accept<TResult>(IDeclarationVisitor<TBody, TResult> visitor)
         => visitor.VisitModule(this);
+
+    public T Evaluate<T>(IDeclarationSemantic<T> semantic)
+    {
+        if (this is ShaderModuleDeclaration<FunctionBody4> m)
+        {
+            return semantic.VisitModule(m);
+        }
+        throw new NotSupportedException();
+    }
 }

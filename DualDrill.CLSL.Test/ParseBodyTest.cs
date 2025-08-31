@@ -866,7 +866,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var p = new ParameterDeclaration("p", ShaderType.Vec3F32, []);
         var c = new ParameterDeclaration("cond", ShaderType.Bool, []);
         var f = new FunctionDeclaration(
-            nameof(DevelopTestShaderModule.MaxByTernaryOperator),
+            nameof(DevelopTestShaderModule.TernaryConditionalSwizzle),
             [p, c],
             new FunctionReturn(ShaderType.F32, []),
             []);
@@ -921,7 +921,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
             new FunctionReturn(ShaderType.I32, []),
             []);
         var result = ParseMethod(f,
-            MethodHelper.GetMethod<int, int, int, int, int>(DevelopTestShaderModule.NestedLoop));
+            MethodHelper.GetMethod<int, int, int, int, int>(DevelopTestShaderModule.NestedLoopFlat));
     }
     [Fact]
     public void NestedExpressionWithFunctionCallShouldWork()

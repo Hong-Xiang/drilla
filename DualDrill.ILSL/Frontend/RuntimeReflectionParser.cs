@@ -4,16 +4,15 @@ using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.Common;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using DualDrill.CLSL.Language.Region;
 using ShaderValueDeclaration = DualDrill.CLSL.Language.Symbol.ShaderValueDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
@@ -331,29 +330,19 @@ public sealed record class RuntimeReflectionParser(
     {
         var model = Context.GetFunctionDefinition(f);
         var methodTable = new CompilationContext(Context);
-        Dictionary<VariableDeclaration, ShaderValueDeclaration> localValues = [];
         Dictionary<ParameterDeclaration, IParameterBinding> parameterBindings = [];
-        List<ShaderValueDeclaration> localVariableDeclarations = [];
         foreach (var v in model.LocalVariables)
         {
             var loc = ParseLocalVariable(v, methodTable);
-            var valueDecl = new ShaderValueDeclaration(ShaderValue.Create(loc.Type.GetPtrType(), $"loc_{v.LocalIndex}"), loc.Type.GetPtrType());
-            localValues.Add(loc, valueDecl);
-            localVariableDeclarations.Add(valueDecl);
         }
-
-        List<IParameterBinding> parameterBindingsList = [];
         {
             foreach (var (index, p) in f.Parameters.Index())
             {
                 methodTable.AddParameter(Symbol.Parameter(index), p);
-                var binding = new ParameterPointerBinding(ShaderValue.Create(p.Type.GetPtrType(), p.Name), p);
-                parameterBindings.Add(p, binding);
-                parameterBindingsList.Add(binding);
             }
         }
 
-        Dictionary<Label, ImmutableStack<ShaderValueDeclaration>> basicBlockInputs = new()
+        Dictionary<Label, ImmutableStack<IShaderValue>> basicBlockInputs = new()
         {
             [model.ControlFlowGraph.EntryLabel] = []
         };
@@ -367,10 +356,7 @@ public sealed record class RuntimeReflectionParser(
                 model,
                 f,
                 model.ControlFlowGraph.Successor(l),
-                basicBlockInputs[l],
-                localValues,
-                parameterBindings
-            );
+                basicBlockInputs[l]);
             var ilRange = model.ControlFlowGraph[l];
             for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
             {
@@ -383,13 +369,13 @@ public sealed record class RuntimeReflectionParser(
 
             //basicBlockOutputs.Add(l, visitor.Stack);
 
-            ITerminator<RegionJump, ShaderValue>? terminator = visitor.Terminator;
+            ITerminator<RegionJump, IShaderValue>? terminator = visitor.Terminator;
 
 
             {
                 var successor = model.ControlFlowGraph.Successor(l);
                 var args = visitor.GetStackOutput();
-                terminator ??= Terminator.B.Br<RegionJump, ShaderValue>(new(successor.AllTargets().Single(), args));
+                terminator ??= Terminator.B.Br<RegionJump, IShaderValue>(new(successor.AllTargets().Single(), args));
 
                 foreach (var tl in successor.AllTargets())
                 {
@@ -412,7 +398,7 @@ public sealed record class RuntimeReflectionParser(
                     }
                     else
                     {
-                        var inputs = ImmutableStack.CreateRange(visitor.Stack.Select(v => new ShaderValueDeclaration(ShaderValue.Create(v.Type), visitor.GetValueType(v))));
+                        var inputs = ImmutableStack.CreateRange(visitor.Stack.Select(v => (IShaderValue)ShaderValue.Create(v.Type)).Reverse());
                         basicBlockInputs.Add(tl, inputs);
                     }
                 }
@@ -433,9 +419,8 @@ public sealed record class RuntimeReflectionParser(
         //     basicBlocks.ToFrozenDictionary()
         // );
         return new FunctionBody4(
-            [.. parameterBindingsList],
-            [.. localVariableDeclarations],
-            RegionTree.Create<ShaderRegionBody>(
+            f,
+            RegionTree.Create(
                 model.ControlFlowGraph.EntryLabel,
                 x => x.Body.Last.ToSuccessor(),
                 basicBlocks.Select(kv => (kv.Key, kv.Value))

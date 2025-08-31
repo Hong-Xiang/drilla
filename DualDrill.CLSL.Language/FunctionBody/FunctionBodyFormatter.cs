@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
@@ -14,25 +15,30 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 
 sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Function)
     : IRegionTreeFoldLazySemantic<Label, ShaderRegionBody, Unit, Unit>
-    , ISeqSemantic<ShaderStmt, ITerminator<RegionJump, ShaderValue>, Func<Unit>, Unit>
-    , ITerminatorSemantic<RegionJump, ShaderValue, Unit>
-    , IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>
-    , IExpressionTreeLazyFoldSemantic<ShaderValue, Unit>
+    , ISeqSemantic<ShaderStmt, ITerminator<RegionJump, IShaderValue>, Func<Unit>, Unit>
+    , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
+    , IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>
+    , IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>
 {
 
     SemanticModel Model = new(Function);
+    Stack<Label> VisitingRegionUsage = [];
+    Stack<Label> CurrentScope = [];
 
     void Dump(IShaderValue value)
     {
         var index = Model.ValueIndex(value);
 
         Writer.Write($"%{index}");
-        if (value is ShaderValue sv && sv.Name is not null)
+        if (value is VariablePointerValue sv && sv.Declaration.Name is not null)
         {
             Writer.Write('(');
-            Writer.Write(sv.Name);
+            Writer.Write(sv.Declaration.Name);
             Writer.Write(')');
         }
+
+        Writer.Write(" : ");
+        Writer.Write(value.Type.Name);
     }
 
     void Dump(Label l)
@@ -48,48 +54,34 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         }
     }
 
-    void Dump(int index, IParameterBinding p)
+    void Dump(int index, ParameterPointerValue p)
     {
         Writer.Write(" = $");
         Writer.Write(index);
-        if (p is ParameterPointerBinding ppb)
-        {
-            Writer.Write('(');
-            Writer.Write(ppb.Parameter.Name);
-            Writer.Write(')');
-        }
-    }
-
-    void Dump(ShaderValue value, IShaderType type)
-    {
-        Dump(value);
-        Writer.Write(" : ");
-        Writer.Write(type.Name);
-    }
-    void Dump(ShaderValueDeclaration decl)
-    {
-        Dump(decl.Value, decl.Type);
+        Writer.Write('(');
+        Writer.Write(p.Declaration.Name);
+        Writer.Write(')');
     }
 
     public void Dump()
     {
-        foreach (var (i, p) in Function.Parameters.Index())
+        foreach (var (i, p) in Function.Declaration.Parameters.Index())
         {
-            Dump(p.Value, p.Type);
-            Dump(i, p);
+            Dump(p.Value);
+            Dump(i, p.Value);
             Writer.WriteLine();
         }
 
-        foreach (var decl in Function.LocalVariableValues)
+        foreach (var decl in Function.GetLocalVariables())
         {
-            Dump(decl);
+            Dump(decl.Value);
             Writer.WriteLine();
         }
 
         Function.Body.Fold(this);
     }
 
-    public Unit Single(ITerminator<RegionJump, ShaderValue> value)
+    public Unit Single(ITerminator<RegionJump, IShaderValue> value)
     {
         value.Evaluate(this);
         return default;
@@ -102,13 +94,13 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.ReturnVoid()
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid()
     {
         Writer.WriteLine("return");
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.ReturnExpr(ShaderValue expr)
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
     {
         Writer.Write("return ");
         Dump(expr);
@@ -129,9 +121,16 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
             Dump(a);
         }
         Writer.Write(')');
+        if (Model.IsUsedOnce(target.Label))
+        {
+            Writer.WriteLine();
+            VisitingRegionUsage.Push(target.Label);
+            Model.RegionTree(target.Label).Fold(this);
+            VisitingRegionUsage.Pop();
+        }
     }
 
-    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.Br(RegionJump target)
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)
     {
         Writer.Write("br ");
         Dump(target);
@@ -139,7 +138,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, ShaderValue, Unit>.BrIf(ShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
     {
         Writer.Write("br_if ");
         Dump(condition);
@@ -159,35 +158,31 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Nop()
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Nop()
     {
         Writer.WriteLine("nop");
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Let(ShaderValue result, ShaderExpr expr)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Let(IShaderValue result, ShaderExpr expr)
     {
         Dump(result);
-        Writer.Write(" : ");
-        Writer.Write(result.Type.Name);
         Writer.Write(" = ");
         expr.Fold(this);
         Writer.WriteLine();
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Get(ShaderValue result, ShaderValue source)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Get(IShaderValue result, IShaderValue source)
     {
         Dump(result);
-        Writer.Write(" : ");
-        Writer.Write(result.Type.Name);
         Writer.Write(" = load ");
         Dump(source);
         Writer.WriteLine();
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Set(ShaderValue target, ShaderValue source)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Set(IShaderValue target, IShaderValue source)
     {
         Dump(target);
         Writer.Write(" := ");
@@ -196,7 +191,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Mov(ShaderValue target, ShaderValue source)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Mov(IShaderValue target, IShaderValue source)
     {
         Dump(target);
         Writer.Write(" <- ");
@@ -205,11 +200,9 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Call(ShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
     {
         Dump(result);
-        Writer.Write(" : ");
-        Writer.Write(result.Type.Name);
         Writer.Write(" = call ");
         Writer.Write(f.Name);
         Writer.Write('(');
@@ -225,7 +218,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Dup(ShaderValue result, ShaderValue source)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Dup(IShaderValue result, IShaderValue source)
     {
         Writer.Write("dup ");
         Dump(result);
@@ -235,7 +228,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.Pop(ShaderValue target)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Pop(IShaderValue target)
     {
         Writer.Write("pop ");
         Dump(target);
@@ -243,7 +236,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IStatementSemantic<ShaderValue, ShaderExpr, ShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, ShaderValue target, ShaderValue value)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, IShaderValue target, IShaderValue value)
     {
         Dump(target);
         Writer.Write('.');
@@ -254,7 +247,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IExpressionTreeLazyFoldSemantic<ShaderValue, Unit>.Value(ShaderValue value)
+    Unit IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>.Value(IShaderValue value)
     {
         Dump(value);
         return default;
@@ -276,7 +269,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
     Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
     {
         Writer.Write("ref ");
-        // e is already evaluated - no need to call it
+        e();
         Writer.Write('.');
         Writer.Write(operation.Name);
         return default;
@@ -312,28 +305,67 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
+    void RegionHeader(Label label)
+    {
+        Dump(label);
+        Writer.Write(" refs [");
+        foreach (var l in Model.UsedExternalLabels[label])
+        {
+            Dump(l);
+            Writer.Write(", ");
+        }
+        Writer.Write("] ");
+        Writer.WriteLine(":");
+    }
 
     Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Block(Label label, Func<Unit> body)
     {
+        CurrentScope.Push(label);
+        if (Model.IsUsedOnce(label))
+        {
+            if (VisitingRegionUsage.Count == 0 || !(VisitingRegionUsage.Peek() == label))
+            {
+                CurrentScope.Pop();
+                return default;
+            }
+        }
+
         Writer.Write("block ");
-        Dump(label);
-        Writer.WriteLine(":");
+        RegionHeader(label);
         using (Writer.IndentedScope())
         {
             body();
         }
+        CurrentScope.Pop();
         return default;
     }
 
     Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Loop(Label label, Func<Unit> body)
     {
+        CurrentScope.Push(label);
+        //Writer.Write($"[DEBUG] loop {label}, usages ({Model.LabelUsageCount(label)}) : ");
+        ////foreach (var u in Model.LabelUsages(label))
+        ////{
+        ////    //u.Evaluate(this);
+        ////    Writer.WriteLine(',');
+        ////}
+        //Writer.WriteLine(";[DEBUG]");
+
+        if (Model.IsUsedOnce(label))
+        {
+            if (VisitingRegionUsage.Count == 0 || !(VisitingRegionUsage.Peek() == label))
+            {
+                CurrentScope.Pop();
+                return default;
+            }
+        }
         Writer.Write("loop ");
-        Dump(label);
-        Writer.WriteLine(":");
+        RegionHeader(label);
         using (Writer.IndentedScope())
         {
             body();
         }
+        CurrentScope.Pop();
         return default;
     }
 
@@ -341,7 +373,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
     {
         foreach (var (i, p) in body.Parameters.Index())
         {
-            Dump(p.Value, p.Type);
+            Dump(p);
             Writer.Write(" = region $");
             Writer.WriteLine(i);
         }
