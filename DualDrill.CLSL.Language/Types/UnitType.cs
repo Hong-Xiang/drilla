@@ -11,6 +11,11 @@ public sealed class UnitType : ISingletonShaderType<UnitType>, ISingleton<UnitTy
 
     public string Name => "Unit";
 
+    T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
+    {
+        return semantic.UnitType(this);
+    }
+
     public IRefType GetRefType()
     {
         throw new NotSupportedException();

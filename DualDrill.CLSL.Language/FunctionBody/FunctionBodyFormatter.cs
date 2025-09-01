@@ -6,7 +6,6 @@ using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
-using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using System.CodeDom.Compiler;
@@ -22,8 +21,6 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
 {
 
     SemanticModel Model = new(Function);
-    Stack<Label> VisitingRegionUsage = [];
-    Stack<Label> CurrentScope = [];
 
     void Dump(IShaderValue value)
     {
@@ -121,13 +118,13 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
             Dump(a);
         }
         Writer.Write(')');
-        if (Model.IsUsedOnce(target.Label))
-        {
-            Writer.WriteLine();
-            VisitingRegionUsage.Push(target.Label);
-            Model.RegionTree(target.Label).Fold(this);
-            VisitingRegionUsage.Pop();
-        }
+        //if (Model.IsUsedOnce(target.Label))
+        //{
+        //    Writer.WriteLine();
+        //    VisitingRegionUsage.Push(target.Label);
+        //    Model.RegionTree(target.Label).Fold(this);
+        //    VisitingRegionUsage.Pop();
+        //}
     }
 
     Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)
@@ -305,72 +302,33 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    void RegionHeader(Label label)
-    {
-        Dump(label);
-        Writer.Write(" refs [");
-        foreach (var l in Model.UsedExternalLabels[label])
-        {
-            Dump(l);
-            Writer.Write(", ");
-        }
-        Writer.Write("] ");
-        Writer.WriteLine(":");
-    }
-
     Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Block(Label label, Func<Unit> body)
     {
-        CurrentScope.Push(label);
-        if (Model.IsUsedOnce(label))
-        {
-            if (VisitingRegionUsage.Count == 0 || !(VisitingRegionUsage.Peek() == label))
-            {
-                CurrentScope.Pop();
-                return default;
-            }
-        }
-
         Writer.Write("block ");
-        RegionHeader(label);
+        Dump(label);
+        Writer.WriteLine(":");
         using (Writer.IndentedScope())
         {
             body();
         }
-        CurrentScope.Pop();
         return default;
     }
 
     Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Loop(Label label, Func<Unit> body)
     {
-        CurrentScope.Push(label);
-        //Writer.Write($"[DEBUG] loop {label}, usages ({Model.LabelUsageCount(label)}) : ");
-        ////foreach (var u in Model.LabelUsages(label))
-        ////{
-        ////    //u.Evaluate(this);
-        ////    Writer.WriteLine(',');
-        ////}
-        //Writer.WriteLine(";[DEBUG]");
-
-        if (Model.IsUsedOnce(label))
-        {
-            if (VisitingRegionUsage.Count == 0 || !(VisitingRegionUsage.Peek() == label))
-            {
-                CurrentScope.Pop();
-                return default;
-            }
-        }
         Writer.Write("loop ");
-        RegionHeader(label);
+        Dump(label);
+        Writer.WriteLine(":");
         using (Writer.IndentedScope())
         {
             body();
         }
-        CurrentScope.Pop();
         return default;
     }
 
     void Dump(ShaderRegionBody body)
     {
+        Writer.WriteLine();
         Writer.Write($"|=> ");
         if (body.ImmediatePostDominator is null)
         {
@@ -381,7 +339,6 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
             Dump(body.ImmediatePostDominator);
             Writer.WriteLine();
         }
-        Writer.WriteLine();
         foreach (var (i, p) in body.Parameters.Index())
         {
             Dump(p);

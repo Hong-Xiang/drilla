@@ -7,29 +7,6 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed record class RegionJump(Label Label, ImmutableArray<IShaderValue> Arguments)
-{
-}
-
-public sealed record class ShaderRegionBody(
-    Label Label,
-    ImmutableArray<IShaderValue> Parameters,
-    Seq<ShaderStmt, ITerminator<RegionJump, IShaderValue>> Body,
-    Label? ImmediatePostDominator
-) : IBasicBlock2
-{
-    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IEnumerable<VariableDeclaration> ReferencedLocalVariables => throw new NotSupportedException();
-    public IEnumerable<IShaderValue> ReferencedValues => [
-        ..Parameters
-    ];
-    public ISuccessor Successor => Body.Last.ToSuccessor();
-}
-
 public sealed record class FunctionBody4(FunctionDeclaration Declaration, RegionTree<Label, ShaderRegionBody> Body)
     : IFunctionBody, ILocalDeclarationContext, IUnifiedFunctionBody<ShaderRegionBody>
 {
@@ -106,7 +83,6 @@ public sealed record class FunctionBody4(FunctionDeclaration Declaration, Region
             return found;
         }
     }
-
 
     public ISuccessor Successor(Label label)
         => this[label].Successor;

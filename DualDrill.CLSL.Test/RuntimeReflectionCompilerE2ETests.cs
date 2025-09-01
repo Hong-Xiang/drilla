@@ -16,9 +16,9 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         module.Accept(formatter);
         Output.WriteLine(formatter.Dump());
 
-        var emitter = new SPIRVEmitter();
+        var emitter = new SPIRVEmitter(module);
 
-        var code = emitter.Emit(module);
+        var code = emitter.Emit();
         Output.WriteLine("=== SPIRV ===");
         Output.WriteLine(code);
 

@@ -14,6 +14,10 @@ public interface IShaderType
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IShaderTypeVisitor1<TResult>;
 
+    virtual T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public interface IShaderType<TSelf> : IShaderType, ISingleton<TSelf>
@@ -29,6 +33,11 @@ public interface IShaderType<TSelf> : IShaderType, ISingleton<TSelf>
 public interface IShaderTypeVisitor1<out TResult>
 {
     TResult Visit<TType>(TType type) where TType : IShaderType<TType>;
+}
+
+public interface IShaderTypeSemantic<in TI, out TO>
+{
+    TO UnitType(UnitType t);
 }
 
 public interface IShaderTypeMatcher2<out TResult>
