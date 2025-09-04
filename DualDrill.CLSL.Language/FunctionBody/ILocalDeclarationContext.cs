@@ -9,12 +9,18 @@ public interface ILocalDeclarationContext
 {
     int LabelIndex(Label label);
     int ValueIndex(IShaderValue value);
+    // TODO: add type index
+    // int TypeIndex(IShaderType type);
+
+
+    // Remove following things
     int VariableIndex(VariableDeclaration variable);
 
     ImmutableArray<VariableDeclaration> LocalVariables { get; }
     ImmutableArray<Label> Labels { get; }
     ImmutableArray<IShaderValue> Values { get; }
 }
+
 
 public interface IDeclarationUser : ITextDumpable<ILocalDeclarationContext>
 {
@@ -33,7 +39,7 @@ public static class LocalDeclarationContextExtensions
 
     public static string VariableName(this ILocalDeclarationContext context, VariableDeclaration variable)
     {
-        return variable.DeclarationScope == DeclarationScope.Function
+        return variable.AddressSpace is FunctionAddressSpace
             ? $"var<f> %{context.VariableIndex(variable)} : {variable.Type.Name} {variable.Name}"
             : $"var<m> {variable.Name}";
     }

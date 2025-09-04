@@ -1,7 +1,9 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -9,7 +11,7 @@ namespace DualDrill.CLSL.Language.Declaration;
 
 [DebuggerDisplay("{DebugDisplay()}")]
 public sealed class FunctionDeclaration
-    : IDeclaration
+    : IDeclaration, IShaderValue
 {
     public FunctionDeclaration(string name,
         ImmutableArray<ParameterDeclaration> parameters,
@@ -20,6 +22,7 @@ public sealed class FunctionDeclaration
         Parameters = parameters;
         Return = @return;
         Attributes = attributes;
+        Type = new FunctionType([.. parameters.Select(p => p.Type)], @return.Type);
     }
 
     public override string ToString()
@@ -34,6 +37,8 @@ public sealed class FunctionDeclaration
     public FunctionReturn Return { get; }
     public ImmutableHashSet<IShaderAttribute> Attributes { get; }
 
+    public IShaderType Type { get; }
+
     private string DebugDisplay()
     {
         var parameters = string.Join(", ", Parameters.Select(p => $"{p.Name} : {p.Type.Name}"));
@@ -41,7 +46,12 @@ public sealed class FunctionDeclaration
     }
 
     public T Evaluate<T>(IDeclarationSemantic<T> semantic)
-        => semantic.VisitFunction(this, null);
+        => semantic.VisitFunction(this);
+
+    public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public sealed record class FunctionReturn(IShaderType Type, ImmutableHashSet<IShaderAttribute> Attributes)

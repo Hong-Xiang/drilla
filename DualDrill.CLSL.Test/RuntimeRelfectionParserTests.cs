@@ -8,6 +8,7 @@ using DualDrill.Mathematics;
 using FluentAssertions;
 using System.Numerics;
 using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Test;
 
@@ -83,7 +84,7 @@ public class RuntimeRelfectionParserTests
         var module = Parser.ParseShaderModule(new SimpleStructUniformShaderModule());
         var uniformDecl = module.Declarations.OfType<VariableDeclaration>().Single();
         Assert.Equal("ourStruct", uniformDecl.Name);
-        uniformDecl.DeclarationScope.Should().Be(DeclarationScope.Module);
+        uniformDecl.AddressSpace.Should().Be(UniformAddressSpace.Instance);
         Assert.Equal(0, uniformDecl.Attributes.OfType<GroupAttribute>().Single().Binding);
         Assert.Equal(0, uniformDecl.Attributes.OfType<BindingAttribute>().Single().Binding);
         Assert.Single(uniformDecl.Attributes.OfType<UniformAttribute>());

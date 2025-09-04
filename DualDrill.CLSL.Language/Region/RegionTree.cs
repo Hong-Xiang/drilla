@@ -32,9 +32,9 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
     public IEnumerable<RegionTree<TL, TB>> Bindings => Definition.Body.Elements;
 
     public static RegionTree<TL, TB> Block(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body)
-        => new(new BlockRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>>(label, Seq.Create(regions, body)));
+        => new(new BlockRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>>(label, Seq.Create([.. regions], body)));
     public static RegionTree<TL, TB> Loop(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body)
-        => new(new LoopRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>>(label, Seq.Create(regions, body)));
+        => new(new LoopRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>>(label, Seq.Create([.. regions], body)));
 
     public RegionTree<TL, TB> WithBindings(IEnumerable<RegionTree<TL, TB>> regions)
         => new(Definition.Select(seq => Seq.Create([.. regions], seq.Last)));
@@ -45,9 +45,9 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
         => Definition.Evaluate(new FoldLazyImplSemantic<TS, T>(semantic))();
 
 
-    public bool Traverse(Func<TL, TB, bool> f)
+    public bool Traverse(Func<RegionTree<TL, TB>, TL, TB, bool> f)
     {
-        var r = f(Definition.Label, Definition.Body.Last);
+        var r = f(this, Definition.Label, Definition.Body.Last);
         if (!r)
         {
             foreach (var b in Definition.Body.Elements.Reverse())
@@ -118,7 +118,7 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
             => Seq<RegionTree<TLR, TBR>, TBR>.Single(b(value));
     }
 
-    public RegionTree<TLR, TBR> Map<TLR, TBR>(Func<TL, TLR> l, Func<TB, TBR> b)
+    public RegionTree<TLR, TBR> Select<TLR, TBR>(Func<TL, TLR> l, Func<TB, TBR> b)
         => Fold(new MapFoldSemantic<TLR, TBR>(l, b));
 }
 
@@ -217,7 +217,7 @@ public static class RegionDefinitionExtension
 
         var labelToName = LabelMap.Create(l => $"^{l.Name}:{labels[l]}");
 
-        var sir = region.Map<string, IEnumerable<string>>(
+        var sir = region.Select<string, IEnumerable<string>>(
             labelToName.MapLabel, s =>
             [s.Map(labelToName).ToString() ?? string.Empty]);
         var lines = sir.Fold(new RegionDefinitionFormatter(0));
@@ -247,7 +247,7 @@ public static class RegionDefinitionExtension
 
         var stepFormatter = new SuccessorFormatSemantic(labels);
 
-        var sir = region.Map<string, IEnumerable<string>>(stepFormatter.LabelName, s => [s.Evaluate(stepFormatter, default)]);
+        var sir = region.Select<string, IEnumerable<string>>(stepFormatter.LabelName, s => [s.Evaluate(stepFormatter, default)]);
         var lines = sir.Fold(new RegionDefinitionFormatter(0));
         return string.Join(Environment.NewLine, lines);
     }

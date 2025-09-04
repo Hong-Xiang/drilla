@@ -16,6 +16,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 /// LabelIndex(Entry) = 0
 /// </summary>
 /// <typeparam name="TElement"></typeparam>
+[Obsolete]
 public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ILocalDeclarationContext
     where TElement : IBasicBlockElement
 {
@@ -29,13 +30,13 @@ public sealed class ControlFlowGraphFunctionBody<TElement> : IFunctionBody, ILoc
     {
         Graph = graph;
         DominatorTree = DominatorTree.CreateFromControlFlowGraph(Graph.GetDFSTree());
-        Labels = [..graph.Labels()];
+        Labels = [.. graph.Labels()];
         Entry = graph.EntryLabel;
         LocalVariables =
         [
             ..Labels.Select(l => graph[l]).SelectMany(b => b.Elements)
                     .SelectMany(e => e.ReferencedLocalVariables)
-                    .Where(v => v.DeclarationScope == DeclarationScope.Function)
+                    .Where(v => v.AddressSpace is FunctionAddressSpace)
                     .Distinct()
         ];
         LabelIndices = Labels.Index().ToFrozenDictionary(x => x.Item, x => x.Index);

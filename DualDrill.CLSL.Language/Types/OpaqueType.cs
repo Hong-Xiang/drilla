@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -13,7 +14,6 @@ public sealed class OpaqueType : IShaderType<OpaqueType>
     public OpaqueType(Type? type)
     {
         Type = type;
-        PtrType = new(() => new PtrType(this));
     }
 
     public string Name => $"<OpaqueType:{Type?.Name ?? nameof(OpaqueType)}>";
@@ -23,8 +23,15 @@ public sealed class OpaqueType : IShaderType<OpaqueType>
         throw new NotSupportedException();
     }
 
-    Lazy<IPtrType> PtrType { get; }
-    public IPtrType GetPtrType() => PtrType.Value;
+    public IPtrType GetPtrType(IAddressSpace addressSpace)
+    {
+        throw new NotImplementedException();
+    }
+
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
+    {
+        throw new NotImplementedException();
+    }
 
     public static OpaqueType Instance => throw new NotImplementedException();
 }

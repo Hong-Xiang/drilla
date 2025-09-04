@@ -1,20 +1,29 @@
 ﻿using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Transform;
 using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
 public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 {
+    void Dump(string title, ShaderModuleDeclaration<FunctionBody4> module)
+    {
+        var formatter = new ShaderModuleFormatter();
+        Output.WriteLine($"=== {title} ===");
+        module.Accept(formatter);
+        Output.WriteLine(formatter.Dump());
+    }
     void TestShader(ISharpShader shader)
     {
         var sep = $"\n{new string('-', 10)}\n";
         var module = shader.Parse4();
+        Dump("IR", module);
+        module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
 
-        var formatter = new ShaderModuleFormatter();
-        Output.WriteLine("=== IR ===");
-        module.Accept(formatter);
-        Output.WriteLine(formatter.Dump());
+        Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
 
         var emitter = new SPIRVEmitter(module);
 

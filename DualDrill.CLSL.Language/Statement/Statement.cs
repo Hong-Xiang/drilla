@@ -20,6 +20,7 @@ public interface IStatementSemantic<in TV, in TE, in TM, in TF, out TO>
 public interface IStatement<out TV, out TE, out TM, out TF>
 {
     public TR Evaluate<TR>(IStatementSemantic<TV, TE, TM, TF, TR> semantic);
+    public IStatement<TVR, TVE, TVM, TVF> Select<TVR, TVE, TVM, TVF>(Func<TV, TVR> fr, Func<TE, TVE> fe, Func<TM, TVM> fm, Func<TF, TVF> ff);
 }
 
 public static class Statement
@@ -43,3 +44,5 @@ public sealed class StatementSeqBuilder<TV, TE, TM, TF>
         ], value);
     }
 }
+
+

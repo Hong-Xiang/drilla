@@ -13,7 +13,6 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
 using System.Collections.Immutable;
-using ShaderValueDeclaration = DualDrill.CLSL.Language.Symbol.ShaderValueDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -392,18 +391,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitLoadStaticField(CilInstructionInfo inst, VariableDeclaration v)
     {
-        throw new NotImplementedException();
-        // Emit(StackIR.Instruction.GetLocal(v));
-        // Push(v.Type);
-        // return default;
+        DoLoad(v.Value);
+        return default;
     }
 
     public Unit VisitLoadStaticFieldAddress(CilInstructionInfo inst, VariableDeclaration v)
     {
-        throw new NotImplementedException();
-        // Emit(StackIR.Instruction.GetLocalAddress(v));
-        // Push(v.Type.GetPtrType());
-        // return default;
+        Push(v.Value);
+        return default;
     }
 
     public Unit VisitLoadNull(CilInstructionInfo info)
@@ -436,7 +431,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                         var l = Pop();
                         if (!GetValueType(l).Equals(bs.LeftType) || !GetValueType(r).Equals(bs.RightType))
                         {
-                            throw new ValidationException($"{bs} operation stack : {l}, {r}", Model.Method);
+                            if (l.Type is IPtrType lp && bs.LeftType is IPtrType bp && lp.BaseType.Equals(bp.BaseType))
+                            {
+                                // TODO: correct handling of address space equality
+                            }
+                            else
+                            {
+                                throw new ValidationException($"{bs.Name} {bs.LeftType.Name} {bs.RightType.Name} operation stack : {l.Type.Name}, {r.Type.Name}", Model.Method);
+                            }
                         }
 
                         if (bs is IVectorComponentSetOperation vcs)
@@ -459,7 +461,14 @@ sealed class RuntimeReflectionInstructionParserVisitor3
                         var s = Pop();
                         if (!GetValueType(s).Equals(ue.SourceType))
                         {
-                            throw new ValidationException($"{ue} operation stack : {s}", Model.Method);
+                            if (s.Type is IPtrType ps && ue.SourceType is IPtrType pu && ps.BaseType.Equals(pu.BaseType))
+                            {
+                                // TODO: modify operation to support precise control on address space 
+                            }
+                            else
+                            {
+                                throw new ValidationException($"{ue} operation stack : {s}", Model.Method);
+                            }
                         }
 
                         var v = EmitLet(ue.ResultType, ExprF.Operation1(ue, CreateValueExpr(s)));

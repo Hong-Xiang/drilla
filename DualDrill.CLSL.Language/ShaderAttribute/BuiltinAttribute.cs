@@ -14,7 +14,7 @@ public enum BuiltinBinding
     num_workgroups,
 }
 
-public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, IShaderAttribute
+public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, ISemanticBindingAttribute
 {
     public BuiltinBinding Slot { get; } = Slot;
 }

@@ -1,4 +1,5 @@
 ﻿using DotNext.Patterns;
+using DualDrill.CLSL.Language.Symbol;
 using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
@@ -21,7 +22,7 @@ public sealed class UnitType : ISingletonShaderType<UnitType>, ISingleton<UnitTy
         throw new NotSupportedException();
     }
 
-    public IPtrType GetPtrType()
+    public IPtrType GetPtrType(IAddressSpace? addressSpace)
     {
         throw new NotSupportedException();
     }

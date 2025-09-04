@@ -52,7 +52,8 @@ public sealed class ShaderModuleFormatter
             case IShaderMetadataAttribute:
                 break;
             default:
-                throw new NotSupportedException($"WriteAttribute not support {attr}");
+                Writer.Write(attr);
+                break;
         }
         return default;
     }
@@ -162,7 +163,18 @@ public sealed class ShaderModuleFormatter
 
     public Unit VisitVariable(VariableDeclaration decl)
     {
-        throw new NotImplementedException();
+        foreach (var s in decl.Attributes)
+        {
+            WriteAttribute(s);
+            Writer.WriteLine();
+        }
+        Writer.Write("var ");
+        Writer.Write(decl.Name);
+        Writer.Write(": ");
+        OnShaderType(decl.Type);
+        Writer.WriteLine();
+        Writer.WriteLine();
+        return default;
     }
 
     public string Dump()

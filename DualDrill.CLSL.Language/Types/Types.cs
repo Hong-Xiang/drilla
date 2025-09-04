@@ -9,16 +9,15 @@ public interface IShaderType
 {
     string Name { get; }
     IRefType GetRefType();
-    IPtrType GetPtrType();
+    IPtrType GetPtrType(IAddressSpace addressSpace);
 
     TResult Accept<TVisitor, TResult>(TVisitor visitor)
         where TVisitor : IShaderTypeVisitor1<TResult>;
 
-    virtual T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
-    {
-        throw new NotImplementedException();
-    }
+    T Evaluate<T>(IShaderTypeSemantic<T, T> semantic);
 }
+
+
 
 public interface IShaderType<TSelf> : IShaderType, ISingleton<TSelf>
     where TSelf : IShaderType<TSelf>
@@ -38,6 +37,13 @@ public interface IShaderTypeVisitor1<out TResult>
 public interface IShaderTypeSemantic<in TI, out TO>
 {
     TO UnitType(UnitType t);
+    TO BoolType(BoolType t);
+    TO IntType<TWidth>(IntType<TWidth> t) where TWidth : IBitWidth;
+    TO UIntType<TWidth>(UIntType<TWidth> t) where TWidth : IBitWidth;
+    TO FloatType<TWidth>(FloatType<TWidth> t) where TWidth : IBitWidth;
+    TO VecType<TRank, TElement>(VecType<TRank, TElement> t) where TRank : IRank<TRank> where TElement : IScalarType<TElement>;
+    TO PtrType(IPtrType ptr);
+    TO FunctionType(FunctionType t);
 }
 
 public interface IShaderTypeMatcher2<out TResult>
@@ -56,6 +62,7 @@ public interface ISingletonShaderType<TSelf>
     where TSelf : ISingletonShaderType<TSelf>
 {
     IRefType IShaderType.GetRefType() => throw new NotImplementedException();
+    IPtrType IShaderType.GetPtrType(IAddressSpace s) => IPtrType.CreateFromSingletonType<TSelf>(s);
 }
 
 /// <summary>
@@ -126,4 +133,9 @@ public static partial class ShaderType
             _ => t.Name
         };
     }
+}
+
+public static class ShderTypeExtension
+{
+    public static IPtrType GetPtrType(this IShaderType t) => t.GetPtrType(GenericAddressSpace.Instance);
 }

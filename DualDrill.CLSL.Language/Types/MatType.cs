@@ -1,4 +1,5 @@
-﻿using DualDrill.Common.Nat;
+﻿using DualDrill.CLSL.Language.Symbol;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -18,6 +19,16 @@ public sealed record class MatType(
     }
 
     public IPtrType GetPtrType()
+    {
+        throw new NotImplementedException();
+    }
+
+    public IPtrType GetPtrType(IAddressSpace addressSpace)
+    {
+        throw new NotImplementedException();
+    }
+
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
     {
         throw new NotImplementedException();
     }

@@ -1,6 +1,7 @@
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -13,7 +14,6 @@ public sealed class StructureType
     public StructureType(StructureDeclaration declaration)
     {
         Declaration = declaration;
-        PtrType = new(() => new PtrType(this));
         ZeroConstructor = new FunctionDeclaration(
             declaration.Name,
             [],
@@ -28,10 +28,29 @@ public sealed class StructureType
     {
         throw new NotImplementedException();
     }
+    private Dictionary<IAddressSpace, IPtrType> PtrTypes = [];
 
-    private Lazy<IPtrType> PtrType { get; }
+    public IPtrType GetPtrType(IAddressSpace addressSpace)
+    {
+        lock (PtrTypes)
+        {
+            if (PtrTypes.TryGetValue(addressSpace, out var ptr))
+            {
+                return ptr;
+            }
+            else
+            {
+                var p = new PtrType(this, addressSpace);
+                PtrTypes.Add(addressSpace, p);
+                return p;
+            }
+        }
+    }
 
-    public IPtrType GetPtrType() => PtrType.Value;
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
+    {
+        throw new NotImplementedException();
+    }
 
     public FunctionDeclaration ZeroConstructor { get; }
     public static StructureType Instance => throw new NotSupportedException();

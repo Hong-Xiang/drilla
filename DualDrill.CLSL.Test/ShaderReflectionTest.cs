@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Reflection;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Test;
 
@@ -30,7 +31,7 @@ public class ShaderReflectionTest
             Declarations =
             [
                 new VariableDeclaration(
-                    DeclarationScope.Module,
+                    UniformAddressSpace.Instance,
                     "data",
                     ShaderType.Vec2F32,
                     [

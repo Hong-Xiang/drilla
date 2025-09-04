@@ -11,10 +11,6 @@ public sealed class BoolType : IScalarType<BoolType>, IBasicPrimitiveType<BoolTy
 
     public string Name => "bool";
 
-    static IPtrType PtrType { get; } = new PtrType(Instance);
-    public IPtrType GetPtrType() => PtrType;
-
-
     public int ByteSize => 4;
 
     public IBitWidth BitWidth { get; } = N8.Instance;
@@ -22,4 +18,6 @@ public sealed class BoolType : IScalarType<BoolType>, IBasicPrimitiveType<BoolTy
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
 
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
+        => semantic.BoolType(this);
 }

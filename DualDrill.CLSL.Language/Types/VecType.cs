@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common.Nat;
 using System.Diagnostics;
 using static DualDrill.CLSL.Language.Operation.Swizzle;
@@ -67,13 +68,6 @@ public sealed class VecType<TRank, TElement>
 
     public IRank Size => TRank.Instance;
 
-    public IRefType GetRefType()
-    {
-        throw new NotImplementedException();
-    }
-
-    public IPtrType GetPtrType() => SingletonPtrType<VecType<TRank, TElement>>.Instance;
-
     public IShaderType SwizzleResultType<TPattern>() where TPattern : Swizzle.IPattern<TPattern>
         => TPattern.Instance.ValueVecType<TElement>();
 
@@ -132,6 +126,9 @@ public sealed class VecType<TRank, TElement>
         yield return VectorScalarExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Div>.Instance;
         yield return VectorScalarExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
     }
+
+    T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
+        => semantic.VecType(this);
 }
 
 public static partial class ShaderType

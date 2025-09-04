@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
@@ -29,7 +30,7 @@ public sealed class WgslFunctionBodyVisitor(ILocalDeclarationContext Context, In
 
     string VariableIdentifier(VariableDeclaration variable)
     {
-        return variable.DeclarationScope == DeclarationScope.Function
+        return variable.AddressSpace is FunctionAddressSpace
             ? $"loc_{Context.VariableIndex(variable)}"
             : variable.Name;
     }

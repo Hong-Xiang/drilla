@@ -12,12 +12,12 @@ public sealed class VariableDeclaration
     : IDeclaration, IVariableIdentifierSymbol
 {
     public VariableDeclaration(
-        DeclarationScope declarationScope,
+        IAddressSpace addressSpace,
         string name,
         IShaderType type,
         ImmutableHashSet<IShaderAttribute> attributes)
     {
-        DeclarationScope = declarationScope;
+        AddressSpace = addressSpace;
         Name = name;
         Type = type;
         Attributes = attributes;
@@ -31,17 +31,11 @@ public sealed class VariableDeclaration
 
     public override string ToString()
     {
-        var scope = DeclarationScope switch
-        {
-            DeclarationScope.Module => "m",
-            DeclarationScope.Function => "f",
-            _ => throw new NotSupportedException()
-        };
-        return $"var@{scope}({Name}: {Type.Name})";
+        return $"var@{AddressSpace}({Name}: {Type.Name})";
     }
 
     public VariablePointerValue Value { get; }
-    public DeclarationScope DeclarationScope { get; }
+    public IAddressSpace AddressSpace { get; }
     public string Name { get; }
     public IShaderType Type { get; }
     public ImmutableHashSet<IShaderAttribute> Attributes { get; }
@@ -68,7 +62,7 @@ public interface ILocalVariableSymbol : ISymbol
 public class VariablePointerValue : IShaderValue
 {
     public VariableDeclaration Declaration { get; }
-    public IShaderType Type => Declaration.Type.GetPtrType();
+    public IShaderType Type => Declaration.Type.GetPtrType(Declaration.AddressSpace);
     internal VariablePointerValue(VariableDeclaration declaration)
     {
         Declaration = declaration;

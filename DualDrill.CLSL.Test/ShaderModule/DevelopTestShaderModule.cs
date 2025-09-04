@@ -15,11 +15,13 @@ internal sealed class DevelopShaderModule : ISharpShader
     //     return a == uint.MaxValue;
     // }
 
+    [ShaderMethod]
     static vec3 map(vec3 pos)
     {
         return pos;
     }
 
+    [ShaderMethod]
     static int foo(int x)
     {
         return x;
@@ -36,7 +38,7 @@ internal sealed class DevelopShaderModule : ISharpShader
         return foov(x).x + foov(x).x;
     }
 
-    // [ShaderMethod]
+    [ShaderMethod]
     static vec3f32 calcNormal(vec3f32 pos)
     {
         var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;

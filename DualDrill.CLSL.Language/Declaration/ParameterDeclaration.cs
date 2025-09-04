@@ -11,7 +11,8 @@ namespace DualDrill.CLSL.Language.Declaration;
 public sealed class ParameterDeclaration
     : IDeclaration, IVariableIdentifierSymbol
 {
-    public ParameterDeclaration(string name,
+    public ParameterDeclaration(
+        string name,
         IShaderType type,
         ImmutableHashSet<IShaderAttribute> attributes)
     {
@@ -38,11 +39,13 @@ public class ParameterPointerValue : IShaderValue
 {
     public ParameterDeclaration Declaration { get; }
 
-    public IShaderType Type => Declaration.Type.GetPtrType();
+    public IShaderType Type { get; }
 
     internal ParameterPointerValue(ParameterDeclaration declaration)
     {
         Declaration = declaration;
+        var hasSemanticBinding = Declaration.Attributes.Any(a => a is ISemanticBindingAttribute);
+        Type = Declaration.Type.GetPtrType(hasSemanticBinding ? InputAddressSpace.Instance : FunctionAddressSpace.Instance);
     }
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)

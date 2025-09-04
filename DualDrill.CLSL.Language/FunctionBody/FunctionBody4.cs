@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.ControlFlow;
+﻿using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
@@ -7,9 +8,43 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed record class FunctionBody4(FunctionDeclaration Declaration, RegionTree<Label, ShaderRegionBody> Body)
+public sealed class FunctionBody4
     : IFunctionBody, ILocalDeclarationContext, IUnifiedFunctionBody<ShaderRegionBody>
 {
+    public FunctionBody4(FunctionDeclaration declaration, RegionTree<Label, ShaderRegionBody> body)
+    {
+        Declaration = declaration;
+        Body = body;
+        {
+            var labels = ImmutableArray.CreateBuilder<Label>();
+            var enqueued = new HashSet<Label>();
+            var toVisit = new Queue<Label>();
+            void TryEnqueue(Label label)
+            {
+                if (enqueued.Contains(label))
+                {
+                    return;
+                }
+                enqueued.Add(label);
+                toVisit.Enqueue(label);
+            }
+            TryEnqueue(Entry);
+            while (toVisit.Count > 0)
+            {
+                var label = toVisit.Dequeue();
+                labels.Add(label);
+                foreach (var t in this[label].Body.Last.ToSuccessor().AllTargets())
+                {
+                    TryEnqueue(t);
+                }
+            }
+            Labels = labels.ToImmutable();
+        }
+        {
+            // TODO : collect local variables
+        }
+    }
+
     public void Dump(IndentedTextWriter writer)
     {
         new FunctionBodyFormatter(writer, this).Dump();
@@ -32,18 +67,23 @@ public sealed record class FunctionBody4(FunctionDeclaration Declaration, Region
         throw new NotImplementedException();
     }
 
-    public ImmutableArray<VariableDeclaration> LocalVariables => [];
-    public ImmutableArray<Label> Labels { get; } = GetLabels(Body);
-
-    static ImmutableArray<Label> GetLabels(RegionTree<Label, ShaderRegionBody> body)
+    public FunctionBody4 UpdateValue(Func<IShaderValue, IShaderValue> update)
     {
-        var labels = ImmutableArray.CreateBuilder<Label>();
-        body.Traverse((l, b) =>
-        {
-            labels.Add(l);
-            return false;
-        });
-        return labels.ToImmutable();
+        throw new NotImplementedException();
+    }
+
+    public FunctionBody4 UpdateStatement(Func<ShaderStmt, IEnumerable<ShaderStmt>> update)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ImmutableArray<VariableDeclaration> LocalVariables => [];
+
+    public ImmutableArray<Label> Labels { get; }
+
+    public IEnumerable<IShaderValue> UsedValues()
+    {
+        return Body.Fold(new ValueUseAnalysis());
     }
 
     public ImmutableArray<IShaderValue> Values { get; }
@@ -61,13 +101,15 @@ public sealed record class FunctionBody4(FunctionDeclaration Declaration, Region
     }
 
     public Label Entry => Body.Label;
+    public FunctionDeclaration Declaration { get; }
+    public RegionTree<Label, ShaderRegionBody> Body { get; }
 
     public ShaderRegionBody this[Label label]
     {
         get
         {
             ShaderRegionBody? found = null;
-            Body.Traverse((l, b) =>
+            Body.Traverse((_, l, b) =>
             {
                 if (l == label)
                 {
@@ -82,6 +124,47 @@ public sealed record class FunctionBody4(FunctionDeclaration Declaration, Region
             }
             return found;
         }
+    }
+
+    public FunctionBody4 MapValueUse(Func<IShaderValue, IShaderValue> mapValue)
+    {
+        return new FunctionBody4(
+                    Declaration,
+                    Body.Select(
+                        static l => l,
+                        body => new ShaderRegionBody(
+                            body.Label,
+                            [.. body.Parameters.Select(mapValue)],
+                            body.Body.Select(
+                                stmt => stmt.Select(
+                                    mapValue,
+                                    e => e.Select(mapValue),
+                                    mapValue,
+                                    f =>
+                                    {
+                                        var fr = mapValue(f);
+                                        return (FunctionDeclaration)fr;
+                                    }
+                                ),
+                                term => term.Select(
+                                    j => new RegionJump(j.Label, [.. j.Arguments.Select(mapValue)]),
+                                    mapValue)
+                            ),
+                            body.ImmediatePostDominator
+                        )
+                    )
+                );
+    }
+
+    public FunctionBody4 MapRegionBody(Func<ShaderRegionBody, ShaderRegionBody> mapRegionBody)
+    {
+        return new FunctionBody4(
+                    Declaration,
+                    Body.Select(
+                        static l => l,
+                        body => mapRegionBody(body)
+                    )
+                );
     }
 
     public ISuccessor Successor(Label label)

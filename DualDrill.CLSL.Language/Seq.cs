@@ -151,8 +151,8 @@ sealed class FormatSemantic<TH, TL>(bool isFirst) : ISeqSemantic<TH, TL, Func<st
 
 public static class Seq
 {
-    public static Seq<TH, TT> Create<TH, TT>(ReadOnlySpan<TH> seq, TT last) =>
-        Seq<TH, TT>.Unfold(seq, (b, s) => s.IsEmpty ? b.Single(last) : b.Nested(s[0], s[1..]));
+    public static Seq<TH, TT> Create<TH, TT>(IEnumerable<TH> seq, TT last) =>
+        Seq<TH, TT>.Unfold<ReadOnlySpan<TH>>([..seq], (b, s) => s.IsEmpty ? b.Single(last) : b.Nested(s[0], s[1..]));
 
     public static Seq<TH, TL> Single<TH, TL>(TL last) => Seq<TH, TL>.Single(last);
     public static Seq<TH, TL> Nested<TH, TL>(TH head, Seq<TH, TL> next) => Seq<TH, TL>.Nested(head, next);

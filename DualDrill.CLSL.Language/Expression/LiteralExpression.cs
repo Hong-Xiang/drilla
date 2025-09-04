@@ -2,10 +2,17 @@
 
 namespace DualDrill.CLSL.Language.Expression;
 
+public interface ILiteralExpression
+{
+    ILiteral LiteralValue { get; }
+}
+
 public sealed record class LiteralExpression<TLiteral, T>(TLiteral Literal)
-    : IExpression<T>
+    : IExpression<T>, ILiteralExpression
     where TLiteral : ILiteral
 {
+    public ILiteral LiteralValue => Literal;
+
     public TR Evaluate<TR>(IExpressionSemantic<T, TR> semantic)
         => semantic.Literal(Literal);
 

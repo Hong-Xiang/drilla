@@ -34,7 +34,7 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         RootRegion = functionBody.Root;
         // TODO: fix local variable contains module variable problem
         LocalVariables = functionBody.FunctionBodyDataLocalVariables
-                                     .Where(v => v.DeclarationScope == DeclarationScope.Function)
+                                     .Where(v => v.AddressSpace is FunctionAddressSpace)
                                      .Distinct().ToFrozenSet();
     }
 
@@ -50,7 +50,8 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
     readonly FrozenSet<VariableDeclaration> LocalVariables;
     readonly Stack<(Label, IScfLabelRegion)> LabelTargetsContext = [];
 
-    VariableDeclaration BrDepth = new(DeclarationScope.Function, "br_depth",
+    VariableDeclaration BrDepth = new(
+        FunctionAddressSpace.Instance, "br_depth",
         ShaderType.I32,
         []
     );
@@ -128,15 +129,15 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
         switch (region)
         {
             case Block block:
-            {
-                Block(block);
-                return;
-            }
+                {
+                    Block(block);
+                    return;
+                }
             case Loop loop:
-            {
-                VisitLoop(loop);
-                return;
-            }
+                {
+                    VisitLoop(loop);
+                    return;
+                }
             case IfThenElse ifThenElse:
                 VisitIfThenElse(ifThenElse);
                 break;
@@ -395,11 +396,11 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
                 Expressions.Push(new VariableIdentifierExpression(v));
                 break;
             case MemberDeclaration m:
-            {
-                var o = Expressions.Pop();
-                Expressions.Push(new NamedComponentExpression(o, m));
-                break;
-            }
+                {
+                    var o = Expressions.Pop();
+                    Expressions.Push(new NamedComponentExpression(o, m));
+                    break;
+                }
             default:
                 throw new NotImplementedException();
         }
@@ -416,11 +417,11 @@ public sealed class StructuredInstructionToAbstractSyntaxTreeBuilder
                 Expressions.Push(new VariableIdentifierExpression(v));
                 break;
             case MemberDeclaration m:
-            {
-                var o = Expressions.Pop();
-                Expressions.Push(new NamedComponentExpression(o, m));
-                break;
-            }
+                {
+                    var o = Expressions.Pop();
+                    Expressions.Push(new NamedComponentExpression(o, m));
+                    break;
+                }
             default:
                 throw new NotImplementedException();
         }

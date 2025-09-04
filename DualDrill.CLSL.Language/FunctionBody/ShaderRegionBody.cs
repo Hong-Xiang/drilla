@@ -23,4 +23,13 @@ public sealed record class ShaderRegionBody(
         ..Parameters
     ];
     public ISuccessor Successor => Body.Last.ToSuccessor();
+
+    public static ShaderRegionBody Create(
+        Label label,
+        ImmutableArray<IShaderValue> parameters,
+        IEnumerable<ShaderStmt> statements,
+        ITerminator<RegionJump, IShaderValue> terminator,
+        Label? immediatePostDominator
+    )
+        => new(label, parameters, Seq.Create([.. statements], terminator), immediatePostDominator);
 }

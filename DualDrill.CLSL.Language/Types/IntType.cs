@@ -24,8 +24,6 @@ public sealed class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
     {
     }
 
-    static IPtrType PtrType { get; } = new PtrType(Instance);
-    public IPtrType GetPtrType() => PtrType;
     public IBitWidth BitWidth => TBitWidth.BitWidth;
 
     public string Name => $"i{BitWidth.Value}";
@@ -33,6 +31,9 @@ public sealed class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
 
     public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
         => visitor.Visit(this);
+
+    T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
+        => semantic.IntType(this);
 
     public IUIntType SameWidthUIntType => UIntType<TBitWidth>.Instance;
 }

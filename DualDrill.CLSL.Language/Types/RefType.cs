@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -22,6 +23,16 @@ public sealed record class RefType<TShaderType>(TShaderType BaseType) : IRefType
     }
 
     public IUnaryExpressionOperation? CilStackConversion() => null;
+
+    public IPtrType GetPtrType(IAddressSpace addressSpace)
+    {
+        throw new NotImplementedException();
+    }
+
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
+    {
+        throw new NotImplementedException();
+    }
 
     public static RefType<TShaderType> Instance => throw new NotImplementedException();
 }

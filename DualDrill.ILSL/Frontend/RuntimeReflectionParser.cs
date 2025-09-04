@@ -14,7 +14,6 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using ShaderValueDeclaration = DualDrill.CLSL.Language.Symbol.ShaderValueDeclaration;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -61,8 +60,6 @@ public sealed record class RuntimeReflectionParser(
     /// all access control are ignored (all fields, properties, methods are treated as public)
     /// basically it will parse all fields (including privates) and properties with automatically generated get, set, init etc.
     /// </summary>
-    /// <param name="t"></param>
-    /// <returns></returns>
     StructureType ParseStructDeclaration(Type t)
     {
         var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
@@ -92,7 +89,7 @@ public sealed record class RuntimeReflectionParser(
         }
 
         var decl = new VariableDeclaration(
-            DeclarationScope.Module,
+            UniformAddressSpace.Instance,
             fieldInfo.Name,
             ParseType(fieldInfo.FieldType),
             [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]
@@ -143,8 +140,10 @@ public sealed record class RuntimeReflectionParser(
             return found;
         }
 
+        var addressSpace = info.GetCustomAttributes().OfType<IAddressSpaceAttribute>().Single().AddressSpace;
+
         var decl = new VariableDeclaration(
-            DeclarationScope.Module,
+            addressSpace,
             info.Name,
             ParseType(info.FieldType),
             [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
@@ -162,8 +161,10 @@ public sealed record class RuntimeReflectionParser(
             return found;
         }
 
+        var addressSpace = info.CustomAttributes.OfType<IAddressSpaceAttribute>().Single().AddressSpace;
         var decl =
-            new VariableDeclaration(DeclarationScope.Module,
+            new VariableDeclaration(
+                addressSpace,
                 info.Name,
                 ParseType(info.PropertyType),
                 [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
@@ -273,13 +274,15 @@ public sealed record class RuntimeReflectionParser(
 
         var model = new MethodBodyAnalysisModel(method);
 
+        var isEntryMethod = method.GetCustomAttributes().Any(a => a is IShaderStageAttribute);
+
         var decl = new FunctionDeclaration(
             method.Name,
             method.IsStatic
                 ? [.. model.Parameters.Select(ParseParameter)]
                 :
                 [
-                    new ParameterDeclaration("this", ParseType(method.DeclaringType).GetPtrType(), []),
+                    new ParameterDeclaration("this", ParseType(method.DeclaringType).GetPtrType(isEntryMethod ? InputAddressSpace.Instance : FunctionAddressSpace.Instance), []),
                     .. model.Parameters.Select(ParseParameter)
                 ],
             ParseMethodReturn(method),
@@ -318,7 +321,7 @@ public sealed record class RuntimeReflectionParser(
     {
         var t = ParseType(info.LocalType);
         var result = new VariableDeclaration(
-            DeclarationScope.Function,
+            FunctionAddressSpace.Instance,
             $"loc_{info.LocalIndex}",
             t,
             []
