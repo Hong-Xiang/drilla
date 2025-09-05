@@ -1,7 +1,6 @@
-﻿using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.LinearInstruction;
+using DualDrill.CLSL.Language.Types;
 using System.Text.Json.Serialization;
-using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Literal;
 
@@ -17,6 +16,19 @@ public interface ILiteral : IPrintable
     IShaderType Type { get; }
     string Name { get; }
     IInstruction GetInstruction();
+
+    T Evaluate<T>(ILiteralSemantic<T> semantic);
+}
+
+public interface ILiteralSemantic<T>
+{
+    T Bool(bool value);
+    T I32(int value);
+    T I64(long value);
+    T U32(uint value);
+    T U64(ulong value);
+    T F32(float value);
+    T F64(double value);
 }
 
 public interface ILiteral<TShaderType> : ILiteral

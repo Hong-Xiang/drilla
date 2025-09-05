@@ -6,6 +6,9 @@ namespace DualDrill.CLSL.Language.Literal;
 
 public record struct U64Literal(ulong Value) : ILiteral<U64Literal, ulong, UIntType<N64>>
 {
+    public T Evaluate<T>(ILiteralSemantic<T> semantic)
+        => semantic.U64(Value);
+
     public void PrettyPrint(IndentedTextWriter writer, PrettyPrintOption option)
     {
         writer.Write(Value);

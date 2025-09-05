@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.ShaderAttribute;
@@ -35,6 +36,7 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
     , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
     , IStatementSemantic<IShaderValue, IExpressionTree<IShaderValue>, IShaderValue, FunctionDeclaration, Unit>
     , IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>
+    , ILiteralSemantic<Unit>
 {
     IndentedTextWriter BodyWriter = new IndentedTextWriter(new StringWriter());
     IndentedTextWriter HeadWriter = new IndentedTextWriter(new StringWriter());
@@ -441,7 +443,7 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
         if (expr is NodeExpression<IShaderValue>
             { Node: ILiteralExpression })
         {
-            ConstantWriter.Write($"{name} = OpConstant ");
+            ConstantWriter.Write($"{name} = ");
             expr.Fold(this);
             ConstantWriter.WriteLine();
         }
@@ -521,7 +523,10 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
 
     Unit IExpressionSemantic<Func<Unit>, Unit>.Literal<TLiteral>(TLiteral literal)
     {
-        ConstantWriter.Write(literal);
+        ConstantWriter.Write($"OpConstant ");
+        ConstantWriter.Write(GetTypeName(literal.Type));
+        ConstantWriter.Write(" ");
+        literal.Evaluate(this);
         return default;
     }
 
@@ -575,6 +580,47 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
         l();
         BodyWriter.Write(" ");
         r();
+        return default;
+    }
+
+    Unit ILiteralSemantic<Unit>.Bool(bool value)
+    {
+        throw new NotImplementedException();
+    }
+
+    Unit ILiteralSemantic<Unit>.I32(int value)
+    {
+        ConstantWriter.Write(value);
+        return default;
+    }
+
+    Unit ILiteralSemantic<Unit>.I64(long value)
+    {
+        ConstantWriter.Write(value);
+        return default;
+    }
+
+    Unit ILiteralSemantic<Unit>.U32(uint value)
+    {
+        ConstantWriter.Write(value);
+        return default;
+    }
+
+    Unit ILiteralSemantic<Unit>.U64(ulong value)
+    {
+        ConstantWriter.Write(value);
+        return default;
+    }
+
+    Unit ILiteralSemantic<Unit>.F32(float value)
+    {
+        ConstantWriter.Write(value);
+        return default;
+    }
+
+    Unit ILiteralSemantic<Unit>.F64(double value)
+    {
+        ConstantWriter.Write(value);
         return default;
     }
 }
