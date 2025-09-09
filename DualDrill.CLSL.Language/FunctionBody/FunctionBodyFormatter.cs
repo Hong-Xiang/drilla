@@ -197,7 +197,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
     {
         Dump(result);
         Writer.Write(" = call ");
@@ -209,7 +209,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
             {
                 Writer.Write(", ");
             }
-            a.Fold(this);
+            Dump(a);
         }
         Writer.WriteLine(')');
         return default;
@@ -302,7 +302,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Block(Label label, Func<Unit> body)
+    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Block(Label label, Func<Unit> body, Label? next)
     {
         Writer.Write("block ");
         Dump(label);
@@ -314,7 +314,7 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Loop(Label label, Func<Unit> body)
+    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Loop(Label label, Func<Unit> body, Label? next, Label? breakNext)
     {
         Writer.Write("loop ");
         Dump(label);
@@ -360,6 +360,15 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         head();
         Writer.WriteLine();
         next();
+        return default;
+    }
+
+    Unit IExpressionSemantic<Func<Unit>, Unit>.VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<Func<Unit>> arguments)
+    {
+        Writer.Write(operation.Name);
+        Writer.Write('(');
+        Writer.Write(string.Join(", ", arguments.Select(a => a())));
+        Writer.WriteLine(");");
         return default;
     }
 }

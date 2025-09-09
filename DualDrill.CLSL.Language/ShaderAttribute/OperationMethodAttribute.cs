@@ -1,5 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Operation;
-using DualDrill.Common;
+using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 
 namespace DualDrill.CLSL.Language.ShaderAttribute;
 
@@ -15,3 +15,4 @@ public sealed class OperationMethodAttribute<TOperation>
 {
     public IOperation Operation => TOperation.Instance;
 }
+

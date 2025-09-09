@@ -11,7 +11,7 @@ public sealed class AddressOfMemberOperation(MemberDeclaration Member)
 {
     public FunctionDeclaration Function => throw new NotImplementedException();
 
-    public string Name => throw new NotImplementedException();
+    public string Name => Member.Name;
 
     public IInstruction Instruction => throw new NotImplementedException();
 

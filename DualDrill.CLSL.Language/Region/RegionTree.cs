@@ -22,19 +22,16 @@ public interface IRegionTreeFoldLazySemantic<TL, TB, TS, T>
 {
 }
 
-
-
-
 public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>> Definition)
 {
     public TL Label => Definition.Label;
     public TB Body => Definition.Body.Last;
     public IEnumerable<RegionTree<TL, TB>> Bindings => Definition.Body.Elements;
 
-    public static RegionTree<TL, TB> Block(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body)
-        => new(new BlockRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>>(label, Seq.Create([.. regions], body)));
-    public static RegionTree<TL, TB> Loop(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body)
-        => new(new LoopRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>>(label, Seq.Create([.. regions], body)));
+    public static RegionTree<TL, TB> Block(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body, TL? next)
+        => new(new BlockRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>>(label, Seq.Create([.. regions], body), next));
+    public static RegionTree<TL, TB> Loop(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body, TL? next, TL? breakNext)
+        => new(new LoopRegionDefinition<TL, Seq<RegionTree<TL, TB>, TB>>(label, Seq.Create([.. regions], body), next, breakNext));
 
     public RegionTree<TL, TB> WithBindings(IEnumerable<RegionTree<TL, TB>> regions)
         => new(Definition.Select(seq => Seq.Create([.. regions], seq.Last)));
@@ -65,10 +62,10 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
         : IRegionDefinitionSemantic<TL, Seq<RegionTree<TL, TB>, TB>, Func<T>>
         , ISeqSemantic<RegionTree<TL, TB>, TB, Func<TS>, Func<TS>>
     {
-        public Func<T> Block(TL label, Seq<RegionTree<TL, TB>, TB> body)
-            => () => semantic.Block(label, body.Fold(this));
-        public Func<T> Loop(TL label, Seq<RegionTree<TL, TB>, TB> body)
-            => () => semantic.Loop(label, body.Fold(this));
+        public Func<T> Block(TL label, Seq<RegionTree<TL, TB>, TB> body, TL? next)
+            => () => semantic.Block(label, body.Fold(this), next);
+        public Func<T> Loop(TL label, Seq<RegionTree<TL, TB>, TB> body, TL? next, TL? breakNext)
+            => () => semantic.Loop(label, body.Fold(this), next, breakNext);
 
         public Func<TS> Nested(RegionTree<TL, TB> head, Func<TS> next)
             => () => semantic.Nested(head.Definition.Evaluate(this), next);
@@ -84,10 +81,10 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
         : IRegionDefinitionSemantic<TL, Seq<RegionTree<TL, TB>, TB>, T>
         , ISeqSemantic<RegionTree<TL, TB>, TB, Func<TS>, TS>
     {
-        public T Block(TL label, Seq<RegionTree<TL, TB>, TB> body)
-            => semantic.Block(label, () => body.FoldLazy(this));
-        public T Loop(TL label, Seq<RegionTree<TL, TB>, TB> body)
-            => semantic.Loop(label, () => body.FoldLazy(this));
+        public T Block(TL label, Seq<RegionTree<TL, TB>, TB> body, TL next)
+            => semantic.Block(label, () => body.FoldLazy(this), next);
+        public T Loop(TL label, Seq<RegionTree<TL, TB>, TB> body, TL next, TL breakNext)
+            => semantic.Loop(label, () => body.FoldLazy(this), next, breakNext);
 
         public TS Nested(RegionTree<TL, TB> head, Func<TS> next)
             => semantic.Nested(head.Definition.Evaluate(this), next);
@@ -100,15 +97,15 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
     sealed class MapFoldSemantic<TLR, TBR>(Func<TL, TLR> l, Func<TB, TBR> b)
         : IRegionTreeFoldSemantic<TL, TB, Seq<RegionTree<TLR, TBR>, TBR>, RegionTree<TLR, TBR>>
     {
-        public RegionTree<TLR, TBR> Block(TL label, Func<Seq<RegionTree<TLR, TBR>, TBR>> body)
+        public RegionTree<TLR, TBR> Block(TL label, Func<Seq<RegionTree<TLR, TBR>, TBR>> body, TL? next)
         {
             var bd = body();
-            return RegionTree<TLR, TBR>.Block(l(label), [.. bd.Elements], bd.Last);
+            return RegionTree<TLR, TBR>.Block(l(label), [.. bd.Elements], bd.Last, next is not null ? l(next) : default);
         }
-        public RegionTree<TLR, TBR> Loop(TL label, Func<Seq<RegionTree<TLR, TBR>, TBR>> body)
+        public RegionTree<TLR, TBR> Loop(TL label, Func<Seq<RegionTree<TLR, TBR>, TBR>> body, TL? next, TL? breakNext)
         {
             var bd = body();
-            return RegionTree<TLR, TBR>.Loop(l(label), [.. bd.Elements], bd.Last);
+            return RegionTree<TLR, TBR>.Loop(l(label), [.. bd.Elements], bd.Last, next is not null ? l(next) : default, breakNext is not null ? l(breakNext) : default);
         }
 
         public Seq<RegionTree<TLR, TBR>, TBR> Nested(RegionTree<TLR, TBR> head, Func<Seq<RegionTree<TLR, TBR>, TBR>> next)
@@ -124,10 +121,10 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
 
 public static class RegionTree
 {
-    public static RegionTree<TL, TB> Block<TL, TB>(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body)
-        => RegionTree<TL, TB>.Block(label, regions, body);
-    public static RegionTree<TL, TB> Loop<TL, TB>(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body)
-        => RegionTree<TL, TB>.Loop(label, regions, body);
+    public static RegionTree<TL, TB> Block<TL, TB>(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body, TL? next)
+        => RegionTree<TL, TB>.Block(label, regions, body, next);
+    public static RegionTree<TL, TB> Loop<TL, TB>(TL label, ReadOnlySpan<RegionTree<TL, TB>> regions, TB body, TL? next, TL? breakNext)
+        => RegionTree<TL, TB>.Loop(label, regions, body, next, breakNext);
 
     public static void Traverse(this RegionTree<Label, ShaderRegionBody> region, Action<RegionTree<Label, ShaderRegionBody>> f)
     {
@@ -153,11 +150,10 @@ public static class RegionTree
             var children = dt.GetChildren(l);
             var childrenExpressions = children.Reverse().Select(ToRegion).ToImmutableArray();
             return controlFlowAnalysis.IsLoop(l)
-                ? Loop(l, [.. childrenExpressions], regions_[l].Body)
-                : Block(l, [.. childrenExpressions], regions_[l].Body);
+                ? Loop(l, [.. childrenExpressions], regions_[l].Body, null, null)
+                : Block(l, [.. childrenExpressions], regions_[l].Body, null);
         }
         return ToRegion(controlFlowAnalysis.ControlFlowGraph.EntryLabel);
-
     }
 
 }
@@ -168,7 +164,7 @@ sealed class RegionDefinitionFormatter(int indent)
 
     private int Indent = indent;
 
-    public IEnumerable<string> Block(string label, Func<IEnumerable<string>> body)
+    public IEnumerable<string> Block(string label, Func<IEnumerable<string>> body, string? next)
     {
         Indent++;
         var b = body();
@@ -176,7 +172,7 @@ sealed class RegionDefinitionFormatter(int indent)
         return [IndentStr + $"block {label}", .. b];
     }
 
-    public IEnumerable<string> Loop(string label, Func<IEnumerable<string>> body)
+    public IEnumerable<string> Loop(string label, Func<IEnumerable<string>> body, string? next, string? breakNext)
     {
         Indent++;
         var b = body();
@@ -194,9 +190,9 @@ sealed class RegionDefinitionFormatter(int indent)
 sealed class RegionDefinitionDefinedLabelsSemantic<TB>
     : IRegionTreeFoldSemantic<Label, TB, IEnumerable<Label>, IEnumerable<Label>>
 {
-    public IEnumerable<Label> Block(Label label, Func<IEnumerable<Label>> body)
+    public IEnumerable<Label> Block(Label label, Func<IEnumerable<Label>> body, Label? next)
         => [label, .. body()];
-    public IEnumerable<Label> Loop(Label label, Func<IEnumerable<Label>> body)
+    public IEnumerable<Label> Loop(Label label, Func<IEnumerable<Label>> body, Label? next, Label? breakNext)
         => [label, .. body()];
 
     public IEnumerable<Label> Nested(IEnumerable<Label> head, Func<IEnumerable<Label>> next)

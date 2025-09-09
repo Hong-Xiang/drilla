@@ -24,5 +24,8 @@ sealed class ExpressionFactorySemantic<T> : IExpressionSemantic<T, IExpression<T
 
     public IExpression<T> Operation2(IBinaryExpressionOperation operation, T l, T r)
         => new Operation2Expression<T>(operation, l, r);
+
+    public IExpression<T> VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<T> arguments)
+        => new VectorCompositeConstructExpression<T>(operation, [.. arguments]);
 }
 

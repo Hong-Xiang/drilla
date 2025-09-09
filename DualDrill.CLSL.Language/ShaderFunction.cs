@@ -1,5 +1,6 @@
 ﻿using DotNext.Patterns;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -304,55 +305,24 @@ public class ShaderFunction : ISingleton<ShaderFunction>
 
     static IEnumerable<FunctionDeclaration> VecConstructors()
     {
-        static IEnumerable<int[]> ValueConstructorParametersPattern(IRank rank)
-        {
-            return rank switch
-            {
-                N3 => [[1, 2], [2, 1]],
-                N4 => [[1, 3], [3, 1], [1, 1, 2], [1, 2, 1], [2, 1, 1], [2, 2]],
-                _ => []
-            };
-        }
-        static ParameterDeclaration PatternToParameter(int pattern, IScalarType s, int i)
-        {
-            var t = pattern switch
-            {
-                1 => new ParameterDeclaration($"e{i}", s, []),
-                2 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N2.Instance, s), []),
-                3 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N3.Instance, s), []),
-                4 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N4.Instance, s), []),
-                _ => throw new NotSupportedException()
-            };
-            return t;
-        }
-
         return from s in ShaderType.ScalarTypes
                from r in ShaderType.Ranks
                let v = ShaderType.GetVecType(r, s)
                let name = $"vec{r.Value}"
                let tname = CSharpProjectionConfiguration.Instance.GetCSharpTypeName(v)
-               let bc = new FunctionDeclaration(
-                            name,
-                            [new ParameterDeclaration("e", s, [])],
-                            new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute()])
-               let zc = new FunctionDeclaration(
-                            //v.Name,
-                            tname,
-                            [],
-                            new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute(), new ZeroConstructorMethodAttribute(), new VecMethodRenamedForOverloadAttribute()])
-               let sc = new FunctionDeclaration(
-                            name,
-                            [.. Enumerable.Range(0, r.Value).Select(i => new ParameterDeclaration($"e{i}", s, []))],
-                            new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute()])
-               let vc = from p in ValueConstructorParametersPattern(r)
-                        select new FunctionDeclaration(
-                            name,
-                            [.. p.Select((pr, i) => PatternToParameter(pr, s, i))],
-                            new FunctionReturn(v, []),
-                            [new ShaderRuntimeMethodAttribute()])
+               //let bc = new FunctionDeclaration(
+               //             name,
+               //             [new ParameterDeclaration("e", s, [])],
+               //             new FunctionReturn(v, []),
+               //             [new ShaderRuntimeMethodAttribute()])
+               let bc = v.FromScalarConstructOperation.Function
+               let zc = v.ZeroConstructor
+               let sc = VectorCompositeConstructionOperation.Operations.Values
+                        .Single(o => o.ResultType.Equals(v) && o.ParameterTypes.Length == v.Size.Value)
+                        .Function
+               let vc = VectorCompositeConstructionOperation.Operations.Values
+                        .Where(o => o.ResultType.Equals(v) && o.ParameterTypes.Length != v.Size.Value)
+                        .Select(o => o.Function)
                let cc = from ss in ShaderType.ScalarTypes
                         select new FunctionDeclaration(
                             tname,

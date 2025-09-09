@@ -89,6 +89,9 @@ public static class ExpressionTreeExtension
         public T Operation2(IBinaryExpressionOperation operation, IExpressionTree<TValue> l, IExpressionTree<TValue> r)
             => semantic.Operation2(operation, () => l.Accept(this), () => r.Accept(this));
 
+        public T VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<IExpressionTree<TValue>> arguments)
+            => semantic.VectorCompositeConstruction(operation, arguments.Select<IExpressionTree<TValue>, Func<T>>(e => () => e.Accept(this)));
+
         public T VisitLeaf(TValue value)
             => semantic.Value(value);
 

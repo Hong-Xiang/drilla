@@ -62,7 +62,7 @@ public sealed class PostDominatorTree
         {
             result.Add(kv.Key, kv.Value
                 .Where(l => !l.Equals(kv.Key))
-                .OrderBy(l => postDominatorSets[l].Count)
+                .OrderByDescending(l => postDominatorSets[l].Count)
                 .FirstOrDefault());
         }
         return result;

@@ -24,4 +24,5 @@ sealed class MinimumHelloTriangleShaderModule : ISharpShader
     [Fragment]
     [return: Location(0)]
     public static vec4f32 fs() => vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //public static vec4f32 fs() => vec4(1.0f);
 }

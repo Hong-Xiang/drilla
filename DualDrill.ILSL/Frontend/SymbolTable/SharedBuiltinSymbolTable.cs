@@ -109,7 +109,10 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
                             paramTypes.Select(p => new ParameterDeclaration(p.Name, runtimeTypes[p], []));
                         var parameterTypes = parameterDecls.Select(p => p.Type).ToArray();
                         var f = ShaderFunction.Instance.GetFunction(m.Name, rt, parameterTypes);
-                        result.Add(m, f);
+                        if (!result.ContainsKey(m))
+                        {
+                            result.Add(m, f);
+                        }
                     }
                 }
             }

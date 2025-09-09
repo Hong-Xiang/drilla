@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.Common.Nat;
 using System.Diagnostics;
 using static DualDrill.CLSL.Language.Operation.Swizzle;
@@ -14,6 +15,9 @@ public interface IVecType : IShaderType
 
     public IOperation ComponentGetOperation(IComponent c);
     public IOperation ComponentSetOperation(IComponent c);
+
+    public FunctionDeclaration ZeroConstructor { get; }
+    public IOperation FromScalarConstructOperation { get; }
 
     public interface IVisitor<TResult>
     {
@@ -44,7 +48,7 @@ public interface ISizedVecType<TRank, TSelf> : IVecType<TSelf>
     public TResult Accept<TResult>(ISizedVisitor<TResult> visitor);
 }
 
-[DebuggerDisplay("{Name}")]
+[DebuggerDisplay("{Name,nq}")]
 public sealed class VecType<TRank, TElement>
     : ISizedVecType<TRank, VecType<TRank, TElement>>
     , ISingletonShaderType<VecType<TRank, TElement>>
@@ -53,6 +57,12 @@ public sealed class VecType<TRank, TElement>
 {
     private VecType()
     {
+        var ctorName = $"vec{Size.Value}{ElementType.ElementName()}";
+        ZeroConstructor = new FunctionDeclaration(
+            $"vec{Size.Value}{ElementType.ElementName()}",
+            [],
+            new FunctionReturn(this, []),
+            [new ShaderRuntimeMethodAttribute(), new ZeroConstructorMethodAttribute()]);
     }
 
     public static VecType<TRank, TElement> Instance { get; } = new();
@@ -106,6 +116,8 @@ public sealed class VecType<TRank, TElement>
             []);
     }
 
+    public FunctionDeclaration ZeroConstructor { get; }
+
     public IEnumerable<IVectorBinaryNumericOperation> GetBinaryNumericOperations()
     {
         yield return VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, BinaryArithmetic.Add>.Instance;
@@ -129,6 +141,9 @@ public sealed class VecType<TRank, TElement>
 
     T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
         => semantic.VecType(this);
+
+    public IOperation FromScalarConstructOperation =>
+        VectorFromScalarConstructOperation<TRank, TElement>.Instance;
 }
 
 public static partial class ShaderType
@@ -147,4 +162,5 @@ public static partial class ShaderType
     {
         readonly IVecType IRank.IVisitor<IVecType>.Visit<TRank>() => ElementType.GetVecType<TRank>();
     }
+
 }

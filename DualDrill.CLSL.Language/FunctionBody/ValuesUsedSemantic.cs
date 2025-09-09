@@ -32,8 +32,8 @@ sealed class ValuesUsedSemantic
     public IEnumerable<IShaderValue> BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
         => [condition, .. trueTarget.Arguments, .. falseTarget.Arguments];
 
-    public IEnumerable<IShaderValue> Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
-        => [result, .. arguments.SelectMany(e => e.Fold(this))];
+    public IEnumerable<IShaderValue> Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
+        => [result, .. arguments];
 
     public IEnumerable<IShaderValue> Dup(IShaderValue result, IShaderValue source)
         => [result, source];
@@ -80,4 +80,7 @@ sealed class ValuesUsedSemantic
 
     public IEnumerable<IShaderValue> Value(IShaderValue value)
         => [value];
+
+    public IEnumerable<IShaderValue> VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<IEnumerable<IShaderValue>> arguments)
+        => arguments.SelectMany(a => a);
 }

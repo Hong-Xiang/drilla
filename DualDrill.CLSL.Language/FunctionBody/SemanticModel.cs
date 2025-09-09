@@ -17,7 +17,7 @@ sealed class UsedExternalLabelSemantic
     , ITerminatorSemantic<RegionJump, IShaderValue, ImmutableHashSet<Label>>
 {
     Stack<Label> Scope = [];
-    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Block(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body)
+    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Block(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body, Label? next)
     {
         return OnScope(label, body);
 
@@ -57,7 +57,7 @@ sealed class UsedExternalLabelSemantic
         result = result.SetItem(label, [.. rself]);
         return result;
     }
-    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Loop(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body)
+    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Loop(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body, Label? next, Label? breakNext)
     {
         return OnScope(label, body);
     }
@@ -211,7 +211,7 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Block(Label label, Func<Unit> body)
+    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Block(Label label, Func<Unit> body, Label? next)
     {
         LabelDef(label);
         Scope = Scope.Push(label);
@@ -220,7 +220,7 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Loop(Label label, Func<Unit> body)
+    Unit IRegionDefinitionSemantic<Label, Func<Unit>, Unit>.Loop(Label label, Func<Unit> body, Label? next, Label? breakNext)
     {
         LabelDef(label);
         LoopLabels.Add(label);
@@ -341,11 +341,11 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
     {
         foreach (var a in arguments)
         {
-            a.Fold(this);
+            ValueUse(a, null);
         }
         return default;
     }
@@ -366,6 +366,15 @@ public sealed class SemanticModel
     {
         ValueUse(target, null);
         ValueUse(value, null);
+        return default;
+    }
+
+    Unit IExpressionSemantic<Func<Unit>, Unit>.VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<Func<Unit>> arguments)
+    {
+        foreach (var a in arguments)
+        {
+            a();
+        }
         return default;
     }
 }

@@ -32,4 +32,14 @@ public sealed record class ShaderRegionBody(
         Label? immediatePostDominator
     )
         => new(label, parameters, Seq.Create([.. statements], terminator), immediatePostDominator);
+
+    public ShaderRegionBody MapStatement(Func<ShaderStmt, IEnumerable<ShaderStmt>> f)
+    {
+        return new ShaderRegionBody(
+            Label,
+            Parameters,
+            Seq.Create(Body.Elements.SelectMany(f), Body.Last),
+            ImmediatePostDominator
+        );
+    }
 }

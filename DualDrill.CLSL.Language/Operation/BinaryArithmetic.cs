@@ -50,10 +50,8 @@ public static class BinaryArithmetic
     public sealed class Add : IOp<Add>, ISymbolOp<Add>, IFloatOp<Add>, IIntegerOp<Add>
     {
         public static Add Instance { get; } = new();
-
         public static OpKind Kind => OpKind.add;
         public string Symbol => "+";
-
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
             => visitor.Visit(this);
     }
@@ -62,9 +60,7 @@ public static class BinaryArithmetic
     {
         public static OpKind Kind => OpKind.sub;
         public string Symbol => "-";
-
         public static Sub Instance { get; } = new();
-
         public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
             => visitor.Visit(this);
     }
@@ -174,9 +170,9 @@ public static class BinaryArithmetic
         , ISymbolOp<BitwiseXor>
         , IBitwiseLogicalOp
     {
-        private BitwiseAnd _instance;
         public static OpKind Kind => OpKind.xor;
         public static BitwiseXor Instance { get; } = new();
         public string Symbol => "^";
     }
 }
+

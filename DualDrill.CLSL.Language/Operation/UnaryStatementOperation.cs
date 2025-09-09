@@ -3,7 +3,6 @@ using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation;

@@ -43,7 +43,7 @@ public sealed class ParameterWithSemanticBindingToModuleVariablePass
                 decl.Name,
                 [],
                 new FunctionReturn(ShaderType.Unit, []),
-                decl.Attributes
+                [.. decl.Attributes, new EntryPointInterfaceValuesShaderAttribute([resultVar.Value, .. updatedValues.Values])]
             );
 
         FunctionUpdates.Add(decl, resultDecl);

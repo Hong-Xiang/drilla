@@ -1,7 +1,6 @@
 ﻿using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
-using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Expression;
 
@@ -13,6 +12,7 @@ public interface IExpressionSemantic<in TI, out TO>
     TO AddressOfIndex(IAccessChainOperation operation, TI e, TI index);
     TO Operation1(IUnaryExpressionOperation operation, TI e);
     TO Operation2(IBinaryExpressionOperation operation, TI l, TI r);
+    TO VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<TI> arguments);
 }
 
 public interface IExpression<out T>

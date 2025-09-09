@@ -7,11 +7,13 @@ namespace DualDrill.CLSL.Language.Operation;
 
 public interface IVectorSwizzleGetOperation
 {
+    Swizzle.IPattern Pattern { get; }
 }
 
 public sealed class VectorSwizzleGetExpressionOperation<TPattern, TElement>
     : IVectorSizzleOperation<VectorSwizzleGetExpressionOperation<TPattern, TElement>>
     , IUnaryExpressionOperation<VectorSwizzleGetExpressionOperation<TPattern, TElement>>
+    , IVectorSwizzleGetOperation
     where TPattern : Swizzle.IPattern<TPattern>
     where TElement : IScalarType<TElement>
 {
@@ -23,6 +25,8 @@ public sealed class VectorSwizzleGetExpressionOperation<TPattern, TElement>
 
     public IInstruction Instruction =>
         UnaryExpressionOperationInstruction<VectorSwizzleGetExpressionOperation<TPattern, TElement>>.Instance;
+
+    public Swizzle.IPattern Pattern => TPattern.Instance;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<VectorSwizzleGetExpressionOperation<TPattern, TElement>> expr)

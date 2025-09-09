@@ -32,6 +32,10 @@ public interface IUnaryExpressionOperationSemantic<in TX, out TO>
         where TRank : IRank<TRank>
         where TElement : IScalarType<TElement>
         where TPattern : Swizzle.IPattern<TPattern>;
+
+    TO VectorFromScalarConstruct<TRank, TElement>(TX context, VectorFromScalarConstructOperation<TRank, TElement> operation)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>;
 }
 
 public interface IUnaryExpressionOperation<TSelf> : IUnaryExpressionOperation, IOperation<TSelf>

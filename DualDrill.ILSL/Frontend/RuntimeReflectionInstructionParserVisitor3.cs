@@ -408,6 +408,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     void VisitCallFunction(FunctionDeclaration func, bool hasReturnValue)
     {
+        // TODO: move this operation handle fully properly to FunctionToOperationPass
         if (func.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } opAttr)
         {
             switch (opAttr.Operation)
@@ -496,7 +497,7 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         }
         args.Reverse();
         var rv = CreateValue(func.Return.Type);
-        Emit(Stmt.Call(rv, func, [.. args.Select(v => CreateValueExpr(v))]));
+        Emit(Stmt.Call(rv, func, [.. args]));
 
         if (hasReturnValue)
         {
@@ -649,6 +650,9 @@ sealed class RuntimeReflectionInstructionParserVisitor3
             (FloatType<N64>, FloatType<N64>, false) => NumericBinaryRelationalOperation<FloatType<N64>, TOp>.Instance,
             (IntType<N32>, IntType<N32>, true) => NumericBinaryRelationalOperation<UIntType<N32>, TOp>.Instance,
             (IntType<N64>, IntType<N64>, true) => NumericBinaryRelationalOperation<UIntType<N64>, TOp>.Instance,
+            // TODO handle unorder comparison
+            (FloatType<N32>, FloatType<N32>, true) => NumericBinaryRelationalOperation<FloatType<N32>, TOp>.Instance,
+            (FloatType<N64>, FloatType<N64>, true) => NumericBinaryRelationalOperation<FloatType<N64>, TOp>.Instance,
             _ => throw new ValidationException($"binary relational op {TOp.Instance.Name} not support in type {l}, {r}",
                 Model.Method)
         };
@@ -688,6 +692,25 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>
     {
+        var v = Pop();
+        var t = v.Type;
+        if (t is IScalarType nt)
+        {
+            IUnaryExpressionOperation op;
+            switch (t)
+            {
+                case FloatType<N32>:
+                    op = UnaryNumericArithmeticExpressionOperation<FloatType<N32>, TOp>.Instance;
+                    break;
+                default:
+                    throw new NotImplementedException();
+                    break;
+            }
+
+            var r = EmitLet(op.ResultType, Expr.Operation1(op, CreateValueExpr(v)));
+            Push(r);
+            return default;
+        }
         throw new NotImplementedException();
     }
 

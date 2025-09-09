@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
@@ -127,7 +128,16 @@ public sealed class ShaderModuleFormatter
 
     public Unit VisitMember(MemberDeclaration decl)
     {
-        throw new NotImplementedException();
+        Writer.Write(decl.Name);
+        Writer.Write(" : ");
+        Writer.Write(decl.Type);
+        Writer.Write("[");
+        foreach (var a in decl.Attributes)
+        {
+            WriteAttribute(a);
+        }
+        Writer.Write("]");
+        return default;
     }
 
     public Unit VisitModule(ShaderModuleDeclaration<FunctionBody4> decl)
@@ -153,7 +163,17 @@ public sealed class ShaderModuleFormatter
 
     public Unit VisitStructure(StructureDeclaration decl)
     {
-        throw new NotImplementedException();
+        WriteAttributes(decl.Attributes, true);
+        Writer.Write(decl.Name);
+        using (Writer.IndentedScope())
+        {
+            foreach (var m in decl.Members)
+            {
+                m.AcceptVisitor(this);
+            }
+        }
+        Writer.WriteLine();
+        return default;
     }
 
     public Unit VisitValue(ValueDeclaration decl)

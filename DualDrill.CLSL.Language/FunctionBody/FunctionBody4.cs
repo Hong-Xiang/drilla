@@ -41,7 +41,12 @@ public sealed class FunctionBody4
             Labels = labels.ToImmutable();
         }
         {
-            // TODO : collect local variables
+            LocalVariables = body.Fold(new ValueUseAnalysis())
+                                 .OfType<VariablePointerValue>()
+                                 .Select(v => v.Declaration)
+                                 .Where(v => v.AddressSpace is FunctionAddressSpace)
+                                 .Distinct()
+                                 .ToImmutableArray();
         }
     }
 
@@ -77,7 +82,7 @@ public sealed class FunctionBody4
         throw new NotImplementedException();
     }
 
-    public ImmutableArray<VariableDeclaration> LocalVariables => [];
+    public ImmutableArray<VariableDeclaration> LocalVariables { get; }
 
     public ImmutableArray<Label> Labels { get; }
 

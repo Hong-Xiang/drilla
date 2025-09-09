@@ -10,11 +10,10 @@ public interface IStatementSemantic<in TV, in TE, in TM, in TF, out TO>
     TO Get(TV result, TM source);
     TO Set(TM target, TV source);
     TO Mov(TM target, TM source);
-    TO Call(TV result, TF f, IReadOnlyList<TE> arguments);
+    TO Call(TV result, TF f, IReadOnlyList<TV> arguments);
+    TO SetVecSwizzle(IVectorSwizzleSetOperation operation, TV target, TV value);
     TO Dup(TV result, TV source);
     TO Pop(TV target);
-
-    TO SetVecSwizzle(IVectorSwizzleSetOperation operation, TV target, TV value);
 }
 
 public interface IStatement<out TV, out TE, out TM, out TF>

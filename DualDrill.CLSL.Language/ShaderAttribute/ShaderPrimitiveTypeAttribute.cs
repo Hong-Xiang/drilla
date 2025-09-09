@@ -1,4 +1,5 @@
-﻿using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
+using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.ShaderAttribute;
 

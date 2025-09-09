@@ -5,7 +5,7 @@ namespace DualDrill.CLSL.Language.Statement;
 sealed class StatementFactorySemantic<TV, TE, TM, TF>
     : IStatementSemantic<TV, TE, TM, TF, IStatement<TV, TE, TM, TF>>
 {
-    public IStatement<TV, TE, TM, TF> Call(TV result, TF f, IReadOnlyList<TE> arguments)
+    public IStatement<TV, TE, TM, TF> Call(TV result, TF f, IReadOnlyList<TV> arguments)
         => new CallStatement<TV, TE, TM, TF>(result, f, arguments);
 
     public IStatement<TV, TE, TM, TF> Dup(TV result, TV source)

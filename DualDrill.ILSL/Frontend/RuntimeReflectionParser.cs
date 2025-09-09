@@ -7,6 +7,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using System.Collections.Frozen;
@@ -126,8 +127,9 @@ public sealed record class RuntimeReflectionParser(
     {
         return
         [
-            ..m.GetCustomAttributes<VertexAttribute>(),
-            ..m.GetCustomAttributes<FragmentAttribute>(),
+            //..m.GetCustomAttributes<VertexAttribute>(),
+            //..m.GetCustomAttributes<FragmentAttribute>(),
+            ..m.GetCustomAttributes().OfType<IShaderAttribute>()
             //..m.GetCustomAttributes<ShaderMethodAttribute>(),
         ];
     }
@@ -269,6 +271,18 @@ public sealed record class RuntimeReflectionParser(
                 var f = attr.Operation.Function;
                 Context.AddFunctionDeclaration(symbol, f);
                 return f;
+            }
+        }
+
+        {
+            var shaderMethodOperationAttribute = method.GetCustomAttributes().OfType<IShaderOperationMethodAttribute>().SingleOrDefault();
+            if (shaderMethodOperationAttribute is not null)
+            {
+                var result = ParseMethodReturn(method);
+                var parameters = method.GetParameters().Select(ParseParameter);
+                var op = shaderMethodOperationAttribute.GetOperation(result.Type, parameters.Select(p => p.Type));
+                Context.AddFunctionDeclaration(symbol, op.Function);
+                return op.Function;
             }
         }
 

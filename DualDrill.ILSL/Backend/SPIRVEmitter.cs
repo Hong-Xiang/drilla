@@ -47,7 +47,6 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
 
     private readonly Dictionary<IShaderType, string> typeNames = [];
     private readonly Dictionary<FunctionDeclaration, string> functionNames = [];
-    private readonly Dictionary<FunctionDeclaration, IShaderValue> functionResultValues = [];
     private readonly Dictionary<IShaderValue, string> valueNames = [];
     private readonly Dictionary<Label, string> labelNames = [];
 
@@ -64,10 +63,6 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
 
     string GetTypeName(IShaderType t)
     {
-        if (t is IPtrType pt && pt.AddressSpace is GenericAddressSpace)
-        {
-            Console.WriteLine();
-        }
         if (typeNames.TryGetValue(t, out var n))
         {
             return n;
@@ -209,9 +204,6 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
         var voidType = GetTypeName(UnitType.Instance);
         var funcTypeId = GetTypeName(new FunctionType([], UnitType.Instance));
 
-        // Create function type - for now just void(void)
-        //TypeWriter.WriteLine($"{funcTypeId} = OpTypeFunction {voidType}");
-
         var funcId = GetFunctionName(decl);
 
 
@@ -220,89 +212,29 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
             DecoratorWriter.WriteLine($"OpExecutionMode {funcId} OriginUpperLeft");
         }
 
-        //foreach (var p in decl.Parameters)
-        //{
-        //    var value = p.Value;
-        //    var ptrType = (IPtrType)value.Type;
-        //    var varId = GetValueName(value);
-        //    VariableWriter.WriteLine($"{varId} = OpVariable {GetTypeName(ptrType)} {Enum.GetName(InputAddressSpace.Instance.Kind)}");
-        //    var bindingAttr = p.Attributes.OfType<ISemanticBindingAttribute>().Single();
-        //    EmitSemanticBindingDecoration(varId, bindingAttr);
-        //}
-
-        //{
-        //    if (decl.Return.Type is not UnitType)
-        //    {
-        //        var resultVar = new VariableDeclaration(
-        //            OutputAddressSpace.Instance,
-        //            string.Empty,
-        //            decl.Return.Type,
-        //            decl.Return.Attributes
-        //        );
-        //        var resultVal = resultVar.Value;
-        //        var resultType = (IPtrType)resultVal.Type;
-        //        functionResultValues.Add(decl, resultVal);
-        //        var retId = GetValueName(resultVal);
-        //        VariableWriter.WriteLine($"{retId} = OpVariable {GetTypeName(resultType)} {Enum.GetName(OutputAddressSpace.Instance.Kind)}");
-        //        var bindingAttr = resultVar.Attributes.OfType<ISemanticBindingAttribute>().Single();
-        //        EmitSemanticBindingDecoration(retId, bindingAttr);
-        //    }
-        //}
-
-
-        HeadWriter.WriteLine($"OpEntryPoint {Enum.GetName(stage.Stage)} {funcId} \"{decl.Name}\"");
-        //foreach (var p in decl.Parameters)
-        //{
-        //    HeadWriter.Write(" ");
-        //    HeadWriter.Write(GetValueName(p.Value));
-        //}
-        //HeadWriter.Write($" {GetValueName(functionResultValues[decl])}");
-        //HeadWriter.WriteLine();
-
-
-        // Create input/output variables for entry points
-        Dictionary<string, string> inputVars = new();
-        Dictionary<string, string> outputVars = new();
-
-        //if (IsVertexFunction(decl))
-        //{
-        //    // Create vertex index input variable
-        //    foreach (var param in decl.Parameters)
-        //    {
-        //        var builtinAttr = param.Attributes.OfType<BuiltinAttribute>().FirstOrDefault();
-        //        if (builtinAttr?.Slot == BuiltinBinding.vertex_index)
-        //        {
-        //            var inputVar = GetVariable("gl_VertexIndex", param.Type, "Input", builtinAttr);
-        //            inputVars["vertex_index"] = inputVar; // Fixed key name
-        //        }
-        //    }
-
-        //    // Create position output variable
-        //    var returnType = decl.Return.Type;
-        //    var positionAttr = decl.Return.Attributes.OfType<BuiltinAttribute>().FirstOrDefault();
-        //    if (positionAttr?.Slot == BuiltinBinding.position)
-        //    {
-        //        var outputVar = GetVariable("gl_Position", returnType, "Output", positionAttr);
-        //        outputVars["position"] = outputVar;
-        //    }
-        //}
-        //else if (IsFragmentFunction(decl))
-        //{
-        //    // Create fragment output variable
-        //    var returnType = decl.Return.Type;
-        //    var locationAttr = decl.Return.Attributes.OfType<LocationAttribute>().FirstOrDefault();
-        //    if (locationAttr != null)
-        //    {
-        //        var outputVar = GetVariable("fs_output", returnType, "Output", locationAttr);
-        //        outputVars["color"] = outputVar;
-        //    }
-        //}
+        HeadWriter.Write($"OpEntryPoint {Enum.GetName(stage.Stage)} {funcId} \"{decl.Name}\"");
+        var ea = decl.Attributes.OfType<EntryPointInterfaceValuesShaderAttribute>().SingleOrDefault();
+        if (ea is not null)
+        {
+            foreach (var v in ea.InterfaceValues)
+            {
+                HeadWriter.Write(" ");
+                HeadWriter.Write(GetValueName(v));
+            }
+        }
+        HeadWriter.WriteLine();
 
         BodyWriter.WriteLine($"{funcId} = OpFunction {voidType} None {funcTypeId}");
+
 
         // Add function label
         var startLabel = GetLabelName(Label.Create());
         BodyWriter.WriteLine($"{startLabel} = OpLabel");
+        foreach (var v in body.LocalVariables)
+        {
+            var n = GetValueName(v.Value);
+            BodyWriter.WriteLine($"{n} = OpVariable {GetTypeName(v.Value.Type)} Function");
+        }
         BodyWriter.WriteLine($"OpBranch {GetLabelName(body.Entry)}");
 
         // Process the actual function body IR if available
@@ -482,10 +414,12 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
         throw new NotImplementedException();
     }
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
+    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
     {
         BodyWriter.Write(GetValueName(result));
         BodyWriter.Write(" = ");
+        //// develop ad hoc dump
+        //BodyWriter.Write("OpCompositeConstruct ");
         BodyWriter.Write("OpFunctionCall ");
         BodyWriter.Write(GetFunctionName(f));
         BodyWriter.Write(" ");
@@ -493,7 +427,7 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
         foreach (var a in arguments)
         {
             BodyWriter.Write(" ");
-            a.Fold(this);
+            BodyWriter.Write(GetValueName(a));
         }
         BodyWriter.WriteLine();
         return default;
@@ -564,16 +498,30 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
 
     public Unit Operation2(IBinaryExpressionOperation operation, Func<Unit> l, Func<Unit> r)
     {
-        var opName = (operation.BinaryOp, operation.ResultType) switch
+        switch (operation)
         {
-            (BinaryArithmetic.Add, IntType<N32>) => "OpIAdd",
-            (BinaryArithmetic.Sub, IntType<N32>) => "OpISub",
-            (BinaryArithmetic.Mul, FloatType<N32>) => "OpFMul",
-            (BinaryArithmetic.Mul, IntType<N32>) => "OpIMul",
-            (BinaryArithmetic.BitwiseAnd, IntType<N32>) => "OpBitwiseAnd",
-            _ => operation.Name
-        };
-        BodyWriter.Write(opName);
+            case IVectorBinaryNumericOperation op:
+                {
+                    throw new NotImplementedException();
+                }
+                break;
+            default:
+                {
+                    var opName = (operation.BinaryOp, operation.ResultType) switch
+                    {
+                        (BinaryArithmetic.Add, IntType<N32>) => "OpIAdd",
+                        (BinaryArithmetic.Sub, IntType<N32>) => "OpISub",
+                        (BinaryArithmetic.Mul, FloatType<N32>) => "OpFMul",
+                        (BinaryArithmetic.Mul, IntType<N32>) => "OpIMul",
+                        (BinaryArithmetic.BitwiseAnd, IntType<N32>) => "OpBitwiseAnd",
+                        _ => operation.Name
+                    };
+                    BodyWriter.Write(opName);
+                }
+                break;
+
+        }
+
         BodyWriter.Write(" ");
         BodyWriter.Write(GetTypeName(operation.ResultType));
         BodyWriter.Write(" ");
@@ -621,6 +569,18 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
     Unit ILiteralSemantic<Unit>.F64(double value)
     {
         ConstantWriter.Write(value);
+        return default;
+    }
+
+    Unit IExpressionSemantic<Func<Unit>, Unit>.VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<Func<Unit>> arguments)
+    {
+        BodyWriter.Write("OpCompositeConstruct ");
+        BodyWriter.Write(GetTypeName(operation.ResultType));
+        foreach (var a in arguments)
+        {
+            BodyWriter.Write(" ");
+            a();
+        }
         return default;
     }
 }

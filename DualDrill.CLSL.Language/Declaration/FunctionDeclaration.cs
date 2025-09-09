@@ -40,10 +40,7 @@ public sealed class FunctionDeclaration
     public IShaderType Type { get; }
 
     private string DebugDisplay()
-    {
-        var parameters = string.Join(", ", Parameters.Select(p => $"{p.Name} : {p.Type.Name}"));
-        return $"func {Return.Type.Name} {Name} ({parameters})";
-    }
+        => ToString();
 
     public T Evaluate<T>(IDeclarationSemantic<T> semantic)
         => semantic.VisitFunction(this);

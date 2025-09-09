@@ -26,11 +26,11 @@ internal class ValueUseAnalysis
         throw new NotImplementedException();
     }
 
-    public IEnumerable<IShaderValue> Block(Label label, Func<IEnumerable<IShaderValue>> body)
+    public IEnumerable<IShaderValue> Block(Label label, Func<IEnumerable<IShaderValue>> body, Label? next)
         => body();
 
-    public IEnumerable<IShaderValue> Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
-        => [.. arguments.SelectMany(e => e.Fold(this))];
+    public IEnumerable<IShaderValue> Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
+        => arguments;
 
     public IEnumerable<IShaderValue> Dup(IShaderValue result, IShaderValue source)
         => [source];
@@ -44,7 +44,7 @@ internal class ValueUseAnalysis
     public IEnumerable<IShaderValue> Literal<TLiteral>(TLiteral literal) where TLiteral : ILiteral
         => [];
 
-    public IEnumerable<IShaderValue> Loop(Label label, Func<IEnumerable<IShaderValue>> body)
+    public IEnumerable<IShaderValue> Loop(Label label, Func<IEnumerable<IShaderValue>> body, Label? next, Label? breakNext)
         => body();
 
     public IEnumerable<IShaderValue> Mov(IShaderValue target, IShaderValue source)
@@ -80,6 +80,9 @@ internal class ValueUseAnalysis
 
     public IEnumerable<IShaderValue> Value(IShaderValue value)
         => [value];
+
+    public IEnumerable<IShaderValue> VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<IEnumerable<IShaderValue>> arguments)
+        => arguments.SelectMany(a => a);
 }
 
 public static class ValueUseAnalysisExtension

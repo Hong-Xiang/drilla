@@ -1,6 +1,6 @@
 ﻿using DualDrill.Common;
 
-namespace DualDrill.CLSL.Language.ShaderAttribute;
+namespace DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 
 public interface IShaderMetadataAttribute : IShaderAttribute
 {

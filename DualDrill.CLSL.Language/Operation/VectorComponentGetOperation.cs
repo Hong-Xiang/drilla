@@ -5,9 +5,15 @@ using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
 
+public interface IVectorComponentGetOperation
+{
+    Swizzle.IComponent Component { get; }
+}
+
 // TODO: change math code gen to use <TRank, TElement, TComponent> generic parameters
 public sealed class VectorComponentGetExpressionOperation<TRank, TVector, TComponent>
     : IUnaryExpressionOperation<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>>
+    , IVectorComponentGetOperation
     where TRank : IRank<TRank>
     where TVector : ISizedVecType<TRank, TVector>
     where TComponent : Swizzle.ISizedComponent<TRank, TComponent>
@@ -24,6 +30,8 @@ public sealed class VectorComponentGetExpressionOperation<TRank, TVector, TCompo
 
     public IInstruction Instruction =>
         UnaryExpressionOperationInstruction<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>>.Instance;
+
+    public Swizzle.IComponent Component => TComponent.Instance;
 
     public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
         UnaryOperationExpression<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>> expr)

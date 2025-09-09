@@ -30,6 +30,11 @@ public interface IOperation
     IInstruction Instruction { get; }
 }
 
+public interface IGenericOperation : IOperation
+{
+    IAbstractOp Op { get; }
+}
+
 public interface IOperation<TSelf> : IOperation, ISingleton<TSelf>
     where TSelf : IOperation<TSelf>
 {

@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Transform;
 using Xunit.Abstractions;
 
@@ -16,21 +17,26 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         module.Accept(formatter);
         Output.WriteLine(formatter.Dump());
     }
-    void TestShader(ISharpShader shader)
+    void TestShader(ISharpShader shader, string name)
     {
         var sep = $"\n{new string('-', 10)}\n";
         var module = shader.Parse4();
         Dump("IR", module);
-        module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
+        //module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
+        //module = module.RunPass(new FunctionToOperationPass());
 
-        Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
+        //Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
 
-        var emitter = new SPIRVEmitter(module);
+        var emitter = new SlangEmitter(module);
 
         var code = emitter.Emit();
-        Output.WriteLine("=== SPIRV ===");
+        Output.WriteLine("=== SLang ===");
         Output.WriteLine(code);
 
+        using var f = File.OpenWrite($"D:\\Code\\DualDrillEngine\\DualDrill.CLSL.Test\\ShaderModule\\{name}-gen.slang");
+        using var w = new StreamWriter(f);
+        w.WriteLine(code);
+        w.Flush();
 
         //cfg = cfg.EliminateBlockValueTransfer();
         //Output.WriteLine("=== Remove Outputs ===");
@@ -72,34 +78,41 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     public async Task MinimumTriangleShaderShouldWork()
     {
         var shader = new ShaderModule.MinimumHelloTriangleShaderModule();
-        TestShader(shader);
+        TestShader(shader, "triangle");
     }
 
     [Fact]
     public async Task AdHocDevelopTest()
     {
         var shader = new ShaderModule.DevelopShaderModule();
-        TestShader(shader);
+        TestShader(shader, "adhoc-develop");
     }
 
     [Fact]
     public async Task DevelopTestShaderModuleShouldWork()
     {
         var shader = new ShaderModule.DevelopTestShaderModule();
-        TestShader(shader);
+        TestShader(shader, "develop-test");
     }
 
     [Fact]
     public async Task MandelbrotDistanceShaderModuleShouldWork()
     {
         var shader = new ShaderModule.MandelbrotDistanceShaderModule();
-        TestShader(shader);
+        TestShader(shader, "mandelbrot");
     }
 
     [Fact]
     public async Task SimpleUniformShaderShouldWork()
     {
         var shader = new ShaderModule.SimpleStructUniformShaderModule();
-        TestShader(shader);
+        TestShader(shader, "simple-uniform");
+    }
+
+    [Fact]
+    public async Task RayMartching()
+    {
+        var shader = new ShaderModule.RaymarchingPrimitiveShader();
+        TestShader(shader, "raymartching");
     }
 }

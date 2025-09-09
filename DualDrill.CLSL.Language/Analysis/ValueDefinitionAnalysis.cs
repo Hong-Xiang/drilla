@@ -11,10 +11,10 @@ internal class ValueDefinitionAnalysis
     : IRegionTreeFoldSemantic<Label, ShaderRegionBody, IEnumerable<IShaderValue>, IEnumerable<IShaderValue>>
     , IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, IEnumerable<IShaderValue>>
 {
-    public IEnumerable<IShaderValue> Block(Label label, Func<IEnumerable<IShaderValue>> body)
+    public IEnumerable<IShaderValue> Block(Label label, Func<IEnumerable<IShaderValue>> body, Label? next)
         => body();
 
-    public IEnumerable<IShaderValue> Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<ShaderExpr> arguments)
+    public IEnumerable<IShaderValue> Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
         => [result];
 
     public IEnumerable<IShaderValue> Dup(IShaderValue result, IShaderValue source)
@@ -26,7 +26,7 @@ internal class ValueDefinitionAnalysis
     public IEnumerable<IShaderValue> Let(IShaderValue result, ShaderExpr expr)
         => [result];
 
-    public IEnumerable<IShaderValue> Loop(Label label, Func<IEnumerable<IShaderValue>> body)
+    public IEnumerable<IShaderValue> Loop(Label label, Func<IEnumerable<IShaderValue>> body, Label? next, Label? breakNext)
         => body();
 
     public IEnumerable<IShaderValue> Mov(IShaderValue target, IShaderValue source)
