@@ -23,9 +23,6 @@ sealed class ValuesUsedSemantic
     public IEnumerable<IShaderValue> AddressOfIndex(IAccessChainOperation operation, IEnumerable<IShaderValue> e, IEnumerable<IShaderValue> index)
         => [.. e, .. index];
 
-    public IEnumerable<IShaderValue> AddressOfSymbol(IAddressOfSymbolOperation operation)
-        => [];
-
     public IEnumerable<IShaderValue> Br(RegionJump target)
         => [.. target.Arguments];
 

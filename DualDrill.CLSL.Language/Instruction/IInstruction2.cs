@@ -1,17 +1,23 @@
 ﻿using DualDrill.CLSL.Language.Operation;
+using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Instruction;
 
-public interface IInstruction2<T>
+public readonly record struct Instruction2<TV, TR>(
+    IOperation Operation,
+    int OperandCount,
+    TR? Result,
+    TV? Operand0,
+    TV? Operand1,
+    ImmutableArray<TV> Operands
+)
 {
-    IOperation Operation { get; }
-    T? Result { get; }
-    int OperandCount { get; }
-    T this[int index] { get; }
-}
-
-public interface IInstructionSemantic<in TI, out TO>
-{
-    TO Nop();
-    TO ScalarNumericArithmetic(IOperation operation, TI l, TI r);
+    public TV? this[int index] =>
+        index < OperandCount ?
+        index switch
+        {
+            0 => Operand0,
+            1 => Operand1,
+            _ => index - 2 < Operands.Length ? Operands[index - 2] : default,
+        } : throw new IndexOutOfRangeException($"Accessing {index} operand while instruction has {OperandCount} operands");
 }

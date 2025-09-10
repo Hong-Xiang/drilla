@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
@@ -28,6 +29,12 @@ public interface IOperation
     string Name { get; }
     IOperationMethodAttribute GetOperationMethodAttribute();
     IInstruction Instruction { get; }
+
+    virtual TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
+        where TS : IOperationInstructionSemantic<Instruction2<TV, TR>, TV, TR, TO>
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public interface IGenericOperation : IOperation

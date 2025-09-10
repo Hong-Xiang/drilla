@@ -256,13 +256,6 @@ sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Func
         return default;
     }
 
-    Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfSymbol(IAddressOfSymbolOperation operation)
-    {
-        Writer.Write("&");
-        Writer.Write(operation);
-        return default;
-    }
-
     Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
     {
         Writer.Write("ref ");

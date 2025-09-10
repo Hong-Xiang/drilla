@@ -464,11 +464,6 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
         return default;
     }
 
-    public Unit AddressOfSymbol(IAddressOfSymbolOperation operation)
-    {
-        throw new NotImplementedException();
-    }
-
     public Unit AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
     {
         throw new NotImplementedException();

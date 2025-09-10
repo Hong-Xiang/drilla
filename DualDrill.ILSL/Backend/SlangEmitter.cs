@@ -558,11 +558,6 @@ public class SlangEmitter
         return default;
     }
 
-    Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfSymbol(IAddressOfSymbolOperation operation)
-    {
-        throw new NotImplementedException();
-    }
-
     Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
     {
         if (operation is AddressOfVecComponentOperation vcop)

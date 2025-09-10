@@ -21,11 +21,6 @@ internal class ValueUseAnalysis
     public IEnumerable<IShaderValue> AddressOfIndex(IAccessChainOperation operation, IEnumerable<IShaderValue> e, IEnumerable<IShaderValue> index)
         => [.. e, .. index];
 
-    public IEnumerable<IShaderValue> AddressOfSymbol(IAddressOfSymbolOperation operation)
-    {
-        throw new NotImplementedException();
-    }
-
     public IEnumerable<IShaderValue> Block(Label label, Func<IEnumerable<IShaderValue>> body, Label? next)
         => body();
 

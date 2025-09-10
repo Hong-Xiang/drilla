@@ -280,11 +280,6 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfSymbol(IAddressOfSymbolOperation operation)
-    {
-        return default;
-    }
-
     Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
     {
         e();

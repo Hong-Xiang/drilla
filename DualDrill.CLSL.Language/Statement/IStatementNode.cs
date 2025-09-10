@@ -1,6 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Operation;
 using System.Collections.Immutable;
-using System.Net.Http.Headers;
 
 namespace DualDrill.CLSL.Language.Statement;
 

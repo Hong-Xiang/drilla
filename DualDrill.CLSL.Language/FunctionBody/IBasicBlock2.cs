@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
+[Obsolete]
 public interface IBasicBlock2 : IStructuredControlFlowElement
 {
     Label Label { get; }
@@ -13,6 +14,7 @@ public interface IBasicBlock2 : IStructuredControlFlowElement
         [Label, ..Successor.GetReferencedLabels()];
 }
 
+[Obsolete]
 // for stack instruction, BasicBlock<IStackInstruction, IShaderType, IShaderType>
 // for value instruction, BasicBlock<IValueInstruction, ??? (maybe IValue, or dedicate BlockArgumentValue?), IValue>
 // for statement, BasicBlock<IStatement, Unit, Unit>, implies empty Inputs and Outputs

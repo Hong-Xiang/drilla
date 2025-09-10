@@ -12,9 +12,6 @@ sealed class ExpressionFactorySemantic<T> : IExpressionSemantic<T, IExpression<T
     public IExpression<T> AddressOfIndex(IAccessChainOperation operation, T e, T index)
         => new AddressOfIndexExpression<T>(operation, e, index);
 
-    public IExpression<T> AddressOfSymbol(IAddressOfSymbolOperation operation)
-        => new AddressOfSymbolExpression<T>(operation);
-
     public IExpression<T> Literal<TLiteral>(TLiteral literal)
         where TLiteral : ILiteral
         => new LiteralExpression<TLiteral, T>(literal);

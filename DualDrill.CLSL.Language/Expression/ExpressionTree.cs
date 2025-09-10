@@ -77,9 +77,6 @@ public static class ExpressionTreeExtension
         public T AddressOfIndex(IAccessChainOperation operation, IExpressionTree<TValue> e, IExpressionTree<TValue> index)
             => semantic.AddressOfIndex(operation, () => e.Accept(this), () => index.Accept(this));
 
-        public T AddressOfSymbol(IAddressOfSymbolOperation operation)
-            => semantic.AddressOfSymbol(operation);
-
         public T Literal<TLiteral>(TLiteral literal) where TLiteral : ILiteral
             => semantic.Literal(literal);
 
