@@ -4,7 +4,6 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Transform;
 
@@ -78,11 +77,12 @@ public sealed class ParameterWithSemanticBindingToModuleVariablePass
                 var t = body.Body.Last;
                 if (t is Terminator.D.ReturnExpr<RegionJump, IShaderValue> rv)
                 {
+                    throw new NotImplementedException();
                     var setResultStatement = ShaderModule.StatementFactory.Set(resultValue, rv.Expr);
                     return ShaderRegionBody.Create(
                         body.Label,
                         body.Parameters,
-                        [.. body.Body.Elements, setResultStatement],
+                        [.. body.Body.Elements],
                         Terminator.B.ReturnVoid<RegionJump, IShaderValue>(),
                         body.ImmediatePostDominator
                     );

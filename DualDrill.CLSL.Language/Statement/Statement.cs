@@ -3,6 +3,7 @@ using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Statement;
 
+[Obsolete]
 public interface IStatementSemantic<in TV, in TE, in TM, in TF, out TO>
 {
     TO Nop();
@@ -16,6 +17,7 @@ public interface IStatementSemantic<in TV, in TE, in TM, in TF, out TO>
     TO Pop(TV target);
 }
 
+[Obsolete]
 public interface IStatement<out TV, out TE, out TM, out TF>
 {
     public TR Evaluate<TR>(IStatementSemantic<TV, TE, TM, TF, TR> semantic);

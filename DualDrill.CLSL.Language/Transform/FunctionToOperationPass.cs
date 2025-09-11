@@ -1,12 +1,15 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common;
 
 namespace DualDrill.CLSL.Language.Transform;
 
@@ -31,22 +34,25 @@ public sealed class FunctionToOperationPass
             body.Declaration,
             body.Body.Select(
                 l => l,
-                rbody => rbody.MapStatement(TransformStatement)
+                rbody => rbody.MapInstruction(TransformInstruction)
             )
         );
     }
 
-    sealed record class StatementTransformSemantic(ShaderStmt Stmt)
-        : IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, IEnumerable<ShaderStmt>>
+    sealed record class InstructionTransformSemantic
+        : IOperationSemantic<Instruction2<IShaderValue, IShaderValue>, IShaderValue, IShaderValue, IEnumerable<Instruction2<IShaderValue, IShaderValue>>>
     {
-        private IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, ShaderStmt> S { get; }
-            = Statement.Statement.Factory<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration>();
-        private IExpressionSemantic<IExpressionTree<IShaderValue>, IExpression<ShaderExpr>> E { get; } =
-            Language.Expression.Expression.Factory<IExpressionTree<IShaderValue>>();
+        IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction2<IShaderValue, IShaderValue>> InstF { get; } = Instruction2.Factory;
 
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> AddressOfChain(Instruction2<IShaderValue, IShaderValue> ctx, IAccessChainOperation op, IShaderValue result, IShaderValue target)
+            => [ctx];
 
-        public IEnumerable<ShaderStmt> Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> AddressOfChain(Instruction2<IShaderValue, IShaderValue> ctx, IAccessChainOperation op, IShaderValue result, IShaderValue target, IShaderValue index)
+            => [ctx];
+
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Call(Instruction2<IShaderValue, IShaderValue> ctx, CallOperation op, IShaderValue result, IShaderValue fv, IReadOnlyList<IShaderValue> arguments)
         {
+            var f = (FunctionDeclaration)fv;
             if (f.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } opAttr)
             {
                 switch (opAttr.Operation)
@@ -59,7 +65,7 @@ public sealed class FunctionToOperationPass
                             {
                                 throw new OperationFunctionNotMatchException(f, be);
                             }
-                            return [S.Let(result, E.Operation2(be, ExpressionTree.Value(l), ExpressionTree.Value(r)).AsNode())];
+                            return [InstF.Operation2(default, be, result, l, r)];
                         }
                     case IBinaryStatementOperation bs:
                         {
@@ -81,14 +87,16 @@ public sealed class FunctionToOperationPass
                             {
                                 var p = ShaderValue.Create(vcs.ElementType.GetPtrType(FunctionAddressSpace.Instance));
                                 return [
-                                    S.Let(p, E.AddressOfChain(new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), ExpressionTree.Value(l)).AsNode()),
-                                    S.Set(p, r)
+                                    InstF.AddressOfChain(default,new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), p, l),
+                                    InstF.Store(default, new StoreOperation(), p, r)
                                 ];
                             }
 
                             if (bs is IVectorSwizzleSetOperation vss)
                             {
-                                return [S.SetVecSwizzle(vss, l, r)];
+                                return [
+                                    InstF.VectorSwizzleSet(default,vss,l,r  )
+                                ];
                             }
 
                             throw new NotSupportedException($"binary statement {bs.Name}");
@@ -109,48 +117,53 @@ public sealed class FunctionToOperationPass
                             }
 
                             return [
-                                S.Let(result, E.Operation1(ue, ExpressionTree.Value(s)).AsNode())
+                                InstF.Operation1(default, ue, result, s),
                             ];
                         }
                 }
             }
             if (f.Attributes.OfType<VectorCompositeConstructorMethodAttribute>().SingleOrDefault() is { } vcc)
             {
-                var op = (VectorCompositeConstructionOperation)vcc.GetOperation(f.Return.Type, f.Parameters.Select(p => p.Type));
+                var op_ = (VectorCompositeConstructionOperation)vcc.GetOperation(f.Return.Type, f.Parameters.Select(p => p.Type));
                 return [
-                    S.Let(result, E.VectorCompositeConstruction(op, arguments.Select(ExpressionTree.Value)).AsNode())
+                    InstF.VectorCompositeConstruction(default, op_, result, arguments)
                 ];
             }
-            return [Stmt];
+            return [ctx];
         }
 
-        public IEnumerable<ShaderStmt> Dup(IShaderValue result, IShaderValue source)
-            => [Stmt];
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Literal(Instruction2<IShaderValue, IShaderValue> ctx, LiteralOperation op, IShaderValue result, ILiteral value)
+            => [ctx];
 
-        public IEnumerable<ShaderStmt> Get(IShaderValue result, IShaderValue source)
-            => [Stmt];
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Load(Instruction2<IShaderValue, IShaderValue> ctx, LoadOperation op, IShaderValue result, IShaderValue ptr)
+            => [ctx];
 
-        public IEnumerable<ShaderStmt> Let(IShaderValue result, ShaderExpr expr)
-            => [Stmt];
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Nop(Instruction2<IShaderValue, IShaderValue> ctx, NopOperation op)
+            => [ctx];
 
-        public IEnumerable<ShaderStmt> Mov(IShaderValue target, IShaderValue source)
-            => [Stmt];
 
-        public IEnumerable<ShaderStmt> Nop()
-            => [Stmt];
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Operation1(Instruction2<IShaderValue, IShaderValue> ctx, IUnaryExpressionOperation op, IShaderValue result, IShaderValue e)
+            => [ctx];
 
-        public IEnumerable<ShaderStmt> Pop(IShaderValue target)
-            => [Stmt];
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Operation2(Instruction2<IShaderValue, IShaderValue> ctx, IBinaryExpressionOperation op, IShaderValue result, IShaderValue l, IShaderValue r)
+            => [ctx];
 
-        public IEnumerable<ShaderStmt> Set(IShaderValue target, IShaderValue source)
-            => [Stmt];
 
-        public IEnumerable<ShaderStmt> SetVecSwizzle(IVectorSwizzleSetOperation operation, IShaderValue target, IShaderValue value)
-            => [Stmt];
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Store(Instruction2<IShaderValue, IShaderValue> ctx, StoreOperation op, IShaderValue ptr, IShaderValue value)
+            => [ctx];
+
+
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> VectorCompositeConstruction(Instruction2<IShaderValue, IShaderValue> ctx, VectorCompositeConstructionOperation op, IShaderValue result, IReadOnlyList<IShaderValue> components)
+            => [ctx];
+
+
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> VectorSwizzleSet(Instruction2<IShaderValue, IShaderValue> ctx, IVectorSwizzleSetOperation op, IShaderValue ptr, IShaderValue value)
+            => [ctx];
+
     }
 
-    IEnumerable<ShaderStmt> TransformStatement(ShaderStmt stmt)
-        => stmt.Evaluate(new StatementTransformSemantic(stmt));
+    IEnumerable<Instruction2<IShaderValue, IShaderValue>> TransformInstruction(Instruction2<IShaderValue, IShaderValue> inst)
+        => inst.Evaluate(new InstructionTransformSemantic());
 
     public IDeclaration? VisitMember(MemberDeclaration decl)
         => decl;

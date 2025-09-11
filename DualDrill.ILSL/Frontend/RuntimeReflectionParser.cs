@@ -413,7 +413,7 @@ public sealed record class RuntimeReflectionParser(
                     l,
                     [.. basicBlockInputs[l].Reverse()],
                     Seq.Create(
-                        [.. visitor.Statements],
+                        [.. visitor.Instructions],
                         terminator ?? throw new NotSupportedException("failed to resolve terminator")
                     ),
                     cfa.PostDominatorTree.ImmediatePostDominator(l)

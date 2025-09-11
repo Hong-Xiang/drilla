@@ -1,5 +1,4 @@
-﻿using DotNext.Collections.Generic;
-using DualDrill.CLSL.Language.Analysis;
+﻿using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.Operation;
@@ -12,103 +11,6 @@ using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-sealed class UsedExternalLabelSemantic
-    : IRegionTreeFoldSemantic<Label, ShaderRegionBody, ImmutableDictionary<Label, ImmutableHashSet<Label>>, ImmutableDictionary<Label, ImmutableHashSet<Label>>>
-    , ITerminatorSemantic<RegionJump, IShaderValue, ImmutableHashSet<Label>>
-{
-    Stack<Label> Scope = [];
-    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Block(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body, Label? next)
-    {
-        return OnScope(label, body);
-
-    }
-    ImmutableDictionary<Label, ImmutableHashSet<Label>> OnScope(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body)
-    {
-        Scope.Push(label);
-        var result = body();
-        if (!result.ContainsKey(label))
-        {
-            result = result.Add(label, []);
-        }
-        Scope.Pop();
-        //result = result.ToImmutableDictionary(x => x.Key, x => x.Value.Remove(label));
-        HashSet<Label> rself = [.. result[label]];
-        var count = result.Count;
-        var changed = true;
-        while (changed)
-        {
-            List<Label> toAdd = [];
-            foreach (var l in rself)
-            {
-                if (result.TryGetValue(l, out var v))
-                {
-                    toAdd.AddAll(v);
-                }
-            }
-            rself.AddAll(toAdd);
-            changed = rself.Count > count;
-            count = rself.Count;
-        }
-        rself.Remove(label);
-        foreach (var k in result.Keys)
-        {
-            rself.Remove(k);
-        }
-        result = result.SetItem(label, [.. rself]);
-        return result;
-    }
-    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Loop(Label label, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> body, Label? next, Label? breakNext)
-    {
-        return OnScope(label, body);
-    }
-
-    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Nested(ImmutableDictionary<Label, ImmutableHashSet<Label>> head, Func<ImmutableDictionary<Label, ImmutableHashSet<Label>>> next)
-    {
-        var rn = next();
-        ImmutableHashSet<Label> keys = [.. head.Keys, .. rn.Keys];
-        var dct = new Dictionary<Label, HashSet<Label>>();
-        foreach (var k in keys)
-        {
-            dct.Add(k, []);
-        }
-        foreach (var (k, v) in head)
-        {
-            dct[k].AddAll(v);
-        }
-        foreach (var (k, v) in rn)
-        {
-            dct[k].AddAll(v);
-        }
-        var s = Scope.Peek();
-        if (!dct.ContainsKey(s))
-        {
-            dct.Add(s, []);
-        }
-        dct[s].AddAll(dct.Values.SelectMany(x => x));
-
-        return dct.ToImmutableDictionary(x => x.Key, x => x.Value.ToImmutableHashSet());
-    }
-
-
-    public ImmutableDictionary<Label, ImmutableHashSet<Label>> Single(ShaderRegionBody value)
-    {
-        var used = value.Body.Last.Evaluate(this);
-        var s = Scope.Peek();
-        return ImmutableDictionary<Label, ImmutableHashSet<Label>>.Empty.Add(s, used);
-    }
-
-    public ImmutableHashSet<Label> ReturnVoid()
-        => [];
-
-    public ImmutableHashSet<Label> ReturnExpr(IShaderValue expr)
-        => [];
-
-    public ImmutableHashSet<Label> Br(RegionJump target)
-        => [target.Label];
-
-    public ImmutableHashSet<Label> BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
-        => [trueTarget.Label, falseTarget.Label];
-}
 
 public sealed class SemanticModel
     : IRegionTreeFoldLazySemantic<Label, ShaderRegionBody, Unit, Unit>
@@ -135,7 +37,6 @@ public sealed class SemanticModel
 
     public RegionTree<Label, ShaderRegionBody> RegionTree(Label label) => RegionTreeDefinitions[label];
 
-    public ImmutableDictionary<Label, ImmutableHashSet<Label>> UsedExternalLabels { get; }
 
     public SemanticModel(FunctionBody4 body)
     {
@@ -146,7 +47,6 @@ public sealed class SemanticModel
         {
             RegionTreeDefinitions.Add(r.Label, r);
         });
-        UsedExternalLabels = FunctionBody.Body.Fold(new UsedExternalLabelSemantic());
         foreach (var l in LabelDefIndex.Keys)
         {
             if (!LabelUsage.ContainsKey(l))
@@ -170,6 +70,7 @@ public sealed class SemanticModel
     }
     public int ValueIndex(IShaderValue value)
         => ValueIndices[value];
+    //=> ValueIndices.TryGetValue(value, out var index) ? index : -1;
 
     void LabelDef(Label label)
     {
@@ -200,7 +101,16 @@ public sealed class SemanticModel
 
     Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Single(ShaderRegionBody value)
     {
-        value.Body.FoldLazy<Unit>(this);
+        foreach (var e in value.Body.Elements)
+        {
+            foreach (var o in e.Operands)
+            {
+                ValueUse(o, null);
+            }
+        }
+        VisitingTerminator.Push(value.Body.Last);
+        value.Body.Last.Evaluate(this);
+        VisitingTerminator.Pop();
         return default;
     }
 

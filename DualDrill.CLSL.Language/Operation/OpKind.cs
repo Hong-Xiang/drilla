@@ -30,11 +30,12 @@ public interface IOperation
     IOperationMethodAttribute GetOperationMethodAttribute();
     IInstruction Instruction { get; }
 
-    virtual TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
-        where TS : IOperationInstructionSemantic<Instruction2<TV, TR>, TV, TR, TO>
-    {
-        throw new NotImplementedException();
-    }
+    TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>;
+}
+
+public static class OperationExtension
+{
+
 }
 
 public interface IGenericOperation : IOperation

@@ -1,32 +1,31 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
-using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 using System.CodeDom.Compiler;
-using System.Collections.Immutable;
-using System.Numerics;
+using System.Text;
 
 namespace DualDrill.CLSL.Backend;
 
 public class SlangEmitter
     : IDeclarationVisitor<FunctionBody4, Unit>
     , IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>
-    , IStatementSemantic<IShaderValue, IExpressionTree<IShaderValue>, IShaderValue, FunctionDeclaration, Unit>
-    , IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>
-    , ILiteralSemantic<Unit>
+    //, IStatementSemantic<IShaderValue, IExpressionTree<IShaderValue>, IShaderValue, FunctionDeclaration, Unit>
+    //, IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>
+    , ILiteralSemantic<string>
     , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
+    , IOperationSemantic<Instruction2<string, string>, string, string, string>
 {
     private IndentedTextWriter Writer { get; }
     public ShaderModuleDeclaration<FunctionBody4> Module { get; }
@@ -341,7 +340,13 @@ public class SlangEmitter
     {
         foreach (var s in basicBlock.Body.Elements)
         {
-            s.Evaluate(this);
+            var ns = s.Select(v =>
+                v switch
+                {
+                    FunctionDeclaration f => f.Name,
+                    _ => GetValueName(v)
+                }, v => $"let {GetValueName(v)} : {v.Type.Name}");
+            Writer.WriteLine(ns.Evaluate(this));
         }
         basicBlock.Body.Last.Evaluate(this);
     }
@@ -417,10 +422,10 @@ public class SlangEmitter
         return default;
     }
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Nop()
-    {
-        return default;
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Nop()
+    //{
+    //    return default;
+    //}
 
     void WriteValueAssignEqual(IShaderValue value)
     {
@@ -432,244 +437,220 @@ public class SlangEmitter
         Writer.Write(" = ");
     }
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Let(IShaderValue result, ShaderExpr expr)
-    {
-        WriteValueAssignEqual(result);
-        expr.Fold(this);
-        Writer.WriteLine(";");
-        return default;
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Let(IShaderValue result, ShaderExpr expr)
+    //{
+    //    WriteValueAssignEqual(result);
+    //    expr.Fold(this);
+    //    Writer.WriteLine(";");
+    //    return default;
+    //}
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Get(IShaderValue result, IShaderValue source)
-    {
-        WriteValueAssignEqual(result);
-        Writer.Write(GetValueName(source));
-        Writer.WriteLine(";");
-        return default;
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Get(IShaderValue result, IShaderValue source)
+    //{
+    //    WriteValueAssignEqual(result);
+    //    Writer.Write(GetValueName(source));
+    //    Writer.WriteLine(";");
+    //    return default;
+    //}
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Set(IShaderValue target, IShaderValue source)
-    {
-        Writer.Write(GetValueName(target));
-        Writer.Write(" = ");
-        Writer.Write(GetValueName(source));
-        Writer.WriteLine(";");
-        return default;
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Set(IShaderValue target, IShaderValue source)
+    //{
+    //    Writer.Write(GetValueName(target));
+    //    Writer.Write(" = ");
+    //    Writer.Write(GetValueName(source));
+    //    Writer.WriteLine(";");
+    //    return default;
+    //}
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Mov(IShaderValue target, IShaderValue source)
-    {
-        throw new NotImplementedException();
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Mov(IShaderValue target, IShaderValue source)
+    //{
+    //    throw new NotImplementedException();
+    //}
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
-    {
-        if (result.Type is not UnitType)
-        {
-            WriteValueAssignEqual(result);
-        }
-        var fn = f.Name switch
-        {
-            "vec4" => "float4",
-            "vec3" => "float3",
-            "vec2" => "float2",
-            _ => f.Name
-        };
-        Writer.Write(fn);
-        Writer.Write("(");
-        Writer.Write(string.Join(", ", arguments.Select(GetValueName)));
-        Writer.WriteLine(");");
-        return default;
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
+    //{
+    //    if (result.Type is not UnitType)
+    //    {
+    //        WriteValueAssignEqual(result);
+    //    }
+    //    var fn = f.Name switch
+    //    {
+    //        "vec4" => "float4",
+    //        "vec3" => "float3",
+    //        "vec2" => "float2",
+    //        _ => f.Name
+    //    };
+    //    Writer.Write(fn);
+    //    Writer.Write("(");
+    //    Writer.Write(string.Join(", ", arguments.Select(GetValueName)));
+    //    Writer.WriteLine(");");
+    //    return default;
+    //}
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, IShaderValue target, IShaderValue value)
-    {
-        Writer.Write(GetValueName(target));
-        Writer.Write('.');
-        Writer.Write(operation.Pattern.Name);
-        Writer.Write(" = ");
-        Writer.Write(GetValueName(value));
-        return default;
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, IShaderValue target, IShaderValue value)
+    //{
+    //    Writer.Write(GetValueName(target));
+    //    Writer.Write('.');
+    //    Writer.Write(operation.Pattern.Name);
+    //    Writer.Write(" = ");
+    //    Writer.Write(GetValueName(value));
+    //    return default;
+    //}
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Dup(IShaderValue result, IShaderValue source)
-    {
-        throw new NotImplementedException();
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Dup(IShaderValue result, IShaderValue source)
+    //{
+    //    throw new NotImplementedException();
+    //}
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Pop(IShaderValue target)
-    {
-        throw new NotImplementedException();
-    }
+    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Pop(IShaderValue target)
+    //{
+    //    throw new NotImplementedException();
+    //}
 
 
 
-    Unit ILiteralSemantic<Unit>.Bool(bool value)
-    {
-        Writer.Write(value);
-        return default;
-    }
+    string ILiteralSemantic<string>.Bool(bool value)
+        => value.ToString();
 
-    Unit ILiteralSemantic<Unit>.I32(int value)
-    {
-        Writer.Write(value);
-        return default;
-    }
+    string ILiteralSemantic<string>.I32(int value)
+        => value.ToString();
 
-    Unit ILiteralSemantic<Unit>.I64(long value)
-    {
-        Writer.Write(value);
-        return default;
-    }
 
-    Unit ILiteralSemantic<Unit>.U32(uint value)
-    {
-        Writer.Write(value);
-        return default;
-    }
+    string ILiteralSemantic<string>.I64(long value)
+        => value.ToString();
+    string ILiteralSemantic<string>.U32(uint value)
+     => value.ToString();
+    string ILiteralSemantic<string>.U64(ulong value)
+      => value.ToString();
+    string ILiteralSemantic<string>.F32(float value)
+       => value.ToString();
+    string ILiteralSemantic<string>.F64(double value)
+        => value.ToString();
 
-    Unit ILiteralSemantic<Unit>.U64(ulong value)
-    {
-        Writer.Write(value);
-        return default;
-    }
+    //Unit IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>.Value(IShaderValue value)
+    //{
+    //    Writer.Write(GetValueName(value));
+    //    return default;
+    //}
 
-    Unit ILiteralSemantic<Unit>.F32(float value)
-    {
-        Writer.Write(value);
-        return default;
-    }
+    //Unit IExpressionSemantic<Func<Unit>, Unit>.Literal<TLiteral>(TLiteral literal)
+    //{
+    //    literal.Evaluate(this);
+    //    return default;
+    //}
 
-    Unit ILiteralSemantic<Unit>.F64(double value)
-    {
-        Writer.Write(value);
-        return default;
-    }
+    //Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
+    //{
+    //    if (operation is AddressOfVecComponentOperation vcop)
+    //    {
+    //        e();
+    //        Writer.Write('.');
+    //        Writer.Write(vcop.Component.Name);
+    //    }
+    //    else
+    //    {
+    //        Writer.Write(operation.GetType().Name);
+    //        Writer.Write(operation);
+    //        e();
+    //    }
+    //    return default;
+    //}
 
-    Unit IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>.Value(IShaderValue value)
-    {
-        Writer.Write(GetValueName(value));
-        return default;
-    }
+    //Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfIndex(IAccessChainOperation operation, Func<Unit> e, Func<Unit> index)
+    //{
+    //    Writer.Write(operation);
+    //    e();
+    //    return default;
+    //}
 
-    Unit IExpressionSemantic<Func<Unit>, Unit>.Literal<TLiteral>(TLiteral literal)
-    {
-        literal.Evaluate(this);
-        return default;
-    }
+    //Unit IExpressionSemantic<Func<Unit>, Unit>.Operation1(IUnaryExpressionOperation operation, Func<Unit> e)
+    //{
+    //    switch (operation)
+    //    {
+    //        case IConversionOperation c:
+    //            VisitType(c.ResultType);
+    //            Writer.Write("(");
+    //            e();
+    //            Writer.Write(")");
+    //            break;
+    //        case IVectorSwizzleGetOperation o:
+    //            e();
+    //            Writer.Write(".");
+    //            Writer.Write(o.Pattern.Name);
+    //            break;
+    //        case IVectorComponentGetOperation o:
+    //            e();
+    //            Writer.Write(".");
+    //            Writer.Write(o.Component.Name);
+    //            break;
+    //        case IVectorFromScalarConstructOperation o:
+    //            Writer.Write("vector<");
+    //            VisitType(o.ElementType);
+    //            Writer.Write(",");
+    //            Writer.Write(o.Size.Value);
+    //            Writer.Write(">(");
+    //            e();
+    //            Writer.Write(")");
+    //            break;
+    //        case UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate>:
+    //            Writer.Write("-");
+    //            e();
+    //            break;
+    //        default:
+    //            Writer.Write(operation.Name);
+    //            Writer.Write("(");
+    //            e();
+    //            Writer.Write(")");
+    //            break;
+    //    }
+    //    return default;
+    //}
 
-    Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
-    {
-        if (operation is AddressOfVecComponentOperation vcop)
-        {
-            e();
-            Writer.Write('.');
-            Writer.Write(vcop.Component.Name);
-        }
-        else
-        {
-            Writer.Write(operation.GetType().Name);
-            Writer.Write(operation);
-            e();
-        }
-        return default;
-    }
+    //Unit IExpressionSemantic<Func<Unit>, Unit>.Operation2(IBinaryExpressionOperation operation, Func<Unit> l, Func<Unit> r)
+    //{
+    //    if (operation.BinaryOp is ISymbolOp s)
+    //    {
+    //        l();
+    //        Writer.Write(" ");
+    //        Writer.Write(s.Symbol);
+    //        Writer.Write(" ");
+    //        r();
+    //    }
+    //    else
+    //    {
+    //        Writer.Write(operation.Name);
+    //        Writer.Write("(");
+    //        l();
+    //        Writer.Write(",");
+    //        r();
+    //        Writer.Write(")");
+    //    }
 
-    Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfIndex(IAccessChainOperation operation, Func<Unit> e, Func<Unit> index)
-    {
-        Writer.Write(operation);
-        e();
-        return default;
-    }
+    //    return default;
+    //}
 
-    Unit IExpressionSemantic<Func<Unit>, Unit>.Operation1(IUnaryExpressionOperation operation, Func<Unit> e)
-    {
-        switch (operation)
-        {
-            case IConversionOperation c:
-                VisitType(c.ResultType);
-                Writer.Write("(");
-                e();
-                Writer.Write(")");
-                break;
-            case IVectorSwizzleGetOperation o:
-                e();
-                Writer.Write(".");
-                Writer.Write(o.Pattern.Name);
-                break;
-            case IVectorComponentGetOperation o:
-                e();
-                Writer.Write(".");
-                Writer.Write(o.Component.Name);
-                break;
-            case IVectorFromScalarConstructOperation o:
-                Writer.Write("vector<");
-                VisitType(o.ElementType);
-                Writer.Write(",");
-                Writer.Write(o.Size.Value);
-                Writer.Write(">(");
-                e();
-                Writer.Write(")");
-                break;
-            case UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate>:
-                Writer.Write("-");
-                e();
-                break;
-            default:
-                Writer.Write(operation.Name);
-                Writer.Write("(");
-                e();
-                Writer.Write(")");
-                break;
-        }
-        return default;
-    }
-
-    Unit IExpressionSemantic<Func<Unit>, Unit>.Operation2(IBinaryExpressionOperation operation, Func<Unit> l, Func<Unit> r)
-    {
-        if (operation.BinaryOp is ISymbolOp s)
-        {
-            l();
-            Writer.Write(" ");
-            Writer.Write(s.Symbol);
-            Writer.Write(" ");
-            r();
-        }
-        else
-        {
-            Writer.Write(operation.Name);
-            Writer.Write("(");
-            l();
-            Writer.Write(",");
-            r();
-            Writer.Write(")");
-        }
-
-        return default;
-    }
-
-    Unit IExpressionSemantic<Func<Unit>, Unit>.VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<Func<Unit>> arguments)
-    {
-        var rv = (IVecType)operation.ResultType;
-        Writer.Write("vector");
-        Writer.Write("<");
-        VisitType(rv.ElementType);
-        Writer.Write(",");
-        Writer.Write(rv.Size.Value);
-        Writer.Write(">");
-        Writer.Write("(");
-        var args = arguments.ToImmutableArray();
-        foreach (var (i, a) in args.Index())
-        {
-            if (i > 0)
-            {
-                Writer.Write(", ");
-            }
-            a();
-        }
-        Writer.Write(")");
-        return default;
-    }
+    //Unit IExpressionSemantic<Func<Unit>, Unit>.VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<Func<Unit>> arguments)
+    //{
+    //    var rv = (IVecType)operation.ResultType;
+    //    Writer.Write("vector");
+    //    Writer.Write("<");
+    //    VisitType(rv.ElementType);
+    //    Writer.Write(",");
+    //    Writer.Write(rv.Size.Value);
+    //    Writer.Write(">");
+    //    Writer.Write("(");
+    //    var args = arguments.ToImmutableArray();
+    //    foreach (var (i, a) in args.Index())
+    //    {
+    //        if (i > 0)
+    //        {
+    //            Writer.Write(", ");
+    //        }
+    //        a();
+    //    }
+    //    Writer.Write(")");
+    //    return default;
+    //}
 
     Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid()
     {
@@ -755,5 +736,79 @@ public class SlangEmitter
             EmitBranch(falseTarget.Label);
         }
         return default;
+    }
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Nop(Instruction2<string, string> ctx, NopOperation op)
+        => "";
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Load(Instruction2<string, string> ctx, LoadOperation op, string result, string ptr)
+        => $"{result} = {ptr};";
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Store(Instruction2<string, string> ctx, StoreOperation op, string ptr, string value)
+        => $"{ptr} = {value};";
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.VectorSwizzleSet(Instruction2<string, string> ctx, IVectorSwizzleSetOperation op, string ptr, string value)
+        => $"{ptr}.{op.Pattern.Name} = {value};";
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Call(Instruction2<string, string> ctx, CallOperation op, string result, string f, IReadOnlyList<string> arguments)
+    {
+        // TODO: handle void type
+        return $"{result} = {f}({string.Join(',', arguments)});";
+    }
+
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Literal(Instruction2<string, string> ctx, LiteralOperation op, string result, ILiteral value)
+    {
+        return $"{result} = {value.Evaluate(this)};";
+    }
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.AddressOfChain(Instruction2<string, string> ctx, IAccessChainOperation op, string result, string target)
+    {
+        if (op is AddressOfVecComponentOperation vcop)
+        {
+            return $"{result} = {target}.{vcop.Component.Name};";
+        }
+        else
+        {
+            return $"{result} = {op.Name}({target});";
+        }
+    }
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.AddressOfChain(Instruction2<string, string> ctx, IAccessChainOperation op, string result, string target, string index)
+    {
+        throw new NotImplementedException();
+    }
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Operation1(Instruction2<string, string> ctx, IUnaryExpressionOperation op, string result, string e)
+    {
+        var code = op switch
+        {
+            IConversionOperation c => $"{c.ResultType.Name}({e})",
+            IVectorSwizzleGetOperation o => $"{e}.{o.Pattern.Name}",
+            IVectorComponentGetOperation o => $"{e}.{o.Component.Name}",
+            IVectorFromScalarConstructOperation o => $"{op.ResultType.Name}({e})",
+            UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
+            _ => $"{op.Name}({e})"
+        };
+        return $"{result} = {code};";
+    }
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Operation2(Instruction2<string, string> ctx, IBinaryExpressionOperation op, string result, string l, string r)
+    {
+        if (op.BinaryOp is ISymbolOp s)
+        {
+            return $"{result} = {l} {s.Symbol} {r};";
+        }
+        else
+        {
+            return $"{result} = {op.Name}({l},{r});";
+        }
+    }
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.VectorCompositeConstruction(Instruction2<string, string> ctx, VectorCompositeConstructionOperation op, string result, IReadOnlyList<string> components)
+    {
+        var sw = new StringBuilder();
+        var rv = (IVecType)op.ResultType;
+        return $"{result} = vector<{rv.ElementType.Name}, {rv.Size.Value}>({string.Join(',', components)});";
     }
 }

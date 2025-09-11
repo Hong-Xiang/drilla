@@ -254,7 +254,8 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
             var region = body[l];
             foreach (var stmt in region.Body.Elements)
             {
-                stmt.Evaluate(this);
+                throw new NotImplementedException();
+                //stmt.Evaluate(this);
             }
             region.Body.Last.Evaluate(this);
         }

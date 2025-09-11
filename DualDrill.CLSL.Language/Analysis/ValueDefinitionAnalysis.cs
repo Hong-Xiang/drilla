@@ -2,14 +2,12 @@
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Region;
-using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Analysis;
 
 internal class ValueDefinitionAnalysis
     : IRegionTreeFoldSemantic<Label, ShaderRegionBody, IEnumerable<IShaderValue>, IEnumerable<IShaderValue>>
-    , IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, IEnumerable<IShaderValue>>
 {
     public IEnumerable<IShaderValue> Block(Label label, Func<IEnumerable<IShaderValue>> body, Label? next)
         => body();
@@ -51,7 +49,7 @@ internal class ValueDefinitionAnalysis
     {
         return [
             ..value.Parameters,
-            ..value.Body.Elements.SelectMany(s => s.Evaluate(this))
+            ..value.Body.Elements.SelectMany(s => s.Result is IShaderValue v ? (IEnumerable<IShaderValue>)[v] : [])
         ];
     }
 }

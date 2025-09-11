@@ -21,16 +21,16 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     {
         var sep = $"\n{new string('-', 10)}\n";
         var module = shader.Parse4();
-        Dump("IR", module);
         //module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
-        //module = module.RunPass(new FunctionToOperationPass());
+        module = module.RunPass(new FunctionToOperationPass());
+        Dump("IR", module);
 
         //Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
 
         var emitter = new SlangEmitter(module);
 
         var code = emitter.Emit();
-        Output.WriteLine("=== SLang ===");
+        Output.WriteLine("=== Slang ===");
         Output.WriteLine(code);
 
         using var f = File.OpenWrite($"D:\\Code\\DualDrillEngine\\DualDrill.CLSL.Test\\ShaderModule\\{name}-gen.slang");

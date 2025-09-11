@@ -3,6 +3,7 @@ using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
+[Obsolete]
 public interface IUnifiedFunctionBody<TBasicBlock> : IFunctionBody
     where TBasicBlock : IBasicBlock2
 {

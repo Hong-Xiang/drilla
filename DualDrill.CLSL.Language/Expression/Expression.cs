@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.Operation.Pointer;
 
 namespace DualDrill.CLSL.Language.Expression;
 
+[Obsolete]
 public interface IExpressionSemantic<in TI, out TO>
 {
     TO Literal<TLiteral>(TLiteral literal) where TLiteral : ILiteral;
@@ -14,6 +15,7 @@ public interface IExpressionSemantic<in TI, out TO>
     TO VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<TI> arguments);
 }
 
+[Obsolete]
 public interface IExpression<out T>
 {
     TR Evaluate<TR>(IExpressionSemantic<T, TR> semantic);

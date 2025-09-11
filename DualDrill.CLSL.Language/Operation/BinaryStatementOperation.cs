@@ -1,6 +1,7 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
@@ -12,6 +13,10 @@ public interface IBinaryStatementOperation : IOperation
     public IShaderType LeftType { get; }
     public IShaderType RightType { get; }
     public IStatement CreateStatement(IExpression l, IExpression r);
+    TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public interface IBinaryStatementOperation<TOperation> : IBinaryStatementOperation, IOperation<TOperation>

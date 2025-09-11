@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Symbol;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
@@ -9,7 +10,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 public sealed record class ShaderRegionBody(
     Label Label,
     ImmutableArray<IShaderValue> Parameters,
-    Seq<ShaderStmt, ITerminator<RegionJump, IShaderValue>> Body,
+    Seq<Instruction2<IShaderValue, IShaderValue>, ITerminator<RegionJump, IShaderValue>> Body,
     Label? ImmediatePostDominator
 ) : IBasicBlock2
 {
@@ -27,13 +28,13 @@ public sealed record class ShaderRegionBody(
     public static ShaderRegionBody Create(
         Label label,
         ImmutableArray<IShaderValue> parameters,
-        IEnumerable<ShaderStmt> statements,
+        IEnumerable<Instruction2<IShaderValue, IShaderValue>> statements,
         ITerminator<RegionJump, IShaderValue> terminator,
         Label? immediatePostDominator
     )
         => new(label, parameters, Seq.Create([.. statements], terminator), immediatePostDominator);
 
-    public ShaderRegionBody MapStatement(Func<ShaderStmt, IEnumerable<ShaderStmt>> f)
+    public ShaderRegionBody MapInstruction(Func<Instruction2<IShaderValue, IShaderValue>, IEnumerable<Instruction2<IShaderValue, IShaderValue>>> f)
     {
         return new ShaderRegionBody(
             Label,

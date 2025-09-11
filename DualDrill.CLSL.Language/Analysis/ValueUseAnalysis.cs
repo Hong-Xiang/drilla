@@ -14,6 +14,7 @@ internal class ValueUseAnalysis
     : IRegionTreeFoldSemantic<Label, ShaderRegionBody, IEnumerable<IShaderValue>, IEnumerable<IShaderValue>>
     , IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, IEnumerable<IShaderValue>>
     , IExpressionTreeFoldSemantic<IShaderValue, IEnumerable<IShaderValue>>
+    , ITerminatorSemantic<RegionJump, IShaderValue, IEnumerable<IShaderValue>>
 {
     public IEnumerable<IShaderValue> AddressOfChain(IAccessChainOperation operation, IEnumerable<IShaderValue> e)
         => e;
@@ -23,6 +24,12 @@ internal class ValueUseAnalysis
 
     public IEnumerable<IShaderValue> Block(Label label, Func<IEnumerable<IShaderValue>> body, Label? next)
         => body();
+
+    public IEnumerable<IShaderValue> Br(RegionJump target)
+        => [..target.Arguments];
+
+    public IEnumerable<IShaderValue> BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
+        => [condition, ..trueTarget.Arguments, ..falseTarget.Arguments];
 
     public IEnumerable<IShaderValue> Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
         => arguments;
@@ -60,6 +67,12 @@ internal class ValueUseAnalysis
     public IEnumerable<IShaderValue> Pop(IShaderValue target)
         => [target];
 
+    public IEnumerable<IShaderValue> ReturnExpr(IShaderValue expr)
+        => [expr];
+
+    public IEnumerable<IShaderValue> ReturnVoid()
+        => [];
+
     public IEnumerable<IShaderValue> Set(IShaderValue target, IShaderValue source)
         => [target, source];
 
@@ -69,7 +82,8 @@ internal class ValueUseAnalysis
     public IEnumerable<IShaderValue> Single(ShaderRegionBody value)
     {
         return [
-            ..value.Body.Elements.SelectMany(s => s.Evaluate(this))
+            ..value.Body.Elements.SelectMany(s => s.Operands),
+            ..value.Body.Last.Evaluate(this)
         ];
     }
 

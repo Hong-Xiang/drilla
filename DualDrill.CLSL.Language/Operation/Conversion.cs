@@ -30,7 +30,7 @@ public sealed class ScalarConversionOperation<TSource, TTarget>
     public IInstruction Instruction =>
         UnaryExpressionOperationInstruction<ScalarConversionOperation<TSource, TTarget>>.Instance;
 
-    public IShaderType SourceType => throw new NotImplementedException();
+    public IShaderType SourceType => TSource.Instance;
 
-    public IShaderType ResultType => throw new NotImplementedException();
+    public IShaderType ResultType => TTarget.Instance;
 }

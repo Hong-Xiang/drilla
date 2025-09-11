@@ -1,4 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
@@ -123,4 +124,7 @@ public sealed class VectorCompositeConstructionOperation : IOperation
     {
         return ToString();
     }
+
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>
+        => semantic.VectorCompositeConstruction(inst, this, inst.Result, [..inst.Operands]);
 }

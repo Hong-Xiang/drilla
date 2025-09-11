@@ -143,13 +143,7 @@ public sealed class FunctionBody4
                             body.Body.Select(
                                 stmt => stmt.Select(
                                     mapValue,
-                                    e => e.Select(mapValue),
-                                    mapValue,
-                                    f =>
-                                    {
-                                        var fr = mapValue(f);
-                                        return (FunctionDeclaration)fr;
-                                    }
+                                    static d => d
                                 ),
                                 term => term.Select(
                                     j => new RegionJump(j.Label, [.. j.Arguments.Select(mapValue)]),

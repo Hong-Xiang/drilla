@@ -1,5 +1,6 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
@@ -13,6 +14,9 @@ public interface IUnaryExpressionOperation : IOperation
     IShaderType ResultType { get; }
     IUnaryExpression CreateExpression(IExpression expr);
     TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context);
+
+    TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
+        => semantic.Operation1(inst, this, inst.Result, inst[0]);
 }
 
 public interface IUnaryExpressionOperationSemantic<in TX, out TO>
