@@ -966,8 +966,8 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
             //}
             if (m >= 1.5f)
             {
-                //nor = calcNormal(pos);
-                nor = vec3(0.0f, 1.0f, 0.0f);
+                nor = calcNormal(pos);
+                //nor = vec3(0.0f, 1.0f, 0.0f);
             }
 
             var reflection = reflect(rd, nor);
@@ -993,16 +993,16 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
             //    col = vec3(0.5f);
             //}
             //return vec3(clamp(col.x, 0.0f, 1.0f), clamp(col.y, 0.0f, 1.0f), clamp(col.z, 0.0f, 1.0f));
-            //else
-            //{
-            //    col = vec3(m / 10.0f);
-            //}
+            else
+            {
+                col = vec3(m / 10.0f);
+            }
             //return col;
 
             // lighting
 
-            var lin = vec3(0.0f);
-            //var lin = col;
+            //var lin = vec3(0.0f);
+            var lin = col;
 
             int sun = 1;
             int sky = 1;
