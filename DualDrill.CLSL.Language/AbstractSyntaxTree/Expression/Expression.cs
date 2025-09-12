@@ -29,11 +29,6 @@ public sealed class InvalidExpressionTypeException(string message) : Exception(m
 {
 }
 
-// either literal or local variable
-public interface ICrossBlockExpression : IExpression
-{
-}
-
 public interface IExpressionVisitor<T>
 {
     T VisitLiteralValueExpression(LiteralValueExpression expr);
@@ -70,8 +65,4 @@ public interface IExpressionVisitor<T>
 
     T VisitFormalParameterExpression(FormalParameterExpression expr);
     T VisitNamedComponentExpression(NamedComponentExpression expr);
-}
-
-public static class ExpressionExtension
-{
 }

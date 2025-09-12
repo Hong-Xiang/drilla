@@ -2,7 +2,6 @@
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 
@@ -28,11 +27,6 @@ public sealed class NopOperation
     private NopOperation() { }
 
     public IOperationMethodAttribute GetOperationMethodAttribute()
-    {
-        throw new NotImplementedException();
-    }
-
-    public TR Evaluate<TV, TE, TS, TR>(IStatementNode<TV, TE> stmt, TS semantic) where TS : IStatementSemantic<TV, TE, TR>
     {
         throw new NotImplementedException();
     }

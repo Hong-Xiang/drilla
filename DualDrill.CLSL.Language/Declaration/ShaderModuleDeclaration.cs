@@ -1,7 +1,5 @@
-﻿using DualDrill.CLSL.Language.Expression;
-using DualDrill.CLSL.Language.FunctionBody;
+﻿using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
@@ -94,11 +92,4 @@ public sealed record class ShaderModuleDeclaration<TBody>(
         );
     }
 
-}
-
-public static class ShaderModule
-{
-    public static IStatementSemantic<IShaderValue, IExpressionTree<IShaderValue>, IShaderValue, FunctionDeclaration,
-                                    ShaderStmt> StatementFactory
-    { get; } = Statement.Statement.Factory<IShaderValue, IExpressionTree<IShaderValue>, IShaderValue, FunctionDeclaration>();
 }

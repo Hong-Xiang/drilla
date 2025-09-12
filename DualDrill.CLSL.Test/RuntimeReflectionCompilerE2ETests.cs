@@ -3,7 +3,6 @@ using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Transform;
-using DualDrill.CLSL.Transform;
 using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;

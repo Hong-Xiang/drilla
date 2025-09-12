@@ -18,7 +18,6 @@ public interface ILocalDeclarationContext
 
     ImmutableArray<VariableDeclaration> LocalVariables { get; }
     ImmutableArray<Label> Labels { get; }
-    ImmutableArray<IShaderValue> Values { get; }
 }
 
 

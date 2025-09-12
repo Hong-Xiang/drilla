@@ -89,15 +89,4 @@ public class UnifiedFunctionBody<TBasicBlock> : IUnifiedFunctionBody<TBasicBlock
     {
         throw new NotImplementedException();
     }
-
-    public UnifiedFunctionBody<TResultBasicBlock>
-        ApplyBasicBlockTransform<TResultBasicBlock>(
-            IBasicBlockTransform<TBasicBlock, TResultBasicBlock> transform)
-        where TResultBasicBlock : IBasicBlock2
-    {
-        var traverser = new FunctionBodyBasicBlockTransformTraverser<
-            TBasicBlock, TResultBasicBlock>(transform);
-        var resultElements = Body.Traverse(traverser);
-        return UnifiedFunctionBody.Create<TResultBasicBlock>(resultElements.Elements);
-    }
 }

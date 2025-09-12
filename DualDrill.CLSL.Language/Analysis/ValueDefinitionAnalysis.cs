@@ -21,9 +21,6 @@ internal class ValueDefinitionAnalysis
     public IEnumerable<IShaderValue> Get(IShaderValue result, IShaderValue source)
         => [result];
 
-    public IEnumerable<IShaderValue> Let(IShaderValue result, ShaderExpr expr)
-        => [result];
-
     public IEnumerable<IShaderValue> Loop(Label label, Func<IEnumerable<IShaderValue>> body, Label? next, Label? breakNext)
         => body();
 

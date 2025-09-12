@@ -1,12 +1,10 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
@@ -34,8 +32,6 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
     : IDeclarationSemantic<Unit>
     , IShaderTypeSemantic<string, string>
     , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
-    , IStatementSemantic<IShaderValue, IExpressionTree<IShaderValue>, IShaderValue, FunctionDeclaration, Unit>
-    , IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>
     , ILiteralSemantic<Unit>
 {
     IndentedTextWriter BodyWriter = new IndentedTextWriter(new StringWriter());
@@ -364,106 +360,7 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
         return default;
     }
 
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Nop()
-    {
-        return default;
-    }
 
-
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Let(IShaderValue result, ShaderExpr expr)
-    {
-        var name = GetValueName(result);
-        if (expr is NodeExpression<IShaderValue>
-            { Node: ILiteralExpression })
-        {
-            ConstantWriter.Write($"{name} = ");
-            expr.Fold(this);
-            ConstantWriter.WriteLine();
-        }
-        else
-        {
-            BodyWriter.Write($"{name} = ");
-            expr.Fold(this);
-            BodyWriter.WriteLine();
-        }
-        return default;
-    }
-
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Get(IShaderValue result, IShaderValue source)
-    {
-        BodyWriter.Write(GetValueName(result));
-        BodyWriter.Write(" = OpLoad ");
-        BodyWriter.Write(GetTypeName(result.Type));
-        BodyWriter.Write(" ");
-        BodyWriter.Write(GetValueName(source));
-        BodyWriter.WriteLine();
-        return default;
-    }
-
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Set(IShaderValue target, IShaderValue source)
-    {
-        BodyWriter.Write("OpStore ");
-        BodyWriter.Write(GetValueName(target));
-        BodyWriter.Write(" ");
-        BodyWriter.Write(GetValueName(source));
-        BodyWriter.WriteLine();
-        return default;
-    }
-
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Mov(IShaderValue target, IShaderValue source)
-    {
-        throw new NotImplementedException();
-    }
-
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
-    {
-        BodyWriter.Write(GetValueName(result));
-        BodyWriter.Write(" = ");
-        //// develop ad hoc dump
-        //BodyWriter.Write("OpCompositeConstruct ");
-        BodyWriter.Write("OpFunctionCall ");
-        BodyWriter.Write(GetFunctionName(f));
-        BodyWriter.Write(" ");
-        BodyWriter.Write(GetTypeName(f.Return.Type));
-        foreach (var a in arguments)
-        {
-            BodyWriter.Write(" ");
-            BodyWriter.Write(GetValueName(a));
-        }
-        BodyWriter.WriteLine();
-        return default;
-    }
-
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Dup(IShaderValue result, IShaderValue source)
-    {
-        throw new NotImplementedException();
-    }
-
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Pop(IShaderValue target)
-    {
-        throw new NotImplementedException();
-    }
-
-    Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, IShaderValue target, IShaderValue value)
-    {
-        BodyWriter.WriteLine($"swizzle set {operation.Name} {GetValueName(target)} = {GetValueName(value)}");
-        return default;
-    }
-
-    Unit IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>.Value(IShaderValue value)
-    {
-        BodyWriter.Write(GetValueName(value));
-        return default;
-    }
-
-    Unit IExpressionSemantic<Func<Unit>, Unit>.Literal<TLiteral>(TLiteral literal)
-    {
-        ConstantWriter.Write($"OpConstant ");
-        ConstantWriter.Write(GetTypeName(literal.Type));
-        ConstantWriter.Write(" ");
-        literal.Evaluate(this);
-        return default;
-    }
 
     public Unit AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
     {
@@ -568,15 +465,4 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
         return default;
     }
 
-    Unit IExpressionSemantic<Func<Unit>, Unit>.VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<Func<Unit>> arguments)
-    {
-        BodyWriter.Write("OpCompositeConstruct ");
-        BodyWriter.Write(GetTypeName(operation.ResultType));
-        foreach (var a in arguments)
-        {
-            BodyWriter.Write(" ");
-            a();
-        }
-        return default;
-    }
 }

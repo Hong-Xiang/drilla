@@ -1,11 +1,9 @@
 ﻿using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
-using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;

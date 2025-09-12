@@ -26,11 +26,6 @@ interface IFunctionBodyElementAlgebra<
     TSequence Sequence(ImmutableArray<TElement> elements);
 }
 
-interface IElement<TBasicBlock, TSequence>
-{
-    TElement Evaluate<TElement>(IFunctionBodyElementAlgebra<TBasicBlock, TElement, TSequence> algebra);
-}
-
 interface FixT<TBasicBlock, T>
     where T : FixT<TBasicBlock, T>
 {

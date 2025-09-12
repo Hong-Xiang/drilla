@@ -2,23 +2,16 @@
 using DualDrill.CLSL.Compiler;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Frontend.SymbolTable;
-using DualDrill.CLSL.Language.AbstractSyntaxTree;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.ControlFlowGraph;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
-using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.CodeTextWriter;
-using DualDrill.Common.Nat;
 using System.CodeDom.Compiler;
-using System.Collections.Frozen;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL;
 
@@ -38,108 +31,12 @@ public static class ShaderModuleExtension
     }
 
     public static ShaderModuleDeclaration<FunctionBody4> Parse4(
-            this ISharpShader shader
-        )
+        this ISharpShader shader
+    )
     {
         var context = CompilationContext.Create();
         var parser = new RuntimeReflectionParser(context);
         return parser.ParseShaderModule(shader);
-    }
-
-    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> EliminateBlockValueTransfer(
-        this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> module
-    )
-        => module.MapBody((_, _, cfg) =>
-            cfg.MapBody((label, bb) =>
-            {
-                if (bb.Outputs.IsEmpty)
-                {
-                    return bb;
-                }
-
-                var pushStmt = bb.Elements.OfType<PushStatement>().SingleOrDefault();
-
-                var successorLabels = cfg.Successor(label).AllTargets();
-
-                var statements = new List<IStackStatement>();
-
-                statements.AddRange(bb.Elements.Where(s => s is not PushStatement));
-
-                foreach (var sl in successorLabels)
-                {
-                    var bt = cfg[sl];
-                    foreach (var (vo, vi) in bb.Outputs.Zip(bt.Inputs))
-                    {
-                        switch (vo.Type, vi.Type)
-                        {
-                            case (var l, var r) when l.Equals(r):
-                            case (UIntType<N32>, IntType<N32>):
-                            case (IntType<N32>, UIntType<N32>):
-                                statements.Add(SyntaxFactory.AssignStatement(
-                                    SyntaxFactory.VarIdentifier(vi),
-                                    SyntaxFactory.VarIdentifier(vo)
-                                ));
-                                break;
-                            case (IntType<N32>, BoolType):
-                                IBinaryExpressionOperation op =
-                                    NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Ne>.Instance;
-                                statements.Add(SyntaxFactory.AssignStatement(
-                                    SyntaxFactory.VarIdentifier(vi),
-                                    op.CreateExpression(
-                                        SyntaxFactory.VarIdentifier(vo),
-                                        SyntaxFactory.Literal(0)
-                                    )
-                                ));
-                                break;
-                            default:
-                                throw new NotSupportedException();
-                        }
-                    }
-                }
-
-                if (pushStmt is { } s)
-                {
-                    statements.Add(s);
-                }
-
-                return new BasicBlock<IStackStatement>([.. statements], bb.Inputs, []);
-            })
-        );
-
-    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>>
-        BasicBlockTransformStatementsToInstructions(
-            this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IStackStatement>> module
-        )
-        => module.MapBody((_, _, body) =>
-            body.MapBody(bb =>
-                BasicBlock<IInstruction>.Create([
-                    ..bb.Elements.SelectMany(e => e.ToInstructions())
-                ])));
-
-    public static ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>>
-        ReplaceOperationCallsToOperationInstruction(
-            this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>> ir
-        )
-    {
-        return ir.MapBody((m, f, b) =>
-            b.MapBody(bb =>
-            {
-                return BasicBlock<IInstruction>.Create([
-                    ..bb.Elements.Select(inst =>
-                    {
-                        if (inst is CallInstruction call)
-                        {
-                            if (call.Callee.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is
-                                { } attr)
-                            {
-                                return attr.Operation.Instruction;
-                            }
-                        }
-
-                        return inst;
-                    })
-                ]);
-            }));
     }
 
     public static ShaderModuleDeclaration<FunctionBody<CompoundStatement>> ToAbstractSyntaxTreeFunctionBody(
@@ -163,48 +60,6 @@ public static class ShaderModuleExtension
         {
             var stmt = b.Body.AcceptVisitor(new AbstractSyntaxTreeSimplify());
             return new FunctionBody<CompoundStatement>((CompoundStatement)stmt);
-        });
-    }
-
-    public static ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Simplify(
-        this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module
-    )
-    {
-        // TODO: proper handling multiple run of simplify
-        for (int i = 0; i < 4; i++)
-        {
-            module = module.Simplify1();
-        }
-
-        return module;
-    }
-
-    public static ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> Simplify1(
-        this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module
-    )
-    {
-        return module.MapBody((m, f, fBody) =>
-        {
-            var result = fBody.Root;
-            var counter = new StructuredControlFlowLocalReferencesUsageCounter();
-            _ = result.Accept(counter);
-            var vSt = counter.VariableStoreCount.ToFrozenDictionary();
-            var vLd = counter.VariableLoadCount.ToFrozenDictionary();
-
-            var simplifer = new StructuredControlFlowSimplifier(vLd, vSt,
-                counter.DirectJumpLabels.ToFrozenSet(),
-                counter.NestedJumpLabels.ToFrozenSet()
-            );
-            var elements = result.Accept(simplifer).ToImmutableArray();
-            result = elements switch
-            {
-                [Block r] => r,
-                [Loop r] => r,
-                [IfThenElse r] => r,
-                _ => new Block(Label.Create(), new(elements))
-            };
-
-            return new StructuredStackInstructionFunctionBody(result);
         });
     }
 
@@ -340,97 +195,6 @@ public static class ShaderModuleExtension
     }
 
 
-    // public static async ValueTask<string> Dump(
-    //     this ShaderModuleDeclaration<StructuredStackInstructionFunctionBody> module)
-    // {
-    //     var sw = new StringWriter();
-    //     var isw = new IndentedTextWriter(sw);
-    //     isw.Write(module.GetType().CSharpFullName());
-    //     var visitor = new ModuleToCodeVisitor<StructuredStackInstructionFunctionBody>(isw, module, (b) =>
-    //     {
-    //         var labelIndex = b.Root.ReferencedLabels.Distinct().ToArray().Index()
-    //                           .ToDictionary(x => x.Item, x => x.Index);
-    //         var variables = b.Root.ReferencedLocalVariables.Distinct().Index()
-    //                          .ToDictionary(x => x.Item, x => x.Index);
-    //
-    //         string VariableName(VariableDeclaration variable) =>
-    //             variable.DeclarationScope == DeclarationScope.Function
-    //                 ? $"var#{variables[variable]} {variable}"
-    //                 : $"module var {variable.Name}";
-    //
-    //
-    //         string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
-    //
-    //         b.Root.Dump(LabelName, VariableName, isw);
-    //         return ValueTask.CompletedTask;
-    //     });
-    //     await module.Accept(visitor);
-    //     return sw.ToString();
-    // }
-
-    // public static async ValueTask<string> Dump(
-    //     this ShaderModuleDeclaration<ControlFlowGraphFunctionBody<IInstruction>> module)
-    // {
-    //     var sw = new StringWriter();
-    //     var isw = new IndentedTextWriter(sw);
-    //     isw.Write(module.GetType().CSharpFullName());
-    //     var visitor = new ModuleToCodeVisitor<ControlFlowGraphFunctionBody<IInstruction>>(isw,
-    //         module, (b) =>
-    //         {
-    //             var instructions = b.Labels.SelectMany(l => b[l].Elements.ToArray()).ToArray();
-    //
-    //             var labelIndex = b.Labels.Index().ToDictionary(x => x.Item, x => x.Index);
-    //             var variables = instructions.OfType<LoadSymbolValueInstruction<VariableDeclaration>>()
-    //                                         .Select(x => x.Target)
-    //                                         .Concat(instructions.OfType<StoreSymbolInstruction<VariableDeclaration>>()
-    //                                                             .Select(x => x.Target))
-    //                                         .Concat(instructions
-    //                                                 .OfType<LoadSymbolAddressInstruction<VariableDeclaration>>()
-    //                                                 .Select(x => x.Target))
-    //                                         .Where(v => v.DeclarationScope == DeclarationScope.Function)
-    //                                         .Distinct()
-    //                                         .Index()
-    //                                         .ToDictionary(x => x.Item, x => x.Index);
-    //
-    //             string VariableName(VariableDeclaration variable) =>
-    //                 variable.DeclarationScope == DeclarationScope.Function
-    //                     ? $"var#{variables[variable]} {variable}"
-    //                     : $"module var {variable.Name}";
-    //
-    //
-    //             string LabelName(Label label) => $"label#{labelIndex[label]} {label}";
-    //
-    //
-    //             foreach (var (k, v) in variables)
-    //             {
-    //                 isw.WriteLine($"var#{v} {k}");
-    //             }
-    //
-    //             isw.WriteLine();
-    //
-    //             foreach (var l in b.Labels)
-    //             {
-    //                 isw.Write($"{LabelName(l)} : -> ");
-    //                 b.Successor(l).Dump(LabelName, isw);
-    //                 isw.WriteLine();
-    //                 using (isw.IndentedScope())
-    //                 {
-    //                     foreach (var instruction in b[l].Elements)
-    //                     {
-    //                         instruction.Dump(LabelName, VariableName, isw);
-    //                     }
-    //                 }
-    //
-    //                 isw.WriteLine();
-    //             }
-    //
-    //             return ValueTask.CompletedTask;
-    //         });
-    //     await module.Accept(visitor);
-    //     return sw.ToString();
-    // }
-
-
     public static async ValueTask Dump<TBody>(this ShaderModuleDeclaration<TBody> module, IndentedTextWriter writer)
         where TBody : IFunctionBody
     {
@@ -445,11 +209,6 @@ public static class ShaderModuleExtension
             return ValueTask.CompletedTask;
         });
         await module.Accept(visitor);
-    }
-
-    public static string Dump(this ShaderModuleDeclaration<FunctionBody4> module)
-    {
-        throw new NotImplementedException();
     }
 
     public static async ValueTask<string> Dump<TBody>(this ShaderModuleDeclaration<TBody> module)

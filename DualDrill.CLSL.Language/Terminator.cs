@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language.ControlFlow;
-using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
@@ -149,7 +148,4 @@ public static class TerminatorExtension
 
     public static ITerminator<TR, TE> Map<TT, TE, TR>(this ITerminator<TT, TE> t, ILabelMap<TT, TR> f)
         => t.Select(f.MapLabel, static x => x);
-
-    public static ITerminator<TT, TR> Map<TT, TE, TR>(this ITerminator<TT, TE> t, IExprTransform<TE, TR> f)
-        => t.Select(static x => x, f.MapExpr);
 }

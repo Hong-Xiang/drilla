@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.ControlFlowGraph;
-using DualDrill.CLSL.Language.Declaration;
+﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Symbol;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
@@ -11,18 +10,6 @@ public interface IBasicBlockTransform<TSourceBasicBlock, TResultBasicBlock>
     where TResultBasicBlock : IBasicBlock2
 {
     TResultBasicBlock Apply(TSourceBasicBlock basicBlock);
-}
-
-public interface IBasicBlockTraverser<TBasicBlock>
-{
-    record struct Context(
-        LocalDeclarationContext DeclarationContext,
-        ImmutableStack<IStructuredControlFlowRegion> Regions
-    )
-    {
-    }
-
-    void Visit(Context context, TBasicBlock basicBlock);
 }
 
 public sealed class FunctionBody<TBodyData> : IFunctionBody, ILocalDeclarationContext

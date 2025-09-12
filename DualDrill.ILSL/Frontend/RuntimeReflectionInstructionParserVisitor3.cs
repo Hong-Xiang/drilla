@@ -1,14 +1,12 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Expression;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.Statement;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
@@ -16,8 +14,6 @@ using DualDrill.Common.Nat;
 using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Frontend;
-
-using ShaderExpr = IExpressionTree<IShaderValue>;
 
 sealed class RuntimeReflectionInstructionParserVisitor3
     : ICilInstructionVisitor<Unit>
@@ -28,27 +24,17 @@ sealed class RuntimeReflectionInstructionParserVisitor3
     public ImmutableStack<IShaderValue> Stack { get; private set; }
 
     public ITerminator<RegionJump, IShaderValue>? Terminator { get; private set; } = null;
-    public IReadOnlyList<ShaderStmt> Statements => statements;
-
-    List<ShaderStmt> statements = [];
 
     public IReadOnlyList<Instruction2<IShaderValue, IShaderValue>> Instructions => instructions;
     List<Instruction2<IShaderValue, IShaderValue>> instructions = [];
 
-    private IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, ShaderStmt> Stmt { get; }
-        = Statement.Factory<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration>();
-
     private ITerminatorSemantic<RegionJump, IShaderValue, ITerminator<RegionJump, IShaderValue>> TermF { get; }
         = Language.Terminator.Factory<RegionJump, IShaderValue>();
-
-    private IExpressionSemantic<IExpressionTree<IShaderValue>, IExpression<ShaderExpr>> ExprF { get; } =
-        Language.Expression.Expression.Factory<IExpressionTree<IShaderValue>>();
 
     IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction2<IShaderValue, IShaderValue>> InstF { get; }
         = Instruction2.Factory;
 
 
-    IExpressionSemantic<ShaderExpr, IExpression<ShaderExpr>> Expr = Expression.Factory<ShaderExpr>();
     private PointerOperationFactory Pointer = new();
     //public IShaderType GetValueType(IShaderValue value) => ValueTypes[value];
     public IShaderType GetValueType(IShaderValue value) => value.Type;
@@ -65,8 +51,6 @@ sealed class RuntimeReflectionInstructionParserVisitor3
         Successor = successor;
         Stack = inputStack;
     }
-
-    ShaderExpr CreateValueExpr(IShaderValue v) => ExpressionTree.Value(v);
 
     IShaderType ConvertToCilStackType(IShaderType type)
     {

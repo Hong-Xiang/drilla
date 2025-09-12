@@ -1,6 +1,4 @@
-﻿using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.Language.ShaderAttribute;
-using Silk.NET.Maths;
+﻿using Silk.NET.Maths;
 using System.Numerics;
 
 namespace DualDrill.CLSL;

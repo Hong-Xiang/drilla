@@ -72,16 +72,6 @@ public sealed class FunctionBody4
         throw new NotImplementedException();
     }
 
-    public FunctionBody4 UpdateValue(Func<IShaderValue, IShaderValue> update)
-    {
-        throw new NotImplementedException();
-    }
-
-    public FunctionBody4 UpdateStatement(Func<ShaderStmt, IEnumerable<ShaderStmt>> update)
-    {
-        throw new NotImplementedException();
-    }
-
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
 
     public ImmutableArray<Label> Labels { get; }
