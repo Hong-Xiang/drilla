@@ -63,6 +63,17 @@ internal sealed class DevelopShaderModule : ISharpShader
         //return normalize(n);
     }
 
+    [ShaderMethod]
+    static int condExpr(int a, int b)
+    {
+        //float cay = ra - 0.5f;
+        //float cbx = ra * rb;
+
+        //float s = (cbx < 0.0f && cay < 0.0f) ? -1.0f : 1.0f;
+
+        //return s + 0.1f;
+        return (a < 0 && b < 1f) ? 2 : 3;
+    }
 
     // [Vertex]
     // public static int SimpleLoop(int x)

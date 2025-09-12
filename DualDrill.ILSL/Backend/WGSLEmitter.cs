@@ -353,6 +353,7 @@ public class WGSLEmitter
                 IVectorComponentGetOperation o => $"{e}.{o.Component.Name}",
                 IVectorFromScalarConstructOperation o => $"{op.ResultType.Name}({e})",
                 UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
+                VectorNumericUnaryOperation<N3, FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
                 _ => $"{op.Name}({e})"
             };
 
@@ -380,6 +381,8 @@ public class WGSLEmitter
         public string VectorSwizzleSet(Instruction2<string, string> ctx, IVectorSwizzleSetOperation op, string ptr, string value)
             => op.Name;
 
+        public string VectorComponentSet(Instruction2<string, string> ctx, IVectorComponentSetOperation op, string ptr, string value)
+            => $"{ptr}.{op.Component.Name} = {value}";
 
         public readonly static InstCodeSemantic Instance = new();
     }
@@ -443,7 +446,7 @@ public class WGSLEmitter
 
     Unit IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>.Loop(Label label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody> body, Label? next, Label? breakNext)
     {
-        Writer.Write("while(true)");
+        Writer.Write("for(;;)");
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// loop " + GetLabelName(label));
@@ -461,7 +464,6 @@ public class WGSLEmitter
             NextBlock.Push(nextL);
             OnShaderRegionBody(body.Last);
             NextBlock.Pop();
-            ContinueTarget.Pop();
             if (nextL is not null)
             {
                 if (ContinueTarget.Count > 0 && ContinueTarget.Peek().Equals(nextL))
@@ -472,6 +474,7 @@ public class WGSLEmitter
                     EmitBranch(nextL);
                 }
             }
+            ContinueTarget.Pop();
         }
         return default;
     }
@@ -535,7 +538,7 @@ public class WGSLEmitter
         return default;
     }
 
-    HashSet<Label> Emitted = [];
+    Dictionary<Label, int> Emitted = [];
 
     void EmitBranch(Label target)
     {
@@ -568,14 +571,29 @@ public class WGSLEmitter
         {
             return;
         }
-        if (Emitted.Contains(target))
+        var emitCount = Emitted.TryGetValue(target, out var c) ? c : 0;
+        if (emitCount > 0)
         {
-            Writer.WriteLine($"Invalid duplicate label {GetLabelName(target)}");
+            Writer.WriteLine($"// multiple emit label {GetLabelName(target)} -> {emitCount}");
+
+            if (Blocks[target].Definition.Kind == RegionKind.Loop)
+            {
+                Writer.WriteLine($"Invalid duplicate label {GetLabelName(target)}");
+                return;
+            }
             //Blocks[target].Definition.Evaluate(this);
-            return;
         }
-        Emitted.Add(target);
+        Emitted[target] = emitCount + 1;
         Blocks[target].Definition.Evaluate(this);
+
+        //if (Emitted.Contains(target))
+        //{
+        //    Writer.WriteLine($"Invalid duplicate label {GetLabelName(target)}");
+        //    //Blocks[target].Definition.Evaluate(this);
+        //    return;
+        //}
+        //Emitted.Add(target);
+        //Blocks[target].Definition.Evaluate(this);
     }
 
     Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)

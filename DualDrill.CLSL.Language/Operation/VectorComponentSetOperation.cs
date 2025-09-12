@@ -1,6 +1,7 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
@@ -66,4 +67,6 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
     public IStatement CreateStatement(IExpression target, IExpression value)
         => TVector.Instance.Accept(new SizedVecStmtVisitor(target, value));
 
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>
+        => semantic.VectorComponentSet(inst, this, inst.Operand0, inst.Operand1);
 }

@@ -1,0 +1,93 @@
+﻿using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
+using DualDrill.CLSL.Language.Symbol;
+using System.Collections.Immutable;
+
+namespace DualDrill.CLSL.Language.Transform;
+
+public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
+{
+    public IDeclaration? VisitFunction(FunctionDeclaration decl)
+        => decl;
+
+    sealed record class JumpStoreSemantic(
+        IReadOnlyDictionary<Label, ImmutableArray<IShaderValue>> Parameters,
+        IReadOnlyDictionary<IShaderValue, VariableDeclaration> ParameterVars
+    ) : ITerminatorSemantic<RegionJump, IShaderValue, IEnumerable<Instruction2<IShaderValue, IShaderValue>>>
+    {
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Br(RegionJump target)
+            => Parameters[target.Label].Zip(target.Arguments, StoreLocalVar);
+
+        Instruction2<IShaderValue, IShaderValue> StoreLocalVar(IShaderValue p, IShaderValue a)
+        {
+            return Instruction2.Factory.Store(default, new Operation.StoreOperation(), ParameterVars[p].Value, a);
+        }
+
+
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget)
+            => [
+                .. Parameters[trueTarget.Label].Zip(trueTarget.Arguments, StoreLocalVar),
+                .. Parameters[falseTarget.Label].Zip(falseTarget.Arguments, StoreLocalVar),
+               ];
+
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> ReturnExpr(IShaderValue expr)
+            => [];
+
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> ReturnVoid()
+            => [];
+    }
+
+    public FunctionBody4 VisitFunctionBody(FunctionBody4 body)
+    {
+        var model = new SemanticModel(body);
+        Dictionary<Label, ImmutableArray<IShaderValue>> regionParamters = [];
+        body.Body.Traverse((t, l, b) =>
+        {
+            regionParamters.Add(l, b.Parameters);
+            return false;
+        });
+        Dictionary<IShaderValue, VariableDeclaration> regionParamtersVars = regionParamters.Values
+            .SelectMany(p => p)
+            .ToDictionary(x => x, x => new VariableDeclaration(FunctionAddressSpace.Instance, string.Empty, x.Type, []));
+        Dictionary<IShaderValue, IShaderValue> regionParamtersUses = regionParamtersVars.ToDictionary(x => x.Key, x => (IShaderValue)ShaderValue.Create(x.Key.Type));
+        return body.MapRegionBody(bb =>
+        {
+            return bb with
+            {
+                Parameters = [],
+                Body = Seq.Create(
+                    [.. bb.Parameters.Select(p => Instruction2.Factory.Load(default, new Operation.LoadOperation(), regionParamtersUses[p], regionParamtersVars[p].Value)),
+                     .. bb.Body.Elements,
+                     .. bb.Body.Last.Evaluate(new JumpStoreSemantic(regionParamters, regionParamtersVars))],
+                    bb.Body.Last
+                )
+            };
+        }).MapValueUse(v =>
+        {
+            if (regionParamtersUses.TryGetValue(v, out var lv))
+            {
+                return lv;
+            }
+            else
+            {
+                return v;
+            }
+        });
+    }
+
+    public IDeclaration? VisitMember(MemberDeclaration decl)
+        => decl;
+
+    public IDeclaration? VisitParameter(ParameterDeclaration decl)
+        => decl;
+
+    public IDeclaration? VisitStructure(StructureDeclaration decl)
+        => decl;
+
+    public IDeclaration? VisitValue(ValueDeclaration decl)
+        => decl;
+
+    public IDeclaration? VisitVariable(VariableDeclaration decl)
+        => decl;
+}

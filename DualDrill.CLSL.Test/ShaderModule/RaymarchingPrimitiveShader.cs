@@ -1049,10 +1049,6 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         public vec3f32 col2;
     }
 
-    public struct VertexInput
-    {
-        [Location(0)] public vec2f32 position;
-    }
 
     [Group(0)][Binding(0)][Uniform] static vec2f32 iResolution;
 
@@ -1060,9 +1056,9 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
-    static vec4f32 vs(VertexInput vert)
+    static vec4f32 vs([Location(0)] vec2f32 position)
     {
-        return vec4(vert.position.xy, 0.0f, 1.0f);
+        return vec4(position.xy, 0.0f, 1.0f);
     }
 
     [Fragment]

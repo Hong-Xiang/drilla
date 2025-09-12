@@ -461,9 +461,10 @@ sealed class RuntimeReflectionInstructionParserVisitor3
 
                         if (bs is IVectorComponentSetOperation vcs)
                         {
+                            Emit(InstF.VectorComponentSet(default, vcs, l, r));
                             //var cp = EmitLet(vcs.ElementType.GetPtrType(), ExprF.AddressOfChain(new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), CreateValueExpr(l)));
-                            var cp = EmitLet(vcs.ElementType.GetPtrType(((IPtrType)l.Type).AddressSpace), res => InstF.AddressOfChain(default, new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), res, l));
-                            DoStore(cp, r);
+                            //var cp = EmitLet(vcs.ElementType.GetPtrType(((IPtrType)l.Type).AddressSpace), res => InstF.AddressOfChain(default, new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), res, l));
+                            //DoStore(cp, r);
                             //Emit(Stmt.Set(cp, r));
                             return;
                         }

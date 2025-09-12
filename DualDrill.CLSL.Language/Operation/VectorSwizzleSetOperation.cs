@@ -1,5 +1,6 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation;
@@ -35,4 +36,7 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
 
     public IStatement CreateStatement(IExpression target, IExpression value)
         => TPattern.Instance.CreateSwizzleSetStatement<TElement>(target, value);
+
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>
+        => semantic.VectorSwizzleSet(inst, this, inst[0], inst[1]);
 }

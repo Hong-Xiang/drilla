@@ -87,8 +87,7 @@ public sealed class FunctionToOperationPass
                             {
                                 var p = ShaderValue.Create(vcs.ElementType.GetPtrType(FunctionAddressSpace.Instance));
                                 return [
-                                    InstF.AddressOfChain(default,new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), p, l),
-                                    InstF.Store(default, new StoreOperation(), p, r)
+                                    InstF.VectorComponentSet(default, vcs, l, r)
                                 ];
                             }
 
@@ -152,6 +151,8 @@ public sealed class FunctionToOperationPass
         public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Store(Instruction2<IShaderValue, IShaderValue> ctx, StoreOperation op, IShaderValue ptr, IShaderValue value)
             => [ctx];
 
+        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> VectorComponentSet(Instruction2<IShaderValue, IShaderValue> ctx, IVectorComponentSetOperation op, IShaderValue ptr, IShaderValue value)
+            => [ctx];
 
         public IEnumerable<Instruction2<IShaderValue, IShaderValue>> VectorCompositeConstruction(Instruction2<IShaderValue, IShaderValue> ctx, VectorCompositeConstructionOperation op, IShaderValue result, IReadOnlyList<IShaderValue> components)
             => [ctx];

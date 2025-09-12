@@ -114,6 +114,9 @@ public static class Instruction2
         public Instruction2<IShaderValue, IShaderValue> Store(Unit ctx, StoreOperation op, IShaderValue ptr, IShaderValue value)
             => Create(op, default, [ptr, value]);
 
+        public Instruction2<IShaderValue, IShaderValue> VectorComponentSet(Unit ctx, IVectorComponentSetOperation op, IShaderValue ptr, IShaderValue value)
+            => Create(op, default, [ptr, value]);
+
         public Instruction2<IShaderValue, IShaderValue> VectorCompositeConstruction(Unit ctx, VectorCompositeConstructionOperation op, IShaderValue result, IReadOnlyList<IShaderValue> components)
             => Create(op, result, components);
 

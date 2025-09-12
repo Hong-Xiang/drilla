@@ -343,7 +343,11 @@ public class SlangEmitter
             var ns = s.Select(v =>
                 v switch
                 {
-                    FunctionDeclaration f => f.Name,
+                    FunctionDeclaration f => f.Name switch
+                    {
+                        "mix" => "lerp",
+                        _ => f.Name
+                    },
                     _ => GetValueName(v)
                 }, v => $"let {GetValueName(v)} : {v.Type.Name}");
             Writer.WriteLine(ns.Evaluate(this));
@@ -407,7 +411,6 @@ public class SlangEmitter
             NextBlock.Push(nextL);
             OnShaderRegionBody(body.Last);
             NextBlock.Pop();
-            ContinueTarget.Pop();
             if (nextL is not null)
             {
                 if (ContinueTarget.Count > 0 && ContinueTarget.Peek().Equals(nextL))
@@ -418,6 +421,7 @@ public class SlangEmitter
                     EmitBranch(nextL);
                 }
             }
+            ContinueTarget.Pop();
         }
         return default;
     }
@@ -666,7 +670,7 @@ public class SlangEmitter
         return default;
     }
 
-    HashSet<Label> Emitted = [];
+    Dictionary<Label, int> Emitted = [];
 
     void EmitBranch(Label target)
     {
@@ -699,13 +703,19 @@ public class SlangEmitter
         {
             return;
         }
-        if (Emitted.Contains(target))
+        var emitCount = Emitted.TryGetValue(target, out var c) ? c : 0;
+        if (emitCount > 0)
         {
-            Writer.WriteLine($"Invalid duplicate label {GetLabelName(target)}");
+            Writer.WriteLine($"// multiple emit label {GetLabelName(target)} -> {emitCount}");
+
+            if (Blocks[target].Definition.Kind == RegionKind.Loop)
+            {
+                Writer.WriteLine($"Invalid duplicate label {GetLabelName(target)}");
+                return;
+            }
             //Blocks[target].Definition.Evaluate(this);
-            return;
         }
-        Emitted.Add(target);
+        Emitted[target] = emitCount + 1;
         Blocks[target].Definition.Evaluate(this);
     }
 
@@ -788,6 +798,7 @@ public class SlangEmitter
             IVectorComponentGetOperation o => $"{e}.{o.Component.Name}",
             IVectorFromScalarConstructOperation o => $"{op.ResultType.Name}({e})",
             UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
+            VectorNumericUnaryOperation<N3, FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
             _ => $"{op.Name}({e})"
         };
         return $"{result} = {code};";
@@ -810,5 +821,10 @@ public class SlangEmitter
         var sw = new StringBuilder();
         var rv = (IVecType)op.ResultType;
         return $"{result} = vector<{rv.ElementType.Name}, {rv.Size.Value}>({string.Join(',', components)});";
+    }
+
+    string IOperationSemantic<Instruction2<string, string>, string, string, string>.VectorComponentSet(Instruction2<string, string> ctx, IVectorComponentSetOperation op, string ptr, string value)
+    {
+        return $"{ptr}.{op.Component.Name} = {value};";
     }
 }
