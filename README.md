@@ -57,3 +57,7 @@ Features:
 - [ ] LLVM backend (for vectorization) and ideally use CIL -> LLVM auto vectorization -> CIL (intrinsics)
 - [ ] CUDA backend
 
+
+## Current Progress
+
+Start Clean Legacy Code and Use New SSA based IR
