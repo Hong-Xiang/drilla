@@ -45,28 +45,28 @@ public sealed class FunctionToOperationPass
 
     public IDeclaration? VisitVariable(VariableDeclaration decl) => decl;
 
-    private IEnumerable<Instruction2<IShaderValue, IShaderValue>> TransformInstruction(
-        Instruction2<IShaderValue, IShaderValue> inst) =>
+    private IEnumerable<Instruction<IShaderValue, IShaderValue>> TransformInstruction(
+        Instruction<IShaderValue, IShaderValue> inst) =>
         inst.Evaluate(new InstructionTransformSemantic());
 
     private sealed record class InstructionTransformSemantic
-        : IOperationSemantic<Instruction2<IShaderValue, IShaderValue>, IShaderValue, IShaderValue,
-            IEnumerable<Instruction2<IShaderValue, IShaderValue>>>
+        : IOperationSemantic<Instruction<IShaderValue, IShaderValue>, IShaderValue, IShaderValue,
+            IEnumerable<Instruction<IShaderValue, IShaderValue>>>
     {
-        private IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction2<IShaderValue, IShaderValue>> InstF
+        private IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction<IShaderValue, IShaderValue>> InstF
         {
             get;
         } = Instruction2.Factory;
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> AddressOfChain(
-            Instruction2<IShaderValue, IShaderValue> ctx, IAccessChainOperation op, IShaderValue result,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> AddressOfChain(
+            Instruction<IShaderValue, IShaderValue> ctx, IAccessChainOperation op, IShaderValue result,
             IShaderValue target) => [ctx];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> AddressOfChain(
-            Instruction2<IShaderValue, IShaderValue> ctx, IAccessChainOperation op, IShaderValue result,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> AddressOfChain(
+            Instruction<IShaderValue, IShaderValue> ctx, IAccessChainOperation op, IShaderValue result,
             IShaderValue target, IShaderValue index) => [ctx];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Call(Instruction2<IShaderValue, IShaderValue> ctx,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Call(Instruction<IShaderValue, IShaderValue> ctx,
             CallOperation op, IShaderValue result, IShaderValue fv, IReadOnlyList<IShaderValue> arguments)
         {
             var f = (FunctionDeclaration)fv;
@@ -150,40 +150,40 @@ public sealed class FunctionToOperationPass
             return [ctx];
         }
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Literal(
-            Instruction2<IShaderValue, IShaderValue> ctx, LiteralOperation op, IShaderValue result, ILiteral value) =>
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Literal(
+            Instruction<IShaderValue, IShaderValue> ctx, LiteralOperation op, IShaderValue result, ILiteral value) =>
             [ctx];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Load(Instruction2<IShaderValue, IShaderValue> ctx,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Load(Instruction<IShaderValue, IShaderValue> ctx,
             LoadOperation op, IShaderValue result, IShaderValue ptr) => [ctx];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Nop(Instruction2<IShaderValue, IShaderValue> ctx,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Nop(Instruction<IShaderValue, IShaderValue> ctx,
             NopOperation op) => [ctx];
 
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Operation1(
-            Instruction2<IShaderValue, IShaderValue> ctx, IUnaryExpressionOperation op, IShaderValue result,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Operation1(
+            Instruction<IShaderValue, IShaderValue> ctx, IUnaryExpressionOperation op, IShaderValue result,
             IShaderValue e) => [ctx];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Operation2(
-            Instruction2<IShaderValue, IShaderValue> ctx, IBinaryExpressionOperation op, IShaderValue result,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Operation2(
+            Instruction<IShaderValue, IShaderValue> ctx, IBinaryExpressionOperation op, IShaderValue result,
             IShaderValue l, IShaderValue r) => [ctx];
 
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Store(Instruction2<IShaderValue, IShaderValue> ctx,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Store(Instruction<IShaderValue, IShaderValue> ctx,
             StoreOperation op, IShaderValue ptr, IShaderValue value) => [ctx];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> VectorComponentSet(
-            Instruction2<IShaderValue, IShaderValue> ctx, IVectorComponentSetOperation op, IShaderValue ptr,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> VectorComponentSet(
+            Instruction<IShaderValue, IShaderValue> ctx, IVectorComponentSetOperation op, IShaderValue ptr,
             IShaderValue value) => [ctx];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> VectorCompositeConstruction(
-            Instruction2<IShaderValue, IShaderValue> ctx, VectorCompositeConstructionOperation op, IShaderValue result,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> VectorCompositeConstruction(
+            Instruction<IShaderValue, IShaderValue> ctx, VectorCompositeConstructionOperation op, IShaderValue result,
             IReadOnlyList<IShaderValue> components) => [ctx];
 
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> VectorSwizzleSet(
-            Instruction2<IShaderValue, IShaderValue> ctx, IVectorSwizzleSetOperation op, IShaderValue ptr,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> VectorSwizzleSet(
+            Instruction<IShaderValue, IShaderValue> ctx, IVectorSwizzleSetOperation op, IShaderValue ptr,
             IShaderValue value) => [ctx];
     }
 }

@@ -18,7 +18,7 @@ namespace DualDrill.CLSL.Frontend;
 internal sealed class RuntimeReflectionInstructionParserVisitor3
     : ICilInstructionVisitor<Unit>
 {
-    private readonly List<Instruction2<IShaderValue, IShaderValue>> instructions = [];
+    private readonly List<Instruction<IShaderValue, IShaderValue>> instructions = [];
 
 
     private readonly PointerOperationFactory Pointer = new();
@@ -43,12 +43,12 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
 
     public ITerminator<RegionJump, IShaderValue>? Terminator { get; private set; }
 
-    public IReadOnlyList<Instruction2<IShaderValue, IShaderValue>> Instructions => instructions;
+    public IReadOnlyList<Instruction<IShaderValue, IShaderValue>> Instructions => instructions;
 
     private ITerminatorSemantic<RegionJump, IShaderValue, ITerminator<RegionJump, IShaderValue>> TermF { get; }
         = Language.Terminator.Factory<RegionJump, IShaderValue>();
 
-    private IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction2<IShaderValue, IShaderValue>> InstF
+    private IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction<IShaderValue, IShaderValue>> InstF
     {
         get;
     }
@@ -512,12 +512,12 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         return r;
     }
 
-    private void Emit(Instruction2<IShaderValue, IShaderValue> inst)
+    private void Emit(Instruction<IShaderValue, IShaderValue> inst)
     {
         instructions.Add(inst);
     }
 
-    private IShaderValue EmitLet(IShaderType t, Func<IShaderValue, Instruction2<IShaderValue, IShaderValue>> e)
+    private IShaderValue EmitLet(IShaderType t, Func<IShaderValue, Instruction<IShaderValue, IShaderValue>> e)
     {
         var value = CreateValue(t);
         instructions.Add(e(value));

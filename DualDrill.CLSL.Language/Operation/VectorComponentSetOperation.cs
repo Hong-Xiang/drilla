@@ -52,7 +52,7 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
 
     public IVecType VecType => TVector.Instance;
 
-    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
-        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO> =>
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
         semantic.VectorComponentSet(inst, this, inst.Operand0, inst.Operand1);
 }

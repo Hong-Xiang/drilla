@@ -11,7 +11,7 @@ public interface IBinaryExpressionOperation : IOperation
     public IShaderType ResultType { get; }
     public IBinaryOp BinaryOp { get; }
 
-    TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) =>
+    TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic) =>
         semantic.Operation2(inst, this, inst.Result, inst[0], inst[1]);
 }
 

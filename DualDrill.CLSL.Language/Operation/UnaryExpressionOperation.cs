@@ -11,7 +11,7 @@ public interface IUnaryExpressionOperation : IOperation
 {
     IShaderType SourceType { get; }
     IShaderType ResultType { get; }
-    TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) =>
+    TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic) =>
         semantic.Operation1(inst, this, inst.Result, inst[0]);
 
 

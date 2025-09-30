@@ -25,8 +25,8 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
     public static VectorSwizzleSetOperation<TPattern, TElement> Instance { get; } = new();
     public string Name => $"set.{TPattern.Instance.Name}.{TElement.Instance.Name}";
 
-    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
-        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO> =>
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
         semantic.VectorSwizzleSet(inst, this, inst[0], inst[1]);
 
     public Swizzle.IPattern Pattern => TPattern.Instance;

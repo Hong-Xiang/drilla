@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation;
 

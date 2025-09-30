@@ -14,8 +14,8 @@ public sealed class LiteralOperation : IOperation
 
     public IOperationMethodAttribute GetOperationMethodAttribute() => throw new NotImplementedException();
 
-    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
-        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO> =>
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
         semantic.Literal(inst, this, inst.Result,
             inst.Payload as ILiteral ?? throw new ArgumentException("invalid payload for instruction"));
 }

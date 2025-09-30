@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.Declaration;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
+[Obsolete]
 public enum SwizzleComponent
 {
     x,

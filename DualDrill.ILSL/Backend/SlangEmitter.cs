@@ -25,7 +25,7 @@ public class SlangEmitter
       //, IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>
     , ILiteralSemantic<string>
     , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
-    , IOperationSemantic<Instruction2<string, string>, string, string, string>
+    , IOperationSemantic<Instruction<string, string>, string, string, string>
 {
     private readonly Dictionary<Label, RegionTree<Label, ShaderRegionBody>> Blocks = [];
     private Stack<Label> BreakTarget = [];
@@ -239,46 +239,46 @@ public class SlangEmitter
     string ILiteralSemantic<string>.F64(double value)
         => value.ToString();
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Nop(
-        Instruction2<string, string> ctx, NopOperation op)
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.Nop(
+        Instruction<string, string> ctx, NopOperation op)
         => "";
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Load(
-        Instruction2<string, string> ctx, LoadOperation op, string result, string ptr)
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.Load(
+        Instruction<string, string> ctx, LoadOperation op, string result, string ptr)
         => $"{result} = {ptr};";
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Store(
-        Instruction2<string, string> ctx, StoreOperation op, string ptr, string value)
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.Store(
+        Instruction<string, string> ctx, StoreOperation op, string ptr, string value)
         => $"{ptr} = {value};";
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.VectorSwizzleSet(
-        Instruction2<string, string> ctx, IVectorSwizzleSetOperation op, string ptr, string value)
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.VectorSwizzleSet(
+        Instruction<string, string> ctx, IVectorSwizzleSetOperation op, string ptr, string value)
         => $"{ptr}.{op.Pattern.Name} = {value};";
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Call(
-        Instruction2<string, string> ctx, CallOperation op, string result, string f, IReadOnlyList<string> arguments) =>
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.Call(
+        Instruction<string, string> ctx, CallOperation op, string result, string f, IReadOnlyList<string> arguments) =>
         // TODO: handle void type
         $"{result} = {f}({string.Join(',', arguments)});";
 
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Literal(
-        Instruction2<string, string> ctx, LiteralOperation op, string result, ILiteral value) =>
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.Literal(
+        Instruction<string, string> ctx, LiteralOperation op, string result, ILiteral value) =>
         $"{result} = {value.Evaluate(this)};";
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.AddressOfChain(
-        Instruction2<string, string> ctx, IAccessChainOperation op, string result, string target)
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.AddressOfChain(
+        Instruction<string, string> ctx, IAccessChainOperation op, string result, string target)
     {
         if (op is AddressOfVecComponentOperation vcop) return $"{result} = {target}.{vcop.Component.Name};";
 
         return $"{result} = {op.Name}({target});";
     }
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.AddressOfChain(
-        Instruction2<string, string> ctx, IAccessChainOperation op, string result, string target, string index) =>
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.AddressOfChain(
+        Instruction<string, string> ctx, IAccessChainOperation op, string result, string target, string index) =>
         throw new NotImplementedException();
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Operation1(
-        Instruction2<string, string> ctx, IUnaryExpressionOperation op, string result, string e)
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.Operation1(
+        Instruction<string, string> ctx, IUnaryExpressionOperation op, string result, string e)
     {
         var code = op switch
         {
@@ -293,16 +293,16 @@ public class SlangEmitter
         return $"{result} = {code};";
     }
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.Operation2(
-        Instruction2<string, string> ctx, IBinaryExpressionOperation op, string result, string l, string r)
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.Operation2(
+        Instruction<string, string> ctx, IBinaryExpressionOperation op, string result, string l, string r)
     {
         if (op.BinaryOp is ISymbolOp s) return $"{result} = {l} {s.Symbol} {r};";
 
         return $"{result} = {op.Name}({l},{r});";
     }
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.VectorCompositeConstruction(
-        Instruction2<string, string> ctx, VectorCompositeConstructionOperation op, string result,
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.VectorCompositeConstruction(
+        Instruction<string, string> ctx, VectorCompositeConstructionOperation op, string result,
         IReadOnlyList<string> components)
     {
         var sw = new StringBuilder();
@@ -310,8 +310,8 @@ public class SlangEmitter
         return $"{result} = vector<{rv.ElementType.Name}, {rv.Size.Value}>({string.Join(',', components)});";
     }
 
-    string IOperationSemantic<Instruction2<string, string>, string, string, string>.VectorComponentSet(
-        Instruction2<string, string> ctx, IVectorComponentSetOperation op, string ptr, string value) =>
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.VectorComponentSet(
+        Instruction<string, string> ctx, IVectorComponentSetOperation op, string ptr, string value) =>
         $"{ptr}.{op.Component.Name} = {value};";
 
     Unit IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>.Block(

@@ -15,8 +15,8 @@ public sealed class CallOperation(FunctionType calleeType) : IOperation
 
     public FunctionDeclaration Function => throw new NotImplementedException();
 
-    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
-        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO> =>
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
         semantic.Call(inst, this, inst.Result, inst[0], [.. inst.Operands.ToImmutableArray()[1..]]);
 
     public IOperationMethodAttribute GetOperationMethodAttribute() => throw new NotImplementedException();

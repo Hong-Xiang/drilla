@@ -28,8 +28,8 @@ public interface IOperation
     string Name { get; }
     IOperationMethodAttribute GetOperationMethodAttribute();
 
-    TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
-        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>;
+    TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO>;
 }
 
 public static class OperationExtension

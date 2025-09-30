@@ -63,24 +63,24 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
     private sealed record class JumpStoreSemantic(
         IReadOnlyDictionary<Label, ImmutableArray<IShaderValue>> Parameters,
         IReadOnlyDictionary<IShaderValue, VariableDeclaration> ParameterVars
-    ) : ITerminatorSemantic<RegionJump, IShaderValue, IEnumerable<Instruction2<IShaderValue, IShaderValue>>>
+    ) : ITerminatorSemantic<RegionJump, IShaderValue, IEnumerable<Instruction<IShaderValue, IShaderValue>>>
     {
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> Br(RegionJump target) =>
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Br(RegionJump target) =>
             Parameters[target.Label].Zip(target.Arguments, StoreLocalVar);
 
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> BrIf(IShaderValue condition, RegionJump trueTarget,
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> BrIf(IShaderValue condition, RegionJump trueTarget,
             RegionJump falseTarget) =>
         [
             .. Parameters[trueTarget.Label].Zip(trueTarget.Arguments, StoreLocalVar),
             .. Parameters[falseTarget.Label].Zip(falseTarget.Arguments, StoreLocalVar)
         ];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> ReturnExpr(IShaderValue expr) => [];
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReturnExpr(IShaderValue expr) => [];
 
-        public IEnumerable<Instruction2<IShaderValue, IShaderValue>> ReturnVoid() => [];
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReturnVoid() => [];
 
-        private Instruction2<IShaderValue, IShaderValue> StoreLocalVar(IShaderValue p, IShaderValue a) =>
+        private Instruction<IShaderValue, IShaderValue> StoreLocalVar(IShaderValue p, IShaderValue a) =>
             Instruction2.Factory.Store(default, new StoreOperation(), ParameterVars[p].Value, a);
     }
 }

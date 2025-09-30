@@ -39,6 +39,8 @@ public static class Swizzle
     {
         ComponentKind Kind { get; }
         string Name { get; }
+        
+        [Obsolete]
         SwizzleComponent LegacySwizzleComponent { get; }
     }
 

@@ -10,7 +10,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 public sealed record class ShaderRegionBody(
     Label Label,
     ImmutableArray<IShaderValue> Parameters,
-    Seq<Instruction2<IShaderValue, IShaderValue>, ITerminator<RegionJump, IShaderValue>> Body,
+    Seq<Instruction<IShaderValue, IShaderValue>, ITerminator<RegionJump, IShaderValue>> Body,
     Label? ImmediatePostDominator
 ) 
 {
@@ -31,14 +31,14 @@ public sealed record class ShaderRegionBody(
     public static ShaderRegionBody Create(
         Label label,
         ImmutableArray<IShaderValue> parameters,
-        IEnumerable<Instruction2<IShaderValue, IShaderValue>> statements,
+        IEnumerable<Instruction<IShaderValue, IShaderValue>> statements,
         ITerminator<RegionJump, IShaderValue> terminator,
         Label? immediatePostDominator
     ) =>
         new(label, parameters, Seq.Create([.. statements], terminator), immediatePostDominator);
 
     public ShaderRegionBody MapInstruction(
-        Func<Instruction2<IShaderValue, IShaderValue>, IEnumerable<Instruction2<IShaderValue, IShaderValue>>> f) =>
+        Func<Instruction<IShaderValue, IShaderValue>, IEnumerable<Instruction<IShaderValue, IShaderValue>>> f) =>
         new(
             Label,
             Parameters,

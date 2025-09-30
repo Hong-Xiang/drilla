@@ -32,6 +32,6 @@ public sealed class CommonOperationLoweringPass
 
     public IDeclaration? VisitVariable(VariableDeclaration decl) => decl;
 
-    private IEnumerable<Instruction2<IShaderValue, IShaderValue>> TransformInstruction(
-        Instruction2<IShaderValue, IShaderValue> inst) => [inst];
+    private IEnumerable<Instruction<IShaderValue, IShaderValue>> TransformInstruction(
+        Instruction<IShaderValue, IShaderValue> inst) => [inst];
 }

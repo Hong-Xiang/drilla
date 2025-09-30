@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[Obsolete()]
 public enum UnaryArithmeticOp
 {
     Minus
