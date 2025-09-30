@@ -1,7 +1,7 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree;
-using DualDrill.CLSL.Language.ShaderAttribute;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Text.Json.Serialization;
+using DualDrill.CLSL.Language.AbstractSyntaxTree;
+using DualDrill.CLSL.Language.ShaderAttribute;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -15,7 +15,7 @@ namespace DualDrill.CLSL.Language.Declaration;
 //    nameof(ShaderModuleDeclaration<IUnifiedFunctionBody<StackInstructionBasicBlock>>))]
 //[JsonDerivedType(typeof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>),
 //    nameof(ShaderModuleDeclaration<FunctionBody<CompoundStatement>>))]
-public interface IDeclaration : IShaderAstNode
+public interface IDeclaration
 {
     string Name { get; }
     ImmutableHashSet<IShaderAttribute> Attributes { get; }

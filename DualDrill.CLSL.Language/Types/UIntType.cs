@@ -1,7 +1,5 @@
-﻿using DualDrill.CLSL.Language.Operation;
-using DualDrill.Common;
+﻿using System.Diagnostics;
 using DualDrill.Common.Nat;
-using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -18,21 +16,20 @@ public sealed class UIntType<TBitWidth> : IUIntType, INumericType<UIntType<TBitW
     {
     }
 
+    public string ElementTypeName => Name;
+
     public static UIntType<TBitWidth> Instance { get; } = new();
 
     public string Name => $"u{BitWidth.Value}";
 
     public int ByteSize => BitWidth.Value / 8;
 
-    public string ElementTypeName => Name;
-
     public IBitWidth BitWidth => TBitWidth.BitWidth;
 
-    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
-        => visitor.Visit(this);
+    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T> =>
+        visitor.Visit(this);
 
-    T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
-        => semantic.UIntType(this);
+    T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => semantic.UIntType(this);
 
     public IIntType SameWidthIntType => IntType<TBitWidth>.Instance;
 }

@@ -1,6 +1,5 @@
-﻿using DualDrill.CLSL.Language.Operation;
+﻿using System.Diagnostics;
 using DualDrill.Common.Nat;
-using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -15,9 +14,8 @@ public sealed class BoolType : IScalarType<BoolType>, IBasicPrimitiveType<BoolTy
 
     public IBitWidth BitWidth { get; } = N8.Instance;
 
-    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
-        => visitor.Visit(this);
+    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T> =>
+        visitor.Visit(this);
 
-    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
-        => semantic.BoolType(this);
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => semantic.BoolType(this);
 }

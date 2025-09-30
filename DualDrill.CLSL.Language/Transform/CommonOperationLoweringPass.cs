@@ -8,8 +8,7 @@ namespace DualDrill.CLSL.Language.Transform;
 public sealed class CommonOperationLoweringPass
     : IShaderModuleSimplePass
 {
-    public IDeclaration? VisitFunction(FunctionDeclaration decl)
-        => decl;
+    public IDeclaration? VisitFunction(FunctionDeclaration decl) => decl;
 
     public FunctionBody4 VisitFunctionBody(FunctionBody4 body)
     {
@@ -22,23 +21,17 @@ public sealed class CommonOperationLoweringPass
         );
     }
 
-    IEnumerable<Instruction2<IShaderValue, IShaderValue>> TransformInstruction(Instruction2<IShaderValue, IShaderValue> inst)
-        => [inst];
 
+    public IDeclaration? VisitMember(MemberDeclaration decl) => decl;
 
+    public IDeclaration? VisitParameter(ParameterDeclaration decl) => decl;
 
-    public IDeclaration? VisitMember(MemberDeclaration decl)
-        => decl;
+    public IDeclaration? VisitStructure(StructureDeclaration decl) => decl;
 
-    public IDeclaration? VisitParameter(ParameterDeclaration decl)
-        => decl;
+    public IDeclaration? VisitValue(ValueDeclaration decl) => decl;
 
-    public IDeclaration? VisitStructure(StructureDeclaration decl)
-        => decl;
+    public IDeclaration? VisitVariable(VariableDeclaration decl) => decl;
 
-    public IDeclaration? VisitValue(ValueDeclaration decl)
-        => decl;
-
-    public IDeclaration? VisitVariable(VariableDeclaration decl)
-        => decl;
+    private IEnumerable<Instruction2<IShaderValue, IShaderValue>> TransformInstruction(
+        Instruction2<IShaderValue, IShaderValue> inst) => [inst];
 }

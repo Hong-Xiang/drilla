@@ -1,5 +1,5 @@
-﻿using DualDrill.Common.Nat;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -17,13 +17,13 @@ public static partial class ShaderType
     public static ImmutableArray<IScalarType> NumericScalarTypes => [.. IntegerTypes, .. FloatTypes];
     public static ImmutableArray<IScalarType> ScalarTypes => [Bool, .. NumericScalarTypes];
 
-    public static IEnumerable<IShaderType> GetVecTypes(IScalarType type) =>
-        from r in Ranks
-        select GetVecType(r, type);
-    public static IEnumerable<IShaderType> GetScalarOrVectorTypes(IScalarType type) =>
-        [type, .. GetVecTypes(type)];
-
     public static IShaderType Vec4F32 => GetVecType(N4.Instance, F32);
     public static IShaderType Vec3F32 => VecType<N3, FloatType<N32>>.Instance;
     public static IShaderType Vec2F32 => GetVecType(N2.Instance, F32);
+
+    public static IEnumerable<IShaderType> GetVecTypes(IScalarType type) =>
+        from r in Ranks
+        select GetVecType(r, type);
+
+    public static IEnumerable<IShaderType> GetScalarOrVectorTypes(IScalarType type) => [type, .. GetVecTypes(type)];
 }

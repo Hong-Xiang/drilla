@@ -1,4 +1,8 @@
-﻿using DotNext.Collections.Generic;
+﻿using System.Collections.Frozen;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Analysis;
@@ -10,24 +14,23 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using System.Collections.Frozen;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace DualDrill.CLSL.Frontend;
 
 /// <summary>
-/// Parse shader module metadata from reflection APIs, 
-/// including all types, shader module variables, functions signatures, etc.
-/// method bodies are not parsed.
+///     Parse shader module metadata from reflection APIs,
+///     including all types, shader module variables, functions signatures, etc.
+///     method bodies are not parsed.
 /// </summary>
 /// <param name="Context"></param>
 public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
     Dictionary<FunctionDeclaration, FunctionBody4> MethodBodies)
 {
+    // TODO static binding flags should not be used, add code to proper handle static readonly value
+    private static readonly BindingFlags VariableBindingFlags =
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+
     public RuntimeReflectionParser()
         : this(CompilationContext.Create(), [])
     {
@@ -40,10 +43,7 @@ public sealed record class RuntimeReflectionParser(
 
     public IShaderType ParseType(Type t)
     {
-        if (Context[t] is { } found)
-        {
-            return found;
-        }
+        if (Context[t] is { } found) return found;
 
         if (t.IsValueType)
         {
@@ -56,12 +56,13 @@ public sealed record class RuntimeReflectionParser(
     }
 
     /// <summary>
-    /// Parse new struct declaration based on relfection APIs
-    /// currently only supports structs
-    /// all access control are ignored (all fields, properties, methods are treated as public)
-    /// basically it will parse all fields (including privates) and properties with automatically generated get, set, init etc.
+    ///     Parse new struct declaration based on relfection APIs
+    ///     currently only supports structs
+    ///     all access control are ignored (all fields, properties, methods are treated as public)
+    ///     basically it will parse all fields (including privates) and properties with automatically generated get, set, init
+    ///     etc.
     /// </summary>
-    StructureType ParseStructDeclaration(Type t)
+    private StructureType ParseStructDeclaration(Type t)
     {
         var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                       .Where(f => !f.Name.EndsWith("k__BackingField"));
@@ -84,10 +85,7 @@ public sealed record class RuntimeReflectionParser(
     {
         var symbol = Symbol.Variable(fieldInfo);
         // TODO: distinct on module variable and function variable
-        if (Context[symbol] is { } found)
-        {
-            return found;
-        }
+        if (Context[symbol] is { } found) return found;
 
         var decl = new VariableDeclaration(
             UniformAddressSpace.Instance,
@@ -102,10 +100,7 @@ public sealed record class RuntimeReflectionParser(
 
     public MemberDeclaration ParseField(FieldInfo fieldInfo)
     {
-        if (Context[fieldInfo] is { } found)
-        {
-            return found;
-        }
+        if (Context[fieldInfo] is { } found) return found;
 
         var decl = new MemberDeclaration(fieldInfo.Name,
             ParseType(fieldInfo.FieldType),
@@ -114,33 +109,24 @@ public sealed record class RuntimeReflectionParser(
         return decl;
     }
 
-    ImmutableHashSet<IShaderAttribute> ParseAttribute(ParameterInfo p)
-    {
-        return
-        [
-            ..p.GetCustomAttributes<BuiltinAttribute>(),
-            ..p.GetCustomAttributes<LocationAttribute>(),
-        ];
-    }
+    private ImmutableHashSet<IShaderAttribute> ParseAttribute(ParameterInfo p) =>
+    [
+        ..p.GetCustomAttributes<BuiltinAttribute>(),
+        ..p.GetCustomAttributes<LocationAttribute>()
+    ];
 
-    ImmutableHashSet<IShaderAttribute> ParseAttribute(MethodBase m)
-    {
-        return
-        [
-            //..m.GetCustomAttributes<VertexAttribute>(),
-            //..m.GetCustomAttributes<FragmentAttribute>(),
-            ..m.GetCustomAttributes().OfType<IShaderAttribute>()
-            //..m.GetCustomAttributes<ShaderMethodAttribute>(),
-        ];
-    }
+    private ImmutableHashSet<IShaderAttribute> ParseAttribute(MethodBase m) =>
+    [
+        //..m.GetCustomAttributes<VertexAttribute>(),
+        //..m.GetCustomAttributes<FragmentAttribute>(),
+        ..m.GetCustomAttributes().OfType<IShaderAttribute>()
+        //..m.GetCustomAttributes<ShaderMethodAttribute>(),
+    ];
 
-    VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
+    private VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
     {
         var symbol = Symbol.Variable(info);
-        if (Context[symbol] is { } found)
-        {
-            return found;
-        }
+        if (Context[symbol] is { } found) return found;
 
         var addressSpace = info.GetCustomAttributes().OfType<IAddressSpaceAttribute>().Single().AddressSpace;
 
@@ -153,15 +139,12 @@ public sealed record class RuntimeReflectionParser(
         return decl;
     }
 
-    VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
+    private VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
     {
         var getter = info.GetGetMethod() ??
                      throw new NotSupportedException("Properties without getter is not supported");
         var symbol = Symbol.Variable(info);
-        if (Context[symbol] is { } found)
-        {
-            return found;
-        }
+        if (Context[symbol] is { } found) return found;
 
         var addressSpace = info.CustomAttributes.OfType<IAddressSpaceAttribute>().Single().AddressSpace;
         var decl =
@@ -174,11 +157,7 @@ public sealed record class RuntimeReflectionParser(
         return decl;
     }
 
-    // TODO static binding flags should not be used, add code to proper handle static readonly value
-    static readonly BindingFlags VariableBindingFlags =
-        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
-
-    IReadOnlyList<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
+    private IReadOnlyList<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
     {
         var fields = moduleType.GetFields(VariableBindingFlags);
         fields = [.. fields.Where(f => f.GetCustomAttributes().Any(a => a is IShaderAttribute))];
@@ -186,8 +165,8 @@ public sealed record class RuntimeReflectionParser(
     }
 
     /// <summary>
-    /// Parse shader module, since compilation context is fixed for this parser
-    /// use a parser for multiple shader modules will merge them into a larger module
+    ///     Parse shader module, since compilation context is fixed for this parser
+    ///     use a parser for multiple shader modules will merge them into a larger module
     /// </summary>
     /// <param name="module"></param>
     /// <returns></returns>
@@ -205,12 +184,9 @@ public sealed record class RuntimeReflectionParser(
 
         var variables = ParseAllModuleVariableDeclarations(moduleType);
 
-        foreach (var m in entryMethods)
-        {
-            _ = ParseMethod(m);
-        }
+        foreach (var m in entryMethods) _ = ParseMethod(m);
 
-        return new(
+        return new ShaderModuleDeclaration<FunctionBody4>(
             [
                 .. Context.StructureDeclarations,
                 ..variables,
@@ -222,10 +198,7 @@ public sealed record class RuntimeReflectionParser(
     public ParameterDeclaration ParseParameter(ParameterInfo parameter)
     {
         var symbol = Symbol.Parameter(parameter);
-        if (Context[symbol] is { } found)
-        {
-            return found;
-        }
+        if (Context[symbol] is { } found) return found;
 
         var p = new ParameterDeclaration(
             parameter.Name ?? throw new NotSupportedException("Can not parse parameter without name"),
@@ -235,7 +208,7 @@ public sealed record class RuntimeReflectionParser(
         return p;
     }
 
-    FunctionReturn ParseMethodReturn(MethodBase method)
+    private FunctionReturn ParseMethodReturn(MethodBase method)
     {
         var returnType = method switch
         {
@@ -257,10 +230,7 @@ public sealed record class RuntimeReflectionParser(
     public FunctionDeclaration ParseMethod(MethodBase method)
     {
         var symbol = Symbol.Function(method);
-        if (Context[symbol] is { } found)
-        {
-            return found;
-        }
+        if (Context[symbol] is { } found) return found;
 
         var metaAttributes = method.GetCustomAttributes().OfType<IShaderMetadataAttribute>().ToFrozenSet();
 
@@ -275,7 +245,8 @@ public sealed record class RuntimeReflectionParser(
         }
 
         {
-            var shaderMethodOperationAttribute = method.GetCustomAttributes().OfType<IShaderOperationMethodAttribute>().SingleOrDefault();
+            var shaderMethodOperationAttribute = method.GetCustomAttributes().OfType<IShaderOperationMethodAttribute>()
+                                                       .SingleOrDefault();
             if (shaderMethodOperationAttribute is not null)
             {
                 var result = ParseMethodReturn(method);
@@ -296,7 +267,10 @@ public sealed record class RuntimeReflectionParser(
                 ? [.. model.Parameters.Select(ParseParameter)]
                 :
                 [
-                    new ParameterDeclaration("this", ParseType(method.DeclaringType).GetPtrType(isEntryMethod ? InputAddressSpace.Instance : FunctionAddressSpace.Instance), []),
+                    new ParameterDeclaration("this",
+                        ParseType(method.DeclaringType)
+                            .GetPtrType(isEntryMethod ? InputAddressSpace.Instance : FunctionAddressSpace.Instance),
+                        []),
                     .. model.Parameters.Select(ParseParameter)
                 ],
             ParseMethodReturn(method),
@@ -306,21 +280,12 @@ public sealed record class RuntimeReflectionParser(
         {
             Context.AddFunctionDefinition(symbol, decl, model);
             {
-                foreach (var v in model.LocalVariables)
-                {
-                    _ = ParseType(v.LocalType);
-                }
+                foreach (var v in model.LocalVariables) _ = ParseType(v.LocalType);
             }
             var callees = FilterCalledMethods(model.CalledMethods()).ToArray();
-            foreach (var callee in callees)
-            {
-                _ = ParseMethod(callee);
-            }
+            foreach (var callee in callees) _ = ParseMethod(callee);
 
-            if (model.Body is not null)
-            {
-                MethodBodies.Add(decl, ParseMethodBody3(decl));
-            }
+            if (model.Body is not null) MethodBodies.Add(decl, ParseMethodBody3(decl));
         }
         else
         {
@@ -331,7 +296,7 @@ public sealed record class RuntimeReflectionParser(
     }
 
 
-    VariableDeclaration ParseLocalVariable(LocalVariableInfo info, ISymbolTable methodTable)
+    private VariableDeclaration ParseLocalVariable(LocalVariableInfo info, ISymbolTable methodTable)
     {
         var t = ParseType(info.LocalType);
         var result = new VariableDeclaration(
@@ -354,11 +319,9 @@ public sealed record class RuntimeReflectionParser(
         {
             var loc = ParseLocalVariable(v, methodTable);
         }
+
         {
-            foreach (var (index, p) in f.Parameters.Index())
-            {
-                methodTable.AddParameter(Symbol.Parameter(index), p);
-            }
+            foreach (var (index, p) in f.Parameters.Index()) methodTable.AddParameter(Symbol.Parameter(index), p);
         }
 
         Dictionary<Label, ImmutableStack<IShaderValue>> basicBlockInputs = new()
@@ -382,26 +345,26 @@ public sealed record class RuntimeReflectionParser(
                 var cilInst = model[i];
                 Debug.Write($"parse {cilInst.Instruction.OpCode}");
                 cilInst.Evaluate(visitor, model.IsStatic, methodTable);
-                Debug.Write($" -> ");
+                Debug.Write(" -> ");
                 Debug.WriteLine(string.Join(", ", visitor.Stack.Select(v => visitor.GetValueType(v).Name)));
             }
 
-            ITerminator<RegionJump, IShaderValue>? terminator = visitor.Terminator;
+            var terminator = visitor.Terminator;
 
             {
                 var successor = model.ControlFlowGraph.Successor(l);
                 var args = visitor.GetStackOutput();
-                terminator ??= Terminator.B.Br<RegionJump, IShaderValue>(new(successor.AllTargets().Single(), args));
+                terminator ??=
+                    Terminator.B.Br<RegionJump, IShaderValue>(new RegionJump(successor.AllTargets().Single(), args));
 
                 foreach (var tl in successor.AllTargets())
                 {
-                    ImmutableStack<IShaderValue> output = [.. visitor.Stack.Select(v => (IShaderValue)ShaderValue.Create(v.Type)).Reverse()];
+                    ImmutableStack<IShaderValue> output =
+                        [.. visitor.Stack.Select(v => (IShaderValue)ShaderValue.Create(v.Type)).Reverse()];
                     if (basicBlockInputs.TryGetValue(tl, out var existed))
                     {
                         if (!existed.Select(v => v.Type).SequenceEqual(output.Select(v => v.Type)))
-                        {
-                            throw new ValidationException($"Stack output mismatch", model.Method);
-                        }
+                            throw new ValidationException("Stack output mismatch", model.Method);
                     }
                     else
                     {
@@ -451,36 +414,24 @@ public sealed record class RuntimeReflectionParser(
     //    throw new NotImplementedException();
     //}
 
-    bool IsMethodDefinition(MethodBase m)
-    {
-        return !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(m);
-    }
+    private bool IsMethodDefinition(MethodBase m) => !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(m);
 
-    IEnumerable<MethodBase> FilterCalledMethods(IEnumerable<MethodBase> calleeCandidates)
+    private IEnumerable<MethodBase> FilterCalledMethods(IEnumerable<MethodBase> calleeCandidates)
     {
         return calleeCandidates
             .Where(m =>
             {
-                if (!IsMethodDefinition(m))
-                {
-                    return false;
-                }
+                if (!IsMethodDefinition(m)) return false;
 
                 // generated getter and setters should not be considered
                 var t = m.DeclaringType;
-                if (Context[t] is IVecType st)
-                {
-                    return false;
-                }
+                if (Context[t] is IVecType st) return false;
 
                 if (m.IsSpecialName &&
                     m.CustomAttributes.Any(a => a.AttributeType == typeof(CompilerGeneratedAttribute)))
                 {
                     var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (props.Any(p => p.GetMethod == m || p.SetMethod == m))
-                    {
-                        return false;
-                    }
+                    if (props.Any(p => p.GetMethod == m || p.SetMethod == m)) return false;
                 }
 
                 return true;

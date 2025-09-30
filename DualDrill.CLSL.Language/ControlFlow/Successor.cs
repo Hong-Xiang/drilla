@@ -1,8 +1,7 @@
-﻿using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.Language.LinearInstruction;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common.CodeTextWriter;
-using System.CodeDom.Compiler;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
@@ -13,7 +12,6 @@ public enum SuccessorKind
     Switch,
     Terminate
 }
-
 
 public interface ISuccessorSemantic<in TX, in TI, out TO>
 {
@@ -27,27 +25,21 @@ public interface ISuccessor<T>
     TR Evaluate<TX, TR>(ISuccessorSemantic<TX, T, TR> semantic, TX context);
 }
 
-
 public interface ISuccessor
     : ITextDumpable<ILocalDeclarationContext>
     , ISuccessor<Label>
 {
     void Traverse(Action<Label> action);
-    bool IsCompatible(ITerminatorStackInstruction terminator);
     IEnumerable<Label> GetReferencedLabels();
 }
 
 public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
 {
-    public override string ToString()
-        => $"br -> ^{Target.Name}";
     public void Traverse(Action<Label> action)
     {
         action(Target);
     }
 
-    public bool IsCompatible(ITerminatorStackInstruction terminator)
-        => terminator is BrInstruction { Target: var target } && target == Target;
 
     public IEnumerable<Label> GetReferencedLabels() => [Target];
 
@@ -57,15 +49,14 @@ public sealed record class UnconditionalSuccessor(Label Target) : ISuccessor
         writer.WriteLine($"br -> {context.LabelName(Target)}");
     }
 
-    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context)
-        => semantic.Unconditional(context, Target);
+    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context) =>
+        semantic.Unconditional(context, Target);
+
+    public override string ToString() => $"br -> ^{Target.Name}";
 }
 
 public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTarget) : ISuccessor
 {
-    public override string ToString()
-        => $"br_if -> t: ^{TrueTarget.Name} f: ^{FalseTarget.Name}";
-
     public IEnumerable<Label> GetReferencedLabels() => [TrueTarget, FalseTarget];
 
     public void Traverse(Action<Label> action)
@@ -74,40 +65,35 @@ public sealed record class ConditionalSuccessor(Label TrueTarget, Label FalseTar
         action(FalseTarget);
     }
 
-    public bool IsCompatible(ITerminatorStackInstruction terminator)
-        => terminator is BrIfInstruction { TrueTarget: var tt, FalseTarget: var ft } && TrueTarget == tt &&
-           FalseTarget == ft;
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
         writer.WriteLine($"br_if -> t: {context.LabelName(TrueTarget)} f: {context.LabelName(FalseTarget)}");
     }
 
-    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context)
-        => semantic.Conditional(context, TrueTarget, FalseTarget);
+    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context) =>
+        semantic.Conditional(context, TrueTarget, FalseTarget);
+
+    public override string ToString() => $"br_if -> t: ^{TrueTarget.Name} f: ^{FalseTarget.Name}";
 }
 
-public sealed record class TerminateSuccessor() : ISuccessor
+public sealed record class TerminateSuccessor : ISuccessor
 {
-    public override string ToString()
-        => "return";
-
     public IEnumerable<Label> GetReferencedLabels() => [];
 
     public void Traverse(Action<Label> action)
     {
     }
 
-    public bool IsCompatible(ITerminatorStackInstruction terminator)
-        => terminator is ReturnResultStackInstruction;
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {
         writer.WriteLine("return");
     }
 
-    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context)
-        => semantic.Terminate(context);
+    public TR Evaluate<TX, TR>(ISuccessorSemantic<TX, Label, TR> semantic, TX context) => semantic.Terminate(context);
+
+    public override string ToString() => "return";
 }
 
 public static class Successor
@@ -118,6 +104,7 @@ public static class Successor
         new ConditionalSuccessor(trueTarget, falseTarget);
 
     public static ISuccessor Switch() => throw new NotImplementedException();
+
     public static ISuccessor Terminate() => new TerminateSuccessor();
 
     public static IEnumerable<Label> AllTargets(this ISuccessor successor)
@@ -127,64 +114,3 @@ public static class Successor
         return targets;
     }
 }
-
-//public static class Successor
-//{
-//    sealed class VisitorAlgebra<TLabel>(Action<TLabel> Run) : ISuccessorAlgebra<TLabel, TLabel, Unit>
-//    {
-//        public Unit Br(TLabel target)
-//        {
-//            Run(target);
-//            return default;
-//        }
-
-//        public Unit BrIf(TLabel trueTarget, TLabel falseTarget)
-//        {
-//            Run(trueTarget);
-//            Run(falseTarget);
-//            return default;
-//        }
-
-//        public Unit Return()
-//        {
-//            return default;
-//        }
-
-//        public Unit Switch(TLabel defaultLabel, IEnumerable<(ILiteral, TLabel)> cases)
-//        {
-//            throw new NotImplementedException();
-//        }
-//    }
-
-//    public static void Match<TLabel>(this ISuccessor<TLabel, TLabel> successor, Action<TLabel> action)
-//    {
-//        successor.Evaluate(new VisitorAlgebra<TLabel>(action));
-//    }
-
-//    sealed class KindAlgebra<TLabel, TFalseLabel> : ISuccessorAlgebra<TLabel, TFalseLabel, SuccessorKind>
-//    {
-//        public SuccessorKind Br(TLabel target) => SuccessorKind.BrOrNext;
-
-//        public SuccessorKind BrIf(TLabel trueTarget, TFalseLabel falseTarget) => SuccessorKind.BrIf;
-//        public SuccessorKind Return() => SuccessorKind.ReturnOrTerminate;
-//        public SuccessorKind Switch(TLabel defaultLabel, IEnumerable<(ILiteral, TLabel)> cases) => SuccessorKind.Switch;
-//    }
-
-//    public static SuccessorKind GetKind<TLabel, TFalseLabel>(this ISuccessor<TLabel, TFalseLabel> successor)
-//    {
-//        return successor.Evaluate(new KindAlgebra<TLabel, TFalseLabel>());
-//    }
-//}
-
-
-//public class SuccessorFactory<TLabel> : ISingleton<SuccessorFactory<TLabel>>, ISuccessorAlgebra<TLabel, TLabel, ISuccessor<TLabel, TLabel>>
-//{
-//    public static SuccessorFactory<TLabel> Instance { get; } = new();
-
-//    public ISuccessor<TLabel, TLabel> Br(TLabel target) => new BrSuccessor<TLabel, TLabel>(target);
-//    public ISuccessor<TLabel, TLabel> BrIf(TLabel trueTarget, TLabel falseTarget) => new BrIfSuccessor<TLabel, TLabel>(trueTarget, falseTarget);
-//    public ISuccessor<TLabel, TLabel> Return() => new ReturnOrTerminateSuccessor<TLabel, TLabel>();
-
-//    public ISuccessor<TLabel, TLabel> Switch(TLabel defaultLabel, IEnumerable<(ILiteral, TLabel)> cases)
-//        => throw new NotImplementedException();
-//}

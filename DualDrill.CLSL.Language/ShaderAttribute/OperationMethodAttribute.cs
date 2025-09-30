@@ -15,4 +15,3 @@ public sealed class OperationMethodAttribute<TOperation>
 {
     public IOperation Operation => TOperation.Instance;
 }
-

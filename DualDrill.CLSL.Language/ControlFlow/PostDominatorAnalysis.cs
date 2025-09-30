@@ -1,25 +1,23 @@
-﻿using DualDrill.CLSL.Language.Analysis;
+﻿using System.Collections.Immutable;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.ControlFlow;
 
 public sealed class PostDominatorAnalysis
 {
-    public IReadOnlyDictionary<Label, Label?> ImmediatePostDominators { get; }
-
     private PostDominatorAnalysis(IReadOnlyDictionary<Label, Label?> immediatePostDominators)
     {
         ImmediatePostDominators = immediatePostDominators;
     }
-    public Label? GetMergeImmediatePostDominator(Label label)
-        => ImmediatePostDominators.TryGetValue(label, out var merge) ? merge : null;
 
-    public IEnumerable<Label> GetPostDominators(Label label)
-    {
-        throw new NotImplementedException();
-    }
+    public IReadOnlyDictionary<Label, Label?> ImmediatePostDominators { get; }
+
+    public Label? GetMergeImmediatePostDominator(Label label) =>
+        ImmediatePostDominators.TryGetValue(label, out var merge) ? merge : null;
+
+    public IEnumerable<Label> GetPostDominators(Label label) => throw new NotImplementedException();
 
     public static PostDominatorAnalysis Create(ControlFlowGraph<Unit> cfg)
     {
@@ -29,6 +27,7 @@ public sealed class PostDominatorAnalysis
         var nestedLoop = labels.ToDictionary(l => l, l => dominators[l].Reverse().FirstOrDefault(cfa.IsLoop));
         Dictionary<Label, Label?> immediatePostDominators = [];
         var changed = true;
+
         void SetPostDominator(Label target, Label? value)
         {
             var nl = nestedLoop[target];
@@ -37,6 +36,7 @@ public sealed class PostDominatorAnalysis
                 immediatePostDominators[target] = null;
                 return;
             }
+
             // any jump to current scope label should use continue, not break/merge
             if (nl is not null && nl.Equals(value))
             {
@@ -47,21 +47,17 @@ public sealed class PostDominatorAnalysis
             //{
             //    immediatePostDominators[target] = null;
             //}
-            else
-            {
-                immediatePostDominators[target] = value;
-            }
+
+            immediatePostDominators[target] = value;
             changed = true;
         }
+
         while (changed && immediatePostDominators.Count < cfg.Count)
         {
             changed = false;
             foreach (var l in labels)
             {
-                if (immediatePostDominators.ContainsKey(l))
-                {
-                    continue;
-                }
+                if (immediatePostDominators.ContainsKey(l)) continue;
                 var s = cfg.Successor(l);
                 switch (s)
                 {
@@ -70,58 +66,54 @@ public sealed class PostDominatorAnalysis
                         break;
                     case UnconditionalSuccessor { Target: Label t }:
                         if (nestedLoop[l]?.Equals(t) ?? false)
-                        {
                             SetPostDominator(l, null);
-                        }
                         else
-                        {
                             SetPostDominator(l, t);
-                        }
                         break;
                     case ConditionalSuccessor { TrueTarget: Label tt, FalseTarget: Label ft }:
+                    {
+                        if (!(immediatePostDominators.ContainsKey(tt) &&
+                              immediatePostDominators.ContainsKey(ft))) break;
+                        if (immediatePostDominators[tt] is null)
                         {
-                            if (!(immediatePostDominators.ContainsKey(tt) && immediatePostDominators.ContainsKey(ft)))
-                            {
-                                break;
-                            }
-                            if (immediatePostDominators[tt] is null)
-                            {
-                                SetPostDominator(l, immediatePostDominators[ft]);
-                                break;
-                            }
-                            if (immediatePostDominators[ft] is null)
-                            {
-                                SetPostDominator(l, immediatePostDominators[tt]);
-                                break;
-                            }
-                            var lc = tt;
-                            HashSet<Label> lt = [];
-                            while (immediatePostDominators.TryGetValue(lc, out var lci))
-                            {
-                                if (lci is null)
-                                {
-                                    break;
-                                }
-                                lt.Add(lci);
-                                lc = lci;
-                            }
-                            var rc = ft;
-                            while (immediatePostDominators.TryGetValue(rc, out var rci) && rci is not null)
-                            {
-                                if (lt.Contains(rci))
-                                {
-                                    SetPostDominator(l, rci);
-                                    break;
-                                }
-                                rc = rci;
-                            }
+                            SetPostDominator(l, immediatePostDominators[ft]);
+                            break;
                         }
+
+                        if (immediatePostDominators[ft] is null)
+                        {
+                            SetPostDominator(l, immediatePostDominators[tt]);
+                            break;
+                        }
+
+                        var lc = tt;
+                        HashSet<Label> lt = [];
+                        while (immediatePostDominators.TryGetValue(lc, out var lci))
+                        {
+                            if (lci is null) break;
+                            lt.Add(lci);
+                            lc = lci;
+                        }
+
+                        var rc = ft;
+                        while (immediatePostDominators.TryGetValue(rc, out var rci) && rci is not null)
+                        {
+                            if (lt.Contains(rci))
+                            {
+                                SetPostDominator(l, rci);
+                                break;
+                            }
+
+                            rc = rci;
+                        }
+                    }
                         break;
                     default:
                         throw new NotSupportedException();
                 }
             }
         }
+
         return new PostDominatorAnalysis(immediatePostDominators);
         // how to get inner most loop node -> nearest dominator of loop label
         // immediate post dominator (or merge postdominator?)

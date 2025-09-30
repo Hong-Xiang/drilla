@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
@@ -9,6 +8,7 @@ using DualDrill.Common.Nat;
 using Microsoft.CodeAnalysis;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using IOperation = DualDrill.CLSL.Language.Operation.IOperation;
 
 namespace DualDrill.ApiGen.DMath;
@@ -36,11 +36,9 @@ internal sealed record class VectorComponentCodeGenerator(
             using (Writer.IndentedScope())
             {
                 Writer.WriteAggressiveInlining();
-                Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m.Name)]).GetCSharpUsageCode()}]");
                 Writer.WriteLine($"[{VecType.ComponentGetOperation(m).GetOperationMethodAttribute().GetCSharpUsageCode()}]");
                 Writer.WriteLine("get;");
                 Writer.WriteAggressiveInlining();
-                Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute([Enum.Parse<SwizzleComponent>(m.Name)]).GetCSharpUsageCode()}]");
                 Writer.WriteLine($"[{VecType.ComponentSetOperation(m).GetOperationMethodAttribute().GetCSharpUsageCode()}]");
                 Writer.WriteLine("set;");
             }
@@ -109,13 +107,11 @@ internal sealed record class VectorSimdCodeGenerator(
 
             //getter
             Writer.WriteAggressiveInlining();
-            Writer.WriteLine($"[{new RuntimeVectorSwizzleGetMethodAttribute([Enum.Parse<SwizzleComponent>(m.Name)]).GetCSharpUsageCode()}]");
             Writer.WriteLine($"[{VecType.ComponentGetOperation(m).GetOperationMethodAttribute().GetCSharpUsageCode()}]");
             Writer.WriteLine($"get => Data[{i}];");
             Writer.WriteLine();
 
             Writer.WriteAggressiveInlining();
-            Writer.WriteLine($"[{new RuntimeVectorSwizzleSetMethodAttribute([Enum.Parse<SwizzleComponent>(m.Name)]).GetCSharpUsageCode()}]");
             Writer.WriteLine($"[{VecType.ComponentSetOperation(m).GetOperationMethodAttribute().GetCSharpUsageCode()}]");
             Writer.WriteLine("set {");
             Writer.Indent++;

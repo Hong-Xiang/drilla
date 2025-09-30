@@ -12,27 +12,15 @@ public sealed record class RefType<TShaderType>(TShaderType BaseType) : IRefType
 {
     public string Name => $"ref<{BaseType.Name}>";
 
-    public IPtrType GetPtrType()
-    {
-        throw new NotImplementedException();
-    }
+    public IRefType GetRefType() => throw new NotImplementedException();
 
-    public IRefType GetRefType()
-    {
-        throw new NotImplementedException();
-    }
+    public IPtrType GetPtrType(IAddressSpace addressSpace) => throw new NotImplementedException();
 
-    public IUnaryExpressionOperation? CilStackConversion() => null;
-
-    public IPtrType GetPtrType(IAddressSpace addressSpace)
-    {
-        throw new NotImplementedException();
-    }
-
-    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
-    {
-        throw new NotImplementedException();
-    }
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => throw new NotImplementedException();
 
     public static RefType<TShaderType> Instance => throw new NotImplementedException();
+
+    public IPtrType GetPtrType() => throw new NotImplementedException();
+
+    public IUnaryExpressionOperation? CilStackConversion() => null;
 }

@@ -1,11 +1,9 @@
-﻿using DualDrill.Common;
-
-namespace DualDrill.CLSL.Language.Types;
+﻿namespace DualDrill.CLSL.Language.Types;
 
 public interface ISignedness<TSign>
     where TSign : ISignedness<TSign>
 {
-    abstract static string Name { get; }
+    static abstract string Name { get; }
 }
 
 public static class Signedness

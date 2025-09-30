@@ -7,4 +7,3 @@ public interface IShaderOperationMethodAttribute : IShaderAttribute
 {
     IOperation GetOperation(IShaderType resultType, IEnumerable<IShaderType> parameterTypes);
 }
-

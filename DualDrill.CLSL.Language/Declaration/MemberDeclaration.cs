@@ -1,7 +1,8 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+﻿using System.Collections.Immutable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -13,10 +14,10 @@ public sealed class MemberDeclaration(
 {
     public string Name { get; } = Name;
     public ImmutableHashSet<IShaderAttribute> Attributes { get; } = Attributes;
-    public IShaderType Type { get; } = Type;
 
-    public T Evaluate<T>(IDeclarationSemantic<T> semantic)
-        => semantic.VisitMember(this);
+    public T Evaluate<T>(IDeclarationSemantic<T> semantic) => semantic.VisitMember(this);
+
+    public IShaderType Type { get; } = Type;
 
     public override string ToString() => $"member {Name} : {Type.Name}";
 }

@@ -1,6 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 
@@ -18,20 +17,10 @@ public sealed record class AddressOfVecComponentOperation(
 
     public string Name => $"{Target.Name}.set.{Component.Name}";
 
-    public IInstruction Instruction => throw new NotImplementedException();
 
-    public IUnaryExpression CreateExpression(IExpression expr)
-    {
-        throw new NotImplementedException();
-    }
 
-    public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context)
-    {
+    public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context) =>
         throw new NotImplementedException();
-    }
 
-    public IOperationMethodAttribute GetOperationMethodAttribute()
-    {
-        throw new NotImplementedException();
-    }
+    public IOperationMethodAttribute GetOperationMethodAttribute() => throw new NotImplementedException();
 }

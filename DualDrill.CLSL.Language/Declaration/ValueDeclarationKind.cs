@@ -8,5 +8,10 @@ public enum ValueDeclarationKind
     FormalParameter
 }
 
-public interface IConstValueSymbol { }
-public interface IOverrideValueSymbol { }
+public interface IConstValueSymbol
+{
+}
+
+public interface IOverrideValueSymbol
+{
+}

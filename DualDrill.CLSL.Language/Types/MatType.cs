@@ -9,29 +9,16 @@ public sealed record class MatType(
     IRank Column)
     : IShaderType<MatType>, IStorableType
 {
+    public int ByteSize => Row.Value * Column.Value * ElementType.ByteSize;
     public string Name => $"mat{Row.Value}x{Column.Value}{ElementType.ElementName()}";
 
-    public int ByteSize => Row.Value * Column.Value * ElementType.ByteSize;
+    public IRefType GetRefType() => throw new NotImplementedException();
 
-    public IRefType GetRefType()
-    {
-        throw new NotImplementedException();
-    }
+    public IPtrType GetPtrType(IAddressSpace addressSpace) => throw new NotImplementedException();
 
-    public IPtrType GetPtrType()
-    {
-        throw new NotImplementedException();
-    }
-
-    public IPtrType GetPtrType(IAddressSpace addressSpace)
-    {
-        throw new NotImplementedException();
-    }
-
-    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
-    {
-        throw new NotImplementedException();
-    }
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => throw new NotImplementedException();
 
     public static MatType Instance => throw new NotImplementedException();
+
+    public IPtrType GetPtrType() => throw new NotImplementedException();
 }

@@ -18,11 +18,11 @@ public interface INumericType : IScalarType
 public interface INumericType<TSelf> : INumericType, IScalarType<TSelf>
     where TSelf : INumericType<TSelf>
 {
+    IUnaryExpressionOperation INumericType.UnaryArithmeticOperation<TOp>() =>
+        UnaryNumericArithmeticExpressionOperation<TSelf, TOp>.Instance;
 
-    IUnaryExpressionOperation INumericType.UnaryArithmeticOperation<TOp>()
-        => UnaryNumericArithmeticExpressionOperation<TSelf, TOp>.Instance;
-    IOperation INumericType.GetVectorUnaryNumericOperation<TRank, TOp>()
-        => VectorNumericUnaryOperation<TRank, TSelf, TOp>.Instance;
+    IOperation INumericType.GetVectorUnaryNumericOperation<TRank, TOp>() =>
+        VectorNumericUnaryOperation<TRank, TSelf, TOp>.Instance;
 
     INumericBinaryArithmeticOperation INumericType.ArithmeticOperation<TOp>() =>
         NumericBinaryArithmeticOperation<TSelf, TOp>.Instance;

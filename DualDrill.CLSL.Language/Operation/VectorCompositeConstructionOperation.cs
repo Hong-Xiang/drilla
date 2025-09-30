@@ -1,51 +1,72 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using System.Collections.Frozen;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Instruction;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
-using System.Collections.Frozen;
-using System.Collections.Immutable;
-using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Operation;
 
 [DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
 public sealed class VectorCompositeConstructionOperation : IOperation
 {
-    private VectorCompositeConstructionOperation(IRank size, IScalarType elementType, ImmutableArray<int> parameterPattern)
+    public static readonly FrozenDictionary<FunctionType, VectorCompositeConstructionOperation> Operations =
+        GetAllOperations();
+
+    private VectorCompositeConstructionOperation(IRank size, IScalarType elementType,
+        ImmutableArray<int> parameterPattern)
     {
         Size = size;
         ElementType = elementType;
         ResultType = ShaderType.GetVecType(size, elementType);
-        List<IShaderAttribute> attrs = [new ShaderRuntimeMethodAttribute(), new VectorCompositeConstructorMethodAttribute()];
-        if (parameterPattern.Length == size.Value)
-        {
-            attrs.Add(new CompositeConstructorMethodAttribute());
-        }
+        List<IShaderAttribute> attrs =
+            [new ShaderRuntimeMethodAttribute(), new VectorCompositeConstructorMethodAttribute()];
+        if (parameterPattern.Length == size.Value) attrs.Add(new CompositeConstructorMethodAttribute());
         Function = new FunctionDeclaration(
             $"vec{size.Value}",
-            [..parameterPattern.Select((p, i) => {
-            var t = p switch
-            {
-                1 => new ParameterDeclaration($"e{i}", ElementType, []),
-                2 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N2.Instance, ElementType), []),
-                3 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N3.Instance, ElementType), []),
-                _ => throw new NotSupportedException()
-            };
-            return t;
-            })],
+            [
+                ..parameterPattern.Select((p, i) =>
+                {
+                    var t = p switch
+                    {
+                        1 => new ParameterDeclaration($"e{i}", ElementType, []),
+                        2 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N2.Instance, ElementType), []),
+                        3 => new ParameterDeclaration($"e{i}", ShaderType.GetVecType(N3.Instance, ElementType), []),
+                        _ => throw new NotSupportedException()
+                    };
+                    return t;
+                })
+            ],
             new FunctionReturn(ResultType, []),
             [.. attrs]);
         ParameterTypes = [.. Function.Parameters.Select(p => p.Type)];
     }
 
-    public readonly static FrozenDictionary<FunctionType, VectorCompositeConstructionOperation> Operations = GetAllOperations();
+    public IShaderType ResultType { get; }
 
-    static FrozenDictionary<FunctionType, VectorCompositeConstructionOperation> GetAllOperations()
+    public ImmutableArray<IShaderType> ParameterTypes { get; }
+
+    public IRank Size { get; }
+    public IScalarType ElementType { get; }
+
+    public FunctionDeclaration Function { get; }
+
+    public string Name => $"{ResultType.Name}.ctor({string.Join(',', ParameterTypes.Select(t => t.Name))})";
+
+
+    public IOperationMethodAttribute GetOperationMethodAttribute() => throw new NotImplementedException();
+
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO> =>
+        semantic.VectorCompositeConstruction(inst, this, inst.Result, [..inst.Operands]);
+
+    private static FrozenDictionary<FunctionType, VectorCompositeConstructionOperation> GetAllOperations()
     {
         Dictionary<FunctionType, VectorCompositeConstructionOperation> ops = [];
+
         static IEnumerable<ImmutableArray<int>> ParameterPattern(int rank)
         {
             return rank switch
@@ -58,13 +79,12 @@ public sealed class VectorCompositeConstructionOperation : IOperation
         }
 
         foreach (var v in ShaderType.GetVecTypes())
+        foreach (var p in ParameterPattern(v.Size.Value))
         {
-            foreach (var p in ParameterPattern(v.Size.Value))
-            {
-                var op = new VectorCompositeConstructionOperation(v.Size, v.ElementType, p);
-                ops.Add((FunctionType)op.Function.Type, op);
-            }
+            var op = new VectorCompositeConstructionOperation(v.Size, v.ElementType, p);
+            ops.Add((FunctionType)op.Function.Type, op);
         }
+
         return ops.ToFrozenDictionary();
     }
 
@@ -84,47 +104,23 @@ public sealed class VectorCompositeConstructionOperation : IOperation
                 dims += 1;
                 continue;
             }
+
             if (p is IVecType vp && vp.ElementType.Equals(e))
             {
                 dims += vp.Size.Value;
                 continue;
             }
+
             throw new ArgumentException("Invalid parameter type", nameof(parameters));
         }
-        if (dims != r.Value)
-        {
-            throw new ArgumentException("Invalid parameter total dimension count", nameof(parameters));
-        }
+
+        if (dims != r.Value) throw new ArgumentException("Invalid parameter total dimension count", nameof(parameters));
         var ft = new FunctionType(ps, resultType);
         return Operations[ft];
     }
 
-    public IShaderType ResultType { get; }
-
-    public ImmutableArray<IShaderType> ParameterTypes { get; }
-
-    public FunctionDeclaration Function { get; }
-
-    public string Name => $"{ResultType.Name}.ctor({string.Join(',', ParameterTypes.Select(t => t.Name))})";
-
     public override string ToString() => $"op.{Name}";
 
-    public IInstruction Instruction => throw new NotImplementedException();
 
-    public IRank Size { get; }
-    public IScalarType ElementType { get; }
-
-    public IOperationMethodAttribute GetOperationMethodAttribute()
-    {
-        throw new NotImplementedException();
-    }
-
-
-    private string GetDebuggerDisplay()
-    {
-        return ToString();
-    }
-
-    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>
-        => semantic.VectorCompositeConstruction(inst, this, inst.Result, [..inst.Operands]);
+    private string GetDebuggerDisplay() => ToString();
 }

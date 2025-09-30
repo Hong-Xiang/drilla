@@ -9,39 +9,37 @@ public sealed class ShaderRuntimeMethodAttribute : Attribute, IZeroArgumentNewLi
 {
 }
 
-public sealed class VecConstructorMethodAttribute : Attribute, IZeroArgumentNewLikeShaderMetadataAttribute { }
-
-public sealed class VecMethodRenamedForOverloadAttribute : Attribute, IZeroArgumentNewLikeShaderMetadataAttribute { }
-
-public sealed class ConversionMethodAttribute : Attribute, IZeroArgumentNewLikeShaderMetadataAttribute, IShaderOperationMethodAttribute
+public sealed class VecConstructorMethodAttribute : Attribute, IZeroArgumentNewLikeShaderMetadataAttribute
 {
-    public IOperation GetOperation(IShaderType resultType, IEnumerable<IShaderType> parameterTypes)
-    {
+}
+
+public sealed class VecMethodRenamedForOverloadAttribute : Attribute, IZeroArgumentNewLikeShaderMetadataAttribute
+{
+}
+
+public sealed class ConversionMethodAttribute : Attribute, IZeroArgumentNewLikeShaderMetadataAttribute,
+                                                IShaderOperationMethodAttribute
+{
+    public IOperation GetOperation(IShaderType resultType, IEnumerable<IShaderType> parameterTypes) =>
         throw new NotImplementedException();
-    }
 }
 
 public sealed class RuntimeFieldGetMethodAttribute(string Name) : Attribute, IShaderMetadataAttribute
 {
     public string Name { get; } = Name;
 
-    public string GetCSharpUsageCode()
-    {
-        return $"{nameof(RuntimeFieldGetMethodAttribute)}(\"{Name}\")";
-    }
+    public string GetCSharpUsageCode() => $"{nameof(RuntimeFieldGetMethodAttribute)}(\"{Name}\")";
 }
 
 public sealed class RuntimeFieldSetMethodAttribute(string Name) : Attribute, IShaderMetadataAttribute
 {
     public string Name { get; } = Name;
 
-    public string GetCSharpUsageCode()
-    {
-        return $"{nameof(RuntimeFieldSetMethodAttribute)}(\"{Name}\")";
-    }
+    public string GetCSharpUsageCode() => $"{nameof(RuntimeFieldSetMethodAttribute)}(\"{Name}\")";
 }
 
-public sealed class RuntimeVectorSwizzleGetMethodAttribute(SwizzleComponent[] Components) : Attribute, IShaderMetadataAttribute
+public sealed class RuntimeVectorSwizzleGetMethodAttribute(SwizzleComponent[] Components)
+    : Attribute, IShaderMetadataAttribute
 {
     public SwizzleComponent[] Components { get; } = Components;
 
@@ -53,9 +51,11 @@ public sealed class RuntimeVectorSwizzleGetMethodAttribute(SwizzleComponent[] Co
     }
 }
 
-public sealed class RuntimeVectorSwizzleSetMethodAttribute(SwizzleComponent[] Components) : Attribute, IShaderMetadataAttribute
+public sealed class RuntimeVectorSwizzleSetMethodAttribute(SwizzleComponent[] Components)
+    : Attribute, IShaderMetadataAttribute
 {
     public SwizzleComponent[] Components { get; } = Components;
+
     public string GetCSharpUsageCode()
     {
         var fn = typeof(SwizzleComponent).FullName;
@@ -63,5 +63,3 @@ public sealed class RuntimeVectorSwizzleSetMethodAttribute(SwizzleComponent[] Co
         return $"{nameof(RuntimeVectorSwizzleSetMethodAttribute)}([{arguments}])";
     }
 }
-
-

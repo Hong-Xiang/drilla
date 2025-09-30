@@ -17,16 +17,10 @@ public interface IShaderType
     T Evaluate<T>(IShaderTypeSemantic<T, T> semantic);
 }
 
-
-
 public interface IShaderType<TSelf> : IShaderType, ISingleton<TSelf>
     where TSelf : IShaderType<TSelf>
 {
-    TResult IShaderType.Accept<TVisitor, TResult>(TVisitor visitor)
-    {
-        return visitor.Visit((TSelf)this);
-    }
-
+    TResult IShaderType.Accept<TVisitor, TResult>(TVisitor visitor) => visitor.Visit((TSelf)this);
 }
 
 public interface IShaderTypeVisitor1<out TResult>
@@ -41,7 +35,10 @@ public interface IShaderTypeSemantic<in TI, out TO>
     TO IntType<TWidth>(IntType<TWidth> t) where TWidth : IBitWidth;
     TO UIntType<TWidth>(UIntType<TWidth> t) where TWidth : IBitWidth;
     TO FloatType<TWidth>(FloatType<TWidth> t) where TWidth : IBitWidth;
-    TO VecType<TRank, TElement>(VecType<TRank, TElement> t) where TRank : IRank<TRank> where TElement : IScalarType<TElement>;
+
+    TO VecType<TRank, TElement>(VecType<TRank, TElement> t)
+        where TRank : IRank<TRank> where TElement : IScalarType<TElement>;
+
     TO PtrType(IPtrType ptr);
     TO FunctionType(FunctionType t);
 }
@@ -62,11 +59,12 @@ public interface ISingletonShaderType<TSelf>
     where TSelf : ISingletonShaderType<TSelf>
 {
     IRefType IShaderType.GetRefType() => throw new NotImplementedException();
+
     IPtrType IShaderType.GetPtrType(IAddressSpace s) => IPtrType.CreateFromSingletonType<TSelf>(s);
 }
 
 /// <summary>
-/// type with size fully determined at shader creation time
+///     type with size fully determined at shader creation time
 /// </summary>
 public interface ICreationFixedFootprintType : IShaderType
 {
@@ -86,18 +84,18 @@ public interface IScalarType : IPlainType, IStorableType, ICreationFixedFootprin
 {
     IBitWidth BitWidth { get; }
 
-    public interface IGenericVisitor<T>
-    {
-        public T Visit<TScalarType>(TScalarType scalarType)
-            where TScalarType : class, IScalarType<TScalarType>;
-    }
-
     T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IGenericVisitor<T>;
 
     IConversionOperation GetConversionToOperation<TTarget>()
         where TTarget : IScalarType<TTarget>;
 
     IVecType GetVecType<TRank>() where TRank : class, IRank<TRank>;
+
+    public interface IGenericVisitor<T>
+    {
+        public T Visit<TScalarType>(TScalarType scalarType)
+            where TScalarType : class, IScalarType<TScalarType>;
+    }
 }
 
 public interface IScalarType<TSelf> : IScalarType, ISingletonShaderType<TSelf>

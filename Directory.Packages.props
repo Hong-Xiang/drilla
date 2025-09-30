@@ -30,7 +30,7 @@
     <PackageVersion Include="SIPSorceryMedia.FFmpeg" Version="1.4.2" />
     <PackageVersion Include="SIPSorcery" Version="8.0.6" />
     <PackageVersion Include="SIPSorceryMedia.Encoders" Version="0.0.13" />
-    <PackageVersion Include="ICSharpCode.Decompiler" Version="8.2.0.7535" />
+    <PackageVersion Include="ICSharpCode.Decompiler" Version="9.1.0.7988" />
     <PackageVersion Include="Lokad.ILPack" Version="0.2.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.v3" Version="0.3.0-pre.18" />

@@ -8,31 +8,29 @@ namespace DualDrill.CLSL.Frontend.SymbolTable;
 
 public sealed class CompilationContext : ISymbolTable
 {
-    private readonly Dictionary<Type, IShaderType> Types = [];
     private readonly Dictionary<FunctionDeclaration, MethodBodyAnalysisModel> FunctionDefinitions = [];
 
     private readonly Dictionary<IFunctionSymbol, FunctionDeclaration> Functions = [];
-    private readonly Dictionary<IParameterSymbol, ParameterDeclaration> Parameters = [];
     private readonly Dictionary<IVariableSymbol, VariableDeclaration> LocalVariables = [];
     private readonly Dictionary<FieldInfo, MemberDeclaration> Members = [];
 
     private readonly HashSet<StructureDeclaration> ModuleStructureDeclarations = [];
-    private readonly Dictionary<FieldInfo, MemberDeclaration> StructureMembers = [];
+    private readonly Dictionary<IParameterSymbol, ParameterDeclaration> Parameters = [];
     private readonly ISymbolTableView? Parent;
+    private readonly Dictionary<FieldInfo, MemberDeclaration> StructureMembers = [];
+    private readonly Dictionary<Type, IShaderType> Types = [];
 
     public CompilationContext(ISymbolTableView? parent)
     {
         Parent = parent;
     }
 
-    public static ISymbolTable Create() => new CompilationContext(SharedBuiltinSymbolTable.Instance);
+    public ParameterDeclaration? this[ParameterInfo parameter] => throw new NotImplementedException();
 
     public IShaderType? this[Type type] => Types.TryGetValue(type, out var shaderType) ? shaderType : Parent?[type];
 
     public FunctionDeclaration? this[IFunctionSymbol symbol] =>
         Functions.TryGetValue(symbol, out var found) ? found : Parent?[symbol];
-
-    public ParameterDeclaration? this[ParameterInfo parameter] => throw new NotImplementedException();
 
     public ParameterDeclaration? this[IParameterSymbol info] =>
         Parameters.TryGetValue(info, out var result) ? result : Parent?[info];
@@ -101,4 +99,6 @@ public sealed class CompilationContext : ISymbolTable
         LocalVariables.Values;
 
     public IEnumerable<FunctionDeclaration> FunctionDeclarations => Functions.Values;
+
+    public static ISymbolTable Create() => new CompilationContext(SharedBuiltinSymbolTable.Instance);
 }

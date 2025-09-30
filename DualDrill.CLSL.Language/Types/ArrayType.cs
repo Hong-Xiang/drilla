@@ -1,6 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-
-namespace DualDrill.CLSL.Language.Types;
+﻿namespace DualDrill.CLSL.Language.Types;
 
 public sealed record class FixedSizedArrayType(IPlainType ElementType, int Size)
 {

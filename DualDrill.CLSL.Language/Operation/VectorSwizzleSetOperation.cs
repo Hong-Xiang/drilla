@@ -1,5 +1,4 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Types;
 
@@ -20,11 +19,15 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
     where TPattern : Swizzle.IPattern<TPattern>
     where TElement : IScalarType<TElement>
 {
+    public IShaderType LeftType => TPattern.Instance.CalleeVecType<TElement>().GetPtrType();
+    public IShaderType RightType => TPattern.Instance.ValueVecType<TElement>();
+
     public static VectorSwizzleSetOperation<TPattern, TElement> Instance { get; } = new();
     public string Name => $"set.{TPattern.Instance.Name}.{TElement.Instance.Name}";
 
-    public IShaderType LeftType => TPattern.Instance.CalleeVecType<TElement>().GetPtrType();
-    public IShaderType RightType => TPattern.Instance.ValueVecType<TElement>();
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO> =>
+        semantic.VectorSwizzleSet(inst, this, inst[0], inst[1]);
 
     public Swizzle.IPattern Pattern => TPattern.Instance;
 
@@ -33,10 +36,4 @@ public sealed class VectorSwizzleSetOperation<TPattern, TElement>
     public IVecType ValueVecType => (IVecType)RightType;
 
     public IScalarType ElementType => TElement.Instance;
-
-    public IStatement CreateStatement(IExpression target, IExpression value)
-        => TPattern.Instance.CreateSwizzleSetStatement<TElement>(target, value);
-
-    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>
-        => semantic.VectorSwizzleSet(inst, this, inst[0], inst[1]);
 }

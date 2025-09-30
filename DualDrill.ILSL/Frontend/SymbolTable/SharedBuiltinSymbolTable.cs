@@ -1,31 +1,58 @@
-﻿using DotNext.Patterns;
+﻿using System.Collections.Frozen;
+using System.Numerics;
+using System.Reflection;
+using DotNext.Patterns;
+using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
-using System.Collections.Frozen;
-using System.Numerics;
-using System.Reflection;
-using DualDrill.CLSL.Frontend.SymbolTable;
 
 namespace DualDrill.CLSL.Frontend;
 
-sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, ISymbolTableView
+internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, ISymbolTableView
 {
-    public FrozenDictionary<Type, IShaderType> RuntimeTypes { get; }
-    public FrozenDictionary<MethodBase, FunctionDeclaration> RuntimeMethods { get; }
-
-    SharedBuiltinSymbolTable()
+    private SharedBuiltinSymbolTable()
     {
         RuntimeTypes = GetRuntimeTypes().ToFrozenDictionary();
         RuntimeMethods = GetRuntimeMethods(RuntimeTypes).ToFrozenDictionary();
     }
 
+    public FrozenDictionary<Type, IShaderType> RuntimeTypes { get; }
+    public FrozenDictionary<MethodBase, FunctionDeclaration> RuntimeMethods { get; }
+
+    public static SharedBuiltinSymbolTable Instance { get; } = new();
+
+    public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) =>
+        throw new NotSupportedException("All runtime methods have not definitions");
+
+    // all entities in shared builtin context can only be directly refrenced
+    // declarations is not allowed
+    public VariableDeclaration? this[IVariableSymbol symbol] => null;
+    public ParameterDeclaration? this[IParameterSymbol parameter] => null;
+
+    public MemberDeclaration? this[FieldInfo method] => null;
+
+    public IEnumerable<StructureDeclaration> StructureDeclarations => [];
+
+    public IEnumerable<VariableDeclaration> VariableDeclarations => [];
+
+    public IEnumerable<FunctionDeclaration> FunctionDeclarations => [];
+
+
+    public FunctionDeclaration? this[IFunctionSymbol symbol] => symbol switch
+    {
+        CSharpMethodFunctionSymbol { Method: var m } => RuntimeMethods.TryGetValue(m, out var f) ? f : null,
+        _ => throw new NotImplementedException()
+    };
+
+    public IShaderType? this[Type type] => RuntimeTypes.TryGetValue(type, out var found) ? found : null;
+
     private Dictionary<Type, IShaderType> GetRuntimeTypes()
     {
-        var result = new Dictionary<Type, IShaderType>()
+        var result = new Dictionary<Type, IShaderType>
         {
             [typeof(bool)] = BoolType.Instance,
             [typeof(int)] = ShaderType.I32,
@@ -37,7 +64,7 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
             [typeof(double)] = ShaderType.F64,
             [typeof(Vector4)] = VecType<N4, FloatType<N32>>.Instance,
             [typeof(Vector3)] = VecType<N3, FloatType<N32>>.Instance,
-            [typeof(Vector2)] = VecType<N2, FloatType<N32>>.Instance,
+            [typeof(Vector2)] = VecType<N2, FloatType<N32>>.Instance
         };
         var config = CSharpProjectionConfiguration.Instance;
 
@@ -54,27 +81,15 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
         return result;
     }
 
-    private Type[] GetNumericVectorTypes()
-    {
-        return [typeof(Vector4), typeof(Vector3), typeof(Vector2)];
-    }
+    private Type[] GetNumericVectorTypes() => [typeof(Vector4), typeof(Vector3), typeof(Vector2)];
 
     private Type GetMappedVecType(Type t)
     {
-        if (t == typeof(Vector4))
-        {
-            return typeof(vec4f32);
-        }
+        if (t == typeof(Vector4)) return typeof(vec4f32);
 
-        if (t == typeof(Vector3))
-        {
-            return typeof(vec3f32);
-        }
+        if (t == typeof(Vector3)) return typeof(vec3f32);
 
-        if (t == typeof(Vector2))
-        {
-            return typeof(vec2f32);
-        }
+        if (t == typeof(Vector2)) return typeof(vec2f32);
 
         throw new NotSupportedException();
     }
@@ -89,13 +104,9 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
                                let attr = m.GetCustomAttributes().OfType<IOperationMethodAttribute>().SingleOrDefault()
                                where attr is not null
                                select (m, attr.Operation);
-        foreach (var (m, op) in operationMethods)
-        {
-            result.Add(m, op.Function);
-        }
+        foreach (var (m, op) in operationMethods) result.Add(m, op.Function);
 
         foreach (var m in typeof(DMath).GetMethods())
-        {
             if (m.IsStatic)
             {
                 var returnType = m.ReturnType;
@@ -109,23 +120,16 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
                             paramTypes.Select(p => new ParameterDeclaration(p.Name, runtimeTypes[p], []));
                         var parameterTypes = parameterDecls.Select(p => p.Type).ToArray();
                         var f = ShaderFunction.Instance.GetFunction(m.Name, rt, parameterTypes);
-                        if (!result.ContainsKey(m))
-                        {
-                            result.Add(m, f);
-                        }
+                        if (!result.ContainsKey(m)) result.Add(m, f);
                     }
                 }
             }
-        }
 
         var vec4f32t = ShaderType.GetVecType(N4.Instance, ShaderType.F32);
         foreach (var c in typeof(Vector4).GetConstructors())
         {
             var parameters = c.GetParameters();
-            if (!parameters.All(p => runtimeTypes.ContainsKey(p.ParameterType)))
-            {
-                continue;
-            }
+            if (!parameters.All(p => runtimeTypes.ContainsKey(p.ParameterType))) continue;
 
             var f = ShaderFunction.Instance.GetFunction("vec4", vec4f32t, [
                 ..parameters.Select(p => runtimeTypes[p.ParameterType])
@@ -134,40 +138,9 @@ sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolTable>, IS
         }
 
         foreach (var m in typeof(Vector4).GetMethods())
-        {
             if (m.Name == "Dot")
-            {
-                result.Add(m, ShaderFunction.Instance.GetFunction("dot", ShaderType.F32, [vec4f32t, vec4f32t]));
-            }
-        }
+                result.Add(m, ShaderFunction.Instance.GetFunction("dot", ShaderType.F32, vec4f32t, vec4f32t));
 
         return result;
     }
-
-    public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) =>
-        throw new NotSupportedException("All runtime methods have not definitions");
-
-    public static SharedBuiltinSymbolTable Instance { get; } = new SharedBuiltinSymbolTable();
-
-    // all entities in shared builtin context can only be directly refrenced
-    // declarations is not allowed
-    public VariableDeclaration? this[IVariableSymbol symbol] => null;
-    public ParameterDeclaration? this[SymbolTable.IParameterSymbol parameter] => null;
-
-    public MemberDeclaration? this[FieldInfo method] => null;
-
-    public IEnumerable<StructureDeclaration> StructureDeclarations => [];
-
-    public IEnumerable<VariableDeclaration> VariableDeclarations => [];
-
-    public IEnumerable<FunctionDeclaration> FunctionDeclarations => [];
-
-
-    public FunctionDeclaration? this[SymbolTable.IFunctionSymbol symbol] => symbol switch
-    {
-        CSharpMethodFunctionSymbol { Method: var m } => RuntimeMethods.TryGetValue(m, out var f) ? f : null,
-        _ => throw new NotImplementedException()
-    };
-
-    public IShaderType? this[Type type] => RuntimeTypes.TryGetValue(type, out var found) ? found : null;
 }

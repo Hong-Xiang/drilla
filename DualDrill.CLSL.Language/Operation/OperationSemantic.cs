@@ -1,5 +1,4 @@
-﻿using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Literal;
+﻿using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation.Pointer;
 
 namespace DualDrill.CLSL.Language.Operation;
@@ -17,5 +16,7 @@ public interface IOperationSemantic<in TX, in TV, in TR, out TO>
     TO AddressOfChain(TX ctx, IAccessChainOperation op, TR result, TV target, TV index);
     TO Operation1(TX ctx, IUnaryExpressionOperation op, TR result, TV e);
     TO Operation2(TX ctx, IBinaryExpressionOperation op, TR result, TV l, TV r);
-    TO VectorCompositeConstruction(TX ctx, VectorCompositeConstructionOperation op, TR result, IReadOnlyList<TV> components);
+
+    TO VectorCompositeConstruction(TX ctx, VectorCompositeConstructionOperation op, TR result,
+        IReadOnlyList<TV> components);
 }

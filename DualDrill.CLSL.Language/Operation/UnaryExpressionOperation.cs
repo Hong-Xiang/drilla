@@ -1,7 +1,6 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Instruction;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -12,11 +11,11 @@ public interface IUnaryExpressionOperation : IOperation
 {
     IShaderType SourceType { get; }
     IShaderType ResultType { get; }
-    IUnaryExpression CreateExpression(IExpression expr);
-    TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context);
+    TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) =>
+        semantic.Operation1(inst, this, inst.Result, inst[0]);
 
-    TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
-        => semantic.Operation1(inst, this, inst.Result, inst[0]);
+
+    TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context);
 }
 
 public interface IUnaryExpressionOperationSemantic<in TX, out TO>
@@ -37,7 +36,8 @@ public interface IUnaryExpressionOperationSemantic<in TX, out TO>
         where TElement : IScalarType<TElement>
         where TPattern : Swizzle.IPattern<TPattern>;
 
-    TO VectorFromScalarConstruct<TRank, TElement>(TX context, VectorFromScalarConstructOperation<TRank, TElement> operation)
+    TO VectorFromScalarConstruct<TRank, TElement>(TX context,
+        VectorFromScalarConstructOperation<TRank, TElement> operation)
         where TRank : IRank<TRank>
         where TElement : IScalarType<TElement>;
 }
@@ -45,24 +45,16 @@ public interface IUnaryExpressionOperationSemantic<in TX, out TO>
 public interface IUnaryExpressionOperation<TSelf> : IUnaryExpressionOperation, IOperation<TSelf>
     where TSelf : IUnaryExpressionOperation<TSelf>
 {
-    IInstruction IOperation.Instruction => UnaryExpressionOperationInstruction<TSelf>.Instance;
-
-
-    TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor, UnaryOperationExpression<TSelf> expr);
-
     static readonly FunctionDeclaration OperationFunction = new(
         TSelf.Instance.Name,
         [
-            new ParameterDeclaration("value", TSelf.Instance.SourceType, []),
+            new ParameterDeclaration("value", TSelf.Instance.SourceType, [])
         ],
         new FunctionReturn(TSelf.Instance.ResultType, []),
         [new OperationMethodAttribute<TSelf>()]
     );
 
     FunctionDeclaration IOperation.Function => OperationFunction;
-
-    IUnaryExpression IUnaryExpressionOperation.CreateExpression(IExpression expr) =>
-        new UnaryOperationExpression<TSelf>(expr);
 }
 
 public interface IUnaryExpressionOperation<TSelf, TSourceType, TResultType>
@@ -85,6 +77,6 @@ public interface IUnaryExpressionOperation<TSelf, TSourceType, TResultType, TOp>
     string IOperation.Name => $"{TOp.Instance.Name}.{TSourceType.Instance.Name}.{TResultType.Instance.Name}";
 
 
-    TR IUnaryExpressionOperation.Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context)
-        => semantic.OpOperation<TSelf, TSourceType, TResultType, TOp>(context, TSelf.Instance);
+    TR IUnaryExpressionOperation.Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context) =>
+        semantic.OpOperation<TSelf, TSourceType, TResultType, TOp>(context, TSelf.Instance);
 }

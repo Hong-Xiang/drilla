@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-  </PropertyGroup>
+    <PropertyGroup>
+    </PropertyGroup>
 
-  <ItemGroup>
-	<PackageReference Include="DotNext"></PackageReference>
-    <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
-    <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="DotNext"></PackageReference>
+        <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj"/>
+        <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj"/>
+    </ItemGroup>
 
 </Project>

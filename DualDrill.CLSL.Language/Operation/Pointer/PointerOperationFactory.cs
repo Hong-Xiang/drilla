@@ -5,11 +5,10 @@ namespace DualDrill.CLSL.Language.Operation.Pointer;
 
 public sealed class PointerOperationFactory
 {
-    public IAccessChainOperation Member(MemberDeclaration member)
-        => new AddressOfMemberOperation(member);
+    public IAccessChainOperation Member(MemberDeclaration member) => new AddressOfMemberOperation(member);
 
     public IAccessChainOperation VecComponent(
         IVecType target,
-        Swizzle.IComponent component)
-        => new AddressOfVecComponentOperation(target, component);
+        Swizzle.IComponent component) =>
+        new AddressOfVecComponentOperation(target, component);
 }

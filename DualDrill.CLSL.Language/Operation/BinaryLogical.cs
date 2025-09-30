@@ -34,26 +34,26 @@ public static class BinaryLogical
 
 public sealed class LogicalAnd : BinaryLogical.IWithBitwiseOp<LogicalAnd>, IIntegerOp<LogicalAnd>, ISymbolOp<LogicalAnd>
 {
+    public string Symbol => "&&";
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.and;
 
     public static LogicalAnd Instance { get; } = new();
 
     public BinaryArithmetic.IBitwiseLogicalOp BitwiseOp => BinaryArithmetic.BitwiseAnd.Instance;
-    public string Symbol => "&&";
 }
 
 public sealed class LogicalOr : BinaryLogical.IWithBitwiseOp<LogicalOr>, IIntegerOp<LogicalOr>, ISymbolOp<LogicalOr>
 {
+    public string Symbol => "||";
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.or;
     public static LogicalOr Instance { get; } = new();
     public BinaryArithmetic.IBitwiseLogicalOp BitwiseOp => BinaryArithmetic.BitwiseOr.Instance;
-    public string Symbol => "||";
 }
 
 public sealed class LogicalXor : BinaryLogical.IWithBitwiseOp<LogicalXor>, IIntegerOp<LogicalXor>, ISymbolOp<LogicalXor>
 {
+    public string Symbol => "^";
     public static BinaryLogical.OpKind Kind => BinaryLogical.OpKind.xor;
     public static LogicalXor Instance { get; } = new();
     public BinaryArithmetic.IBitwiseLogicalOp BitwiseOp => BinaryArithmetic.BitwiseXor.Instance;
-    public string Symbol => "^";
 }

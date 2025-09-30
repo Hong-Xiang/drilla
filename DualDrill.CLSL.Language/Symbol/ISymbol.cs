@@ -1,5 +1,5 @@
-using DualDrill.CLSL.Language.ShaderAttribute;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Language.ShaderAttribute;
 
 namespace DualDrill.CLSL.Language.Symbol;
 

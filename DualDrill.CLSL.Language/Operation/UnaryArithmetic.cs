@@ -1,6 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -33,13 +31,5 @@ public sealed class UnaryNumericArithmeticExpressionOperation<TType, TOp>
 {
     public static UnaryNumericArithmeticExpressionOperation<TType, TOp> Instance { get; } = new();
 
-    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        UnaryOperationExpression<UnaryNumericArithmeticExpressionOperation<TType, TOp>> expr)
-    {
-        return visitor
-            .VisitUnaryExpression<UnaryNumericArithmeticExpressionOperation<TType, TOp>, TType, TType, TOp>(expr);
-    }
 
-    public IInstruction Instruction =>
-        UnaryExpressionOperationInstruction<UnaryNumericArithmeticExpressionOperation<TType, TOp>>.Instance;
 }

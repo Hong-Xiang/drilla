@@ -1,65 +1,34 @@
-﻿using DualDrill.CLSL.Compiler;
-using DualDrill.CLSL.Language.ControlFlow;
-using Lokad.ILPack.IL;
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Reflection.Metadata;
+using DualDrill.CLSL.Compiler;
+using DualDrill.CLSL.Language.ControlFlow;
+using Lokad.ILPack.IL;
 using Label = DualDrill.CLSL.Language.Symbol.Label;
 
 namespace DualDrill.CLSL.Frontend;
 
 public sealed class MethodBodyAnalysisModel
 {
-    public readonly record struct CilInstructionBlock(
-        Label Label,
-        int InstructionIndex,
-        int InstructionCount,
-        int ByteOffset,
-        int ByteLength
-    )
-    {
-    }
-
-    public ImmutableArray<ParameterInfo> Parameters { get; }
-    public ImmutableArray<LocalVariableInfo> LocalVariables { get; }
-    public ImmutableArray<int> Offsets { get; }
-    private ImmutableArray<Instruction> Instructions { get; }
-    public ImmutableArray<Label> Labels { get; }
+    private readonly FrozenDictionary<Label, int> LabelCounts;
 
     private readonly FrozenDictionary<Label, int> LabelIndices;
-    private readonly FrozenDictionary<Label, int> LabelCounts;
     private readonly FrozenDictionary<int, Label> OffsetLabels;
-    public int LabelToInstructionIndex(Label label) => LabelIndices[label];
-    public int LabelToInstructionCount(Label label) => LabelCounts[label];
-    public Label? OffsetToLabel(int offset) => OffsetLabels.TryGetValue(offset, out var label) ? label : null;
-    public MethodBase Method { get; }
-    public MethodBody? Body { get; }
-    public bool IsStatic => Method.IsStatic;
-
-    public int InstructionCount => Instructions.Length;
-    public int CodeByteSize => Offsets[InstructionCount];
-
-    public FrozenDictionary<int, int> OffsetsToIndex { get; }
-
-    public ControlFlowGraph<CilInstructionBlock> ControlFlowGraph { get; }
 
     public MethodBodyAnalysisModel(MethodBase method)
     {
         Method = method;
         Body = method.GetMethodBody();
         Parameters = [.. method.GetParameters()];
-        Instructions = [.. (method.GetInstructions() ?? [])];
+        Instructions = [.. method.GetInstructions() ?? []];
 
         {
             var localVariables = (method.GetMethodBody()?.LocalVariables ?? []).ToArray();
             var localVariablesFromInsturctions = Instructions.Select(inst => inst.Operand).OfType<LocalVariableInfo>()
                                                              .Distinct().OrderBy(v => v.LocalIndex);
-            foreach (var l in localVariablesFromInsturctions)
-            {
-                localVariables[l.LocalIndex] = l;
-            }
+            foreach (var l in localVariablesFromInsturctions) localVariables[l.LocalIndex] = l;
 
             LocalVariables = [.. localVariables];
         }
@@ -78,6 +47,26 @@ public sealed class MethodBodyAnalysisModel
         OffsetLabels = LabelIndices.ToFrozenDictionary(x => Offsets[x.Value], x => x.Key);
         Labels = [.. LabelIndices.OrderBy(x => x.Value).Select(x => x.Key)];
     }
+
+    public ImmutableArray<ParameterInfo> Parameters { get; }
+    public ImmutableArray<LocalVariableInfo> LocalVariables { get; }
+    public ImmutableArray<int> Offsets { get; }
+    private ImmutableArray<Instruction> Instructions { get; }
+    public ImmutableArray<Label> Labels { get; }
+    public MethodBase Method { get; }
+    public MethodBody? Body { get; }
+    public bool IsStatic => Method.IsStatic;
+
+    public int InstructionCount => Instructions.Length;
+    public int CodeByteSize => Offsets[InstructionCount];
+
+    public FrozenDictionary<int, int> OffsetsToIndex { get; }
+
+    public ControlFlowGraph<CilInstructionBlock> ControlFlowGraph { get; }
+    public CilInstructionInfo this[int index] => new(index, Offsets[index], Offsets[index + 1], Instructions[index]);
+    public int LabelToInstructionIndex(Label label) => LabelIndices[label];
+    public int LabelToInstructionCount(Label label) => LabelCounts[label];
+    public Label? OffsetToLabel(int offset) => OffsetLabels.TryGetValue(offset, out var label) ? label : null;
 
     public IEnumerable<MethodBase> CalledMethods()
     {
@@ -138,5 +127,14 @@ public sealed class MethodBodyAnalysisModel
             );
         });
     }
-    public CilInstructionInfo this[int index] => new(index, Offsets[index], Offsets[index + 1], Instructions[index]);
+
+    public readonly record struct CilInstructionBlock(
+        Label Label,
+        int InstructionIndex,
+        int InstructionCount,
+        int ByteOffset,
+        int ByteLength
+    )
+    {
+    }
 }

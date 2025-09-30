@@ -1,8 +1,8 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+﻿using System.Collections.Immutable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language;
 
@@ -10,23 +10,22 @@ public sealed class CSharpProjectionConfiguration
 {
     public static readonly CSharpProjectionConfiguration Instance = new();
 
-    public string MathLibNameSpaceName { get; } = "DualDrill.Mathematics";
-    public string StaticMathTypeName { get; } = "DMath";
-
-    ImmutableDictionary<IShaderType, string> CSharpTypeNameMap { get; }
-    CSharpProjectionConfiguration()
+    private CSharpProjectionConfiguration()
     {
         var typeNameMap = new Dictionary<IShaderType, string>();
         foreach (var t in ShaderType.ScalarTypes)
         {
             typeNameMap.Add(t, DefineCSharpTypeName(t));
-            foreach (var v in ShaderType.GetVecTypes(t))
-            {
-                typeNameMap.Add(v, DefineCSharpTypeName(v));
-            }
+            foreach (var v in ShaderType.GetVecTypes(t)) typeNameMap.Add(v, DefineCSharpTypeName(v));
         }
+
         CSharpTypeNameMap = typeNameMap.ToImmutableDictionary();
     }
+
+    public string MathLibNameSpaceName { get; } = "DualDrill.Mathematics";
+    public string StaticMathTypeName { get; } = "DMath";
+
+    private ImmutableDictionary<IShaderType, string> CSharpTypeNameMap { get; }
 
     public string OpName(UnaryArithmeticOp op)
     {
@@ -62,7 +61,8 @@ public sealed class CSharpProjectionConfiguration
             _ => throw new NotSupportedException($"Binary arithmetic operator {op} is not supported")
         };
     }
-    static string DefineCSharpTypeName(IShaderType type)
+
+    private static string DefineCSharpTypeName(IShaderType type)
     {
         return (type switch
         {

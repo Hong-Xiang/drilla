@@ -1,6 +1,5 @@
 ﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 
@@ -13,24 +12,13 @@ public sealed class AddressOfMemberOperation(MemberDeclaration Member)
 
     public string Name => Member.Name;
 
-    public IInstruction Instruction => throw new NotImplementedException();
 
     public IShaderType SourceType => throw new NotImplementedException();
 
     public IShaderType ResultType => Member.Type.GetPtrType();
 
-    public IUnaryExpression CreateExpression(IExpression expr)
-    {
+    public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context) =>
         throw new NotImplementedException();
-    }
 
-    public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IOperationMethodAttribute GetOperationMethodAttribute()
-    {
-        throw new NotImplementedException();
-    }
+    public IOperationMethodAttribute GetOperationMethodAttribute() => throw new NotImplementedException();
 }

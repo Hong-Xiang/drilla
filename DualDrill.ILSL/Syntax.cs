@@ -1,5 +1,5 @@
-﻿using Silk.NET.Maths;
-using System.Numerics;
+﻿using System.Numerics;
+using Silk.NET.Maths;
 
 namespace DualDrill.CLSL;
 
@@ -25,7 +25,6 @@ namespace DualDrill.CLSL;
 //    public GPUVertexStepMode StepMode { get; } = StepMode;
 //}
 
-
 public interface ISharpShader
 {
 }
@@ -39,5 +38,3 @@ public interface ITexture2D<T>
     public T Sample(ISampler sampler, Vector2 coordinate);
     public T Sample(ISampler sampler, Vector2D<float> coordinate);
 }
-
-

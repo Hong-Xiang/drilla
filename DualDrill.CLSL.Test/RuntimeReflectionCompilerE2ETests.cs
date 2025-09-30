@@ -1,4 +1,6 @@
 ﻿using DualDrill.CLSL.Backend;
+using DualDrill.CLSL.Frontend;
+using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -19,7 +21,9 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     void TestShader(ISharpShader shader, string name)
     {
         var sep = $"\n{new string('-', 10)}\n";
-        var module = shader.Parse4();
+        var context = CompilationContext.Create();
+        var parser = new RuntimeReflectionParser(context);
+        var module =  parser.ParseShaderModule(shader);
         Dump("IR", module);
         //module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
         //module = module.RunPass(new FunctionToOperationPass());
@@ -28,13 +32,13 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         //Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
         Dump("IR after passes", module);
 
-        var emitter = new WGSLEmitter(module);
+        var emitter = new SlangEmitter(module);
 
         var code = emitter.Emit();
-        Output.WriteLine("=== WGSL ===");
+        Output.WriteLine("=== SLang ===");
         Output.WriteLine(code);
 
-        using var f = File.CreateText($"D:\\Code\\DualDrillEngine\\DualDrill.CLSL.Test\\ShaderModule\\{name}-gen.wgsl");
+        using var f = File.CreateText($"D:\\Code\\DualDrillEngine\\DualDrill.CLSL.Test\\ShaderModule\\{name}-gen.slang");
         f.WriteLine(code);
 
         //cfg = cfg.EliminateBlockValueTransfer();

@@ -8,15 +8,65 @@ namespace DualDrill.CLSL.Language.ControlFlowGraph;
 
 public sealed class DominatorTree : IComparer<Label>
 {
-    FrozenDictionary<Label, int> LabelOrders { get; }
     /// <summary>
-    /// Get all children of a node in dominator tree (ordered by reverse postorder numbering)
-    /// which contains all nodes n which satisfies `ImmediateDominator(n) = node`
+    ///     Create dominator tree, with dominator sets etc
+    /// </summary>
+    /// <param name="labels">labels of tree, ordered by reverse postorder numbering</param>
+    /// <param name="donminatorSets">dominator sets of all labels, must be consistency with labels ordering</param>
+    public DominatorTree(
+        ControlFlowDFSTree tree,
+        IEnumerable<Label> labels,
+        IReadOnlyDictionary<Label, IEnumerable<Label>> dominatorSets
+    )
+    {
+        Labels = [.. labels];
+        LabelOrders = Labels.Select((l, i) => KeyValuePair.Create(l, i)).ToFrozenDictionary();
+        AllLabelDominators = dominatorSets
+                             .Select(kv => KeyValuePair.Create(
+                                 kv.Key,
+                                 kv.Value.OrderBy(l => LabelOrders[l]).ToImmutableArray()))
+                             .ToFrozenDictionary();
+        Debug.Assert(AllLabelDominators.Count == dominatorSets.Count);
+        var childrenMap = new Dictionary<Label, List<Label>>();
+        foreach (var l in labels) childrenMap.Add(l, []);
+        foreach (var l in labels)
+        {
+            var p = ImmediateDominator(l);
+            if (p is Label pl) childrenMap[pl].Add(l);
+        }
+
+        foreach (var l in labels) childrenMap[l].Sort((a, b) => LabelOrders[a] - LabelOrders[b]);
+        ChildrenMaps = childrenMap.Select(kv => KeyValuePair.Create(kv.Key, kv.Value.ToImmutableArray()))
+                                  .ToFrozenDictionary();
+
+        Validate();
+    }
+
+    private FrozenDictionary<Label, int> LabelOrders { get; }
+
+    private FrozenDictionary<Label, ImmutableArray<Label>> AllLabelDominators { get; }
+    private FrozenDictionary<Label, ImmutableArray<Label>> ChildrenMaps { get; }
+    private ImmutableArray<Label> Labels { get; }
+    public Label EntryLabel => Labels[0];
+
+    public int Compare(Label? x, Label? y)
+    {
+        return (x, y) switch
+        {
+            (null, null) => 0,
+            (null, not null) => 1,
+            (not null, null) => -1,
+            _ => LabelOrders[x] - LabelOrders[y]
+        };
+    }
+
+    /// <summary>
+    ///     Get all children of a node in dominator tree (ordered by reverse postorder numbering)
+    ///     which contains all nodes n which satisfies `ImmediateDominator(n) = node`
     /// </summary>
     /// <param name="node"></param>
     /// <returns></returns>
-    public IEnumerable<Label> GetChildren(Label node)
-        => ChildrenMaps[node];
+    public IEnumerable<Label> GetChildren(Label node) => ChildrenMaps[node];
 
 
     public Label? ImmediateDominator(Label label)
@@ -30,80 +80,26 @@ public sealed class DominatorTree : IComparer<Label>
 
 
     /// <summary>
-    /// All dominators of given node, which is actually a path from root to given node in dominator tree
+    ///     All dominators of given node, which is actually a path from root to given node in dominator tree
     /// </summary>
     /// <param name="node"></param>
     /// <returns></returns>
     public IEnumerable<Label> Dominators(Label node) => AllLabelDominators[node];
 
-    FrozenDictionary<Label, ImmutableArray<Label>> AllLabelDominators { get; }
-    FrozenDictionary<Label, ImmutableArray<Label>> ChildrenMaps { get; }
-    ImmutableArray<Label> Labels { get; }
-    public Label EntryLabel => Labels[0];
-
-    /// <summary>
-    /// Create dominator tree, with dominator sets etc 
-    /// </summary>
-    /// <param name="labels">labels of tree, ordered by reverse postorder numbering</param>
-    /// <param name="donminatorSets">dominator sets of all labels, must be consistency with labels ordering</param>
-    public DominatorTree(
-        ControlFlowDFSTree tree,
-        IEnumerable<Label> labels,
-        IReadOnlyDictionary<Label, IEnumerable<Label>> dominatorSets
-    )
-    {
-        Labels = [.. labels];
-        LabelOrders = Labels.Select((l, i) => KeyValuePair.Create(l, i)).ToFrozenDictionary();
-        AllLabelDominators = dominatorSets
-                        .Select(kv => KeyValuePair.Create(
-                            kv.Key,
-                            kv.Value.OrderBy(l => LabelOrders[l]).ToImmutableArray()))
-                        .ToFrozenDictionary();
-        Debug.Assert(AllLabelDominators.Count == dominatorSets.Count);
-        var childrenMap = new Dictionary<Label, List<Label>>();
-        foreach (var l in labels)
-        {
-            childrenMap.Add(l, []);
-        }
-        foreach (var l in labels)
-        {
-            var p = ImmediateDominator(l);
-            if (p is Label pl)
-            {
-                childrenMap[pl].Add(l);
-            }
-        }
-        foreach (var l in labels)
-        {
-            childrenMap[l].Sort((a, b) => LabelOrders[a] - LabelOrders[b]);
-        }
-        ChildrenMaps = childrenMap.Select(kv => KeyValuePair.Create(kv.Key, kv.Value.ToImmutableArray())).ToFrozenDictionary();
-
-        Validate();
-    }
-
-    void Validate()
+    private void Validate()
     {
         Debug.Assert(Labels.Length == AllLabelDominators.Count);
         Debug.Assert(Labels.Length == LabelOrders.Count);
-        foreach (var l in Labels)
-        {
-            Debug.Assert(AllLabelDominators.ContainsKey(l));
-        }
+        foreach (var l in Labels) Debug.Assert(AllLabelDominators.ContainsKey(l));
         foreach (var kv in AllLabelDominators)
-        {
             Debug.Assert(kv.Key.Equals(kv.Value[^1]), "last element of dominators must be label itself");
-        }
     }
 
     public static DominatorTree CreateFromControlFlowGraph(ControlFlowDFSTree tree)
     {
-        ImmutableArray<Label> labels = tree.Labels;
+        var labels = tree.Labels;
         var dominatorSets = new Dictionary<Label, HashSet<Label>>();
-        foreach (var label in labels)
-        {
-            dominatorSets[label] = [.. labels];
-        }
+        foreach (var label in labels) dominatorSets[label] = [.. labels];
         var e = tree.ControlFlowGraph.EntryLabel;
         dominatorSets[e] = [e];
 
@@ -113,15 +109,9 @@ public sealed class DominatorTree : IComparer<Label>
             changed = false;
             foreach (var label in labels)
             {
-                if (label.Equals(e))
-                {
-                    continue;
-                }
+                if (label.Equals(e)) continue;
                 HashSet<Label> tmp = [.. labels];
-                foreach (var p in tree.ControlFlowGraph.GetPred(label))
-                {
-                    tmp.IntersectWith(dominatorSets[p]);
-                }
+                foreach (var p in tree.ControlFlowGraph.GetPred(label)) tmp.IntersectWith(dominatorSets[p]);
                 tmp.Add(label);
                 var cur = dominatorSets[label];
                 if (cur.Count != tmp.Count)
@@ -131,26 +121,16 @@ public sealed class DominatorTree : IComparer<Label>
                 }
             }
         }
-        Dictionary<Label, IEnumerable<Label>> ds = dominatorSets.Select(kv => KeyValuePair.Create(kv.Key, (IEnumerable<Label>)kv.Value)).ToDictionary();
-        return new DominatorTree(tree, labels, ds);
-    }
 
-    public int Compare(Label? x, Label? y)
-    {
-        return (x, y) switch
-        {
-            (null, null) => 0,
-            (null, { }) => 1,
-            ({ }, null) => -1,
-            _ => LabelOrders[x] - LabelOrders[y]
-        };
+        var ds = dominatorSets.Select(kv => KeyValuePair.Create(kv.Key, (IEnumerable<Label>)kv.Value)).ToDictionary();
+        return new DominatorTree(tree, labels, ds);
     }
 }
 
-public static partial class StructuredControlFlow
+public static class StructuredControlFlow
 {
     public static DominatorTree GetDominatorTree(
         this ControlFlowDFSTree tree
-    )
-        => DominatorTree.CreateFromControlFlowGraph(tree);
+    ) =>
+        DominatorTree.CreateFromControlFlowGraph(tree);
 }

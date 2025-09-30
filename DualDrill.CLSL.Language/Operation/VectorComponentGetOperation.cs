@@ -1,5 +1,4 @@
 using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 
@@ -25,26 +24,20 @@ public sealed class VectorComponentGetExpressionOperation<TRank, TVector, TCompo
     public IShaderType SourceType => TVector.Instance.GetPtrType();
     public IShaderType ResultType => TVector.Instance.ElementType;
 
-    IUnaryExpression IUnaryExpressionOperation.CreateExpression(IExpression expr)
-        => new UnaryOperationExpression<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>>(expr);
 
-    public IInstruction Instruction =>
-        UnaryExpressionOperationInstruction<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>>.Instance;
+
+
+    public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context) =>
+        TVector.Instance.Accept(new SizedVecVisitor<TX, TR>(semantic, context));
 
     public Swizzle.IComponent Component => TComponent.Instance;
 
-    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        UnaryOperationExpression<VectorComponentGetExpressionOperation<TRank, TVector, TComponent>> expr)
-        => visitor.VisitVectorComponentGetExpression<TRank, TVector, TComponent>(expr);
-
-    sealed class SizedVecVisitor<TX, TR>(
-        IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context
+    private sealed class SizedVecVisitor<TX, TR>(
+        IUnaryExpressionOperationSemantic<TX, TR> semantic,
+        TX context
     ) : ISizedVecType<TRank, TVector>.ISizedVisitor<TR>
     {
-        public TR Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement>
-            => semantic.VectorComponentGet<TRank, TElement, TComponent>(context);
+        public TR Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement> =>
+            semantic.VectorComponentGet<TRank, TElement, TComponent>(context);
     }
-
-    public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context)
-        => TVector.Instance.Accept(new SizedVecVisitor<TX, TR>(semantic, context));
 }

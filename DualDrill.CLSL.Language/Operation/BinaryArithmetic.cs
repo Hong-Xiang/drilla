@@ -1,6 +1,6 @@
-﻿using DualDrill.CLSL.Language.Types;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json.Serialization;
+using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation;
 
@@ -22,105 +22,6 @@ public static class BinaryArithmetic
         xor
     }
 
-    public interface IOp : IBinaryOp
-    {
-        public interface IVisitor<TResult>
-        {
-            TResult Visit<TOp>(TOp op) where TOp : IOp<TOp>;
-        }
-
-        TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IVisitor<TResult>;
-
-        INumericBinaryArithmeticOperation GetNumericBinaryOperation(INumericType t);
-    }
-
-    public interface IOp<TSelf> : IOp, IOpKind<TSelf, OpKind>, IBinaryOp<TSelf>
-        where TSelf : IOp<TSelf>
-    {
-        TResult IOp.Accept<TVisitor, TResult>(TVisitor visitor)
-            => visitor.Visit(TSelf.Instance);
-
-
-        INumericBinaryArithmeticOperation IOp.GetNumericBinaryOperation(INumericType t)
-        {
-            return t.ArithmeticOperation<TSelf>();
-        }
-    }
-
-    public sealed class Add : IOp<Add>, ISymbolOp<Add>, IFloatOp<Add>, IIntegerOp<Add>
-    {
-        public static Add Instance { get; } = new();
-        public static OpKind Kind => OpKind.add;
-        public string Symbol => "+";
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
-            => visitor.Visit(this);
-    }
-
-    public sealed class Sub : IOp<Sub>, ISymbolOp<Sub>, IFloatOp<Sub>, IIntegerOp<Sub>
-    {
-        public static OpKind Kind => OpKind.sub;
-        public string Symbol => "-";
-        public static Sub Instance { get; } = new();
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
-            => visitor.Visit(this);
-    }
-
-
-    public sealed class Mul : IOp<Mul>, ISymbolOp<Mul>, IFloatOp<Mul>, IIntegerOp<Mul>
-    {
-        public static OpKind Kind => OpKind.mul;
-        public string Symbol => "*";
-
-        public static Mul Instance { get; } = new();
-
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
-            => visitor.Visit(this);
-    }
-
-
-    public sealed class Div : IOp<Div>, ISymbolOp<Div>, IFloatOp<Div>, ISignedIntegerOp<Div>
-    {
-        public static OpKind Kind => OpKind.div;
-        public string Symbol => "/";
-
-        public static Div Instance { get; } = new();
-
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
-            => visitor.Visit(this);
-    }
-
-
-    public sealed class Rem : IOp<Rem>, ISymbolOp<Rem>, IFloatOp<Div>, ISignedIntegerOp<Div>
-    {
-        public static OpKind Kind => OpKind.rem;
-        public string Symbol => "%";
-
-        public static Rem Instance { get; } = new();
-
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
-            => visitor.Visit(this);
-    }
-
-    public sealed class Min : IOp<Min>, IFloatOp<Min>
-    {
-        public static OpKind Kind => OpKind.min;
-
-        public static Min Instance { get; } = new();
-
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
-            => visitor.Visit(this);
-    }
-
-    public sealed class Max : IOp<Max>, IFloatOp<Min>
-    {
-        public static OpKind Kind => OpKind.max;
-
-        public static Max Instance { get; } = new();
-
-        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult>
-            => visitor.Visit(this);
-    }
-
     public static IOp GetInstance(OpKind op)
     {
         return op switch
@@ -135,6 +36,109 @@ public static class BinaryArithmetic
             OpKind.xor => BitwiseXor.Instance,
             _ => throw new InvalidEnumArgumentException(nameof(op), (int)op, typeof(OpKind))
         };
+    }
+
+    public interface IOp : IBinaryOp
+    {
+        TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IVisitor<TResult>;
+
+        INumericBinaryArithmeticOperation GetNumericBinaryOperation(INumericType t);
+
+        public interface IVisitor<TResult>
+        {
+            TResult Visit<TOp>(TOp op) where TOp : IOp<TOp>;
+        }
+    }
+
+    public interface IOp<TSelf> : IOp, IOpKind<TSelf, OpKind>, IBinaryOp<TSelf>
+        where TSelf : IOp<TSelf>
+    {
+        TResult IOp.Accept<TVisitor, TResult>(TVisitor visitor) => visitor.Visit(TSelf.Instance);
+
+
+        INumericBinaryArithmeticOperation IOp.GetNumericBinaryOperation(INumericType t) =>
+            t.ArithmeticOperation<TSelf>();
+    }
+
+    public sealed class Add : IOp<Add>, ISymbolOp<Add>, IFloatOp<Add>, IIntegerOp<Add>
+    {
+        public static Add Instance { get; } = new();
+        public static OpKind Kind => OpKind.add;
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult> =>
+            visitor.Visit(this);
+
+        public string Symbol => "+";
+    }
+
+    public sealed class Sub : IOp<Sub>, ISymbolOp<Sub>, IFloatOp<Sub>, IIntegerOp<Sub>
+    {
+        public static OpKind Kind => OpKind.sub;
+        public static Sub Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult> =>
+            visitor.Visit(this);
+
+        public string Symbol => "-";
+    }
+
+
+    public sealed class Mul : IOp<Mul>, ISymbolOp<Mul>, IFloatOp<Mul>, IIntegerOp<Mul>
+    {
+        public static OpKind Kind => OpKind.mul;
+
+        public static Mul Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult> =>
+            visitor.Visit(this);
+
+        public string Symbol => "*";
+    }
+
+
+    public sealed class Div : IOp<Div>, ISymbolOp<Div>, IFloatOp<Div>, ISignedIntegerOp<Div>
+    {
+        public static OpKind Kind => OpKind.div;
+
+        public static Div Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult> =>
+            visitor.Visit(this);
+
+        public string Symbol => "/";
+    }
+
+
+    public sealed class Rem : IOp<Rem>, ISymbolOp<Rem>, IFloatOp<Div>, ISignedIntegerOp<Div>
+    {
+        public static OpKind Kind => OpKind.rem;
+
+        public static Rem Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult> =>
+            visitor.Visit(this);
+
+        public string Symbol => "%";
+    }
+
+    public sealed class Min : IOp<Min>, IFloatOp<Min>
+    {
+        public static OpKind Kind => OpKind.min;
+
+        public static Min Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult> =>
+            visitor.Visit(this);
+    }
+
+    public sealed class Max : IOp<Max>, IFloatOp<Min>
+    {
+        public static OpKind Kind => OpKind.max;
+
+        public static Max Instance { get; } = new();
+
+        public TResult Accept<TVisitor, TResult>(TVisitor visitor) where TVisitor : IOp.IVisitor<TResult> =>
+            visitor.Visit(this);
     }
 
     public interface IBitwiseLogicalOp : IOp
@@ -175,4 +179,3 @@ public static class BinaryArithmetic
         public string Symbol => "^";
     }
 }
-

@@ -17,7 +17,6 @@ public interface IDeclarationVisitor<TBody, T> : IDeclarationVisitor<T>
     where TBody : IFunctionBody
 {
     T VisitModule(ShaderModuleDeclaration<TBody> decl);
-
 }
 
 public interface IDeclarationSemantic<T>

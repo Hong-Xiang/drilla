@@ -8,7 +8,7 @@ public enum AddressSpaceKind
     Function,
     Uniform,
     Input,
-    Output,
+    Output
 }
 
 public interface IAddressSpace
@@ -47,11 +47,9 @@ public sealed class GenericAddressSpace
 
     public AddressSpaceKind Kind => AddressSpaceKind.Generic;
 
-    public T Eval<T>(IAddressSpaceSemantic<T> semantic)
-        => semantic.Generic(this);
+    public T Eval<T>(IAddressSpaceSemantic<T> semantic) => semantic.Generic(this);
 
-    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic)
-        => semantic.AddressSpace(this);
+    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic) => semantic.AddressSpace(this);
 }
 
 public sealed class FunctionAddressSpace
@@ -62,12 +60,10 @@ public sealed class FunctionAddressSpace
 
     public AddressSpaceKind Kind => AddressSpaceKind.Function;
 
-    public T Eval<T>(IAddressSpaceSemantic<T> semantic)
-        => semantic.Function(this);
+    public T Eval<T>(IAddressSpaceSemantic<T> semantic) => semantic.Function(this);
 
 
-    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic)
-        => semantic.AddressSpace(this);
+    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic) => semantic.AddressSpace(this);
 }
 
 public sealed class InputAddressSpace
@@ -77,11 +73,9 @@ public sealed class InputAddressSpace
     public static InputAddressSpace Instance { get; } = new();
     public AddressSpaceKind Kind => AddressSpaceKind.Input;
 
-    public T Eval<T>(IAddressSpaceSemantic<T> semantic)
-        => semantic.Input(this);
+    public T Eval<T>(IAddressSpaceSemantic<T> semantic) => semantic.Input(this);
 
-    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic)
-        => semantic.AddressSpace(this);
+    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic) => semantic.AddressSpace(this);
 }
 
 public sealed class OutputAddressSpace
@@ -91,11 +85,9 @@ public sealed class OutputAddressSpace
     public static OutputAddressSpace Instance { get; } = new();
     public AddressSpaceKind Kind => AddressSpaceKind.Output;
 
-    public T Eval<T>(IAddressSpaceSemantic<T> semantic)
-        => semantic.Output(this);
+    public T Eval<T>(IAddressSpaceSemantic<T> semantic) => semantic.Output(this);
 
-    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic)
-        => semantic.AddressSpace(this);
+    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic) => semantic.AddressSpace(this);
 }
 
 public sealed class UniformAddressSpace
@@ -105,9 +97,7 @@ public sealed class UniformAddressSpace
     public AddressSpaceKind Kind => AddressSpaceKind.Uniform;
     public static UniformAddressSpace Instance { get; } = new();
 
-    public T Eval<T>(IAddressSpaceSemantic<T> semantic)
-        => semantic.Uniform(this);
+    public T Eval<T>(IAddressSpaceSemantic<T> semantic) => semantic.Uniform(this);
 
-    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic)
-        => semantic.AddressSpace(this);
+    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic) => semantic.AddressSpace(this);
 }

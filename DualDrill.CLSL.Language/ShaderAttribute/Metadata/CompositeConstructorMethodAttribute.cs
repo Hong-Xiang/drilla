@@ -3,15 +3,12 @@ using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 
-[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Method)]
 public sealed class CompositeConstructorMethodAttribute
     : Attribute
     , IZeroArgumentNewLikeShaderMetadataAttribute
     , IShaderOperationMethodAttribute
 {
-    public IOperation GetOperation(IShaderType resultType, IEnumerable<IShaderType> parameterTypes)
-    {
+    public IOperation GetOperation(IShaderType resultType, IEnumerable<IShaderType> parameterTypes) =>
         throw new NotImplementedException();
-    }
 }
-

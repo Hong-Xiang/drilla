@@ -1,7 +1,5 @@
-﻿using DualDrill.CLSL.Language.Operation;
-using DualDrill.Common;
+﻿using System.Diagnostics;
 using DualDrill.Common.Nat;
-using System.Diagnostics;
 
 namespace DualDrill.CLSL.Language.Types;
 
@@ -24,11 +22,10 @@ public sealed record class FloatType<TBitWidth> : IFloatType<FloatType<TBitWidth
     public IBitWidth BitWidth => TBitWidth.BitWidth;
     public int ByteSize => BitWidth.Value / 8;
 
-    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T>
-        => visitor.Visit(this);
+    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T> =>
+        visitor.Visit(this);
 
-    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
-        => semantic.FloatType(this);
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => semantic.FloatType(this);
 }
 
 public static partial class ShaderType

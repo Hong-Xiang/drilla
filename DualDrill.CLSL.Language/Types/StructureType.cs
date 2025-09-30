@@ -1,5 +1,4 @@
 using DualDrill.CLSL.Language.Declaration;
-using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 
@@ -8,8 +7,7 @@ namespace DualDrill.CLSL.Language.Types;
 public sealed class StructureType
     : IShaderType<StructureType>
 {
-    public StructureDeclaration Declaration { get; }
-    public string Name => Declaration.Name;
+    private readonly Dictionary<IAddressSpace, IPtrType> PtrTypes = [];
 
     public StructureType(StructureDeclaration declaration)
     {
@@ -19,39 +17,31 @@ public sealed class StructureType
             [],
             new FunctionReturn(this, []),
             [
-                new ShaderRuntimeMethodAttribute(),
+                new ShaderRuntimeMethodAttribute()
             ]
         );
     }
 
-    public IRefType GetRefType()
-    {
-        throw new NotImplementedException();
-    }
-    private Dictionary<IAddressSpace, IPtrType> PtrTypes = [];
+    public StructureDeclaration Declaration { get; }
+
+    public FunctionDeclaration ZeroConstructor { get; }
+    public string Name => Declaration.Name;
+
+    public IRefType GetRefType() => throw new NotImplementedException();
 
     public IPtrType GetPtrType(IAddressSpace addressSpace)
     {
         lock (PtrTypes)
         {
-            if (PtrTypes.TryGetValue(addressSpace, out var ptr))
-            {
-                return ptr;
-            }
-            else
-            {
-                var p = new PtrType(this, addressSpace);
-                PtrTypes.Add(addressSpace, p);
-                return p;
-            }
+            if (PtrTypes.TryGetValue(addressSpace, out var ptr)) return ptr;
+
+            var p = new PtrType(this, addressSpace);
+            PtrTypes.Add(addressSpace, p);
+            return p;
         }
     }
 
-    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
-    {
-        throw new NotImplementedException();
-    }
+    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => throw new NotImplementedException();
 
-    public FunctionDeclaration ZeroConstructor { get; }
     public static StructureType Instance => throw new NotSupportedException();
 }

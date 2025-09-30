@@ -26,31 +26,21 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
     {
         var instruction = Instruction;
 
-        ParameterDeclaration GetParameterByInfo()
-        {
-            return table[Symbol.Parameter((ParameterInfo)instruction.Operand)] ?? throw new KeyNotFoundException();
-        }
+        ParameterDeclaration GetParameterByInfo() => table[Symbol.Parameter((ParameterInfo)instruction.Operand)] ??
+                                                     throw new KeyNotFoundException();
 
-        ParameterDeclaration GetParameterByIndex(int index)
-        {
-            return table[Symbol.Parameter(index)] ??
-                   throw new ParameterNotResolvedException(index);
-        }
+        ParameterDeclaration GetParameterByIndex(int index) =>
+            table[Symbol.Parameter(index)] ??
+            throw new ParameterNotResolvedException(index);
 
-        VariableDeclaration GetVariableByInfo()
-        {
-            return table[Symbol.Variable((LocalVariableInfo)instruction.Operand)] ?? throw new KeyNotFoundException();
-        }
+        VariableDeclaration GetVariableByInfo() => table[Symbol.Variable((LocalVariableInfo)instruction.Operand)] ??
+                                                   throw new KeyNotFoundException();
 
-        VariableDeclaration GetVariableByIndex(int index)
-        {
-            return table[Symbol.Variable(index)] ?? throw new VariableNotResolvedException(index);
-        }
+        VariableDeclaration GetVariableByIndex(int index) =>
+            table[Symbol.Variable(index)] ?? throw new VariableNotResolvedException(index);
 
-        MemberDeclaration GetMemberByInfo()
-        {
-            return table[(FieldInfo)instruction.Operand] ?? throw new KeyNotFoundException();
-        }
+        MemberDeclaration GetMemberByInfo() =>
+            table[(FieldInfo)instruction.Operand] ?? throw new KeyNotFoundException();
 
         return Instruction.OpCode.ToILOpCode() switch
         {
@@ -96,45 +86,46 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Pop => visitor.VisitPop(this),
             ILOpCode.Jmp => throw new NotImplementedException(),
             ILOpCode.Call => visitor.VisitCall(this,
-                table[Symbol.Function((MethodInfo)instruction.Operand)] ?? throw new KeyNotFoundException($"method {instruction.Operand} not found in symbol table")),
+                table[Symbol.Function((MethodInfo)instruction.Operand)] ??
+                throw new KeyNotFoundException($"method {instruction.Operand} not found in symbol table")),
             ILOpCode.Calli => throw new NotSupportedException(),
             ILOpCode.Ret => visitor.VisitReturn(this),
             ILOpCode.Br_s => visitor.VisitBranch(this, (sbyte)instruction.Operand),
-            ILOpCode.Brfalse_s => visitor.VisitBranchIf(this, (sbyte)instruction.Operand, value: false),
-            ILOpCode.Brtrue_s => visitor.VisitBranchIf(this, (sbyte)instruction.Operand, value: true),
+            ILOpCode.Brfalse_s => visitor.VisitBranchIf(this, (sbyte)instruction.Operand, false),
+            ILOpCode.Brtrue_s => visitor.VisitBranchIf(this, (sbyte)instruction.Operand, true),
             ILOpCode.Beq_s => visitor.VisitBranchIf<BinaryRelational.Eq>(this, (sbyte)instruction.Operand),
             ILOpCode.Bge_s => visitor.VisitBranchIf<BinaryRelational.Ge>(this, (sbyte)instruction.Operand),
             ILOpCode.Bgt_s => visitor.VisitBranchIf<BinaryRelational.Gt>(this, (sbyte)instruction.Operand),
             ILOpCode.Ble_s => visitor.VisitBranchIf<BinaryRelational.Le>(this, (sbyte)instruction.Operand),
             ILOpCode.Blt_s => visitor.VisitBranchIf<BinaryRelational.Lt>(this, (sbyte)instruction.Operand),
             ILOpCode.Bne_un_s => visitor.VisitBranchIf<BinaryRelational.Ne>(this, (sbyte)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Bge_un_s => visitor.VisitBranchIf<BinaryRelational.Ge>(this, (sbyte)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Bgt_un_s => visitor.VisitBranchIf<BinaryRelational.Gt>(this, (sbyte)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Ble_un_s => visitor.VisitBranchIf<BinaryRelational.Le>(this, (sbyte)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Blt_un_s => visitor.VisitBranchIf<BinaryRelational.Lt>(this, (sbyte)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Br => visitor.VisitBranch(this, (int)instruction.Operand),
-            ILOpCode.Brfalse => visitor.VisitBranchIf(this, (int)instruction.Operand, value: false),
-            ILOpCode.Brtrue => visitor.VisitBranchIf(this, (int)instruction.Operand, value: true),
+            ILOpCode.Brfalse => visitor.VisitBranchIf(this, (int)instruction.Operand, false),
+            ILOpCode.Brtrue => visitor.VisitBranchIf(this, (int)instruction.Operand, true),
             ILOpCode.Beq => visitor.VisitBranchIf<BinaryRelational.Eq>(this, (int)instruction.Operand),
             ILOpCode.Bge => visitor.VisitBranchIf<BinaryRelational.Ge>(this, (int)instruction.Operand),
             ILOpCode.Bgt => visitor.VisitBranchIf<BinaryRelational.Gt>(this, (int)instruction.Operand),
             ILOpCode.Ble => visitor.VisitBranchIf<BinaryRelational.Le>(this, (int)instruction.Operand),
             ILOpCode.Blt => visitor.VisitBranchIf<BinaryRelational.Lt>(this, (int)instruction.Operand),
             ILOpCode.Bne_un => visitor.VisitBranchIf<BinaryRelational.Ne>(this, (int)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Bge_un => visitor.VisitBranchIf<BinaryRelational.Ge>(this, (int)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Bgt_un => visitor.VisitBranchIf<BinaryRelational.Gt>(this, (int)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Ble_un => visitor.VisitBranchIf<BinaryRelational.Le>(this, (int)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Blt_un => visitor.VisitBranchIf<BinaryRelational.Lt>(this, (int)instruction.Operand,
-                isUn: true),
+                true),
             ILOpCode.Switch => visitor.VisitSwitch(this),
             ILOpCode.Ldind_i1 => visitor.VisitLoadIndirect<IntType<N8>>(this),
             ILOpCode.Ldind_u1 => visitor.VisitLoadIndirect<UIntType<N8>>(this),
@@ -265,9 +256,9 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Arglist => throw new NotImplementedException(),
             ILOpCode.Ceq => visitor.VisitBinaryRelation<BinaryRelational.Eq>(this),
             ILOpCode.Cgt => visitor.VisitBinaryRelation<BinaryRelational.Gt>(this),
-            ILOpCode.Cgt_un => visitor.VisitBinaryRelation<BinaryRelational.Gt>(this, isUn: true),
+            ILOpCode.Cgt_un => visitor.VisitBinaryRelation<BinaryRelational.Gt>(this, true),
             ILOpCode.Clt => visitor.VisitBinaryRelation<BinaryRelational.Lt>(this),
-            ILOpCode.Clt_un => visitor.VisitBinaryRelation<BinaryRelational.Lt>(this, isUn: true),
+            ILOpCode.Clt_un => visitor.VisitBinaryRelation<BinaryRelational.Lt>(this, true),
             ILOpCode.Ldftn => throw new NotImplementedException(),
             ILOpCode.Ldvirtftn => throw new NotImplementedException(),
             ILOpCode.Ldarg => visitor.VisitLoadArgument(this, GetParameterByInfo()),

@@ -1,15 +1,15 @@
-﻿using DualDrill.CLSL.Language.Analysis;
+﻿using System.CodeDom.Compiler;
+using System.Collections.Immutable;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
-using System.CodeDom.Compiler;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
 public sealed class FunctionBody4
-    : IFunctionBody, ILocalDeclarationContext, IUnifiedFunctionBody<ShaderRegionBody>
+    : IFunctionBody, ILocalDeclarationContext
 {
     public FunctionBody4(FunctionDeclaration declaration, RegionTree<Label, ShaderRegionBody> body)
     {
@@ -19,25 +19,22 @@ public sealed class FunctionBody4
             var labels = ImmutableArray.CreateBuilder<Label>();
             var enqueued = new HashSet<Label>();
             var toVisit = new Queue<Label>();
+
             void TryEnqueue(Label label)
             {
-                if (enqueued.Contains(label))
-                {
-                    return;
-                }
+                if (enqueued.Contains(label)) return;
                 enqueued.Add(label);
                 toVisit.Enqueue(label);
             }
+
             TryEnqueue(Entry);
             while (toVisit.Count > 0)
             {
                 var label = toVisit.Dequeue();
                 labels.Add(label);
-                foreach (var t in this[label].Body.Last.ToSuccessor().AllTargets())
-                {
-                    TryEnqueue(t);
-                }
+                foreach (var t in this[label].Body.Last.ToSuccessor().AllTargets()) TryEnqueue(t);
             }
+
             Labels = labels.ToImmutable();
         }
         {
@@ -50,6 +47,10 @@ public sealed class FunctionBody4
         }
     }
 
+    public ImmutableArray<IShaderValue> Values { get; }
+    public FunctionDeclaration Declaration { get; }
+    public RegionTree<Label, ShaderRegionBody> Body { get; }
+
     public void Dump(IndentedTextWriter writer)
     {
         new FunctionBodyFormatter(writer, this).Dump();
@@ -57,47 +58,18 @@ public sealed class FunctionBody4
 
     public ILocalDeclarationContext DeclarationContext => this;
 
-    public int LabelIndex(Label label)
-    {
-        throw new NotImplementedException();
-    }
+    public int LabelIndex(Label label) => throw new NotImplementedException();
 
-    public int ValueIndex(IShaderValue value)
-    {
-        throw new NotImplementedException();
-    }
+    public int ValueIndex(IShaderValue value) => throw new NotImplementedException();
 
-    public int VariableIndex(VariableDeclaration variable)
-    {
-        throw new NotImplementedException();
-    }
+    public int VariableIndex(VariableDeclaration variable) => throw new NotImplementedException();
 
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
 
     public ImmutableArray<Label> Labels { get; }
 
-    public IEnumerable<IShaderValue> UsedValues()
-    {
-        return Body.Fold(new ValueUseAnalysis());
-    }
-
-    public ImmutableArray<IShaderValue> Values { get; }
-
-    public IUnifiedFunctionBody<TResultBasicBlock> ApplyTransform<TResultBasicBlock>(
-        IBasicBlockTransform<ShaderRegionBody, TResultBasicBlock> transform) where TResultBasicBlock : IBasicBlock2
-    {
-        throw new NotImplementedException();
-    }
-
-    public TResult Traverse<TElementResult, TResult>(
-        IControlFlowElementSequenceTraverser<ShaderRegionBody, TElementResult, TResult> traverser)
-    {
-        throw new NotImplementedException();
-    }
 
     public Label Entry => Body.Label;
-    public FunctionDeclaration Declaration { get; }
-    public RegionTree<Label, ShaderRegionBody> Body { get; }
 
     public ShaderRegionBody this[Label label]
     {
@@ -111,51 +83,50 @@ public sealed class FunctionBody4
                     found = b;
                     return true;
                 }
+
                 return false;
             });
-            if (found is null)
-            {
-                throw new KeyNotFoundException($"region with label {label} not found");
-            }
+            if (found is null) throw new KeyNotFoundException($"region with label {label} not found");
             return found;
         }
     }
 
+    public ISuccessor Successor(Label label) => this[label].Successor;
+
+    public IEnumerable<IShaderValue> UsedValues() => Body.Fold(new ValueUseAnalysis());
+
     public FunctionBody4 MapValueUse(Func<IShaderValue, IShaderValue> mapValue)
     {
         return new FunctionBody4(
-                    Declaration,
-                    Body.Select(
-                        static l => l,
-                        body => new ShaderRegionBody(
-                            body.Label,
-                            [.. body.Parameters.Select(mapValue)],
-                            body.Body.Select(
-                                stmt => stmt.Select(
-                                    mapValue,
-                                    static d => d
-                                ),
-                                term => term.Select(
-                                    j => new RegionJump(j.Label, [.. j.Arguments.Select(mapValue)]),
-                                    mapValue)
-                            ),
-                            body.ImmediatePostDominator
-                        )
-                    )
-                );
+            Declaration,
+            Body.Select(
+                static l => l,
+                body => new ShaderRegionBody(
+                    body.Label,
+                    [.. body.Parameters.Select(mapValue)],
+                    body.Body.Select(
+                        stmt => stmt.Select(
+                            mapValue,
+                            static d => d
+                        ),
+                        term => term.Select(
+                            j => new RegionJump(j.Label, [.. j.Arguments.Select(mapValue)]),
+                            mapValue)
+                    ),
+                    body.ImmediatePostDominator
+                )
+            )
+        );
     }
 
     public FunctionBody4 MapRegionBody(Func<ShaderRegionBody, ShaderRegionBody> mapRegionBody)
     {
         return new FunctionBody4(
-                    Declaration,
-                    Body.Select(
-                        static l => l,
-                        body => mapRegionBody(body)
-                    )
-                );
+            Declaration,
+            Body.Select(
+                static l => l,
+                body => mapRegionBody(body)
+            )
+        );
     }
-
-    public ISuccessor Successor(Label label)
-        => this[label].Successor;
 }

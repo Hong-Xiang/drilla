@@ -57,16 +57,16 @@ public static class BinaryRelational
     {
         public static OpKind Kind => OpKind.eq;
         public static Eq Instance { get; } = new();
+        public string Name => "eq";
 
         public string Symbol => "==";
-        public string Name => "eq";
     }
 
     public sealed class Ne : IOp<Ne>, IFloatOp<Ne>, IIntegerOp<Ne>, ISymbolOp<Ne>, BinaryLogical.IOp<Ne>
     {
         public static OpKind Kind => OpKind.ne;
         public static Ne Instance { get; } = new();
-        public string Symbol => "!=";
         public string Name => "ne";
+        public string Symbol => "!=";
     }
 }

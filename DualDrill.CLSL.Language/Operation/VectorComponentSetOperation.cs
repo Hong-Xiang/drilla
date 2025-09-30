@@ -1,8 +1,5 @@
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.AbstractSyntaxTree.Statement;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Instruction;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -23,7 +20,6 @@ public interface IVectorComponentSetOperation<TSelf>
     , IBinaryStatementOperation<TSelf>
     where TSelf : IVectorComponentSetOperation<TSelf>
 {
-    IInstruction IOperation.Instruction => BinaryStatementOperationInstruction<TSelf>.Instance;
 }
 
 public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
@@ -45,14 +41,6 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
 
     public string Name => $"set.{TComponent.Instance.Name}.{TVector.Instance.Name}";
 
-
-    record struct SizedVecStmtVisitor(IExpression Target, IExpression Value)
-        : ISizedVecType<TRank, TVector>.ISizedVisitor<IStatement>
-    {
-        public IStatement Visit<TElement>(VecType<TRank, TElement> t) where TElement : IScalarType<TElement>
-            => new VectorComponentSetStatement<TRank, TElement, TComponent>(Target, Value);
-    }
-
     public IShaderType LeftType => TVector.Instance.GetPtrType();
     public IShaderType RightType => TVector.Instance.ElementType;
 
@@ -64,9 +52,7 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
 
     public IVecType VecType => TVector.Instance;
 
-    public IStatement CreateStatement(IExpression target, IExpression value)
-        => TVector.Instance.Accept(new SizedVecStmtVisitor(target, value));
-
-    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>
-        => semantic.VectorComponentSet(inst, this, inst.Operand0, inst.Operand1);
+    public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO> =>
+        semantic.VectorComponentSet(inst, this, inst.Operand0, inst.Operand1);
 }

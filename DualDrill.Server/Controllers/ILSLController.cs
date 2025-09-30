@@ -1,15 +1,12 @@
 ﻿using DualDrill.CLSL;
-using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Engine.Shader;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Reflection;
-using System.Text.Json;
 
 namespace DualDrill.Server.Controllers;
 
 [Route("[controller]")]
-public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLCompiler Compiler) : Controller
+public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Controller
 {
     ISharpShader? GetShader(string name)
     {
@@ -22,57 +19,29 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
             return null;
         }
     }
-
-
-    struct DevelopShader : ISharpShader
-    {
-        [Vertex]
-        public static float Test(float a, float b, float c)
-        {
-            return c <= 0 ? a : b;
-        }
-    }
-
-    [HttpGet("compile/develop")]
-    public async Task<IActionResult> CompileDevelop()
-    {
-        var shader = new DevelopShader();
-        //ShaderModuleDeclaration ir = await Compiler.ParseAsync(shader);
-        //var pass0 = ShaderModuleCompilationPass.Create(new DotNetInstructionPass());
-        //ir = pass0.Compile(ir);
-        //var pass1 = ShaderModuleCompilationPass.Create(new ControlFlowGraphDotNetInstructionPass());
-        //ir = pass1.Compile(ir);
-        //var context = ShaderModuleCompilationContext.Create();
-        //var methodContext = context.GetMethodContext(MethodHelper.GetMethod<float, float, float, float>(DevelopShader.Test));
-        //var pass2 = ShaderModuleCompilationPass.Create(new ControlFlowGraphPass(methodContext));
-        var code = await Compiler.EmitWGSL(shader);
-        return Ok(code);
-    }
-
-    [HttpGet("compile/{name}/ir")]
-    public IActionResult ParseDevelopModule(string name)
+    
+    [HttpGet("compile/{name}/{target}")]
+    public async Task<IActionResult> CompileDevelopModuleToSlang(string name, string target)
     {
         var shader = GetShader(name);
         if (shader is null)
         {
             return NotFound();
         }
-        var ir = shader.Parse();
-        //return Ok(ir.Dump());
-        return Ok(JsonSerializer.Serialize(ir));
-    }
 
-    [HttpGet("compile/{name}/wgsl")]
-    public async Task<IActionResult> CompileDevelopModule(string name)
-    {
-        var shader = GetShader(name);
-        if (shader is null)
+        var targetOption = target.ToLower() switch
         {
-            return NotFound();
-        }
-        var code = await shader.EmitWgslCode();
+            "ir" => CLSLCompileTarget.IR,
+            "wgsl" => CLSLCompileTarget.WGSL,
+            "slang" => CLSLCompileTarget.SLang,
+            _ => throw new NotSupportedException()
+        };
+
+        ICLSLCompiler compiler = new CLSLCompiler(new CLSLCompileOption(targetOption));
+        var code = compiler.Emit(shader);
         return Ok(code);
     }
+
 
     [HttpGet("")]
     public IActionResult Index()
@@ -99,8 +68,11 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetVertexBufferLayout());
         }
+
         return NotFound();
     }
+
+    private ICLSLCompiler Compiler => throw new NotImplementedException();
 
     [HttpGet("wgsl/bindgrouplayoutdescriptor/{name}")]
     public async Task<IActionResult> GetBindGroupLayoutDescriptor(string name)
@@ -109,7 +81,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
         {
             var shaderModule = new RaymarchingPrimitiveShader();
             var type = shaderModule.GetType();
-            var module = Compiler.Reflect(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
@@ -117,17 +89,18 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
         {
             var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
-            var module = Compiler.Reflect(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
         else if (name == nameof(MandelbrotDistanceShader))
         {
             var shaderModule = new MandelbrotDistanceShader();
-            var module = Compiler.Reflect(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptor(module));
         }
+
         return NotFound();
     }
 
@@ -139,7 +112,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
         {
             var shaderModule = new RaymarchingPrimitiveShader();
             var type = shaderModule.GetType();
-            var module = Compiler.Reflect(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new RaymarchingPrimitivesShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
@@ -147,10 +120,11 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, ICLSLC
         {
             var shaderModule = new MandelbrotDistanceShader();
             var type = shaderModule.GetType();
-            var module = Compiler.Reflect(shaderModule);
+            var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
             return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
         }
+
         return NotFound();
     }
 }

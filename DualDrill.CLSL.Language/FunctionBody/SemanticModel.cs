@@ -1,10 +1,8 @@
-﻿using DualDrill.CLSL.Language.Analysis;
-using DualDrill.CLSL.Language.Operation;
-using DualDrill.CLSL.Language.Operation.Pointer;
+﻿using System.Collections.Immutable;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
@@ -13,95 +11,44 @@ public sealed class SemanticModel
     , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
 
 {
-    int ValueCount = 0;
-    Dictionary<IShaderValue, int> ValueIndices = [];
-    int LabelCount = 0;
-    Dictionary<Label, int> LabelDefIndex = [];
-    HashSet<Label> LoopLabels = [];
-    Dictionary<Label, ImmutableStack<Label>> DefinedScope = [];
-    Dictionary<Label, HashSet<Label>> LabelUsage = [];
+    private readonly Dictionary<Label, ImmutableStack<Label>> DefinedScope = [];
+    private readonly Dictionary<Label, int> LabelDefIndex = [];
+    private readonly Dictionary<Label, HashSet<Label>> LabelUsage = [];
+    private readonly HashSet<Label> LoopLabels = [];
+    private readonly Dictionary<Label, RegionTree<Label, ShaderRegionBody>> RegionTreeDefinitions = [];
+    private readonly Dictionary<IShaderValue, int> ValueIndices = [];
 
 
-    Dictionary<IShaderValue, int> ValueUsage = [];
-    Dictionary<Label, RegionTree<Label, ShaderRegionBody>> RegionTreeDefinitions = [];
+    private readonly Dictionary<IShaderValue, int> ValueUsage = [];
 
-    Stack<ITerminator<RegionJump, IShaderValue>> VisitingTerminator = [];
-    ImmutableStack<Label> Scope = [];
-
-    public RegionTree<Label, ShaderRegionBody> RegionTree(Label label) => RegionTreeDefinitions[label];
+    private readonly Stack<ITerminator<RegionJump, IShaderValue>> VisitingTerminator = [];
+    private int LabelCount;
+    private ImmutableStack<Label> Scope = [];
+    private int ValueCount = 0;
 
 
     public SemanticModel(FunctionBody4 body)
     {
         FunctionBody = body;
-        ValueIndices = (body.GetValueDefinitions().Concat(body.GetUsedValues())).Distinct().Select((v, i) => (v, i))
-            .ToDictionary(x => x.v, x => x.i);
+        ValueIndices = body.GetValueDefinitions().Concat(body.GetUsedValues()).Distinct().Select((v, i) => (v, i))
+                           .ToDictionary(x => x.v, x => x.i);
         FunctionBody.Body.Fold(this);
         FunctionBody.Body.Traverse(r => { RegionTreeDefinitions.Add(r.Label, r); });
         foreach (var l in LabelDefIndex.Keys)
-        {
             if (!LabelUsage.ContainsKey(l))
-            {
                 LabelUsage.Add(l, []);
-            }
-        }
     }
 
     public FunctionBody4 FunctionBody { get; }
 
-
-    void ValueUse(IShaderValue value, object? user)
-    {
-        if (!ValueUsage.TryGetValue(value, out var count))
-        {
-            ValueUsage.Add(value, 0);
-        }
-
-        ValueUsage[value]++;
-    }
-
-    public int ValueIndex(IShaderValue value)
-        => ValueIndices[value];
-    //=> ValueIndices.TryGetValue(value, out var index) ? index : -1;
-
-    void LabelDef(Label label)
-    {
-        DefinedScope.Add(label, Scope);
-        LabelDefIndex.Add(label, LabelCount);
-        LabelCount++;
-    }
-
-    Label? CurrentScope => Scope.IsEmpty ? null : Scope.Peek();
-
-    void LabelUse(Label label, ITerminator<RegionJump, IShaderValue> terminator)
-    {
-        if (LabelUsage.TryGetValue(label, out var usages))
-        {
-            usages.Add(CurrentScope ?? throw new NullReferenceException());
-        }
-        else
-        {
-            LabelUsage.Add(label, [CurrentScope ?? throw new NullReferenceException()]);
-        }
-    }
-
-
-    public int LabelIndex(Label l) => LabelDefIndex[l];
-
-    public bool IsUsedOnce(Label l) => LabelUsage[l].Count() == 1;
-    public bool IsUsedInJoin(Label l) => false;
-    public bool IsLoop(Label l) => LoopLabels.Contains(l);
+    private Label? CurrentScope => Scope.IsEmpty ? null : Scope.Peek();
 
 
     Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Single(ShaderRegionBody value)
     {
         foreach (var e in value.Body.Elements)
-        {
-            foreach (var o in e.Operands)
-            {
-                ValueUse(o, null);
-            }
-        }
+        foreach (var o in e.Operands)
+            ValueUse(o, null);
 
         VisitingTerminator.Push(value.Body.Last);
         value.Body.Last.Evaluate(this);
@@ -136,10 +83,7 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid()
-    {
-        return default;
-    }
+    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid() => default;
 
     Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
     {
@@ -160,4 +104,41 @@ public sealed class SemanticModel
         LabelUse(falseTarget.Label, VisitingTerminator.Peek());
         return default;
     }
+
+    public RegionTree<Label, ShaderRegionBody> RegionTree(Label label) => RegionTreeDefinitions[label];
+
+
+    private void ValueUse(IShaderValue value, object? user)
+    {
+        if (!ValueUsage.TryGetValue(value, out var count)) ValueUsage.Add(value, 0);
+
+        ValueUsage[value]++;
+    }
+
+    public int ValueIndex(IShaderValue value) => ValueIndices[value];
+    //=> ValueIndices.TryGetValue(value, out var index) ? index : -1;
+
+    private void LabelDef(Label label)
+    {
+        DefinedScope.Add(label, Scope);
+        LabelDefIndex.Add(label, LabelCount);
+        LabelCount++;
+    }
+
+    private void LabelUse(Label label, ITerminator<RegionJump, IShaderValue> terminator)
+    {
+        if (LabelUsage.TryGetValue(label, out var usages))
+            usages.Add(CurrentScope ?? throw new NullReferenceException());
+        else
+            LabelUsage.Add(label, [CurrentScope ?? throw new NullReferenceException()]);
+    }
+
+
+    public int LabelIndex(Label l) => LabelDefIndex[l];
+
+    public bool IsUsedOnce(Label l) => LabelUsage[l].Count() == 1;
+
+    public bool IsUsedInJoin(Label l) => false;
+
+    public bool IsLoop(Label l) => LoopLabels.Contains(l);
 }

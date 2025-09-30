@@ -1,6 +1,5 @@
-﻿using DualDrill.CLSL.Language.LinearInstruction;
+﻿using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.Types;
-using System.Text.Json.Serialization;
 
 namespace DualDrill.CLSL.Language.Literal;
 
@@ -15,7 +14,6 @@ public interface ILiteral : IPrintable
 {
     IShaderType Type { get; }
     string Name { get; }
-    IInstruction GetInstruction();
 
     T Evaluate<T>(ILiteralSemantic<T> semantic);
 }
@@ -47,19 +45,23 @@ public interface ILiteral<TSelf, TCSharpType, TShaderType> : ILiteral<TShaderTyp
     TCSharpType Value { get; }
     string ILiteral.Name => $"{TShaderType.Instance.Name}({Value})";
     IShaderType ILiteral.Type => TShaderType.Instance;
-    IInstruction ILiteral.GetInstruction() => ShaderInstruction.Const((TSelf)this);
 }
 
 public static class Literal
 {
     public static BoolLiteral Create(bool value) => new(value);
+
     public static I32Literal Create(int value) => new(value);
+
     public static I64Literal Create(long value) => new(value);
+
     public static U32Literal Create(uint value) => new(value);
+
     public static U64Literal Create(ulong value) => new(value);
+
     public static F32Literal Create(float value) => new(value);
+
     public static F64Literal Create(double value) => new(value);
 
-    public static string TypeName<TLiteral>(this TLiteral literal) where TLiteral : ILiteral
-        => literal.Type.Name;
+    public static string TypeName<TLiteral>(this TLiteral literal) where TLiteral : ILiteral => literal.Type.Name;
 }

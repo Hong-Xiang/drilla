@@ -1,6 +1,5 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Instruction;
-using DualDrill.CLSL.Language.LinearInstruction;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
@@ -28,14 +27,13 @@ public interface IOperation
     FunctionDeclaration Function { get; }
     string Name { get; }
     IOperationMethodAttribute GetOperationMethodAttribute();
-    IInstruction Instruction { get; }
 
-    TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic) where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>;
+    TO EvaluateInstruction<TV, TR, TS, TO>(Instruction2<TV, TR> inst, TS semantic)
+        where TS : IOperationSemantic<Instruction2<TV, TR>, TV, TR, TO>;
 }
 
 public static class OperationExtension
 {
-
 }
 
 public interface IGenericOperation : IOperation
@@ -46,8 +44,7 @@ public interface IGenericOperation : IOperation
 public interface IOperation<TSelf> : IOperation, ISingleton<TSelf>
     where TSelf : IOperation<TSelf>
 {
-    IOperationMethodAttribute IOperation.GetOperationMethodAttribute()
-        => new OperationMethodAttribute<TSelf>();
+    IOperationMethodAttribute IOperation.GetOperationMethodAttribute() => new OperationMethodAttribute<TSelf>();
 }
 
 public interface IAbstractOp
@@ -87,14 +84,14 @@ public interface IBinaryOp : IAbstractOp
 public interface IBinaryOp<TSelf> : IBinaryOp, IAbstractOp<TSelf>
     where TSelf : IBinaryOp<TSelf>
 {
-    IOperation IBinaryOp.GetVectorBinaryNumericOperation<TRank, TElement>()
-        => VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TSelf>.Instance;
+    IOperation IBinaryOp.GetVectorBinaryNumericOperation<TRank, TElement>() =>
+        VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TSelf>.Instance;
 
-    IOperation IBinaryOp.GetScalarVectorNumericOperation<TRank, TElement>()
-        => ScalarVectorExpressionNumericOperation<TRank, TElement, TSelf>.Instance;
+    IOperation IBinaryOp.GetScalarVectorNumericOperation<TRank, TElement>() =>
+        ScalarVectorExpressionNumericOperation<TRank, TElement, TSelf>.Instance;
 
-    IOperation IBinaryOp.GetVectorScalarNumericOperation<TRank, TElement>()
-        => VectorScalarExpressionNumericOperation<TRank, TElement, TSelf>.Instance;
+    IOperation IBinaryOp.GetVectorScalarNumericOperation<TRank, TElement>() =>
+        VectorScalarExpressionNumericOperation<TRank, TElement, TSelf>.Instance;
 }
 
 public interface ISymbolOp
@@ -111,6 +108,6 @@ public interface IOpKind<TSelf, TOpKind> : IAbstractOp
     where TOpKind : struct, Enum
     where TSelf : IOpKind<TSelf, TOpKind>
 {
-    abstract static TOpKind Kind { get; }
+    static abstract TOpKind Kind { get; }
     string IAbstractOp.Name => TSelf.Kind.ToString();
 }

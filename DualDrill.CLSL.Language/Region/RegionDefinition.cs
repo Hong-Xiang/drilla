@@ -3,7 +3,7 @@
 public enum RegionKind
 {
     Block,
-    Loop,
+    Loop
 }
 
 public interface IRegionDefinitionSemantic<in TL, in TB, out TO>
@@ -21,4 +21,3 @@ public interface IRegionDefinition<out TL, out TB>
     TR Evaluate<TR>(IRegionDefinitionSemantic<TL, TB, TR> semantic);
     IRegionDefinition<TL, TR> Select<TR>(Func<TB, TR> f);
 }
-

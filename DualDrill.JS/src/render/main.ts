@@ -68,12 +68,12 @@ export async function BatchRenderMain() {
   //   : "SampleFragmentShader";
   //const code = await (await fetch(`/ilsl/wgsl/QuadShader`)).text();
 
-  const shaderName = "RaymarchingPrimitiveShader";
-  // const shaderName = "MandelbrotDistanceShader";
+  // const shaderName = "RaymarchingPrimitiveShader";
+  const shaderName = "MandelbrotDistanceShader";
   const meshName = "ScreenQuad";
-  const vertexBufferLayout = await (
-    await fetch(`/ilsl/wgsl/vertexbufferlayout/${shaderName}`)
-  ).json();
+  // const vertexBufferLayout = await (
+  //   await fetch(`/ilsl/wgsl/vertexbufferlayout/${shaderName}`)
+  // ).json();
   // const vertexBufferLayout = JSON.parse(vertexBufferLayoutJson);
   const code = await (await fetch(`/ilsl/compile/${shaderName}/wgsl`)).text();
   const meshVertices = await (
@@ -82,9 +82,9 @@ export async function BatchRenderMain() {
   const meshIndices = await (
     await fetch(`/api/Mesh/${meshName}/index`)
   ).arrayBuffer(); //Quad
-  const bindGroupLayoutDescriptor = await (
-    await fetch(`/ilsl/wgsl/bindgrouplayoutdescriptorbuffer/${shaderName}`)
-  ).json();
+  // const bindGroupLayoutDescriptor = await (
+  //   await fetch(`/ilsl/wgsl/bindgrouplayoutdescriptorbuffer/${shaderName}`)
+  // ).json();
 
   const targetCode = `struct VertexInput {
   @location(0) position: vec2<f32>
@@ -425,15 +425,23 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
   });
 
   const bindGroupLayout = device.createBindGroupLayout(
-    bindGroupLayoutDescriptor
+    {
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        },
+      ],
+    }
+    // bindGroupLayoutDescriptor
   );
   const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
-    // entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
-    entries: [
-      { binding: 0, resource: { buffer: resolutionBuffer } },
-      { binding: 1, resource: { buffer: timeBuffer } },
-    ],
+    entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
+    // entries: [
+    //   { binding: 0, resource: { buffer: resolutionBuffer } },
+    //   { binding: 1, resource: { buffer: timeBuffer } },
+    // ],
   });
 
   const pipelineLayout = device.createPipelineLayout({
@@ -448,7 +456,7 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
     vertex: {
       module: module,
       entryPoint: "vs",
-      buffers: vertexBufferLayout,
+      // buffers: vertexBufferLayout,
     },
     fragment: {
       module,

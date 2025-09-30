@@ -1,4 +1,5 @@
 ﻿namespace DualDrill.CLSL.Language.ShaderAttribute;
+
 public enum BuiltinBinding
 {
     vertex_index,
@@ -11,7 +12,7 @@ public enum BuiltinBinding
     local_invocation_index,
     global_invocation_id,
     workgroup_id,
-    num_workgroups,
+    num_workgroups
 }
 
 public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, ISemanticBindingAttribute

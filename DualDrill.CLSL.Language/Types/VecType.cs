@@ -1,9 +1,9 @@
-﻿using DualDrill.CLSL.Language.Declaration;
+﻿using System.Diagnostics;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.Common.Nat;
-using System.Diagnostics;
 using static DualDrill.CLSL.Language.Operation.Swizzle;
 
 namespace DualDrill.CLSL.Language.Types;
@@ -13,11 +13,13 @@ public interface IVecType : IShaderType
     public IScalarType ElementType { get; }
     public IRank Size { get; }
 
+    public FunctionDeclaration ZeroConstructor { get; }
+    public IOperation FromScalarConstructOperation { get; }
+
     public IOperation ComponentGetOperation(IComponent c);
     public IOperation ComponentSetOperation(IComponent c);
 
-    public FunctionDeclaration ZeroConstructor { get; }
-    public IOperation FromScalarConstructOperation { get; }
+    public TResult Accept<TResult>(IVisitor<TResult> visitor);
 
     public interface IVisitor<TResult>
     {
@@ -25,27 +27,25 @@ public interface IVecType : IShaderType
             where TRank : IRank<TRank>
             where TElement : IScalarType<TElement>;
     }
-
-    public TResult Accept<TResult>(IVisitor<TResult> visitor);
 }
 
 public interface IVecType<TSelf> : IVecType, IShaderType<TSelf>
     where TSelf : IVecType<TSelf>
 {
-    IShaderType SwizzleResultType<TPattern>() where TPattern : Swizzle.IPattern<TPattern>;
+    IShaderType SwizzleResultType<TPattern>() where TPattern : IPattern<TPattern>;
 }
 
 public interface ISizedVecType<TRank, TSelf> : IVecType<TSelf>
     where TRank : IRank<TRank>
     where TSelf : ISizedVecType<TRank, TSelf>
 {
+    public TResult Accept<TResult>(ISizedVisitor<TResult> visitor);
+
     public interface ISizedVisitor<TResult>
     {
         public TResult Visit<TElement>(VecType<TRank, TElement> t)
             where TElement : IScalarType<TElement>;
     }
-
-    public TResult Accept<TResult>(ISizedVisitor<TResult> visitor);
 }
 
 [DebuggerDisplay("{Name,nq}")]
@@ -65,58 +65,46 @@ public sealed class VecType<TRank, TElement>
             [new ShaderRuntimeMethodAttribute(), new ZeroConstructorMethodAttribute()]);
     }
 
+    public int ByteSize => Size.Value * ElementType.ByteSize;
+
     public static VecType<TRank, TElement> Instance { get; } = new();
 
     public string Name => $"vec{Size.Value}<{ElementType.Name}>";
-
-    public override string ToString()
-        => Name;
-
-    public int ByteSize => Size.Value * ElementType.ByteSize;
 
     public IScalarType ElementType => TElement.Instance;
 
     public IRank Size => TRank.Instance;
 
-    public IShaderType SwizzleResultType<TPattern>() where TPattern : Swizzle.IPattern<TPattern>
-        => TPattern.Instance.ValueVecType<TElement>();
+    public IShaderType SwizzleResultType<TPattern>() where TPattern : IPattern<TPattern> =>
+        TPattern.Instance.ValueVecType<TElement>();
 
     public IOperation ComponentGetOperation(IComponent c)
     {
-        if (c is Swizzle.ISizedComponent<TRank> rc)
-        {
-            return rc.ComponentGetOperation<VecType<TRank, TElement>, TElement>();
-        }
+        if (c is ISizedComponent<TRank> rc) return rc.ComponentGetOperation<VecType<TRank, TElement>, TElement>();
 
         throw new NotSupportedException();
     }
 
     public IOperation ComponentSetOperation(IComponent c)
     {
-        if (c is Swizzle.ISizedComponent<TRank> rc)
-        {
-            return rc.ComponentSetOperation<VecType<TRank, TElement>, TElement>();
-        }
+        if (c is ISizedComponent<TRank> rc) return rc.ComponentSetOperation<VecType<TRank, TElement>, TElement>();
 
         throw new NotSupportedException();
     }
 
-    public TResult Accept<TResult>(IVecType.IVisitor<TResult> visitor)
-        => visitor.Visit(this);
+    public TResult Accept<TResult>(IVecType.IVisitor<TResult> visitor) => visitor.Visit(this);
 
-    public TResult Accept<TResult>(ISizedVecType<TRank, VecType<TRank, TElement>>.ISizedVisitor<TResult> visitor)
-        => visitor.Visit(this);
-
-    public sealed class ComponentMember<TComponent>
-        where TComponent : ISizedComponent<TRank, TComponent>
-    {
-        public MemberDeclaration Declaration { get; } = new MemberDeclaration(
-            TComponent.Instance.Name,
-            TElement.Instance,
-            []);
-    }
+    public TResult Accept<TResult>(ISizedVecType<TRank, VecType<TRank, TElement>>.ISizedVisitor<TResult> visitor) =>
+        visitor.Visit(this);
 
     public FunctionDeclaration ZeroConstructor { get; }
+
+    T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => semantic.VecType(this);
+
+    public IOperation FromScalarConstructOperation =>
+        VectorFromScalarConstructOperation<TRank, TElement>.Instance;
+
+    public override string ToString() => Name;
 
     public IEnumerable<IVectorBinaryNumericOperation> GetBinaryNumericOperations()
     {
@@ -139,11 +127,14 @@ public sealed class VecType<TRank, TElement>
         yield return VectorScalarExpressionNumericOperation<TRank, TElement, BinaryArithmetic.Rem>.Instance;
     }
 
-    T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic)
-        => semantic.VecType(this);
-
-    public IOperation FromScalarConstructOperation =>
-        VectorFromScalarConstructOperation<TRank, TElement>.Instance;
+    public sealed class ComponentMember<TComponent>
+        where TComponent : ISizedComponent<TRank, TComponent>
+    {
+        public MemberDeclaration Declaration { get; } = new(
+            TComponent.Instance.Name,
+            TElement.Instance,
+            []);
+    }
 }
 
 public static partial class ShaderType
@@ -155,12 +146,11 @@ public static partial class ShaderType
           select GetVecType(r, e)
     ];
 
-    public static IVecType GetVecType(IRank size, IScalarType elementType)
-        => size.Accept(new VecTypeFromRankVisitor(elementType));
+    public static IVecType GetVecType(IRank size, IScalarType elementType) =>
+        size.Accept(new VecTypeFromRankVisitor(elementType));
 
     private struct VecTypeFromRankVisitor(IScalarType ElementType) : IRank.IVisitor<IVecType>
     {
         readonly IVecType IRank.IVisitor<IVecType>.Visit<TRank>() => ElementType.GetVecType<TRank>();
     }
-
 }

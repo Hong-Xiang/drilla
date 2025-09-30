@@ -1,12 +1,7 @@
-﻿using DualDrill.CLSL.Language.FunctionBody;
+﻿using System.CodeDom.Compiler;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
-using System;
-using System.CodeDom.Compiler;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DualDrill.CLSL.Language.Literal;
 

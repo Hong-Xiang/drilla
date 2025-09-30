@@ -1,20 +1,20 @@
 <Project>
-	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-	</PropertyGroup>
-	<ItemGroup>
-		<!-- <PackageVersion Include="DotNext.Unsafe" Version="5.14.0" />
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- <PackageVersion Include="DotNext.Unsafe" Version="5.14.0" />
 
-		<PackageVersion Include="Silk.NET" Version="$(SilkNETVersion)" />
-		<PackageVersion Include="Silk.NET.Core" Version="$(SilkNETVersion)" />
-		<PackageVersion Include="Silk.NET.SDL" Version="$(SilkNETVersion)" />
-		<PackageVersion Include="Silk.NET.Input" Version="$(SilkNETVersion)" />
-		<PackageVersion Include="Silk.NET.Shaderc" Version="$(SilkNETVersion)" />
-		<PackageVersion Include="Silk.NET.Shaderc.Native" Version="$(SilkNETVersion)" />
-		<PackageVersion Include="Silk.NET.Vulkan" Version="$(SilkNETVersion)" />
-		<PackageVersion Include="Silk.NET.Vulkan.Extensions.EXT" Version="$(SilkNETVersion)" />
-		<PackageVersion Include="Silk.NET.Windowing" Version="$(SilkNETVersion)" /> -->
-	</ItemGroup>
+        <PackageVersion Include="Silk.NET" Version="$(SilkNETVersion)" />
+        <PackageVersion Include="Silk.NET.Core" Version="$(SilkNETVersion)" />
+        <PackageVersion Include="Silk.NET.SDL" Version="$(SilkNETVersion)" />
+        <PackageVersion Include="Silk.NET.Input" Version="$(SilkNETVersion)" />
+        <PackageVersion Include="Silk.NET.Shaderc" Version="$(SilkNETVersion)" />
+        <PackageVersion Include="Silk.NET.Shaderc.Native" Version="$(SilkNETVersion)" />
+        <PackageVersion Include="Silk.NET.Vulkan" Version="$(SilkNETVersion)" />
+        <PackageVersion Include="Silk.NET.Vulkan.Extensions.EXT" Version="$(SilkNETVersion)" />
+        <PackageVersion Include="Silk.NET.Windowing" Version="$(SilkNETVersion)" /> -->
+    </ItemGroup>
 </Project>

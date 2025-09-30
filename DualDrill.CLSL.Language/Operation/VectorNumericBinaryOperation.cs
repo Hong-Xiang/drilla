@@ -1,6 +1,4 @@
-﻿using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
-using DualDrill.CLSL.Language.LinearInstruction;
-using DualDrill.CLSL.Language.Types;
+﻿using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Operation;
@@ -39,8 +37,6 @@ public sealed class VectorNumericUnaryOperation<TRank, TElement, TOp>
     where TOp : IUnaryOp<TOp>
 
 {
-    public static VectorNumericUnaryOperation<TRank, TElement, TOp> Instance { get; } = new();
-
     private VectorNumericUnaryOperation()
     {
     }
@@ -48,19 +44,8 @@ public sealed class VectorNumericUnaryOperation<TRank, TElement, TOp>
     public VecType<TRank, TElement> OperandType => VecType<TRank, TElement>.Instance;
 
 
-    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        UnaryOperationExpression<VectorNumericUnaryOperation<TRank, TElement, TOp>> expr)
-    {
-        return visitor.VisitUnaryExpression<
-            VectorNumericUnaryOperation<TRank, TElement, TOp>,
-            VecType<TRank, TElement>,
-            VecType<TRank, TElement>,
-            TOp
-        >(expr);
-    }
+    public static VectorNumericUnaryOperation<TRank, TElement, TOp> Instance { get; } = new();
 
-    public IInstruction Instruction =>
-        UnaryExpressionOperationInstruction<VectorNumericUnaryOperation<TRank, TElement, TOp>>.Instance;
 }
 
 public sealed class VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>
@@ -78,19 +63,12 @@ public sealed class VectorExpressionNumericBinaryExpressionOperation<TRank, TEle
     where TOp : IBinaryOp<TOp>
 
 {
-    public static VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp> Instance { get; } = new();
-
     private VectorExpressionNumericBinaryExpressionOperation()
     {
     }
 
     public VecType<TRank, TElement> OperandType => VecType<TRank, TElement>.Instance;
-
-    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        BinaryOperationExpression<VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp>> expr)
-    {
-        throw new NotImplementedException();
-    }
+    public static VectorExpressionNumericBinaryExpressionOperation<TRank, TElement, TOp> Instance { get; } = new();
 }
 
 public sealed class ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>
@@ -106,20 +84,13 @@ public sealed class ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>
     where TOp : IBinaryOp<TOp>
 
 {
-    public static ScalarVectorExpressionNumericOperation<TRank, TElement, TOp> Instance { get; } = new();
-
     private ScalarVectorExpressionNumericOperation()
     {
     }
 
     public VecType<TRank, TElement> VectorType => VecType<TRank, TElement>.Instance;
     public IScalarType ScalarType => TElement.Instance;
-
-    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        BinaryOperationExpression<ScalarVectorExpressionNumericOperation<TRank, TElement, TOp>> expr)
-    {
-        throw new NotImplementedException();
-    }
+    public static ScalarVectorExpressionNumericOperation<TRank, TElement, TOp> Instance { get; } = new();
 }
 
 public sealed class VectorScalarExpressionNumericOperation<TRank, TElement, TOp>
@@ -135,18 +106,11 @@ public sealed class VectorScalarExpressionNumericOperation<TRank, TElement, TOp>
     where TElement : IScalarType<TElement>
     where TOp : IBinaryOp<TOp>
 {
-    public static VectorScalarExpressionNumericOperation<TRank, TElement, TOp> Instance { get; } = new();
-
     private VectorScalarExpressionNumericOperation()
     {
     }
 
     public VecType<TRank, TElement> VectorType => VecType<TRank, TElement>.Instance;
     public IScalarType ScalarType => TElement.Instance;
-
-    public TResult EvaluateExpression<TResult>(IExpressionVisitor<TResult> visitor,
-        BinaryOperationExpression<VectorScalarExpressionNumericOperation<TRank, TElement, TOp>> expr)
-    {
-        throw new NotImplementedException();
-    }
+    public static VectorScalarExpressionNumericOperation<TRank, TElement, TOp> Instance { get; } = new();
 }
