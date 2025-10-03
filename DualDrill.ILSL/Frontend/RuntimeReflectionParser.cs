@@ -360,7 +360,7 @@ public sealed record class RuntimeReflectionParser(
                 foreach (var tl in successor.AllTargets())
                 {
                     ImmutableStack<IShaderValue> output =
-                        [.. visitor.Stack.Select(v => (IShaderValue)ShaderValue.Create(v.Type)).Reverse()];
+                        [.. visitor.Stack.Select(v => (IShaderValue)BindShaderValue.Create(v.Type)).Reverse()];
                     if (basicBlockInputs.TryGetValue(tl, out var existed))
                     {
                         if (!existed.Select(v => v.Type).SequenceEqual(output.Select(v => v.Type)))

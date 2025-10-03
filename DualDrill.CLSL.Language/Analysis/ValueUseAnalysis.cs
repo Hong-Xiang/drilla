@@ -39,9 +39,9 @@ internal class ValueUseAnalysis
 
     public IEnumerable<IShaderValue> ReturnVoid() => [];
 
-    public IEnumerable<IShaderValue> AddressOfChain(IAccessChainOperation operation, IEnumerable<IShaderValue> e) => e;
+    public IEnumerable<IShaderValue> AddressOfChain(IAddressOfOperation operation, IEnumerable<IShaderValue> e) => e;
 
-    public IEnumerable<IShaderValue> AddressOfIndex(IAccessChainOperation operation, IEnumerable<IShaderValue> e,
+    public IEnumerable<IShaderValue> AddressOfIndex(IAddressOfOperation operation, IEnumerable<IShaderValue> e,
         IEnumerable<IShaderValue> index) => [.. e, .. index];
 
     public IEnumerable<IShaderValue> Call(IShaderValue result, FunctionDeclaration f,

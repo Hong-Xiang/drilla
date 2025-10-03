@@ -26,7 +26,7 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
                                                      x => new VariableDeclaration(FunctionAddressSpace.Instance,
                                                          string.Empty, x.Type, []));
         var regionParamtersUses =
-            regionParamtersVars.ToDictionary(x => x.Key, x => (IShaderValue)ShaderValue.Create(x.Key.Type));
+            regionParamtersVars.ToDictionary(x => x.Key, x => (IShaderValue)BindShaderValue.Create(x.Key.Type));
         return body.MapRegionBody(bb =>
         {
             return bb with

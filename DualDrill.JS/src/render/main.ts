@@ -360,7 +360,7 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
   device.queue.writeBuffer(resolutionBuffer, 0, resolution);
 
   // Uniform Buffer to pass time
-  const timeBufferSize = 4;
+  const timeBufferSize = 16;
   const timeBuffer = device.createBuffer({
     size: timeBufferSize,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -430,6 +430,9 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
         {
           binding: 0,
           visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {
+            type: 'uniform',
+          },
         },
       ],
     }
@@ -450,13 +453,26 @@ fn fs(@builtin(position) vertexIn: vec4<f32>) -> @location(0) vec4<f32>
     ],
   });
 
+
   const pipeline = device.createRenderPipeline({
     layout: pipelineLayout,
     // layout: "auto",
     vertex: {
       module: module,
       entryPoint: "vs",
-      // buffers: vertexBufferLayout,
+      buffers: [
+        {
+          arrayStride: 2 * 4,
+          stepMode: "vertex",
+          attributes: [
+            {
+              shaderLocation: 0,
+              offset: 0,
+              format: "float32x2",
+            }
+          ]
+        }
+      ],
     },
     fragment: {
       module,

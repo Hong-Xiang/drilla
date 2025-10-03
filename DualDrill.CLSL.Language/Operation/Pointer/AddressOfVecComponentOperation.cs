@@ -7,7 +7,7 @@ namespace DualDrill.CLSL.Language.Operation.Pointer;
 
 public sealed record class AddressOfVecComponentOperation(
     IVecType Target,
-    Swizzle.IComponent Component) : IAccessChainOperation
+    Swizzle.IComponent Component) : IAddressOfOperation
 {
     public IShaderType SourceType => Target.GetPtrType();
 
@@ -16,9 +16,6 @@ public sealed record class AddressOfVecComponentOperation(
     public FunctionDeclaration Function => throw new NotImplementedException();
 
     public string Name => $"{Target.Name}.set.{Component.Name}";
-
-
-
     public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context) =>
         throw new NotImplementedException();
 

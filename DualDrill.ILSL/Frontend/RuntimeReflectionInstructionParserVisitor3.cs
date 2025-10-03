@@ -479,7 +479,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         //ShaderValueDeclaration r = new(v, t);
         //ValueTypes.Add(v, t);
         //return v;
-        ShaderValue.Create(t);
+        BindShaderValue.Create(t);
 
     private void Push(IShaderValue v)
     {
@@ -526,7 +526,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
 
     private void PushEmitLet2(IBinaryExpressionOperation op, IShaderValue l, IShaderValue r)
     {
-        var res = ShaderValue.Create(op.ResultType);
+        var res = BindShaderValue.Create(op.ResultType);
         //var v = EmitLet(op.ResultType, ExprF.Operation2(op, CreateValueExpr(l), CreateValueExpr(r)));
         //var v = EmitLet(op.ResultType, r => InstF.Operation2(default, op, r, l, r));
         Emit(InstF.Operation2(default, op, res, l, r));

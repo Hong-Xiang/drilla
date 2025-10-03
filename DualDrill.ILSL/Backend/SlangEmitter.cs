@@ -43,6 +43,8 @@ public class SlangEmitter
 
     private readonly Stack<VisitingEntity> Visiting = [];
 
+    private readonly Dictionary<IShaderValue, string> RValues = [];
+
     public SlangEmitter(
         ShaderModuleDeclaration<FunctionBody4> module
     )
@@ -146,76 +148,6 @@ public class SlangEmitter
         return default;
     }
 
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Let(IShaderValue result, ShaderExpr expr)
-    //{
-    //    WriteValueAssignEqual(result);
-    //    expr.Fold(this);
-    //    Writer.WriteLine(";");
-    //    return default;
-    //}
-
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Get(IShaderValue result, IShaderValue source)
-    //{
-    //    WriteValueAssignEqual(result);
-    //    Writer.Write(GetValueName(source));
-    //    Writer.WriteLine(";");
-    //    return default;
-    //}
-
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Set(IShaderValue target, IShaderValue source)
-    //{
-    //    Writer.Write(GetValueName(target));
-    //    Writer.Write(" = ");
-    //    Writer.Write(GetValueName(source));
-    //    Writer.WriteLine(";");
-    //    return default;
-    //}
-
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Mov(IShaderValue target, IShaderValue source)
-    //{
-    //    throw new NotImplementedException();
-    //}
-
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Call(IShaderValue result, FunctionDeclaration f, IReadOnlyList<IShaderValue> arguments)
-    //{
-    //    if (result.Type is not UnitType)
-    //    {
-    //        WriteValueAssignEqual(result);
-    //    }
-    //    var fn = f.Name switch
-    //    {
-    //        "vec4" => "float4",
-    //        "vec3" => "float3",
-    //        "vec2" => "float2",
-    //        _ => f.Name
-    //    };
-    //    Writer.Write(fn);
-    //    Writer.Write("(");
-    //    Writer.Write(string.Join(", ", arguments.Select(GetValueName)));
-    //    Writer.WriteLine(");");
-    //    return default;
-    //}
-
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.SetVecSwizzle(IVectorSwizzleSetOperation operation, IShaderValue target, IShaderValue value)
-    //{
-    //    Writer.Write(GetValueName(target));
-    //    Writer.Write('.');
-    //    Writer.Write(operation.Pattern.Name);
-    //    Writer.Write(" = ");
-    //    Writer.Write(GetValueName(value));
-    //    return default;
-    //}
-
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Dup(IShaderValue result, IShaderValue source)
-    //{
-    //    throw new NotImplementedException();
-    //}
-
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Pop(IShaderValue target)
-    //{
-    //    throw new NotImplementedException();
-    //}
-
 
     string ILiteralSemantic<string>.Bool(bool value)
         => value.ToString();
@@ -266,16 +198,26 @@ public class SlangEmitter
         $"{result} = {value.Evaluate(this)};";
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.AddressOfChain(
-        Instruction<string, string> ctx, IAccessChainOperation op, string result, string target)
+        Instruction<string, string> ctx, IAddressOfOperation op, string result, string target)
     {
-        if (op is AddressOfVecComponentOperation vcop) return $"{result} = {target}.{vcop.Component.Name};";
-
-        return $"{result} = {op.Name}({target});";
+        switch (op)
+        {
+            case AddressOfVecComponentOperation vcop:
+                return $"{result} = {target}.{vcop.Component.Name};";
+            default:
+                return $"{result} = {op.Name}({target});";
+        }
     }
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.AddressOfChain(
-        Instruction<string, string> ctx, IAccessChainOperation op, string result, string target, string index) =>
-        throw new NotImplementedException();
+        Instruction<string, string> ctx, IAddressOfOperation op, string result, string target, string index)
+    {
+        if (op is AddressOfVecComponentOperation vcop) return $"{result} = {target}.{vcop.Component.Name};";
+        return $"{result} = {op.Name}({target});";
+    }
+
+    public string AccessChain(Instruction<string, string> ctx, AccessChainOperation op, string result, string target,
+        IReadOnlyList<string> indices) => throw new NotImplementedException();
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.Operation1(
         Instruction<string, string> ctx, IUnaryExpressionOperation op, string result, string e)
@@ -305,7 +247,6 @@ public class SlangEmitter
         Instruction<string, string> ctx, VectorCompositeConstructionOperation op, string result,
         IReadOnlyList<string> components)
     {
-        var sw = new StringBuilder();
         var rv = (IVecType)op.ResultType;
         return $"{result} = vector<{rv.ElementType.Name}, {rv.Size.Value}>({string.Join(',', components)});";
     }
@@ -321,7 +262,7 @@ public class SlangEmitter
         {
             Writer.WriteLine("// block " + GetLabelName(label));
             Writer.Write("// => ");
-            if (body.Last.ImmediatePostDominator is Label dl)
+            if (body.Last.ImmediatePostDominator is { } dl)
                 Writer.WriteLine(GetLabelName(dl));
             else
                 Writer.WriteLine("exit");
@@ -352,7 +293,7 @@ public class SlangEmitter
         {
             Writer.WriteLine("// loop " + GetLabelName(label));
             Writer.Write("// => ");
-            if (body.Last.ImmediatePostDominator is Label dl)
+            if (body.Last.ImmediatePostDominator is { } dl)
                 Writer.WriteLine(GetLabelName(dl));
             else
                 Writer.WriteLine("exit");
@@ -378,130 +319,6 @@ public class SlangEmitter
         return default;
     }
 
-    //Unit IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>.Value(IShaderValue value)
-    //{
-    //    Writer.Write(GetValueName(value));
-    //    return default;
-    //}
-
-    //Unit IExpressionSemantic<Func<Unit>, Unit>.Literal<TLiteral>(TLiteral literal)
-    //{
-    //    literal.Evaluate(this);
-    //    return default;
-    //}
-
-    //Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfChain(IAccessChainOperation operation, Func<Unit> e)
-    //{
-    //    if (operation is AddressOfVecComponentOperation vcop)
-    //    {
-    //        e();
-    //        Writer.Write('.');
-    //        Writer.Write(vcop.Component.Name);
-    //    }
-    //    else
-    //    {
-    //        Writer.Write(operation.GetType().Name);
-    //        Writer.Write(operation);
-    //        e();
-    //    }
-    //    return default;
-    //}
-
-    //Unit IExpressionSemantic<Func<Unit>, Unit>.AddressOfIndex(IAccessChainOperation operation, Func<Unit> e, Func<Unit> index)
-    //{
-    //    Writer.Write(operation);
-    //    e();
-    //    return default;
-    //}
-
-    //Unit IExpressionSemantic<Func<Unit>, Unit>.Operation1(IUnaryExpressionOperation operation, Func<Unit> e)
-    //{
-    //    switch (operation)
-    //    {
-    //        case IConversionOperation c:
-    //            VisitType(c.ResultType);
-    //            Writer.Write("(");
-    //            e();
-    //            Writer.Write(")");
-    //            break;
-    //        case IVectorSwizzleGetOperation o:
-    //            e();
-    //            Writer.Write(".");
-    //            Writer.Write(o.Pattern.Name);
-    //            break;
-    //        case IVectorComponentGetOperation o:
-    //            e();
-    //            Writer.Write(".");
-    //            Writer.Write(o.Component.Name);
-    //            break;
-    //        case IVectorFromScalarConstructOperation o:
-    //            Writer.Write("vector<");
-    //            VisitType(o.ElementType);
-    //            Writer.Write(",");
-    //            Writer.Write(o.Size.Value);
-    //            Writer.Write(">(");
-    //            e();
-    //            Writer.Write(")");
-    //            break;
-    //        case UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate>:
-    //            Writer.Write("-");
-    //            e();
-    //            break;
-    //        default:
-    //            Writer.Write(operation.Name);
-    //            Writer.Write("(");
-    //            e();
-    //            Writer.Write(")");
-    //            break;
-    //    }
-    //    return default;
-    //}
-
-    //Unit IExpressionSemantic<Func<Unit>, Unit>.Operation2(IBinaryExpressionOperation operation, Func<Unit> l, Func<Unit> r)
-    //{
-    //    if (operation.BinaryOp is ISymbolOp s)
-    //    {
-    //        l();
-    //        Writer.Write(" ");
-    //        Writer.Write(s.Symbol);
-    //        Writer.Write(" ");
-    //        r();
-    //    }
-    //    else
-    //    {
-    //        Writer.Write(operation.Name);
-    //        Writer.Write("(");
-    //        l();
-    //        Writer.Write(",");
-    //        r();
-    //        Writer.Write(")");
-    //    }
-
-    //    return default;
-    //}
-
-    //Unit IExpressionSemantic<Func<Unit>, Unit>.VectorCompositeConstruction(VectorCompositeConstructionOperation operation, IEnumerable<Func<Unit>> arguments)
-    //{
-    //    var rv = (IVecType)operation.ResultType;
-    //    Writer.Write("vector");
-    //    Writer.Write("<");
-    //    VisitType(rv.ElementType);
-    //    Writer.Write(",");
-    //    Writer.Write(rv.Size.Value);
-    //    Writer.Write(">");
-    //    Writer.Write("(");
-    //    var args = arguments.ToImmutableArray();
-    //    foreach (var (i, a) in args.Index())
-    //    {
-    //        if (i > 0)
-    //        {
-    //            Writer.Write(", ");
-    //        }
-    //        a();
-    //    }
-    //    Writer.Write(")");
-    //    return default;
-    //}
 
     Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid()
     {
@@ -588,6 +405,7 @@ public class SlangEmitter
     {
         return v switch
         {
+            _ when RValues.TryGetValue(v, out var n) => n,
             VariablePointerValue x => GetVariableName(x.Declaration),
             ParameterPointerValue p => p.Declaration.Name,
             _ => $"v_{GetId(v)}"
@@ -711,17 +529,38 @@ public class SlangEmitter
     {
         foreach (var s in basicBlock.Body.Elements)
         {
-            var ns = s.Select(v =>
-                v switch
+            switch (s.Operation)
+            {
+                case AddressOfVecComponentOperation op:
                 {
-                    FunctionDeclaration f => f.Name switch
-                    {
-                        "mix" => "lerp",
-                        _ => f.Name
-                    },
-                    _ => GetValueName(v)
-                }, v => $"let {GetValueName(v)} : {v.Type.Name}");
-            Writer.WriteLine(ns.Evaluate(this));
+                    var r = s.Result!;
+                    var t = s[0]!;
+                    RValues.Add(r, $"{GetValueName(t)}.{op.Component.Name}");
+                    break;
+                }
+                case AddressOfMemberOperation op:
+                {
+                    var r = s.Result!;
+                    var t = s[0]!;
+                    RValues.Add(r, $"{GetValueName(t)}.{op.Name}");
+                    break;
+                }
+                default:
+                {
+                    var ns = s.Select(v =>
+                        v switch
+                        {
+                            FunctionDeclaration f => f.Name switch
+                            {
+                                "mix" => "lerp",
+                                _ => f.Name
+                            },
+                            _ => GetValueName(v)
+                        }, v => $"let {GetValueName(v)} : {v.Type.Name}");
+                    Writer.WriteLine(ns.Evaluate(this));
+                    break;
+                }
+            }
         }
 
         basicBlock.Body.Last.Evaluate(this);

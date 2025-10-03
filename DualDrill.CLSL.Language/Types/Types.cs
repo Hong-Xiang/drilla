@@ -109,6 +109,7 @@ public interface IScalarType<TSelf> : IScalarType, ISingletonShaderType<TSelf>
 
 public interface IIntegerType : IScalarType
 {
+    ISignedness Signedness { get; }
 }
 
 public interface IIntegerType<TBitwidth, TSign> : IIntegerType

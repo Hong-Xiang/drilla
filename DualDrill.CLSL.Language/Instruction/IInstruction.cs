@@ -85,11 +85,11 @@ public static class Instruction2
     private sealed class OperationInstructionFactory : IOperationSemantic<Unit, IShaderValue, IShaderValue,
         Instruction<IShaderValue, IShaderValue>>
     {
-        public Instruction<IShaderValue, IShaderValue> AddressOfChain(Unit ctx, IAccessChainOperation op,
+        public Instruction<IShaderValue, IShaderValue> AddressOfChain(Unit ctx, IAddressOfOperation op,
             IShaderValue result, IShaderValue target) =>
             Create(op, result, [target]);
 
-        public Instruction<IShaderValue, IShaderValue> AddressOfChain(Unit ctx, IAccessChainOperation op,
+        public Instruction<IShaderValue, IShaderValue> AddressOfChain(Unit ctx, IAddressOfOperation op,
             IShaderValue result, IShaderValue target, IShaderValue index) =>
             Create(op, result, [target, index]);
 
@@ -135,5 +135,8 @@ public static class Instruction2
         private static Instruction<IShaderValue, IShaderValue> Create(IOperation op, IShaderValue? result,
             IEnumerable<IShaderValue> operands, object? payload = null) =>
             Instruction<IShaderValue, IShaderValue>.Create(op, result, operands, payload);
+
+        public Instruction<IShaderValue, IShaderValue> AccessChain(Unit ctx, AccessChainOperation op, IShaderValue result, IShaderValue target, IReadOnlyList<IShaderValue> indices)
+            => Create(op, result, [target, .. indices]);
     }
 }

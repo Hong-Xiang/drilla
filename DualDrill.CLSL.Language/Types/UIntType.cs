@@ -32,6 +32,8 @@ public sealed class UIntType<TBitWidth> : IUIntType, INumericType<UIntType<TBitW
     T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => semantic.UIntType(this);
 
     public IIntType SameWidthIntType => IntType<TBitWidth>.Instance;
+
+    public ISignedness Signedness => Types.Signedness.U.Instance;
 }
 
 public static partial class ShaderType

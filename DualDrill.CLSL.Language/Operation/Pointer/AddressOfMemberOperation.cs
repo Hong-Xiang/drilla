@@ -6,7 +6,7 @@ using DualDrill.CLSL.Language.Types;
 namespace DualDrill.CLSL.Language.Operation.Pointer;
 
 public sealed class AddressOfMemberOperation(MemberDeclaration Member)
-    : IAccessChainOperation
+    : IAddressOfOperation
 {
     public FunctionDeclaration Function => throw new NotImplementedException();
 

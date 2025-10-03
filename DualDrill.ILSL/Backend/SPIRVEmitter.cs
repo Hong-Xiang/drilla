@@ -339,9 +339,9 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
     }
 
 
-    public Unit AddressOfChain(IAccessChainOperation operation, Func<Unit> e) => throw new NotImplementedException();
+    public Unit AddressOfChain(IAddressOfOperation operation, Func<Unit> e) => throw new NotImplementedException();
 
-    public Unit AddressOfIndex(IAccessChainOperation operation, Func<Unit> e, Func<Unit> index) =>
+    public Unit AddressOfIndex(IAddressOfOperation operation, Func<Unit> e, Func<Unit> index) =>
         throw new NotImplementedException();
 
     public Unit Operation1(IUnaryExpressionOperation operation, Func<Unit> e)

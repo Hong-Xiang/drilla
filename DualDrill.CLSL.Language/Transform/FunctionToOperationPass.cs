@@ -58,12 +58,15 @@ public sealed class FunctionToOperationPass
             get;
         } = Instruction2.Factory;
 
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> AccessChain(Instruction<IShaderValue, IShaderValue> ctx, AccessChainOperation op, IShaderValue result, IShaderValue target, IReadOnlyList<IShaderValue> indices)
+            => [ctx];
+
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> AddressOfChain(
-            Instruction<IShaderValue, IShaderValue> ctx, IAccessChainOperation op, IShaderValue result,
+            Instruction<IShaderValue, IShaderValue> ctx, IAddressOfOperation op, IShaderValue result,
             IShaderValue target) => [ctx];
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> AddressOfChain(
-            Instruction<IShaderValue, IShaderValue> ctx, IAccessChainOperation op, IShaderValue result,
+            Instruction<IShaderValue, IShaderValue> ctx, IAddressOfOperation op, IShaderValue result,
             IShaderValue target, IShaderValue index) => [ctx];
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Call(Instruction<IShaderValue, IShaderValue> ctx,
@@ -99,7 +102,7 @@ public sealed class FunctionToOperationPass
 
                         if (bs is IVectorComponentSetOperation vcs)
                         {
-                            var p = ShaderValue.Create(vcs.ElementType.GetPtrType(FunctionAddressSpace.Instance));
+                            var p = BindShaderValue.Create(vcs.ElementType.GetPtrType(FunctionAddressSpace.Instance));
                             return
                             [
                                 InstF.VectorComponentSet(default, vcs, l, r)
