@@ -1,40 +1,19 @@
-﻿using System.Diagnostics;
-using DualDrill.Common.Nat;
-
+﻿using DualDrill.Common.Nat;
 namespace DualDrill.CLSL.Language.Types;
 
-public interface IFloatType : IScalarType
+public sealed record class FloatType(IBitWidth BitWidth) : IScalarType
 {
-}
-
-public interface IFloatType<TSelf> : IFloatType, INumericType<TSelf>
-    where TSelf : IFloatType<TSelf>
-{
-}
-
-[DebuggerDisplay("{Name}")]
-public sealed record class FloatType<TBitWidth> : IFloatType<FloatType<TBitWidth>>
-    where TBitWidth : IBitWidth
-{
-    public static FloatType<TBitWidth> Instance { get; } = new();
-
     public string Name => $"f{BitWidth.Value}";
-    public IBitWidth BitWidth => TBitWidth.BitWidth;
     public int ByteSize => BitWidth.Value / 8;
-
-    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T> =>
-        visitor.Visit(this);
-
-    public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => semantic.FloatType(this);
 }
 
 public static partial class ShaderType
 {
-    public static IFloatType F16 { get; } = FloatType<N16>.Instance;
-    public static IFloatType F32 { get; } = FloatType<N32>.Instance;
-    public static IFloatType F64 { get; } = FloatType<N64>.Instance;
+    public static FloatType F16 { get; } = new(N16.Instance);
+    public static FloatType F32 { get; } = new(N32.Instance);
+    public static FloatType F64 { get; } = new(N64.Instance);
 
-    public static IFloatType GetFloatType(IBitWidth bitWidth)
+    public static FloatType GetFloatType(IBitWidth bitWidth)
     {
         return bitWidth switch
         {

@@ -1,4 +1,5 @@
-﻿using DualDrill.ApiGen.DrillLang.Types;
+﻿using DualDrill.ApiGen.DrillLang.Declaration;
+using DualDrill.ApiGen.DrillLang.Types;
 
 namespace DualDrill.ApiGen.DrillLang.Visitors;
 

@@ -7,10 +7,15 @@ Drilla engine for HPC and visualization
 requirements:
 
 - [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
-- [dotnet 9.0](https://dotnet.microsoft.com/en-us/download)
-- [slangc](https://github.com/shader-slang/slang) need to be installed and added to PATH, can be installed via slang or via Vulkan SDK
+- [dotnet 8.0](https://dotnet.microsoft.com/en-us/download)
+
 
 ### run dev environment
+
+#### onetime
+
+* *Deprecated* Add `DUALDRILLFFMPEGPATH` environment variable, value should be `bin` folder of ffmpeg (with shared libraries) directory.
+  On windows, it could be installed using `winget install "FFmpeg (Shared)" --version "6.1.1"`
 
 #### dev loop
 
@@ -26,13 +31,11 @@ requirements:
 
 NOTE when runtime identifier is required to build/run, i.e. we need use `x64` runtime identifier, `Any CPU` will not work
 
-## CLSL (previously ILSL)
+## ILSL
 
-CLSL is a C# embedded language which is designed to be compiled to multiple shader language running on GPU and SIMD accelerated CPU.
+ILSL is a C# embeedded language which could (planning) be compiled to multiple shader language runnning on GPU.
 
-It is designed to be a subset of C# language, with custom attributes to extend its semantic for shaders.
-
-It it designed to be compiled into shader language like WGSL, SPIR-V and CUDA, and also can be compiled into SIMD accelerated CPU code like Unity's Burst Compiler (with help of LLVM's auto vectorization).
+ILSL code is a subset of valid C# code, with custom attribute to extend its semantic for shaders.
 
 ILSL's compiler currently support runtime compilation of dotnet's bytecode CIL(MSIL) to WGSL source text.
 
@@ -55,10 +58,7 @@ Features:
 - [x] custom struct declaration
 - [x] shader relfection for uniform/vertex buffer layouts
 - [ ] C# getter/setters
-- [ ] LLVM backend (for vectorization) and ideally use CIL -> LLVM auto vectorization -> CIL (intrinsics)
 - [ ] CUDA backend
 
 
-## Current Progress
 
-Start Clean Legacy Code and Use New SSA based IR

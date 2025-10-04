@@ -1,27 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-        <RootNamespace>DualDrill.CLSL</RootNamespace>
-    </PropertyGroup>
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	</PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="ClangSharp" />
-        <PackageReference Include="ICSharpCode.Decompiler" />
-        <PackageReference Include="LLVMSharp" />
-        <PackageReference Include="Lokad.ILPack" />
-        <PackageReference Include="System.CodeDom" />
-    </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="ICSharpCode.Decompiler" Version="8.2.0.7535" />
+		<PackageReference Include="Lokad.ILPack" Version="0.2.0" />
+	</ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj" />
-        <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
-        <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
-        <ProjectReference Include="..\DualDrill.Mathematics\DualDrill.Mathematics.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Update="DotNext.Unsafe" />
-    </ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj" />
+	  <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
+	  <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
+	  <ProjectReference Include="..\DualDrill.Mathematics\DualDrill.Mathematics.csproj" />
+	</ItemGroup>
 
 </Project>

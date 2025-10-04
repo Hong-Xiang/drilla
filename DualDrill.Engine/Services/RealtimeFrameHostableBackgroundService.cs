@@ -1,4 +1,5 @@
 ﻿using DualDrill.Engine.Headless;
+using DualDrill.Engine.Media;
 using DualDrill.Engine.Scene;
 using DualDrill.Graphics;
 using Microsoft.Extensions.Logging;

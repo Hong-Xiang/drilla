@@ -20,7 +20,7 @@ public sealed class ScreenQuad : IMesh
         ]
     };
 
-    static readonly ImmutableArray<float> _VertexData =
+    static readonly ImmutableArray<float> _VertexData = 
         [
             -1.0f, 1.0f,
             -1.0f, -1.0f,

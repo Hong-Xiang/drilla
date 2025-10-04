@@ -1,10 +1,10 @@
-﻿using DualDrill.Engine.Connection;
+﻿using DualDrill.ApiGen;
+using DualDrill.Engine.Connection;
 using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
 using DualDrill.Engine.Services;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
-using DualDrill.CLSL;
 using DualDrill.Server.Services;
 using DualDrill.WebView;
 
@@ -73,12 +73,7 @@ public static class DualDrillServerExtension
         services.AddSingleton<DualDrill.Engine.Renderer.ClearColorRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.VolumeRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.StaticTriangleRenderer>();
-    }
-
-    private static void AddCLSLCompilerService(IServiceCollection services)
-    {
         services.AddSingleton<ILSLDevelopShaderModuleService>();
-        services.AddSingleton<SlangService>();
     }
 
     static void AddSingletonHostedService<T>(this IServiceCollection services)
@@ -96,7 +91,6 @@ public static class DualDrillServerExtension
         AddRealtimeSimulationServices(services);
         AddRenderService(services);
         AddHeadlessServices(services);
-        AddCLSLCompilerService(services);
 
         //services.AddScoped<InitializedClientContext>();
 

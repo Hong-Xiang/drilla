@@ -1,6 +1,6 @@
-﻿using DualDrill.Common.ResourceManagement;
-using DualDrill.Engine.Connection;
+﻿using DualDrill.Engine.Connection;
 using System.Reactive.Disposables;
+using DualDrill.Common.ResourceManagement;
 
 namespace DualDrill.Engine.WebRTC;
 

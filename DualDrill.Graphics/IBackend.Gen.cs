@@ -1,4 +1,8 @@
-﻿namespace DualDrill.Graphics;
+﻿using System;
+using System.Collections.Immutable;
+
+
+namespace DualDrill.Graphics;
 public partial interface IBackend<TBackend>
  : IDisposable
     , IGPUHandleDisposer<TBackend, GPUAdapter<TBackend>>

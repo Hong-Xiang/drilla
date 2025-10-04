@@ -9,331 +9,259 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.InteropServices;
-using DualDrill.CLSL.Language.ShaderAttribute;
 namespace DualDrill.Mathematics;
 using static DMath;
 
 [StructLayout(LayoutKind.Sequential)]
 public partial struct vec2u8{
-    public Byte x {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [RuntimeVectorSwizzleGetMethodAttribute([DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.x])]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentGetExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>,DualDrill.CLSL.Language.Operation.Swizzle.X>>]
-        get;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [RuntimeVectorSwizzleSetMethodAttribute([DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.x])]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentSetOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>,DualDrill.CLSL.Language.Operation.Swizzle.X>>]
-        set;
-    
-    }
-    public Byte y {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [RuntimeVectorSwizzleGetMethodAttribute([DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.y])]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentGetExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>,DualDrill.CLSL.Language.Operation.Swizzle.Y>>]
-        get;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [RuntimeVectorSwizzleSetMethodAttribute([DualDrill.CLSL.Language.AbstractSyntaxTree.Expression.SwizzleComponent.y])]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorComponentSetOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.VecType<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>,DualDrill.CLSL.Language.Operation.Swizzle.Y>>]
-        set;
-    
-    }
+    public System.Byte x { get; set; }
+    public System.Byte y { get; set; }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorNumericUnaryOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.UnaryArithmetic.Negate>>]
     public static vec2u8 operator -(vec2u8 v)
     {
-        return vec2((Byte)(-v.x), (Byte)(-v.y));
+        return vec2((System.Byte)(-v.x), (System.Byte)(-v.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
     public static vec2u8 operator +(vec2u8 left, vec2u8 right)
     {
-        return vec2((Byte)(left.x + right.x), (Byte)(left.y + right.y));
+        return vec2((System.Byte)(left.x + right.x), (System.Byte)(left.y + right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
     public static vec2u8 operator -(vec2u8 left, vec2u8 right)
     {
-        return vec2((Byte)(left.x - right.x), (Byte)(left.y - right.y));
+        return vec2((System.Byte)(left.x - right.x), (System.Byte)(left.y - right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
     public static vec2u8 operator *(vec2u8 left, vec2u8 right)
     {
-        return vec2((Byte)(left.x * right.x), (Byte)(left.y * right.y));
+        return vec2((System.Byte)(left.x * right.x), (System.Byte)(left.y * right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
     public static vec2u8 operator /(vec2u8 left, vec2u8 right)
     {
-        return vec2((Byte)(left.x / right.x), (Byte)(left.y / right.y));
+        return vec2((System.Byte)(left.x / right.x), (System.Byte)(left.y / right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorExpressionNumericBinaryExpressionOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
     public static vec2u8 operator %(vec2u8 left, vec2u8 right)
     {
-        return vec2((Byte)(left.x % right.x), (Byte)(left.y % right.y));
+        return vec2((System.Byte)(left.x % right.x), (System.Byte)(left.y % right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
-    public static vec2u8 operator +(Byte left, vec2u8 right)
+    public static vec2u8 operator +(System.Byte left, vec2u8 right)
     {
-        return vec2((Byte)(left + right.x), (Byte)(left + right.y));
+        return vec2((System.Byte)(left + right.x), (System.Byte)(left + right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
-    public static vec2u8 operator -(Byte left, vec2u8 right)
+    public static vec2u8 operator +(vec2u8 left, System.Byte right)
     {
-        return vec2((Byte)(left - right.x), (Byte)(left - right.y));
+        return vec2((System.Byte)(left.x + right), (System.Byte)(left.y + right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
-    public static vec2u8 operator *(Byte left, vec2u8 right)
+    public static vec2u8 operator -(System.Byte left, vec2u8 right)
     {
-        return vec2((Byte)(left * right.x), (Byte)(left * right.y));
+        return vec2((System.Byte)(left - right.x), (System.Byte)(left - right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
-    public static vec2u8 operator /(Byte left, vec2u8 right)
+    public static vec2u8 operator -(vec2u8 left, System.Byte right)
     {
-        return vec2((Byte)(left / right.x), (Byte)(left / right.y));
+        return vec2((System.Byte)(left.x - right), (System.Byte)(left.y - right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.ScalarVectorExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
-    public static vec2u8 operator %(Byte left, vec2u8 right)
+    public static vec2u8 operator *(System.Byte left, vec2u8 right)
     {
-        return vec2((Byte)(left % right.x), (Byte)(left % right.y));
+        return vec2((System.Byte)(left * right.x), (System.Byte)(left * right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Add>>]
-    public static vec2u8 operator +(vec2u8 left, Byte right)
+    public static vec2u8 operator *(vec2u8 left, System.Byte right)
     {
-        return vec2((Byte)(left.x + right), (Byte)(left.y + right));
+        return vec2((System.Byte)(left.x * right), (System.Byte)(left.y * right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Sub>>]
-    public static vec2u8 operator -(vec2u8 left, Byte right)
+    public static vec2u8 operator /(System.Byte left, vec2u8 right)
     {
-        return vec2((Byte)(left.x - right), (Byte)(left.y - right));
+        return vec2((System.Byte)(left / right.x), (System.Byte)(left / right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Mul>>]
-    public static vec2u8 operator *(vec2u8 left, Byte right)
+    public static vec2u8 operator /(vec2u8 left, System.Byte right)
     {
-        return vec2((Byte)(left.x * right), (Byte)(left.y * right));
+        return vec2((System.Byte)(left.x / right), (System.Byte)(left.y / right));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Div>>]
-    public static vec2u8 operator /(vec2u8 left, Byte right)
+    public static vec2u8 operator %(System.Byte left, vec2u8 right)
     {
-        return vec2((Byte)(left.x / right), (Byte)(left.y / right));
+        return vec2((System.Byte)(left % right.x), (System.Byte)(left % right.y));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorScalarExpressionNumericOperation<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>,DualDrill.CLSL.Language.Operation.BinaryArithmetic.Rem>>]
-    public static vec2u8 operator %(vec2u8 left, Byte right)
+    public static vec2u8 operator %(vec2u8 left, System.Byte right)
     {
-        return vec2((Byte)(left.x % right), (Byte)(left.y % right));
+        return vec2((System.Byte)(left.x % right), (System.Byte)(left.y % right));
     }
     
     public vec2u8 xx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec2(x, x);
-    }
-    
-    public vec2u8 xy {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec2(x, y);
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleSetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        set 
-        {
-            x = value.x;
-            y = value.y;
-        }
-        
     }
     
     public vec2u8 yx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec2(y, x);
-        
+    }
+    
+    public vec2u8 xy {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleSetOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        set 
-        {
-            y = value.x;
-            x = value.y;
-        }
-        
+        get => vec2(x, y);
     }
     
     public vec2u8 yy {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec2(y, y);
     }
     
     public vec3u8 xxx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec3(x, x, x);
-    }
-    
-    public vec3u8 xxy {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec3(x, x, y);
-    }
-    
-    public vec3u8 xyx {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec3(x, y, x);
-    }
-    
-    public vec3u8 xyy {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec3(x, y, y);
     }
     
     public vec3u8 yxx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec3(y, x, x);
     }
     
-    public vec3u8 yxy {
+    public vec3u8 xyx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec3(y, x, y);
+        get => vec3(x, y, x);
     }
     
     public vec3u8 yyx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec3(y, y, x);
+    }
+    
+    public vec3u8 xxy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec3(x, x, y);
+    }
+    
+    public vec3u8 yxy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec3(y, x, y);
+    }
+    
+    public vec3u8 xyy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec3(x, y, y);
     }
     
     public vec3u8 yyy {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec3(y, y, y);
     }
     
     public vec4u8 xxxx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec4(x, x, x, x);
-    }
-    
-    public vec4u8 xxxy {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(x, x, x, y);
-    }
-    
-    public vec4u8 xxyx {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(x, x, y, x);
-    }
-    
-    public vec4u8 xxyy {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(x, x, y, y);
-    }
-    
-    public vec4u8 xyxx {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(x, y, x, x);
-    }
-    
-    public vec4u8 xyxy {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(x, y, x, y);
-    }
-    
-    public vec4u8 xyyx {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(x, y, y, x);
-    }
-    
-    public vec4u8 xyyy {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(x, y, y, y);
     }
     
     public vec4u8 yxxx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec4(y, x, x, x);
     }
     
-    public vec4u8 yxxy {
+    public vec4u8 xyxx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(y, x, x, y);
-    }
-    
-    public vec4u8 yxyx {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(y, x, y, x);
-    }
-    
-    public vec4u8 yxyy {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(y, x, y, y);
+        get => vec4(x, y, x, x);
     }
     
     public vec4u8 yyxx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec4(y, y, x, x);
     }
     
-    public vec4u8 yyxy {
+    public vec4u8 xxyx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
-        get => vec4(y, y, x, y);
+        get => vec4(x, x, y, x);
+    }
+    
+    public vec4u8 yxyx {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(y, x, y, x);
+    }
+    
+    public vec4u8 xyyx {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(x, y, y, x);
     }
     
     public vec4u8 yyyx {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.X>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec4(y, y, y, x);
+    }
+    
+    public vec4u8 xxxy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(x, x, x, y);
+    }
+    
+    public vec4u8 yxxy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(y, x, x, y);
+    }
+    
+    public vec4u8 xyxy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(x, y, x, y);
+    }
+    
+    public vec4u8 yyxy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(y, y, x, y);
+    }
+    
+    public vec4u8 xxyy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(x, x, y, y);
+    }
+    
+    public vec4u8 yxyy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(y, x, y, y);
+    }
+    
+    public vec4u8 xyyy {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => vec4(x, y, y, y);
     }
     
     public vec4u8 yyyy {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [DualDrill.CLSL.Language.ShaderAttribute.OperationMethodAttribute<DualDrill.CLSL.Language.Operation.VectorSwizzleGetExpressionOperation<DualDrill.CLSL.Language.Operation.Swizzle.Pattern<DualDrill.Common.Nat.N2,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y,DualDrill.CLSL.Language.Operation.Swizzle.Y>,DualDrill.CLSL.Language.Types.UIntType<DualDrill.Common.Nat.N8>>>]
         get => vec4(y, y, y, y);
     }
     
+}
+
+public static partial class DMath{
+    public static vec2u8 vec2(System.Byte x, System.Byte y){
+        return new vec2u8 () {
+            x = x,
+            y = y
+        };
+    }
+    
+    public static vec2u8 vec2(System.Byte e) => vec2(e, e);
 }
 

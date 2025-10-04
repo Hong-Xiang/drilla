@@ -1,32 +1,76 @@
-﻿using System.Numerics;
+﻿using DualDrill.Graphics;
+using DualDrill.ILSL.IR;
 using Silk.NET.Maths;
+using System.Collections.Immutable;
+using System.Numerics;
 
-namespace DualDrill.CLSL;
+namespace DualDrill.ILSL;
 
-//public sealed class ShaderMethodAttribute() : Attribute, IShaderStageAttribute
-//{
-//}
-
-//public sealed class BindingAttribute(int Binding, bool HasDynamicOffset = false) : Attribute, IShaderAttribute
-//{
-//    public int Binding { get; } = Binding;
-//    public bool HasDynamicOffset { get; } = HasDynamicOffset;
-//}
-
-//public sealed class UniformAttribute() : Attribute, IShaderAttribute { }
-//public sealed class ReadAttribute() : Attribute, IShaderAttribute { }
-//public sealed class ReadWriteAttribute() : Attribute, IShaderAttribute { }
-//public sealed class StageAttribute(GPUShaderStage stage) : Attribute, IShaderAttribute
-//{
-//    public GPUShaderStage Stage { get; } = stage;
-//}
-//public sealed class VertexStepModeAttribute(GPUVertexStepMode StepMode) : Attribute
-//{
-//    public GPUVertexStepMode StepMode { get; } = StepMode;
-//}
-
-public interface ISharpShader
+public enum BuiltinBinding
 {
+    vertex_index,
+    instance_index,
+    position,
+    front_facing,
+    frag_depth,
+    sample_index,
+    local_invocation_id,
+    local_invocation_index,
+    global_invocation_id,
+    workgroup_id,
+    num_workgroups,
+}
+
+public sealed class BuiltinAttribute(BuiltinBinding Slot) : Attribute, IAttribute
+{
+    public BuiltinBinding Slot { get; } = Slot;
+}
+
+public sealed class VertexAttribute() : Attribute, IShaderStageAttribute { }
+public sealed class FragmentAttribute() : Attribute, IShaderStageAttribute { }
+public sealed class ComputeAttribute() : Attribute, IShaderStageAttribute { }
+public sealed class ShaderMethodAttribute() : Attribute, IShaderStageAttribute
+{
+}
+interface IShaderStageAttribute : IAttribute { }
+
+public sealed class LocationAttribute(int Binding) : Attribute, IAttribute
+{
+    public int Binding { get; } = Binding;
+}
+
+public sealed class GroupAttribute(int Binding) : Attribute, IAttribute
+{
+    public int Binding { get; } = Binding;
+}
+
+public sealed class BindingAttribute(int Binding, bool HasDynamicOffset = false) : Attribute, IAttribute
+{
+    public int Binding { get; } = Binding;
+    public bool HasDynamicOffset { get; } = HasDynamicOffset;
+}
+
+public sealed class UniformAttribute() : Attribute, IAttribute { }
+public sealed class ReadAttribute() : Attribute, IAttribute { }
+public sealed class ReadWriteAttribute() : Attribute, IAttribute { }
+public sealed class StageAttribute(GPUShaderStage stage) : Attribute, IAttribute
+{
+    public GPUShaderStage Stage { get; } = stage;
+}
+public sealed class VertexStepModeAttribute(GPUVertexStepMode StepMode) : Attribute
+{
+    public GPUVertexStepMode StepMode { get; } = StepMode;
+}
+
+
+public interface IShaderModule
+{
+}
+
+public interface IReflection
+{
+    public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ILSL.IR.Module module);
 }
 
 public interface ISampler
@@ -38,3 +82,5 @@ public interface ITexture2D<T>
     public T Sample(ISampler sampler, Vector2 coordinate);
     public T Sample(ISampler sampler, Vector2D<float> coordinate);
 }
+
+
