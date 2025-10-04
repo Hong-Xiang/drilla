@@ -8,6 +8,7 @@ requirements:
 
 - [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
 - [dotnet 9.0](https://dotnet.microsoft.com/en-us/download)
+- [slangc](https://github.com/shader-slang/slang) need to be installed and added to PATH, can be installed via slang or via Vulkan SDK
 
 ### run dev environment
 
