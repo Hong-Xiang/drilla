@@ -1,7 +1,6 @@
 ﻿namespace DualDrill.Common;
 
-public interface ISingleton<TSelf>
-    where TSelf : ISingleton<TSelf>
+public interface ISingleton<out TValue>
 {
-    abstract static TSelf Instance { get; }
+    static abstract TValue Instance { get; }
 }

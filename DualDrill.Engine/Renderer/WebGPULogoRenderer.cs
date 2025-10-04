@@ -1,6 +1,5 @@
 ﻿using DualDrill.Engine.Mesh;
 using DualDrill.Graphics;
-using DualDrill.Graphics.Backend;
 using System.Numerics;
 using System.Runtime.InteropServices;
 

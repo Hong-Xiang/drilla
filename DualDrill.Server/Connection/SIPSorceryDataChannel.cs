@@ -3,7 +3,7 @@ using MessagePipe;
 using R3;
 using SIPSorcery.Net;
 
-namespace DualDrill.Server.Services;
+namespace DualDrill.Server.Connection;
 
 sealed class SIPSorceryDataChannel : IDataChannel
 {

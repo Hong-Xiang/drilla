@@ -10,7 +10,7 @@ public sealed class Quad : IMesh
     {
         ArrayStride = 5 * sizeof(float),
         StepMode = GPUVertexStepMode.Vertex,
-        Attributes = (GPUVertexAttribute[]) [
+        Attributes = (GPUVertexAttribute[])[
                 new GPUVertexAttribute
                             {
                                 ShaderLocation = 0,

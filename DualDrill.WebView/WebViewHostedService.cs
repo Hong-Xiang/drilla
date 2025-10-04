@@ -1,10 +1,4 @@
-﻿using DualDrill.Engine.Headless;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-
-namespace DualDrill.WebView;
+﻿namespace DualDrill.WebView;
 
 //public sealed class WebViewWindowHostedService(
 //    IServer WebServer,

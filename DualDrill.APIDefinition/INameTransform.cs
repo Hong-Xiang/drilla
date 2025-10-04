@@ -1,6 +1,4 @@
-﻿using DualDrill.ApiGen.DrillLang.Types;
-
-namespace DualDrill.ApiGen;
+﻿namespace DualDrill.ApiGen;
 
 public interface INameTransform
 {

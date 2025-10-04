@@ -1,12 +1,10 @@
-﻿using DotNext;
-using DualDrill.CLSL.Language.IR;
+﻿using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Graphics;
-using DualDrill.ILSL;
-using DualDrill.ILSL.IR.Declaration;
-using Silk.NET.Input;
-using Silk.NET.SDL;
+using DualDrill.CLSL;
 using System.Collections.Immutable;
 using System.Numerics;
+using DualDrill.CLSL.Reflection;
 
 namespace DualDrill.Engine.Shader;
 
@@ -28,7 +26,7 @@ public class ReflectionTestShaderReflection : IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(ILSL.IR.Module module)
+    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(IShaderModuleDeclaration module)
     {
         return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
     }
@@ -36,7 +34,7 @@ public class ReflectionTestShaderReflection : IReflection
     public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor() => null;
 }
 
-public struct ReflectionTestShader : IShaderModule
+public struct ReflectionTestShader : ISharpShader
 {
     public struct Vertex
     {

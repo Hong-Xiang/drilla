@@ -1,9 +1,7 @@
 ﻿using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Types;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using DualDrill.Common.Nat;
 using System.CodeDom.Compiler;
-using System.Runtime.InteropServices;
 namespace DualDrill.ApiGen.DMath;
 
 
@@ -38,7 +36,8 @@ public sealed class MathCodeGenerator
         Writer.WriteLine("using System.Runtime.CompilerServices;");
         Writer.WriteLine("using System.Runtime.Intrinsics;");
         Writer.WriteLine("using System.Runtime.InteropServices;");
-        Writer.WriteLine($"namespace {Config.NameSpace};");
+        Writer.WriteLine("using DualDrill.CLSL.Language.ShaderAttribute;");
+        Writer.WriteLine($"namespace {Config.MathLibNameSpaceName};");
         Writer.WriteLine($"using static {Config.StaticMathTypeName};");
         Writer.WriteLine();
     }
@@ -48,9 +47,11 @@ public sealed class MathCodeGenerator
         return BaseWriter.ToString();
     }
 
-    public void Generate(VecType vecType)
+    public void Generate<TRank, TElement>(VecType<TRank, TElement> vecType)
+        where TRank : IRank<TRank>
+        where TElement : IScalarType<TElement>
     {
-        var vecGenertor = new VecCodeGenerator(vecType, Writer, Config);
+        var vecGenertor = new VecCodeGenerator<TRank, TElement>(vecType, Writer, Config);
         vecGenertor.Generate();
     }
 

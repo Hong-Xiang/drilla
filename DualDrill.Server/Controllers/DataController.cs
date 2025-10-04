@@ -1,5 +1,4 @@
 ﻿using DualDrill.Engine.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DualDrill.Server.Controllers;
