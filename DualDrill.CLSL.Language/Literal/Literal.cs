@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.CodeDom.Compiler;
+using System.Text.Json.Serialization;
 using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Literal;
@@ -63,5 +64,10 @@ public static class Literal
 
     public static F64Literal Create(double value) => new(value);
 
-    public static string TypeName<TLiteral>(this TLiteral literal) where TLiteral : ILiteral => literal.Type.Name;
+    public static string ValueString(this ILiteral literal)
+    {
+        var sw = new IndentedTextWriter(new StringWriter());
+        literal.PrettyPrint(sw, PrettyPrintOption.Default);
+        return sw.InnerWriter.ToString();
+    }
 }

@@ -5,6 +5,7 @@ using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
@@ -56,9 +57,11 @@ public sealed class FunctionToOperationPass
         private IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction<IShaderValue, IShaderValue>> InstF
         {
             get;
-        } = Instruction2.Factory;
+        } = Instruction.Instruction.Factory;
 
-        public IEnumerable<Instruction<IShaderValue, IShaderValue>> AccessChain(Instruction<IShaderValue, IShaderValue> ctx, AccessChainOperation op, IShaderValue result, IShaderValue target, IReadOnlyList<IShaderValue> indices)
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> AccessChain(
+            Instruction<IShaderValue, IShaderValue> ctx, AccessChainOperation op, IShaderValue result,
+            IShaderValue target, IReadOnlyList<IShaderValue> indices)
             => [ctx];
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> AddressOfChain(
@@ -77,68 +80,74 @@ public sealed class FunctionToOperationPass
                 switch (opAttr.Operation)
                 {
                     case IBinaryExpressionOperation be:
-                    {
-                        var r = arguments[1];
-                        var l = arguments[0];
-                        if (!l.Type.Equals(be.LeftType) || !r.Type.Equals(be.RightType))
-                            throw new OperationFunctionNotMatchException(f, be);
-                        return [InstF.Operation2(default, be, result, l, r)];
-                    }
+                        {
+                            var r = arguments[1];
+                            var l = arguments[0];
+                            if (!l.Type.Equals(be.LeftType) || !r.Type.Equals(be.RightType))
+                                throw new OperationFunctionNotMatchException(f, be);
+                            return [InstF.Operation2(default, be, result, l, r)];
+                        }
                     case IBinaryStatementOperation bs:
-                    {
-                        var r = arguments[1];
-                        var l = arguments[0];
-                        if (!l.Type.Equals(bs.LeftType) || !r.Type.Equals(bs.RightType))
                         {
-                            if (l.Type is IPtrType lp && bs.LeftType is IPtrType bp && lp.BaseType.Equals(bp.BaseType))
+                            var r = arguments[1];
+                            var l = arguments[0];
+                            if (!l.Type.Equals(bs.LeftType) || !r.Type.Equals(bs.RightType))
                             {
-                                // TODO: correct handling of address space equality
+                                if (l.Type is IPtrType lp && bs.LeftType is IPtrType bp && lp.BaseType.Equals(bp.BaseType))
+                                {
+                                    // TODO: correct handling of address space equality
+                                }
+                                else
+                                {
+                                    throw new OperationFunctionNotMatchException(f, bs);
+                                }
                             }
-                            else
+
+                            if (bs is IVectorComponentSetOperation vcs)
                             {
-                                throw new OperationFunctionNotMatchException(f, bs);
+                                return
+                                [
+                                    InstF.VectorComponentSet(default, vcs, l, r)
+                                ];
                             }
+
+                            if (bs is IVectorSwizzleSetOperation vss)
+                                return
+                                [
+                                    InstF.VectorSwizzleSet(default, vss, l, r)
+                                ];
+
+                            throw new NotSupportedException($"binary statement {bs.Name}");
                         }
-
-                        if (bs is IVectorComponentSetOperation vcs)
-                        {
-                            var p = BindShaderValue.Create(vcs.ElementType.GetPtrType(FunctionAddressSpace.Instance));
-                            return
-                            [
-                                InstF.VectorComponentSet(default, vcs, l, r)
-                            ];
-                        }
-
-                        if (bs is IVectorSwizzleSetOperation vss)
-                            return
-                            [
-                                InstF.VectorSwizzleSet(default, vss, l, r)
-                            ];
-
-                        throw new NotSupportedException($"binary statement {bs.Name}");
-                    }
                     case IUnaryExpressionOperation ue:
-                    {
-                        var s = arguments[0];
-                        if (!s.Type.Equals(ue.SourceType))
                         {
-                            if (s.Type is IPtrType ps && ue.SourceType is IPtrType pu &&
-                                ps.BaseType.Equals(pu.BaseType))
+                            var s = arguments[0];
+                            if (!s.Type.Equals(ue.SourceType))
                             {
-                                // TODO: modify operation to support precise control on address space 
+                                if (s.Type is IPtrType ps && ue.SourceType is IPtrType pu &&
+                                    ps.BaseType.Equals(pu.BaseType))
+                                {
+                                    // TODO: modify operation to support precise control on address space 
+                                }
+                                else
+                                {
+                                    throw new OperationFunctionNotMatchException(f, ue);
+                                }
                             }
-                            else
-                            {
-                                throw new OperationFunctionNotMatchException(f, ue);
-                            }
-                        }
 
-                        return
-                        [
-                            InstF.Operation1(default, ue, result, s)
-                        ];
-                    }
+                            return
+                            [
+                                InstF.Operation1(default, ue, result, s)
+                            ];
+                        }
                 }
+
+            if (f.Attributes.OfType<ZeroConstructorMethodAttribute>().Any() && f.ReturnType is IVecType vt)
+            {
+                return [
+                    InstF.ZeroConstructorOperation(default, new ZeroConstructorOperation(vt), result)
+                ];
+            }
 
             if (f.Attributes.OfType<VectorCompositeConstructorMethodAttribute>().SingleOrDefault() is { } vcc)
             {
@@ -154,7 +163,7 @@ public sealed class FunctionToOperationPass
         }
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Literal(
-            Instruction<IShaderValue, IShaderValue> ctx, LiteralOperation op, IShaderValue result, ILiteral value) =>
+            Instruction<IShaderValue, IShaderValue> ctx, LiteralOperation op, IShaderValue result, IShaderValue value) =>
             [ctx];
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Load(Instruction<IShaderValue, IShaderValue> ctx,
@@ -188,5 +197,8 @@ public sealed class FunctionToOperationPass
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> VectorSwizzleSet(
             Instruction<IShaderValue, IShaderValue> ctx, IVectorSwizzleSetOperation op, IShaderValue ptr,
             IShaderValue value) => [ctx];
+
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> ZeroConstructorOperation(Instruction<IShaderValue, IShaderValue> ctx, ZeroConstructorOperation op, IShaderValue result)
+            => [ctx];
     }
 }

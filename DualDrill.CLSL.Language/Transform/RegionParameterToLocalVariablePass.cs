@@ -26,7 +26,7 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
                                                      x => new VariableDeclaration(FunctionAddressSpace.Instance,
                                                          string.Empty, x.Type, []));
         var regionParamtersUses =
-            regionParamtersVars.ToDictionary(x => x.Key, x => (IShaderValue)BindShaderValue.Create(x.Key.Type));
+            regionParamtersVars.ToDictionary(x => x.Key, x => (IShaderValue)ShaderValue.Intermediate(x.Key.Type));
         return body.MapRegionBody(bb =>
         {
             return bb with
@@ -34,7 +34,7 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
                 Parameters = [],
                 Body = Seq.Create(
                     [
-                        .. bb.Parameters.Select(p => Instruction2.Factory.Load(default, new LoadOperation(),
+                        .. bb.Parameters.Select(p => Instruction.Instruction.Factory.Load(default, new LoadOperation(),
                             regionParamtersUses[p], regionParamtersVars[p].Value)),
                         .. bb.Body.Elements,
                         .. bb.Body.Last.Evaluate(new JumpStoreSemantic(regionParamters, regionParamtersVars))
@@ -81,6 +81,6 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReturnVoid() => [];
 
         private Instruction<IShaderValue, IShaderValue> StoreLocalVar(IShaderValue p, IShaderValue a) =>
-            Instruction2.Factory.Store(default, new StoreOperation(), ParameterVars[p].Value, a);
+            Instruction.Instruction.Factory.Store(default, new StoreOperation(), ParameterVars[p].Value, a);
     }
 }

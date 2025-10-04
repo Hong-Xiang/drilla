@@ -33,7 +33,16 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
     {
         Writer.Write("loop ");
         Dump(label);
-        Writer.WriteLine(":");
+        Writer.Write(" | break -> ");
+        if (breakNext is { } l)
+        {
+            Dump(l);
+        }
+        else
+        {
+            Writer.Write("<null>");
+        }
+        Writer.WriteLine(" : ");
         using (Writer.IndentedScope())
         {
             body();
@@ -100,8 +109,14 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
         return default;
     }
 
+
     private void Dump(IShaderValue value)
     {
+        if (value is LiteralValue literalValue)
+        {
+            Writer.Write(literalValue.Value.ValueString());
+            return;
+        }
         var index = Model.ValueIndex(value);
 
         Writer.Write($"%{index}");
@@ -206,13 +221,6 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
                 Writer.Write(" (");
                 Dump(a);
                 Writer.Write(')');
-            }
-
-            switch (e.Payload)
-            {
-                case ILiteral l:
-                    Writer.Write(l.Name);
-                    break;
             }
 
             Writer.WriteLine();

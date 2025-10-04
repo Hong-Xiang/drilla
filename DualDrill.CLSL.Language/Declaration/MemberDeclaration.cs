@@ -10,7 +10,7 @@ public sealed class MemberDeclaration(
     string Name,
     IShaderType Type,
     ImmutableHashSet<IShaderAttribute> Attributes)
-    : IDeclaration, ILoadStoreTargetSymbol
+    : IDeclaration
 {
     public string Name { get; } = Name;
     public ImmutableHashSet<IShaderAttribute> Attributes { get; } = Attributes;

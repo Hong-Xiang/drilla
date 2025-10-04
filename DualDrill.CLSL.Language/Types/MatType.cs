@@ -3,6 +3,12 @@ using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Types;
 
+enum MatrixMemoryLayout
+{
+    RowMajor,
+    ColMajor
+}
+
 public sealed record class MatType(
     IScalarType ElementType,
     IRank Row,

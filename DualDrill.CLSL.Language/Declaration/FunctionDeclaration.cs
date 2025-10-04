@@ -32,6 +32,7 @@ public sealed class FunctionDeclaration
     public T Evaluate<T>(IDeclarationSemantic<T> semantic) => semantic.VisitFunction(this);
 
     public IShaderType Type { get; }
+    public IShaderType ReturnType => Return.Type;
 
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
     {

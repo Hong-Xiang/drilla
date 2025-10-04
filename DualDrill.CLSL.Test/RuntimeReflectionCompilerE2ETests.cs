@@ -18,15 +18,18 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         module.Accept(formatter);
         Output.WriteLine(formatter.Dump());
     }
-    void TestShader(ISharpShader shader, string name)
+
+    string OutputFolder = Path.GetDirectoryName(typeof(RuntimeReflectionCompilerE2ETests).Assembly.Location);
+
+    async Task TestShader(ISharpShader shader, string name)
     {
         var sep = $"\n{new string('-', 10)}\n";
         var context = CompilationContext.Create();
         var parser = new RuntimeReflectionParser(context);
-        var module =  parser.ParseShaderModule(shader);
+        var module = parser.ParseShaderModule(shader);
         Dump("IR", module);
         //module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
-        //module = module.RunPass(new FunctionToOperationPass());
+        module = module.RunPass(new FunctionToOperationPass());
         module = module.RunPass(new RegionParameterToLocalVariablePass());
 
         //Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
@@ -38,8 +41,19 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Output.WriteLine("=== SLang ===");
         Output.WriteLine(code);
 
-        using var f = File.CreateText($"D:\\Code\\DualDrillEngine\\DualDrill.CLSL.Test\\ShaderModule\\{name}-gen.slang");
+        var slangPath = Path.Combine(OutputFolder, $"{name}-gen.slang");
+        using var f = File.CreateText(slangPath);
         f.WriteLine(code);
+        await f.FlushAsync();
+        Output.WriteLine($"[Write Slang to file] {slangPath}");
+
+        var slangService = new SlangService();
+        await slangService.ValidateAsync(code);
+
+        //var wgsl = await slangService.CompileToWgslAsync(code);
+        //Output.WriteLine("=== WGSL ===");
+        //Output.WriteLine(wgsl);
+
 
         //cfg = cfg.EliminateBlockValueTransfer();
         //Output.WriteLine("=== Remove Outputs ===");
@@ -81,41 +95,41 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     public async Task MinimumTriangleShaderShouldWork()
     {
         var shader = new ShaderModule.MinimumHelloTriangleShaderModule();
-        TestShader(shader, "triangle");
+        await TestShader(shader, "triangle");
     }
 
     [Fact]
     public async Task AdHocDevelopTest()
     {
         var shader = new ShaderModule.DevelopShaderModule();
-        TestShader(shader, "adhoc-develop");
+        await TestShader(shader, "adhoc-develop");
     }
 
     [Fact]
     public async Task DevelopTestShaderModuleShouldWork()
     {
         var shader = new ShaderModule.DevelopTestShaderModule();
-        TestShader(shader, "develop-test");
+        await TestShader(shader, "develop-test");
     }
 
     [Fact]
     public async Task MandelbrotDistanceShaderModuleShouldWork()
     {
         var shader = new ShaderModule.MandelbrotDistanceShaderModule();
-        TestShader(shader, "mandelbrot");
+        await TestShader(shader, "mandelbrot");
     }
 
     [Fact]
     public async Task SimpleUniformShaderShouldWork()
     {
         var shader = new ShaderModule.SimpleStructUniformShaderModule();
-        TestShader(shader, "simple-uniform");
+        await TestShader(shader, "simple-uniform");
     }
 
     [Fact]
     public async Task RayMartching()
     {
         var shader = new ShaderModule.RaymarchingPrimitiveShader();
-        TestShader(shader, "raymartching");
+        await TestShader(shader, "raymartching");
     }
 }

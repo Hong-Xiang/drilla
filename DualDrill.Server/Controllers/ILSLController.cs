@@ -2,11 +2,12 @@
 using DualDrill.Engine.Shader;
 using DualDrill.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace DualDrill.Server.Controllers;
 
 [Route("[controller]")]
-public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Controller
+public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, SlangService slangService) : Controller
 {
     ISharpShader? GetShader(string name)
     {
@@ -19,7 +20,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
             return null;
         }
     }
-    
+
     [HttpGet("compile/{name}/{target}")]
     public async Task<IActionResult> CompileDevelopModuleToSlang(string name, string target)
     {
@@ -40,6 +41,21 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules) : Cont
         ICLSLCompiler compiler = new CLSLCompiler(new CLSLCompileOption(targetOption));
         var code = compiler.Emit(shader);
         return Ok(code);
+    }
+
+    [HttpGet("reflect/{name}")]
+    public async Task<IActionResult> Reflect(string name)
+    {
+        var shader = GetShader(name);
+        if (shader is null)
+        {
+            return NotFound();
+        }
+
+        ICLSLCompiler compiler = new CLSLCompiler(new CLSLCompileOption(CLSLCompileTarget.SLang));
+        var code = compiler.Emit(shader);
+        var json = await slangService.ReflectAsync(code);
+        return Ok(JsonSerializer.Deserialize<JsonDocument>(json));
     }
 
 

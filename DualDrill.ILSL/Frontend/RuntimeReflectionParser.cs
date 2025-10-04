@@ -343,10 +343,10 @@ public sealed record class RuntimeReflectionParser(
             for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
             {
                 var cilInst = model[i];
-                Debug.Write($"parse {cilInst.Instruction.OpCode}");
+                //Debug.Write($"parse {cilInst.Instruction.OpCode}");
                 cilInst.Evaluate(visitor, model.IsStatic, methodTable);
-                Debug.Write(" -> ");
-                Debug.WriteLine(string.Join(", ", visitor.Stack.Select(v => visitor.GetValueType(v).Name)));
+                //Debug.Write(" -> ");
+                //Debug.WriteLine(string.Join(", ", visitor.Stack.Select(v => visitor.GetValueType(v).Name)));
             }
 
             var terminator = visitor.Terminator;
@@ -360,7 +360,7 @@ public sealed record class RuntimeReflectionParser(
                 foreach (var tl in successor.AllTargets())
                 {
                     ImmutableStack<IShaderValue> output =
-                        [.. visitor.Stack.Select(v => (IShaderValue)BindShaderValue.Create(v.Type)).Reverse()];
+                        [.. visitor.Stack.Select(v => (IShaderValue)ShaderValue.Intermediate(v.Type)).Reverse()];
                     if (basicBlockInputs.TryGetValue(tl, out var existed))
                     {
                         if (!existed.Select(v => v.Type).SequenceEqual(output.Select(v => v.Type)))

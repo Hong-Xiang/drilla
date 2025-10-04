@@ -1,5 +1,4 @@
 ﻿using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Declaration;
 
@@ -33,11 +32,6 @@ public interface IShaderModuleSimplePass
     : IDeclarationVisitor<IDeclaration?>
 {
     FunctionBody4 VisitFunctionBody(FunctionBody4 body);
-}
-
-public interface ITypeReferenceVisitor<T>
-{
-    T VisitTypeReference(IShaderType type);
 }
 
 public static class DeclarationExtension

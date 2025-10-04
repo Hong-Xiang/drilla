@@ -48,16 +48,13 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
     private ITerminatorSemantic<RegionJump, IShaderValue, ITerminator<RegionJump, IShaderValue>> TermF { get; }
         = Language.Terminator.Factory<RegionJump, IShaderValue>();
 
-    private IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction<IShaderValue, IShaderValue>> InstF
-    {
-        get;
-    }
-        = Instruction2.Factory;
+    private IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction<IShaderValue, IShaderValue>> InstF { get; }
+        = Instruction.Factory;
 
     public Unit VisitLiteral<TLiteral>(CilInstructionInfo info, TLiteral literal) where TLiteral : ILiteral
     {
         //var val = EmitLet(literal.Type, ExprF.Literal(literal));
-        var val = EmitLet(literal.Type, r => InstF.Literal(default, new LiteralOperation(), r, literal));
+        var val = EmitLet(literal.Type, r => InstF.Literal(default, new LiteralOperation(), r, ShaderValue.Literal(literal)));
         Push(val);
         return default;
     }
@@ -474,13 +471,6 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         };
     }
 
-    private IShaderValue CreateValue(IShaderType t) =>
-        //var v = IShaderValue.Create(t);
-        //ShaderValueDeclaration r = new(v, t);
-        //ValueTypes.Add(v, t);
-        //return v;
-        BindShaderValue.Create(t);
-
     private void Push(IShaderValue v)
     {
         var type = GetValueType(v);
@@ -519,14 +509,14 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
 
     private IShaderValue EmitLet(IShaderType t, Func<IShaderValue, Instruction<IShaderValue, IShaderValue>> e)
     {
-        var value = CreateValue(t);
+        var value = ShaderValue.Intermediate(t);
         instructions.Add(e(value));
         return value;
     }
 
     private void PushEmitLet2(IBinaryExpressionOperation op, IShaderValue l, IShaderValue r)
     {
-        var res = BindShaderValue.Create(op.ResultType);
+        var res = ShaderValue.Intermediate(op.ResultType);
         //var v = EmitLet(op.ResultType, ExprF.Operation2(op, CreateValueExpr(l), CreateValueExpr(r)));
         //var v = EmitLet(op.ResultType, r => InstF.Operation2(default, op, r, l, r));
         Emit(InstF.Operation2(default, op, res, l, r));
@@ -538,7 +528,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
     {
         if (p.Type is IPtrType pt)
         {
-            var r = CreateValue(pt.BaseType);
+            var r = ShaderValue.Intermediate(pt.BaseType);
             Emit(InstF.Load(default, new LoadOperation(), r, p));
             //Emit(Stmt.Get(r, p));
             Push(r);
@@ -567,77 +557,77 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
             switch (opAttr.Operation)
             {
                 case IBinaryExpressionOperation be:
-                {
-                    var r = Pop();
-                    var l = Pop();
-                    var lt = GetValueType(l);
-                    var rt = GetValueType(r);
-                    if (!lt.Equals(be.LeftType) || !rt.Equals(be.RightType))
-                        throw new ValidationException($"{be} operation stack : {l}, {r}", Model.Method);
-                    PushEmitLet2(be, l, r);
-                    return;
-                }
+                    {
+                        var r = Pop();
+                        var l = Pop();
+                        var lt = GetValueType(l);
+                        var rt = GetValueType(r);
+                        if (!lt.Equals(be.LeftType) || !rt.Equals(be.RightType))
+                            throw new ValidationException($"{be} operation stack : {l}, {r}", Model.Method);
+                        PushEmitLet2(be, l, r);
+                        return;
+                    }
                 case IBinaryStatementOperation bs:
-                {
-                    var r = Pop();
-                    var l = Pop();
-                    if (!GetValueType(l).Equals(bs.LeftType) || !GetValueType(r).Equals(bs.RightType))
                     {
-                        if (l.Type is IPtrType lp && bs.LeftType is IPtrType bp && lp.BaseType.Equals(bp.BaseType))
+                        var r = Pop();
+                        var l = Pop();
+                        if (!GetValueType(l).Equals(bs.LeftType) || !GetValueType(r).Equals(bs.RightType))
                         {
-                            // TODO: correct handling of address space equality
+                            if (l.Type is IPtrType lp && bs.LeftType is IPtrType bp && lp.BaseType.Equals(bp.BaseType))
+                            {
+                                // TODO: correct handling of address space equality
+                            }
+                            else
+                            {
+                                throw new ValidationException(
+                                    $"{bs.Name} {bs.LeftType.Name} {bs.RightType.Name} operation stack : {l.Type.Name}, {r.Type.Name}",
+                                    Model.Method);
+                            }
                         }
-                        else
+
+                        if (bs is IVectorComponentSetOperation vcs)
                         {
-                            throw new ValidationException(
-                                $"{bs.Name} {bs.LeftType.Name} {bs.RightType.Name} operation stack : {l.Type.Name}, {r.Type.Name}",
-                                Model.Method);
+                            Emit(InstF.VectorComponentSet(default, vcs, l, r));
+                            //var cp = EmitLet(vcs.ElementType.GetPtrType(), ExprF.AddressOfChain(new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), CreateValueExpr(l)));
+                            //var cp = EmitLet(vcs.ElementType.GetPtrType(((IPtrType)l.Type).AddressSpace), res => InstF.AddressOfChain(default, new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), res, l));
+                            //DoStore(cp, r);
+                            //Emit(Stmt.Set(cp, r));
+                            return;
                         }
-                    }
 
-                    if (bs is IVectorComponentSetOperation vcs)
-                    {
-                        Emit(InstF.VectorComponentSet(default, vcs, l, r));
-                        //var cp = EmitLet(vcs.ElementType.GetPtrType(), ExprF.AddressOfChain(new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), CreateValueExpr(l)));
-                        //var cp = EmitLet(vcs.ElementType.GetPtrType(((IPtrType)l.Type).AddressSpace), res => InstF.AddressOfChain(default, new AddressOfVecComponentOperation(vcs.VecType, vcs.Component), res, l));
-                        //DoStore(cp, r);
-                        //Emit(Stmt.Set(cp, r));
-                        return;
-                    }
+                        if (bs is IVectorSwizzleSetOperation vss)
+                        {
+                            Emit(InstF.VectorSwizzleSet(default, vss, l, r));
+                            //Emit(Stmt.SetVecSwizzle(vss, l, r));
+                            return;
+                        }
 
-                    if (bs is IVectorSwizzleSetOperation vss)
-                    {
-                        Emit(InstF.VectorSwizzleSet(default, vss, l, r));
-                        //Emit(Stmt.SetVecSwizzle(vss, l, r));
-                        return;
+                        throw new NotSupportedException($"binary statement {bs.Name}");
                     }
-
-                    throw new NotSupportedException($"binary statement {bs.Name}");
-                }
                 case IUnaryExpressionOperation ue:
-                {
-                    var s = Pop();
-                    if (!GetValueType(s).Equals(ue.SourceType))
                     {
-                        if (s.Type is IPtrType ps && ue.SourceType is IPtrType pu && ps.BaseType.Equals(pu.BaseType))
+                        var s = Pop();
+                        if (!GetValueType(s).Equals(ue.SourceType))
                         {
-                            // TODO: modify operation to support precise control on address space 
+                            if (s.Type is IPtrType ps && ue.SourceType is IPtrType pu && ps.BaseType.Equals(pu.BaseType))
+                            {
+                                // TODO: modify operation to support precise control on address space 
+                            }
+                            else
+                            {
+                                throw new ValidationException($"{ue} operation stack : {s}", Model.Method);
+                            }
                         }
-                        else
-                        {
-                            throw new ValidationException($"{ue} operation stack : {s}", Model.Method);
-                        }
+
+                        var v = EmitLet(ue.ResultType, r => InstF.Operation1(default, ue, r, s));
+
+                        //var v = EmitLet(ue.ResultType, ExprF.Operation1(ue, CreateValueExpr(s)));
+                        Push(v);
+                        return;
+                        //Emit(StackIR.Instruction.Expr1(ue));
+                        //Push(ue.ResultType);
+                        //throw new NotImplementedException($"unary expression {ue} not implemented");
                     }
-
-                    var v = EmitLet(ue.ResultType, r => InstF.Operation1(default, ue, r, s));
-
-                    //var v = EmitLet(ue.ResultType, ExprF.Operation1(ue, CreateValueExpr(s)));
-                    Push(v);
-                    return;
-                    //Emit(StackIR.Instruction.Expr1(ue));
-                    //Push(ue.ResultType);
-                    //throw new NotImplementedException($"unary expression {ue} not implemented");
-                }
             }
 
         List<IShaderValue> args = [];
@@ -652,7 +642,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         }
 
         args.Reverse();
-        var rv = CreateValue(func.Return.Type);
+        var rv = ShaderValue.Intermediate(func.Return.Type);
         Emit(InstF.Call(default, new CallOperation((FunctionType)func.Type), rv, func, args));
         //Emit(Stmt.Call(rv, func, [.. args]));
 

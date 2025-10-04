@@ -32,6 +32,8 @@ public sealed record class CLSLCompileOption(
 
 public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
 {
+    private readonly SlangService _slangService = new();
+
     public ShaderModuleDeclaration<FunctionBody4> Parse(ISharpShader shader)
     {
         var context = CompilationContext.Create();
@@ -57,7 +59,7 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                 var emitter = new SlangEmitter(module);
                 var slangCode = emitter.Emit();
                 // Compile Slang to WGSL using slangc
-                var wgslCode = CompileSlangToWgslAsync(slangCode).GetAwaiter().GetResult();
+                var wgslCode = _slangService.CompileToWgslAsync(slangCode).GetAwaiter().GetResult();
                 return wgslCode;
             }
             case CLSLCompileTarget.SLang:
@@ -70,83 +72,6 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
             }
             default:
                 throw new NotSupportedException();
-        }
-    }
-
-    private async Task<string> CompileSlangToWgslAsync(string slangCode)
-    {
-        // Create a temporary file for the Slang code
-        var tempSlangFile = Path.GetTempFileName() + ".slang";
-
-        try
-        {
-            // Write the Slang code to the temporary file
-            await File.WriteAllTextAsync(tempSlangFile, slangCode);
-
-            // Set up the process to run slangc
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = "slangc",
-                Arguments = $"\"{tempSlangFile}\" -target wgsl",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using var process = new Process();
-            process.StartInfo = processStartInfo;
-
-            var outputStringBuilder = new StringBuilder();
-            var errorStringBuilder = new StringBuilder();
-
-            // Capture output and error streams
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
-                    outputStringBuilder.AppendLine(e.Data);
-            };
-
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
-                    errorStringBuilder.AppendLine(e.Data);
-            };
-
-            process.Start();
-
-            // Begin async reading of output and error
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-
-            // Wait for the process to complete
-            await process.WaitForExitAsync();
-
-            var wgslOutput = outputStringBuilder.ToString().Trim();
-            var errorOutput = errorStringBuilder.ToString().Trim();
-
-            if (process.ExitCode != 0)
-                throw new InvalidOperationException(
-                    $"slangc compilation failed with exit code {process.ExitCode}. Error: {errorOutput}");
-
-            if (string.IsNullOrWhiteSpace(wgslOutput))
-                throw new InvalidOperationException($"slangc produced no WGSL output. Error: {errorOutput}");
-
-            return wgslOutput;
-        }
-        finally
-        {
-            // Clean up the temporary file
-            if (File.Exists(tempSlangFile))
-                try
-                {
-                    File.Delete(tempSlangFile);
-                }
-                catch (Exception ex)
-                {
-                    // Log the exception but don't fail the compilation
-                    Debug.WriteLine($"Failed to delete temporary file {tempSlangFile}: {ex.Message}");
-                }
         }
     }
 }

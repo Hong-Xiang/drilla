@@ -878,8 +878,8 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         //else return res;
 
         // raymarch primitives   
-        //var tb = iBox(ro - vec3(0.0f, 0.4f, -0.5f), rd, vec3(2.5f, 0.41f, 3.0f));
-        var tb = iBox(ro, rd, vec3(2.5f, 0.5f, 2.5f));
+        var tb = iBox(ro - vec3(0.0f, 0.4f, -0.5f), rd, vec3(2.5f, 0.41f, 3.0f));
+        //var tb = iBox(ro, rd, vec3(2.5f, 0.5f, 2.5f));
         var cond = tb.x < tb.y && tb.y > 0.0f && tb.x < tmax;
         if (cond)
         {
@@ -993,14 +993,13 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         {
             var pos = ro + t * rd;
             var nor = vec3(0.0f, 1.0f, 0.0f);
-            //if (m < 1.5f)
-            //{
-            //    nor = new Vector3(0.0f, 1.0f, 0.0f);
-            //}
+            if (m < 1.5f)
+            {
+                nor = vec3(0.0f, 1.0f, 0.0f);
+            }
             if (m >= 1.5f)
             {
-                //nor = calcNormal(pos);
-                nor = vec3(0.0f, 1.0f, 0.0f);
+                nor = calcNormal(pos);
             }
 
             var reflection = reflect(rd, nor);
@@ -1087,9 +1086,9 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         [Location(0)] public vec2f32 position;
     }
 
-    [Group(0)][Binding(0)][Uniform] static vec2f32 iResolution;
+    //[Group(0)][Binding(0)][Uniform] static vec2f32 iResolution;
 
-    [Group(0)][Binding(1)][Uniform] static float iTime;
+    [Group(0)][Binding(0)][Uniform] static float iTime;
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
@@ -1102,6 +1101,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     [return: Location(0)]
     static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 vertexIn)
     {
+        var iResolution = vec2(1920f, 1080f);
         int antialiasing = 1;
         var time = 32.0f + iTime * 1.5f;
         var fragCoord = iResolution - vertexIn.xy;

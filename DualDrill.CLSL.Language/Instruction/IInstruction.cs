@@ -1,6 +1,5 @@
 ﻿using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
-using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Symbol;
@@ -75,7 +74,7 @@ public readonly record struct Instruction<TV, TR>(
     }
 }
 
-public static class Instruction2
+public static class Instruction
 {
     public static IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction<IShaderValue, IShaderValue>> Factory
     {
@@ -98,8 +97,8 @@ public static class Instruction2
             Create(op, result, [f, .. arguments]);
 
         public Instruction<IShaderValue, IShaderValue> Literal(Unit ctx, LiteralOperation op, IShaderValue result,
-            ILiteral value) =>
-            Create(op, result, [], value);
+            IShaderValue value) =>
+            Create(op, result, [value]);
 
         public Instruction<IShaderValue, IShaderValue> Load(Unit ctx, LoadOperation op, IShaderValue result,
             IShaderValue ptr) =>
@@ -138,5 +137,8 @@ public static class Instruction2
 
         public Instruction<IShaderValue, IShaderValue> AccessChain(Unit ctx, AccessChainOperation op, IShaderValue result, IShaderValue target, IReadOnlyList<IShaderValue> indices)
             => Create(op, result, [target, .. indices]);
+
+        public Instruction<IShaderValue, IShaderValue> ZeroConstructorOperation(Unit ctx, ZeroConstructorOperation op, IShaderValue result)
+            => Create(op, result, []);
     }
 }

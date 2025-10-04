@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Instruction;
+using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
@@ -45,4 +46,12 @@ public sealed record class ShaderRegionBody(
             Seq.Create(Body.Elements.SelectMany(f), Body.Last),
             ImmediatePostDominator
         );
+}
+
+public static class RegionTreeWithShaderRegionBodyExtension
+{
+    public static IEnumerable<Label> DefinedLabels(this RegionTree<Label, ShaderRegionBody> tree)
+    {
+        return [tree.Label, .. tree.Bindings.SelectMany(r => r.DefinedLabels())];
+    }
 }

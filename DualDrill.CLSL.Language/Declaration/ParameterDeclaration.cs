@@ -9,7 +9,7 @@ using DualDrill.CLSL.Language.Types;
 namespace DualDrill.CLSL.Language.Declaration;
 
 public sealed class ParameterDeclaration
-    : IDeclaration, IVariableIdentifierSymbol
+    : IDeclaration
 {
     public ParameterDeclaration(
         string name,

@@ -15,65 +15,214 @@ internal sealed class DevelopShaderModule : ISharpShader
     //     return a == uint.MaxValue;
     // }
 
-    [ShaderMethod]
-    static vec3 map(vec3 pos)
-    {
-        return pos;
-    }
+    //[Vertex]
+    //public static float TernaryConditionalSwizzle(vec3 p, bool cond)
+    //{
+    //    // IL_0000: nop
+    //    // IL_0001: ldarga.s     p
+    //    // IL_0003: ldarg.1      // cond
+    //    // IL_0004: brtrue.s     IL_000f
+    //    //   outputs [ addr<vec3> ] <- stack-top
+    //    //
+    //    //   inputs [ addr<vec3> ]
+    //    // IL_0006: ldarga.s     p
+    //    // IL_0008: call         instance valuetype [DualDrill.Mathematics]DualDrill.Mathematics.vec2f32 [DualDrill.Mathematics]DualDrill.Mathematics.vec3f32::get_xz()
+    //    // IL_000d: br.s         IL_0016
+    //    //   outputs [ addr<vec3>, vec2 ] <- stack-top
+    //    //
+    //    //   inputs [ addr<vec3> ]
+    //    // IL_000f: ldarga.s     p
+    //    // IL_0011: call         instance valuetype [DualDrill.Mathematics]DualDrill.Mathematics.vec2f32 [DualDrill.Mathematics]DualDrill.Mathematics.vec3f32::get_zx()
+    //    //   outputs [ addr<vec3>, vec2 ] <- stack-top
+    //    //
+    //    // IL_0016: call         instance void [DualDrill.Mathematics]DualDrill.Mathematics.vec3f32::set_xz(valuetype [DualDrill.Mathematics]DualDrill.Mathematics.vec2f32)
+    //    // IL_001b: nop
+    //    // IL_001c: ldarga.s     p
+    //    // IL_001e: call         instance float32 [DualDrill.Mathematics]DualDrill.Mathematics.vec3f32::get_x()
+    //    // IL_0023: stloc.0      // V_0
+    //    // IL_0024: br.s         IL_0026
+    //    //
+    //    // IL_0026: ldloc.0      // V_0
+    //    //  IL_0027: ret
+    //    //
+    //    p.xz = cond ? p.zx : p.xz;
+    //    return p.x;
+    //}
+
+
+    //[Vertex]
+    //public static int NestedLoop(int x, int y, int nx, int ny)
+    //{
+    //    var result = 0;
+    //    for (var ix = 0; ix < nx; ix++)
+    //    {
+    //        for (var iy = 0; iy < ny; iy++)
+    //        {
+    //            result += y;
+    //        }
+
+    //        result += x;
+    //    }
+
+    //    return result;
+    //}
 
     [ShaderMethod]
-    static int foo(int x)
+    static vec2f32 raycast(vec3f32 ro, vec3f32 rd)
     {
-        return x;
+        var res = vec2(-1.0f, -1.0f);
+
+        var tmin = 1.0f;
+        var tmax = 20.0f;
+
+        // raytrace floor plane
+        float tp1 = (0.0f - ro.y) / rd.y;
+
+        if (tp1 > 0.0f)
+        {
+            tmax = min(tmax, tp1);
+            res = vec2(tp1, 1.0f);
+        }
+        //else return res;
+
+        // raymarch primitives   
+        //var tb = iBox(ro - vec3(0.0f, 0.4f, -0.5f), rd, vec3(2.5f, 0.41f, 3.0f));
+        var tb = ro;
+        //var tb = iBox(ro, rd, vec3(2.5f, 0.5f, 2.5f));
+        var cond = tb.x < tb.y && tb.y > 0.0f && tb.x < tmax;
+        if (cond)
+        {
+            //return vec2(tb.y, 2.0f);
+
+            tmin = max(tb.x, tmin);
+            tmax = min(tb.y, tmax);
+
+
+            var t = tmin;
+            for (var i = 0; i < 70 && t < tmax; i = i + 1)
+            {
+                var h = ro + rd * t;
+                //return vec2(tb.y, (rd * t).z);
+                if (abs(h.x) < (0.0001f * t))
+                {
+                    res = vec2(t, h.y);
+                    break;
+                }
+                t = t + h.x;
+            }
+            //return res;
+        }
+        return res;
     }
 
-    static vec3 foov(vec3 x)
-    {
-        return x;
-    }
+    //[ShaderMethod]
+    //public static vec2f32 raycast(vec3f32 ro, vec3f32 rd)
+    //{
+    //    var res = vec2(-1.0f, -1.0f);
 
-    [ShaderMethod]
-    static float bar(vec3 x)
-    {
-        return foov(x).x + foov(x).x;
-    }
+    //    var tmin = 1.0f;
+    //    var tmax = 20.0f;
 
-    [ShaderMethod]
-    static vec3f32 calcNormal(vec3f32 pos)
-    {
-        var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
-        return normalize(e.xyy * map(pos + e.xyy).x +
-                         e.yyx * map(pos + e.yyx).x +
-                         e.yxy * map(pos + e.yxy).x +
-                         e.xxx * map(pos + e.xxx).x);
-        //var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
-        //return Normalize(
-        //    e.xyy * map(pos + e.xyy).X + e.yyx * map(pos + e.yyx).X + e.yxy * map(pos + e.yxy).X + e.xxx * map
-        //    new Vector3(e.X, e.Y, e.Y) * map(pos + new Vector3(e.X, e.Y, e.Y)).X +
-        //    new Vector3(e.Y, e.Y, e.X) * map(pos + new Vector3(e.Y, e.Y, e.X)).X +
-        //    new Vector3(e.Y, e.X, e.Y) * map(pos + new Vector3(e.Y, e.X, e.Y)).X +
-        //new Vector3(e.X, e.X, e.X) * map(pos + new Vector3(e.X, e.X, e.X)).X);
-        //vec3 n = vec3(0.0f);
-        //for (int i = 0; i < 4; i++)
-        //{
-        //    vec3 e = 0.5773 * (2.0f * vec3((((i + 3) >> 1) & 1), ((i >> 1) & 1), (i & 1)) - 1.0);
-        //    n += e * map(pos + 0.0005f * e).x;
-        //    //if( n.x+n.y+n.z>100.0 ) break;
-        //}
-        //return normalize(n);
-    }
+    //    // raytrace floor plane
+    //    //float tp1 = (0.0f - ro.y) / rd.y;
 
-    [ShaderMethod]
-    static int condExpr(int a, int b)
-    {
-        //float cay = ra - 0.5f;
-        //float cbx = ra * rb;
+    //    //if (tp1 > 0.0f)
+    //    //{
+    //    //    tmax = min(tmax, tp1);
+    //    //    res = vec2(tp1, 1.0f);
+    //    //}
+    //    //else return res;
 
-        //float s = (cbx < 0.0f && cay < 0.0f) ? -1.0f : 1.0f;
+    //    // raymarch primitives   
+    //    //var tb = iBox(ro - vec3(0.0f, 0.4f, -0.5f), rd, vec3(2.5f, 0.41f, 3.0f));
+    //    var tb = ro;
+    //    //var cond = tb.x < tb.y && tb.y > 0.0f && tb.x < tmax;
+    //    var cond = true;
+    //    if (cond)
+    //    {
+    //        //return vec2(tb.y, 2.0f);
 
-        //return s + 0.1f;
-        return (a < 0 && b < 1f) ? 2 : 3;
-    }
+    //        //tmin = max(tb.x, tmin);
+    //        //tmax = min(tb.y, tmax);
+
+
+    //        var t = tmin;
+    //        for (var i = 0; i < 70 && t < tmax; i = i + 1)
+    //        {
+    //            var h = rd;
+    //            //return vec2(tb.y, (rd * t).z);
+    //            if (abs(h.x) < (0.0001f * t))
+    //            {
+    //                res = vec2(t, h.y);
+    //                break;
+    //            }
+    //            t = t + h.x;
+    //        }
+    //        //return res;
+    //    }
+    //    return res;
+    //}
+
+
+    //[ShaderMethod]
+    //static vec3 map(vec3 pos)
+    //{
+    //    return pos;
+    //}
+
+    //[ShaderMethod]
+    //static int foo(int x)
+    //{
+    //    return x;
+    //}
+
+    //static vec3 foov(vec3 x)
+    //{
+    //    return x;
+    //}
+
+    //[ShaderMethod]
+    //static float bar(vec3 x)
+    //{
+    //    return foov(x).x + foov(x).x;
+    //}
+
+    //[ShaderMethod]
+    //static vec3f32 calcNormal(vec3f32 pos)
+    //{
+    //    var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
+    //    return normalize(e.xyy * map(pos + e.xyy).x +
+    //                     e.yyx * map(pos + e.yyx).x +
+    //                     e.yxy * map(pos + e.yxy).x +
+    //                     e.xxx * map(pos + e.xxx).x);
+    //    //var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
+    //    //return Normalize(
+    //    //    e.xyy * map(pos + e.xyy).X + e.yyx * map(pos + e.yyx).X + e.yxy * map(pos + e.yxy).X + e.xxx * map
+    //    //    new Vector3(e.X, e.Y, e.Y) * map(pos + new Vector3(e.X, e.Y, e.Y)).X +
+    //    //    new Vector3(e.Y, e.Y, e.X) * map(pos + new Vector3(e.Y, e.Y, e.X)).X +
+    //    //    new Vector3(e.Y, e.X, e.Y) * map(pos + new Vector3(e.Y, e.X, e.Y)).X +
+    //    //new Vector3(e.X, e.X, e.X) * map(pos + new Vector3(e.X, e.X, e.X)).X);
+    //    //vec3 n = vec3(0.0f);
+    //    //for (int i = 0; i < 4; i++)
+    //    //{
+    //    //    vec3 e = 0.5773 * (2.0f * vec3((((i + 3) >> 1) & 1), ((i >> 1) & 1), (i & 1)) - 1.0);
+    //    //    n += e * map(pos + 0.0005f * e).x;
+    //    //    //if( n.x+n.y+n.z>100.0 ) break;
+    //    //}
+    //    //return normalize(n);
+    //}
+
+    //[ShaderMethod]
+    //static int condExpr(int a, int b)
+    //{
+    //    //float cay = ra - 0.5f;
+    //    //float cbx = ra * rb;
+
+    //    //float s = (cbx < 0.0f && cay < 0.0f) ? -1.0f : 1.0f;
+
+    //    //return s + 0.1f;
+    //    return (a < 0 && b < 1f) ? 2 : 3;
+    //}
 
     // [Vertex]
     // public static int SimpleLoop(int x)

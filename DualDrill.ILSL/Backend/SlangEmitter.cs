@@ -1,5 +1,4 @@
 ﻿using System.CodeDom.Compiler;
-using System.Text;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -21,8 +20,6 @@ namespace DualDrill.CLSL.Backend;
 public class SlangEmitter
     : IDeclarationVisitor<FunctionBody4, Unit>
     , IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>
-      //, IStatementSemantic<IShaderValue, IExpressionTree<IShaderValue>, IShaderValue, FunctionDeclaration, Unit>
-      //, IExpressionTreeLazyFoldSemantic<IShaderValue, Unit>
     , ILiteralSemantic<string>
     , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
     , IOperationSemantic<Instruction<string, string>, string, string, string>
@@ -194,8 +191,8 @@ public class SlangEmitter
 
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.Literal(
-        Instruction<string, string> ctx, LiteralOperation op, string result, ILiteral value) =>
-        $"{result} = {value.Evaluate(this)};";
+        Instruction<string, string> ctx, LiteralOperation op, string result, string value) =>
+        $"{result} = {value};";
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.AddressOfChain(
         Instruction<string, string> ctx, IAddressOfOperation op, string result, string target)
@@ -289,6 +286,14 @@ public class SlangEmitter
         Label label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody> body, Label? next, Label? breakNext)
     {
         Writer.Write("while(true)");
+        var nextL = body.Last.ImmediatePostDominator;
+        var shouldEmitNext = true;
+        var breakTarget = nextL;
+        HashSet<Label> dominatedLabels = [label, .. body.Elements.SelectMany(r => r.DefinedLabels())];
+        while (breakTarget is not null && dominatedLabels.Contains(breakTarget))
+        {
+            breakTarget = Blocks[breakTarget].Definition.Body.Last.ImmediatePostDominator;
+        }
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// loop " + GetLabelName(label));
@@ -298,23 +303,18 @@ public class SlangEmitter
             else
                 Writer.WriteLine("exit");
             ContinueTarget.Push(label);
-            var nextL = body.Last.ImmediatePostDominator;
+            BreakTarget.Push(breakTarget);
             NextBlock.Push(nextL);
             OnShaderRegionBody(body.Last);
             NextBlock.Pop();
             if (nextL is not null)
             {
-                if (ContinueTarget.Count > 0 && ContinueTarget.Peek().Equals(nextL))
-                {
-                }
-                else
-                {
-                    EmitBranch(nextL);
-                }
+                EmitBranch(nextL);
             }
-
+            BreakTarget.Pop();
             ContinueTarget.Pop();
         }
+
 
         return default;
     }
@@ -406,6 +406,7 @@ public class SlangEmitter
         return v switch
         {
             _ when RValues.TryGetValue(v, out var n) => n,
+            LiteralValue { Value: var val } => val.Evaluate(this),
             VariablePointerValue x => GetVariableName(x.Declaration),
             ParameterPointerValue p => p.Declaration.Name,
             _ => $"v_{GetId(v)}"
@@ -481,8 +482,6 @@ public class SlangEmitter
         Writer.Write(type.Name);
     }
 
-    private string FunctionName(FunctionDeclaration decl) => $"func{GetFunctionIndex(decl)}_{decl.Name}";
-
     private void OnBody(FunctionBody4 body)
     {
         foreach (var v in body.LocalVariables)
@@ -532,53 +531,38 @@ public class SlangEmitter
             switch (s.Operation)
             {
                 case AddressOfVecComponentOperation op:
-                {
-                    var r = s.Result!;
-                    var t = s[0]!;
-                    RValues.Add(r, $"{GetValueName(t)}.{op.Component.Name}");
-                    break;
-                }
+                    {
+                        var r = s.Result!;
+                        var t = s[0]!;
+                        RValues.Add(r, $"{GetValueName(t)}.{op.Component.Name}");
+                        break;
+                    }
                 case AddressOfMemberOperation op:
-                {
-                    var r = s.Result!;
-                    var t = s[0]!;
-                    RValues.Add(r, $"{GetValueName(t)}.{op.Name}");
-                    break;
-                }
+                    {
+                        var r = s.Result!;
+                        var t = s[0]!;
+                        RValues.Add(r, $"{GetValueName(t)}.{op.Name}");
+                        break;
+                    }
                 default:
-                {
-                    var ns = s.Select(v =>
-                        v switch
-                        {
-                            FunctionDeclaration f => f.Name switch
+                    {
+                        var ns = s.Select(v =>
+                            v switch
                             {
-                                "mix" => "lerp",
-                                _ => f.Name
-                            },
-                            _ => GetValueName(v)
-                        }, v => $"let {GetValueName(v)} : {v.Type.Name}");
-                    Writer.WriteLine(ns.Evaluate(this));
-                    break;
-                }
+                                FunctionDeclaration f => f.Name switch
+                                {
+                                    "mix" => "lerp",
+                                    _ => f.Name
+                                },
+                                _ => GetValueName(v)
+                            }, v => $"let {GetValueName(v)} : {v.Type.Name}");
+                        Writer.WriteLine(ns.Evaluate(this));
+                        break;
+                    }
             }
         }
 
         basicBlock.Body.Last.Evaluate(this);
-    }
-
-    //Unit IStatementSemantic<IShaderValue, ShaderExpr, IShaderValue, FunctionDeclaration, Unit>.Nop()
-    //{
-    //    return default;
-    //}
-
-    private void WriteValueAssignEqual(IShaderValue value)
-    {
-        var name = GetValueName(value);
-        Writer.Write("let ");
-        Writer.Write(name);
-        Writer.Write(" : ");
-        VisitType(value.Type);
-        Writer.Write(" = ");
     }
 
     private void EmitBranch(Label target)
@@ -601,6 +585,11 @@ public class SlangEmitter
             return;
         }
 
+        if(target.Name == "0x2AA")
+        {
+            Console.WriteLine($"emitting {target.Name}");
+        }
+
         if (NextBlock.Count > 0 && target.Equals(NextBlock.Peek())) return;
         var emitCount = Emitted.TryGetValue(target, out var c) ? c : 0;
         if (emitCount > 0)
@@ -609,14 +598,31 @@ public class SlangEmitter
 
             if (Blocks[target].Definition.Kind == RegionKind.Loop)
             {
+                if (BreakTarget.Any() && BreakTarget.Peek().Equals(target))
+                {
+                    Writer.WriteLine("break;");
+                    return;
+                }
                 Writer.WriteLine($"Invalid duplicate label {GetLabelName(target)}");
                 return;
             }
-            //Blocks[target].Definition.Evaluate(this);
+            Writer.WriteLine("// duplicated label emitting");
+            Blocks[target].Definition.Evaluate(this);
         }
 
         Emitted[target] = emitCount + 1;
         Blocks[target].Definition.Evaluate(this);
+    }
+
+    string IOperationSemantic<Instruction<string, string>, string, string, string>.ZeroConstructorOperation(Instruction<string, string> ctx, ZeroConstructorOperation op, string result)
+    {
+        switch (op.ResultType)
+        {
+            case IVecType v:
+                return $"{result} = {{}};";
+            default:
+                throw new NotSupportedException();
+        }
     }
 
     private enum VisitingEntity

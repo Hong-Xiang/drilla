@@ -1,5 +1,6 @@
 ﻿using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Analysis;
 
