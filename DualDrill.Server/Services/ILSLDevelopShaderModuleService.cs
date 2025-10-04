@@ -1,23 +1,17 @@
 ﻿using DualDrill.Engine.Shader;
-using DualDrill.Graphics;
-using DualDrill.ILSL;
+using DualDrill.CLSL;
 namespace DualDrill.Server.Services;
 
 public sealed class ILSLDevelopShaderModuleService
 {
-    public Dictionary<string, IILSLDevelopShaderModule> ShaderModules { get; } = new()
+    public Dictionary<string, ISharpShader> ShaderModules { get; } = new()
     {
         [nameof(MinimumTriangle)] = new MinimumTriangle(),
         //[nameof(SampleFragmentShader)] = new SampleFragmentShader(),
-        [nameof(VertexOutputShader)] = new VertexOutputShader(),
+        [nameof(GradientColorTriangleShader)] = new GradientColorTriangleShader(),
         //[nameof(SimpleUniformShader)] = new SimpleUniformShader(),
-    };
-
-    public Dictionary<string, IShaderModule> DemoShaderModules { get; } = new()
-    {
-        [nameof(SampleFragmentShader)] = new SampleFragmentShader(),
+        [nameof(MandelbrotDistanceShader)] = new MandelbrotDistanceShader(),
         [nameof(SimpleUniformShader)] = new SimpleUniformShader(),
-        [nameof(QuadShader)] = new QuadShader(),
-
+        [nameof(RaymarchingPrimitiveShader)] = new RaymarchingPrimitiveShader(),
     };
 }

@@ -1,6 +1,5 @@
-﻿using Microsoft.JSInterop;
-using DualDrill.Engine.BrowserProxy;
-using DualDrill.Engine.Connection;
+﻿using DualDrill.Engine.Connection;
+using Microsoft.JSInterop;
 
 namespace DualDrill.Engine.BrowserProxy;
 

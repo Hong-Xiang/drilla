@@ -1,7 +1,5 @@
 ﻿using Microsoft.JSInterop;
-using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Runtime.InteropServices;
 
 namespace DualDrill.Engine.BrowserProxy;
 

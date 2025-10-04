@@ -3,20 +3,18 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
-	<Import Project="..\Silk.NET.Packages.props" />
-
 	<ItemGroup>
-		<PackageReference Include="MessagePipe" Version="1.8.1" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-		<PackageReference Include="Microsoft.JSInterop" Version="8.0.4" />
-		<PackageReference Include="R3" Version="1.1.13" />
-		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
-		<PackageReference Include="System.Reactive" Version="6.0.1" />
-		<PackageReference Include="SIPSorceryMedia.FFmpeg" Version="1.4.1" />
-		<PackageReference Include="SIPSorcery" Version="6.2.4" />
-		<PackageReference Include="SIPSorceryMedia.Encoders" Version="0.0.13" />
-		<PackageReference Include="System.ServiceModel.Primitives" Version="8.0.0" />
+		<PackageReference Include="MessagePipe"/>
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+		<PackageReference Include="Microsoft.JSInterop"  />
+		<PackageReference Include="R3"  />
+		<PackageReference Include="SixLabors.ImageSharp" />
+		<PackageReference Include="System.Reactive" />
+		<PackageReference Include="SIPSorceryMedia.FFmpeg" />
+		<PackageReference Include="SIPSorcery" />
+		<PackageReference Include="SIPSorceryMedia.Encoders" />
+		<PackageReference Include="System.ServiceModel.Primitives" />
 	</ItemGroup>
 
 	<ItemGroup>

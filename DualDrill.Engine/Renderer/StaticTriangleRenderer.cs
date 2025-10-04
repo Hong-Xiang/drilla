@@ -1,6 +1,4 @@
 ﻿using DualDrill.Graphics;
-using DualDrill.Graphics.Backend;
-using Silk.NET.Vulkan;
 
 namespace DualDrill.Engine.Renderer;
 
@@ -39,7 +37,7 @@ public class StaticTriangleRenderer : IRenderer<StaticTriangleRenderer.State>
     {
         Device = device;
         ShaderModule = Device.CreateShaderModule(new() { Code = SHADER_CODE });
-        Pipeline = Device.CreateRenderPipeline( new GPURenderPipelineDescriptor()
+        Pipeline = Device.CreateRenderPipeline(new GPURenderPipelineDescriptor()
         {
             Vertex = new GPUVertexState()
             {

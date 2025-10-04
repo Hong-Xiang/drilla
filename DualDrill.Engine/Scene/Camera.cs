@@ -9,7 +9,7 @@ public sealed record class Camera
     public float NearPlaneDistance { get; init; } = 0.1f;
     public float FarPlaneDistance { get; init; } = 1000.0f;
     public Vector3 Position { get; init; } = 5.0f * Vector3.UnitZ;
-    public Vector3 Forward { get; init; } = - Vector3.UnitZ;
+    public Vector3 Forward { get; init; } = -Vector3.UnitZ;
     public Vector3 Up { get; init; } = Vector3.UnitY;
 
     public Matrix4x4 ViewProjectionMatrix =>

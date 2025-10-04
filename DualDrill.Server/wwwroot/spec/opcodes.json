@@ -1,0 +1,2262 @@
+[
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 0,
+        "Name": "nop"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 1,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 1,
+        "Name": "break"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 2,
+        "Name": "ldarg.0"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 3,
+        "Name": "ldarg.1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 4,
+        "Name": "ldarg.2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 5,
+        "Name": "ldarg.3"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 6,
+        "Name": "ldloc.0"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 7,
+        "Name": "ldloc.1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 8,
+        "Name": "ldloc.2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 9,
+        "Name": "ldloc.3"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 10,
+        "Name": "stloc.0"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 11,
+        "Name": "stloc.1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 12,
+        "Name": "stloc.2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 13,
+        "Name": "stloc.3"
+    },
+    {
+        "OperandType": 18,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 14,
+        "Name": "ldarg.s"
+    },
+    {
+        "OperandType": 18,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 15,
+        "Name": "ldarga.s"
+    },
+    {
+        "OperandType": 18,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 16,
+        "Name": "starg.s"
+    },
+    {
+        "OperandType": 18,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 17,
+        "Name": "ldloc.s"
+    },
+    {
+        "OperandType": 18,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 18,
+        "Name": "ldloca.s"
+    },
+    {
+        "OperandType": 18,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 19,
+        "Name": "stloc.s"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 25,
+        "Size": 1,
+        "Value": 20,
+        "Name": "ldnull"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 21,
+        "Name": "ldc.i4.m1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 22,
+        "Name": "ldc.i4.0"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 23,
+        "Name": "ldc.i4.1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 24,
+        "Name": "ldc.i4.2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 25,
+        "Name": "ldc.i4.3"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 26,
+        "Name": "ldc.i4.4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 27,
+        "Name": "ldc.i4.5"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 28,
+        "Name": "ldc.i4.6"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 29,
+        "Name": "ldc.i4.7"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 30,
+        "Name": "ldc.i4.8"
+    },
+    {
+        "OperandType": 16,
+        "FlowControl": 5,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 31,
+        "Name": "ldc.i4.s"
+    },
+    {
+        "OperandType": 2,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 32,
+        "Name": "ldc.i4"
+    },
+    {
+        "OperandType": 3,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 33,
+        "Name": "ldc.i8"
+    },
+    {
+        "OperandType": 17,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 23,
+        "Size": 1,
+        "Value": 34,
+        "Name": "ldc.r4"
+    },
+    {
+        "OperandType": 7,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 24,
+        "Size": 1,
+        "Value": 35,
+        "Name": "ldc.r8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 20,
+        "Size": 1,
+        "Value": 37,
+        "Name": "dup"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 38,
+        "Name": "pop"
+    },
+    {
+        "OperandType": 4,
+        "FlowControl": 2,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 39,
+        "Name": "jmp"
+    },
+    {
+        "OperandType": 4,
+        "FlowControl": 2,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 26,
+        "StackBehaviourPush": 27,
+        "Size": 1,
+        "Value": 40,
+        "Name": "call"
+    },
+    {
+        "OperandType": 9,
+        "FlowControl": 2,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 26,
+        "StackBehaviourPush": 27,
+        "Size": 1,
+        "Value": 41,
+        "Name": "calli"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 7,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 26,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 42,
+        "Name": "ret"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 0,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 43,
+        "Name": "br.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 44,
+        "Name": "brfalse.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 45,
+        "Name": "brtrue.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 46,
+        "Name": "beq.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 47,
+        "Name": "bge.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 48,
+        "Name": "bgt.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 49,
+        "Name": "ble.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 50,
+        "Name": "blt.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 51,
+        "Name": "bne.un.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 52,
+        "Name": "bge.un.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 53,
+        "Name": "bgt.un.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 54,
+        "Name": "ble.un.s"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 55,
+        "Name": "blt.un.s"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 0,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 56,
+        "Name": "br"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 57,
+        "Name": "brfalse"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 58,
+        "Name": "brtrue"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 59,
+        "Name": "beq"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 60,
+        "Name": "bge"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 61,
+        "Name": "bgt"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 62,
+        "Name": "ble"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 63,
+        "Name": "blt"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 64,
+        "Name": "bne.un"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 65,
+        "Name": "bge.un"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 66,
+        "Name": "bgt.un"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 67,
+        "Name": "ble.un"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 3,
+        "OpCodeType": 1,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 68,
+        "Name": "blt.un"
+    },
+    {
+        "OperandType": 11,
+        "FlowControl": 3,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 69,
+        "Name": "switch"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 70,
+        "Name": "ldind.i1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 71,
+        "Name": "ldind.u1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 72,
+        "Name": "ldind.i2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 73,
+        "Name": "ldind.u2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 74,
+        "Name": "ldind.i4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 75,
+        "Name": "ldind.u4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 76,
+        "Name": "ldind.i8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 77,
+        "Name": "ldind.i"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 23,
+        "Size": 1,
+        "Value": 78,
+        "Name": "ldind.r4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 24,
+        "Size": 1,
+        "Value": 79,
+        "Name": "ldind.r8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 25,
+        "Size": 1,
+        "Value": 80,
+        "Name": "ldind.ref"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 5,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 81,
+        "Name": "stind.ref"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 5,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 82,
+        "Name": "stind.i1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 5,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 83,
+        "Name": "stind.i2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 5,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 84,
+        "Name": "stind.i4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 6,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 85,
+        "Name": "stind.i8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 8,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 86,
+        "Name": "stind.r4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 9,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 87,
+        "Name": "stind.r8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 88,
+        "Name": "add"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 89,
+        "Name": "sub"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 90,
+        "Name": "mul"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 91,
+        "Name": "div"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 92,
+        "Name": "div.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 93,
+        "Name": "rem"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 94,
+        "Name": "rem.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 95,
+        "Name": "and"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 96,
+        "Name": "or"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 97,
+        "Name": "xor"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 98,
+        "Name": "shl"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 99,
+        "Name": "shr"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 100,
+        "Name": "shr.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 101,
+        "Name": "neg"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 102,
+        "Name": "not"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 103,
+        "Name": "conv.i1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 104,
+        "Name": "conv.i2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 105,
+        "Name": "conv.i4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 106,
+        "Name": "conv.i8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 23,
+        "Size": 1,
+        "Value": 107,
+        "Name": "conv.r4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 24,
+        "Size": 1,
+        "Value": 108,
+        "Name": "conv.r8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 109,
+        "Name": "conv.u4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 110,
+        "Name": "conv.u8"
+    },
+    {
+        "OperandType": 4,
+        "FlowControl": 2,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 26,
+        "StackBehaviourPush": 27,
+        "Size": 1,
+        "Value": 111,
+        "Name": "callvirt"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 5,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 112,
+        "Name": "cpobj"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 113,
+        "Name": "ldobj"
+    },
+    {
+        "OperandType": 10,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 25,
+        "Size": 1,
+        "Value": 114,
+        "Name": "ldstr"
+    },
+    {
+        "OperandType": 4,
+        "FlowControl": 2,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 26,
+        "StackBehaviourPush": 25,
+        "Size": 1,
+        "Value": 115,
+        "Name": "newobj"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 25,
+        "Size": 1,
+        "Value": 116,
+        "Name": "castclass"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 117,
+        "Name": "isinst"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 24,
+        "Size": 1,
+        "Value": 118,
+        "Name": "conv.r.un"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 121,
+        "Name": "unbox"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 8,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 122,
+        "Name": "throw"
+    },
+    {
+        "OperandType": 1,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 123,
+        "Name": "ldfld"
+    },
+    {
+        "OperandType": 1,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 124,
+        "Name": "ldflda"
+    },
+    {
+        "OperandType": 1,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 11,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 125,
+        "Name": "stfld"
+    },
+    {
+        "OperandType": 1,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 126,
+        "Name": "ldsfld"
+    },
+    {
+        "OperandType": 1,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 127,
+        "Name": "ldsflda"
+    },
+    {
+        "OperandType": 1,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 128,
+        "Name": "stsfld"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 4,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 129,
+        "Name": "stobj"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 130,
+        "Name": "conv.ovf.i1.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 131,
+        "Name": "conv.ovf.i2.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 132,
+        "Name": "conv.ovf.i4.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 133,
+        "Name": "conv.ovf.i8.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 134,
+        "Name": "conv.ovf.u1.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 135,
+        "Name": "conv.ovf.u2.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 136,
+        "Name": "conv.ovf.u4.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 137,
+        "Name": "conv.ovf.u8.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 138,
+        "Name": "conv.ovf.i.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 139,
+        "Name": "conv.ovf.u.un"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 25,
+        "Size": 1,
+        "Value": 140,
+        "Name": "box"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 25,
+        "Size": 1,
+        "Value": 141,
+        "Name": "newarr"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 142,
+        "Name": "ldlen"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 143,
+        "Name": "ldelema"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 144,
+        "Name": "ldelem.i1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 145,
+        "Name": "ldelem.u1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 146,
+        "Name": "ldelem.i2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 147,
+        "Name": "ldelem.u2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 148,
+        "Name": "ldelem.i4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 149,
+        "Name": "ldelem.u4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 150,
+        "Name": "ldelem.i8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 151,
+        "Name": "ldelem.i"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 23,
+        "Size": 1,
+        "Value": 152,
+        "Name": "ldelem.r4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 24,
+        "Size": 1,
+        "Value": 153,
+        "Name": "ldelem.r8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 25,
+        "Size": 1,
+        "Value": 154,
+        "Name": "ldelem.ref"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 13,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 155,
+        "Name": "stelem.i"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 13,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 156,
+        "Name": "stelem.i1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 13,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 157,
+        "Name": "stelem.i2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 13,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 158,
+        "Name": "stelem.i4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 14,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 159,
+        "Name": "stelem.i8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 15,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 160,
+        "Name": "stelem.r4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 16,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 161,
+        "Name": "stelem.r8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 17,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 162,
+        "Name": "stelem.ref"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 12,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 163,
+        "Name": "ldelem"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 28,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 164,
+        "Name": "stelem"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 165,
+        "Name": "unbox.any"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 179,
+        "Name": "conv.ovf.i1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 180,
+        "Name": "conv.ovf.u1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 181,
+        "Name": "conv.ovf.i2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 182,
+        "Name": "conv.ovf.u2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 183,
+        "Name": "conv.ovf.i4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 184,
+        "Name": "conv.ovf.u4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 185,
+        "Name": "conv.ovf.i8"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 22,
+        "Size": 1,
+        "Value": 186,
+        "Name": "conv.ovf.u8"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 194,
+        "Name": "refanyval"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 24,
+        "Size": 1,
+        "Value": 195,
+        "Name": "ckfinite"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 198,
+        "Name": "mkrefany"
+    },
+    {
+        "OperandType": 12,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 208,
+        "Name": "ldtoken"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 209,
+        "Name": "conv.u2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 210,
+        "Name": "conv.u1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 211,
+        "Name": "conv.i"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 212,
+        "Name": "conv.ovf.i"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 213,
+        "Name": "conv.ovf.u"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 214,
+        "Name": "add.ovf"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 215,
+        "Name": "add.ovf.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 216,
+        "Name": "mul.ovf"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 217,
+        "Name": "mul.ovf.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 218,
+        "Name": "sub.ovf"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 19,
+        "Size": 1,
+        "Value": 219,
+        "Name": "sub.ovf.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 7,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 220,
+        "Name": "endfinally"
+    },
+    {
+        "OperandType": 0,
+        "FlowControl": 0,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 221,
+        "Name": "leave"
+    },
+    {
+        "OperandType": 15,
+        "FlowControl": 0,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 222,
+        "Name": "leave.s"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 5,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 223,
+        "Name": "stind.i"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 1,
+        "Value": 224,
+        "Name": "conv.u"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 2,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 248,
+        "Name": "prefix7"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 2,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 249,
+        "Name": "prefix6"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 2,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 250,
+        "Name": "prefix5"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 2,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 251,
+        "Name": "prefix4"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 2,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 252,
+        "Name": "prefix3"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 2,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 253,
+        "Name": "prefix2"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 2,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 254,
+        "Name": "prefix1"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 2,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 1,
+        "Value": 255,
+        "Name": "prefixref"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -512,
+        "Name": "arglist"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -511,
+        "Name": "ceq"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -510,
+        "Name": "cgt"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -509,
+        "Name": "cgt.un"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -508,
+        "Name": "clt"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 2,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -507,
+        "Name": "clt.un"
+    },
+    {
+        "OperandType": 4,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -506,
+        "Name": "ldftn"
+    },
+    {
+        "OperandType": 4,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 10,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -505,
+        "Name": "ldvirtftn"
+    },
+    {
+        "OperandType": 14,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 2,
+        "Value": -503,
+        "Name": "ldarg"
+    },
+    {
+        "OperandType": 14,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -502,
+        "Name": "ldarga"
+    },
+    {
+        "OperandType": 14,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -501,
+        "Name": "starg"
+    },
+    {
+        "OperandType": 14,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 19,
+        "Size": 2,
+        "Value": -500,
+        "Name": "ldloc"
+    },
+    {
+        "OperandType": 14,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -499,
+        "Name": "ldloca"
+    },
+    {
+        "OperandType": 14,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -498,
+        "Name": "stloc"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -497,
+        "Name": "localloc"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 7,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -495,
+        "Name": "endfilter"
+    },
+    {
+        "OperandType": 16,
+        "FlowControl": 4,
+        "OpCodeType": 4,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -494,
+        "Name": "unaligned."
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 4,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -493,
+        "Name": "volatile."
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 4,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -492,
+        "Name": "tail."
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 3,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -491,
+        "Name": "initobj"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 4,
+        "OpCodeType": 4,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -490,
+        "Name": "constrained."
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 7,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -489,
+        "Name": "cpblk"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 7,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -488,
+        "Name": "initblk"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 8,
+        "OpCodeType": 3,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -486,
+        "Name": "rethrow"
+    },
+    {
+        "OperandType": 13,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -484,
+        "Name": "sizeof"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 5,
+        "OpCodeType": 5,
+        "StackBehaviourPop": 1,
+        "StackBehaviourPush": 21,
+        "Size": 2,
+        "Value": -483,
+        "Name": "refanytype"
+    },
+    {
+        "OperandType": 5,
+        "FlowControl": 4,
+        "OpCodeType": 4,
+        "StackBehaviourPop": 0,
+        "StackBehaviourPush": 18,
+        "Size": 2,
+        "Value": -482,
+        "Name": "readonly."
+    }
+]

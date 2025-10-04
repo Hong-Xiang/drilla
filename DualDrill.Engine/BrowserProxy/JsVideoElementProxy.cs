@@ -6,7 +6,7 @@ using Microsoft.JSInterop;
 namespace DualDrill.Engine.BrowserProxy
 {
     public class JsVideoElementProxy(
-    IClient BrowserClient,  
+    IClient BrowserClient,
     JSClientModule Module,
     IJSObjectReference VideoElement)
     : IVideoElement, IClientObjectReferenceProxy<IClient, IJSObjectReference>, IAsyncDisposable

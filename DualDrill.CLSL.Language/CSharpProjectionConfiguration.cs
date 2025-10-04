@@ -1,7 +1,8 @@
-﻿using DualDrill.CLSL.Language.IR.Expression;
+﻿using System.Collections.Immutable;
+using DualDrill.CLSL.Language.AbstractSyntaxTree.Expression;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
-using System.Collections.Immutable;
 
 namespace DualDrill.CLSL.Language;
 
@@ -9,23 +10,22 @@ public sealed class CSharpProjectionConfiguration
 {
     public static readonly CSharpProjectionConfiguration Instance = new();
 
-    public string NameSpace { get; } = "DualDrill.Mathematics";
-    public string StaticMathTypeName { get; } = "DMath";
-
-    ImmutableDictionary<IShaderType, string> CSharpTypeNameMap { get; }
-    CSharpProjectionConfiguration()
+    private CSharpProjectionConfiguration()
     {
         var typeNameMap = new Dictionary<IShaderType, string>();
         foreach (var t in ShaderType.ScalarTypes)
         {
             typeNameMap.Add(t, DefineCSharpTypeName(t));
-            foreach (var v in ShaderType.GetVecTypes(t))
-            {
-                typeNameMap.Add(v, DefineCSharpTypeName(v));
-            }
+            foreach (var v in ShaderType.GetVecTypes(t)) typeNameMap.Add(v, DefineCSharpTypeName(v));
         }
+
         CSharpTypeNameMap = typeNameMap.ToImmutableDictionary();
     }
+
+    public string MathLibNameSpaceName { get; } = "DualDrill.Mathematics";
+    public string StaticMathTypeName { get; } = "DMath";
+
+    private ImmutableDictionary<IShaderType, string> CSharpTypeNameMap { get; }
 
     public string OpName(UnaryArithmeticOp op)
     {
@@ -36,71 +36,55 @@ public sealed class CSharpProjectionConfiguration
         };
     }
 
-    public string OpName(BinaryArithmeticOp op)
+    public string OpName(IBinaryOp op)
     {
         return op switch
         {
-            BinaryArithmeticOp.Addition => "+",
-            BinaryArithmeticOp.Subtraction => "-",
-            BinaryArithmeticOp.Multiplication => "*",
-            BinaryArithmeticOp.Division => "/",
-            BinaryArithmeticOp.Remainder => "%",
+            BinaryArithmetic.Add => "+",
+            BinaryArithmetic.Sub => "-",
+            BinaryArithmetic.Mul => "*",
+            BinaryArithmetic.Div => "/",
+            BinaryArithmetic.Rem => "%",
+            _ => throw new NotSupportedException()
+        };
+    }
+
+    public string OpName(BinaryArithmetic.OpKind op)
+    {
+        return op switch
+        {
+            BinaryArithmetic.OpKind.add => "+",
+            BinaryArithmetic.OpKind.sub => "-",
+            BinaryArithmetic.OpKind.mul => "*",
+            BinaryArithmetic.OpKind.div => "/",
+            BinaryArithmetic.OpKind.rem => "%",
             _ => throw new NotSupportedException($"Binary arithmetic operator {op} is not supported")
         };
     }
 
-    static string DefineCSharpTypeName(IShaderType type)
+    private static string DefineCSharpTypeName(IShaderType type)
     {
         return (type switch
         {
-            BoolType _ => typeof(bool).FullName,
-            IntType { BitWidth: N8 } => typeof(sbyte).FullName,
-            IntType { BitWidth: N16 } => typeof(short).FullName,
-            IntType { BitWidth: N32 } => typeof(int).FullName,
-            IntType { BitWidth: N64 } => typeof(long).FullName,
+            BoolType _ => typeof(bool).Name,
+            IIntType { BitWidth: N8 } => typeof(sbyte).Name,
+            IIntType { BitWidth: N16 } => typeof(short).Name,
+            IIntType { BitWidth: N32 } => typeof(int).Name,
+            IIntType { BitWidth: N64 } => typeof(long).Name,
 
-            UIntType { BitWidth: N8 } => typeof(byte).FullName,
-            UIntType { BitWidth: N16 } => typeof(ushort).FullName,
-            UIntType { BitWidth: N32 } => typeof(uint).FullName,
-            UIntType { BitWidth: N64 } => typeof(ulong).FullName,
+            IUIntType { BitWidth: N8 } => typeof(byte).Name,
+            IUIntType { BitWidth: N16 } => typeof(ushort).Name,
+            IUIntType { BitWidth: N32 } => typeof(uint).Name,
+            IUIntType { BitWidth: N64 } => typeof(ulong).Name,
 
-            FloatType { BitWidth: N16 } => typeof(Half).FullName,
-            FloatType { BitWidth: N32 } => typeof(float).FullName,
-            FloatType { BitWidth: N64 } => typeof(double).FullName,
-
-            VecType { Size: var size, ElementType: BoolType b } => $"vec{size.Value}{ElementName(b)}",
-            VecType { Size: var size, ElementType: var e } => $"vec{size.Value}{ElementName(e)}",
-            MatType { Row: var r, Column: var c, ElementType: var e } => $"mat{r.Value}x{c.Value}{ElementName(e)}",
+            IFloatType { BitWidth: N16 } => typeof(Half).Name,
+            IFloatType { BitWidth: N32 } => typeof(float).Name,
+            IFloatType { BitWidth: N64 } => typeof(double).Name,
+            IVecType t => $"vec{t.Size.Value}{t.ElementType.ElementName()}",
+            MatType m => m.Name,
             _ => throw new NotSupportedException($"C# type map for {type} is undefined")
         })!;
     }
 
-    static string ElementName(IScalarType type)
-    {
-        return type switch
-        {
-            BoolType => "b",
-            FloatType => $"f{type.BitWidth.Value}",
-            IntType => $"i{type.BitWidth.Value}",
-            UIntType => $"u{type.BitWidth.Value}",
-            _ => throw new NotSupportedException($"{nameof(ElementName)} does not support {type}")
-        };
-    }
-
     public string GetCSharpTypeName(IShaderType type) => CSharpTypeNameMap[type];
-
-    public bool IsSimdDataSupported(IShaderType type)
-    {
-        // for numeric vectors with data larger than 64 bits (except System.Half, which is not supported in VectorXX<Half>),
-        // we use .NET builtin SIMD optimization
-        // for vec3, we use vec4's data for optimizing memory access and SIMD optimization
-        return type switch
-        {
-            VecType { ElementType: BoolType } => false,
-            VecType { ElementType: FloatType { BitWidth: N16 } } => false,
-            VecType { ElementType: var e, Size: N3 } when e.BitWidth.Value * 4 >= 64 => true,
-            VecType { ElementType: var e, Size: var s } when e.BitWidth.Value * s.Value >= 64 => true,
-            _ => false
-        };
-    }
 }
