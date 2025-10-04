@@ -303,15 +303,22 @@ public class SlangEmitter
             else
                 Writer.WriteLine("exit");
             ContinueTarget.Push(label);
-            BreakTarget.Push(breakTarget);
+            if (breakTarget is not null)
+            {
+                BreakTarget.Push(breakTarget);
+            }
             NextBlock.Push(nextL);
             OnShaderRegionBody(body.Last);
+
             NextBlock.Pop();
             if (nextL is not null)
             {
                 EmitBranch(nextL);
             }
-            BreakTarget.Pop();
+            if (breakTarget is not null)
+            {
+                BreakTarget.Pop();
+            }
             ContinueTarget.Pop();
         }
 
@@ -585,12 +592,17 @@ public class SlangEmitter
             return;
         }
 
-        if(target.Name == "0x2AA")
+        if (NextBlock.Count > 0 && target.Equals(NextBlock.Peek()))
         {
-            Console.WriteLine($"emitting {target.Name}");
+            if (BreakTarget.Count == 0)
+            {
+                return;
+            }
+            if (!BreakTarget.Peek().Equals(target))
+            {
+                return;
+            }
         }
-
-        if (NextBlock.Count > 0 && target.Equals(NextBlock.Peek())) return;
         var emitCount = Emitted.TryGetValue(target, out var c) ? c : 0;
         if (emitCount > 0)
         {
