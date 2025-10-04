@@ -85,7 +85,7 @@ export async function BatchRenderMain() {
   // ).json();
 
   // Uniform Buffer to pass resolution
-  const resolutionBufferSize = 16; // used 8
+  const resolutionBufferSize = 4 * 2; // used 8
   const resolutionBuffer = device.createBuffer({
     size: resolutionBufferSize,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -94,12 +94,12 @@ export async function BatchRenderMain() {
   device.queue.writeBuffer(resolutionBuffer, 0, resolution);
 
   // Uniform Buffer to pass time
-  const timeBufferSize = 16; // used 4
+  const timeBufferSize = 4; // used 16
   const timeBuffer = device.createBuffer({
     size: timeBufferSize,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const time = new Float32Array([0, 0, 0, 0]);
+  const time = new Float32Array([0]);
   device.queue.writeBuffer(timeBuffer, 0, time);
 
   // // Vertex Buffer
@@ -169,24 +169,24 @@ export async function BatchRenderMain() {
             type: "uniform",
           },
         },
-        // {
-        //   binding: 1,
-        //   visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        //   buffer: {
-        //     type: "uniform",
-        //   },
-        // },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {
+            type: "uniform",
+          },
+        },
       ],
     }
     // bindGroupLayoutDescriptor
   );
   const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
-    // entries: [
-    //   { binding: 0, resource: { buffer: resolutionBuffer } },
-    //   { binding: 1, resource: { buffer: timeBuffer } },
-    // ],
+    // entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
+    entries: [
+      { binding: 0, resource: { buffer: timeBuffer } },
+      { binding: 1, resource: { buffer: resolutionBuffer } },
+    ],
   });
 
   const pipelineLayout = device.createPipelineLayout({
@@ -254,7 +254,7 @@ export async function BatchRenderMain() {
       ],
     };
     var seconds = performance.now() / 1000;
-    time.set([seconds, seconds]);
+    time.set([seconds]);
     device.queue.writeBuffer(timeBuffer, 0, time);
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);

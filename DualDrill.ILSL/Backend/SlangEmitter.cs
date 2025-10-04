@@ -136,8 +136,35 @@ public class SlangEmitter
 
     public Unit VisitVariable(VariableDeclaration decl)
     {
-        if (decl.Attributes.OfType<UniformAttribute>().FirstOrDefault() is not null) Writer.Write("uniform ");
+        int? group = null;
+        int? binding = null;
+        if (decl.Attributes.OfType<GroupAttribute>().FirstOrDefault() is { } g)
+        {
+            group = g.Binding;
+        }
+        if (decl.Attributes.OfType<BindingAttribute>().FirstOrDefault() is { } b)
+        {
+            binding = b.Binding;
+        }
+        switch (group, binding)
+        {
+            case (int gv, int bv):
+                Writer.WriteLine($"[[vk::binding({bv}, {gv})]]");
+                break;
+            default:
+                break;
+        }
+        var isUniform = decl.Attributes.OfType<UniformAttribute>().FirstOrDefault() is not null;
+
+        if (isUniform)
+        {
+            Writer.Write("ConstantBuffer<");
+        }
         VisitType(decl.Type);
+        if (isUniform)
+        {
+            Writer.Write(">");
+        }
         Writer.Write(" ");
         var name = GetValueName(decl.Value);
         Writer.Write(name);

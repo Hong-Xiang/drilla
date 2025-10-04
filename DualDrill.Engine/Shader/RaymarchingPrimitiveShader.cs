@@ -1086,9 +1086,9 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         [Location(0)] public vec2f32 position;
     }
 
-    //[Group(0)][Binding(0)][Uniform] static vec2f32 iResolution;
-
     [Group(0)][Binding(0)][Uniform] static float iTime;
+    [Group(0)][Binding(1)][Uniform] static vec2f32 iResolution;
+
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
@@ -1101,7 +1101,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     [return: Location(0)]
     static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 vertexIn)
     {
-        var iResolution = vec2(1920f, 1080f);
+        //var iResolution = vec2(1920f, 1080f);
         int antialiasing = 1;
         var time = 32.0f + iTime * 1.5f;
         var fragCoord = iResolution - vertexIn.xy;
