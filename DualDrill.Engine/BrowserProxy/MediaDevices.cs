@@ -1,4 +1,5 @@
 ﻿using DualDrill.Engine.Connection;
+using DualDrill.Engine.UI;
 using Microsoft.JSInterop;
 
 namespace DualDrill.Engine.BrowserProxy;

@@ -1,4 +1,5 @@
-﻿using DualDrill.Engine.Headless;
+﻿using DualDrill.Engine.Connection;
+using DualDrill.Engine.Headless;
 using DualDrill.Engine.Media;
 
 namespace DualDrill.Engine;

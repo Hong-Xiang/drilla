@@ -1,7 +1,6 @@
 using DualDrill.Engine.Headless;
 using DualDrill.Graphics;
 using DualDrill.Server.Connection;
-using DualDrill.Server.Controllers;
 using Serilog;
 using Serilog.Extensions.Logging;
 using System.Text.Json;
@@ -53,16 +52,12 @@ public class Program
         builder.Services.AddHealthChecks();
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
-        //.AddInteractiveWebAssemblyComponents();
+            //.AddInteractiveWebAssemblyComponents();
 
         //builder.Services.AddOpenApi();
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-
-        //using var duckdb = new DuckDBConnectionService();
-        //builder.Services.AddSingleton(sp => duckdb);
-        builder.Services.AddSingleton<DuckDBConnectionService>();
 
         await builder.Services.AddDualDrillServerServices(CancellationToken.None);
 

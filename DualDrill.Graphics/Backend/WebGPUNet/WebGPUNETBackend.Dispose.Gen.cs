@@ -1,4 +1,4 @@
-﻿using DualDrill.Common.Interop;
+﻿using DualDrill.Interop;
 using Evergine.Bindings.WebGPU;
 namespace DualDrill.Graphics.Backend;
 using static Evergine.Bindings.WebGPU.WebGPUNative;

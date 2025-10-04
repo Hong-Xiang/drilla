@@ -1,5 +1,5 @@
-﻿using DualDrill.ApiGen.DrillLang.Types;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
+using DualDrill.ApiGen.DrillLang.Types;
 
 namespace DualDrill.ApiGen.DrillLang.Declaration;
 

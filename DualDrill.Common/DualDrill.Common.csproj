@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,10 +13,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Nats.tt</DependentUpon>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="DotNext" />
   </ItemGroup>
 
   <ItemGroup>

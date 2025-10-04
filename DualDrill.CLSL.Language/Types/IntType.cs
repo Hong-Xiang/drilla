@@ -1,51 +1,21 @@
-﻿using System.Diagnostics;
-using DualDrill.Common.Nat;
+﻿using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Language.Types;
 
-public interface IIntType : IIntegerType
+public sealed record class IntType(IBitWidth BitWidth) : IIntegerType, IScalarType
 {
-    IUIntType SameWidthUIntType { get; }
-}
-
-public interface IIntType<TSelf> : IIntType, INumericType<TSelf>
-    where TSelf : IIntType<TSelf>
-{
-}
-
-[DebuggerDisplay("{Name}")]
-public sealed class IntType<TBitWidth> : IIntType<IntType<TBitWidth>>
-    where TBitWidth : IBitWidth
-{
-    private IntType()
-    {
-    }
-
-    public static IntType<TBitWidth> Instance { get; } = new();
-
-    public IBitWidth BitWidth => TBitWidth.BitWidth;
-
     public string Name => $"i{BitWidth.Value}";
     public int ByteSize => BitWidth.Value / 8;
-
-    public T Accept<T, TVisitor>(TVisitor visitor) where TVisitor : IScalarType.IGenericVisitor<T> =>
-        visitor.Visit(this);
-
-    T IShaderType.Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => semantic.IntType(this);
-
-    public IUIntType SameWidthUIntType => UIntType<TBitWidth>.Instance;
-
-    public ISignedness Signedness =>  Types. Signedness.S.Instance;
 }
 
 public static partial class ShaderType
 {
-    public static IIntType I8 => IntType<N8>.Instance;
-    public static IIntType I16 => IntType<N16>.Instance;
-    public static IIntType I32 => IntType<N32>.Instance;
-    public static IIntType I64 => IntType<N64>.Instance;
+    public static IntType I8 { get; } = new(N8.Instance);
+    public static IntType I16 { get; } = new(N16.Instance);
+    public static IntType I32 { get; } = new(N32.Instance);
+    public static IntType I64 { get; } = new(N64.Instance);
 
-    public static IIntType GetIntType(IBitWidth bitWidth)
+    public static IntType GetIntType(IBitWidth bitWidth)
     {
         return bitWidth switch
         {

@@ -1,6 +1,6 @@
 using DualDrill.Engine.Headless;
-using DualDrill.Server.Models;
 using Microsoft.AspNetCore.Mvc;
+using DualDrill.Server.Models;
 using System.Diagnostics;
 
 namespace DualDrill.Server.Controllers;

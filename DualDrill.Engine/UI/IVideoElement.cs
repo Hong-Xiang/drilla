@@ -1,4 +1,5 @@
-﻿using DualDrill.Engine.Media;
+﻿using DualDrill.Engine.BrowserProxy;
+using DualDrill.Engine.Media;
 
 namespace DualDrill.Engine.UI;
 

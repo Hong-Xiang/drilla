@@ -5,7 +5,7 @@ using Microsoft.JSInterop;
 using R3;
 using SIPSorcery.Net;
 
-namespace DualDrill.Server.Connection;
+namespace DualDrill.Server.Services;
 
 sealed class SIPSorceryRTCPeerConnection(
     RTCPeerConnection Connection

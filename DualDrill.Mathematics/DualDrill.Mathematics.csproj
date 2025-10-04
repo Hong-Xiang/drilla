@@ -1,14 +1,77 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj" />
+    <Compile Remove="Vec3 - Copy.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="DMath.gen.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DMath.gen.cs</LastGenOutput>
+    </None>
+    <None Update="Functions.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Functions.cs</LastGenOutput>
+    </None>
+    <None Update="Vec2.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Vec2.cs</LastGenOutput>
+    </None>
+    <None Update="Vec4.tt">
+      <LastGenOutput>Vec4.cs</LastGenOutput>
+      <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
+    <None Update="Vec3.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Vec3.cs</LastGenOutput>
+    </None>
+    <None Update="Vec2B16.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Vec2B16.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Code.Gen.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Code.Gen.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Functions.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Functions.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Vec2.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Vec2.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Vec2B16.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Vec2B16.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Vec3.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Vec3.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Vec4.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Vec4.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 </Project>

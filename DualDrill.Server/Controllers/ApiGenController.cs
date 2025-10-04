@@ -1,5 +1,6 @@
 ﻿using DualDrill.ApiGen;
 using DualDrill.ApiGen.CodeGen;
+using DualDrill.ApiGen.DMath;
 using DualDrill.ApiGen.DrillGpu;
 using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.WebIDL;

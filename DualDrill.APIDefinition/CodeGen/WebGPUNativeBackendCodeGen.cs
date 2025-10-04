@@ -1,6 +1,11 @@
 ﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.DrillLang.Types;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace DualDrill.ApiGen.CodeGen;
 

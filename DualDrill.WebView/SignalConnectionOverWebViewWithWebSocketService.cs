@@ -1,7 +1,9 @@
 ﻿using DualDrill.Engine;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Event;
+using DualDrill.WebView.Event;
 using MessagePipe;
+using System.Reactive.Disposables;
 
 namespace DualDrill.WebView;
 

@@ -1,33 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<TargetFramework>net8.0</TargetFramework>
 	</PropertyGroup>
 
+	<Import Project="..\Silk.NET.Packages.props" />
+
 	<ItemGroup>
-		<PackageReference Include="Silk.NET"  />
-		<PackageReference Include="Silk.NET.Core"  />
-		<PackageReference Include="Silk.NET.SDL"  />
-		<PackageReference Include="Silk.NET.Windowing"  />
-		<PackageReference Include="Silk.NET.Input"  />
-		<PackageReference Include="Silk.NET.Vulkan" />
-		<PackageReference Include="Silk.NET.Vulkan.Extensions.EXT" />
-		<!-- <PackageReference Include="Silk.NET.WebGPU" Version="$(SilkNETVersion)" /> -->
-		<!-- <PackageReference Include="Silk.NET.WebGPU.Native.WGPU" Version="$(SilkNETVersion)" /> -->
-		<!-- <PackageReference Include="Silk.NET.WebGPU.Extensions.WGPU" Version="$(SilkNETVersion)" /> -->
-		<PackageReference Include="Silk.NET.Shaderc" />
-		<PackageReference Include="Silk.NET.Shaderc.Native" />
-		<PackageReference Include="DotNext.Unsafe" />
+	  <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.2.2" />
+	  <PackageReference Include="Evergine.Bindings.WebGPU" Version="2024.8.10.11" />
+	  <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
+	  <PackageReference Include="System.Reactive" Version="6.0.1" />
+	  <PackageReference Include="Varena" Version="1.2.0" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.HighPerformance" />
-		<PackageReference Include="Evergine.Bindings.WebGPU" />
-		<PackageReference Include="SixLabors.ImageSharp" />
-		<PackageReference Include="System.Reactive" />
-		<PackageReference Include="Varena" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
+	  <ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 	</ItemGroup>
 </Project>

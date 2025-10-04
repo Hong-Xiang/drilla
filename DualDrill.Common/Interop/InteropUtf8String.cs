@@ -1,8 +1,9 @@
 ﻿using System.Buffers;
+using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace DualDrill.Common.Interop;
+namespace DualDrill.Interop;
 
 public unsafe readonly struct PinnedNullTerminatedUtf8String : IDisposable
 {

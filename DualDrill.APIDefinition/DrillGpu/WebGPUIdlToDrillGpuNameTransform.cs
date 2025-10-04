@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using DualDrill.ApiGen.DrillLang.Types;
+using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.DrillGpu;
 
