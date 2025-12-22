@@ -68,6 +68,11 @@ internal sealed class DevelopShaderModule : ISharpShader
     //}
 
     [ShaderMethod]
+    public static int MinimumTernary(bool c0, bool c1, int v0, int v1)
+    {
+        return c0 && c1 ? 1 : 2;
+    }
+    // [ShaderMethod]
     static vec2f32 raycast(vec3f32 ro, vec3f32 rd)
     {
         var res = vec2(-1.0f, -1.0f);
@@ -108,10 +113,12 @@ internal sealed class DevelopShaderModule : ISharpShader
                     res = vec2(t, h.y);
                     break;
                 }
+
                 t = t + h.x;
             }
             //return res;
         }
+
         return res;
     }
 
@@ -365,6 +372,13 @@ internal sealed class DevelopTestShaderModule
     {
         return pos;
     }
+
+    [ShaderMethod]
+    public static int MinimumTernary(bool c0, bool c1, int v0, int v1)
+    {
+        return c0 && c1 ? v0 : v1;
+    }
+
     public static vec3f32 NestedExpressionWithFunctionCall(vec3f32 pos)
     {
         var e = vec2(1.0f, -1.0f) * 0.5773f * 0.0005f;
@@ -404,6 +418,7 @@ internal sealed class DevelopTestShaderModule
 
         return result;
     }
+
     [Vertex]
     public static uint StackTransferedValuesWithLiteralImplicitConversion(uint x, uint y)
     {
@@ -418,6 +433,7 @@ internal sealed class DevelopTestShaderModule
         {
             r += 1;
         }
+
         return r;
     }
 
