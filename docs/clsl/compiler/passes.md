@@ -1,147 +1,129 @@
 # CLSL Compiler Passes and Transformations
 
-> **Note**: This documentation is generated and maintained with the assistance of AI/LLM tools. While we strive for accuracy, please verify critical information and report any inconsistencies.
-
 ## Overview
 
-The CLSL compiler employs a series of passes to transform code from C# to shader languages. Each pass is designed to handle a specific aspect of the compilation process while maintaining correctness and optimizing performance.
+The CLSL compiler uses a series of passes to transform code from C# CIL to Slang source code. The pipeline has three main phases: frontend analysis, IR transformation, and backend emission.
 
 ## Pass Pipeline
 
-### 1. Frontend Passes
-
-#### Runtime Reflection Pass
-- Analyzes C# code using reflection
-- Collects type information
-- Processes shader attributes
-- Builds initial symbol tables
-
-#### Method Body Analysis
-- Analyzes IL instructions
-- Maps C# operations to shader operations
-- Handles control flow structures
-- Validates shader constraints
-
-### 2. IR Transformation Passes
-
-#### Stack-Based IR Generation
 ```
-Initial C# IL:
-ldarg.0
-ldarg.1
-add
-
-Becomes CLSL IR:
-load.param %0
-load.param %1
-add.i32
+C# Shader (ISharpShader)
+    |
+    v
+[Frontend: RuntimeReflectionParser]
+    |-- Type resolution (SharedBuiltinSymbolTable)
+    |-- CIL instruction parsing (RuntimeReflectionInstructionParserVisitor3)
+    |-- CFG construction (ControlFlowGraphBuilder)
+    |-- Dominator / post-dominator analysis
+    |-- Region tree construction (structured control flow recovery)
+    v
+ShaderModuleDeclaration<FunctionBody4>
+    |
+    v
+[FunctionToOperationPass]              -- IR transformation
+    |
+    v
+[RegionParameterToLocalVariablePass]   -- IR transformation
+    |
+    v
+[SlangEmitter]                         -- backend emission
 ```
 
-#### Control Flow Analysis
+## Frontend Passes
 
-1. **Basic Block Formation**
-   ```
-   Entry Block:
-       load.param %0
-       br_if Block2
-   
-   Block1:
-       const.f32 1.0
-       br Exit
-   
-   Block2:
-       const.f32 2.0
-       br Exit
-   
-   Exit:
-       return
-   ```
+### Type and Symbol Resolution
 
-2. **Build ControlFlow Graph and Dominator Tree**
-   - Define successors of basic blocks
-   - Identify dominator relationships
-   - Analyze loop structures, merge nodes, etc.
+The `SharedBuiltinSymbolTable` pre-registers:
+- Scalar types: `float` -> `FloatType<N32>`, `int` -> `IntType<N32>`, etc.
+- Vector types: `Vector2/3/4` -> `VecType<TRank, TElement>`
+- Builtin functions: `Math.Sin` -> `sin`, `Vector3.Dot` -> `dot`, etc.
+- Shader attributes: `[Vertex]`, `[Fragment]`, `[Uniform]`, `[Location(n)]`, etc.
 
-#### Control Flow Structuring
-```
+### CIL Instruction Parsing
+
+`RuntimeReflectionInstructionParserVisitor3` walks the CIL instruction stream and:
+- Maintains a simulated evaluation stack (converting stack operations to SSA values)
+- Maps CIL opcodes to `IOperation` instances (e.g., `add` -> `NumericBinaryArithmeticOperation<T, Add>`)
+- Handles method calls by resolving to builtin operations or user function calls
+- Produces `Instruction<TResult, TArg>` sequences within basic blocks
+
+### Control Flow Analysis
+
+1. **CFG Construction** (`ControlFlowGraphBuilder`):
+   - Scans for branch targets in CIL
+   - Creates `Label` nodes for basic block boundaries
+   - Establishes `ISuccessor` edges (Unconditional, Conditional, Terminate)
+
+2. **Dominator Tree** (`DominatorTree`):
+   - Computes dominance relationships
+   - Used for identifying natural loops and region boundaries
+
+3. **Post-Dominator Tree** (`PostDominatorTree`):
+   - Computes reverse dominance
+   - Used for identifying merge points (immediate post-dominators)
+
+4. **Region Tree Construction**:
+   - Identifies natural loops via back-edges in DFS tree
+   - Lifts flat CFG into nested Block/Loop regions
+   - Uses immediate post-dominator as merge point for if/else
+
+## IR Transformation Passes
+
+### FunctionToOperationPass
+
+Located in `DualDrill.CLSL.Language/Transform/FunctionToOperationPass.cs`.
+
+Resolves high-level function references to concrete operation instances. Lowers `CallOperation` nodes where the target is a known builtin into the appropriate typed operation.
+
+### RegionParameterToLocalVariablePass
+
+Located in `DualDrill.CLSL.Language/Transform/RegionParameterToLocalVariablePass.cs`.
+
+Converts region/block parameters (values passed along branch edges as `RegionJump` arguments) into explicit local variable declarations with store/load sequences. This eliminates the need for the backend to handle block arguments during code generation.
+
 Before:
-    br_if L1
-    br L2
-L1:
-    // code
-    br L3
-L2:
-    // code
-    br L3
-L3:
+```
+br block_1(%value)
+
+block_1(%param):
+    use %param
+```
 
 After:
-    if {
-        // L1 code
-    } else {
-        // L2 code
-    }
+```
+store %local, %value
+br block_1
+
+block_1:
+    %param = load %local
+    use %param
 ```
 
-## Pass Implementation
+### CommonOperationLoweringPass
 
-### Pass Interface
+Located in `DualDrill.CLSL.Language/Transform/CommonOperationLoweringPass.cs`.
+
+Lowers common operation patterns that don't map directly to backend constructs.
+
+## Backend Emission
+
+The `SlangEmitter` is technically a pass that consumes the IR and produces text output. It implements several visitor interfaces:
+
+- `IDeclarationVisitor` -- emits struct/function/variable declarations
+- `IOperationSemantic` -- translates operations to Slang expression syntax
+- `ITerminatorSemantic` -- translates branches to `if/else`, `break`, `continue`, `return`
+- `IRegionDefinitionSemantic` -- translates Block/Loop regions to scoped blocks and `while(true)` loops
+
+## Pass Architecture
+
+Passes operate on `ShaderModuleDeclaration<FunctionBody4>` and return a new instance:
+
 ```csharp
-public interface ICompilationPass<TInput, TOutput>
-{
-    TOutput Process(TInput input);
-    bool Validate(TInput input);
-}
+module = module.RunPass(pass);
 ```
 
-### Pass Management
-- Sequential pass execution
-- Pass dependency tracking
-- Validation between passes
-- Optional passes based on target
-
-### Pass Categories
-
-1. **Analysis Passes**
-   - Type analysis
-   - Control flow analysis
-   - Resource usage analysis
-
-2. **Transformation Passes**
-   - IR generation
-   - Control flow structuring
-   - Operation lowering
-
-3. **Optimization Passes**
-   - Constant folding
-   - Dead code elimination
-   - Vector operation fusion
-
-## Validation
-
-### Inter-Pass Validation
-- Type consistency
-- Control flow integrity
-- Resource binding validity
-
-### Target-Specific Validation
-- WGSL constraints
-- Resource limitations
-- Stage restrictions
-
-## Extension Points
-
-### Custom Passes
-- User-defined optimization passes
-- Target-specific transformations
-- Analysis passes for debugging
-
-### Pass Pipeline Configuration
-- Pass ordering control
-- Optional pass selection
-- Optimization level selection
+The `RunPass` method applies the pass to each function body in the module, producing a new module with transformed bodies. The module and its IR components use immutable data structures (`ImmutableArray`, etc.) to ensure passes don't mutate shared state.
 
 See also:
 - [IR Specification](../ir_spec.md)
-- [Type System](../type_system.md)
-- [Optimization Strategies](./optimizations.md)
+- [Control Flow Analysis](./control_flow.md)

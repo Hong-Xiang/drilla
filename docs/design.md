@@ -1,52 +1,57 @@
-# CLSL (CIL Shader Language) Compiler
+# CLSL (CIL Shader Language) Compiler -- Design
 
-CLSL is a embedded DSL in dotnet for writing shader program.
-It uses a subset of dotnet CIL with additional attribute to support shader-specific constructs.
+CLSL is an embedded DSL in .NET for writing shader programs. It uses a subset of .NET CIL with additional attributes to support shader-specific constructs. Users write C# classes implementing `ISharpShader`; the compiler reads these at runtime via reflection and emits shader code.
 
+## Current IR Design
 
-## IR Design
+```
+ShaderModuleDeclaration<FunctionBody4>
+├── StructureDeclaration[]        -- user-defined struct types
+├── VariableDeclaration[]         -- module-level variables (uniforms, storage)
+├── FunctionDeclaration[]         -- function signatures with attributes
+└── FunctionBody4                 -- per-function body:
+    ├── Entry: Label
+    ├── LocalVariables: VariableDeclaration[]
+    └── Body: RegionTree<Label, ShaderRegionBody>
+        ├── BlockRegionDefinition   -- straight-line region
+        └── LoopRegionDefinition    -- loop region (back-edge)
+            └── ShaderRegionBody
+                ├── Body: Seq<Instruction<...>, ShaderRegionBody>
+                └── Terminator: Br | BrIf | Return | ReturnExpr
+```
 
-ShaderModule
-- TypeDeclaration
-  - StructDeclaration
-    - StructFieldDeclaration
-  - FunctionDeclaration
-    - FunctionParameter
+### Key Abstractions
 
-- ModuleLevelVariables
-- FunctionDefinition
-   - FunctionLocalVariable
-   - RegionTree
-      - BasicBlock
-         - Instruction
-         - Terminator
+**Types** (`IShaderType`): Singleton-based type objects using generic type parameters for bit widths and vector ranks. Custom types (structs, functions) use non-singleton instances. This allows type-level operations (e.g., `IntType<N32>.ArithmeticOperation<Add>()`) to produce correctly-typed operation instances.
 
+**Operations** (`IOperation`): Stateless descriptions of computations, parameterized by type and operator kind. Operations are distinct from instructions: an operation is a "class" of computation (e.g., `Add_f32`), while an instruction is an operation applied to specific SSA values.
 
-### Design Discussion
+**Values** (`IShaderValue`): SSA values with type information. `IntermediateValue` represents computed results, `LiteralValue` represents constants, `VariablePointerValue` and `ParameterPointerValue` represent addresses.
 
-#### Should we use singleton for shader types?
-Using singleton for shader types has following benefits:
-- Automatically deduplicate types
-- Easier to implement associated properties
-- Easier to express in dotnet attribute for adding additional information to other related objects, e.g. a `AddOperationMethod<IntType<N32>>>` could be added to a method so that it would be easier to parse
-    - But this maybe not necessary, as we could use enum for this purpose
+**Region Tree**: Structured control flow encoded as nested Block and Loop regions. Each region's body is a `ShaderRegionBody` containing a sequence of instructions ending with a terminator that either branches to another block, returns, or loops.
 
-But there are also some challenges:
-- Handling for custom types would be challenging:
-    - Function types, since user could define lots of different function signatures
-    - User defined structures
+### Design Decisions
 
+**Singleton types with type parameters vs. simple classes**: Using singletons for shader types (`FloatType<N32>.Instance`) provides automatic deduplication and enables encoding type-specific behavior in the type parameter. The tradeoff is complexity when handling user-defined types (structs, functions) which need runtime instances.
 
-#### Should we use singleton for operations?
+**Singleton operations with visitor dispatch**: Operations like `Add`, `Sub` etc. are singleton instances with visitor-based dispatch. This enables type-safe extensibility but makes adding new operation kinds verbose.
 
-We distinguish between operation and instructions by operation are "class" of instructions, thus instructions without operands. Operands are just instance of `IShaderValue`.
+**Operation vs. instruction distinction**: An operation is the "class" of computation (e.g., `Add<FloatType<N32>>`), while an instruction combines an operation with its SSA value operands. Compile-time-known operands (like struct member indices in AccessChain) are encoded in the operation itself, ensuring type-safe access. Runtime operands are instruction arguments (`IShaderValue` instances).
 
-- How do we model compile time known operands? e.g. for AccessChain of structures, logically it is used as `AccessChain <index> %value-ptr`, the `<index>` need to be compile time constant and in valid range of the structure member count. Then should be model it in operation so that each `AccessChain` to each structure/member is a distinct operation? Or should we model it as a single operation with a compile time constant operand in instruction? Model each access chain for a member seems a good idea since at least structure is not a value, thus anyway we need to model `AccessChain` to different structure as different operations, by modeling members as different `AccessChain` operation ensured that the index is in valid range.
-But then it comes tricky that how do we handle access to vector/matrix indices. For vector, `.x` is just a special case for member access, should we encode it as a special access chain operation?
-If so, then we still need to encode another version of dynamic access chain for vector, using runtime shader value as index.
+**SSA over stack IR**: Stack-based IR (as in CIL) makes inter-block value transfer implicit via the evaluation stack. SSA makes data flow explicit, which is necessary for correct code generation and optimization. The conversion from CIL stack semantics to SSA happens in the frontend parser.
 
-Another question is for those argument that is not a value, we need to encode it in operation itself, but should we encode it using properties or type arguments?
-For type arguments, it is more 
+**Region trees over CFG for code generation**: Shader languages require structured control flow. Rather than working with a flat CFG during emission, the compiler lifts the CFG into a region tree early, so the backend can directly emit nested if/else/loop constructs.
 
+## Planned: CIL-Based IR Encoding
 
+The current IR abstraction layer (IShaderType, IOperation, IShaderValue class hierarchies) is being replaced with ECMA-335 CIL metadata encoding. In this design:
 
+- Shader modules, functions, and blocks become `ref struct` types
+- SSA values become instance fields with attributes
+- Operations become calls to `Builtin.*` static methods
+- Control flow is encoded via interfaces (`IBrBlock<T>`, `IBrIfBlock<T,F>`, etc.)
+- IR can be inspected via .NET reflection or Mono.Cecil
+
+This simplifies transforms (standard CIL manipulation instead of custom visitor plumbing) and enables the IR to be executed on CPU for debugging.
+
+See `DualDrill.ILSL/docs/ECMA335-SSA-IR-Design.md` for the full design.

@@ -1,196 +1,148 @@
 # CLSL Intermediate Representation Specification
 
-> **Note**: This documentation is generated and maintained with the assistance of AI/LLM tools. While we strive for accuracy, please verify critical information and report any inconsistencies.
-
 ## Overview
 
-CLSL IR is a hybrid intermediate representation designed specifically for shader compilation. It combines concepts from WebAssembly, .NET CIL, and SPIR-V to create an IR that is both easy to generate from C# and efficient to translate to various shader languages.
+CLSL uses an SSA-based intermediate representation with structured control flow encoded as region trees. The IR sits between the .NET CIL frontend (unstructured, stack-based) and the Slang/WGSL backend (structured, no arbitrary pointers).
 
-It has multiple different kinds of representations of function bodies,
-while the declarations are represented using `ShaderModuleDeclaration`, `FunctionDeclaration` etc,
-the function bodies are represented using different kinds of types implemented `IFunctionBody`, including:
+The IR supports multiple representations of function bodies at different compilation stages:
 
-* `UnstructuredStackInstruction` stack byte code with `LabelInstruction` and `BrInstruction`, `BrInstruction` is allowed to jump to any label inside current function.
-* `StructuredControlFlowRegion` structured control flow region with `Block`, `Loop`, `If`, `Else`, `Switch` etc, `BrInstruction` is only allowed to jump to the outer regions of current region.
-* `ControlFlowGraph` a control flow graph representation of the function body,
-with `Label`s associated with `BasicBlock`s,
-and `BasicBlock`s are connected with `ISuccessor`s.
-
+- **ControlFlowGraph** (`ControlFlowGraph<CilInstructionBlock>`): Flat CFG with `Label`s, `BasicBlock`s, and `ISuccessor` edges. Produced by `ControlFlowGraphBuilder` from CIL method bodies.
+- **FunctionBody4** (with `RegionTree<Label, ShaderRegionBody>`): SSA IR with structured control flow via nested Block/Loop regions. This is the primary representation used by backends.
 
 ## Design Principles
 
-1. **Type Richness**
-   - Every instruction carries complete type information
-   - No implicit type conversions
-   - Full shader type system support
+1. **SSA Values**: Every computed result is a unique `IShaderValue` instance. Values carry type information (`IShaderType`). No implicit value sharing or mutation.
 
-2. **Stack-Based Operation**
-   - Simple instruction format
-   - Explicit evaluation stack management
-   - Easy to validate and transform
+2. **Typed Operations**: Every operation (`IOperation`) carries complete type information. Operations are parameterized by type and operator kind (e.g., `NumericBinaryArithmeticOperation<FloatType<N32>, Add>`). No implicit type conversions.
 
-3. **Structured Control Flow**
-   - Block-based nesting
-   - Direct mapping to high-level constructs
-   - Natural translation to shader languages (shader language like HLSL, WGSL does not support unstructured control flow)
+3. **Structured Control Flow**: Function bodies are organized as region trees (`RegionTree<Label, ShaderRegionBody>`), with Block and Loop regions that map directly to shader language constructs. This enables straightforward code generation without needing a separate control flow restructuring pass in the backend.
 
-## Instruction Set
+4. **Explicit Terminators**: Each basic block ends with an explicit terminator: `Br` (unconditional branch), `BrIf` (conditional), `Return`/`ReturnExpr`, or `Discard`.
 
-### Stack Instructions
+## IR Structure
 
-1. **Constant Loading**
-   ```
-   const.i32 <value>    ; Push 32-bit integer
-   const.f32 <value>    ; Push 32-bit float
-   const.bool <value>   ; Push boolean
-   ```
-
-2. **Stack Manipulation**
-   ```
-   pop                  ; Remove top value
-   dup                  ; Duplicate top value
-   ```
-
-3. **Memory Operations**
-   ```
-   load <target>        ; Load from variable/parameter
-   store <target>       ; Store to variable/parameter
-   load.address <target>; Load address for member access
-   ```
-
-### Control Flow Instructions
-
-1. **Basic Control**
-   ```
-   br <label>          ; Unconditional branch
-   br_if <label>       ; Conditional branch
-   return              ; Return from function
-   ```
-
-2. **Structured Control**
-   ```
-   block               ; 
-   loop                ; Begin a loop
-   if-then-else        ; Begin if construct
-   ```
-   all structured control flow instructions has similar semantics like in WebAssembly
-
-### Arithmetic Instructions
-
-1. **Binary Operations**
-   ```
-   add.i32            ; Integer addition
-   add.f32            ; Float addition
-   sub.i32            ; Integer subtraction
-   mul.f32            ; Float multiplication
-   div.f32            ; Float division
-   ```
-
-2. **Vector Operations**
-   ```
-   vec4.construct     ; Construct vec4 from components
-   vec3.swizzle.xyz   ; Apply swizzle pattern
-   vec4.dot           ; Vector dot product
-   ```
-
-## Control Flow Structure
-
-### Basic Blocks
+### Module
 ```
-block_0:
-    const.f32 1.0
-    const.f32 2.0
-    add.f32
-    br block_1
-
-block_1:
-    return
+ShaderModuleDeclaration<FunctionBody4>
+├── Declarations: IDeclaration[]
+│   ├── StructureDeclaration    -- user-defined structs
+│   ├── FunctionDeclaration     -- function signatures
+│   └── VariableDeclaration     -- module-level variables
+└── FunctionBodies: Map<FunctionDeclaration, FunctionBody4>
 ```
 
-### Structured Control Flow
+### Function Body
 ```
-block main:
-    loop l:
-        // Loop body
-        br_if l
-    if:
-        // True branch
-    else:
-        // False branch
+FunctionBody4
+├── Entry: Label               -- entry block label
+├── LocalVariables: VariableDeclaration[]
+└── Body: RegionTree<Label, ShaderRegionBody>
 ```
 
-## Type System Integration
-
-### Type Declarations
+### Region Tree
 ```
-struct VertexInput:
-    pos: vec3<f32>
-    normal: vec3<f32>
-    uv: vec2<f32>
-
-struct UniformBuffer:
-    view: mat4x4<f32>
-    proj: mat4x4<f32>
+RegionTree<Label, ShaderRegionBody>
+├── Label: Label               -- region label
+├── Definition: RegionDefinition
+│   ├── BlockRegionDefinition  -- straight-line region
+│   └── LoopRegionDefinition   -- loop with back-edge
+├── Children: RegionTree[]     -- nested sub-regions
+└── ImmediatePostDominator: Label?
 ```
 
-### Function Signatures
+### Basic Block Body
 ```
-@vertex
-fn main(
-    @location(0) position: vec3<f32>,
-    @location(1) normal: vec3<f32>
-) -> @builtin(position) vec4<f32>
+ShaderRegionBody
+├── Body: Seq<Instruction<string, string>, ShaderRegionBody>
+│   ├── Element: Instruction   -- SSA instruction
+│   └── Rest: ...              -- remaining instructions
+└── Last: Terminator           -- Br, BrIf, Return, ReturnExpr
 ```
+
+### Instructions
+```
+Instruction<TResult, TArg>
+├── Operation: IOperation      -- computation description
+├── Result: IShaderValue?      -- produced SSA value (null for statements)
+└── Operands: IShaderValue[]   -- input SSA values
+```
+
+## Operations
+
+### Arithmetic
+- `NumericBinaryArithmeticOperation<TType, TOp>` where TOp: Add, Sub, Mul, Div, Rem
+- `VectorNumericBinaryOperation<TRank, TElement, TOp>` -- component-wise vector arithmetic
+
+### Comparison
+- `NumericBinaryRelationalOperation<TType, TOp>` where TOp: Lt, Gt, Le, Ge, Eq, Ne
+
+### Logical
+- `LogicalBinaryOperation<TOp>` where TOp: And, Or
+- `LogicalNot`
+
+### Conversion
+- `ScalarConversionOperation<TSource, TTarget>` -- e.g., int -> float
+- `Bitcast`
+
+### Vector
+- `VectorCompositeConstructionOperation` -- construct vector from components
+- `VectorFromScalarConstructOperation` -- broadcast scalar to vector
+- `VectorComponentGetOperation` / `VectorComponentSetOperation` -- .x, .y, .z, .w
+- `VectorSwizzleGetOperation` / `VectorSwizzleSetOperation` -- .xyz, .xz, etc.
+
+### Memory
+- `LoadOperation` -- load value from variable/parameter
+- `StoreOperation` -- store value to variable/parameter
+- `AddressOfMemberOperation` -- get pointer to struct member
+- `AddressOfVecComponentOperation` -- get pointer to vector component
+- `AccessChainOperation` -- indexed access
+
+### Other
+- `CallOperation` -- function call
+- `LiteralOperation` -- constant value
+- `NopOperation` -- no operation
+- `ZeroConstructorOperation` -- zero-initialize a type
+
+## Control Flow
+
+### Terminators
+- `Br(target: Label)` -- unconditional branch
+- `BrIf(condition: IShaderValue, trueTarget: Label, falseTarget: Label)` -- conditional
+- `Return` -- void return
+- `ReturnExpr(value: IShaderValue)` -- return with value
+
+### CFG Edge Types
+- `UnconditionalSuccessor` -- single target
+- `ConditionalSuccessor` -- true/false targets
+- `TerminateSuccessor` -- return/discard (no successor)
+
+## Type System
+
+See [Type System Reference](./type_system.md) for details.
+
+Scalar types: `BoolType`, `IntType<N32>`, `UIntType<N32>`, `FloatType<N32>`, `FloatType<N64>`
+Vector types: `VecType<TRank, TElement>` -- rank 2/3/4 with any scalar element
+Pointer types: `PtrType`, `RefType` -- for CIL address-of patterns
+Composite: `StructureType`, `FunctionType`
+Opaque: `Texture2D`, `Sampler`, etc.
 
 ## Validation Rules
 
-1. **Type Checking**
-   - Stack effect validation
-   - Type compatibility verification
-   - Resource access validation
+1. **SSA**: Each `IntermediateValue` is produced by exactly one instruction
+2. **Type consistency**: Operation operand types must match operation's expected types
+3. **Terminator**: Every basic block must end with exactly one terminator
+4. **Region structure**: Region tree must be well-nested (no cross-region jumps)
+5. **Value liveness**: Values used in a block must dominate that block's definition
 
-2. **Control Flow**
-   - Structured nesting
-   - Reachability analysis
-   - Stack consistency
+## Planned: CIL-Based Encoding
 
-3. **Resource Usage**
-   - Binding validation
-   - Access pattern checking
-   - Stage compatibility
+The IR is being migrated to an ECMA-335 CIL encoding where:
+- Operations become `Builtin.*` method calls (no more `IOperation` hierarchy)
+- Values become `ref struct` fields (no more `IShaderValue` hierarchy)
+- Types use .NET `Type` directly (no more `IShaderType` hierarchy)
 
-## Memory Model
-
-1. **Storage Classes**
-   - Function locals
-   - Module globals
-   - Uniform buffers
-   - Storage buffers
-
-2. **Address Spaces**
-   - Private
-   - Uniform
-   - Storage
-   - Workgroup
-
-## Optimization Opportunities
-
-1. **Instruction-Level**
-   - Constant folding
-   - Common subexpression elimination
-   - Dead code elimination
-
-2. **Control Flow**
-   - Loop optimization
-   - Branch simplification
-   - Block merging
-
-3. **Vector/Matrix**
-   - Swizzle optimization
-   - Matrix multiplication patterns
-   - SIMD-friendly transformations
+See [ECMA-335 SSA IR Design](../../DualDrill.ILSL/docs/ECMA335-SSA-IR-Design.md).
 
 See also:
 - [WGSL Backend](./backends/wgsl.md)
-- [IR Transformation Passes](./compiler/passes.md)
-- [Validation Rules](./compiler/validation.md)
+- [Compiler Passes](./compiler/passes.md)
