@@ -268,8 +268,7 @@ public sealed record class RuntimeReflectionParser(
                 :
                 [
                     new ParameterDeclaration("this",
-                        ParseType(method.DeclaringType)
-                            .GetPtrType(isEntryMethod ? InputAddressSpace.Instance : FunctionAddressSpace.Instance),
+                        ParseType(method.DeclaringType),
                         []),
                     .. model.Parameters.Select(ParseParameter)
                 ],

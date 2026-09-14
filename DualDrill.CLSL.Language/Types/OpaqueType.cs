@@ -19,7 +19,7 @@ public sealed class OpaqueType : IShaderType<OpaqueType>
 
     public IRefType GetRefType() => throw new NotSupportedException();
 
-    public IPtrType GetPtrType(IAddressSpace addressSpace) => throw new NotImplementedException();
+    public IPtrType GetPtrType(IAddressSpace addressSpace) => new PtrType(this, addressSpace);
 
     public T Evaluate<T>(IShaderTypeSemantic<T, T> semantic) => throw new NotImplementedException();
 
