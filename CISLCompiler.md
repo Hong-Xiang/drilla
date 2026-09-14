@@ -51,6 +51,30 @@ Then we use a simple CFG builder to build the control flow graph of the method, 
 
 Then we use structured [control flow conversion algorithm](https://dl.acm.org/doi/10.1145/3547621) to convert the CFG into properly nested block/loop/if-else constructors.
 
+### Region parameter lowering in the SSA / Slang pipeline
+
+`RegionParameterToLocalVariablePass` collects region bodies with a fold and jump edges
+with a terminator algebra. It checks edge arity and types, including pointer address spaces,
+before lowering parameters.
+
+Pointer parameters are constraints on address identity, not values to copy into pointer locals.
+A finite dependency-graph traversal resolves each parameter to a single parameter or variable
+address. Alias chains and cycles with one stable external address are supported independently
+of region traversal order. Multiple addresses, computed pointer sources, missing incoming
+addresses, and cycles without a stable address fail explicitly with function/block/slot context.
+Every pointer parameter is checked, including unused parameters and those in unreachable regions.
+This is deliberately not general pointer-phi or resource-pointer lowering.
+
+The resulting substitutions are applied through the existing maps. Ordinary value parameters
+continue to lower to local loads/stores; consumed jump arguments are removed along with their
+parameters, so running the pass again does not introduce more locals or instructions.
+Conditional edges to the same target may share identical value arguments; differing arguments
+are explicitly rejected until edge-specific value lowering is implemented, rather than
+unconditionally storing both argument lists and silently selecting the wrong one.
+Direct IR regression tests cover address identity, chains, cycles, rejected inputs, mixed
+parameter slots, and idempotence. Existing Slang end-to-end tests remain compilation checks,
+not GPU execution-equivalence proofs.
+
 ## CLSL Built in Attributes
 Some attributes are defined to extend C# language's semantic for shaders,
 with support of CLSL compiler.
