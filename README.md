@@ -26,6 +26,23 @@ Node.js, and pnpm. It preserves the host Vulkan ICD/driver environment and
 any inherited `LD_LIBRARY_PATH`; it does not install or select Vulkan tools,
 an ICD, software renderer, browser, or Chromium.
 
+The default shell is the compiler-only environment. On the tested Ubuntu
+NVIDIA host, run the optional native graphics smoke through nixGL so the
+Nix-built process can use the existing proprietary Vulkan driver:
+
+```sh
+NIXPKGS_ALLOW_UNFREE=1 nix develop --command \
+  nix run --impure github:nix-community/nixGL#nixVulkanNvidia -- \
+  timeout 120s dotnet test \
+  DualDrill.CLSL.NativeTest/DualDrill.CLSL.NativeTest.csproj \
+  -c Release -r linux-x64 --logger 'console;verbosity=minimal'
+```
+
+This wrapper exposes the host NVIDIA driver to the process; it does not
+install an ICD or force a software fallback. Other driver vendors need their
+corresponding, separately verified host interop rather than an assumed
+fallback.
+
 The same shell can run commands for another worktree:
 
 ```sh
