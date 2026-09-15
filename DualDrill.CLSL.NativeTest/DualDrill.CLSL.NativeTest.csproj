@@ -18,8 +18,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\MinimumHelloTriangleShaderModule.cs"
-             Link="ShaderModule\MinimumHelloTriangleShaderModule.cs" />
+    <Compile Include="..\DualDrill.Compiler.Server\MinimumTriangleShader.cs"
+             Link="ShaderModule\MinimumTriangleShader.cs" />
+    <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\SimpleStructUniformShaderModule.cs"
+             Link="ShaderModule\SimpleStructUniformShaderModule.cs" />
+    <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\MandelbrotDistanceShaderModule.cs"
+             Link="ShaderModule\MandelbrotDistanceShaderModule.cs" />
+    <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\RaymarchingPrimitiveShader.cs"
+             Link="ShaderModule\RaymarchingPrimitiveShader.cs" />
     <Using Include="Xunit" />
   </ItemGroup>
 

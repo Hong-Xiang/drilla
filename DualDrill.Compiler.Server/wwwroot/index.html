@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>DualDrill compiler triangle</title>
+    <title>DualDrill C# shader compiler</title>
     <style>
       :root {
         color-scheme: dark;
@@ -21,11 +21,38 @@
 
       canvas {
         display: block;
-        width: 720px;
-        height: 480px;
+        width: 800px;
+        aspect-ratio: 4 / 3;
         max-width: 100%;
+        height: auto;
         background: #073642;
         border: 1px solid #475569;
+      }
+
+      .shader-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      button {
+        padding: 8px 12px;
+        color: inherit;
+        background: #1e293b;
+        border: 1px solid #64748b;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button[aria-pressed="true"] {
+        background: #0e7490;
+        border-color: #67e8f9;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.6;
       }
 
       pre {
@@ -42,9 +69,39 @@
     </style>
   </head>
   <body>
-    <h1>C# compiler → WebGPU triangle</h1>
-    <p id="status">Starting…</p>
-    <canvas id="triangle" width="720" height="480"></canvas>
+    <h1>C# compiler → WebGPU shaders</h1>
+    <div class="shader-buttons" role="group" aria-label="Shader selection">
+      <button
+        type="button"
+        data-shader="MinimumTriangleShader"
+        aria-pressed="true"
+      >
+        Triangle
+      </button>
+      <button
+        type="button"
+        data-shader="SimpleStructUniformShaderModule"
+        aria-pressed="false"
+      >
+        Uniform
+      </button>
+      <button
+        type="button"
+        data-shader="MandelbrotDistanceShaderModule"
+        aria-pressed="false"
+      >
+        Mandelbrot
+      </button>
+      <button
+        type="button"
+        data-shader="RaymarchingPrimitiveShader"
+        aria-pressed="false"
+      >
+        Raymarching
+      </button>
+    </div>
+    <p id="status" aria-live="polite">Starting…</p>
+    <canvas id="shader-canvas" width="800" height="600"></canvas>
 
     <h2>Adapter</h2>
     <pre id="adapter">Not requested yet.</pre>
