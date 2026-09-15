@@ -46,12 +46,13 @@ fallback. The pinned nixGL source makes the wrapper reproducible, while
 `--impure` is intentional because the existing host driver remains outside
 the Nix closure; this graphics path is therefore not fully hermetic.
 
-The same shell can run commands for another worktree:
+The same shell can run commands for another worktree. Replace both absolute
+worktree paths below with your own:
 
 ```sh
-nix develop path:/home/xianghong/drilla-worktrees/nix-toolchain --command \
-  dotnet test /path/to/worktree/DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj \
-  -p:DirectoryBuildPropsPath=/home/xianghong/drilla-worktrees/nix-toolchain/Directory.Build.props
+nix develop path:/path/to/toolchain-worktree --command \
+  dotnet test /path/to/target-worktree/DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj \
+  -p:DirectoryBuildPropsPath=/path/to/toolchain-worktree/Directory.Build.props
 ```
 
 Restore and test the compiler project headlessly:
