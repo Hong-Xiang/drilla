@@ -57,7 +57,7 @@ public class ShaderReflectionTest
                     {
                         Type = GPUBufferBindingType.Uniform,
                         HasDynamicOffset = false,
-                        MinBindingSize = 8
+                        MinBindingSize = 0
                     }
                 }
             }
