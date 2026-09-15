@@ -15,16 +15,13 @@ function describeError(error: unknown): string {
     : String(error);
 }
 
-function formatAdapterInfo(
-  info: GPUAdapterInfo,
-  isFallbackAdapter: boolean,
-): string {
+function formatAdapterInfo(info: GPUAdapterInfo): string {
   const fields: ReadonlyArray<readonly [string, string]> = [
     ["vendor", info.vendor],
     ["architecture", info.architecture],
     ["device", info.device],
     ["description", info.description],
-    ["browser fallback flag", String(isFallbackAdapter)],
+    ["browser fallback flag", String(info.isFallbackAdapter)],
   ];
   const availableFields = fields.filter(([, value]) => value.length > 0);
 
@@ -63,11 +60,7 @@ async function render(): Promise<void> {
   if (!adapter) {
     throw new Error("The browser did not provide a WebGPU adapter.");
   }
-  const adapterInfo = await adapter.requestAdapterInfo();
-  adapterOutput.textContent = formatAdapterInfo(
-    adapterInfo,
-    adapter.isFallbackAdapter,
-  );
+  adapterOutput.textContent = formatAdapterInfo(adapter.info);
 
   const device = await adapter.requestDevice();
   device.onuncapturederror = (event) => {
