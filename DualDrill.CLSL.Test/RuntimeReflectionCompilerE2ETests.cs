@@ -191,6 +191,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
             #!/bin/sh
             printf '%s\n' "$$" > "$SLANG_TEST_DIRECTORY/pid"
             printf '%s\n' "$@" > "$SLANG_TEST_DIRECTORY/arguments"
+            touch "$SLANG_TEST_DIRECTORY/ready"
             sleep 30
             """,
             async directory =>
@@ -200,13 +201,14 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
                 var validation = new SlangService().ValidateAsync(
                     "validity is controlled by the test",
                     cancellation.Token);
-                await WaitForFileAsync(argumentsPath, cancellation.Token);
+                await WaitForFileAsync(Path.Combine(directory, "ready"), cancellation.Token);
                 cancellation.Cancel();
 
                 await Assert.ThrowsAnyAsync<OperationCanceledException>(() => validation);
 
                 var arguments = await File.ReadAllLinesAsync(argumentsPath);
                 Assert.Equal(4, arguments.Length);
+                Assert.Contains("slang test ", arguments[0]);
                 Assert.False(File.Exists(arguments[0]));
                 Assert.Equal("-target", arguments[1]);
                 Assert.Equal("wgsl", arguments[2]);
@@ -265,7 +267,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 
     static async Task WithFakeSlangAsync(string script, Func<string, Task> test)
     {
-        var directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var directory = Path.Combine(Path.GetTempPath(), $"slang test {Path.GetRandomFileName()}");
         Directory.CreateDirectory(directory);
         var compilerPath = Path.Combine(directory, "slangc");
         await File.WriteAllTextAsync(compilerPath, script);
@@ -276,8 +278,10 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         var previousPath = Environment.GetEnvironmentVariable("PATH")
             ?? throw new InvalidOperationException("PATH is not set");
         var previousTestDirectory = Environment.GetEnvironmentVariable("SLANG_TEST_DIRECTORY");
+        var previousTempDirectory = Environment.GetEnvironmentVariable("TMPDIR");
         Environment.SetEnvironmentVariable("PATH", $"{directory}{Path.PathSeparator}{previousPath}");
         Environment.SetEnvironmentVariable("SLANG_TEST_DIRECTORY", directory);
+        Environment.SetEnvironmentVariable("TMPDIR", directory);
 
         try
         {
@@ -287,6 +291,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         {
             Environment.SetEnvironmentVariable("PATH", previousPath);
             Environment.SetEnvironmentVariable("SLANG_TEST_DIRECTORY", previousTestDirectory);
+            Environment.SetEnvironmentVariable("TMPDIR", previousTempDirectory);
             Directory.Delete(directory, recursive: true);
         }
     }
