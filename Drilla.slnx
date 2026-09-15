@@ -9,6 +9,7 @@
   <Project Path="DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj" />
   <Project Path="DualDrill.Common.Abstraction/DualDrill.Common.Abstraction.csproj" />
   <Project Path="DualDrill.Common/DualDrill.Common.csproj" />
+  <Project Path="DualDrill.Compiler.Server/DualDrill.Compiler.Server.csproj" />
   <Project Path="DualDrill.Engine/DualDrill.Engine.csproj" />
   <Project Path="DualDrill.Graphics/DualDrill.Graphics.csproj" />
   <Project Path="DualDrill.ILSL/DualDrill.ILSL.csproj" />
