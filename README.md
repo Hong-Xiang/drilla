@@ -8,7 +8,42 @@ requirements:
 
 - [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
 - [dotnet 9.0](https://dotnet.microsoft.com/en-us/download)
-- [slangc](https://github.com/shader-slang/slang) need to be installed and added to PATH, can be installed via slang or via Vulkan SDK
+- [slangc](https://github.com/shader-slang/slang) on `PATH` (the Nix package
+  is `shader-slang`; the unrelated `slang` package does not provide it), or
+  installed through the Vulkan SDK
+
+### Linux Nix toolchain
+
+On x86-64 Linux, enter the pinned compiler development shell from the repository root:
+
+```sh
+nix develop
+```
+
+The shell supplies .NET SDK/runtime 9, Slang (`slangc`), LLVM 16 native
+libraries for LLVMSharp, Node.js, and pnpm. It preserves the host Vulkan
+driver environment and any inherited `LD_LIBRARY_PATH`; it does not install
+or select Vulkan tools, an ICD, software renderer, browser, or Chromium.
+
+The same shell can run commands for another worktree:
+
+```sh
+nix develop path:/home/xianghong/drilla-worktrees/nix-toolchain --command \
+  dotnet test /path/to/worktree/DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj \
+  -p:DirectoryBuildPropsPath=/home/xianghong/drilla-worktrees/nix-toolchain/Directory.Build.props
+```
+
+Restore and test the compiler project headlessly:
+
+```sh
+dotnet restore DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj
+dotnet test DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj --no-restore
+```
+
+This is a reproducible development shell, not a fully hermetic Nix build:
+NuGet restore still uses the configured package sources and cache. The
+Windows-only solution projects are intentionally outside this Linux workflow;
+use an existing browser for interactive development.
 
 ### run dev environment
 
