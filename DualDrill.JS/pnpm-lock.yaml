@@ -70,8 +70,8 @@ importers:
         specifier: ^4.2.1
         version: 4.2.1(vite@5.2.6)
       '@webgpu/types':
-        specifier: ^0.1.40
-        version: 0.1.40
+        specifier: 0.1.72
+        version: 0.1.72
       esbuild:
         specifier: 0.20.2
         version: 0.20.2
@@ -486,8 +486,8 @@ packages:
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0
 
-  '@webgpu/types@0.1.40':
-    resolution: {integrity: sha512-/BBkHLS6/eQjyWhY2H7Dx5DHcVrS2ICj9owvSRdgtQT6KcafLZA86tPze0xAOsd4FbsYKCUBUQyNi87q7gV7kw==}
+  '@webgpu/types@0.1.72':
+    resolution: {integrity: sha512-0cF7RFM2edNoiIS1ODJp0/Gzv4/xSXhwoR0YCza+OWpJWtn4wmo9DvK91aLlH9+uUnwIriP7ZiC3WitmyhuzBw==}
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -1224,7 +1224,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@webgpu/types@0.1.40': {}
+  '@webgpu/types@0.1.72': {}
 
   abort-controller@3.0.0:
     dependencies:
