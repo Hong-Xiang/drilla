@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DualDrill compiler triangle</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      body {
+        box-sizing: border-box;
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      canvas {
+        display: block;
+        width: 720px;
+        height: 480px;
+        max-width: 100%;
+        background: #073642;
+        border: 1px solid #475569;
+      }
+
+      pre {
+        overflow: auto;
+        padding: 12px;
+        background: #020617;
+        border: 1px solid #334155;
+        white-space: pre-wrap;
+      }
+
+      .error {
+        color: #fca5a5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>C# compiler → WebGPU triangle</h1>
+    <p id="status">Starting…</p>
+    <canvas id="triangle" width="720" height="480"></canvas>
+
+    <h2>Adapter</h2>
+    <pre id="adapter">Not requested yet.</pre>
+
+    <h2>Diagnostics</h2>
+    <pre id="diagnostics">Waiting for generated WGSL.</pre>
+
+    <h2>Generated WGSL</h2>
+    <pre id="wgsl">Waiting for compiler response.</pre>
+
+    <script type="module" src="/js/compiler.js"></script>
+  </body>
+</html>
