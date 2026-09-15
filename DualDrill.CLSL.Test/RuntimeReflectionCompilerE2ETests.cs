@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Frontend;
@@ -265,6 +266,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
             await Task.Delay(TimeSpan.FromMilliseconds(10), cancellation);
     }
 
+    [SupportedOSPlatform("linux")]
     static async Task WithFakeSlangAsync(string script, Func<string, Task> test)
     {
         var directory = Path.Combine(Path.GetTempPath(), $"slang test {Path.GetRandomFileName()}");
