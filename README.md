@@ -32,7 +32,8 @@ Nix-built process can use the existing proprietary Vulkan driver:
 
 ```sh
 NIXPKGS_ALLOW_UNFREE=1 nix develop --command \
-  nix run --impure github:nix-community/nixGL#nixVulkanNvidia -- \
+  nix run --impure \
+  github:nix-community/nixGL/b6105297e6f0cd041670c3e8628394d4ee247ed5#nixVulkanNvidia -- \
   timeout 120s dotnet test \
   DualDrill.CLSL.NativeTest/DualDrill.CLSL.NativeTest.csproj \
   -c Release -r linux-x64 --logger 'console;verbosity=minimal'
@@ -41,7 +42,9 @@ NIXPKGS_ALLOW_UNFREE=1 nix develop --command \
 This wrapper exposes the host NVIDIA driver to the process; it does not
 install an ICD or force a software fallback. Other driver vendors need their
 corresponding, separately verified host interop rather than an assumed
-fallback.
+fallback. The pinned nixGL source makes the wrapper reproducible, while
+`--impure` is intentional because the existing host driver remains outside
+the Nix closure; this graphics path is therefore not fully hermetic.
 
 The same shell can run commands for another worktree:
 
