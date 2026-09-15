@@ -21,9 +21,10 @@ nix develop
 ```
 
 The shell supplies .NET SDK/runtime 9, Slang (`slangc`), LLVM 16 native
-libraries for LLVMSharp, Node.js, and pnpm. It preserves the host Vulkan
-driver environment and any inherited `LD_LIBRARY_PATH`; it does not install
-or select Vulkan tools, an ICD, software renderer, browser, or Chromium.
+libraries for LLVMSharp, the Vulkan loader needed by native WebGPU bindings,
+Node.js, and pnpm. It preserves the host Vulkan ICD/driver environment and
+any inherited `LD_LIBRARY_PATH`; it does not install or select Vulkan tools,
+an ICD, software renderer, browser, or Chromium.
 
 The same shell can run commands for another worktree:
 
