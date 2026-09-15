@@ -1,4 +1,4 @@
-﻿using System.CodeDom.Compiler;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 
 namespace DualDrill.CLSL;
@@ -7,151 +7,121 @@ public sealed class SlangService
 {
     public async Task ValidateAsync(string slangCode, CancellationToken cancellation = default)
     {
-        using var tc = new TempFileCollection();
-        var sourceFile = tc.AddExtension(".slang");
-        await File.WriteAllTextAsync(sourceFile, slangCode, cancellation);
+        using var sourceFile = new TempFile(".slang");
+        await File.WriteAllTextAsync(sourceFile.FilePath, slangCode, cancellation);
 
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = "slangc",
-            Arguments = $"\"{sourceFile}\"",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        using var process = Process.Start(processStartInfo);
-        if (process == null)
-            throw new InvalidOperationException("Failed to start slangc process");
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellation);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellation);
-
-        await process.WaitForExitAsync(cancellation);
-
-        var stdout = await stdoutTask;
-        var stderr = await stderrTask;
-
-        if (process.ExitCode != 0)
-            throw new InvalidOperationException(
-                $"slangc validation failed with exit code {process.ExitCode}. Error: {stderr}");
-    }
-
-    sealed class TempFile(string extension) : IDisposable
-    {
-        private bool disposedValue;
-        public string FilePath { get; } = Path.GetTempFileName() + extension;
-
-        private void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    if (Path.Exists(FilePath))
-                    {
-                        File.Delete(FilePath);
-                    }
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                disposedValue = true;
-            }
-        }
-
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~TempFile()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
+        await RunAsync(
+            [sourceFile.FilePath, "-target", "wgsl", "-no-codegen"],
+            "validation",
+            cancellation);
     }
 
     public async Task<string> ReflectAsync(string slangCode, CancellationToken cancellation = default)
     {
-        using var tc = new TempFileCollection();
-        var sourceFile = tc.AddExtension(".slang");
+        using var sourceFile = new TempFile(".slang");
         using var outputFile = new TempFile(".json");
+        await File.WriteAllTextAsync(sourceFile.FilePath, slangCode, cancellation);
 
-        await File.WriteAllTextAsync(sourceFile, slangCode, cancellation);
+        await RunAsync(
+            [
+                sourceFile.FilePath,
+                "-target",
+                "wgsl",
+                "-no-codegen",
+                "-reflection-json",
+                outputFile.FilePath
+            ],
+            "reflection",
+            cancellation);
 
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = "slangc",
-            Arguments = $"\"{sourceFile}\" -target wgsl -reflection-json \"{outputFile.FilePath}\"",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        using var process = Process.Start(processStartInfo);
-        if (process == null)
-            throw new InvalidOperationException("Failed to start slangc process");
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellation);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellation);
-
-        await process.WaitForExitAsync(cancellation);
-
-        var stdout = await stdoutTask;
-        var stderr = await stderrTask;
-
-        if (process.ExitCode != 0)
-            throw new InvalidOperationException(
-                $"slangc compilation failed with exit code {process.ExitCode}. Error: {stderr}");
-
-        var reflectJson = await File.ReadAllTextAsync(outputFile.FilePath, cancellation);
-
-        return reflectJson;
-
+        return await File.ReadAllTextAsync(outputFile.FilePath, cancellation);
     }
 
-    public async Task<string> CompileToWgslAsync(string slangCode, CancellationToken cancellation = default)
+    public async Task<string> CompileToWgslAsync(
+        string slangCode,
+        CancellationToken cancellation = default)
     {
-        using var tc = new TempFileCollection();
-        var sourceFile = tc.AddExtension(".slang");
+        using var sourceFile = new TempFile(".slang");
         using var outputFile = new TempFile(".wgsl");
+        await File.WriteAllTextAsync(sourceFile.FilePath, slangCode, cancellation);
 
-        await File.WriteAllTextAsync(sourceFile, slangCode, cancellation);
+        await RunAsync(
+            [sourceFile.FilePath, "-target", "wgsl", "-o", outputFile.FilePath],
+            "WGSL compilation",
+            cancellation);
 
-        var processStartInfo = new ProcessStartInfo
+        return await File.ReadAllTextAsync(outputFile.FilePath, cancellation);
+    }
+
+    private static async Task RunAsync(
+        IReadOnlyList<string> arguments,
+        string operation,
+        CancellationToken cancellation)
+    {
+        var startInfo = new ProcessStartInfo
         {
             FileName = "slangc",
-            Arguments = $"\"{sourceFile}\" -target wgsl -o \"{outputFile.FilePath}\"",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true
         };
+        foreach (var argument in arguments)
+            startInfo.ArgumentList.Add(argument);
 
-        using var process = Process.Start(processStartInfo);
-        if (process == null)
+        using var process = new Process { StartInfo = startInfo };
+        if (!process.Start())
             throw new InvalidOperationException("Failed to start slangc process");
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellation);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellation);
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
 
-        await process.WaitForExitAsync(cancellation);
+        try
+        {
+            await process.WaitForExitAsync(cancellation);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            if (!process.HasExited)
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch (InvalidOperationException) when (process.HasExited)
+                {
+                }
+                catch (Win32Exception) when (process.HasExited)
+                {
+                }
+            }
+
+            await process.WaitForExitAsync(CancellationToken.None);
+            await Task.WhenAll(stdoutTask, stderrTask);
+            throw;
+        }
 
         var stdout = await stdoutTask;
         var stderr = await stderrTask;
-
         if (process.ExitCode != 0)
+        {
             throw new InvalidOperationException(
-                $"slangc compilation failed with exit code {process.ExitCode}. Error: {stderr}");
+                $"slangc {operation} failed with exit code {process.ExitCode}."
+                + $"\nStandard output:\n{stdout}"
+                + $"\nStandard error:\n{stderr}");
+        }
+    }
 
-        var wgslCode = await File.ReadAllTextAsync(outputFile.FilePath, cancellation);
+    private sealed class TempFile(string extension) : IDisposable
+    {
+        public string FilePath { get; } = Path.Combine(
+            Path.GetTempPath(),
+            Path.ChangeExtension(Path.GetRandomFileName(), extension));
 
-        return wgslCode;
+        public void Dispose()
+        {
+            if (File.Exists(FilePath))
+                File.Delete(FilePath);
+        }
     }
 }
