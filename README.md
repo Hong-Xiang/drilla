@@ -8,7 +8,64 @@ requirements:
 
 - [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
 - [dotnet 9.0](https://dotnet.microsoft.com/en-us/download)
-- [slangc](https://github.com/shader-slang/slang) need to be installed and added to PATH, can be installed via slang or via Vulkan SDK
+- [slangc](https://github.com/shader-slang/slang) on `PATH` (the Nix package
+  is `shader-slang`; the unrelated `slang` package does not provide it), or
+  installed through the Vulkan SDK
+
+### Linux Nix toolchain
+
+On x86-64 Linux, enter the pinned compiler development shell from the repository root:
+
+```sh
+nix develop
+```
+
+The shell supplies .NET SDK/runtime 9, Slang (`slangc`), LLVM 16 native
+libraries for LLVMSharp, the Vulkan loader needed by native WebGPU bindings,
+Node.js, and pnpm. It preserves the host Vulkan ICD/driver environment and
+any inherited `LD_LIBRARY_PATH`; it does not install or select Vulkan tools,
+an ICD, software renderer, browser, or Chromium.
+
+The default shell is the compiler-only environment. On the tested Ubuntu
+NVIDIA host, run the optional native graphics smoke through nixGL so the
+Nix-built process can use the existing proprietary Vulkan driver:
+
+```sh
+NIXPKGS_ALLOW_UNFREE=1 nix develop --command \
+  nix run --impure \
+  github:nix-community/nixGL/b6105297e6f0cd041670c3e8628394d4ee247ed5#nixVulkanNvidia -- \
+  timeout 120s dotnet test \
+  DualDrill.CLSL.NativeTest/DualDrill.CLSL.NativeTest.csproj \
+  -c Release -r linux-x64 --logger 'console;verbosity=minimal'
+```
+
+This wrapper exposes the host NVIDIA driver to the process; it does not
+install an ICD or force a software fallback. Other driver vendors need their
+corresponding, separately verified host interop rather than an assumed
+fallback. The pinned nixGL source makes the wrapper reproducible, while
+`--impure` is intentional because the existing host driver remains outside
+the Nix closure; this graphics path is therefore not fully hermetic.
+
+The same shell can run commands for another worktree. Replace both absolute
+worktree paths below with your own:
+
+```sh
+nix develop path:/path/to/toolchain-worktree --command \
+  dotnet test /path/to/target-worktree/DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj \
+  -p:DirectoryBuildPropsPath=/path/to/toolchain-worktree/Directory.Build.props
+```
+
+Restore and test the compiler project headlessly:
+
+```sh
+dotnet restore DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj
+dotnet test DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj --no-restore
+```
+
+This is a reproducible development shell, not a fully hermetic Nix build:
+NuGet restore still uses the configured package sources and cache. The
+Windows-only solution projects are intentionally outside this Linux workflow;
+use an existing browser for interactive development.
 
 ### run dev environment
 
