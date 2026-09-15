@@ -186,61 +186,109 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         if (!OperatingSystem.IsLinux())
             return;
 
-        var directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(directory);
-        var compilerPath = Path.Combine(directory, "slangc");
-        var argumentsPath = Path.Combine(directory, "arguments");
-        var pidPath = Path.Combine(directory, "pid");
-        await File.WriteAllTextAsync(
-            compilerPath,
+        await WithFakeSlangAsync(
             """
             #!/bin/sh
-            printf '%s\n' "$$" > "$SLANG_TEST_PID_PATH"
-            printf '%s\n' "$@" > "$SLANG_TEST_ARGUMENTS_PATH"
+            printf '%s\n' "$$" > "$SLANG_TEST_DIRECTORY/pid"
+            printf '%s\n' "$@" > "$SLANG_TEST_DIRECTORY/arguments"
             sleep 30
-            """);
-        File.SetUnixFileMode(
-            compilerPath,
-            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            """,
+            async directory =>
+            {
+                var argumentsPath = Path.Combine(directory, "arguments");
+                using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var validation = new SlangService().ValidateAsync(
+                    "validity is controlled by the test",
+                    cancellation.Token);
+                await WaitForFileAsync(argumentsPath, cancellation.Token);
+                cancellation.Cancel();
 
-        var previousPath = Environment.GetEnvironmentVariable("PATH")
-            ?? throw new InvalidOperationException("PATH is not set");
-        Environment.SetEnvironmentVariable("PATH", $"{directory}{Path.PathSeparator}{previousPath}");
-        Environment.SetEnvironmentVariable("SLANG_TEST_ARGUMENTS_PATH", argumentsPath);
-        Environment.SetEnvironmentVariable("SLANG_TEST_PID_PATH", pidPath);
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => validation);
 
-        try
-        {
-            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var validation = new SlangService().ValidateAsync("validity is controlled by the test", cancellation.Token);
-            await WaitForFileAsync(argumentsPath, cancellation.Token);
-            cancellation.Cancel();
+                var arguments = await File.ReadAllLinesAsync(argumentsPath);
+                Assert.Equal(4, arguments.Length);
+                Assert.False(File.Exists(arguments[0]));
+                Assert.Equal("-target", arguments[1]);
+                Assert.Equal("wgsl", arguments[2]);
+                Assert.Equal("-no-codegen", arguments[3]);
 
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => validation);
+                var pid = int.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "pid")));
+                Assert.Throws<ArgumentException>(() => Process.GetProcessById(pid));
+            });
+    }
 
-            var arguments = await File.ReadAllLinesAsync(argumentsPath);
-            Assert.Equal(4, arguments.Length);
-            Assert.False(File.Exists(arguments[0]));
-            Assert.Equal("-target", arguments[1]);
-            Assert.Equal("wgsl", arguments[2]);
-            Assert.Equal("-no-codegen", arguments[3]);
+    [Fact]
+    public async Task ReflectionAndWgslOutputsAreCleaned()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
 
-            var pid = int.Parse(await File.ReadAllTextAsync(pidPath));
-            Assert.Throws<ArgumentException>(() => Process.GetProcessById(pid));
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("PATH", previousPath);
-            Environment.SetEnvironmentVariable("SLANG_TEST_ARGUMENTS_PATH", null);
-            Environment.SetEnvironmentVariable("SLANG_TEST_PID_PATH", null);
-            Directory.Delete(directory, recursive: true);
-        }
+        await WithFakeSlangAsync(
+            """
+            #!/bin/sh
+            if [ "$4" = "-no-codegen" ]; then
+                printf '%s\n' "$1" > "$SLANG_TEST_DIRECTORY/reflection-source"
+                printf '%s\n' "$6" > "$SLANG_TEST_DIRECTORY/reflection-output"
+                printf '{}\n' > "$6"
+            else
+                printf '%s\n' "$1" > "$SLANG_TEST_DIRECTORY/wgsl-source"
+                printf '%s\n' "$5" > "$SLANG_TEST_DIRECTORY/wgsl-output"
+                printf '@compute @workgroup_size(1) fn main() {}\n' > "$5"
+            fi
+            """,
+            async directory =>
+            {
+                var service = new SlangService();
+                Assert.Equal("{}", (await service.ReflectAsync("reflection source")).Trim());
+                Assert.Contains("@compute", await service.CompileToWgslAsync("WGSL source"));
+
+                foreach (var marker in new[]
+                {
+                    "reflection-source",
+                    "reflection-output",
+                    "wgsl-source",
+                    "wgsl-output"
+                })
+                {
+                    var temporaryPath = (await File.ReadAllTextAsync(
+                        Path.Combine(directory, marker))).Trim();
+                    Assert.False(File.Exists(temporaryPath));
+                }
+            });
     }
 
     static async Task WaitForFileAsync(string path, CancellationToken cancellation)
     {
         while (!File.Exists(path))
             await Task.Delay(TimeSpan.FromMilliseconds(10), cancellation);
+    }
+
+    static async Task WithFakeSlangAsync(string script, Func<string, Task> test)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(directory);
+        var compilerPath = Path.Combine(directory, "slangc");
+        await File.WriteAllTextAsync(compilerPath, script);
+        File.SetUnixFileMode(
+            compilerPath,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var previousPath = Environment.GetEnvironmentVariable("PATH")
+            ?? throw new InvalidOperationException("PATH is not set");
+        var previousTestDirectory = Environment.GetEnvironmentVariable("SLANG_TEST_DIRECTORY");
+        Environment.SetEnvironmentVariable("PATH", $"{directory}{Path.PathSeparator}{previousPath}");
+        Environment.SetEnvironmentVariable("SLANG_TEST_DIRECTORY", directory);
+
+        try
+        {
+            await test(directory);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", previousPath);
+            Environment.SetEnvironmentVariable("SLANG_TEST_DIRECTORY", previousTestDirectory);
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     async Task<(JsonDocument Reflection, string Wgsl)> AssertPublicWgslCompilation(
