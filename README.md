@@ -2,6 +2,9 @@
 
 Drilla engine for HPC and visualization
 
+For compiler development on Linux without WebView2, see the
+[compiler-only server](DualDrill.Compiler.Server/README.md).
+
 ## develop
 
 requirements:
