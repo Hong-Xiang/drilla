@@ -32,6 +32,17 @@ interface ShaderProfile {
   readonly drawCount: number;
   readonly vertex: VertexInput | null;
   readonly uniforms: readonly UniformBinding[];
+  readonly timeBinding: number | null;
+}
+
+interface PreparedRender {
+  readonly animated: boolean;
+  readonly draw: (elapsedSeconds: number) => void;
+  readonly dispose: () => void;
+}
+
+interface ActiveRender {
+  readonly dispose: () => void;
 }
 
 interface Runtime {
@@ -41,6 +52,9 @@ interface Runtime {
   lost: boolean;
   selected: ShaderProfile;
   uncapturedError: string | null;
+  generation: number;
+  active: ActiveRender | null;
+  setup: Promise<void>;
 }
 
 const canvas = requireElement("shader-canvas", HTMLCanvasElement);
@@ -58,6 +72,7 @@ const profiles = [
     drawCount: 3,
     vertex: null,
     uniforms: [],
+    timeBinding: null,
   },
   {
     name: "SimpleStructUniformShaderModule",
@@ -70,6 +85,7 @@ const profiles = [
         data: new Float32Array([0.1, 0.65, 1, 1, 0.7, 0.7, 0.1, 0]),
       },
     ],
+    timeBinding: null,
   },
   {
     name: "MandelbrotDistanceShaderModule",
@@ -80,6 +96,7 @@ const profiles = [
       data: fullScreenVertices,
     },
     uniforms: [{ binding: 0, data: new Float32Array([0]) }],
+    timeBinding: 0,
   },
   {
     name: "RaymarchingPrimitiveShader",
@@ -101,6 +118,7 @@ const profiles = [
       },
       { binding: 3, data: raymarchingUniforms.antialiasing },
     ],
+    timeBinding: 1,
   },
 ] as const satisfies readonly ShaderProfile[];
 
@@ -253,6 +271,8 @@ function createDrawResources(
   profile: ShaderProfile,
 ) {
   const buffers: GPUBuffer[] = [];
+  const uniformBuffers = new Map<number, GPUBuffer>();
+  const timeData = profile.timeBinding === null ? null : new Float32Array([0]);
   const own = (buffer: GPUBuffer): GPUBuffer => {
     buffers.push(buffer);
     return buffer;
@@ -271,15 +291,20 @@ function createDrawResources(
         )
       : null;
     const entries = profile.uniforms.map(({ binding, data }) => {
+      const initialData = binding === profile.timeBinding ? timeData : data;
+      if (!initialData) {
+        throw new Error(`${profile.label} time binding ${binding} is invalid.`);
+      }
       const buffer = own(
         createBuffer(
           device,
           `${profile.label} uniform ${binding}`,
-          Math.max(16, data.byteLength),
+          Math.max(16, initialData.byteLength),
           GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-          data,
+          initialData,
         ),
       );
+      uniformBuffers.set(binding, buffer);
       return { binding, resource: { buffer } };
     });
     const bindGroup =
@@ -290,14 +315,87 @@ function createDrawResources(
             layout: pipeline.getBindGroupLayout(0),
             entries,
           });
+    let time: {
+      readonly data: Float32Array;
+      readonly buffer: GPUBuffer;
+    } | null = null;
+    if (profile.timeBinding !== null) {
+      const timeBuffer = uniformBuffers.get(profile.timeBinding);
+      if (!timeData || !timeBuffer) {
+        throw new Error(
+          `${profile.label} has no uniform at time binding ${profile.timeBinding}.`,
+        );
+      }
+      time = { data: timeData, buffer: timeBuffer };
+    }
 
-    return { bindGroup, vertexBuffer, buffers };
+    return { bindGroup, vertexBuffer, buffers, time };
   } catch (error: unknown) {
     for (const buffer of buffers) {
       buffer.destroy();
     }
     throw error;
   }
+}
+
+function createPreparedRender(
+  runtime: Runtime,
+  pipeline: GPURenderPipeline,
+  profile: ShaderProfile,
+): PreparedRender {
+  const resources = createDrawResources(runtime.device, pipeline, profile);
+  let disposed = false;
+
+  return {
+    animated: resources.time !== null,
+    draw(elapsedSeconds: number): void {
+      if (disposed) {
+        throw new Error(`${profile.label} render resources are disposed.`);
+      }
+      if (resources.time) {
+        resources.time.data[0] = elapsedSeconds;
+        runtime.device.queue.writeBuffer(
+          resources.time.buffer,
+          0,
+          resources.time.data,
+        );
+      }
+
+      const encoder = runtime.device.createCommandEncoder({
+        label: `${profile.label} encoder`,
+      });
+      const pass = encoder.beginRenderPass({
+        label: `${profile.label} render pass`,
+        colorAttachments: [
+          {
+            view: runtime.context.getCurrentTexture().createView(),
+            clearValue: clearColor,
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+      });
+      pass.setPipeline(pipeline);
+      if (resources.bindGroup) {
+        pass.setBindGroup(0, resources.bindGroup);
+      }
+      if (resources.vertexBuffer) {
+        pass.setVertexBuffer(0, resources.vertexBuffer);
+      }
+      pass.draw(profile.drawCount);
+      pass.end();
+      runtime.device.queue.submit([encoder.finish()]);
+    },
+    dispose(): void {
+      if (disposed) {
+        return;
+      }
+      disposed = true;
+      for (const buffer of resources.buffers) {
+        buffer.destroy();
+      }
+    },
+  };
 }
 
 function finishPendingOutputs(
@@ -313,13 +411,18 @@ function finishPendingOutputs(
   }
 }
 
+function isCurrentSelection(runtime: Runtime, generation: number): boolean {
+  return !runtime.lost && runtime.generation === generation;
+}
+
 async function renderProfile(
   runtime: Runtime,
   profile: ShaderProfile,
-): Promise<void> {
+  generation: number,
+): Promise<PreparedRender | null> {
   let receivedWgsl = false;
   let receivedDiagnostics = false;
-  const ownedBuffers: GPUBuffer[] = [];
+  let prepared: PreparedRender | null = null;
 
   wgslOutput.textContent = `Waiting for ${profile.name} compiler response.`;
   diagnosticsOutput.textContent = `Waiting for ${profile.name} WebGPU diagnostics.`;
@@ -327,6 +430,9 @@ async function renderProfile(
 
   try {
     const code = await fetchWgsl(profile);
+    if (!isCurrentSelection(runtime, generation)) {
+      return null;
+    }
     receivedWgsl = true;
     wgslOutput.textContent = code;
 
@@ -336,6 +442,9 @@ async function renderProfile(
         code,
       });
       const compilationInfo = await module.getCompilationInfo();
+      if (!isCurrentSelection(runtime, generation)) {
+        return;
+      }
       receivedDiagnostics = true;
       const diagnostics = compilationInfo.messages.map(
         (message) =>
@@ -376,43 +485,112 @@ async function renderProfile(
         },
         primitive: { topology: "triangle-list" },
       });
-      const resources = createDrawResources(runtime.device, pipeline, profile);
-      ownedBuffers.push(...resources.buffers);
-
-      const encoder = runtime.device.createCommandEncoder({
-        label: `${profile.label} encoder`,
-      });
-      const pass = encoder.beginRenderPass({
-        label: `${profile.label} render pass`,
-        colorAttachments: [
-          {
-            view: runtime.context.getCurrentTexture().createView(),
-            clearValue: clearColor,
-            loadOp: "clear",
-            storeOp: "store",
-          },
-        ],
-      });
-      pass.setPipeline(pipeline);
-      if (resources.bindGroup) {
-        pass.setBindGroup(0, resources.bindGroup);
+      if (!isCurrentSelection(runtime, generation)) {
+        return;
       }
-      if (resources.vertexBuffer) {
-        pass.setVertexBuffer(0, resources.vertexBuffer);
+      const render = createPreparedRender(runtime, pipeline, profile);
+      const pending: ActiveRender = { dispose: render.dispose };
+      runtime.active = pending;
+      try {
+        render.draw(0);
+        await runtime.device.queue.onSubmittedWorkDone();
+        if (isCurrentSelection(runtime, generation)) {
+          prepared = render;
+        } else {
+          if (runtime.active === pending) {
+            runtime.active = null;
+          }
+          render.dispose();
+        }
+      } catch (error: unknown) {
+        if (runtime.active === pending) {
+          runtime.active = null;
+        }
+        render.dispose();
+        throw error;
       }
-      pass.draw(profile.drawCount);
-      pass.end();
-      runtime.device.queue.submit([encoder.finish()]);
-      await runtime.device.queue.onSubmittedWorkDone();
     });
+    return prepared;
   } catch (error: unknown) {
+    const active = runtime.active;
+    runtime.active = null;
+    active?.dispose();
+    if (!isCurrentSelection(runtime, generation)) {
+      return null;
+    }
     finishPendingOutputs(profile, receivedWgsl, receivedDiagnostics);
     throw error;
-  } finally {
-    for (const buffer of ownedBuffers) {
-      buffer.destroy();
-    }
   }
+}
+
+function stopRendering(runtime: Runtime): void {
+  runtime.generation += 1;
+  const active = runtime.active;
+  runtime.active = null;
+  active?.dispose();
+}
+
+function activateRender(
+  runtime: Runtime,
+  profile: ShaderProfile,
+  generation: number,
+  render: PreparedRender,
+): void {
+  let animationFrame: number | null = null;
+  let disposed = false;
+  const active: ActiveRender = {
+    dispose(): void {
+      if (disposed) {
+        return;
+      }
+      disposed = true;
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+      render.dispose();
+    },
+  };
+  runtime.active = active;
+
+  if (!render.animated) {
+    return;
+  }
+
+  const startedAt = performance.now();
+  const animate = (timestamp: number): void => {
+    animationFrame = null;
+    if (disposed || !isCurrentSelection(runtime, generation)) {
+      return;
+    }
+
+    try {
+      render.draw(Math.max(0, timestamp - startedAt) / 1000);
+    } catch (error: unknown) {
+      const current =
+        runtime.active === active && isCurrentSelection(runtime, generation);
+      active.dispose();
+      if (runtime.active === active) {
+        runtime.active = null;
+      }
+      if (current) {
+        runtime.generation += 1;
+        canvas.hidden = true;
+        setBusy(false);
+        showStatus(
+          `${profile.label} (${profile.name}) failed: ${describeError(error)}`,
+          true,
+        );
+      }
+      console.error(error);
+      return;
+    }
+
+    if (!disposed && isCurrentSelection(runtime, generation)) {
+      animationFrame = requestAnimationFrame(animate);
+    }
+  };
+  animationFrame = requestAnimationFrame(animate);
 }
 
 async function initialize(): Promise<Runtime> {
@@ -442,6 +620,9 @@ async function initialize(): Promise<Runtime> {
     lost: false,
     selected: profiles[0],
     uncapturedError: null,
+    generation: 0,
+    active: null,
+    setup: Promise.resolve(),
   };
   device.onuncapturederror = (event) => {
     console.error(event.error);
@@ -449,17 +630,26 @@ async function initialize(): Promise<Runtime> {
       return;
     }
     runtime.uncapturedError = `${runtime.selected.name}: WebGPU uncaptured error: ${event.error.message}`;
+    stopRendering(runtime);
     canvas.hidden = true;
+    setBusy(false);
     showStatus(runtime.uncapturedError, true);
   };
   void device.lost.then((loss) => {
     runtime.lost = true;
+    stopRendering(runtime);
     canvas.hidden = true;
     setBusy(false, true);
     showStatus(
       `${runtime.selected.name}: WebGPU device lost (${loss.reason}): ${loss.message}`,
       true,
     );
+  });
+  window.addEventListener("pagehide", () => {
+    stopRendering(runtime);
+    if (!runtime.lost) {
+      setBusy(false);
+    }
   });
 
   return runtime;
@@ -474,27 +664,47 @@ async function main(): Promise<void> {
       return;
     }
 
+    stopRendering(runtime);
+    const generation = runtime.generation;
     runtime.selected = profile;
     runtime.uncapturedError = null;
     canvas.hidden = true;
     selectButton(profile);
     setBusy(true);
+    const renderPromise = runtime.setup.then(() =>
+      isCurrentSelection(runtime, generation)
+        ? renderProfile(runtime, profile, generation)
+        : null,
+    );
+    runtime.setup = renderPromise.then(
+      () => undefined,
+      () => undefined,
+    );
     try {
-      await renderProfile(runtime, profile);
-      if (runtime.lost) {
+      const render = await renderPromise;
+      if (!render || !isCurrentSelection(runtime, generation)) {
+        render?.dispose();
         return;
       }
       if (runtime.uncapturedError) {
+        render.dispose();
         showStatus(runtime.uncapturedError, true);
         return;
       }
 
       canvas.hidden = false;
+      setBusy(false);
       showStatus(
-        `${profile.label} (${profile.name}) rendered one frame successfully.`,
+        render.animated
+          ? `Animating ${profile.label} (${profile.name}).`
+          : `${profile.label} (${profile.name}) rendered one frame successfully.`,
       );
+      activateRender(runtime, profile, generation, render);
     } catch (error: unknown) {
-      if (!runtime.lost) {
+      if (isCurrentSelection(runtime, generation)) {
+        stopRendering(runtime);
+        canvas.hidden = true;
+        setBusy(false);
         showStatus(
           `${profile.label} (${profile.name}) failed: ${describeError(error)}`,
           true,
@@ -502,7 +712,7 @@ async function main(): Promise<void> {
       }
       console.error(error);
     } finally {
-      if (!runtime.lost) {
+      if (isCurrentSelection(runtime, generation)) {
         setBusy(false);
       }
     }

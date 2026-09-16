@@ -13,29 +13,31 @@ nix develop --command dotnet run --project DualDrill.Compiler.Server
 ```
 
 Open <http://127.0.0.1:5083/>. The frontend uses one browser WebGPU device to
-compile and attempt one frame of the selected Triangle, Uniform, Mandelbrot, or
-Raymarching fixture. Compiler, shader-module, pipeline, and device errors stay
-visible instead of falling back to another shader. Animation and general
-reflection-driven rendering are intentionally out of scope: each known fixture
-has a fixed input profile.
+compile and render the selected Triangle, Uniform, Mandelbrot, or Raymarching
+fixture. Mandelbrot and Raymarching animate from time 0; Triangle and Uniform
+render one frame because their C# fixtures have no time uniform. Compiler,
+shader-module, pipeline, and device errors stay visible instead of falling back
+to another shader. General reflection-driven rendering remains intentionally
+out of scope: each known fixture has an explicit input profile.
 
 The raymarching fixture keeps its existing shader and entry-point names and uses
 these group 0 uniform bindings:
 
-| Binding | WGSL type | Value |
-| --- | --- | --- |
-| 0 | `vec2<f32>` | Canvas resolution |
-| 1 | `f32` | Time in seconds |
-| 2 | `vec4<f32>` | Mouse coordinates |
-| 3 | `i32` | Antialiasing level |
+| Binding | WGSL type   | Value              |
+| ------- | ----------- | ------------------ |
+| 0       | `vec2<f32>` | Canvas resolution  |
+| 1       | `f32`       | Time in seconds    |
+| 2       | `vec4<f32>` | Mouse coordinates  |
+| 3       | `i32`       | Antialiasing level |
 
 Clients migrating from the two-binding shader must rebuild and reload their
 bind group with the mouse and antialiasing buffers. The bundled client defaults
-to the canvas center, time 0, and AA1. The shader defensively bounds AA to 1–3;
-AA1 has no subpixel offset, while AA2 and AA3 use the reference sample offsets.
-The complete 22-primitive scene and reference AO, shadow, back-light, and
-subsurface-lighting paths are restored, but image parity remains pending native
-validation against the independent GLSL reference.
+to the canvas center, starts elapsed time at 0 on each selection, and uses AA1.
+The shader defensively bounds AA to 1–3; AA1 has no subpixel offset, while AA2
+and AA3 use the reference sample offsets. The complete 22-primitive scene and
+reference AO, shadow, back-light, and subsurface-lighting paths are restored,
+but image parity remains pending native validation against the independent GLSL
+reference.
 
 Only the existing white `MinimumHelloTriangleShaderModule` native smoke test is
 retained; it is distinct from the orange host `MinimumTriangleShader`. The
