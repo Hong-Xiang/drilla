@@ -5,6 +5,8 @@ namespace DualDrill.CLSL.Test;
 
 internal static class ScalarControlFlowFixtures
 {
+    public static int ConditionalReturn(int left, bool choose, int right) => choose ? left : right;
+
     public static bool BooleanBranch(bool choose)
     {
         if (choose)

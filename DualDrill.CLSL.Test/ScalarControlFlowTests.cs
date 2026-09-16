@@ -66,6 +66,18 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     }
 
     [Theory]
+    [InlineData(false, 29)]
+    [InlineData(true, 11)]
+    public void ConditionalReturnMatchesCpuAndEmittedControl(bool choose, int golden)
+    {
+        Func<int, bool, int, int> reference = ScalarControlFlowFixtures.ConditionalReturn;
+        Assert.Equal(golden, reference(11, choose, 29));
+        Check(reference.Method,
+            [new Value.Integer(11), new Value.Boolean(choose), new Value.Integer(29)],
+            new Value.Integer(golden));
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task BooleanParametersAndReturnsMatchCpuAndEmittedControl(bool input)
