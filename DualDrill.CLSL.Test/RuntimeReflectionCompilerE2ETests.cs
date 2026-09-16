@@ -1,14 +1,20 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.Versioning;
 using System.Text.Json;
 using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Transform;
+using DualDrill.Mathematics;
 using Xunit.Abstractions;
+using static DualDrill.Mathematics.DMath;
 
 namespace DualDrill.CLSL.Test;
 
@@ -163,10 +169,119 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     }
 
     [Fact]
-    public async Task RayMartching()
+    public async Task RayMarchingCompilesThroughPublicWgslApi()
     {
         var shader = new ShaderModule.RaymarchingPrimitiveShader();
-        await TestShader(shader, "raymartching");
+        var compilation = await AssertPublicWgslCompilation(shader);
+        using var reflection = compilation.Reflection;
+        var parameters = reflection.RootElement
+            .GetProperty("parameters")
+            .EnumerateArray()
+            .ToArray();
+
+        Assert.Equal(2, parameters.Length);
+        Assert.Equal(
+            [0, 1],
+            parameters
+                .Select(parameter => parameter.GetProperty("binding").GetProperty("index").GetInt32())
+                .Order());
+        Assert.All(
+            parameters,
+            parameter => Assert.Equal(
+                "descriptorTableSlot",
+                parameter.GetProperty("binding").GetProperty("kind").GetString()));
+        Assert.Contains("@group(0)", compilation.Wgsl);
+        Assert.Contains("@binding(0)", compilation.Wgsl);
+        Assert.Contains("@binding(1)", compilation.Wgsl);
+        Assert.Contains("var<uniform>", compilation.Wgsl);
+        Assert.Contains("iResolution", compilation.Wgsl);
+        Assert.Contains("iTime", compilation.Wgsl);
+    }
+
+    [Fact]
+    public void MultipleReturnHelperUsesConfigurationSpecificCilTopology()
+    {
+        var configuration = typeof(RuntimeReflectionCompilerE2ETests).Assembly
+            .GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration;
+        var method = typeof(MultipleReturnShader).GetMethod(
+            "Select",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Multiple-return helper method was not found");
+        var actualMethodBody = new MethodBodyAnalysisModel(method);
+        var controlFlowGraph = actualMethodBody.ControlFlowGraph;
+        var labels = controlFlowGraph.Labels().ToArray();
+        var conditional = Assert.Single(
+            labels,
+            label => controlFlowGraph.GetSucc(label).Count() == 2);
+        var branchTargets = controlFlowGraph.GetSucc(conditional).ToArray();
+        var postDominators = controlFlowGraph.ControlFlowAnalysis().PostDominatorTree;
+
+        switch (configuration)
+        {
+            case "Debug":
+                {
+                    Assert.Equal(4, labels.Length);
+                    var sharedReturn = Assert.Single(
+                        labels,
+                        label => !controlFlowGraph.GetSucc(label).Any());
+
+                    Assert.Equal(2, branchTargets.Length);
+                    Assert.All(
+                        branchTargets,
+                        target =>
+                        {
+                            Assert.Equal(
+                                sharedReturn,
+                                Assert.IsType<UnconditionalSuccessor>(
+                                    controlFlowGraph.Successor(target)).Target);
+                            Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(target));
+                        });
+                    Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(conditional));
+                    Assert.Null(postDominators.ImmediatePostDominator(sharedReturn));
+                    break;
+                }
+            case "Release":
+                {
+                    Assert.Equal(3, labels.Length);
+                    var terminalReturns = labels
+                        .Where(label => !controlFlowGraph.GetSucc(label).Any())
+                        .ToArray();
+
+                    Assert.Equal(2, terminalReturns.Length);
+                    Assert.Equal(2, branchTargets.Intersect(terminalReturns).Count());
+                    Assert.Null(postDominators.ImmediatePostDominator(conditional));
+                    Assert.All(
+                        terminalReturns,
+                        terminal => Assert.Null(postDominators.ImmediatePostDominator(terminal)));
+                    break;
+                }
+            default:
+                throw new InvalidOperationException($"Unexpected build configuration: {configuration}");
+        }
+    }
+
+    [Fact]
+    public async Task MultipleReturnShaderCompilesThroughPublicSlangAndWgslApis()
+    {
+        var compilation = await AssertPublicWgslCompilation(new MultipleReturnShader());
+        using var reflection = compilation.Reflection;
+
+        Assert.Contains(": vec4<f32> = a;", compilation.Slang);
+        Assert.Contains(": vec4<f32> = b;", compilation.Slang);
+        Assert.Contains("a_0;", compilation.Wgsl);
+        Assert.Contains("b_0;", compilation.Wgsl);
+
+        var configuration = typeof(RuntimeReflectionCompilerE2ETests).Assembly
+            .GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration;
+        if (configuration == "Release")
+        {
+            Assert.Matches(
+                @"let (?<value>\S+) : vec4<f32> = a;\s*return \k<value>;",
+                compilation.Slang);
+            Assert.Matches(
+                @"let (?<value>\S+) : vec4<f32> = b;\s*return \k<value>;",
+                compilation.Slang);
+        }
     }
 
     [Fact]
@@ -298,11 +413,13 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         }
     }
 
-    async Task<(JsonDocument Reflection, string Wgsl)> AssertPublicWgslCompilation(
+    async Task<(JsonDocument Reflection, string Slang, string Wgsl)> AssertPublicWgslCompilation(
         ISharpShader shader)
     {
         var slangCompiler = new CLSLCompiler(new(CLSLCompileTarget.SLang));
         var slang = slangCompiler.Emit(shader);
+        Output.WriteLine("=== SLang ===");
+        Output.WriteLine(slang);
         var reflectionJson = await new SlangService().ReflectAsync(slang);
         var reflection = JsonDocument.Parse(reflectionJson);
 
@@ -329,6 +446,30 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Assert.Contains("fn vs", wgsl);
         Assert.Contains("fn fs", wgsl);
 
-        return (reflection, wgsl);
+        return (reflection, slang, wgsl);
+    }
+
+    private sealed class MultipleReturnShader : ISharpShader
+    {
+        [Vertex]
+        [return: Builtin(BuiltinBinding.position)]
+        public static vec4f32 vs() => vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+        [Fragment]
+        [return: Location(0)]
+        public static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 position) =>
+            Select(
+                position.x,
+                vec4(0.125f, 0.25f, 0.375f, 1.0f),
+                vec4(0.875f, 0.75f, 0.625f, 1.0f));
+
+        [ShaderMethod]
+        private static vec4f32 Select(float condition, vec4f32 a, vec4f32 b)
+        {
+            if (condition > 0.0f)
+                return a;
+
+            return b;
+        }
     }
 }
