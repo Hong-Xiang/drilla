@@ -2,8 +2,10 @@
 
 Drilla engine for HPC and visualization
 
-For compiler development on Linux without WebView2, see the
-[compiler-only server](DualDrill.Compiler.Server/README.md).
+For compiler development on Linux without WebView2, use the
+[compiler-only server](DualDrill.Compiler.Server/README.md). Its browser demo
+offers Triangle, Uniform, animated Mandelbrot, and animated Raymarching shaders
+compiled from C# through Slang to WGSL.
 
 ## develop
 
@@ -29,6 +31,9 @@ Node.js, and pnpm. It preserves the host Vulkan ICD/driver environment and
 any inherited `LD_LIBRARY_PATH`; it does not install or select Vulkan tools,
 an ICD, software renderer, browser, or Chromium.
 
+The shared MSBuild settings use the canonical `Directory.Build.props` filename
+so they are discovered on case-sensitive filesystems as well as Windows.
+
 The default shell is the compiler-only environment. On the tested Ubuntu
 NVIDIA host, run the optional native graphics smoke through nixGL so the
 Nix-built process can use the existing proprietary Vulkan driver:
@@ -49,18 +54,9 @@ fallback. The pinned nixGL source makes the wrapper reproducible, while
 `--impure` is intentional because the existing host driver remains outside
 the Nix closure; this graphics path is therefore not fully hermetic.
 
-The same shell can run commands for another worktree. Replace both absolute
-worktree paths below with your own:
-
-```sh
-nix develop path:/path/to/toolchain-worktree --command \
-  dotnet test /path/to/target-worktree/DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj \
-  -p:DirectoryBuildPropsPath=/path/to/toolchain-worktree/Directory.Build.props
-```
-
-Test the compiler project headlessly in both configurations. The compiler reads
-the built CIL directly, so Release optimization can expose a different control-flow
-graph than Debug:
+Inside `nix develop`, test the compiler project headlessly in both configurations.
+The compiler reads the built CIL directly, so Release optimization can expose a
+different control-flow graph than Debug:
 
 ```sh
 dotnet test DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj -c Debug
@@ -72,41 +68,43 @@ NuGet restore still uses the configured package sources and cache. The
 Windows-only solution projects are intentionally outside this Linux workflow;
 use an existing browser for interactive development.
 
-### run dev environment
+### Windows server development
 
-#### dev loop
+The original Windows/WebView server remains separate from the Linux compiler
+host. For that development path:
 
-* Open `Drilla.sln`, run `DualDrill.Server` project to start a backend server
+- Open `Drilla.slnx`, run `DualDrill.Server` project to start a backend server
 
-* _optional_ In `DualDrill.JS` directory, run `node .\esbuild.mjs --watch` so ts code gets rebuilt automaticall on change
+- _optional_ In `DualDrill.JS`, run `node .\esbuild.mjs --watch` to rebuild TypeScript on changes
 
-* Open browser, visit `https://localhost:7117/desktop` for basic rendering. 
+- Open browser, visit `https://localhost:7117/desktop` for basic rendering.
 
-* visit `https://localhost:7117/ilsl` for basic C# IL to shader translation development
+- visit `https://localhost:7117/ilsl` for basic C# IL to shader translation development
 
-* _optional_ add `DUALDRILL_DATA_ROOT` to environment variable for mesh/texture data
+- _optional_ add `DUALDRILL_DATA_ROOT` to environment variable for mesh/texture data
 
-NOTE when runtime identifier is required to build/run, i.e. we need use `x64` runtime identifier, `Any CPU` will not work
+When specifying a .NET runtime identifier, use a RID such as `win-x64`.
+`x64` and `Any CPU` are platform settings, not runtime identifiers.
 
 ## CLSL (previously ILSL)
 
-CLSL is a C# embedded language which is designed to be compiled to multiple shader language running on GPU and SIMD accelerated CPU.
+CLSL is a restricted C# shader language with attributes for shader stages,
+resources, and built-ins. The active runtime-reflection compiler reads compiled
+.NET CIL, lowers it through a typed IR to Slang, then invokes `slangc` to produce
+WGSL. The public `CLSLCompiler` exposes IR, Slang, and WGSL output targets.
 
-It is designed to be a subset of C# language, with custom attributes to extend its semantic for shaders.
-
-It it designed to be compiled into shader language like WGSL, SPIR-V and CUDA, and also can be compiled into SIMD accelerated CPU code like Unity's Burst Compiler (with help of LLVM's auto vectorization).
-
-ILSL's compiler currently support runtime compilation of dotnet's bytecode CIL(MSIL) to WGSL source text.
+Other backends, including CUDA and LLVM-based SIMD execution, remain development
+goals rather than supported outputs of this pipeline.
 
 Features:
 
 - [x] WGSL backend
 - [x] control flow: if/loop
 - [x] function scope variable declaration
-- [x] priitive arithmetic/bitwise/logical/relational operation
+- [x] primitive arithmetic/bitwise/logical/relational operation
 - [x] basic primitive type mapping
 - [x] vector type mapping
-- [x] some vector based intrinsic functions 
+- [x] some vector based intrinsic functions
 - [ ] matrix type
 - [ ] array type
 - [ ] texture type/sampler type
@@ -115,12 +113,20 @@ Features:
 - [x] shader stage attributes
 - [x] group/binding attributes
 - [x] custom struct declaration
-- [x] shader relfection for uniform/vertex buffer layouts
+- [x] shader reflection for uniform/vertex buffer layouts
 - [ ] C# getter/setters
 - [ ] LLVM backend (for vectorization) and ideally use CIL -> LLVM auto vectorization -> CIL (intrinsics)
 - [ ] CUDA backend
 
+## Current scope and limitations
 
-## Current Progress
+The Linux compiler host and animated browser demos are available without the
+Windows server. The canonical raymarching shader lives in
+`Shared/Shaders/RaymarchingPrimitiveShader.cs`; see the compiler-server guide for
+its namespace and uniform-binding migration.
 
-Start Clean Legacy Code and Use New SSA based IR
+Control-flow support covers the exercised C# subset, not arbitrary CIL or a
+complete control-flow reconstruction algorithm. Shader compilation and manual
+browser rendering do not establish general semantic equivalence. The optional
+native project covers triangle readback and error reporting; automated
+raymarching image comparisons and a modern native-backend migration are deferred.
