@@ -45,10 +45,13 @@ the WGSL specification and accepted by the bundled Naga 0.19.2 consumer.
 Compatibility probes instead found that Naga 0.19.2 and Naga 22.1 reject
 current-WGSL function-local `const` declarations and loop-return forms emitted
 by Slang. The attempted desktop Evergine upgrade therefore failed its
-compatibility pre-check and no API migration was landed. Native work is
-selecting a genuinely modern, matched provider. Raymarching's public Slang and
-WGSL compilation paths are covered in both Debug and Release; this does not
-prove shader semantic parity or native backend compatibility.
+compatibility pre-check and no API migration was landed. Alimer v27 and official
+wgpu-native v29 also reject the generated loop/reference forms. WebGPUSharp
+0.3/Dawn accepts those forms but exposes a separate reference-generation
+address-space mismatch. No replacement native provider has been selected.
+Raymarching's public Slang and WGSL compilation paths are covered in both Debug
+and Release; this does not prove shader semantic parity or native backend
+compatibility.
 
 Generated IR, Slang, and WGSL are available at
 `/ilsl/compile/{shader-name}/{target}`. Reflection is at
