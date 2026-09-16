@@ -2,6 +2,7 @@ import { GUI } from "lil-gui";
 import { createRoot } from "react-dom/client";
 import { InteractiveApp } from "./interactive-ui";
 import { createElement } from "react";
+import { createRaymarchingUniforms } from "../raymarching-uniforms";
 
 interface InteractiveState {
   loop: boolean;
@@ -84,23 +85,42 @@ export async function BatchRenderMain() {
   //   await fetch(`/ilsl/wgsl/bindgrouplayoutdescriptorbuffer/${shaderName}`)
   // ).json();
 
+  const raymarchingUniforms = createRaymarchingUniforms(
+    canvas.width,
+    canvas.height,
+    0,
+    1,
+  );
+
   // Uniform Buffer to pass resolution
-  const resolutionBufferSize = 4 * 2; // used 8
+  const resolution = raymarchingUniforms.resolution;
   const resolutionBuffer = device.createBuffer({
-    size: resolutionBufferSize,
+    size: Math.max(16, resolution.byteLength),
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const resolution = new Float32Array([1920, 1080]);
   device.queue.writeBuffer(resolutionBuffer, 0, resolution);
 
   // Uniform Buffer to pass time
-  const timeBufferSize = 4; // used 16
+  const time = raymarchingUniforms.time;
   const timeBuffer = device.createBuffer({
-    size: timeBufferSize,
+    size: Math.max(16, time.byteLength),
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  const time = new Float32Array([0]);
   device.queue.writeBuffer(timeBuffer, 0, time);
+
+  const mouse = raymarchingUniforms.mouse;
+  const mouseBuffer = device.createBuffer({
+    size: Math.max(16, mouse.byteLength),
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(mouseBuffer, 0, mouse);
+
+  const antialiasing = raymarchingUniforms.antialiasing;
+  const antialiasingBuffer = device.createBuffer({
+    size: Math.max(16, antialiasing.byteLength),
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(antialiasingBuffer, 0, antialiasing);
 
   // // Vertex Buffer
   const verticesBufferSize = meshVertices.byteLength;
@@ -176,6 +196,20 @@ export async function BatchRenderMain() {
             type: "uniform",
           },
         },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {
+            type: "uniform",
+          },
+        },
+        {
+          binding: 3,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {
+            type: "uniform",
+          },
+        },
       ],
     },
     // bindGroupLayoutDescriptor
@@ -185,6 +219,8 @@ export async function BatchRenderMain() {
     entries: [
       { binding: 0, resource: { buffer: resolutionBuffer } },
       { binding: 1, resource: { buffer: timeBuffer } },
+      { binding: 2, resource: { buffer: mouseBuffer } },
+      { binding: 3, resource: { buffer: antialiasingBuffer } },
     ],
   });
 
