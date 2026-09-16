@@ -1,5 +1,6 @@
 ﻿using DualDrill.Common.Interop;
 using Evergine.Bindings.WebGPU;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 namespace DualDrill.Graphics.Backend;
@@ -15,6 +16,8 @@ internal readonly record struct WebGPUNETHandle<THandle, TResource>(
 
 public sealed partial class WebGPUNETBackend : IBackend<Backend>
 {
+    private readonly ConcurrentDictionary<nint, ConcurrentQueue<DeviceUncapturedError>> _uncapturedDeviceErrors = new();
+
     public static Backend Instance { get; } = new();
 
     private unsafe T* Alloc<T>(int count = 1) where T : unmanaged
@@ -71,6 +74,23 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     {
     }
 
+    private void RecordDeviceError(nint device, WGPUErrorType errorType, string message)
+    {
+        if (_uncapturedDeviceErrors.TryGetValue(device, out var errors))
+        {
+            errors.Enqueue(new(errorType, message));
+        }
+    }
+
+    private void ThrowPendingDeviceError(nint device)
+    {
+        if (_uncapturedDeviceErrors.TryGetValue(device, out var errors)
+            && errors.TryDequeue(out var error))
+        {
+            throw error;
+        }
+    }
+
     unsafe ValueTask<GPUDevice<Backend>> IBackend<Backend>.RequestDeviceAsync(GPUAdapter<Backend> adapter, GPUDeviceDescriptor descriptor, CancellationToken cancellation)
     {
         WGPUDeviceDescriptor descriptor_ = new();
@@ -83,11 +103,13 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             {
                 var queue_ = wgpuDeviceGetQueue(device);
                 var queue = new GPUQueue<Backend>(new(queue_.Handle));
+                var deviceHandle = (nint)device.Handle;
+                _uncapturedDeviceErrors.TryAdd(deviceHandle, new());
                 wgpuDeviceSetUncapturedErrorCallback(device, static (errorType, message, data) =>
                 {
                     var messageString = Marshal.PtrToStringUTF8((nint)message) ?? "Failed to get message";
-                    throw new DeviceUncapturedError(errorType, messageString);
-                }, null);
+                    Instance.RecordDeviceError((nint)data, errorType, messageString);
+                }, (void*)deviceHandle);
                 tcs.SetResult(new(new(device.Handle)) { Queue = queue });
             }
             else
@@ -341,6 +363,8 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUShaderModule<Backend> IBackend<Backend>.CreateShaderModule(GPUDevice<Backend> handle, GPUShaderModuleDescriptor descriptor)
     {
+        var nativeDevice = ToNative(handle.Handle);
+        ThrowPendingDeviceError((nint)nativeDevice.Handle);
         using var codeUtf8 = InteropUtf8StringValue.Create(descriptor.Code);
         var dc = new WGPUShaderModuleWGSLDescriptor
         {
@@ -355,7 +379,19 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             nextInChain = &dc.chain,
         };
-        var h = wgpuDeviceCreateShaderModule(ToNative(handle.Handle), &d);
+        var h = wgpuDeviceCreateShaderModule(nativeDevice, &d);
+        try
+        {
+            ThrowPendingDeviceError((nint)nativeDevice.Handle);
+        }
+        catch
+        {
+            if (h.Handle != 0)
+            {
+                wgpuShaderModuleRelease(h);
+            }
+            throw;
+        }
         return new(new(h.Handle));
     }
 
@@ -1084,7 +1120,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe void IBackend<Backend>.Poll(GPUDevice<Backend> device)
     {
-        wgpuDevicePoll(ToNative(device.Handle), false, null);
+        var nativeDevice = ToNative(device.Handle);
+        wgpuDevicePoll(nativeDevice, false, null);
+        ThrowPendingDeviceError((nint)nativeDevice.Handle);
     }
 
     async ValueTask IBackend<Backend>.PollAsync(GPUDevice<Backend> device, CancellationToken cancellation)
@@ -1114,4 +1152,3 @@ static class WebGPUNETExtension
     public unsafe static Span<WGPUVertexBufferLayout> GetBuffers(this WGPUVertexState value)
              => new(value.buffers, (int)value.bufferCount);
 }
-

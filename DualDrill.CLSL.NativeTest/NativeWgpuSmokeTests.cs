@@ -14,6 +14,27 @@ public sealed class NativeWgpuSmokeTests(ITestOutputHelper output)
     private static readonly TimeSpan MapTimeout = TimeSpan.FromSeconds(10);
 
     [Fact]
+    public async Task Invalid_shader_reports_managed_diagnostic()
+    {
+        using var instance = WebGPUNETBackend.Instance.CreateGPUInstance();
+        using var adapter = await instance.RequestAdapterAsync(
+            new()
+            {
+                PowerPreference = GPUPowerPreference.HighPerformance,
+                ForceFallbackAdapter = false,
+            },
+            CancellationToken.None);
+        using var device = await adapter.RequestDeviceAsync(new(), CancellationToken.None);
+
+        var error = Assert.ThrowsAny<GraphicsApiException>(
+            () => device.CreateShaderModule(new() { Code = "not valid WGSL" }));
+
+        Assert.Contains("parsing error", error.Message);
+        Assert.Contains("wgsl:", error.Message);
+        device.Poll();
+    }
+
+    [Fact]
     public async Task Compiled_triangle_renders_to_offscreen_texture()
     {
         output.WriteLine("native wgpu");
