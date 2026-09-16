@@ -19,14 +19,36 @@ visible instead of falling back to another shader. Animation and general
 reflection-driven rendering are intentionally out of scope: each known fixture
 has a fixed input profile.
 
+The raymarching fixture keeps its existing shader and entry-point names and uses
+these group 0 uniform bindings:
+
+| Binding | WGSL type | Value |
+| --- | --- | --- |
+| 0 | `vec2<f32>` | Canvas resolution |
+| 1 | `f32` | Time in seconds |
+| 2 | `vec4<f32>` | Mouse coordinates |
+| 3 | `i32` | Antialiasing level |
+
+Clients migrating from the two-binding shader must rebuild and reload their
+bind group with the mouse and antialiasing buffers. The bundled client defaults
+to the canvas center, time 0, and AA1. The shader defensively bounds AA to 1–3;
+AA1 has no subpixel offset, while AA2 and AA3 use the reference sample offsets.
+The complete 22-primitive scene and reference AO, shadow, back-light, and
+subsurface-lighting paths are restored, but image parity remains pending native
+validation against the independent GLSL reference.
+
 Only the existing white `MinimumHelloTriangleShaderModule` native smoke test is
 retained; it is distinct from the orange host `MinimumTriangleShader`. The
 three new examples are Debug demo profiles, not native execution-equivalence
 coverage. Their current WGSL uses numeric `bool(...)` conversions permitted by
-the current WGSL specification, but compatibility with the bundled native
-wgpu/Naga consumer is unverified. Raymarching's public Slang and WGSL compilation
-paths are covered in both Debug and Release; this does not prove shader semantic
-parity or native backend compatibility.
+the WGSL specification and accepted by the bundled Naga 0.19.2 consumer.
+Compatibility probes instead found that Naga 0.19.2 and Naga 22.1 reject
+current-WGSL function-local `const` declarations and loop-return forms emitted
+by Slang. The attempted desktop Evergine upgrade therefore failed its
+compatibility pre-check and no API migration was landed. Native work is
+selecting a genuinely modern, matched provider. Raymarching's public Slang and
+WGSL compilation paths are covered in both Debug and Release; this does not
+prove shader semantic parity or native backend compatibility.
 
 Generated IR, Slang, and WGSL are available at
 `/ilsl/compile/{shader-name}/{target}`. Reflection is at
