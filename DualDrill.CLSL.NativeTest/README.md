@@ -1,18 +1,9 @@
 # Native wgpu smoke test
 
-This optional Linux x64 xUnit project compiles the compiler host's orange
-triangle plus the existing Uniform, Mandelbrot, and Raymarching fixtures
-through the public CLSL WGSL compiler. Each fixed profile attempts one frame
-with native wgpu to a 64×64 offscreen texture and verifies readback pixels when
-compilation and pipeline creation succeed. A compiler or native shader failure
-fails the test rather than substituting another fixture. It needs no display,
+This optional Linux x64 xUnit project compiles the existing minimum triangle
+fixture through the public CLSL WGSL compiler, renders it with native wgpu to a
+64×64 offscreen texture, and verifies two readback pixels. It needs no display,
 surface, window, or browser.
-
-The checks are execution and pipeline-binding smoke tests, not general C#
-semantic-equivalence tests. The triangle and uniform profiles verify inside
-and outside pixels (with one byte of tolerance for RGBA8 float rounding).
-Fullscreen profiles clear to transparent and verify opaque output at points in
-both quad triangles. Time is fixed at zero; no animation is exercised.
 
 Run it from the repository root with the pinned compiler shell and native wgpu
 dependencies available. On the verified Ubuntu/NVIDIA host, nixGL intentionally

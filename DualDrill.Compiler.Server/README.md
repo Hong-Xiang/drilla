@@ -19,6 +19,14 @@ visible instead of falling back to another shader. Animation and general
 reflection-driven rendering are intentionally out of scope: each known fixture
 has a fixed input profile.
 
+Only the existing minimum-triangle native smoke test is retained. The three new
+examples are Debug demo profiles, not native execution-equivalence coverage.
+Their current WGSL uses numeric `bool(...)` conversions permitted by the
+current WGSL specification, but compatibility with the bundled native
+wgpu/Naga consumer is unverified. Raymarching also has a separate known Release
+compiler failure in `SlangEmitter.GetLabelName`; this slice does not change the
+compiler, native backend, or generated shader text.
+
 Generated IR, Slang, and WGSL are available at
 `/ilsl/compile/{shader-name}/{target}`. Reflection is at
 `/ilsl/reflect/{shader-name}`. The accepted shader names are
