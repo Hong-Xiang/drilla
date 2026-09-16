@@ -1,6 +1,7 @@
 ﻿using DualDrill.CLSL;
 using DualDrill.Engine.Shader;
 using DualDrill.Server.Services;
+using DualDrill.Shaders;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 

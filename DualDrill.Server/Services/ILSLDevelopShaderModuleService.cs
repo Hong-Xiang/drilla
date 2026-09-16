@@ -1,5 +1,6 @@
 ﻿using DualDrill.Engine.Shader;
 using DualDrill.CLSL;
+using DualDrill.Shaders;
 namespace DualDrill.Server.Services;
 
 public sealed class ILSLDevelopShaderModuleService

@@ -13,7 +13,7 @@
              Link="ShaderModule\SimpleStructUniformShaderModule.cs" />
     <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\MandelbrotDistanceShaderModule.cs"
              Link="ShaderModule\MandelbrotDistanceShaderModule.cs" />
-    <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\RaymarchingPrimitiveShader.cs"
+    <Compile Include="..\Shared\Shaders\RaymarchingPrimitiveShader.cs"
              Link="ShaderModule\RaymarchingPrimitiveShader.cs" />
   </ItemGroup>
 

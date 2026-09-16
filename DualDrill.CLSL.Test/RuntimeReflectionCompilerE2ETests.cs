@@ -13,6 +13,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.Mathematics;
+using DualDrill.Shaders;
 using Xunit.Abstractions;
 using static DualDrill.Mathematics.DMath;
 
@@ -171,7 +172,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     [Fact]
     public async Task RayMarchingCompilesThroughPublicWgslApi()
     {
-        var shader = new ShaderModule.RaymarchingPrimitiveShader();
+        var shader = new RaymarchingPrimitiveShader();
         var compilation = await AssertPublicWgslCompilation(shader);
         using var reflection = compilation.Reflection;
         var parameters = reflection.RootElement

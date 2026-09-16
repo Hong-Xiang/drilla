@@ -1,6 +1,7 @@
 using DualDrill.CLSL;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Compiler.Server;
+using DualDrill.Shaders;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://127.0.0.1:5083");
