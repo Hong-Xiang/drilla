@@ -1,5 +1,6 @@
 ﻿using DualDrill.Common.Interop;
 using Evergine.Bindings.WebGPU;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 namespace DualDrill.Graphics.Backend;
@@ -15,6 +16,11 @@ internal readonly record struct WebGPUNETHandle<THandle, TResource>(
 
 public sealed partial class WebGPUNETBackend : IBackend<Backend>
 {
+    private static readonly ConcurrentDictionary<nint, DeviceErrorState> s_deviceErrorStates = new();
+    private static int s_nextDeviceErrorStateId;
+
+    private readonly ConcurrentDictionary<nint, nint> _deviceErrorStateIds = new();
+
     public static Backend Instance { get; } = new();
 
     private unsafe T* Alloc<T>(int count = 1) where T : unmanaged
@@ -71,6 +77,84 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     {
     }
 
+    sealed class DeviceErrorState
+    {
+        private readonly GraphicsApiException<Backend> _callbackFailure =
+            new("Native WebGPU error callback failed before its diagnostic could be decoded.");
+        private int _callbackFailed;
+
+        public ConcurrentQueue<GraphicsApiException<Backend>> Errors { get; } = new();
+
+        public void MarkCallbackFailure() => Interlocked.Exchange(ref _callbackFailed, 1);
+
+        public GraphicsApiException<Backend>? TakeError()
+        {
+            if (Errors.TryDequeue(out var error))
+            {
+                return error;
+            }
+            return Interlocked.Exchange(ref _callbackFailed, 0) == 0 ? null : _callbackFailure;
+        }
+    }
+
+    private unsafe void RegisterDeviceErrorCallback(WGPUDevice device)
+    {
+        var state = new DeviceErrorState();
+        nint stateId;
+        do
+        {
+            stateId = Interlocked.Increment(ref s_nextDeviceErrorStateId);
+        }
+        while (stateId == 0 || !s_deviceErrorStates.TryAdd(stateId, state));
+
+        var deviceHandle = (nint)device.Handle;
+        if (_deviceErrorStateIds.TryGetValue(deviceHandle, out var previousStateId))
+        {
+            s_deviceErrorStates.TryRemove(previousStateId, out _);
+        }
+        _deviceErrorStateIds[deviceHandle] = stateId;
+
+        wgpuDeviceSetUncapturedErrorCallback(device, static (errorType, message, data) =>
+        {
+            DeviceErrorState? callbackState = null;
+            try
+            {
+                if (s_deviceErrorStates.TryGetValue((nint)data, out callbackState))
+                {
+                    var messageString = Marshal.PtrToStringUTF8((nint)message) ?? "Failed to get message";
+                    callbackState.Errors.Enqueue(new DeviceUncapturedError(errorType, messageString));
+                }
+            }
+            catch
+            {
+                callbackState?.MarkCallbackFailure();
+            }
+        }, (void*)stateId);
+    }
+
+    private void ThrowPendingDeviceError(nint device)
+    {
+        if (_deviceErrorStateIds.TryGetValue(device, out var stateId)
+            && s_deviceErrorStates.TryGetValue(stateId, out var state)
+            && state.TakeError() is { } error)
+        {
+            throw error;
+        }
+    }
+
+    private nint DetachDeviceErrorState(nint device)
+    {
+        return _deviceErrorStateIds.TryRemove(device, out var stateId) ? stateId : 0;
+    }
+
+    private static void ReleaseDeviceErrorState(nint stateId)
+    {
+        if (stateId != 0)
+        {
+            s_deviceErrorStates.TryRemove(stateId, out _);
+        }
+    }
+
     unsafe ValueTask<GPUDevice<Backend>> IBackend<Backend>.RequestDeviceAsync(GPUAdapter<Backend> adapter, GPUDeviceDescriptor descriptor, CancellationToken cancellation)
     {
         WGPUDeviceDescriptor descriptor_ = new();
@@ -83,11 +167,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             {
                 var queue_ = wgpuDeviceGetQueue(device);
                 var queue = new GPUQueue<Backend>(new(queue_.Handle));
-                wgpuDeviceSetUncapturedErrorCallback(device, static (errorType, message, data) =>
-                {
-                    var messageString = Marshal.PtrToStringUTF8((nint)message) ?? "Failed to get message";
-                    throw new DeviceUncapturedError(errorType, messageString);
-                }, null);
+                RegisterDeviceErrorCallback(device);
                 tcs.SetResult(new(new(device.Handle)) { Queue = queue });
             }
             else
@@ -341,6 +421,8 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUShaderModule<Backend> IBackend<Backend>.CreateShaderModule(GPUDevice<Backend> handle, GPUShaderModuleDescriptor descriptor)
     {
+        var nativeDevice = ToNative(handle.Handle);
+        ThrowPendingDeviceError((nint)nativeDevice.Handle);
         using var codeUtf8 = InteropUtf8StringValue.Create(descriptor.Code);
         var dc = new WGPUShaderModuleWGSLDescriptor
         {
@@ -355,7 +437,19 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             nextInChain = &dc.chain,
         };
-        var h = wgpuDeviceCreateShaderModule(ToNative(handle.Handle), &d);
+        var h = wgpuDeviceCreateShaderModule(nativeDevice, &d);
+        try
+        {
+            ThrowPendingDeviceError((nint)nativeDevice.Handle);
+        }
+        catch
+        {
+            if (h.Handle != 0)
+            {
+                wgpuShaderModuleRelease(h);
+            }
+            throw;
+        }
         return new(new(h.Handle));
     }
 
@@ -1084,19 +1178,23 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe void IBackend<Backend>.Poll(GPUDevice<Backend> device)
     {
-        wgpuDevicePoll(ToNative(device.Handle), false, null);
+        var nativeDevice = ToNative(device.Handle);
+        wgpuDevicePoll(nativeDevice, false, null);
+        ThrowPendingDeviceError((nint)nativeDevice.Handle);
     }
 
     async ValueTask IBackend<Backend>.PollAsync(GPUDevice<Backend> device, CancellationToken cancellation)
     {
+        var nativeDevice = ToNative(device.Handle);
         await Task.Run(() =>
         {
             unsafe static void PollWait(WGPUDevice device)
             {
                 wgpuDevicePoll(device, true, null);
             }
-            PollWait(ToNative(device.Handle));
+            PollWait(nativeDevice);
         }, cancellation).ConfigureAwait(true);
+        ThrowPendingDeviceError((nint)nativeDevice.Handle);
     }
 
     ValueTask<GPUAdapterInfo> IBackend<Backend>.RequestAdapterInfoAsync(GPUAdapter<Backend> adapter, CancellationToken cancellation)
@@ -1114,4 +1212,3 @@ static class WebGPUNETExtension
     public unsafe static Span<WGPUVertexBufferLayout> GetBuffers(this WGPUVertexState value)
              => new(value.buffers, (int)value.bufferCount);
 }
-
