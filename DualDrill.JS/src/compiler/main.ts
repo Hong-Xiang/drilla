@@ -16,79 +16,83 @@ type ShaderName =
   | "MandelbrotDistanceShaderModule"
   | "RaymarchingPrimitiveShader";
 
-type ShaderProfile =
-  | {
-      readonly name: "MinimumTriangleShader";
-      readonly label: "Triangle";
-      readonly kind: "triangle";
-    }
-  | {
-      readonly name: "SimpleStructUniformShaderModule";
-      readonly label: "Uniform";
-      readonly kind: "uniform";
-    }
-  | {
-      readonly name: "MandelbrotDistanceShaderModule";
-      readonly label: "Mandelbrot";
-      readonly kind: "mandelbrot";
-    }
-  | {
-      readonly name: "RaymarchingPrimitiveShader";
-      readonly label: "Raymarching";
-      readonly kind: "raymarching";
-    };
+interface UniformBinding {
+  readonly binding: number;
+  readonly size: number;
+  readonly data: Float32Array;
+}
+
+interface VertexInput {
+  readonly layout: GPUVertexBufferLayout;
+  readonly data: Float32Array;
+}
+
+interface ShaderProfile {
+  readonly name: ShaderName;
+  readonly label: string;
+  readonly drawCount: number;
+  readonly vertex: VertexInput | null;
+  readonly uniforms: readonly UniformBinding[];
+}
 
 interface Runtime {
   readonly device: GPUDevice;
   readonly context: GPUCanvasContext;
   readonly format: GPUTextureFormat;
-  readonly state: {
-    lost: boolean;
-    selected: ShaderName;
-    uncapturedError: string | null;
-  };
+  lost: boolean;
+  selected: ShaderProfile;
+  uncapturedError: string | null;
 }
 
-interface DrawResources {
-  readonly bindGroup: GPUBindGroup | null;
-  readonly vertexBuffer: GPUBuffer | null;
-  readonly buffers: readonly GPUBuffer[];
-}
-
-interface Outputs {
-  readonly status: HTMLParagraphElement;
-  readonly adapter: HTMLPreElement;
-  readonly diagnostics: HTMLPreElement;
-  readonly wgsl: HTMLPreElement;
-}
-
-interface ShaderButton {
-  readonly element: HTMLButtonElement;
-  readonly name: ShaderName;
-}
-
-const profiles: Readonly<Record<ShaderName, ShaderProfile>> = {
-  MinimumTriangleShader: {
+const profiles = [
+  {
     name: "MinimumTriangleShader",
     label: "Triangle",
-    kind: "triangle",
+    drawCount: 3,
+    vertex: null,
+    uniforms: [],
   },
-  SimpleStructUniformShaderModule: {
+  {
     name: "SimpleStructUniformShaderModule",
     label: "Uniform",
-    kind: "uniform",
+    drawCount: 3,
+    vertex: null,
+    uniforms: [
+      {
+        binding: 0,
+        size: 32,
+        data: new Float32Array([0.1, 0.65, 1, 1, 0.7, 0.7, 0.1, 0]),
+      },
+    ],
   },
-  MandelbrotDistanceShaderModule: {
+  {
     name: "MandelbrotDistanceShaderModule",
     label: "Mandelbrot",
-    kind: "mandelbrot",
+    drawCount: 6,
+    vertex: {
+      layout: fullScreenVertexLayout,
+      data: fullScreenVertices,
+    },
+    uniforms: [{ binding: 0, size: 16, data: new Float32Array([0]) }],
   },
-  RaymarchingPrimitiveShader: {
+  {
     name: "RaymarchingPrimitiveShader",
     label: "Raymarching",
-    kind: "raymarching",
+    drawCount: 6,
+    vertex: {
+      layout: fullScreenVertexLayout,
+      data: fullScreenVertices,
+    },
+    uniforms: [
+      {
+        binding: 0,
+        size: 16,
+        data: new Float32Array([canvasWidth, canvasHeight]),
+      },
+      { binding: 1, size: 16, data: new Float32Array([0]) },
+    ],
   },
-};
+] as const satisfies readonly ShaderProfile[];
 
 function requireElement<T extends Element>(
   id: string,
@@ -101,16 +105,29 @@ function requireElement<T extends Element>(
   return element;
 }
 
-function parseShaderName(value: string | undefined): ShaderName {
-  switch (value) {
-    case "MinimumTriangleShader":
-    case "SimpleStructUniformShaderModule":
-    case "MandelbrotDistanceShaderModule":
-    case "RaymarchingPrimitiveShader":
-      return value;
-    default:
-      throw new Error(`Unknown shader button '${String(value)}'.`);
+function requireProfile(name: string | undefined): ShaderProfile {
+  const profile = profiles.find((candidate) => candidate.name === name);
+  if (!profile) {
+    throw new Error(`Unknown shader button '${String(name)}'.`);
   }
+  return profile;
+}
+
+const buttonGroup = requireElement("shader-buttons", HTMLDivElement);
+const statusOutput = requireElement("status", HTMLParagraphElement);
+const adapterOutput = requireElement("adapter", HTMLPreElement);
+const diagnosticsOutput = requireElement("diagnostics", HTMLPreElement);
+const wgslOutput = requireElement("wgsl", HTMLPreElement);
+const canvas = requireElement("shader-canvas", HTMLCanvasElement);
+const buttons = Array.from(
+  document.querySelectorAll<HTMLButtonElement>("button[data-shader]"),
+  (element) => ({
+    element,
+    profile: requireProfile(element.dataset.shader),
+  }),
+);
+if (buttons.length !== profiles.length) {
+  throw new Error("Expected one button for each supported shader.");
 }
 
 function describeError(error: unknown): string {
@@ -134,33 +151,23 @@ function formatAdapterInfo(info: GPUAdapterInfo): string {
     : availableFields.map(([name, value]) => `${name}: ${value}`).join("\n");
 }
 
-function setError(status: HTMLParagraphElement, message: string): void {
-  status.classList.add("error");
-  status.textContent = message;
+function showStatus(message: string, error = false): void {
+  statusOutput.classList.toggle("error", error);
+  statusOutput.textContent = message;
 }
 
-function setStatus(status: HTMLParagraphElement, message: string): void {
-  status.classList.remove("error");
-  status.textContent = message;
-}
-
-function setButtonsDisabled(
-  buttons: readonly ShaderButton[],
-  disabled: boolean,
-): void {
+function setBusy(busy: boolean, disabled = busy): void {
+  buttonGroup.setAttribute("aria-busy", String(busy));
   for (const button of buttons) {
     button.element.disabled = disabled;
   }
 }
 
-function selectButton(
-  buttons: readonly ShaderButton[],
-  selected: ShaderName,
-): void {
+function selectButton(selected: ShaderProfile): void {
   for (const button of buttons) {
     button.element.setAttribute(
       "aria-pressed",
-      String(button.name === selected),
+      String(button.profile === selected),
     );
   }
 }
@@ -175,28 +182,25 @@ async function fetchWgsl(profile: ShaderProfile): Promise<string> {
   return response.text();
 }
 
-async function withGpuErrorScopes<T>(
+async function withGpuErrorScopes(
   device: GPUDevice,
-  action: () => Promise<T>,
-): Promise<T> {
+  action: () => Promise<void>,
+): Promise<void> {
   device.pushErrorScope("out-of-memory");
   device.pushErrorScope("internal");
   device.pushErrorScope("validation");
 
-  let outcome: { readonly value: T } | null = null;
   let actionError: unknown;
   try {
-    outcome = { value: await action() };
+    await action();
   } catch (error: unknown) {
     actionError = error;
   }
 
   const gpuErrors: GPUError[] = [];
   try {
-    const validationError = await device.popErrorScope();
-    const internalError = await device.popErrorScope();
-    const outOfMemoryError = await device.popErrorScope();
-    for (const error of [validationError, internalError, outOfMemoryError]) {
+    for (let remaining = 0; remaining < 3; remaining += 1) {
+      const error = await device.popErrorScope();
       if (error) {
         gpuErrors.push(error);
       }
@@ -215,10 +219,6 @@ async function withGpuErrorScopes<T>(
   if (actionError !== undefined) {
     throw actionError;
   }
-  if (!outcome) {
-    throw new Error("WebGPU operation returned no result.");
-  }
-  return outcome.value;
 }
 
 function createBuffer(
@@ -242,7 +242,7 @@ function createDrawResources(
   device: GPUDevice,
   pipeline: GPURenderPipeline,
   profile: ShaderProfile,
-): DrawResources {
+) {
   const buffers: GPUBuffer[] = [];
   const own = (buffer: GPUBuffer): GPUBuffer => {
     buffers.push(buffer);
@@ -250,100 +250,39 @@ function createDrawResources(
   };
 
   try {
-    switch (profile.kind) {
-      case "triangle":
-        return { bindGroup: null, vertexBuffer: null, buffers };
-      case "uniform": {
-        const uniformBuffer = own(
-          createBuffer(
-            device,
-            `${profile.label} uniform`,
-            32,
-            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            new Float32Array([0.1, 0.65, 1, 1, 0.7, 0.7, 0.1, 0]),
-          ),
-        );
-        return {
-          bindGroup: device.createBindGroup({
-            label: `${profile.label} bind group`,
-            layout: pipeline.getBindGroupLayout(0),
-            entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-          }),
-          vertexBuffer: null,
-          buffers,
-        };
-      }
-      case "mandelbrot": {
-        const vertexBuffer = own(
+    const vertexBuffer = profile.vertex
+      ? own(
           createBuffer(
             device,
             `${profile.label} vertices`,
-            fullScreenVertices.byteLength,
+            profile.vertex.data.byteLength,
             GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-            fullScreenVertices,
+            profile.vertex.data,
           ),
-        );
-        const timeBuffer = own(
-          createBuffer(
-            device,
-            `${profile.label} time`,
-            16,
-            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            new Float32Array([0]),
-          ),
-        );
-        return {
-          bindGroup: device.createBindGroup({
+        )
+      : null;
+    const entries = profile.uniforms.map(({ binding, size, data }) => {
+      const buffer = own(
+        createBuffer(
+          device,
+          `${profile.label} uniform ${binding}`,
+          size,
+          GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+          data,
+        ),
+      );
+      return { binding, resource: { buffer } };
+    });
+    const bindGroup =
+      entries.length === 0
+        ? null
+        : device.createBindGroup({
             label: `${profile.label} bind group`,
             layout: pipeline.getBindGroupLayout(0),
-            entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
-          }),
-          vertexBuffer,
-          buffers,
-        };
-      }
-      case "raymarching": {
-        const vertexBuffer = own(
-          createBuffer(
-            device,
-            `${profile.label} vertices`,
-            fullScreenVertices.byteLength,
-            GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-            fullScreenVertices,
-          ),
-        );
-        const resolutionBuffer = own(
-          createBuffer(
-            device,
-            `${profile.label} resolution`,
-            16,
-            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            new Float32Array([canvasWidth, canvasHeight]),
-          ),
-        );
-        const timeBuffer = own(
-          createBuffer(
-            device,
-            `${profile.label} time`,
-            16,
-            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-            new Float32Array([0]),
-          ),
-        );
-        return {
-          bindGroup: device.createBindGroup({
-            label: `${profile.label} bind group`,
-            layout: pipeline.getBindGroupLayout(0),
-            entries: [
-              { binding: 0, resource: { buffer: resolutionBuffer } },
-              { binding: 1, resource: { buffer: timeBuffer } },
-            ],
-          }),
-          vertexBuffer,
-          buffers,
-        };
-      }
-    }
+            entries,
+          });
+
+    return { bindGroup, vertexBuffer, buffers };
   } catch (error: unknown) {
     for (const buffer of buffers) {
       buffer.destroy();
@@ -352,68 +291,48 @@ function createDrawResources(
   }
 }
 
-function clearCanvas(runtime: Runtime, label: string): void {
-  const encoder = runtime.device.createCommandEncoder({
-    label: `${label} clear encoder`,
-  });
-  const pass = encoder.beginRenderPass({
-    label: `${label} clear pass`,
-    colorAttachments: [
-      {
-        view: runtime.context.getCurrentTexture().createView(),
-        clearValue: clearColor,
-        loadOp: "clear",
-        storeOp: "store",
-      },
-    ],
-  });
-  pass.end();
-  runtime.device.queue.submit([encoder.finish()]);
-}
-
-function vertexBuffers(
+function finishPendingOutputs(
   profile: ShaderProfile,
-): readonly GPUVertexBufferLayout[] {
-  switch (profile.kind) {
-    case "triangle":
-    case "uniform":
-      return [];
-    case "mandelbrot":
-    case "raymarching":
-      return [fullScreenVertexLayout];
+  receivedWgsl: boolean,
+  receivedDiagnostics: boolean,
+): void {
+  if (!receivedWgsl) {
+    wgslOutput.textContent = `No WGSL received for ${profile.name}.`;
+  }
+  if (!receivedDiagnostics) {
+    diagnosticsOutput.textContent = `No WebGPU diagnostics produced for ${profile.name}.`;
   }
 }
 
 async function renderProfile(
   runtime: Runtime,
   profile: ShaderProfile,
-  outputs: Outputs,
 ): Promise<void> {
-  outputs.wgsl.textContent = `Waiting for ${profile.name} compiler response.`;
-  outputs.diagnostics.textContent = `Waiting for ${profile.name} WebGPU diagnostics.`;
-  setStatus(outputs.status, `Clearing the canvas for ${profile.label}…`);
-  await withGpuErrorScopes(runtime.device, async () => {
-    clearCanvas(runtime, profile.label);
-    await runtime.device.queue.onSubmittedWorkDone();
-  });
-
-  setStatus(outputs.status, `Compiling ${profile.label} from C#…`);
-  const code = await fetchWgsl(profile);
-  outputs.wgsl.textContent = code;
-
+  let receivedWgsl = false;
+  let receivedDiagnostics = false;
   const ownedBuffers: GPUBuffer[] = [];
+
+  wgslOutput.textContent = `Waiting for ${profile.name} compiler response.`;
+  diagnosticsOutput.textContent = `Waiting for ${profile.name} WebGPU diagnostics.`;
+  showStatus(`Compiling ${profile.label} from C#…`);
+
   try {
+    const code = await fetchWgsl(profile);
+    receivedWgsl = true;
+    wgslOutput.textContent = code;
+
     await withGpuErrorScopes(runtime.device, async () => {
       const module = runtime.device.createShaderModule({
         label: `${profile.label} generated WGSL`,
         code,
       });
       const compilationInfo = await module.getCompilationInfo();
+      receivedDiagnostics = true;
       const diagnostics = compilationInfo.messages.map(
         (message) =>
           `${message.type} ${message.lineNum}:${message.linePos} ${message.message}`,
       );
-      outputs.diagnostics.textContent =
+      diagnosticsOutput.textContent =
         diagnostics.length === 0
           ? `No WebGPU compilation diagnostics for ${profile.name}.`
           : diagnostics.join("\n");
@@ -432,14 +351,14 @@ async function renderProfile(
         );
       }
 
-      setStatus(outputs.status, `Creating the ${profile.label} pipeline…`);
+      showStatus(`Creating the ${profile.label} pipeline…`);
       const pipeline = await runtime.device.createRenderPipelineAsync({
         label: `${profile.label} pipeline`,
         layout: "auto",
         vertex: {
           module,
           entryPoint: "vs",
-          buffers: vertexBuffers(profile),
+          buffers: profile.vertex ? [profile.vertex.layout] : [],
         },
         fragment: {
           module,
@@ -472,13 +391,14 @@ async function renderProfile(
       if (resources.vertexBuffer) {
         pass.setVertexBuffer(0, resources.vertexBuffer);
       }
-      pass.draw(
-        profile.kind === "triangle" || profile.kind === "uniform" ? 3 : 6,
-      );
+      pass.draw(profile.drawCount);
       pass.end();
       runtime.device.queue.submit([encoder.finish()]);
       await runtime.device.queue.onSubmittedWorkDone();
     });
+  } catch (error: unknown) {
+    finishPendingOutputs(profile, receivedWgsl, receivedDiagnostics);
+    throw error;
   } finally {
     for (const buffer of ownedBuffers) {
       buffer.destroy();
@@ -486,24 +406,19 @@ async function renderProfile(
   }
 }
 
-async function initialize(
-  buttons: readonly ShaderButton[],
-  outputs: Outputs,
-): Promise<Runtime> {
+async function initialize(): Promise<Runtime> {
   if (!navigator.gpu) {
     throw new Error("WebGPU is not available in this browser.");
   }
 
-  setStatus(outputs.status, "Requesting the browser's default WebGPU adapter…");
+  showStatus("Requesting the browser's default WebGPU adapter…");
   const adapter = await navigator.gpu.requestAdapter();
   if (!adapter) {
     throw new Error("The browser did not provide a WebGPU adapter.");
   }
-  const adapterInfo = adapter.info;
-  outputs.adapter.textContent = formatAdapterInfo(adapterInfo);
+  adapterOutput.textContent = formatAdapterInfo(adapter.info);
 
   const device = await adapter.requestDevice();
-  const canvas = requireElement("shader-canvas", HTMLCanvasElement);
   const context = canvas.getContext("webgpu");
   if (!context) {
     throw new Error("Failed to create a WebGPU canvas context.");
@@ -511,95 +426,94 @@ async function initialize(
   const format = navigator.gpu.getPreferredCanvasFormat();
   context.configure({ device, format, alphaMode: "opaque" });
 
-  const state: Runtime["state"] = {
+  const runtime: Runtime = {
+    device,
+    context,
+    format,
     lost: false,
-    selected: "MinimumTriangleShader",
+    selected: profiles[0],
     uncapturedError: null,
   };
   device.onuncapturederror = (event) => {
-    state.uncapturedError = `${state.selected}: WebGPU uncaptured error: ${event.error.message}`;
-    setError(outputs.status, state.uncapturedError);
     console.error(event.error);
+    if (runtime.lost) {
+      return;
+    }
+    runtime.uncapturedError = `${runtime.selected.name}: WebGPU uncaptured error: ${event.error.message}`;
+    canvas.hidden = true;
+    showStatus(runtime.uncapturedError, true);
   };
   void device.lost.then((loss) => {
-    state.lost = true;
-    setButtonsDisabled(buttons, true);
-    setError(
-      outputs.status,
-      `${state.selected}: WebGPU device lost (${loss.reason}): ${loss.message}`,
+    runtime.lost = true;
+    canvas.hidden = true;
+    setBusy(false, true);
+    showStatus(
+      `${runtime.selected.name}: WebGPU device lost (${loss.reason}): ${loss.message}`,
+      true,
     );
   });
 
-  return { device, context, format, state };
+  return runtime;
 }
 
 async function main(): Promise<void> {
-  const outputs: Outputs = {
-    status: requireElement("status", HTMLParagraphElement),
-    adapter: requireElement("adapter", HTMLPreElement),
-    diagnostics: requireElement("diagnostics", HTMLPreElement),
-    wgsl: requireElement("wgsl", HTMLPreElement),
-  };
-  const buttons = Array.from(
-    document.querySelectorAll<HTMLButtonElement>("button[data-shader]"),
-    (element): ShaderButton => ({
-      element,
-      name: parseShaderName(element.dataset.shader),
-    }),
-  );
-  if (buttons.length !== Object.keys(profiles).length) {
-    throw new Error("Expected one button for each supported shader.");
-  }
+  setBusy(true);
+  const runtime = await initialize();
 
-  setButtonsDisabled(buttons, true);
-  const runtime = await initialize(buttons, outputs);
-
-  const select = async (name: ShaderName): Promise<void> => {
-    if (runtime.state.lost) {
+  const select = async (profile: ShaderProfile): Promise<void> => {
+    if (runtime.lost) {
       return;
     }
 
-    const profile = profiles[name];
-    runtime.state.selected = name;
-    selectButton(buttons, name);
-    setButtonsDisabled(buttons, true);
+    runtime.selected = profile;
+    runtime.uncapturedError = null;
+    canvas.hidden = true;
+    selectButton(profile);
+    setBusy(true);
     try {
-      await renderProfile(runtime, profile, outputs);
-      if (runtime.state.uncapturedError) {
-        setError(outputs.status, runtime.state.uncapturedError);
-      } else {
-        setStatus(
-          outputs.status,
-          `${profile.label} (${profile.name}) rendered one frame successfully.`,
+      await renderProfile(runtime, profile);
+      if (runtime.lost) {
+        return;
+      }
+      if (runtime.uncapturedError) {
+        showStatus(runtime.uncapturedError, true);
+        return;
+      }
+
+      canvas.hidden = false;
+      showStatus(
+        `${profile.label} (${profile.name}) rendered one frame successfully.`,
+      );
+    } catch (error: unknown) {
+      if (!runtime.lost) {
+        showStatus(
+          `${profile.label} (${profile.name}) failed: ${describeError(error)}`,
+          true,
         );
       }
-    } catch (error: unknown) {
-      setError(
-        outputs.status,
-        `${profile.label} (${profile.name}) failed: ${describeError(error)}`,
-      );
       console.error(error);
     } finally {
-      if (!runtime.state.lost) {
-        setButtonsDisabled(buttons, false);
+      if (!runtime.lost) {
+        setBusy(false);
       }
     }
   };
 
   for (const button of buttons) {
     button.element.addEventListener("click", () => {
-      void select(button.name);
+      void select(button.profile);
     });
   }
-  await select("MinimumTriangleShader");
+  await select(profiles[0]);
 }
 
-main().catch((error: unknown) => {
-  const message = describeError(error);
-  const status = document.getElementById("status");
-  if (status) {
-    status.classList.add("error");
-    status.textContent = message;
-  }
+void main().catch((error: unknown) => {
+  setBusy(false, true);
+  canvas.hidden = true;
+  wgslOutput.textContent =
+    "No WGSL requested because WebGPU initialization failed.";
+  diagnosticsOutput.textContent =
+    "No WebGPU diagnostics produced because initialization failed.";
+  showStatus(describeError(error), true);
   console.error(error);
 });

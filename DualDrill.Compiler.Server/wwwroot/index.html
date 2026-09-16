@@ -29,6 +29,10 @@
         border: 1px solid #475569;
       }
 
+      canvas[hidden] {
+        display: none;
+      }
+
       .shader-buttons {
         display: flex;
         flex-wrap: wrap;
@@ -51,8 +55,12 @@
       }
 
       button:disabled {
-        cursor: wait;
+        cursor: not-allowed;
         opacity: 0.6;
+      }
+
+      .shader-buttons[aria-busy="true"] button {
+        cursor: wait;
       }
 
       pre {
@@ -70,7 +78,13 @@
   </head>
   <body>
     <h1>C# compiler → WebGPU shaders</h1>
-    <div class="shader-buttons" role="group" aria-label="Shader selection">
+    <div
+      id="shader-buttons"
+      class="shader-buttons"
+      role="group"
+      aria-label="Shader selection"
+      aria-busy="true"
+    >
       <button
         type="button"
         data-shader="MinimumTriangleShader"
@@ -101,7 +115,7 @@
       </button>
     </div>
     <p id="status" aria-live="polite">Starting…</p>
-    <canvas id="shader-canvas" width="800" height="600"></canvas>
+    <canvas id="shader-canvas" width="800" height="600" hidden></canvas>
 
     <h2>Adapter</h2>
     <pre id="adapter">Not requested yet.</pre>
