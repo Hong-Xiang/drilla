@@ -271,7 +271,6 @@ function createDrawResources(
   profile: ShaderProfile,
 ) {
   const buffers: GPUBuffer[] = [];
-  const uniformBuffers = new Map<number, GPUBuffer>();
   const timeData = profile.timeBinding === null ? null : new Float32Array([0]);
   const own = (buffer: GPUBuffer): GPUBuffer => {
     buffers.push(buffer);
@@ -304,7 +303,6 @@ function createDrawResources(
           initialData,
         ),
       );
-      uniformBuffers.set(binding, buffer);
       return { binding, resource: { buffer } };
     });
     const bindGroup =
@@ -320,13 +318,15 @@ function createDrawResources(
       readonly buffer: GPUBuffer;
     } | null = null;
     if (profile.timeBinding !== null) {
-      const timeBuffer = uniformBuffers.get(profile.timeBinding);
-      if (!timeData || !timeBuffer) {
+      const timeEntry = entries.find(
+        ({ binding }) => binding === profile.timeBinding,
+      );
+      if (!timeData || !timeEntry) {
         throw new Error(
           `${profile.label} has no uniform at time binding ${profile.timeBinding}.`,
         );
       }
-      time = { data: timeData, buffer: timeBuffer };
+      time = { data: timeData, buffer: timeEntry.resource.buffer };
     }
 
     return { bindGroup, vertexBuffer, buffers, time };
@@ -645,13 +645,6 @@ async function initialize(): Promise<Runtime> {
       true,
     );
   });
-  window.addEventListener("pagehide", () => {
-    stopRendering(runtime);
-    if (!runtime.lost) {
-      setBusy(false);
-    }
-  });
-
   return runtime;
 }
 
@@ -723,6 +716,17 @@ async function main(): Promise<void> {
       void select(button.profile);
     });
   }
+  window.addEventListener("pagehide", () => {
+    stopRendering(runtime);
+    if (!runtime.lost) {
+      setBusy(false);
+    }
+  });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted && !runtime.lost) {
+      void select(runtime.selected);
+    }
+  });
   await select(profiles[0]);
 }
 

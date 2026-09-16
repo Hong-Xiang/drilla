@@ -407,6 +407,10 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
   deferredQueueWait.resolve();
   await settle();
   assert.equal(rafCallbacks.size, 0);
+  windowElement.dispatch("pageshow", { persisted: true });
+  await settle();
+  assert.match(status.textContent, /^Animating Mandelbrot/);
+  assert.equal(rafCallbacks.size, 1);
 
   await click("RaymarchingPrimitiveShader");
   const lossBuffers = buffers.filter(
@@ -418,6 +422,18 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
   assert.ok(lossBuffers.every((buffer) => buffer.destroyed));
   assert.match(status.textContent, /WebGPU device lost/);
   const lossStatus = status.textContent;
+  const fetchesBeforeLostRestore = events.filter((event) =>
+    event.startsWith("fetch:"),
+  ).length;
+  windowElement.dispatch("pagehide");
+  windowElement.dispatch("pageshow", { persisted: true });
+  await settle();
+  assert.equal(rafCallbacks.size, 0);
+  assert.equal(
+    events.filter((event) => event.startsWith("fetch:")).length,
+    fetchesBeforeLostRestore,
+  );
+  assert.equal(status.textContent, lossStatus);
   device.onuncapturederror({ error: new Error("late validation") });
   assert.equal(status.textContent, lossStatus);
   assert.ok(buttons.every((button) => button.disabled));
