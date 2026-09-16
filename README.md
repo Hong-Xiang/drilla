@@ -58,11 +58,13 @@ nix develop path:/path/to/toolchain-worktree --command \
   -p:DirectoryBuildPropsPath=/path/to/toolchain-worktree/Directory.Build.props
 ```
 
-Restore and test the compiler project headlessly:
+Test the compiler project headlessly in both configurations. The compiler reads
+the built CIL directly, so Release optimization can expose a different control-flow
+graph than Debug:
 
 ```sh
-dotnet restore DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj
-dotnet test DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj --no-restore
+dotnet test DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj -c Debug
+dotnet test DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj -c Release
 ```
 
 This is a reproducible development shell, not a fully hermetic Nix build:

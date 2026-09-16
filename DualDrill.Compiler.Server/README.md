@@ -24,9 +24,9 @@ retained; it is distinct from the orange host `MinimumTriangleShader`. The
 three new examples are Debug demo profiles, not native execution-equivalence
 coverage. Their current WGSL uses numeric `bool(...)` conversions permitted by
 the current WGSL specification, but compatibility with the bundled native
-wgpu/Naga consumer is unverified. Raymarching also has a separate known Release
-compiler failure in `SlangEmitter.GetLabelName`; this slice does not change the
-compiler, native backend, or generated shader text.
+wgpu/Naga consumer is unverified. Raymarching's public Slang and WGSL compilation
+paths are covered in both Debug and Release; this does not prove shader semantic
+parity or native backend compatibility.
 
 Generated IR, Slang, and WGSL are available at
 `/ilsl/compile/{shader-name}/{target}`. Reflection is at

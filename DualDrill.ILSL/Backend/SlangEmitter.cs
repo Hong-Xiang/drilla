@@ -604,10 +604,10 @@ public class SlangEmitter
         Writer.Write("// emitting branch: ");
         Writer.WriteLine(GetLabelName(target));
         Writer.Write("// next target");
-        if (NextBlock.Count > 0)
-            Writer.WriteLine(GetLabelName(NextBlock.Peek()));
+        if (NextBlock.TryPeek(out var next) && next is not null)
+            Writer.WriteLine(GetLabelName(next));
         else
-            Writer.WriteLine();
+            Writer.WriteLine("exit");
         Writer.Write("// continue target");
         if (ContinueTarget.Count > 0)
             Writer.WriteLine(GetLabelName(ContinueTarget.Peek()));
