@@ -14,4 +14,7 @@ The source contains its MIT license and must remain byte-for-byte unchanged.
 Tests derive AA2/AA3 scratch copies by replacing exactly the two
 `#define AA 1` occurrences, then compile a tiny GLSL wrapper directly to WGSL.
 The wrapper supplies fixed Shadertoy inputs and performs only the required Y
-flip when passing `gl_FragCoord` to `mainImage`.
+flip when passing `gl_FragCoord` to `mainImage`. Its `main` uses a function-local
+color before assigning the stage output, avoiding an invalid private-address-
+space pointer being passed to `mainImage`'s function-address-space `out`
+parameter.

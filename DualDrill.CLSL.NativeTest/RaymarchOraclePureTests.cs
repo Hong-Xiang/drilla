@@ -74,6 +74,9 @@ public sealed class RaymarchOraclePureTests
             Assert.False(string.IsNullOrWhiteSpace(wgsl));
             Assert.Contains("@fragment", wgsl);
             Assert.Contains("fn main", wgsl);
+            Assert.Matches(
+                @"var (?<color>\S+) : vec4<f32>;\s*mainImage_0\(&\(\k<color>\)",
+                wgsl);
         }
     }
 

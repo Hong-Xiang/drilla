@@ -280,7 +280,9 @@ internal static class RaymarchReference
         #include "{{FileName}}"
         void main()
         {
-            mainImage(color, vec2(gl_FragCoord.x, iResolution.y - gl_FragCoord.y));
+            vec4 fragmentColor;
+            mainImage(fragmentColor, vec2(gl_FragCoord.x, iResolution.y - gl_FragCoord.y));
+            color = fragmentColor;
         }
         """;
 

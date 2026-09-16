@@ -37,7 +37,9 @@ the public `CLSLCompiler` CIL → Slang → WGSL path. It independently compiles
 the pinned, pristine MIT-licensed Xds3zN GLSL reference in `Reference/` directly
 to WGSL with `slangc`. Both pipelines execute on the same adapter/device with an
 independent location-0 `vec2` reference vertex shader and the same six fullscreen
-vertices.
+vertices. The GLSL wrapper receives `mainImage` into a function-local color and
+then assigns the stage output so Slang does not emit an invalid
+private-address-space pointer argument.
 
 Four 320×180 RGBA8 profiles cover AA1/AA2/AA3 at time 1 with centered mouse,
 plus AA1 at time 3 with off-center mouse. The candidate receives the actual
