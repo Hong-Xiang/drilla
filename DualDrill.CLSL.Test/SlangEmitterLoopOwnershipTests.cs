@@ -5,6 +5,7 @@ using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
@@ -34,46 +35,107 @@ public sealed class SlangEmitterLoopOwnershipTests
     }
 
     [Fact]
-    public void TransferToUnownedLoopReportsFunctionSourceAndTarget()
+    public async Task EarlyReturnDoesNotEraseNormalOuterContinuation()
+    {
+        var outer = Label.Create("outer");
+        var inner = Label.Create("inner");
+        var earlyReturn = Label.Create("earlyReturn");
+        var normal = Label.Create("normal");
+        var terminal = Label.Create("terminal");
+        var condition = new ParameterDeclaration("condition", ShaderType.Bool, []);
+        var declaration = new FunctionDeclaration("NestedEarlyReturn", [condition],
+            new FunctionReturn(ShaderType.I32, []), []);
+        var outerBody = Body(outer, Terminator.B.Br<RegionJump, IShaderValue>(new(inner, [])), null);
+        var innerBody = Body(inner,
+            Terminator.B.BrIf<RegionJump, IShaderValue>(
+                condition.Value, new RegionJump(earlyReturn, []), new RegionJump(normal, [])), null);
+        var earlyReturnBody = Body(
+            earlyReturn, Terminator.B.Br<RegionJump, IShaderValue>(new(terminal, [])), terminal);
+        var normalBody = Body(normal, Terminator.B.Br<RegionJump, IShaderValue>(new(outer, [])), outer);
+        var terminalBody = Body(terminal,
+            Terminator.B.ReturnExpr<RegionJump, IShaderValue>(ShaderValue.Literal(new I32Literal(0))), null);
+        var body = new FunctionBody4(declaration,
+            RegionTree.Loop(outer,
+            [
+                RegionTree.Loop(inner,
+                [
+                    RegionTree.Block(earlyReturn, [], earlyReturnBody, null),
+                    RegionTree.Block(normal, [], normalBody, null)
+                ], innerBody, null, null),
+                RegionTree.Block(terminal, [], terminalBody, null)
+            ], outerBody, null, null));
+
+        var source = Emit(body);
+        var innerLoop = LoopScopes(source)[1];
+        var innerSource = source[innerLoop.Start..(innerLoop.End + 1)];
+
+        Assert.Contains("return 0;", innerSource);
+        AssertLexicalUnwind(source, 2);
+        await new SlangService().ValidateAsync(source);
+    }
+
+    [Fact]
+    public void MultipleSourcesMayShareOneNormalTransfer()
+    {
+        var outer = Label.Create("outer");
+        var inner = Label.Create("inner");
+        var left = Label.Create("left");
+        var right = Label.Create("right");
+        var condition = new ParameterDeclaration("condition", ShaderType.Bool, []);
+        var declaration = new FunctionDeclaration("SharedNormalTransfer", [condition],
+            new FunctionReturn(ShaderType.Unit, []), []);
+        var outerBody = Body(outer, Terminator.B.Br<RegionJump, IShaderValue>(new(inner, [])), null);
+        var innerBody = Body(inner,
+            Terminator.B.BrIf<RegionJump, IShaderValue>(
+                condition.Value, new RegionJump(left, []), new RegionJump(right, [])), null);
+        var leftBody = Body(left, Terminator.B.Br<RegionJump, IShaderValue>(new(outer, [])), outer);
+        var rightBody = Body(right, Terminator.B.Br<RegionJump, IShaderValue>(new(outer, [])), outer);
+        var body = new FunctionBody4(declaration,
+            RegionTree.Loop(outer,
+            [
+                RegionTree.Loop(inner,
+                [
+                    RegionTree.Block(left, [], leftBody, null),
+                    RegionTree.Block(right, [], rightBody, null)
+                ], innerBody, null, null)
+            ], outerBody, null, null));
+
+        var source = Emit(body);
+
+        Assert.Equal(2, source.Split("break;").Length - 1);
+        Assert.Contains("continue;", source);
+    }
+
+    [Fact]
+    public void MultipleNormalTargetsReportFunctionHeaderSourcesAndTargets()
     {
         var outer = Label.Create("outer");
         var inner = Label.Create("inner");
         var exit = Label.Create("exit");
-        var declaration = new FunctionDeclaration("UnsupportedTransfer", [],
+        var terminal = Label.Create("terminal");
+        var condition = new ParameterDeclaration("condition", ShaderType.Bool, []);
+        var declaration = new FunctionDeclaration("MultipleNormalTargets", [condition],
             new FunctionReturn(ShaderType.Unit, []), []);
-        var outerBody = Body(outer, Terminator.B.Br<RegionJump, IShaderValue>(new(inner, [])), exit);
-        var innerBody = Body(inner, Terminator.B.Br<RegionJump, IShaderValue>(new(outer, [])), exit);
-        var exitBody = Body(exit, Terminator.B.ReturnVoid<RegionJump, IShaderValue>(), null);
+        var outerBody = Body(outer, Terminator.B.Br<RegionJump, IShaderValue>(new(inner, [])), null);
+        var innerBody = Body(inner,
+            Terminator.B.BrIf<RegionJump, IShaderValue>(
+                condition.Value, new RegionJump(outer, []), new RegionJump(exit, [])), null);
+        var exitBody = Body(exit, Terminator.B.Br<RegionJump, IShaderValue>(new(terminal, [])), terminal);
+        var terminalBody = Body(terminal, Terminator.B.ReturnVoid<RegionJump, IShaderValue>(), null);
         var body = new FunctionBody4(declaration,
             RegionTree.Loop(outer,
             [
                 RegionTree.Loop(inner, [], innerBody, null, null),
-                RegionTree.Block(exit, [], exitBody, null)
+                RegionTree.Block(exit, [], exitBody, null),
+                RegionTree.Block(terminal, [], terminalBody, null)
             ], outerBody, null, null));
 
         var error = Assert.Throws<NotSupportedException>(() => Emit(body));
 
-        Assert.Contains("UnsupportedTransfer", error.Message);
+        Assert.Contains("MultipleNormalTargets", error.Message);
         Assert.Contains(inner.ToString(), error.Message);
         Assert.Contains(outer.ToString(), error.Message);
-    }
-
-    [Fact]
-    public void CyclicPostDominatorChainReportsUnsupportedOwnership()
-    {
-        var loop = Label.Create("loop");
-        var next = Label.Create("next");
-        var declaration = new FunctionDeclaration("CyclicPostDominator", [],
-            new FunctionReturn(ShaderType.Unit, []), []);
-        var loopBody = Body(loop, Terminator.B.Br<RegionJump, IShaderValue>(new(loop, [])), next);
-        var nextBody = Body(next, Terminator.B.ReturnVoid<RegionJump, IShaderValue>(), loop);
-        var body = new FunctionBody4(declaration,
-            RegionTree.Loop(loop, [RegionTree.Block(next, [], nextBody, null)], loopBody, null, null));
-
-        var error = Assert.Throws<NotSupportedException>(() => Emit(body));
-
-        Assert.Contains("CyclicPostDominator", error.Message);
-        Assert.Contains("cycles inside the loop region", error.Message);
+        Assert.Contains(exit.ToString(), error.Message);
     }
 
     private static ShaderRegionBody Body(

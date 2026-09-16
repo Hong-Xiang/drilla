@@ -1,5 +1,6 @@
 ﻿using System.CodeDom.Compiler;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
@@ -310,21 +311,11 @@ public class SlangEmitter
     Unit IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>.Loop(
         Label label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody> body, Label? next, Label? breakNext)
     {
-        Writer.Write("while(true)");
         var nextL = body.Last.ImmediatePostDominator;
         HashSet<Label> regionLabels = [label, .. body.Elements.SelectMany(r => r.DefinedLabels())];
-        var unwindSource = label;
-        var unwindTarget = nextL;
-        HashSet<Label> visited = [];
-        while (unwindTarget is not null && regionLabels.Contains(unwindTarget))
-        {
-            if (!visited.Add(unwindTarget))
-                throw UnsupportedLoopTransfer(unwindSource, unwindTarget,
-                    "the immediate-postdominator chain cycles inside the loop region");
-            unwindSource = unwindTarget;
-            unwindTarget = Blocks[unwindTarget].Definition.Body.Last.ImmediatePostDominator;
-        }
+        var normalTransfer = FindNormalTransfer(label, regionLabels);
 
+        Writer.Write("while(true)");
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// loop " + GetLabelName(label));
@@ -333,7 +324,7 @@ public class SlangEmitter
                 Writer.WriteLine(GetLabelName(dl));
             else
                 Writer.WriteLine("exit");
-            LoopOwners.Push(new(label, unwindTarget));
+            LoopOwners.Push(new(label, normalTransfer));
             NextBlock.Push(nextL);
             SourceBlocks.Push(label);
             OnShaderRegionBody(body.Last);
@@ -347,8 +338,8 @@ public class SlangEmitter
             LoopOwners.Pop();
         }
 
-        if (unwindTarget is not null)
-            EmitBranch(unwindTarget, unwindSource);
+        if (normalTransfer is not null)
+            EmitBranch(normalTransfer);
 
         return default;
     }
@@ -601,14 +592,45 @@ public class SlangEmitter
 
     private bool IsCurrentLoopTransfer(Label target) =>
         LoopOwners.TryPeek(out var owner) &&
-        (owner.Header.Equals(target) || (owner.UnwindTarget?.Equals(target) ?? false));
+        (owner.Header.Equals(target) || (owner.NormalTransfer?.Target.Equals(target) ?? false));
 
-    private NotSupportedException UnsupportedLoopTransfer(Label source, Label target, string reason) =>
-        new($"Unsupported loop transfer in function '{CurrentFunction?.Name ?? "<unknown>"}' " +
-            $"from {source} to {target}: {reason}.");
-
-    private void EmitBranch(Label target, Label source)
+    private NormalTransfer? FindNormalTransfer(Label header, IReadOnlySet<Label> regionLabels)
     {
+        var transfers = regionLabels
+            .SelectMany(source => Blocks[source].Body.Successor.AllTargets()
+                .Where(target => !regionLabels.Contains(target) &&
+                                 Blocks[target].Body.Successor is not TerminateSuccessor)
+                .Select(target => (Source: source, Target: target)))
+            .GroupBy(transfer => transfer.Target)
+            .Select(group => new NormalTransfer(group.Key,
+                [.. group.Select(transfer => transfer.Source).Distinct().OrderBy(source => source.ToString())]))
+            .OrderBy(transfer => transfer.Target.ToString())
+            .ToArray();
+
+        return transfers switch
+        {
+            [] => null,
+            [var transfer] => transfer,
+            _ => throw UnsupportedLoopTransfers(header, transfers)
+        };
+    }
+
+    private NotSupportedException UnsupportedLoopTransfers(Label header, IReadOnlyList<NormalTransfer> transfers) =>
+        new($"Unsupported loop transfers in function '{CurrentFunction?.Name ?? "<unknown>"}' " +
+            $"from loop {header}: {string.Join("; ", transfers.Select(FormatTransfer))}.");
+
+    private NotSupportedException UnsupportedLoopTransfer(NormalTransfer transfer, string reason) =>
+        new($"Unsupported loop transfer in function '{CurrentFunction?.Name ?? "<unknown>"}' " +
+            $"{FormatTransfer(transfer)}: {reason}.");
+
+    private static string FormatTransfer(NormalTransfer transfer) =>
+        $"from [{string.Join(", ", transfer.Sources)}] to {transfer.Target}";
+
+    private void EmitBranch(Label target, Label source) => EmitBranch(new(target, [source]));
+
+    private void EmitBranch(NormalTransfer transfer)
+    {
+        var target = transfer.Target;
         Writer.Write("// emitting branch: ");
         Writer.WriteLine(GetLabelName(target));
         Writer.Write("// next target");
@@ -630,14 +652,15 @@ public class SlangEmitter
                 return;
             }
 
-            if (owner.UnwindTarget?.Equals(target) ?? false)
+            if (owner.NormalTransfer?.Target.Equals(target) ?? false)
             {
                 Writer.WriteLine("break;");
                 return;
             }
         }
 
-        if (NextBlock.Count > 0 && target.Equals(NextBlock.Peek()))
+        var isTerminalTransfer = LoopOwners.Count > 0 && Blocks[target].Body.Successor is TerminateSuccessor;
+        if (!isTerminalTransfer && NextBlock.Count > 0 && target.Equals(NextBlock.Peek()))
         {
             return;
         }
@@ -649,7 +672,7 @@ public class SlangEmitter
 
             if (Blocks[target].Definition.Kind == RegionKind.Loop)
             {
-                throw UnsupportedLoopTransfer(source, target,
+                throw UnsupportedLoopTransfer(transfer,
                     "the target is not owned by the current lexical loop");
             }
             Writer.WriteLine("// duplicated label emitting");
@@ -660,7 +683,9 @@ public class SlangEmitter
         Blocks[target].Definition.Evaluate(this);
     }
 
-    private readonly record struct LoopOwner(Label Header, Label? UnwindTarget);
+    private sealed record NormalTransfer(Label Target, IReadOnlyList<Label> Sources);
+
+    private readonly record struct LoopOwner(Label Header, NormalTransfer? NormalTransfer);
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.ZeroConstructorOperation(Instruction<string, string> ctx, ZeroConstructorOperation op, string result)
     {
