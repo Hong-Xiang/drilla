@@ -61,6 +61,40 @@ internal static class ScalarControlFlowFixtures
         return a * 11 + b;
     }
 
+    public static int NestedLoopControl(int outer, int inner)
+    {
+        var result = 1;
+        for (var i = 0; i < outer; i++)
+        {
+            for (var j = 0; j < inner; j++)
+            {
+                if (j == 1)
+                    continue;
+                if (j == 4)
+                    break;
+                result = result * 3 + i + j;
+            }
+            result = result * 5 + i;
+        }
+        return result + 17;
+    }
+
+    public static int ThreeNestedLoops(int count)
+    {
+        var result = 0;
+        for (var i = 0; i < count; i++)
+        {
+            for (var j = 0; j < count; j++)
+            {
+                for (var k = 0; k < count; k++)
+                    result += i + j + k;
+                result += 5;
+            }
+            result += 7;
+        }
+        return result + 11;
+    }
+
     public static int EdgeValue(int x)
     {
         var result = 7;

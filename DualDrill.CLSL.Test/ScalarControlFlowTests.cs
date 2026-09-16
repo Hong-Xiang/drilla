@@ -92,6 +92,9 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     [Theory]
     [InlineData(0, 0, 0)]
     [InlineData(0, 3, 0)]
+    [InlineData(1, 0, 5)]
+    [InlineData(1, 1, 12)]
+    [InlineData(1, 3, 26)]
     [InlineData(2, 0, 10)]
     [InlineData(2, 3, 52)]
     public void NestedLoopsMatchCpuAndEmittedControl(int outer, int inner, int golden)
@@ -102,6 +105,31 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Check(reference.Method,
             [new Value.Integer(5), new Value.Integer(7), new Value.Integer(outer), new Value.Integer(inner)],
             new Value.Integer(expected));
+    }
+
+    [Theory]
+    [InlineData(0, 6, 18)]
+    [InlineData(1, 0, 22)]
+    [InlineData(2, 0, 43)]
+    [InlineData(1, 3, 72)]
+    [InlineData(2, 6, 24428)]
+    public void NestedBreakAndContinueMatchCpuAndEmittedControl(int outer, int inner, int golden)
+    {
+        Func<int, int, int> reference = ScalarControlFlowFixtures.NestedLoopControl;
+        Assert.Equal(golden, reference(outer, inner));
+        Check(reference.Method, [new Value.Integer(outer), new Value.Integer(inner)], new Value.Integer(golden));
+    }
+
+    [Theory]
+    [InlineData(0, 11)]
+    [InlineData(1, 23)]
+    [InlineData(2, 57)]
+    [InlineData(3, 158)]
+    public void ThreeNestedLoopsMatchCpuAndEmittedControl(int count, int golden)
+    {
+        Func<int, int> reference = ScalarControlFlowFixtures.ThreeNestedLoops;
+        Assert.Equal(golden, reference(count));
+        Check(reference.Method, [new Value.Integer(count)], new Value.Integer(golden));
     }
 
     private string Check(MethodInfo method, ImmutableArray<Value> arguments, Value expected)
