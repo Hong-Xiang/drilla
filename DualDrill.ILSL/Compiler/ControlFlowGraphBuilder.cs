@@ -113,7 +113,7 @@ public sealed class ControlFlowGraphBuilder
             if (!labelSuccessors.ContainsKey(label))
             {
                 var nextInst = idx + labelInstructionCount[label];
-                if (nextInst >= TotalInstructionCount - 1)
+                if (nextInst == TotalInstructionCount)
                     labelSuccessors.Add(label, Successor.Terminate());
                 else
                     labelSuccessors.Add(label, Successor.Unconditional(indexToLabel[nextInst]));
