@@ -95,6 +95,22 @@ internal static class ScalarControlFlowFixtures
         return result + 11;
     }
 
+    public static int NestedEarlyReturn(int outer, int inner, int stop)
+    {
+        var result = 1;
+        for (var i = 0; i < outer; i++)
+        {
+            for (var j = 0; j < inner; j++)
+            {
+                if (j == stop)
+                    return result + 1000;
+                result = result * 3 + i + j;
+            }
+            result = result * 5 + i;
+        }
+        return result + 17;
+    }
+
     public static int EdgeValue(int x)
     {
         var result = 7;

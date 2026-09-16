@@ -132,6 +132,20 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Check(reference.Method, [new Value.Integer(count)], new Value.Integer(golden));
     }
 
+    [Theory]
+    [InlineData(0, 3, 1, 18)]
+    [InlineData(2, 0, 1, 43)]
+    [InlineData(2, 3, 3, 21708)]
+    [InlineData(2, 3, 0, 1001)]
+    [InlineData(2, 3, 1, 1003)]
+    public void NestedEarlyReturnMatchesCpuAndEmittedControl(int outer, int inner, int stop, int golden)
+    {
+        Func<int, int, int, int> reference = ScalarControlFlowFixtures.NestedEarlyReturn;
+        Assert.Equal(golden, reference(outer, inner, stop));
+        Check(reference.Method,
+            [new Value.Integer(outer), new Value.Integer(inner), new Value.Integer(stop)], new Value.Integer(golden));
+    }
+
     private string Check(MethodInfo method, ImmutableArray<Value> arguments, Value expected)
     {
         var parser = new RuntimeReflectionParser();
