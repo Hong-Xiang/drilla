@@ -25,22 +25,22 @@ public class SlangEmitter
     , IOperationSemantic<Instruction<string, string>, string, string, string>
 {
     private readonly Dictionary<Label, RegionTree<Label, ShaderRegionBody>> Blocks = [];
-    private Stack<Label> BreakTarget = [];
-
-    private readonly Stack<Label> ContinueTarget = [];
 
     private readonly Dictionary<Label, int> Emitted = [];
 
     private readonly Dictionary<FunctionDeclaration, int> functionIndicies = [];
 
     private readonly Dictionary<Label, int> labelIndices = [];
+    private readonly Stack<LoopOwner> LoopOwners = [];
     private readonly Stack<Label?> NextBlock = [];
+    private readonly Stack<Label> SourceBlocks = [];
 
     private readonly Dictionary<IShaderValue, int> ValueIds = [];
 
     private readonly Stack<VisitingEntity> Visiting = [];
 
     private readonly Dictionary<IShaderValue, string> RValues = [];
+    private FunctionDeclaration? CurrentFunction;
 
     public SlangEmitter(
         ShaderModuleDeclaration<FunctionBody4> module
@@ -55,6 +55,7 @@ public class SlangEmitter
 
     public Unit VisitFunction(FunctionDeclaration decl)
     {
+        CurrentFunction = decl;
         Visiting.Push(VisitingEntity.Function);
         WriteAttributes(decl.Attributes);
         if (decl.Return.Type is not null)
@@ -91,6 +92,7 @@ public class SlangEmitter
 
         Writer.WriteLine();
         Visiting.Pop();
+        CurrentFunction = null;
 
         return default;
     }
@@ -292,17 +294,13 @@ public class SlangEmitter
                 Writer.WriteLine("exit");
             var nextL = body.Last.ImmediatePostDominator;
             NextBlock.Push(nextL);
+            SourceBlocks.Push(label);
             OnShaderRegionBody(body.Last);
+            SourceBlocks.Pop();
             NextBlock.Pop();
-            if (nextL is not null)
+            if (nextL is not null && !IsCurrentLoopTransfer(nextL))
             {
-                if (ContinueTarget.Count > 0 && ContinueTarget.Peek().Equals(nextL))
-                {
-                }
-                else
-                {
-                    EmitBranch(nextL);
-                }
+                EmitBranch(nextL, label);
             }
         }
 
@@ -314,13 +312,19 @@ public class SlangEmitter
     {
         Writer.Write("while(true)");
         var nextL = body.Last.ImmediatePostDominator;
-        var shouldEmitNext = true;
-        var breakTarget = nextL;
-        HashSet<Label> dominatedLabels = [label, .. body.Elements.SelectMany(r => r.DefinedLabels())];
-        while (breakTarget is not null && dominatedLabels.Contains(breakTarget))
+        HashSet<Label> regionLabels = [label, .. body.Elements.SelectMany(r => r.DefinedLabels())];
+        var unwindSource = label;
+        var unwindTarget = nextL;
+        HashSet<Label> visited = [];
+        while (unwindTarget is not null && regionLabels.Contains(unwindTarget))
         {
-            breakTarget = Blocks[breakTarget].Definition.Body.Last.ImmediatePostDominator;
+            if (!visited.Add(unwindTarget))
+                throw UnsupportedLoopTransfer(unwindSource, unwindTarget,
+                    "the immediate-postdominator chain cycles inside the loop region");
+            unwindSource = unwindTarget;
+            unwindTarget = Blocks[unwindTarget].Definition.Body.Last.ImmediatePostDominator;
         }
+
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// loop " + GetLabelName(label));
@@ -329,26 +333,22 @@ public class SlangEmitter
                 Writer.WriteLine(GetLabelName(dl));
             else
                 Writer.WriteLine("exit");
-            ContinueTarget.Push(label);
-            if (breakTarget is not null)
-            {
-                BreakTarget.Push(breakTarget);
-            }
+            LoopOwners.Push(new(label, unwindTarget));
             NextBlock.Push(nextL);
+            SourceBlocks.Push(label);
             OnShaderRegionBody(body.Last);
 
+            SourceBlocks.Pop();
             NextBlock.Pop();
-            if (nextL is not null)
+            if (nextL is not null && !IsCurrentLoopTransfer(nextL))
             {
-                EmitBranch(nextL);
+                EmitBranch(nextL, label);
             }
-            if (breakTarget is not null)
-            {
-                BreakTarget.Pop();
-            }
-            ContinueTarget.Pop();
+            LoopOwners.Pop();
         }
 
+        if (unwindTarget is not null)
+            EmitBranch(unwindTarget, unwindSource);
 
         return default;
     }
@@ -371,7 +371,7 @@ public class SlangEmitter
     Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)
     {
         Writer.WriteLine($"// br {GetLabelName(target.Label)}");
-        EmitBranch(target.Label);
+        EmitBranch(target.Label, SourceBlocks.Peek());
         return default;
     }
 
@@ -387,14 +387,14 @@ public class SlangEmitter
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// ... true ...");
-            EmitBranch(trueTarget.Label);
+            EmitBranch(trueTarget.Label, SourceBlocks.Peek());
         }
 
         Writer.Write("else");
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// ... false ...");
-            EmitBranch(falseTarget.Label);
+            EmitBranch(falseTarget.Label, SourceBlocks.Peek());
         }
 
         return default;
@@ -528,7 +528,7 @@ public class SlangEmitter
         }
 
         body.Body.Traverse(t => { Blocks.Add(t.Label, t); });
-        EmitBranch(body.Entry);
+        EmitBranch(body.Entry, body.Entry);
     }
 
     private void TypeAlias(string name, string target)
@@ -599,7 +599,15 @@ public class SlangEmitter
         basicBlock.Body.Last.Evaluate(this);
     }
 
-    private void EmitBranch(Label target)
+    private bool IsCurrentLoopTransfer(Label target) =>
+        LoopOwners.TryPeek(out var owner) &&
+        (owner.Header.Equals(target) || (owner.UnwindTarget?.Equals(target) ?? false));
+
+    private NotSupportedException UnsupportedLoopTransfer(Label source, Label target, string reason) =>
+        new($"Unsupported loop transfer in function '{CurrentFunction?.Name ?? "<unknown>"}' " +
+            $"from {source} to {target}: {reason}.");
+
+    private void EmitBranch(Label target, Label source)
     {
         Writer.Write("// emitting branch: ");
         Writer.WriteLine(GetLabelName(target));
@@ -609,27 +617,31 @@ public class SlangEmitter
         else
             Writer.WriteLine("exit");
         Writer.Write("// continue target");
-        if (ContinueTarget.Count > 0)
-            Writer.WriteLine(GetLabelName(ContinueTarget.Peek()));
+        if (LoopOwners.TryPeek(out var owner))
+            Writer.WriteLine(GetLabelName(owner.Header));
         else
             Writer.WriteLine();
-        if (ContinueTarget.Count > 0 && ContinueTarget.Peek().Equals(target))
+
+        if (LoopOwners.TryPeek(out owner))
         {
-            Writer.WriteLine("continue;");
-            return;
+            if (owner.Header.Equals(target))
+            {
+                Writer.WriteLine("continue;");
+                return;
+            }
+
+            if (owner.UnwindTarget?.Equals(target) ?? false)
+            {
+                Writer.WriteLine("break;");
+                return;
+            }
         }
 
         if (NextBlock.Count > 0 && target.Equals(NextBlock.Peek()))
         {
-            if (BreakTarget.Count == 0)
-            {
-                return;
-            }
-            if (!BreakTarget.Peek().Equals(target))
-            {
-                return;
-            }
+            return;
         }
+
         var emitCount = Emitted.TryGetValue(target, out var c) ? c : 0;
         if (emitCount > 0)
         {
@@ -637,13 +649,8 @@ public class SlangEmitter
 
             if (Blocks[target].Definition.Kind == RegionKind.Loop)
             {
-                if (BreakTarget.Any() && BreakTarget.Peek().Equals(target))
-                {
-                    Writer.WriteLine("break;");
-                    return;
-                }
-                Writer.WriteLine($"Invalid duplicate label {GetLabelName(target)}");
-                return;
+                throw UnsupportedLoopTransfer(source, target,
+                    "the target is not owned by the current lexical loop");
             }
             Writer.WriteLine("// duplicated label emitting");
             Blocks[target].Definition.Evaluate(this);
@@ -652,6 +659,8 @@ public class SlangEmitter
         Emitted[target] = emitCount + 1;
         Blocks[target].Definition.Evaluate(this);
     }
+
+    private readonly record struct LoopOwner(Label Header, Label? UnwindTarget);
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.ZeroConstructorOperation(Instruction<string, string> ctx, ZeroConstructorOperation op, string result)
     {
