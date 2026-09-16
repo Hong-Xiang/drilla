@@ -199,14 +199,10 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     }
 
     [Fact]
-    public void MultipleReturnHelperUsesReleaseOptimizedCilTopology()
+    public void MultipleReturnHelperUsesConfigurationSpecificCilTopology()
     {
         var configuration = typeof(RuntimeReflectionCompilerE2ETests).Assembly
             .GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration;
-        if (configuration == "Debug")
-            return;
-        Assert.Equal("Release", configuration);
-
         var method = typeof(MultipleReturnShader).GetMethod(
             "Select",
             BindingFlags.NonPublic | BindingFlags.Static)
@@ -214,15 +210,54 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         var actualMethodBody = new MethodBodyAnalysisModel(method);
         var controlFlowGraph = actualMethodBody.ControlFlowGraph;
         var labels = controlFlowGraph.Labels().ToArray();
-        var terminals = labels.Where(label => !controlFlowGraph.GetSucc(label).Any()).ToArray();
         var conditional = Assert.Single(
             labels,
             label => controlFlowGraph.GetSucc(label).Count() == 2);
+        var branchTargets = controlFlowGraph.GetSucc(conditional).ToArray();
+        var postDominators = controlFlowGraph.ControlFlowAnalysis().PostDominatorTree;
 
-        Assert.Equal(2, terminals.Length);
-        Assert.Equal(2, controlFlowGraph.GetSucc(conditional).Intersect(terminals).Count());
-        Assert.Null(controlFlowGraph.ControlFlowAnalysis()
-            .PostDominatorTree.ImmediatePostDominator(conditional));
+        switch (configuration)
+        {
+            case "Debug":
+                {
+                    Assert.Equal(4, labels.Length);
+                    var sharedReturn = Assert.Single(
+                        labels,
+                        label => !controlFlowGraph.GetSucc(label).Any());
+
+                    Assert.Equal(2, branchTargets.Length);
+                    Assert.All(
+                        branchTargets,
+                        target =>
+                        {
+                            Assert.Equal(
+                                sharedReturn,
+                                Assert.IsType<UnconditionalSuccessor>(
+                                    controlFlowGraph.Successor(target)).Target);
+                            Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(target));
+                        });
+                    Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(conditional));
+                    Assert.Null(postDominators.ImmediatePostDominator(sharedReturn));
+                    break;
+                }
+            case "Release":
+                {
+                    Assert.Equal(3, labels.Length);
+                    var terminalReturns = labels
+                        .Where(label => !controlFlowGraph.GetSucc(label).Any())
+                        .ToArray();
+
+                    Assert.Equal(2, terminalReturns.Length);
+                    Assert.Equal(2, branchTargets.Intersect(terminalReturns).Count());
+                    Assert.Null(postDominators.ImmediatePostDominator(conditional));
+                    Assert.All(
+                        terminalReturns,
+                        terminal => Assert.Null(postDominators.ImmediatePostDominator(terminal)));
+                    break;
+                }
+            default:
+                throw new InvalidOperationException($"Unexpected build configuration: {configuration}");
+        }
     }
 
     [Fact]
