@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\SimpleStructUniformShaderModule.cs"
+             Link="ShaderModule\SimpleStructUniformShaderModule.cs" />
+    <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\MandelbrotDistanceShaderModule.cs"
+             Link="ShaderModule\MandelbrotDistanceShaderModule.cs" />
+    <Compile Include="..\Shared\Shaders\RaymarchingPrimitiveShader.cs"
+             Link="ShaderModule\RaymarchingPrimitiveShader.cs" />
+  </ItemGroup>
+
+</Project>

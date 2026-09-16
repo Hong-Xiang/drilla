@@ -307,20 +307,54 @@ public class ParseBodyTest(ITestOutputHelper Output)
         //  IL_0017: ret
 
         var labels = result.DeclarationContext.Labels;
-        labels.Should().HaveCount(4);
-        labels[0].Should().Be(result.Entry);
-        var l0c = labels[1];
-        var l11 = labels[2];
-        var l16 = labels[3];
-
-        result[result.Entry].Successor.Should().Satisfy<ConditionalSuccessor>(sIf =>
+        var configuration = typeof(ParseBodyTest).Assembly
+            .GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration;
+        switch (configuration)
         {
-            sIf.TrueTarget.Should().Be(l0c);
-            sIf.FalseTarget.Should().Be(l11);
-        });
+            case "Debug":
+                {
+                    labels.Select(label => label.Name).Should().Equal("0x0", "0xC", "0x11", "0x16");
+                    var trueArm = labels[1];
+                    var falseArm = labels[2];
+                    var sharedReturn = labels[3];
 
-        result.Successor(l11).Should().BeOfType<UnconditionalSuccessor>().Which.Target.Should().Be(l16);
-        result.Successor(l0c).Should().BeOfType<UnconditionalSuccessor>().Which.Target.Should().Be(l16);
+                    result[result.Entry].Successor.Should().Satisfy<ConditionalSuccessor>(branch =>
+                    {
+                        branch.TrueTarget.Should().Be(trueArm);
+                        branch.FalseTarget.Should().Be(falseArm);
+                    });
+                    result.Successor(trueArm).Should().BeOfType<UnconditionalSuccessor>()
+                        .Which.Target.Should().Be(sharedReturn);
+                    result.Successor(falseArm).Should().BeOfType<UnconditionalSuccessor>()
+                        .Which.Target.Should().Be(sharedReturn);
+                    result.Successor(sharedReturn).Should().BeOfType<TerminateSuccessor>();
+                    result[result.Entry].ImmediatePostDominator.Should().Be(sharedReturn);
+                    result[trueArm].ImmediatePostDominator.Should().Be(sharedReturn);
+                    result[falseArm].ImmediatePostDominator.Should().Be(sharedReturn);
+                    result[sharedReturn].ImmediatePostDominator.Should().BeNull();
+                    break;
+                }
+            case "Release":
+                {
+                    labels.Select(label => label.Name).Should().Equal("0x0", "0x6", "0x4");
+                    var trueReturn = labels[1];
+                    var falseReturn = labels[2];
+
+                    result[result.Entry].Successor.Should().Satisfy<ConditionalSuccessor>(branch =>
+                    {
+                        branch.TrueTarget.Should().Be(trueReturn);
+                        branch.FalseTarget.Should().Be(falseReturn);
+                    });
+                    result.Successor(trueReturn).Should().BeOfType<TerminateSuccessor>();
+                    result.Successor(falseReturn).Should().BeOfType<TerminateSuccessor>();
+                    result[result.Entry].ImmediatePostDominator.Should().BeNull();
+                    result[trueReturn].ImmediatePostDominator.Should().BeNull();
+                    result[falseReturn].ImmediatePostDominator.Should().BeNull();
+                    break;
+                }
+            default:
+                throw new InvalidOperationException($"Unexpected build configuration: {configuration}");
+        }
 
         //var variables = result.DeclarationContext.LocalVariables;
         //variables.Should().HaveCount(2);

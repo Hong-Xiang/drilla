@@ -3,6 +3,7 @@ using CommunityToolkit.HighPerformance;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.Common;
 using DualDrill.Engine.Shader;
+using DualDrill.Shaders;
 using DuckDB.NET.Data;
 using Lokad.ILPack.IL;
 using Microsoft.AspNetCore.Http;

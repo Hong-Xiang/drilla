@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
+    <ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\DualDrill.CLSL.Test\ShaderModule\MinimumHelloTriangleShaderModule.cs"
+             Link="ShaderModule\MinimumHelloTriangleShaderModule.cs" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <Target Name="PreserveNativeWgpuRuntimeLayout" AfterTargets="CopyFilesToOutputDirectory">
+    <MakeDir Directories="$(TargetDir)runtimes/linux-x64/native" />
+    <Copy SourceFiles="$(TargetDir)libwgpu_native.so"
+          DestinationFolder="$(TargetDir)runtimes/linux-x64/native" />
+  </Target>
+
+</Project>

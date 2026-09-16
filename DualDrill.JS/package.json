@@ -7,6 +7,9 @@
     "dev": "vite",
     "compile": "tsc --noEmit",
     "build": "node esbuild.mjs",
+    "compiler:check": "tsc -p tsconfig.compiler.json",
+    "compiler:build": "node esbuild.compiler.mjs",
+    "compiler:test": "pnpm run compiler:build && node --test test/compiler-animation.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -32,7 +35,7 @@
     "@types/three": "^0.164.0",
     "@types/webxr": "^0.5.14",
     "@vitejs/plugin-react": "^4.2.1",
-    "@webgpu/types": "^0.1.40",
+    "@webgpu/types": "0.1.72",
     "esbuild": "0.20.2",
     "prettier": "^3.2.5",
     "typescript": "^5.2.2",

@@ -151,7 +151,9 @@ public sealed partial class WebGPUNETBackend
 
     void IGPUHandleDisposer<Backend, GPUDevice<Backend>>.DisposeHandle(GPUHandle<Backend, GPUDevice<Backend>> handle)
     {
+        var errorStateId = DetachDeviceErrorState(handle.Pointer);
         wgpuDeviceRelease(ToNative(handle));
+        ReleaseDeviceErrorState(errorStateId);
     }
 
     WGPUDevice ToNative(GPUHandle<Backend, GPUDevice<Backend>> instance)

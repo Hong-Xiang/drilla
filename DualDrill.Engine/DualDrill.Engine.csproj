@@ -24,4 +24,9 @@
 		<ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Compile Include="..\Shared\Shaders\RaymarchingPrimitiveShader.cs"
+		         Link="Shader\RaymarchingPrimitiveShader.cs" />
+	</ItemGroup>
+
 </Project>
