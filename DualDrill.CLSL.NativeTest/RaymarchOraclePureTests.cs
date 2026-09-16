@@ -1,3 +1,5 @@
+using DualDrill.Shaders;
+
 namespace DualDrill.CLSL.NativeTest;
 
 public sealed class RaymarchOraclePureTests
@@ -78,6 +80,22 @@ public sealed class RaymarchOraclePureTests
                 @"var (?<color>\S+) : vec4<f32>;\s*mainImage_0\(&\(\k<color>\)",
                 wgsl);
         }
+    }
+
+    [Fact]
+    public void Canonical_candidate_compiles_through_public_WGSL_API()
+    {
+        var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL))
+            .Emit(new RaymarchingPrimitiveShader());
+
+        Assert.Contains("@vertex", wgsl);
+        Assert.Contains("@fragment", wgsl);
+        Assert.Contains("fn vs", wgsl);
+        Assert.Contains("fn fs", wgsl);
+        Assert.Contains("@location(0)", wgsl);
+        Assert.Contains("@group(0)", wgsl);
+        foreach (var binding in Enumerable.Range(0, 4))
+            Assert.Contains($"@binding({binding})", wgsl);
     }
 
     [Fact]
