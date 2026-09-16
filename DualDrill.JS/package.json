@@ -9,6 +9,7 @@
     "build": "node esbuild.mjs",
     "compiler:check": "tsc -p tsconfig.compiler.json",
     "compiler:build": "node esbuild.compiler.mjs",
+    "compiler:test": "pnpm run compiler:build && node --test test/compiler-animation.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
