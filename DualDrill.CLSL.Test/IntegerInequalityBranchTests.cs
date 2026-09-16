@@ -10,9 +10,7 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
-using DualDrill.Mathematics;
 using OpCodes = System.Reflection.Emit.OpCodes;
-using static DualDrill.Mathematics.DMath;
 
 namespace DualDrill.CLSL.Test;
 
@@ -167,10 +165,6 @@ public sealed class IntegerInequalityBranchTests
 
     private sealed class IntegerInequalityShader : ISharpShader
     {
-        [Vertex]
-        [return: Builtin(BuiltinBinding.position)]
-        public static vec4f32 vs() => vec4(0.0f, 0.0f, 0.0f, 1.0f);
-
         [Fragment]
         [return: Location(0)]
         public static int fs([Location(0)] int value) => SelectEqual32(value, -1);
