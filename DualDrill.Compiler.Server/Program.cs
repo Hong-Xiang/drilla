@@ -1,4 +1,5 @@
 using DualDrill.CLSL;
+using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Compiler.Server;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +17,14 @@ app.MapGet("/ilsl/reflect/{name}", ReflectAsync);
 await app.RunAsync();
 
 static ISharpShader? GetShader(string name) =>
-    name == nameof(MinimumTriangleShader) ? new MinimumTriangleShader() : null;
+    name switch
+    {
+        nameof(MinimumTriangleShader) => new MinimumTriangleShader(),
+        nameof(SimpleStructUniformShaderModule) => new SimpleStructUniformShaderModule(),
+        nameof(MandelbrotDistanceShaderModule) => new MandelbrotDistanceShaderModule(),
+        nameof(RaymarchingPrimitiveShader) => new RaymarchingPrimitiveShader(),
+        _ => null
+    };
 
 static IResult Compile(string name, string target)
 {
