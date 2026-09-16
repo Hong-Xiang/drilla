@@ -36,6 +36,19 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Output.WriteLine(formatter.Dump());
     }
 
+    static void AssertScalarType(JsonElement type, string scalarType)
+    {
+        Assert.Equal("scalar", type.GetProperty("kind").GetString());
+        Assert.Equal(scalarType, type.GetProperty("scalarType").GetString());
+    }
+
+    static void AssertVectorType(JsonElement type, int elementCount, string scalarType)
+    {
+        Assert.Equal("vector", type.GetProperty("kind").GetString());
+        Assert.Equal(elementCount, type.GetProperty("elementCount").GetInt32());
+        AssertScalarType(type.GetProperty("elementType"), scalarType);
+    }
+
     string OutputFolder { get; } =
         Path.GetDirectoryName(typeof(RuntimeReflectionCompilerE2ETests).Assembly.Location)
         ?? throw new InvalidOperationException("Test assembly has no output directory");
@@ -178,25 +191,73 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         var parameters = reflection.RootElement
             .GetProperty("parameters")
             .EnumerateArray()
-            .ToArray();
+            .ToDictionary(parameter =>
+                parameter.GetProperty("binding").GetProperty("index").GetInt32());
 
-        Assert.Equal(2, parameters.Length);
-        Assert.Equal(
-            [0, 1],
-            parameters
-                .Select(parameter => parameter.GetProperty("binding").GetProperty("index").GetInt32())
-                .Order());
+        Assert.Equal([0, 1, 2, 3], parameters.Keys.Order());
         Assert.All(
-            parameters,
+            parameters.Values,
             parameter => Assert.Equal(
                 "descriptorTableSlot",
                 parameter.GetProperty("binding").GetProperty("kind").GetString()));
+
+        Assert.EndsWith("iResolution", parameters[0].GetProperty("name").GetString());
+        AssertVectorType(parameters[0].GetProperty("type").GetProperty("elementType"), 2, "float32");
+        Assert.EndsWith("iTime", parameters[1].GetProperty("name").GetString());
+        AssertScalarType(parameters[1].GetProperty("type").GetProperty("elementType"), "float32");
+        Assert.EndsWith("iMouse", parameters[2].GetProperty("name").GetString());
+        AssertVectorType(parameters[2].GetProperty("type").GetProperty("elementType"), 4, "float32");
+        Assert.EndsWith("iAA", parameters[3].GetProperty("name").GetString());
+        AssertScalarType(parameters[3].GetProperty("type").GetProperty("elementType"), "int32");
+
+        var vertexEntryPoint = reflection.RootElement
+            .GetProperty("entryPoints")
+            .EnumerateArray()
+            .Single(entryPoint => entryPoint.GetProperty("name").GetString() == "vs");
+        var vertexInput = Assert.Single(vertexEntryPoint.GetProperty("parameters").EnumerateArray());
+        Assert.Equal("varyingInput", vertexInput.GetProperty("binding").GetProperty("kind").GetString());
+        Assert.Equal(0, vertexInput.GetProperty("binding").GetProperty("index").GetInt32());
+        AssertVectorType(vertexInput.GetProperty("type"), 2, "float32");
+
         Assert.Contains("@group(0)", compilation.Wgsl);
         Assert.Contains("@binding(0)", compilation.Wgsl);
         Assert.Contains("@binding(1)", compilation.Wgsl);
+        Assert.Contains("@binding(2)", compilation.Wgsl);
+        Assert.Contains("@binding(3)", compilation.Wgsl);
         Assert.Contains("var<uniform>", compilation.Wgsl);
         Assert.Contains("iResolution", compilation.Wgsl);
         Assert.Contains("iTime", compilation.Wgsl);
+        Assert.Contains("iMouse", compilation.Wgsl);
+        Assert.Contains("iAA", compilation.Wgsl);
+        Assert.All(
+            new[]
+            {
+                "sdSphere",
+                "sdRhombus",
+                "sdCappedTorus",
+                "sdBoxFrame",
+                "sdCone",
+                "sdCappedCone1",
+                "sdSolidAngle",
+                "sdTorus",
+                "sdBox",
+                "sdCapsule",
+                "sdCylinder1",
+                "sdHexPrism",
+                "sdPyramid",
+                "sdOctahedron0",
+                "sdTriPrism",
+                "sdEllipsoid",
+                "sdHorseshoe",
+                "sdOctogonPrism",
+                "sdCylinder2",
+                "sdCappedCone2",
+                "sdRoundCone_s2",
+                "sdRoundCone_s1"
+            },
+            functionName => Assert.Contains(functionName, compilation.Wgsl));
+        Assert.Contains("calcAO", compilation.Wgsl);
+        Assert.Contains("smoothstep", compilation.Wgsl);
     }
 
     [Fact]

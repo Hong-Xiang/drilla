@@ -65,16 +65,6 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     }
 
     //[ShaderMethod]
-    static float SmoothStep(float edge0, float edge1, float x)
-    {
-        // Clamp x to the [0, 1] range
-        var y = clamp((x - edge0) / (edge1 - edge1), 0.0f, 1.0f);
-
-        // Apply the smoothstep formula
-        return y * y * (3 - 2 * y);
-    }
-
-    //[ShaderMethod]
     static vec3 Mix(vec3 x, vec3 y, float a)
     {
         return x * (1 - a) + y * a;
@@ -743,7 +733,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
             res = opU(res, vec2(sdOctahedron0(pos - vec3(-1.0f, 0.15f, -2.0f), 0.35f), 23.56f));
             res = opU(res, vec2(sdTriPrism(pos - vec3(-1.0f, 0.15f, -1.0f), vec2(0.3f, 0.05f)), 43.5f));
             res = opU(res, vec2(sdEllipsoid(pos - vec3(-1.0f, 0.25f, 0.0f), vec3(0.2f, 0.25f, 0.05f)), 43.17f));
-            //res = opU(res, vec2(sdHorseshoe(pos - vec3(-1.0f, 0.25f, 1.0f), vec2(cos(1.3f), sin(1.3f)), 0.2f, 0.3f, vec2(0.03f, 0.08f)), 11.5f));
+            res = opU(res, vec2(sdHorseshoe(pos - vec3(-1.0f, 0.25f, 1.0f), vec2(cos(1.3f), sin(1.3f)), 0.2f, 0.3f, vec2(0.03f, 0.08f)), 11.5f));
         }
 
         // bounding box
@@ -960,6 +950,26 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     }
 
     [ShaderMethod]
+    static float calcAO(vec3f32 pos, vec3f32 nor)
+    {
+        var occ = 0.0f;
+        var sca = 1.0f;
+        for (var i = ZERO(); i < 5; i++)
+        {
+            var h = 0.01f + 0.12f * (float)i / 4.0f;
+            var d = map(pos + h * nor).x;
+            occ += (h - d) * sca;
+            sca *= 0.95f;
+            if (occ > 0.35f)
+            {
+                break;
+            }
+        }
+
+        return clamp(1.0f - 3.0f * occ, 0.0f, 1.0f) * (0.5f + 0.5f * nor.y);
+    }
+
+    [ShaderMethod]
     static vec3f32 render(vec3f32 ro, vec3f32 rd, vec3f32 rdx, vec3f32 rdy)
     {
         // background
@@ -987,7 +997,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
 
             // material        
             var s = vec3(m * 2.0f) + vec3(0.0f, 1.0f, 2.0f);
-            col = vec3(0.3f) + 0.3f * sin(s);
+            col = vec3(0.2f) + 0.2f * sin(s);
             var ks = 1.0f;
 
             if (m < 1.5f)
@@ -1001,52 +1011,41 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
                 col = vec3(0.15f) + f * vec3(0.05f);
                 ks = 0.4f;
             }
-            //else
-            //{
-            //    col = vec3(0.5f);
-            //}
-            //return vec3(clamp(col.x, 0.0f, 1.0f), clamp(col.y, 0.0f, 1.0f), clamp(col.z, 0.0f, 1.0f));
-            //else
-            //{
-            //    col = vec3(m / 10.0f);
-            //}
-            //return col;
 
-            // lighting
-
+            var occ = calcAO(pos, nor);
             var lin = vec3(0.0f);
-            //var lin = col;
-
-            int sun = 1;
-            int sky = 1;
 
             // sun
-            if (sun == 1)
-            {
-                var lig = normalize(vec3(-0.5f, 0.4f, -0.6f));
-                var hal = normalize(lig - rd);
-                var dif = clamp(dot(nor, lig), 0.0f, 1.0f);
-
-                dif *= calcSoftshadow(pos, lig, 0.02f, 2.5f);
-
-                var spe = pow(clamp(dot(nor, hal), 0.0f, 1.0f), 16.0f);
-                spe *= dif;
-                spe *= 0.04f + 0.96f * pow(clamp(1.0f - dot(hal, lig), 0.0f, 1.0f), 5.0f);
-
-                lin += col * 2.20f * dif * vec3(1.30f, 1.00f, 0.70f);
-                lin += 5.0f * spe * vec3(1.30f, 1.00f, 0.70f) * ks;
-            }
+            var lig = normalize(vec3(-0.5f, 0.4f, -0.6f));
+            var hal = normalize(lig - rd);
+            var sunDif = clamp(dot(nor, lig), 0.0f, 1.0f);
+            sunDif *= calcSoftshadow(pos, lig, 0.02f, 2.5f);
+            var sunSpe = pow(clamp(dot(nor, hal), 0.0f, 1.0f), 16.0f);
+            sunSpe *= sunDif;
+            sunSpe *= 0.04f + 0.96f * pow(clamp(1.0f - dot(hal, lig), 0.0f, 1.0f), 5.0f);
+            lin += col * 2.20f * sunDif * vec3(1.30f, 1.00f, 0.70f);
+            lin += 5.0f * sunSpe * vec3(1.30f, 1.00f, 0.70f) * ks;
 
             // sky
-            if (sky == 1)
-            {
-                var dif = sqrt(clamp(0.5f + 0.5f * nor.y, 0.0f, 1.0f));
-                var spe = SmoothStep(-0.2f, 0.2f, reflection.y);
-                spe *= dif;
-                spe *= 0.04f + 0.96f * pow(clamp(1.0f + dot(nor, rd), 0.0f, 1.0f), 5.0f);
-                lin += col * 0.60f * dif * vec3(0.40f, 0.60f, 1.15f);
-                lin += 2.00f * spe * vec3(0.40f, 0.60f, 1.30f) * ks;
-            }
+            var skyDif = sqrt(clamp(0.5f + 0.5f * nor.y, 0.0f, 1.0f));
+            skyDif *= occ;
+            var skySpe = smoothstep(-0.2f, 0.2f, reflection.y);
+            skySpe *= skyDif;
+            skySpe *= 0.04f + 0.96f * pow(clamp(1.0f + dot(nor, rd), 0.0f, 1.0f), 5.0f);
+            skySpe *= calcSoftshadow(pos, reflection, 0.02f, 2.5f);
+            lin += col * 0.60f * skyDif * vec3(0.40f, 0.60f, 1.15f);
+            lin += 2.00f * skySpe * vec3(0.40f, 0.60f, 1.30f) * ks;
+
+            // back
+            var backDif = clamp(dot(nor, normalize(vec3(0.5f, 0.0f, 0.6f))), 0.0f, 1.0f) *
+                          clamp(1.0f - pos.y, 0.0f, 1.0f);
+            backDif *= occ;
+            lin += col * 0.55f * backDif * vec3(0.25f);
+
+            // subsurface scattering
+            var sssDif = pow(clamp(1.0f + dot(nor, rd), 0.0f, 1.0f), 2.0f);
+            sssDif *= occ;
+            lin += col * 0.25f * sssDif * vec3(1.0f);
 
             col = lin;
             col = mix(col, vec3(0.7f, 0.7f, 0.9f), vec3(1.0f - exp(-0.0001f * t * t * t)));
@@ -1062,8 +1061,11 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         public vec3f32 col2;
     }
 
+    // Host ABI: resolution, time, mouse, antialiasing.
     [Group(0)][Binding(0)][Uniform] static vec2f32 iResolution;
     [Group(0)][Binding(1)][Uniform] static float iTime;
+    [Group(0)][Binding(2)][Uniform] static vec4f32 iMouse;
+    [Group(0)][Binding(3)][Uniform] static int iAA;
 
 
     [Vertex]
@@ -1077,12 +1079,22 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     [return: Location(0)]
     static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 vertexIn)
     {
-        //var iResolution = vec2(1920f, 1080f);
-        int antialiasing = 1;
+        var antialiasing = iAA;
+        if (antialiasing < 1)
+        {
+            antialiasing = 1;
+        }
+        if (antialiasing > 3)
+        {
+            antialiasing = 3;
+        }
+
         var time = 32.0f + iTime * 1.5f;
-        var fragCoord = iResolution - vertexIn.xy;
+        var fragCoord = vec2(vertexIn.x, iResolution.y - vertexIn.y);
+        var mouse = iMouse.xy / iResolution;
         var ta = vec3(0.25f, -0.75f, -0.75f);
-        var ro = ta + vec3(4.5f * cos(0.1f * time + 7.0f), 2.2f, 4.5f * sin(0.1f * time + 7.0f));
+        var cameraAngle = 0.1f * time + 7.0f * mouse.x;
+        var ro = ta + vec3(4.5f * cos(cameraAngle), 2.2f, 4.5f * sin(cameraAngle));
         //Camera Matrix
         float cr = 0.0f;
         var cw = normalize(ta - ro);
@@ -1091,17 +1103,18 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         var cv = cross(cu, cw);
 
         var tot = vec3(0.0f);
-        // TODO: implement correct nested loop support
         for (var loop = 0; loop < antialiasing * antialiasing; ++loop)
         {
             var m = loop / antialiasing;
             var n = loop % antialiasing;
-            // for (int m = ZERO(); m < antialiasing; m++)
-            // {
-            //     for (int n = ZERO(); n < antialiasing; n++)
-            //     {
-            var o = vec2((float)(m) * 1.0f, (float)(n) * 1.0f) / (float)(antialiasing * 1.0f) - vec2(0.5f);
-            var p = vec2(2.0f * fragCoord.x - iResolution.x, 2.0F * fragCoord.y - iResolution.y) / iResolution.y;
+            var offset = vec2(0.0f);
+            if (antialiasing > 1)
+            {
+                offset = vec2((float)m, (float)n) / (float)antialiasing - vec2(0.5f);
+            }
+
+            var sampleCoord = fragCoord + offset;
+            var p = (2.0f * sampleCoord - iResolution) / iResolution.y;
             // focal length
             var fl = 2.5f;
 
@@ -1120,11 +1133,9 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
             col = pow(col, vec3(0.4545f));
 
             tot = tot + col;
-            //     }
-            // }
         }
 
-        tot /= (float)(antialiasing * antialiasing * 1.0f);
+        tot /= (float)(antialiasing * antialiasing);
         return vec4(tot, 1.0f);
     }
 }

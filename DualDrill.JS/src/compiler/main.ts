@@ -1,5 +1,5 @@
-const canvasWidth = 800;
-const canvasHeight = 600;
+import { createRaymarchingUniforms } from "../raymarching-uniforms";
+
 const clearColor: GPUColor = { r: 0.03, g: 0.21, b: 0.26, a: 1 };
 const fullScreenVertices = new Float32Array([
   -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1,
@@ -18,8 +18,7 @@ type ShaderName =
 
 interface UniformBinding {
   readonly binding: number;
-  readonly size: number;
-  readonly data: Float32Array;
+  readonly data: AllowSharedBufferSource;
 }
 
 interface VertexInput {
@@ -44,6 +43,14 @@ interface Runtime {
   uncapturedError: string | null;
 }
 
+const canvas = requireElement("shader-canvas", HTMLCanvasElement);
+const raymarchingUniforms = createRaymarchingUniforms(
+  canvas.width,
+  canvas.height,
+  0,
+  1,
+);
+
 const profiles = [
   {
     name: "MinimumTriangleShader",
@@ -60,7 +67,6 @@ const profiles = [
     uniforms: [
       {
         binding: 0,
-        size: 32,
         data: new Float32Array([0.1, 0.65, 1, 1, 0.7, 0.7, 0.1, 0]),
       },
     ],
@@ -73,7 +79,7 @@ const profiles = [
       layout: fullScreenVertexLayout,
       data: fullScreenVertices,
     },
-    uniforms: [{ binding: 0, size: 16, data: new Float32Array([0]) }],
+    uniforms: [{ binding: 0, data: new Float32Array([0]) }],
   },
   {
     name: "RaymarchingPrimitiveShader",
@@ -86,10 +92,14 @@ const profiles = [
     uniforms: [
       {
         binding: 0,
-        size: 16,
-        data: new Float32Array([canvasWidth, canvasHeight]),
+        data: raymarchingUniforms.resolution,
       },
-      { binding: 1, size: 16, data: new Float32Array([0]) },
+      { binding: 1, data: raymarchingUniforms.time },
+      {
+        binding: 2,
+        data: raymarchingUniforms.mouse,
+      },
+      { binding: 3, data: raymarchingUniforms.antialiasing },
     ],
   },
 ] as const satisfies readonly ShaderProfile[];
@@ -118,7 +128,6 @@ const statusOutput = requireElement("status", HTMLParagraphElement);
 const adapterOutput = requireElement("adapter", HTMLPreElement);
 const diagnosticsOutput = requireElement("diagnostics", HTMLPreElement);
 const wgslOutput = requireElement("wgsl", HTMLPreElement);
-const canvas = requireElement("shader-canvas", HTMLCanvasElement);
 const buttons = Array.from(
   document.querySelectorAll<HTMLButtonElement>("button[data-shader]"),
   (element) => ({
@@ -226,7 +235,7 @@ function createBuffer(
   label: string,
   size: number,
   usage: GPUBufferUsageFlags,
-  data: Float32Array,
+  data: AllowSharedBufferSource,
 ): GPUBuffer {
   const buffer = device.createBuffer({ label, size, usage });
   try {
@@ -261,12 +270,12 @@ function createDrawResources(
           ),
         )
       : null;
-    const entries = profile.uniforms.map(({ binding, size, data }) => {
+    const entries = profile.uniforms.map(({ binding, data }) => {
       const buffer = own(
         createBuffer(
           device,
           `${profile.label} uniform ${binding}`,
-          size,
+          Math.max(16, data.byteLength),
           GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
           data,
         ),
