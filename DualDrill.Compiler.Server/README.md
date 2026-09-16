@@ -42,16 +42,10 @@ retained; it is distinct from the orange host `MinimumTriangleShader`. The
 three new examples are Debug demo profiles, not native execution-equivalence
 coverage. Their current WGSL uses numeric `bool(...)` conversions permitted by
 the WGSL specification and accepted by the bundled Naga 0.19.2 consumer.
-Compatibility probes instead found that Naga 0.19.2 and Naga 22.1 reject
-current-WGSL function-local `const` declarations and loop-return forms emitted
-by Slang. The attempted desktop Evergine upgrade therefore failed its
-compatibility pre-check and no API migration was landed. Alimer v27 and official
-wgpu-native v29 also reject the generated loop/reference forms. WebGPUSharp
-0.3/Dawn accepts those forms but exposes a separate reference-generation
-address-space mismatch. No replacement native provider has been selected.
-Raymarching's public Slang and WGSL compilation paths are covered in both Debug
-and Release; this does not prove shader semantic parity or native backend
-compatibility.
+Raymarching's generated shader and reflection paths are covered in both Debug
+and Release. The bundled native Naga lacks required current-WGSL features;
+modern native integration and independent image-parity validation remain
+pending. Provider investigation is tracked in #93.
 
 Generated IR, Slang, and WGSL are available at
 `/ilsl/compile/{shader-name}/{target}`. Reflection is at
