@@ -177,15 +177,14 @@ export async function BatchRenderMain() {
           },
         },
       ],
-    }
+    },
     // bindGroupLayoutDescriptor
   );
   const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
-    // entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
     entries: [
-      { binding: 0, resource: { buffer: timeBuffer } },
-      { binding: 1, resource: { buffer: resolutionBuffer } },
+      { binding: 0, resource: { buffer: resolutionBuffer } },
+      { binding: 1, resource: { buffer: timeBuffer } },
     ],
   });
 
@@ -276,14 +275,14 @@ export async function BatchRenderMain() {
 function createInteractiveUserInterface(
   uiRoot: HTMLDivElement,
   initState: InteractiveState,
-  update: (s: InteractiveState) => void
+  update: (s: InteractiveState) => void,
 ) {
   const root = createRoot(uiRoot);
   root.render(
     createElement(InteractiveApp, {
       state: { loop: initState.loop },
       update,
-    })
+    }),
   );
 }
 
@@ -298,7 +297,7 @@ function createRealtimeUserInterface(state: RealtimeState) {
 function clearCanvas(
   encoder: GPUCommandEncoder,
   target: GPUTextureView,
-  color: { r: number; g: number; b: number }
+  color: { r: number; g: number; b: number },
 ) {
   const pass = encoder.beginRenderPass({
     label: "clear-pass",

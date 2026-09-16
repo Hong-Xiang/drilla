@@ -5,9 +5,23 @@ using vec2 = DualDrill.Mathematics.vec2f32;
 using vec3 = DualDrill.Mathematics.vec3f32;
 
 
-namespace DualDrill.CLSL.Test.ShaderModule;
+namespace DualDrill.Shaders;
 
-// Raymarching - Primitives from shader toys https://www.shadertoy.com/view/Xds3zN
+// Raymarching - Primitives: https://www.shadertoy.com/view/Xds3zN
+//
+// The MIT License
+// Copyright © 2013 Inigo Quilez
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+// associated documentation files (the "Software"), to deal in the Software without restriction,
+// including without limitation the rights to use, copy, modify, merge, publish, distribute,
+// sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions: The above copyright notice and this
+// permission notice shall be included in all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
 {
@@ -845,8 +859,8 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         //else return res;
 
         // raymarch primitives   
-        //var tb = iBox(ro - vec3(0.0f, 0.4f, -0.5f), rd, vec3(2.5f, 0.41f, 3.0f));
-        var tb = iBox(ro, rd, vec3(2.5f, 0.5f, 2.5f));
+        var tb = iBox(ro - vec3(0.0f, 0.4f, -0.5f), rd, vec3(2.5f, 0.41f, 3.0f));
+        //var tb = iBox(ro, rd, vec3(2.5f, 0.5f, 2.5f));
         var cond = tb.x < tb.y && tb.y > 0.0f && tb.x < tmax;
         if (cond)
         {
@@ -960,14 +974,13 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         {
             var pos = ro + t * rd;
             var nor = vec3(0.0f, 1.0f, 0.0f);
-            //if (m < 1.5f)
-            //{
-            //    nor = new Vector3(0.0f, 1.0f, 0.0f);
-            //}
+            if (m < 1.5f)
+            {
+                nor = vec3(0.0f, 1.0f, 0.0f);
+            }
             if (m >= 1.5f)
             {
                 nor = calcNormal(pos);
-                //nor = vec3(0.0f, 1.0f, 0.0f);
             }
 
             var reflection = reflect(rd, nor);
@@ -993,16 +1006,16 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
             //    col = vec3(0.5f);
             //}
             //return vec3(clamp(col.x, 0.0f, 1.0f), clamp(col.y, 0.0f, 1.0f), clamp(col.z, 0.0f, 1.0f));
-            else
-            {
-                col = vec3(m / 10.0f);
-            }
+            //else
+            //{
+            //    col = vec3(m / 10.0f);
+            //}
             //return col;
 
             // lighting
 
-            //var lin = vec3(0.0f);
-            var lin = col;
+            var lin = vec3(0.0f);
+            //var lin = col;
 
             int sun = 1;
             int sky = 1;
@@ -1049,10 +1062,9 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         public vec3f32 col2;
     }
 
-
     [Group(0)][Binding(0)][Uniform] static vec2f32 iResolution;
-
     [Group(0)][Binding(1)][Uniform] static float iTime;
+
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
@@ -1065,6 +1077,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
     [return: Location(0)]
     static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 vertexIn)
     {
+        //var iResolution = vec2(1920f, 1080f);
         int antialiasing = 1;
         var time = 32.0f + iTime * 1.5f;
         var fragCoord = iResolution - vertexIn.xy;

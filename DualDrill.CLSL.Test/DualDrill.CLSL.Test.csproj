@@ -37,6 +37,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Include="..\Shared\Shaders\RaymarchingPrimitiveShader.cs"
+		         Link="ShaderModule\RaymarchingPrimitiveShader.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Using Include="Xunit" />
 	</ItemGroup>
 
