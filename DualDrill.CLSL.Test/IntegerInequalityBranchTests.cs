@@ -102,6 +102,11 @@ public sealed class IntegerInequalityBranchTests
                     (4, 3, 2, 3),
                     (7, 5, 2, 3));
                 Assert.Equal(OpCodes.Bne_Un_S, model[model.OffsetsToIndex[2]].Instruction.OpCode);
+                var nativeBranch =
+                    Assert.IsType<CilControlFlow.ConditionalBranch>(blocks[0].Terminator);
+                Assert.Equal(OpCodes.Bne_Un_S, nativeBranch.Instruction.Instruction.OpCode);
+                Assert.Same(model[model.OffsetsToIndex[2]].Instruction,
+                    nativeBranch.Instruction.Instruction);
                 AssertRelationalOperation<TInteger, BinaryRelational.Ne>(body[blocks[0].Label]);
                 AssertArms(body, blocks[0].Label, blocks[7].Label, blocks[4].Label);
                 AssertReturningLiteral(body[blocks[4].Label], 11);

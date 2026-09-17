@@ -13,6 +13,33 @@ implementation slice is limited to a lossless linear-source/concrete-control
 boundary with real frontend consumers. Pre-stack analysis and subsequent
 lowerings remain separate slices until explicitly implemented.
 
+### Implemented First Slice
+
+`MethodBodyAnalysisModel.Instructions` is now the immutable linear view of the
+decoded method: one `CilInstructionInfo` per original instruction, with its
+index, byte range, and original Lokad instruction object. Each
+`CilInstructionBlock` retains its exact non-empty instruction slice and a
+`CilControlFlow` value distinguishing native return, branch, and conditional
+branch from synthesized fallthrough and end-of-code.
+
+Native controls retain the original final instruction. A conditional retains
+its native branch target and physical fallthrough target. Its `ToSuccessor`
+projection exposes logical true/false topology, including two equal arms;
+`brfalse` therefore reverses the native target/fallthrough pair only in this
+lossy view. The concrete object is not replaced. `ControlFlowGraphBuilder`
+derives the graph successor from the created payload's projection, and
+`RuntimeReflectionParser` consumes the block instructions and concrete control
+directly while reusing the existing stack/value visitor.
+
+The `ControlFlowGraphBuilder.Build` source API now requires both the node factory
+and its read-only `ISuccessor` projection. Repository callers migrated together;
+there is no compatibility overload. Branch operands and resolved targets are
+checked at this boundary. Unsupported `switch`, exception flow, and reaching the
+end of CIL without an explicit return still fail explicitly.
+
+Pre-stack typing, annotated CFG construction, stack-value lifting, and later
+region/AST work below remain planned stages, not implemented behavior.
+
 ```text
 LinearCode<CilInstruction>
   -> LinearCode<(CilInstruction, PreStackState)>
