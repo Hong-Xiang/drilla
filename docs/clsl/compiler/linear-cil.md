@@ -24,18 +24,28 @@ branch from synthesized fallthrough and end-of-code.
 
 Native controls retain the original final instruction. A conditional retains
 its native branch target and physical fallthrough target. Its `ToSuccessor`
-projection exposes logical true/false topology, including two equal arms;
-`brfalse` therefore reverses the native target/fallthrough pair only in this
-lossy view. The concrete object is not replaced. `ControlFlowGraphBuilder`
-derives the graph successor from the created payload's projection, and
-`RuntimeReflectionParser` consumes the block instructions and concrete control
-directly while reusing the existing stack/value visitor.
+projection exposes that native branch/fallthrough order, including two equal
+arms. For `brfalse`, the existing lowering visitor still reverses those arms when
+it materializes a Boolean `ITerminator.BrIf`; the control projection itself does
+not reinterpret the native predicate. The concrete object is not replaced.
+`ControlFlowGraphBuilder` derives the graph successor from the created payload's
+projection, and `RuntimeReflectionParser` consumes the block instructions and
+concrete control directly while reusing the existing stack/value visitor.
 
-The `ControlFlowGraphBuilder.Build` source API now requires both the node factory
-and its read-only `ISuccessor` projection. Repository callers migrated together;
-there is no compatibility overload. Branch operands and resolved targets are
-checked at this boundary. Unsupported `switch`, exception flow, and reaching the
-end of CIL without an explicit return still fail explicitly.
+The `ControlFlowGraphBuilder.Build` source API now requires a three-parameter
+node factory `(label, range, successor)` plus the payload's read-only
+`ISuccessor` projection. `CilInstructionBlock` changed from a public positional
+record struct with public construction, deconstruction, and `with` support to an
+internally constructed sealed record obtained from `MethodBodyAnalysisModel`.
+Its index/range properties and the model indexer remain computed accessors, not
+compatibility constructors. Repository callers migrated together; there is no
+compatibility overload or alias.
+
+Branch operands and resolved targets are checked at this boundary. Methods with
+exception handling clauses are rejected before CFG construction, and concrete
+native controls accept only supported opcode families (`ret`, `br`/`br.s`, and
+the supported conditional branches). Unsupported `switch`, exception flow, and
+reaching the end of CIL without an explicit return fail explicitly.
 
 Pre-stack typing, annotated CFG construction, stack-value lifting, and later
 region/AST work below remain planned stages, not implemented behavior.

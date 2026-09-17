@@ -21,6 +21,9 @@ public sealed class MethodBodyAnalysisModel
     {
         Method = method;
         Body = method.GetMethodBody();
+        if (Body?.ExceptionHandlingClauses.Count > 0)
+            throw new NotSupportedException($"Exception handling is not supported for method {method}.");
+
         Parameters = [.. method.GetParameters()];
         var decodedInstructions = (method.GetInstructions() ?? []).ToImmutableArray();
 
@@ -87,6 +90,8 @@ public sealed class MethodBodyAnalysisModel
 
         foreach (var inst in Instructions)
         {
+            var opCode = inst.Instruction.OpCode.ToILOpCode();
+
             int GetTargetIndex()
             {
                 var jumpOffset = inst.Instruction.Operand switch
@@ -118,23 +123,21 @@ public sealed class MethodBodyAnalysisModel
 
             switch (inst.Instruction.OpCode.FlowControl)
             {
-                case FlowControl.Branch:
+                case FlowControl.Branch when CilControlFlow.IsUnconditionalBranch(opCode):
                     builder.AddBr(inst.Index, GetTargetIndex());
                     break;
-                case FlowControl.Cond_Branch when inst.Instruction.OpCode.ToILOpCode() == ILOpCode.Switch:
-                    throw new NotImplementedException();
-                case FlowControl.Cond_Branch:
+                case FlowControl.Cond_Branch when CilControlFlow.IsConditionalBranch(opCode):
                     builder.AddBrIf(inst.Index, GetTargetIndex());
                     break;
-                case FlowControl.Return:
+                case FlowControl.Return when CilControlFlow.IsReturn(opCode):
                     builder.AddReturn(inst.Index);
                     break;
                 case FlowControl.Next:
                 case FlowControl.Call:
                     continue;
                 default:
-                    throw new NotImplementedException(
-                        $"Controlflow {inst.Instruction.OpCode.FlowControl} not implemented");
+                    throw new NotSupportedException(
+                        $"CIL control {opCode} at IL_{inst.ByteOffset:X4} is not supported for method {Method}.");
             }
         }
 

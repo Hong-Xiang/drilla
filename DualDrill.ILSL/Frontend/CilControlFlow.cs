@@ -1,4 +1,3 @@
-using System.Reflection.Emit;
 using System.Reflection.Metadata;
 using DualDrill.CLSL.Language.ControlFlow;
 using Lokad.ILPack.IL;
@@ -14,7 +13,7 @@ public abstract record CilControlFlow
     {
         public Return(CilInstructionInfo instruction)
         {
-            RequireFlowControl(instruction, FlowControl.Return);
+            RequireSupportedOpCode(instruction, IsReturn, "return");
             Instruction = instruction;
         }
 
@@ -27,7 +26,7 @@ public abstract record CilControlFlow
     {
         public Branch(CilInstructionInfo instruction, Label target)
         {
-            RequireFlowControl(instruction, FlowControl.Branch);
+            RequireSupportedOpCode(instruction, IsUnconditionalBranch, "unconditional branch");
             Instruction = instruction;
             Target = target;
         }
@@ -45,10 +44,7 @@ public abstract record CilControlFlow
             Label branchTarget,
             Label fallThroughTarget)
         {
-            RequireFlowControl(instruction, FlowControl.Cond_Branch);
-            if (instruction.Instruction.OpCode.ToILOpCode() == ILOpCode.Switch)
-                throw new NotSupportedException("CIL switch control is not supported.");
-
+            RequireSupportedOpCode(instruction, IsConditionalBranch, "conditional branch");
             Instruction = instruction;
             BranchTarget = branchTarget;
             FallThroughTarget = fallThroughTarget;
@@ -58,15 +54,7 @@ public abstract record CilControlFlow
         public Label BranchTarget { get; }
         public Label FallThroughTarget { get; }
 
-        public override ISuccessor ToSuccessor()
-        {
-            return Instruction.Instruction.OpCode.ToILOpCode() switch
-            {
-                ILOpCode.Brfalse or ILOpCode.Brfalse_s =>
-                    Successor.Conditional(FallThroughTarget, BranchTarget),
-                _ => Successor.Conditional(BranchTarget, FallThroughTarget)
-            };
-        }
+        public override ISuccessor ToSuccessor() => Successor.Conditional(BranchTarget, FallThroughTarget);
     }
 
     public sealed record FallThrough(Label Target) : CilControlFlow
@@ -79,12 +67,35 @@ public abstract record CilControlFlow
         public override ISuccessor ToSuccessor() => Successor.Terminate();
     }
 
-    private static void RequireFlowControl(CilInstructionInfo instruction, FlowControl expected)
+    internal static bool IsReturn(ILOpCode opCode) => opCode == ILOpCode.Ret;
+
+    internal static bool IsUnconditionalBranch(ILOpCode opCode) =>
+        opCode is ILOpCode.Br or ILOpCode.Br_s;
+
+    internal static bool IsConditionalBranch(ILOpCode opCode) =>
+        opCode is
+            ILOpCode.Brfalse or ILOpCode.Brfalse_s or
+            ILOpCode.Brtrue or ILOpCode.Brtrue_s or
+            ILOpCode.Beq or ILOpCode.Beq_s or
+            ILOpCode.Bge or ILOpCode.Bge_s or
+            ILOpCode.Bge_un or ILOpCode.Bge_un_s or
+            ILOpCode.Bgt or ILOpCode.Bgt_s or
+            ILOpCode.Bgt_un or ILOpCode.Bgt_un_s or
+            ILOpCode.Ble or ILOpCode.Ble_s or
+            ILOpCode.Ble_un or ILOpCode.Ble_un_s or
+            ILOpCode.Blt or ILOpCode.Blt_s or
+            ILOpCode.Blt_un or ILOpCode.Blt_un_s or
+            ILOpCode.Bne_un or ILOpCode.Bne_un_s;
+
+    private static void RequireSupportedOpCode(
+        CilInstructionInfo instruction,
+        Func<ILOpCode, bool> isSupported,
+        string family)
     {
-        if (instruction.Instruction.OpCode.FlowControl != expected)
+        var opCode = instruction.Instruction.OpCode.ToILOpCode();
+        if (!isSupported(opCode))
             throw new ArgumentException(
-                $"Expected {expected} CIL control at IL_{instruction.ByteOffset:X4}, " +
-                $"got {instruction.Instruction.OpCode.FlowControl}.",
+                $"Expected a supported CIL {family} at IL_{instruction.ByteOffset:X4}, got {opCode}.",
                 nameof(instruction));
     }
 }

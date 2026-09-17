@@ -1,8 +1,10 @@
 using System.Reflection;
 using System.Reflection.Metadata;
 using DualDrill.CLSL.Frontend;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Symbol;
 using Lokad.ILPack.IL;
 
@@ -46,30 +48,55 @@ public sealed class LinearCilControlFlowTests
     }
 
     [Fact]
-    public void BrfalseProjectionIsLogicalWhileConcreteTargetsRemainNative()
+    public void NativeProjectionAndLoweredBooleanKeepDistinctArmMeanings()
     {
-        var model = CreateModel(nameof(Choose));
+        var method = GetMethod(nameof(Choose));
+        var parser = new RuntimeReflectionParser();
+        var declaration = parser.ParseMethod(method);
+        var model = parser.Context.GetFunctionDefinition(declaration);
         var control = model.Labels.Select(label => model.ControlFlowGraph[label].Terminator)
                            .OfType<CilControlFlow.ConditionalBranch>()
                            .Single();
         var successor = Assert.IsType<ConditionalSuccessor>(control.ToSuccessor());
+        var block = model.Labels.Single(label => ReferenceEquals(model.ControlFlowGraph[label].Terminator, control));
+        var lowered = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
+            parser.MethodBodies[declaration][block].Body.Last);
+
+        Assert.Equal(control.BranchTarget, successor.TrueTarget);
+        Assert.Equal(control.FallThroughTarget, successor.FalseTarget);
 
         switch (control.Instruction.Instruction.OpCode.ToILOpCode())
         {
             case ILOpCode.Brfalse:
             case ILOpCode.Brfalse_s:
-                Assert.Equal(control.FallThroughTarget, successor.TrueTarget);
-                Assert.Equal(control.BranchTarget, successor.FalseTarget);
+                Assert.Equal(control.FallThroughTarget, lowered.TrueTarget.Label);
+                Assert.Equal(control.BranchTarget, lowered.FalseTarget.Label);
                 break;
             case ILOpCode.Brtrue:
             case ILOpCode.Brtrue_s:
-                Assert.Equal(control.BranchTarget, successor.TrueTarget);
-                Assert.Equal(control.FallThroughTarget, successor.FalseTarget);
+                Assert.Equal(control.BranchTarget, lowered.TrueTarget.Label);
+                Assert.Equal(control.FallThroughTarget, lowered.FalseTarget.Label);
                 break;
             default:
                 throw new InvalidOperationException(
                     $"Expected brtrue/brfalse, got {control.Instruction.Instruction.OpCode}.");
         }
+    }
+
+    [Fact]
+    public void ExceptionHandlingAndItsControlOpcodesAreRejected()
+    {
+        var method = GetMethod(nameof(TryFinally));
+        var exception = Assert.Throws<NotSupportedException>(() => new MethodBodyAnalysisModel(method));
+        var instructions = Decode(method);
+        var leave = Assert.Single(instructions,
+            instruction => instruction.Instruction.OpCode.ToILOpCode() is ILOpCode.Leave or ILOpCode.Leave_s);
+        var endFinally = Assert.Single(instructions,
+            instruction => instruction.Instruction.OpCode.ToILOpCode() == ILOpCode.Endfinally);
+
+        Assert.Contains(method.Name, exception.Message);
+        Assert.Throws<ArgumentException>(() => new CilControlFlow.Branch(leave, Label.Create(0)));
+        Assert.Throws<ArgumentException>(() => new CilControlFlow.Return(endFinally));
     }
 
     [Fact]
@@ -104,11 +131,32 @@ public sealed class LinearCilControlFlowTests
 
     private static MethodBodyAnalysisModel CreateModel(string name)
     {
+        return new MethodBodyAnalysisModel(GetMethod(name));
+    }
+
+    private static MethodInfo GetMethod(string name)
+    {
         var method = typeof(LinearCilControlFlowTests).GetMethod(
             name,
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException($"{name} fixture was not found.");
-        return new MethodBodyAnalysisModel(method);
+        return method;
+    }
+
+    private static CilInstructionInfo[] Decode(MethodInfo method)
+    {
+        var instructions = method.GetInstructions()?.ToArray()
+                           ?? throw new InvalidOperationException($"{method} has no CIL body.");
+        var codeSize = method.GetMethodBody()?.GetILAsByteArray()?.Length
+                       ?? throw new InvalidOperationException($"{method} has no CIL bytes.");
+        return
+        [
+            .. instructions.Select((instruction, index) => new CilInstructionInfo(
+                index,
+                instruction.Offset,
+                index + 1 < instructions.Length ? instructions[index + 1].Offset : codeSize,
+                instruction))
+        ];
     }
 
     private static IEnumerable<Label> Targets(CilControlFlow control) =>
@@ -122,4 +170,18 @@ public sealed class LinearCilControlFlowTests
     }
 
     private static int Choose(bool choose, int left, int right) => choose ? left : right;
+
+    private static int TryFinally(int value)
+    {
+        try
+        {
+            value++;
+        }
+        finally
+        {
+            value--;
+        }
+
+        return value;
+    }
 }

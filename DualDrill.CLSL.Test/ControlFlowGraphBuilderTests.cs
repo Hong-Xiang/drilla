@@ -7,16 +7,7 @@ namespace DualDrill.CLSL.Test;
 
 public class ControlFlowGraphBuilderTests
 {
-    public readonly struct SimpleNode(int start, int count, ISuccessor successor) : IEquatable<SimpleNode>
-    {
-        public int Start { get; } = start;
-        public int Count { get; } = count;
-        public ISuccessor Successor { get; } = successor;
-
-        public bool Equals(SimpleNode other) => Start == other.Start && Count == other.Count;
-        public override bool Equals(object? obj) => obj is SimpleNode other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(Start, Count);
-    }
+    public readonly record struct SimpleNode(int Start, int Count, ISuccessor Successor);
 
     static SimpleNode CreateNode(
         Label label,
