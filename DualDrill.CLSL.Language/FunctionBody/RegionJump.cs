@@ -3,10 +3,8 @@ using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed record class RegionJump(Label Label, ImmutableArray<IShaderValue> Arguments)
+public sealed record class RegionJump<TValue>(Label Label, ImmutableArray<TValue> Arguments)
 {
-}
-
-public sealed record class RegionJump<TV>(Label Label, ImmutableArray<TV> Arguments)
-{
+    public RegionJump<TNext> Select<TNext>(Func<TValue, TNext> map) =>
+        new(Label, [.. Arguments.Select(map)]);
 }

@@ -5,7 +5,12 @@
 ## Overview
 
 CLSL is a compiler system that translates csharp code (or more specifically .NET IL) into various shader languages.
-It's designed to provide a seamless development experience by allowing developers to write shader code directly in csharp while maintaining full type safety and IDE support.
+It lets developers express shader code with C# types and attributes. The compiler
+accepts a supported subset; type metadata is not a complete static-verification
+guarantee. See the [shared IR contract](./ir_spec.md) for current boundaries.
+
+This page also retains historical design exploration. Capabilities described in
+that exploration are goals, not additional implemented compiler stages.
 
 ## Key Features
 
@@ -24,9 +29,14 @@ It's designed to provide a seamless development experience by allowing developer
 3. **Type System Integration**
    - Seamless mapping between C# and shader types
    - Support for vectors, matrices, and custom structures
-   - Automatic SIMD optimization for supported types
+   - Explicit scalar and vector operation representations
 
 ## Compiler Architecture
+
+The [shared IR and stage contract](./ir_spec.md) and
+[implemented pass pipeline](./compiler/passes.md) distinguish current behavior
+from design exploration. A nested region IR is not the target-language AST,
+and a same-IR transformation is not by itself a missing stage boundary.
 
 ### Frontend
 
@@ -35,9 +45,8 @@ The compiler frontend is primarily based on runtime reflection, analyzing csharp
 ```csharp
 public interface ICLSLCompiler
 {
-    ShaderModuleDeclaration<UnstructuredIUnifiedFunctionBody<StackInstructionBasicBlock>> Reflect(ISharpShader shader);
-    ShaderModuleDeclaration<StructuredIUnifiedFunctionBody<StackInstructionBasicBlock>> Compile(ISharpShader shader);
-    ValueTask<string> EmitWGSL(ISharpShader module);
+    ShaderModuleDeclaration<FunctionBody4> Parse(ISharpShader shader);
+    string Emit(ISharpShader shader);
 }
 ```
 
@@ -48,7 +57,7 @@ CLSL uses a multiple IR inspired by WASM, SPIR-V, and MLIR:
 1. **Instruction Set**
    - Type-aware instructions (e.g., i32.add, f32.mul)
    - Structured control flow primitives
-   - Full type information preservation
+   - Explicit shader type metadata, subject to the documented validation limits
 
 2. **Control Flow**
    - Block-based structure
@@ -65,7 +74,7 @@ The type system bridges C# and shader languages:
    - Precise bit-width control
 
 2. **Vector Types**
-   - SIMD-optimized implementations
+   - Typed vector operations
    - Swizzling support
    - Component-wise operations
 
@@ -98,7 +107,7 @@ public struct SimpleShader : ISharpShader
 2. **IR Generation**
    - Stack-based instruction generation
    - Control flow analysis
-   - Optimization passes
+   - Operation and parameter lowering
 
 3. **Backend Code Generation**
    - WGSL output (primary target)
@@ -122,7 +131,11 @@ public struct SimpleShader : ISharpShader
 - [ ] (Optional) Support for convert to LLVM IR
 - [ ] (Optional) Support for convert to abstract syntax tree
 
-#### Current Design
+#### Design Exploration (Not All Implemented)
+
+The following describes the historical direction, not the currently implemented
+set of region constructors or function-body types. Use the
+[stage contract](./ir_spec.md#actual-pipeline) for implementation status.
 
 Since our primary frontend is .NET CIL,
 and WASM would be a important frontend/backend target for us in the future,

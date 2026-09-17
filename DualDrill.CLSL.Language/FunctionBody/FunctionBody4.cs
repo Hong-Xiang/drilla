@@ -110,7 +110,7 @@ public sealed class FunctionBody4
                             static d => d
                         ),
                         term => term.Select(
-                            j => new RegionJump(j.Label, [.. j.Arguments.Select(mapValue)]),
+                            j => j.Select(mapValue),
                             mapValue)
                     ),
                     body.ImmediatePostDominator

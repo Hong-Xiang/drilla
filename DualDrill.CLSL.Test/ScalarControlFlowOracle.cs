@@ -154,15 +154,15 @@ internal static class ScalarControlFlowOracle
             }
 
             budget.Step($"{label}: terminator");
-            if (block.Body.Last is Terminator.D.ReturnExpr<RegionJump, IShaderValue> returned)
+            if (block.Body.Last is Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned)
             {
                 // CIL represents bool on the evaluation stack as i32; normalize at the method boundary.
                 return new Execution(Convert(Read(returned.Expr), body.Declaration.ReturnType), trace.ToImmutable());
             }
             var jump = block.Body.Last switch
             {
-                Terminator.D.Br<RegionJump, IShaderValue> branch => branch.Target,
-                Terminator.D.BrIf<RegionJump, IShaderValue> branch =>
+                Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => branch.Target,
+                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                     Read(branch.Condition).Bool ? branch.TrueTarget : branch.FalseTarget,
                 _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {block.Body.Last}.")
             };

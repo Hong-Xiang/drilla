@@ -354,7 +354,8 @@ public sealed record class RuntimeReflectionParser(
                 var successor = model.ControlFlowGraph.Successor(l);
                 var args = visitor.GetStackOutput();
                 terminator ??=
-                    Terminator.B.Br<RegionJump, IShaderValue>(new RegionJump(successor.AllTargets().Single(), args));
+                    Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                        new RegionJump<IShaderValue>(successor.AllTargets().Single(), args));
 
                 foreach (var tl in successor.AllTargets())
                 {

@@ -10,7 +10,7 @@ namespace DualDrill.CLSL.Language.Analysis;
 
 internal class ValueUseAnalysis
     : IRegionTreeFoldSemantic<Label, ShaderRegionBody, IEnumerable<IShaderValue>, IEnumerable<IShaderValue>>
-    , ITerminatorSemantic<RegionJump, IShaderValue, IEnumerable<IShaderValue>>
+    , ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, IEnumerable<IShaderValue>>
 {
     public IEnumerable<IShaderValue> Block(Label label, Func<IEnumerable<IShaderValue>> body, Label? next) => body();
 
@@ -30,10 +30,11 @@ internal class ValueUseAnalysis
         ];
     }
 
-    public IEnumerable<IShaderValue> Br(RegionJump target) => [..target.Arguments];
+    public IEnumerable<IShaderValue> Br(RegionJump<IShaderValue> target) => [.. target.Arguments];
 
-    public IEnumerable<IShaderValue> BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget) =>
-        [condition, ..trueTarget.Arguments, ..falseTarget.Arguments];
+    public IEnumerable<IShaderValue> BrIf(IShaderValue condition, RegionJump<IShaderValue> trueTarget,
+        RegionJump<IShaderValue> falseTarget) =>
+        [condition, .. trueTarget.Arguments, .. falseTarget.Arguments];
 
     public IEnumerable<IShaderValue> ReturnExpr(IShaderValue expr) => [expr];
 

@@ -230,7 +230,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var shared = parser.ParseMethod(((Func<int, int>)ScalarControlFlowFixtures.SharedTail).Method);
         var body = parser.MethodBodies[shared];
         var branch = Assert.Single(body.Labels,
-            label => body[label].Body.Last is Terminator.D.BrIf<RegionJump, IShaderValue>);
+            label => body[label].Body.Last is Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>);
         var tail = body[branch].ImmediatePostDominator;
         Assert.NotNull(tail);
         Assert.Contains(body[tail].Body.Elements,
@@ -241,8 +241,9 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.Equal(2, nested.Labels.Count(analysis.IsLoop));
     }
 
-    private static readonly ITerminatorSemantic<RegionJump, IShaderValue, ITerminator<RegionJump, IShaderValue>>
-        Terms = Terminator.Factory<RegionJump, IShaderValue>();
+    private static readonly ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,
+            ITerminator<RegionJump<IShaderValue>, IShaderValue>>
+        Terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
     private static FunctionBody4 HandBody()
     {

@@ -56,12 +56,12 @@ public sealed class SlangEmitterLoopOwnershipTests
         var condition = ShaderValue.Literal(new BoolLiteral(true));
         var declaration = new FunctionDeclaration("SharedNormalTransfer", [],
             new FunctionReturn(ShaderType.Unit, []), []);
-        var outerBody = Body(outer, Terminator.B.Br<RegionJump, IShaderValue>(new(inner, [])), null);
+        var outerBody = Body(outer, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])), null);
         var innerBody = Body(inner,
-            Terminator.B.BrIf<RegionJump, IShaderValue>(
-                condition, new RegionJump(left, []), new RegionJump(right, [])), null);
-        var leftBody = Body(left, Terminator.B.Br<RegionJump, IShaderValue>(new(outer, [])), outer);
-        var rightBody = Body(right, Terminator.B.Br<RegionJump, IShaderValue>(new(outer, [])), outer);
+            Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
+                condition, new RegionJump<IShaderValue>(left, []), new RegionJump<IShaderValue>(right, [])), null);
+        var leftBody = Body(left, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])), outer);
+        var rightBody = Body(right, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])), outer);
         var body = new FunctionBody4(declaration,
             RegionTree.Loop(outer,
             [
@@ -88,12 +88,13 @@ public sealed class SlangEmitterLoopOwnershipTests
         var condition = ShaderValue.Literal(new BoolLiteral(true));
         var declaration = new FunctionDeclaration("MultipleNormalTargets", [],
             new FunctionReturn(ShaderType.Unit, []), []);
-        var outerBody = Body(outer, Terminator.B.Br<RegionJump, IShaderValue>(new(inner, [])), null);
+        var outerBody = Body(outer, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])), null);
         var innerBody = Body(inner,
-            Terminator.B.BrIf<RegionJump, IShaderValue>(
-                condition, new RegionJump(outer, []), new RegionJump(exit, [])), null);
-        var exitBody = Body(exit, Terminator.B.Br<RegionJump, IShaderValue>(new(terminal, [])), terminal);
-        var terminalBody = Body(terminal, Terminator.B.ReturnVoid<RegionJump, IShaderValue>(), null);
+            Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
+                condition, new RegionJump<IShaderValue>(outer, []), new RegionJump<IShaderValue>(exit, [])), null);
+        var exitBody =
+            Body(exit, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(terminal, [])), terminal);
+        var terminalBody = Body(terminal, Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>(), null);
         var body = new FunctionBody4(declaration,
             RegionTree.Loop(outer,
             [
@@ -112,7 +113,7 @@ public sealed class SlangEmitterLoopOwnershipTests
 
     private static ShaderRegionBody Body(
         Label label,
-        ITerminator<RegionJump, IShaderValue> terminator,
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
         Label? immediatePostDominator) =>
         ShaderRegionBody.Create(label, [], [], terminator, immediatePostDominator);
 

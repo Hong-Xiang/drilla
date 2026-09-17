@@ -4,7 +4,12 @@
 
 ## Overview
 
-CLSL implements comprehensive validation at multiple stages of compilation to ensure type safety, correct resource usage, and shader compatibility. This multi-layer validation approach helps catch errors early and provides meaningful feedback to developers.
+The layers below are a validation design inventory, not a claim that all listed
+validators, diagnostics, or recovery strategies currently exist. See the
+[shared IR contract](../ir_spec.md#logical-stages-and-their-obligations) for
+implemented boundaries and remaining obligations. In particular, raw generic IR
+constructors are not a complete type/scope verifier, and completed analysis with
+no result must be distinguished from analysis that has not run.
 
 ## Validation Layers
 

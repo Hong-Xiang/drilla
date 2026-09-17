@@ -1,196 +1,201 @@
-# CLSL Intermediate Representation Specification
+# Shared IR Constructs and Stage Contracts
 
-> **Note**: This documentation is generated and maintained with the assistance of AI/LLM tools. While we strive for accuracy, please verify critical information and report any inconsistencies.
+This is the canonical contract for organizing CLSL's intermediate
+representations. It distinguishes implemented representations from intended
+stage invariants. An invariant listed here is not a claim that a corresponding
+validator or transformation already exists.
 
-## Overview
+The design uses a small set of generic constructors, not a separate class
+hierarchy for every pass. An optimization or lowering may legitimately return
+the same CLR type it consumes. Nested region IR and target-language AST remain
+different logical stages, even when they reuse constructors.
 
-CLSL IR is a hybrid intermediate representation designed specifically for shader compilation. It combines concepts from WebAssembly, .NET CIL, and SPIR-V to create an IR that is both easy to generate from C# and efficient to translate to various shader languages.
+## Three Relations, Not One Tree
 
-It has multiple different kinds of representations of function bodies,
-while the declarations are represented using `ShaderModuleDeclaration`, `FunctionDeclaration` etc,
-the function bodies are represented using different kinds of types implemented `IFunctionBody`, including:
+- **Containment:** which expression or region owns a definition.
+- **Control reference:** which labeled block or continuation receives control.
+- **Value reference:** which definition supplies an instruction operand or edge
+  argument.
 
-* `UnstructuredStackInstruction` stack byte code with `LabelInstruction` and `BrInstruction`, `BrInstruction` is allowed to jump to any label inside current function.
-* `StructuredControlFlowRegion` structured control flow region with `Block`, `Loop`, `If`, `Else`, `Switch` etc, `BrInstruction` is only allowed to jump to the outer regions of current region.
-* `ControlFlowGraph` a control flow graph representation of the function body,
-with `Label`s associated with `BasicBlock`s,
-and `BasicBlock`s are connected with `ISuccessor`s.
+A region's containment can form a tree while multiple control references share
+one block definition. Traversing definitions is not executing them. Turning that
+representation into a target AST must arrange the shared definition without
+accidentally repeating, skipping, or moving its effects.
 
+## Shared Constructors
 
-## Design Principles
+| Construct | Responsibility | What it does not establish |
+|---|---|---|
+| `Seq<TElement, TLast>` | A recursive sequence with a distinct final element; a basic block can use instructions followed by one terminator. | Valid instruction semantics or validity of a default-constructed wrapper. |
+| `Instruction<TOperand, TResult>` | An operation with explicit operand and result representations. | Operand/type compatibility merely from the generic parameters. |
+| `ITerminator<TTarget, TValue>` | Return, unconditional branch, or two ordered conditional arms. | Target binding, availability of values, or legal lexical scope. |
+| `RegionJump<TValue>` | One concrete `Label` plus an immutable, ordered argument payload. | Destination membership, parameter arity/types, or permission to enter a region. |
+| `RegionTree<TLabel, TBody>` | Nested block/loop bindings and a body, with reusable mapping and folding. | A target AST, execution order, or proof that every reference is structurally legal. |
+| `ShaderModuleDeclaration<TBody>` | Shared declarations with a chosen function-body representation. | A mandatory different body type for every transformation. |
 
-1. **Type Richness**
-   - Every instruction carries complete type information
-   - No implicit type conversions
-   - Full shader type system support
+Reuse the existing semantic/fold interfaces when interpreting these constructors.
+Do not introduce an unconstrained universal node-with-children representation
+that loses the difference between operands, branch arms, bindings, and executable
+sequences. The same recursion machinery need not imply identical node grammars.
 
-2. **Stack-Based Operation**
-   - Simple instruction format
-   - Explicit evaluation stack management
-   - Easy to validate and transform
+### Value-Carrying Jumps
 
-3. **Structured Control Flow**
-   - Block-based nesting
-   - Direct mapping to high-level constructs
-   - Natural translation to shader languages (shader language like HLSL, WGSL does not support unstructured control flow)
+`RegionJump<TValue>.Select` changes only the argument representation. For an
+initialized argument array it preserves the exact `Label` instance, arity,
+argument order, and duplicates. It applies the mapper once per argument in order;
+mapper failures propagate rather than becoming an empty or partially successful
+jump.
 
-## Instruction Set
+This is a payload map, not a graph rewrite or a binder. `FunctionBody4.MapValueUse`
+uses it for existing value-use rewriting. Parameter removal changes arity and
+therefore remains an explicit reconstruction, not a payload map.
 
-### Stack Instructions
+Raw constructors are not checked function boundaries. In particular, generic
+signatures do not prevent all null runtime values or a default `ImmutableArray`,
+and do not prove that an argument has the target parameter's shader type.
 
-1. **Constant Loading**
-   ```
-   const.i32 <value>    ; Push 32-bit integer
-   const.f32 <value>    ; Push 32-bit float
-   const.bool <value>   ; Push boolean
-   ```
+### Control Projection Is Lossy
 
-2. **Stack Manipulation**
-   ```
-   pop                  ; Remove top value
-   dup                  ; Duplicate top value
-   ```
+`ToSuccessor` projects a terminator to its control successors. It discards return
+values, branch conditions, and jump arguments. It preserves
+termination/unconditional/conditional control shape, target identity, true/false
+ordering, and two conditional arms even when they refer to the same label.
+Both value-return and void-return terminators project to termination.
 
-3. **Memory Operations**
-   ```
-   load <target>        ; Load from variable/parameter
-   store <target>       ; Store to variable/parameter
-   load.address <target>; Load address for member access
-   ```
+It is suitable for graph analysis, not for reconstructing edge-value semantics.
+Neither this projection nor a set of successor labels may silently equate
+`join(a)` with `join(b)`.
 
-### Control Flow Instructions
+## Actual Pipeline
 
-1. **Basic Control**
-   ```
-   br <label>          ; Unconditional branch
-   br_if <label>       ; Conditional branch
-   return              ; Return from function
-   ```
+The current public compiler path is:
 
-2. **Structured Control**
-   ```
-   block               ; 
-   loop                ; Begin a loop
-   if-then-else        ; Begin if construct
-   ```
-   all structured control flow instructions has similar semantics like in WebAssembly
-
-### Arithmetic Instructions
-
-1. **Binary Operations**
-   ```
-   add.i32            ; Integer addition
-   add.f32            ; Float addition
-   sub.i32            ; Integer subtraction
-   mul.f32            ; Float multiplication
-   div.f32            ; Float division
-   ```
-
-2. **Vector Operations**
-   ```
-   vec4.construct     ; Construct vec4 from components
-   vec3.swizzle.xyz   ; Apply swizzle pattern
-   vec4.dot           ; Vector dot product
-   ```
-
-## Control Flow Structure
-
-### Basic Blocks
-```
-block_0:
-    const.f32 1.0
-    const.f32 2.0
-    add.f32
-    br block_1
-
-block_1:
-    return
+```text
+C# compiled by .NET
+  -> CIL and MethodBodyAnalysisModel.ControlFlowGraph
+  -> RuntimeReflectionParser.ParseMethodBody3
+  -> FunctionBody4
+  -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
+  -> RegionParameterToLocalVariablePass       : FunctionBody4 -> FunctionBody4
+  -> SlangEmitter
+  -> Slang source
+  -> slangc                                  : Slang source -> WGSL
 ```
 
-### Structured Control Flow
+`FunctionBody4` currently combines typed instructions and parameterized CFG
+terminators with a `RegionTree` built from dominance containment. The parser
+performs stack-to-value translation and creates that region tree in one path.
+The emitter still performs lexical layout. There is not yet an independent
+scoped-region validator, complete structurization pass, or target AST stage.
+
+`ExprValue`/`ExprTree` and the `AbstractSyntaxTree` directory do not constitute a
+complete AST function-body stage in this pipeline. Older design examples,
+experimental backends, and the identity `CommonOperationLoweringPass` must not
+be presented as additional active compilation stages.
+
+## Logical Stages and Their Obligations
+
+These boundaries split reasoning and testing; they do not require six unrelated
+IR implementations. The last two rows describe intended stages, not completed
+implementations.
+
+| Stage | Required invariant | Current owner or implementation boundary |
+|---|---|---|
+| Linear CIL | Instruction boundaries and branch offsets are resolved consistently. | `MethodBodyAnalysisModel`; unsupported instructions remain explicit failures. |
+| CFG of CIL blocks | Instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved. | `ControlFlowGraphBuilder` and the analysis model. |
+| Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `RuntimeReflectionParser` and `ShaderRegionBody` build this representation. Validation is partial, not a complete verifier. |
+| Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
+| Scoped nested region SSA-like IR | Every shared join has a defined owner; loop/continuation transfers resolve within permitted scopes; edge arguments and definition sharing remain explicit. | Intended contract. Dominance containment alone does not establish it. |
+| Target AST | Control targets have a legal target-language realization; shared joins and value transfers have explicit lexical placement; effects retain their order and dynamic multiplicity. | Intended lowering. Current `SlangEmitter` combines these decisions with text emission. |
+
+The typed CFG is SSA-like, not a claim of whole-program SSA: explicit loads,
+stores, and mutable local storage coexist with intermediate values and block
+parameters.
+
+Structurization and block-parameter elimination are distinct transformations.
+Keeping parameters through a scoped region stage is valid. Eliminating them
+earlier is also valid if copies are attached to the selected edges, with
+parallel-copy semantics. The architecture does not prescribe an order merely
+because both passes can consume the same representation.
+
+## Analysis Results and Phase State
+
+An absent immediate postdominator can be a legitimate result of a completed
+analysis; it must not also mean that analysis has not run. Nor is an immediate
+postdominator interchangeable with a join binding or lexical continuation.
+
+For future checked stage boundaries:
+
+- Associate analysis with the exact graph it describes. Changing control edges
+  invalidates analyses that depend on them.
+- Separate "analysis not available" from a completed result containing no
+  continuation. A completed optional result is not itself a design defect.
+- Establish scope/type obligations through controlled construction or explicit
+  validation. A marker type by itself is not evidence that validation happened.
+- Use another generic instantiation or a thin checked wrapper only where it
+  communicates a real consumer requirement; do not add a marker for every pass.
+
+Current `RegionTree<TLabel, TBody>` uses unconstrained `TLabel?` and `default` for
+continuations. This is not a sound general option encoding for arbitrary
+value-type labels. Current compiler use is with concrete reference-type `Label`;
+fixing the generic absence representation is a separate step.
+
+## Current Lowering Limits
+
+`RegionParameterToLocalVariablePass` resolves only supported stable pointer
+aliases. It rejects different arguments on conditional arms sharing one target.
+For distinct targets, its current value stores are inserted before the branch,
+not represented as general edge-local actions. Removing the arguments does not
+prove that a general edge-value lowering has been implemented.
+
+During Slang emission, the current emitter supports a lexical loop with zero or
+one distinct non-terminating destination outside its existing region subtree. Direct
+terminal targets retain their actions and return in the selected arm. Multiple
+distinct normal destinations are explicitly rejected. This emission-time layout
+does not transform the input IR into a checked scoped-region representation.
+It is not the complete Beyond Relooper algorithm or a general irreducible-CFG
+policy.
+
+Original `Label` identity denotes original control-flow provenance. If a future
+pass introduces synthetic edge blocks, it must distinguish them from original
+blocks rather than treating every new lexical node as an original execution.
+Ordinary execution equivalence is not a GPU reconvergence guarantee.
+
+## First Foundation Slice and Migration
+
+This slice unifies the duplicate `RegionJump` and `RegionJump<TValue>` records
+on the existing generic constructor. Existing shader-value users migrate:
+
+```text
+RegionJump
+  -> RegionJump<IShaderValue>
+
+ITerminator<RegionJump, IShaderValue>
+  -> ITerminator<RegionJump<IShaderValue>, IShaderValue>
 ```
-block main:
-    loop l:
-        // Loop body
-        br_if l
-    if:
-        // True branch
-    else:
-        // False branch
-```
 
-## Type System Integration
+All repository callers move together, including analyses, formatters, backends,
+lowering passes, and test interpreters. There is no compatibility alias or shim.
+Consumers naming the old CLR type or constructing it must update and rebuild;
+this is a source/binary API break, not a change to shader execution semantics.
+An explicitly typed `ToSuccessor<TE>(...)` call on the old jump terminator becomes
+`ToSuccessor<IShaderValue, TE>(...)`, or can use generic type inference.
 
-### Type Declarations
-```
-struct VertexInput:
-    pos: vec3<f32>
-    normal: vec3<f32>
-    uv: vec2<f32>
+The small accompanying laws cover payload-map identity/composition,
+type-changing maps, label identity, ordered arguments and mapper failures,
+lossy control projection, and the real `MapValueUse` caller. Array contents are
+compared extensionally: immutable-array storage identity is not semantic
+equality of jump arguments.
+Identity and composition concern pure mappers; the separate order and exception
+cases describe observable behavior for effectful callbacks.
 
-struct UniformBuffer:
-    view: mat4x4<f32>
-    proj: mat4x4<f32>
-```
+## Subsequent Slices
 
-### Function Signatures
-```
-@vertex
-fn main(
-    @location(0) position: vec3<f32>,
-    @location(1) normal: vec3<f32>
-) -> @builtin(position) vec4<f32>
-```
+The next independently scoped steps are to make analysis availability and
+continuation absence unambiguous, establish checked region scope and shared-join
+ownership, and lower those owned references and values into a target AST.
+Expression tree packing and final source formatting need not be the same pass
+as control layout. Each step must preserve the existing semantic/trace corpus.
 
-## Validation Rules
-
-1. **Type Checking**
-   - Stack effect validation
-   - Type compatibility verification
-   - Resource access validation
-
-2. **Control Flow**
-   - Structured nesting
-   - Reachability analysis
-   - Stack consistency
-
-3. **Resource Usage**
-   - Binding validation
-   - Access pattern checking
-   - Stage compatibility
-
-## Memory Model
-
-1. **Storage Classes**
-   - Function locals
-   - Module globals
-   - Uniform buffers
-   - Storage buffers
-
-2. **Address Spaces**
-   - Private
-   - Uniform
-   - Storage
-   - Workgroup
-
-## Optimization Opportunities
-
-1. **Instruction-Level**
-   - Constant folding
-   - Common subexpression elimination
-   - Dead code elimination
-
-2. **Control Flow**
-   - Loop optimization
-   - Branch simplification
-   - Block merging
-
-3. **Vector/Matrix**
-   - Swizzle optimization
-   - Matrix multiplication patterns
-   - SIMD-friendly transformations
-
-See also:
-- [WGSL Backend](./backends/wgsl.md)
-- [IR Transformation Passes](./compiler/passes.md)
-- [Validation Rules](./compiler/validation.md)
+See [pass contracts](compiler/passes.md) for per-stage test units and
+[functional IR design notes](functional_ir.md) for the original motivation.

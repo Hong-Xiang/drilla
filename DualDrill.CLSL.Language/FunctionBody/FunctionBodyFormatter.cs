@@ -11,7 +11,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 
 internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Function)
     : IRegionTreeFoldLazySemantic<Label, ShaderRegionBody, Unit, Unit>
-    , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
+    , ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>
 {
     private readonly SemanticModel Model = new(Function);
 
@@ -65,13 +65,13 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid()
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnVoid()
     {
         Writer.WriteLine("return");
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
     {
         Writer.Write("return ");
         Dump(expr);
@@ -79,7 +79,7 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Br(RegionJump<IShaderValue> target)
     {
         Writer.Write("br ");
         Dump(target);
@@ -87,8 +87,8 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.BrIf(IShaderValue condition, RegionJump trueTarget,
-        RegionJump falseTarget)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.BrIf(IShaderValue condition,
+        RegionJump<IShaderValue> trueTarget, RegionJump<IShaderValue> falseTarget)
     {
         Writer.Write("br_if ");
         Dump(condition);
@@ -171,7 +171,7 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
         Function.Body.Fold(this);
     }
 
-    private void Dump(RegionJump target)
+    private void Dump(RegionJump<IShaderValue> target)
     {
         Dump(target.Label);
         Writer.Write('(');

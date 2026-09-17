@@ -31,7 +31,7 @@ internal sealed class SPIRVTypeOpVisitor
 public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
     : IDeclarationSemantic<Unit>
     , IShaderTypeSemantic<string, string>
-    , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
+    , ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>
     , ILiteralSemantic<Unit>
 {
     private readonly Dictionary<FunctionDeclaration, string> functionNames = [];
@@ -148,26 +148,26 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<FunctionBody4> Module)
     string IShaderTypeSemantic<string, string>.FunctionType(FunctionType t) =>
         $"OpTypeFunction {GetTypeName(t.ResultType)} {string.Join(" ", t.ParameterTypes.Select(GetTypeName))}";
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid()
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnVoid()
     {
         BodyWriter.WriteLine("OpReturn");
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
     {
         BodyWriter.WriteLine($"OpReturnValue {GetValueName(expr)}");
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Br(RegionJump<IShaderValue> target)
     {
         BodyWriter.WriteLine($"OpBranch {GetLabelName(target.Label)}");
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.BrIf(IShaderValue condition, RegionJump trueTarget,
-        RegionJump falseTarget)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.BrIf(IShaderValue condition,
+        RegionJump<IShaderValue> trueTarget, RegionJump<IShaderValue> falseTarget)
     {
         BodyWriter.WriteLine(
             $"OpBranchIf {GetValueName(condition)} {GetLabelName(trueTarget.Label)} {GetLabelName(falseTarget.Label)}");
