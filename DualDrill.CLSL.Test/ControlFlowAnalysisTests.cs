@@ -73,4 +73,37 @@ public sealed class ControlFlowAnalysisTests
         Assert.False(cfr.IsLoop(b));
         Assert.False(cfr.IsLoop(c));
     }
+
+    [Fact]
+    public void NonDominatingCycleIsNotALoop()
+    {
+        //     +-> a -+
+        //     |      |
+        // e --+      |
+        //     |      |
+        //     +-> b -+
+        //         ^  |
+        //         +--+
+        var e = Label.Create("e");
+        var a = Label.Create("a");
+        var b = Label.Create("b");
+
+        var cfg = new ControlFlowGraph<Unit>(
+            e,
+            ControlFlowGraph.CreateDefinitions<Unit>(new()
+            {
+                [e] = new(Successor.Conditional(a, b), default),
+                [a] = new(Successor.Unconditional(b), default),
+                [b] = new(Successor.Unconditional(a), default),
+            })
+        );
+
+        var cfr = cfg.ControlFlowAnalysis();
+
+        Assert.True(cfr.IndexOf(a) < cfr.IndexOf(b));
+        Assert.DoesNotContain(a, cfr.DominatorTree.Dominators(b));
+        Assert.DoesNotContain(b, cfr.DominatorTree.Dominators(a));
+        Assert.False(cfr.IsLoop(a));
+        Assert.False(cfr.IsLoop(b));
+    }
 }

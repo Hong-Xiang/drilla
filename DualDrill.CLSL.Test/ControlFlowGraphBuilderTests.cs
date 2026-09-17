@@ -77,6 +77,21 @@ public class ControlFlowGraphBuilderTests
     }
 
     [Fact]
+    public void PenultimateBlockShouldFallThroughToFinalInstruction()
+    {
+        var builder = new ControlFlowGraphBuilder(3, Label.Create);
+
+        var final = builder.AddBr(0, 2);
+        var cfg = builder.Build(CreateNode);
+        var penultimate = Assert.Single(cfg.Predecessor(final), label => label != cfg.EntryLabel);
+
+        Assert.Equal(new(1, 1), cfg[penultimate]);
+        Assert.Equal(final, Assert.IsType<UnconditionalSuccessor>(cfg.Successor(penultimate)).Target);
+        Assert.Equal(new(2, 1), cfg[final]);
+        Assert.IsType<TerminateSuccessor>(cfg.Successor(final));
+    }
+
+    [Fact]
     public void TwoNodeBrIfLoopShouldWork()
     {
         var builder = new ControlFlowGraphBuilder(5, Label.Create);

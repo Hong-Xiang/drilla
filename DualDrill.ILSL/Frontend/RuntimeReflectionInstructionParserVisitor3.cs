@@ -279,11 +279,11 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
                 throw new ValidationException($"binary relational op type not match {lt.Name} {rt.Name}", Model.Method);
             return lt switch
             {
-                IntType<N32> when isUn =>
+                IntType<N32> when isUn && TOp.Instance is not BinaryRelational.Ne =>
                     NumericBinaryRelationalOperation<UIntType<N32>, TOp>.Instance,
                 IntType<N32> =>
                     NumericBinaryRelationalOperation<IntType<N32>, TOp>.Instance,
-                IntType<N64> when isUn =>
+                IntType<N64> when isUn && TOp.Instance is not BinaryRelational.Ne =>
                     NumericBinaryRelationalOperation<UIntType<N64>, TOp>.Instance,
                 IntType<N64> =>
                     NumericBinaryRelationalOperation<IntType<N64>, TOp>.Instance,
@@ -634,6 +634,11 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         foreach (var p in func.Parameters.Reverse())
         {
             var ve = Pop();
+            var conversion = p.Type is BoolType && ve.Type is IntType<N32>
+                ? StoreConversion(p.Type, ve.Type)
+                : null;
+            if (conversion is not null)
+                ve = EmitLet(conversion.ResultType, r => InstF.Operation1(default, conversion, r, ve));
             if (!GetValueType(ve).Equals(p.Type))
                 throw new ValidationException(
                     $"parameter {p} not match: stack {ve} declaration {p.Type.Name}",
