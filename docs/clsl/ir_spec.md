@@ -112,6 +112,14 @@ The typed CFG is SSA-like, not a claim of whole-program SSA: explicit loads,
 stores, and mutable local storage coexist with intermediate values and block
 parameters.
 
+The agreed [linear CIL frontend design](compiler/linear-cil.md) refines the next
+steps: type-level Pre stack analysis can decorate the original linear
+instructions before basic-block construction. Preserve native CIL predicates
+and concrete terminator payload behind narrow generic control views; do not split
+`TE` merely to expose data unused by topology analysis. Instruction-changing
+lowering follows stable CFG label construction. These refinements do not describe
+already completed pipeline changes.
+
 Structurization and block-parameter elimination are distinct transformations.
 Keeping parameters through a scoped region stage is valid. Eliminating them
 earlier is also valid if copies are attached to the selected edges, with
