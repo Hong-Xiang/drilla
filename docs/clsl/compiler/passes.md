@@ -25,7 +25,8 @@ optimization-level pipeline, or comprehensive inter-pass verifier here.
 
 ```text
 linear stack instructions
-  -> CFG of stack instructions
+  -> linear instructions with completed Pre stack-state annotations
+  -> CFG of typed stack instructions
   -> typed CFG with block arguments
   -> scoped nested regions with shared joins and SSA-like values
   -> target-language AST
@@ -37,6 +38,13 @@ classes. Shared instructions, terminators, sequences, labels, and region
 constructors can serve multiple stages. The current parser fuses some of these
 steps, and the current emitter still performs work intended for region-to-AST
 lowering.
+
+The agreed [linear CIL design](linear-cil.md) refines the frontend ordering:
+preserve native predicates and original offsets, analyze Pre stack types on
+instruction positions, then split into blocks and lower instructions only after
+labels are stable. Generic analysis uses a narrow control view while concrete
+terminator payload remains intact. This does not require splitting `TE` or
+rebuilding rich CIL nodes from a lossy `Unit` projection.
 
 ### Control Structurization
 
@@ -79,6 +87,7 @@ a supported constant storage address is not a mutable pointer-valued local.
 
 | Transformation | Minimal independent examples |
 |---|---|
+| Linear CIL -> Pre stack annotation | Jump versus physical adjacency, typed stack joins, loop propagation, and unreachable versus empty entry state. |
 | Linear CIL -> CFG | A separately labeled final instruction, explicit return, conditional branch, and ordinary fallthrough. |
 | Stack CFG -> typed CFG | Equal incoming stack shapes, mismatched shapes, ordered edge arguments, and normalized scalar call boundaries. |
 | CFG -> scoped regions | A diamond, loop header, shared join, nested continuation, and illegal cross-scope reference. |

@@ -27,18 +27,18 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
     public RuntimeReflectionInstructionParserVisitor3(
         MethodBodyAnalysisModel model,
         FunctionDeclaration function,
-        ISuccessor successor,
+        CilControlFlow control,
         ImmutableStack<IShaderValue> inputStack)
     {
         Model = model;
         Function = function;
-        Successor = successor;
+        Control = control;
         Stack = inputStack;
     }
 
     public MethodBodyAnalysisModel Model { get; }
     public FunctionDeclaration Function { get; }
-    public ISuccessor Successor { get; }
+    public CilControlFlow Control { get; }
     public ImmutableStack<IShaderValue> Stack { get; private set; }
 
     public ITerminator<RegionJump<IShaderValue>, IShaderValue>? Terminator { get; private set; }
@@ -70,6 +70,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitReturn(CilInstructionInfo info)
     {
+        RequireNativeControl<CilControlFlow.Return>(info);
         if (Stack.IsEmpty)
         {
             if (Function.Return.Type is not UnitType)
@@ -238,14 +239,10 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
 
     public Unit VisitBranch(CilInstructionInfo inst, int jumpOffset)
     {
-        if (Successor is UnconditionalSuccessor { Target: var target })
-        {
-            var args = GetStackOutput();
-            Terminator = TermF.Br(new RegionJump<IShaderValue>(target, args));
-            return default;
-        }
-
-        throw new ValidationException($"successor mismatch, expected br, got {Successor}", Model.Method);
+        var control = RequireNativeControl<CilControlFlow.Branch>(inst);
+        var args = GetStackOutput();
+        Terminator = TermF.Br(new RegionJump<IShaderValue>(control.Target, args));
+        return default;
     }
 
     public Unit VisitBranchIf(CilInstructionInfo inst, int jumpOffset, bool value)
@@ -255,23 +252,18 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         if (t is not IntType<N32>)
             throw new ValidationException($"br if expecte a i32 stack value, got {t}", Model.Method);
 
-        if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
-        {
-            var args = GetStackOutput();
-            //var vb = EmitLet(ShaderType.Bool, Expr.Operation1(ScalarConversionOperation<IntType<N32>, BoolType>.Instance, CreateValueExpr(v)));
-            var vb = EmitLet(ShaderType.Bool,
-                res => InstF.Operation1(default, ScalarConversionOperation<IntType<N32>, BoolType>.Instance, res, v));
-            if (value)
-                Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(tt, args),
-                    new RegionJump<IShaderValue>(ft, args));
-            else
-                Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(ft, args),
-                    new RegionJump<IShaderValue>(tt, args));
+        var control = RequireNativeControl<CilControlFlow.ConditionalBranch>(inst);
+        var args = GetStackOutput();
+        var vb = EmitLet(ShaderType.Bool,
+            res => InstF.Operation1(default, ScalarConversionOperation<IntType<N32>, BoolType>.Instance, res, v));
+        if (value)
+            Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(control.BranchTarget, args),
+                new RegionJump<IShaderValue>(control.FallThroughTarget, args));
+        else
+            Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(control.FallThroughTarget, args),
+                new RegionJump<IShaderValue>(control.BranchTarget, args));
 
-            return default;
-        }
-
-        throw new ValidationException($"successor mismatch, expected br_if, got {Successor}", Model.Method);
+        return default;
     }
 
     public Unit VisitBranchIf<TOp>(CilInstructionInfo inst, int jumpOffset, bool isUn = false)
@@ -301,19 +293,13 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
             };
         });
 
-        if (Successor is ConditionalSuccessor { TrueTarget: var tt, FalseTarget: var ft })
-        {
-            var args = GetStackOutput();
-            var vb = EmitLet(ShaderType.Bool,
-                r => InstF.Operation1(default, ScalarConversionOperation<IntType<N32>, BoolType>.Instance, r, v));
-            //var vb = EmitLet(ShaderType.Bool, Expr.Operation1(ScalarConversionOperation<IntType<N32>, BoolType>.Instance, CreateValueExpr(v)));
-            Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(tt, args),
-                new RegionJump<IShaderValue>(ft, args));
-        }
-        else
-        {
-            throw new ValidationException($"successor mismatch, expected br_if, got {Successor}", Model.Method);
-        }
+        var control = RequireNativeControl<CilControlFlow.ConditionalBranch>(inst);
+        var args = GetStackOutput();
+        var vb = EmitLet(ShaderType.Bool,
+            r => InstF.Operation1(default, ScalarConversionOperation<IntType<N32>, BoolType>.Instance, r, v));
+        //var vb = EmitLet(ShaderType.Bool, Expr.Operation1(ScalarConversionOperation<IntType<N32>, BoolType>.Instance, CreateValueExpr(v)));
+        Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(control.BranchTarget, args),
+            new RegionJump<IShaderValue>(control.FallThroughTarget, args));
 
         return default;
     }
@@ -664,6 +650,27 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         var result = Stack.Reverse().ToImmutableArray();
         //Stack = [];
         return result;
+    }
+
+    private TControl RequireNativeControl<TControl>(CilInstructionInfo instruction)
+        where TControl : CilControlFlow
+    {
+        if (Control is TControl control)
+        {
+            var source = control switch
+            {
+                CilControlFlow.Return value => value.Instruction,
+                CilControlFlow.Branch value => value.Instruction,
+                CilControlFlow.ConditionalBranch value => value.Instruction,
+                _ => throw new InvalidOperationException($"{typeof(TControl).Name} is not native CIL control.")
+            };
+            if (source.Equals(instruction) && ReferenceEquals(source.Instruction, instruction.Instruction))
+                return control;
+        }
+
+        throw new ValidationException(
+            $"CIL control mismatch at IL_{instruction.ByteOffset:X4}: expected {typeof(TControl).Name}, got {Control}.",
+            Model.Method);
     }
 
 

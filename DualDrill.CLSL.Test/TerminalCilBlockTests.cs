@@ -85,8 +85,11 @@ public sealed class TerminalCilBlockTests
         MethodBodyAnalysisModel.CilInstructionBlock block)
     {
         Assert.IsType<TerminateSuccessor>(model.ControlFlowGraph.Successor(block.Label));
-        var last = block.InstructionIndex + block.InstructionCount - 1;
-        Assert.Equal(OpCodes.Ret, model[last].Instruction.OpCode);
+        var control = Assert.IsType<CilControlFlow.Return>(block.Terminator);
+        var last = block.Instructions[^1];
+        Assert.Equal(OpCodes.Ret, last.Instruction.OpCode);
+        Assert.Equal(last, control.Instruction);
+        Assert.Same(last.Instruction, control.Instruction.Instruction);
     }
 
     private static void AssertDebugValueFlow(

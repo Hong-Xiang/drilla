@@ -21,24 +21,34 @@ public sealed class MethodBodyAnalysisModel
     {
         Method = method;
         Body = method.GetMethodBody();
+        if (Body?.ExceptionHandlingClauses.Count > 0)
+            throw new NotSupportedException($"Exception handling is not supported for method {method}.");
+
         Parameters = [.. method.GetParameters()];
-        Instructions = [.. method.GetInstructions() ?? []];
+        var decodedInstructions = (method.GetInstructions() ?? []).ToImmutableArray();
 
         {
             var localVariables = (method.GetMethodBody()?.LocalVariables ?? []).ToArray();
-            var localVariablesFromInsturctions = Instructions.Select(inst => inst.Operand).OfType<LocalVariableInfo>()
-                                                             .Distinct().OrderBy(v => v.LocalIndex);
+            var localVariablesFromInsturctions = decodedInstructions.Select(inst => inst.Operand)
+                                                                    .OfType<LocalVariableInfo>()
+                                                                    .Distinct()
+                                                                    .OrderBy(v => v.LocalIndex);
             foreach (var l in localVariablesFromInsturctions) localVariables[l.LocalIndex] = l;
 
             LocalVariables = [.. localVariables];
         }
         {
-            var offsets = Instructions.Select(inst => inst.Offset).ToList();
+            var offsets = decodedInstructions.Select(inst => inst.Offset).ToList();
             offsets.Add(method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0);
             Offsets = [.. offsets];
         }
 
         OffsetsToIndex = Offsets.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
+        Instructions =
+        [
+            .. decodedInstructions.Select((instruction, index) =>
+                new CilInstructionInfo(index, Offsets[index], Offsets[index + 1], instruction))
+        ];
 
         ControlFlowGraph = GetControlFlowGraph();
 
@@ -51,7 +61,7 @@ public sealed class MethodBodyAnalysisModel
     public ImmutableArray<ParameterInfo> Parameters { get; }
     public ImmutableArray<LocalVariableInfo> LocalVariables { get; }
     public ImmutableArray<int> Offsets { get; }
-    private ImmutableArray<Instruction> Instructions { get; }
+    public ImmutableArray<CilInstructionInfo> Instructions { get; }
     public ImmutableArray<Label> Labels { get; }
     public MethodBase Method { get; }
     public MethodBody? Body { get; }
@@ -63,14 +73,14 @@ public sealed class MethodBodyAnalysisModel
     public FrozenDictionary<int, int> OffsetsToIndex { get; }
 
     public ControlFlowGraph<CilInstructionBlock> ControlFlowGraph { get; }
-    public CilInstructionInfo this[int index] => new(index, Offsets[index], Offsets[index + 1], Instructions[index]);
+    public CilInstructionInfo this[int index] => Instructions[index];
     public int LabelToInstructionIndex(Label label) => LabelIndices[label];
     public int LabelToInstructionCount(Label label) => LabelCounts[label];
     public Label? OffsetToLabel(int offset) => OffsetLabels.TryGetValue(offset, out var label) ? label : null;
 
     public IEnumerable<MethodBase> CalledMethods()
     {
-        return Instructions.Select(op => op.Operand)
+        return Instructions.Select(info => info.Instruction.Operand)
                            .OfType<MethodBase>();
     }
 
@@ -78,63 +88,122 @@ public sealed class MethodBodyAnalysisModel
     {
         var builder = new ControlFlowGraphBuilder(InstructionCount, index => Label.Create(Offsets[index]));
 
-        foreach (var (index, inst) in Instructions.Index())
+        foreach (var inst in Instructions)
         {
+            var opCode = inst.Instruction.OpCode.ToILOpCode();
+
             int GetTargetIndex()
             {
-                var nextOffset = Offsets[index + 1];
-                var jumpOffset = inst.Operand switch
+                var jumpOffset = inst.Instruction.Operand switch
                 {
                     sbyte v => v,
                     int v => v,
-                    _ => 0
+                    _ => throw new InvalidProgramException(
+                        $"Unsupported branch operand at IL_{inst.ByteOffset:X4}.")
                 };
-                var target = nextOffset + jumpOffset;
-                return OffsetsToIndex[target];
+
+                int target;
+                try
+                {
+                    target = checked(inst.NextByteOffset + jumpOffset);
+                }
+                catch (OverflowException e)
+                {
+                    throw new InvalidProgramException(
+                        $"Branch target overflows at IL_{inst.ByteOffset:X4}.", e);
+                }
+
+                if (!OffsetsToIndex.TryGetValue(target, out var targetIndex) || targetIndex >= InstructionCount)
+                    throw new InvalidProgramException(
+                        $"Branch target IL_{target:X4} from IL_{inst.ByteOffset:X4} is not an instruction boundary.");
+
+                return targetIndex;
             }
 
 
-            switch (inst.OpCode.FlowControl)
+            switch (inst.Instruction.OpCode.FlowControl)
             {
-                case FlowControl.Branch:
-                    builder.AddBr(index, GetTargetIndex());
+                case FlowControl.Branch when CilControlFlow.IsUnconditionalBranch(opCode):
+                    builder.AddBr(inst.Index, GetTargetIndex());
                     break;
-                case FlowControl.Cond_Branch when inst.OpCode.ToILOpCode() == ILOpCode.Switch:
-                    throw new NotImplementedException();
-                case FlowControl.Cond_Branch:
-                    builder.AddBrIf(index, GetTargetIndex());
+                case FlowControl.Cond_Branch when CilControlFlow.IsConditionalBranch(opCode):
+                    builder.AddBrIf(inst.Index, GetTargetIndex());
                     break;
-                case FlowControl.Return:
-                    builder.AddReturn(index);
+                case FlowControl.Return when CilControlFlow.IsReturn(opCode):
+                    builder.AddReturn(inst.Index);
                     break;
                 case FlowControl.Next:
                 case FlowControl.Call:
                     continue;
                 default:
-                    throw new NotImplementedException($"Controlflow {inst.OpCode.FlowControl} not implemented");
+                    throw new NotSupportedException(
+                        $"CIL control {opCode} at IL_{inst.ByteOffset:X4} is not supported for method {Method}.");
             }
         }
 
-        return builder.Build((label, range) =>
-        {
-            var count = range.Count;
-            return new CilInstructionBlock(
-                label,
-                range.Start,
-                range.Count,
-                Offsets[range.Start],
-                Offsets[range.Start + range.Count] - Offsets[range.Start]
-            );
-        });
+        return builder.Build(
+            (label, range, successor) =>
+            {
+                var instructions = Instructions.Slice(range.Start, range.Count);
+                var last = instructions[^1];
+                CilControlFlow terminator = (last.Instruction.OpCode.FlowControl, successor) switch
+                {
+                    (FlowControl.Branch, UnconditionalSuccessor { Target: var target }) =>
+                        new CilControlFlow.Branch(last, target),
+                    (FlowControl.Cond_Branch,
+                        ConditionalSuccessor { TrueTarget: var branchTarget, FalseTarget: var fallThroughTarget }) =>
+                        new CilControlFlow.ConditionalBranch(last, branchTarget, fallThroughTarget),
+                    (FlowControl.Return, TerminateSuccessor) =>
+                        new CilControlFlow.Return(last),
+                    (FlowControl.Next or FlowControl.Call, UnconditionalSuccessor { Target: var target }) =>
+                        new CilControlFlow.FallThrough(target),
+                    (FlowControl.Next or FlowControl.Call, TerminateSuccessor) =>
+                        new CilControlFlow.EndOfCode(),
+                    _ => throw new InvalidProgramException(
+                        $"CIL control and CFG topology disagree at IL_{last.ByteOffset:X4}.")
+                };
+
+                return new CilInstructionBlock(label, instructions, terminator);
+            },
+            static block => block.Terminator.ToSuccessor());
     }
 
-    public readonly record struct CilInstructionBlock(
-        Label Label,
-        int InstructionIndex,
-        int InstructionCount,
-        int ByteOffset,
-        int ByteLength
-    )
+    public sealed record CilInstructionBlock
     {
+        internal CilInstructionBlock(
+            Label label,
+            ImmutableArray<CilInstructionInfo> instructions,
+            CilControlFlow terminator)
+        {
+            if (instructions.IsDefaultOrEmpty)
+                throw new ArgumentException("A CIL basic block must contain at least one instruction.",
+                    nameof(instructions));
+
+            var last = instructions[^1];
+            var nativeInstruction = terminator switch
+            {
+                CilControlFlow.Return control => control.Instruction,
+                CilControlFlow.Branch control => control.Instruction,
+                CilControlFlow.ConditionalBranch control => control.Instruction,
+                _ => (CilInstructionInfo?)null
+            };
+            if (nativeInstruction is { } source &&
+                (!source.Equals(last) || !ReferenceEquals(source.Instruction, last.Instruction)))
+                throw new ArgumentException(
+                    "The native CIL terminator must retain the block's final original instruction.",
+                    nameof(terminator));
+
+            Label = label;
+            Instructions = instructions;
+            Terminator = terminator;
+        }
+
+        public Label Label { get; }
+        public ImmutableArray<CilInstructionInfo> Instructions { get; }
+        public CilControlFlow Terminator { get; }
+        public int InstructionIndex => Instructions[0].Index;
+        public int InstructionCount => Instructions.Length;
+        public int ByteOffset => Instructions[0].ByteOffset;
+        public int ByteLength => Instructions[^1].NextByteOffset - ByteOffset;
     }
 }

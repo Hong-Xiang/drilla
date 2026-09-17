@@ -333,29 +333,46 @@ public sealed record class RuntimeReflectionParser(
         foreach (var l in model.ControlFlowGraph.Labels())
         {
             Debug.WriteLine($"Label {l} == ");
+            var cilBlock = model.ControlFlowGraph[l];
             var visitor = new RuntimeReflectionInstructionParserVisitor3(
                 model,
                 f,
-                model.ControlFlowGraph.Successor(l),
+                cilBlock.Terminator,
                 basicBlockInputs[l]);
-            var ilRange = model.ControlFlowGraph[l];
-            for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
+            foreach (var cilInst in cilBlock.Instructions)
             {
-                var cilInst = model[i];
                 //Debug.Write($"parse {cilInst.Instruction.OpCode}");
                 cilInst.Evaluate(visitor, model.IsStatic, methodTable);
                 //Debug.Write(" -> ");
                 //Debug.WriteLine(string.Join(", ", visitor.Stack.Select(v => visitor.GetValueType(v).Name)));
             }
 
-            var terminator = visitor.Terminator;
-
             {
-                var successor = model.ControlFlowGraph.Successor(l);
                 var args = visitor.GetStackOutput();
-                terminator ??=
-                    Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
-                        new RegionJump<IShaderValue>(successor.AllTargets().Single(), args));
+                var terminator = visitor.Terminator;
+                if (terminator is null)
+                {
+                    terminator = cilBlock.Terminator switch
+                    {
+                        CilControlFlow.FallThrough { Target: var target } =>
+                            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                                new RegionJump<IShaderValue>(target, args)),
+                        CilControlFlow.EndOfCode =>
+                            throw new NotSupportedException(
+                                $"Method {model.Method} reaches the end of CIL without an explicit return."),
+                        _ => throw new ValidationException(
+                            $"Native CIL control at IL_{cilBlock.ByteOffset:X4} did not produce a terminator.",
+                            model.Method)
+                    };
+                }
+                else if (cilBlock.Terminator is CilControlFlow.FallThrough or CilControlFlow.EndOfCode)
+                {
+                    throw new ValidationException(
+                        $"Synthetic CIL control at IL_{cilBlock.ByteOffset:X4} produced a native terminator.",
+                        model.Method);
+                }
+
+                var successor = cilBlock.Terminator.ToSuccessor();
 
                 foreach (var tl in successor.AllTargets())
                 {
