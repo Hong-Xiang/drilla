@@ -25,7 +25,7 @@ public sealed class ControlFlowAnalysis
     public bool IsLoop(Label label)
     {
         var predecessors = ControlFlowGraph.GetPred(label);
-        return predecessors.Any(l => DominatorTree.Compare(label, l) <= 0);
+        return predecessors.Any(predecessor => DominatorTree.Dominators(predecessor).Contains(label));
     }
 
     public int IndexOf(Label label) => DFSTree.GetIndex(label);
