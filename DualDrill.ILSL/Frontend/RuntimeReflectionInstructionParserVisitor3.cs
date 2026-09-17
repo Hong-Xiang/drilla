@@ -634,6 +634,11 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         foreach (var p in func.Parameters.Reverse())
         {
             var ve = Pop();
+            var conversion = p.Type is BoolType && ve.Type is IntType<N32>
+                ? StoreConversion(p.Type, ve.Type)
+                : null;
+            if (conversion is not null)
+                ve = EmitLet(conversion.ResultType, r => InstF.Operation1(default, conversion, r, ve));
             if (!GetValueType(ve).Equals(p.Type))
                 throw new ValidationException(
                     $"parameter {p} not match: stack {ve} declaration {p.Type.Name}",
