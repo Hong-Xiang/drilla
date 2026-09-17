@@ -144,7 +144,8 @@ public sealed class IntegerInequalityBranchTests
 
     private static void AssertArms(FunctionBody4 body, Label branch, Label trueTarget, Label falseTarget)
     {
-        var terminator = Assert.IsType<Terminator.D.BrIf<RegionJump, IShaderValue>>(body[branch].Body.Last);
+        var terminator =
+            Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(body[branch].Body.Last);
         Assert.Equal(trueTarget, terminator.TrueTarget.Label);
         Assert.Equal(falseTarget, terminator.FalseTarget.Label);
     }
@@ -160,7 +161,7 @@ public sealed class IntegerInequalityBranchTests
         var literal = Assert.Single(block.Body.Elements);
         Assert.Equal(expected, Assert.IsType<I32Literal>(Assert.IsType<LiteralValue>(literal.Operand0).Value).Value);
         Assert.Same(literal.Result,
-            Assert.IsType<Terminator.D.ReturnExpr<RegionJump, IShaderValue>>(block.Body.Last).Expr);
+            Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(block.Body.Last).Expr);
     }
 
     private sealed class IntegerInequalityShader : ISharpShader

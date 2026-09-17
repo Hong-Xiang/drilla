@@ -22,7 +22,7 @@ public class SlangEmitter
     : IDeclarationVisitor<FunctionBody4, Unit>
     , IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>
     , ILiteralSemantic<string>
-    , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
+    , ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>
     , IOperationSemantic<Instruction<string, string>, string, string, string>
 {
     private readonly Dictionary<Label, RegionTree<Label, ShaderRegionBody>> Blocks = [];
@@ -345,13 +345,13 @@ public class SlangEmitter
     }
 
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid()
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnVoid()
     {
         Writer.WriteLine("return;");
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
     {
         Writer.Write("return ");
         Writer.Write(GetValueName(expr));
@@ -359,15 +359,15 @@ public class SlangEmitter
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Br(RegionJump<IShaderValue> target)
     {
         Writer.WriteLine($"// br {GetLabelName(target.Label)}");
         EmitBranch(target.Label, SourceBlocks.Peek());
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.BrIf(IShaderValue condition, RegionJump trueTarget,
-        RegionJump falseTarget)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.BrIf(IShaderValue condition,
+        RegionJump<IShaderValue> trueTarget, RegionJump<IShaderValue> falseTarget)
     {
         Writer.WriteLine($"// br if {GetLabelName(trueTarget.Label)} {GetLabelName(falseTarget.Label)}");
         Writer.Write("if");

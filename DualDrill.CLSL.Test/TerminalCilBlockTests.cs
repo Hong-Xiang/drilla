@@ -94,7 +94,7 @@ public sealed class TerminalCilBlockTests
         FunctionDeclaration declaration,
         IReadOnlyDictionary<int, MethodBodyAnalysisModel.CilInstructionBlock> blocks)
     {
-        var branch = Assert.IsType<Terminator.D.BrIf<RegionJump, IShaderValue>>(
+        var branch = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
             body[blocks[0].Label].Body.Last);
         Assert.Equal(blocks[6].Label, branch.TrueTarget.Label);
         Assert.Equal(blocks[3].Label, branch.FalseTarget.Label);
@@ -106,7 +106,8 @@ public sealed class TerminalCilBlockTests
         var parameter = Assert.Single(terminal.Parameters);
         Assert.Empty(terminal.Body.Elements);
         Assert.Same(parameter,
-            Assert.IsType<Terminator.D.ReturnExpr<RegionJump, IShaderValue>>(terminal.Body.Last).Expr);
+            Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(
+                terminal.Body.Last).Expr);
     }
 
     private static void AssertReleaseValueFlow(
@@ -114,7 +115,7 @@ public sealed class TerminalCilBlockTests
         FunctionDeclaration declaration,
         IReadOnlyDictionary<int, MethodBodyAnalysisModel.CilInstructionBlock> blocks)
     {
-        var branch = Assert.IsType<Terminator.D.BrIf<RegionJump, IShaderValue>>(
+        var branch = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
             body[blocks[0].Label].Body.Last);
         Assert.Equal(blocks[5].Label, branch.TrueTarget.Label);
         Assert.Equal(blocks[3].Label, branch.FalseTarget.Label);
@@ -133,7 +134,8 @@ public sealed class TerminalCilBlockTests
         Assert.IsType<LoadOperation>(load.Operation);
         Assert.Same(parameter.Value, load.Operand0);
 
-        var jump = Assert.IsType<Terminator.D.Br<RegionJump, IShaderValue>>(body[arm].Body.Last).Target;
+        var jump =
+            Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(body[arm].Body.Last).Target;
         Assert.Equal(terminal, jump.Label);
         Assert.Same(load.Result, Assert.Single(jump.Arguments));
     }
@@ -147,6 +149,7 @@ public sealed class TerminalCilBlockTests
         Assert.IsType<LoadOperation>(load.Operation);
         Assert.Same(parameter.Value, load.Operand0);
         Assert.Same(load.Result,
-            Assert.IsType<Terminator.D.ReturnExpr<RegionJump, IShaderValue>>(body[arm].Body.Last).Expr);
+            Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(
+                body[arm].Body.Last).Expr);
     }
 }

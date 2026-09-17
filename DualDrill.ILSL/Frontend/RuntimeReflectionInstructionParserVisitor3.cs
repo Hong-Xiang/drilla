@@ -41,12 +41,14 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
     public ISuccessor Successor { get; }
     public ImmutableStack<IShaderValue> Stack { get; private set; }
 
-    public ITerminator<RegionJump, IShaderValue>? Terminator { get; private set; }
+    public ITerminator<RegionJump<IShaderValue>, IShaderValue>? Terminator { get; private set; }
 
     public IReadOnlyList<Instruction<IShaderValue, IShaderValue>> Instructions => instructions;
 
-    private ITerminatorSemantic<RegionJump, IShaderValue, ITerminator<RegionJump, IShaderValue>> TermF { get; }
-        = Language.Terminator.Factory<RegionJump, IShaderValue>();
+    private ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,
+        ITerminator<RegionJump<IShaderValue>, IShaderValue>> TermF
+    { get; }
+        = Language.Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
     private IOperationSemantic<Unit, IShaderValue, IShaderValue, Instruction<IShaderValue, IShaderValue>> InstF { get; }
         = Instruction.Factory;
@@ -239,7 +241,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         if (Successor is UnconditionalSuccessor { Target: var target })
         {
             var args = GetStackOutput();
-            Terminator = TermF.Br(new RegionJump(target, args));
+            Terminator = TermF.Br(new RegionJump<IShaderValue>(target, args));
             return default;
         }
 
@@ -260,9 +262,11 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
             var vb = EmitLet(ShaderType.Bool,
                 res => InstF.Operation1(default, ScalarConversionOperation<IntType<N32>, BoolType>.Instance, res, v));
             if (value)
-                Terminator = TermF.BrIf(vb, new RegionJump(tt, args), new RegionJump(ft, args));
+                Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(tt, args),
+                    new RegionJump<IShaderValue>(ft, args));
             else
-                Terminator = TermF.BrIf(vb, new RegionJump(ft, args), new RegionJump(tt, args));
+                Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(ft, args),
+                    new RegionJump<IShaderValue>(tt, args));
 
             return default;
         }
@@ -303,7 +307,8 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
             var vb = EmitLet(ShaderType.Bool,
                 r => InstF.Operation1(default, ScalarConversionOperation<IntType<N32>, BoolType>.Instance, r, v));
             //var vb = EmitLet(ShaderType.Bool, Expr.Operation1(ScalarConversionOperation<IntType<N32>, BoolType>.Instance, CreateValueExpr(v)));
-            Terminator = TermF.BrIf(vb, new RegionJump(tt, args), new RegionJump(ft, args));
+            Terminator = TermF.BrIf(vb, new RegionJump<IShaderValue>(tt, args),
+                new RegionJump<IShaderValue>(ft, args));
         }
         else
         {

@@ -112,7 +112,7 @@ public static class TerminatorExtension
     public static ISuccessor ToSuccessor<TE>(this ITerminator<Label, TE> t) =>
         t.Evaluate(new ToSuccessorSemantic<TE>());
 
-    public static ISuccessor ToSuccessor<TE>(this ITerminator<RegionJump, TE> t)
+    public static ISuccessor ToSuccessor<TValue, TE>(this ITerminator<RegionJump<TValue>, TE> t)
     {
         return t.Select(l => l.Label, e => e).Evaluate(new ToSuccessorSemantic<TE>());
     }
