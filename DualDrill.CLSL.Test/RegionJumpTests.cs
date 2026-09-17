@@ -2,6 +2,7 @@ using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
@@ -26,6 +27,7 @@ public class RegionJumpTests
             Assert.Same(label, identity.Label);
             Assert.True(arguments.SequenceEqual(identity.Arguments));
             Assert.Same(label, sequential.Label);
+            Assert.Same(label, composed.Label);
             Assert.True(sequential.Arguments.SequenceEqual(composed.Arguments));
         }
     }
@@ -84,14 +86,22 @@ public class RegionJumpTests
     }
 
     [Fact]
-    public void GenericRegionJumpToSuccessorPreservesOrderedParallelTargets()
+    public void GenericRegionJumpToSuccessorPreservesControlShapeAndOrderedTargets()
     {
         var left = Label.Create("left");
         var right = Label.Create("right");
         ITerminator<RegionJump<int>, string> distinct =
             Terminator.B.BrIf<RegionJump<int>, string>("condition", new(left, [1]), new(right, [2]));
         ITerminator<RegionJump<string>, int> parallel =
-            Terminator.B.BrIf<RegionJump<string>, int>(1, new(left, ["first"]), new(left, ["second"]));
+            Terminator.B.BrIf<RegionJump<string>, int>(
+                1, new(left, ["first", "left"]), new(left, ["second", "right"]));
+
+        Assert.IsType<TerminateSuccessor>(
+            Terminator.B.ReturnVoid<RegionJump<int>, string>().ToSuccessor());
+        Assert.IsType<TerminateSuccessor>(
+            Terminator.B.ReturnExpr<RegionJump<int>, string>("value").ToSuccessor());
+        Assert.Same(left, Assert.IsType<UnconditionalSuccessor>(
+            Terminator.B.Br<RegionJump<int>, string>(new(left, [1])).ToSuccessor()).Target);
 
         var distinctSuccessor = Assert.IsType<ConditionalSuccessor>(distinct.ToSuccessor());
         var parallelSuccessor = Assert.IsType<ConditionalSuccessor>(parallel.ToSuccessor());
@@ -115,12 +125,13 @@ public class RegionJumpTests
     {
         var entry = Label.Create("entry");
         var target = Label.Create("target");
-        var source = ShaderValue.Intermediate(ShaderType.I32);
-        var replacement = ShaderValue.Intermediate(ShaderType.I32);
+        var source = ShaderValue.Literal(new I32Literal(1));
+        var replacement = ShaderValue.Literal(new I32Literal(2));
+        var parameter = ShaderValue.Intermediate(ShaderType.I32);
         var terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
         var entryBody = ShaderRegionBody.Create(entry, [], [],
             terms.Br(new RegionJump<IShaderValue>(target, [source])), target);
-        var targetBody = ShaderRegionBody.Create(target, [source], [], terms.ReturnVoid(), null);
+        var targetBody = ShaderRegionBody.Create(target, [parameter], [], terms.ReturnVoid(), null);
         var declaration = new FunctionDeclaration("Map", [], new FunctionReturn(UnitType.Instance, []), []);
         var body = new FunctionBody4(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry,
             [RegionTree<Label, ShaderRegionBody>.Block(target, [], targetBody, null)], entryBody, target));
@@ -137,6 +148,9 @@ public class RegionJumpTests
         Assert.Same(target, mapped[target].Label);
         Assert.Same(target, jump.Label);
         Assert.Same(replacement, Assert.Single(jump.Arguments));
-        Assert.Same(replacement, Assert.Single(mapped[target].Parameters));
+        Assert.Same(parameter, Assert.Single(mapped[target].Parameters));
+        Assert.Same(source, Assert.Single(
+            Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(body[entry].Body.Last)
+                .Target.Arguments));
     }
 }

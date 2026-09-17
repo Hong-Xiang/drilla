@@ -2,6 +2,11 @@
 
 > **Note**: This documentation is generated and maintained with the assistance of AI/LLM tools. While we strive for accuracy, please verify critical information and report any inconsistencies.
 
+This page is a historical implementation/design overview, not a guarantee that
+every capability below is implemented. The
+[shared IR contract](./ir_spec.md) and [actual pass pipeline](./compiler/passes.md)
+are authoritative for current representations, stage boundaries, and limitations.
+
 ## Compiler Pipeline
 
 ### Frontend: Runtime Reflection Parser

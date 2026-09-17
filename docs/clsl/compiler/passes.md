@@ -1,147 +1,114 @@
-# CLSL Compiler Passes and Transformations
+# Compiler Passes and Stage Invariants
 
-> **Note**: This documentation is generated and maintained with the assistance of AI/LLM tools. While we strive for accuracy, please verify critical information and report any inconsistencies.
+The [shared IR contract](../ir_spec.md) is the authoritative distinction between
+implemented representations and intended stages. A logical pass boundary does
+not require a new CLR type. Conversely, using one CLR type does not excuse
+leaving a consumer's required invariant unspecified.
 
-## Overview
+## Implemented Public Path
 
-The CLSL compiler employs a series of passes to transform code from C# to shader languages. Each pass is designed to handle a specific aspect of the compilation process while maintaining correctness and optimizing performance.
+| Component | Input -> output | Current responsibility |
+|---|---|---|
+| `MethodBodyAnalysisModel` / `ControlFlowGraphBuilder` | CIL -> CIL block graph | Instruction ranges, successors, and control-flow analyses. |
+| `RuntimeReflectionParser.ParseMethodBody3` | CIL blocks -> `FunctionBody4` | Stack values become typed operations and block arguments; the parser also creates a dominance-based region tree. |
+| `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
+| `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
+| `SlangEmitter` | `FunctionBody4` -> Slang text | Resolve supported lexical transfers, place code, and emit syntax. These responsibilities are not yet separate passes. |
+| `SlangService` | Slang text -> WGSL | Invoke the external Slang compiler. |
 
-## Pass Pipeline
+The `IR` output option formats `FunctionBody4`; it does not produce a distinct
+target AST. `IShaderModuleSimplePass` is the existing same-body-type pass
+interface. There is no implemented general pass scheduler, configurable
+optimization-level pipeline, or comprehensive inter-pass verifier here.
 
-### 1. Frontend Passes
+## Desired Logical Separation
 
-#### Runtime Reflection Pass
-- Analyzes C# code using reflection
-- Collects type information
-- Processes shader attributes
-- Builds initial symbol tables
-
-#### Method Body Analysis
-- Analyzes IL instructions
-- Maps C# operations to shader operations
-- Handles control flow structures
-- Validates shader constraints
-
-### 2. IR Transformation Passes
-
-#### Stack-Based IR Generation
-```
-Initial C# IL:
-ldarg.0
-ldarg.1
-add
-
-Becomes CLSL IR:
-load.param %0
-load.param %1
-add.i32
+```text
+linear stack instructions
+  -> CFG of stack instructions
+  -> typed CFG with block arguments
+  -> scoped nested regions with shared joins and SSA-like values
+  -> target-language AST
+  -> source text
 ```
 
-#### Control Flow Analysis
+This is a staged contract, not a list of already implemented function-body
+classes. Shared instructions, terminators, sequences, labels, and region
+constructors can serve multiple stages. The current parser fuses some of these
+steps, and the current emitter still performs work intended for region-to-AST
+lowering.
 
-1. **Basic Block Formation**
-   ```
-   Entry Block:
-       load.param %0
-       br_if Block2
-   
-   Block1:
-       const.f32 1.0
-       br Exit
-   
-   Block2:
-       const.f32 2.0
-       br Exit
-   
-   Exit:
-       return
-   ```
+### Control Structurization
 
-2. **Build ControlFlow Graph and Dominator Tree**
-   - Define successors of basic blocks
-   - Identify dominator relationships
-   - Analyze loop structures, merge nodes, etc.
+Establish ownership and legal references before target syntax is chosen.
+A shared join is defined once and may have multiple incoming control references.
+Loop headers require dominance-backed backedges; a completed reducibility
+contract must not be inferred from identifying some natural loop headers.
 
-#### Control Flow Structuring
-```
-Before:
-    br_if L1
-    br L2
-L1:
-    // code
-    br L3
-L2:
-    // code
-    br L3
-L3:
+Forward merge analysis must preserve terminator-arm identity. A true arm and
+false arm referencing the same label can still carry different arguments.
+Projection to successors is useful for control analysis but cannot reconstruct
+those discarded values.
 
-After:
-    if {
-        // L1 code
-    } else {
-        // L2 code
-    }
-```
+### Region-to-AST Lowering
 
-## Pass Implementation
+Choose lexical placement for shared joins, continuations, terminal paths, and
+their value transfers. A valid scoped region is not automatically legal Slang or
+WGSL syntax: exiting several scopes is not the same as emitting a nearest-loop
+`break` or `continue`.
 
-### Pass Interface
-```csharp
-public interface ICompilationPass<TInput, TOutput>
-{
-    TOutput Process(TInput input);
-    bool Validate(TInput input);
-}
-```
+Target AST construction must preserve the dynamic occurrence and order of
+original effects. It may introduce explicit local bindings; it must not expand
+a shared effectful definition at every reference as if it were a pure expression.
 
-### Pass Management
-- Sequential pass execution
-- Pass dependency tracking
-- Validation between passes
-- Optional passes based on target
+### Value Lowering
 
-### Pass Categories
+Block parameters, SSA phi operands, mutable locals, and typed stack results are
+different representations of path-selected values. Parameter elimination must
+preserve selected-edge semantics and parallel copies.
 
-1. **Analysis Passes**
-   - Type analysis
-   - Control flow analysis
-   - Resource usage analysis
+This can happen before structurization, using appropriate edge-local actions,
+or after region construction, using owned transfers and explicit values.
+Choose the order in the slice that implements it; do not erase arguments early
+and then require an emitter to recover them from destination labels.
 
-2. **Transformation Passes**
-   - IR generation
-   - Control flow structuring
-   - Operation lowering
+The existing pointer restrictions remain separate from ordinary scalar copying:
+a supported constant storage address is not a mutable pointer-valued local.
 
-3. **Optimization Passes**
-   - Constant folding
-   - Dead code elimination
-   - Vector operation fusion
+## Small Test Units
 
-## Validation
+| Transformation | Minimal independent examples |
+|---|---|
+| Linear CIL -> CFG | A separately labeled final instruction, explicit return, conditional branch, and ordinary fallthrough. |
+| Stack CFG -> typed CFG | Equal incoming stack shapes, mismatched shapes, ordered edge arguments, and normalized scalar call boundaries. |
+| CFG -> scoped regions | A diamond, loop header, shared join, nested continuation, and illegal cross-scope reference. |
+| Region -> AST | Shared effectful tail, early return, nested exit, and multiple references to one continuation. |
+| Parameter/value lowering | Two arms with different values to one target, cyclic parallel copies, and stable versus ambiguous pointer roots. |
+| AST -> text | Precedence, declarations/scopes, control syntax, and target compiler acceptance. |
 
-### Inter-Pass Validation
-- Type consistency
-- Control flow integrity
-- Resource binding validity
+For shared generic constructors, test identity/composition laws using semantic
+contents rather than incidental object-storage equality. For control/value maps,
+preserve labels and ordered arm/argument references unless the pass explicitly
+owns their transformation.
 
-### Target-Specific Validation
-- WGSL constraints
-- Resource limitations
-- Stage restrictions
+Existing bounded CPU/CFG/emitted-source comparisons remain the end-to-end
+guardrail; these local units do not replace them. The proposed scope and AST
+units become required as those stages are implemented, not evidence that they
+already exist.
 
-## Extension Points
+## Analysis Lifetime and Failure
 
-### Custom Passes
-- User-defined optimization passes
-- Target-specific transformations
-- Analysis passes for debugging
+State each pass's preconditions, established postconditions, and invalidated
+analyses. Control-edge rewrites cannot silently retain dominance or join-layout
+results from an older graph. A same-type pass may preserve an invariant, establish
+a new one, or invalidate one; its contract must say which.
 
-### Pass Pipeline Configuration
-- Pass ordering control
-- Optional pass selection
-- Optimization level selection
+An unavailable analysis is not the same as a completed analysis with no result.
+Keep raw representation, analysis results, and checked consumer requirements
+distinct. Type markers must be backed by controlled construction or validation.
 
-See also:
-- [IR Specification](../ir_spec.md)
-- [Type System](../type_system.md)
-- [Optimization Strategies](./optimizations.md)
+Failures must remain explicit. Unsupported control graphs, edge arguments,
+operations, and pointer merges are not repaired by dropping edges, fabricating
+returns, or substituting empty values. See the
+[current limitations](../ir_spec.md#current-lowering-limits) before relying on a
+planned invariant.
