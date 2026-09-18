@@ -118,6 +118,47 @@ Names in this diagram describe roles, not a requirement to create a new CLR type
 for every logical stage. Existing constructor algebras and same-type passes
 remain valid.
 
+## Read-Only Stage Diagnostics
+
+`MethodBodyAnalysisModel` has separate diagnostic views for the raw and completed
+stages:
+
+```csharp
+var rawModel = new MethodBodyAnalysisModel(method);
+Console.Write(rawModel.DumpRawLinearCil());
+
+var parser = new RuntimeReflectionParser();
+var declaration = parser.ParseMethod(method);
+var completed = parser.Context.GetFunctionDefinition(declaration);
+Console.Write(completed.DumpAnalyzedLinearCil());
+Console.Write(completed.DumpReachableControlFlowGraph());
+```
+
+Each method also accepts an `IndentedTextWriter`. The raw dump reads only the
+decoded instruction array. The analyzed linear and CFG dumps require successful
+analysis and preserve the model's `InvalidOperationException` when those facts
+are unavailable; printing never starts analysis or lowering.
+
+For example, the Debug CIL for a small conditional includes:
+
+```text
+#1 IL_0001..IL_0003 brtrue.s rel=+3 resolved=IL_0006 pre=[i32]
+^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[] predecessors=[]
+    control: native brtrue.s rel=+3 resolved=IL_0006 taken=^2(0x6) fallthrough=^1(0x3)
+```
+
+Byte ranges are half-open and stack entries are printed bottom to top. `rel` is
+the encoded displacement; `resolved` is its original IL target. The analyzed
+linear dump retains every original instruction and uses `<unreachable>` only
+when a successfully completed Pre map has no entry for that position.
+
+Use the existing `FunctionBody4.Dump` and shader-module formatter for the
+subsequent region and module stages. Nested region bindings in that dump describe
+structural ownership, not a linear execution sequence. A loop's
+`break -> <not recorded>` means that continuation metadata was not populated at
+that stage; it does not assert that the loop has no exit or that an exit is
+unreachable.
+
 ## Preserve Native Instructions Before CFG Construction
 
 Source adaptation and stack analysis preserve original instruction order,

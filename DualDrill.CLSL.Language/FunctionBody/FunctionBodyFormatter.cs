@@ -40,7 +40,7 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
         }
         else
         {
-            Writer.Write("<null>");
+            Writer.Write("<not recorded>");
         }
         Writer.WriteLine(" : ");
         using (Writer.IndentedScope())
