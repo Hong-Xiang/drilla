@@ -137,12 +137,16 @@ public sealed class CilPreStackAnalysisTests
         var deadUnsupported = Assert.Single(
             model.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Dup);
+        var deadInitObject = Assert.Single(
+            model.Instructions,
+            instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
         var liveLabel = Assert.IsType<CilControlFlow.Branch>(
             model.ControlFlowGraph[model.ControlFlowGraph.EntryLabel].Terminator).Target;
         var liveTarget = model[model.LabelToInstructionIndex(liveLabel)];
 
         Assert.False(model.PreStackTypes.ContainsKey(deadCall.Index));
         Assert.False(model.PreStackTypes.ContainsKey(deadUnsupported.Index));
+        Assert.False(model.PreStackTypes.ContainsKey(deadInitObject.Index));
         Assert.True(model.PreStackTypes.TryGetValue(liveTarget.Index, out var livePre));
         Assert.Empty(livePre);
         Assert.Equal(
@@ -198,6 +202,7 @@ public sealed class CilPreStackAnalysisTests
         var block = model.ControlFlowGraph[branch.Target];
         var body = parser.MethodBodies[declaration][branch.Target];
 
+        Assert.Contains(model.Instructions, instruction => instruction.Instruction.OpCode == OpCodes.Pop);
         Assert.Collection(
             block.EntryStackTypes,
             type => Assert.IsType<CilStackType.Float32>(type),
@@ -206,6 +211,22 @@ public sealed class CilPreStackAnalysisTests
             body.Parameters,
             value => Assert.Equal(IntType<N32>.Instance, value.Type),
             value => Assert.Equal(FloatType<N32>.Instance, value.Type));
+    }
+
+    [Fact]
+    public void ReachableInitObjectIsRejectedInsteadOfDroppingTheZeroStore()
+    {
+        Assert.Equal(0, ResetAfterWrite());
+
+#if DEBUG
+        var ordinary = GetMethod(nameof(ResetAfterWrite));
+        Assert.Contains(
+            new MethodBodyAnalysisModel(ordinary).Instructions,
+            instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
+        AssertInitObjectRejected(ordinary);
+#endif
+
+        AssertInitObjectRejected(Fixtures.ReachableInitObject);
     }
 
     [Fact]
@@ -372,6 +393,28 @@ public sealed class CilPreStackAnalysisTests
     private static vec4f32 CallThrowingOperationIntrinsic(float value) =>
         ThrowingOperationIntrinsic(value);
 
+    private struct Cell
+    {
+        public int Value;
+    }
+
+    private static int ResetAfterWrite()
+    {
+        Cell cell = default;
+        cell.Value = 5;
+        cell = default;
+        return cell.Value;
+    }
+
+    private static void AssertInitObjectRejected(MethodInfo method)
+    {
+        var exception = Assert.Throws<ValidationException>(() => new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Contains("initobj", exception.Message);
+        Assert.Contains("IL_", exception.Message);
+        Assert.Contains(method.Name, exception.Message);
+    }
+
     private static MethodInfo GetMethod(string name) =>
         typeof(CilPreStackAnalysisTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"{name} fixture was not found.");
@@ -396,6 +439,7 @@ public sealed class CilPreStackAnalysisTests
         public static MethodInfo TypeMismatch => Method(nameof(TypeMismatch));
         public static MethodInfo ScalarStorage => Method(nameof(ScalarStorage));
         public static MethodInfo SupportedScalarCalls => Method(nameof(SupportedScalarCalls));
+        public static MethodInfo ReachableInitObject => Method(nameof(ReachableInitObject));
 
         public static MethodInfo Method(string name) =>
             FixtureType.GetMethod(name, BindingFlags.Public | BindingFlags.Static)
@@ -417,8 +461,11 @@ public sealed class CilPreStackAnalysisTests
 
             var dead = Define(type, nameof(DeadUnsupportedAndCall), typeof(int));
             var deadIl = dead.GetILGenerator();
+            var deadCell = deadIl.DeclareLocal(typeof(Cell));
             var live = deadIl.DefineLabel();
             deadIl.Emit(OpCodes.Br, live);
+            deadIl.Emit(OpCodes.Ldloca, deadCell);
+            deadIl.Emit(OpCodes.Initobj, typeof(Cell));
             deadIl.Emit(OpCodes.Ldc_I4_0);
             deadIl.Emit(OpCodes.Dup);
             deadIl.Emit(OpCodes.Pop);
@@ -473,6 +520,7 @@ public sealed class CilPreStackAnalysisTests
             EmitTypeMismatch(mismatch.GetILGenerator());
 
             DefineScalarFixtures(type);
+            DefineReachableInitObject(type);
 
             return type.CreateType()
                    ?? throw new InvalidOperationException("Failed to create emitted CIL fixture type.");
@@ -578,6 +626,25 @@ public sealed class CilPreStackAnalysisTests
             DefineRejectedCall(type, "CallByte", "IdentityByte", typeof(byte));
             DefineRejectedCall(type, "CallUInt32", "IdentityUInt32", typeof(uint));
             DefineRejectedCall(type, "CallUInt64", "IdentityUInt64", typeof(ulong));
+        }
+
+        private static void DefineReachableInitObject(TypeBuilder type)
+        {
+            var method = Define(type, nameof(ReachableInitObject), typeof(int));
+            var il = method.GetILGenerator();
+            var cell = il.DeclareLocal(typeof(Cell));
+            var value = typeof(Cell).GetField(nameof(Cell.Value))
+                        ?? throw new InvalidOperationException("Cell.Value field was not found.");
+            il.Emit(OpCodes.Ldloca, cell);
+            il.Emit(OpCodes.Initobj, typeof(Cell));
+            il.Emit(OpCodes.Ldloca, cell);
+            il.Emit(OpCodes.Ldc_I4_5);
+            il.Emit(OpCodes.Stfld, value);
+            il.Emit(OpCodes.Ldloca, cell);
+            il.Emit(OpCodes.Initobj, typeof(Cell));
+            il.Emit(OpCodes.Ldloca, cell);
+            il.Emit(OpCodes.Ldfld, value);
+            il.Emit(OpCodes.Ret);
         }
 
         private static MethodBuilder DefineIdentity(TypeBuilder type, string name, Type scalarType)

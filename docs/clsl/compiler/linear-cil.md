@@ -97,11 +97,13 @@ Reachable semantics are limited to the operations already implemented by the
 runtime-reflection value visitor. Reachable unsupported instructions fail with
 method and source context. Syntactic control validation still covers the whole
 source, so malformed branch targets and unsupported native controls such as
-`switch` are rejected even when dead. Exception flow, indirect loads/stores,
-`ldnull`, `dup`, and unsupported unary operations remain unsupported; dead
-non-control instructions do not prevent compilation of the reachable method.
-Independent CFG-value lifting and later region/AST work remain subsequent
-steps.
+`switch` are rejected even when dead. Exception flow, `initobj`, indirect
+loads/stores, `ldnull`, `dup`, and unsupported unary operations remain
+unsupported. `initobj` is rejected at shared instruction dispatch because the
+value frontend does not yet emit its required zero-initialization store;
+ordinary `pop` remains supported. Dead non-control instructions do not prevent
+compilation of the reachable method. Independent CFG-value lifting and later
+region/AST work remain subsequent steps.
 
 ```text
 LinearCode<CilInstruction>

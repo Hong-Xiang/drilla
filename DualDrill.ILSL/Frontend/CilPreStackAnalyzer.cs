@@ -312,17 +312,7 @@ internal static class CilPreStackAnalyzer
 
         public ImmutableStack<CilStackType> VisitPop(CilInstructionInfo inst)
         {
-            var value = Pop();
-            if (inst.Instruction.OpCode.ToILOpCode() == System.Reflection.Metadata.ILOpCode.Initobj)
-            {
-                if (value is not CilStackType.ManagedPointer pointer)
-                    throw Error($"initobj requires a managed pointer, got {value}");
-                if (inst.Instruction.Operand is not Type target ||
-                    table[target] is not { } targetType ||
-                    !pointer.Type.BaseType.Equals(targetType))
-                    throw Error($"initobj target does not match managed pointer {pointer}");
-            }
-
+            _ = Pop();
             return Stack;
         }
 
