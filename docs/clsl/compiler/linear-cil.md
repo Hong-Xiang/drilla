@@ -65,7 +65,8 @@ source. `MethodBodyAnalysisModel` is now only a complete immutable aggregate
 stored by the symbol table; it has no nullable completion fields or `Analyze`
 operation. Reachable blocks carry the exact annotated instruction slice, and no
 default empty value represents pending analysis. Its public constructor checks
-that every graph key is its block's exact label, every stored successor equals
+that execution begins at original instruction index zero, every graph key is its
+block's exact label, every stored successor equals
 the concrete terminator projection including ordered arms, all definitions are
 entry-reachable, and the blocks exactly partition the completed annotated source.
 
@@ -166,6 +167,8 @@ constructor were removed without compatibility shims:
 | `new MethodBodyAnalysisModel(method)` | `CilMethodDecoder.Decode(method)` |
 | `model.Instructions` / `model.PreStackTypes` | `model.RawCode` / `model.PreAnnotatedCode` |
 | `model.ControlFlowGraph` | `model.ControlFlow.Node` |
+| `MethodBodyAnalysisModel.CilInstructionBlock` | `CilInstructionBlock` in `DualDrill.CLSL.Frontend` |
+| `block.Instructions[i]` as a bare CIL instruction | `block.Instructions[i].Node`, with `.Annotation` holding its `PreStack` |
 | `DumpRawLinearCil()` | `RawCode.PrettyPrint()` |
 | `DumpAnalyzedLinearCil()` | `PreAnnotatedCode.PrettyPrint()` |
 | `DumpReachableControlFlowGraph()` | `ControlFlow.PrettyPrint()` |

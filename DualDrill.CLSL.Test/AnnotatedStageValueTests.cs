@@ -1,6 +1,7 @@
 ﻿using System.CodeDom.Compiler;
 using System.Globalization;
 using System.Reflection;
+using System.Reflection.Emit;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Analysis;
@@ -307,6 +308,48 @@ public sealed class AnnotatedStageValueTests
         var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
 
         Assert.Contains("definitions disconnected from its entry", exception.Message);
+    }
+
+    [Fact]
+    public void CompleteAggregateRejectsAnotherEntryEvenWhenEveryBlockRemainsReachable()
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName("AnnotatedStageEntryFixture"),
+            AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("Fixture").DefineType(
+            "EntryFixture", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+        var method = type.DefineMethod(
+            "IncrementUntilThree", MethodAttributes.Public | MethodAttributes.Static, typeof(int), [typeof(int)]);
+        method.DefineParameter(1, ParameterAttributes.None, "value");
+        var il = method.GetILGenerator();
+        var body = il.DefineLabel();
+        var test = il.DefineLabel();
+        il.MarkLabel(body);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldc_I4_1);
+        il.Emit(OpCodes.Add);
+        il.Emit(OpCodes.Starg_S, (byte)0);
+        il.Emit(OpCodes.Br_S, test);
+        il.MarkLabel(test);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldc_I4_3);
+        il.Emit(OpCodes.Blt_S, body);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ret);
+        var fixture = (type.CreateType() ?? throw new InvalidOperationException("Missing fixture type."))
+            .GetMethod("IncrementUntilThree") ?? throw new InvalidOperationException("Missing fixture method.");
+        var parser = new RuntimeReflectionParser();
+        var declaration = parser.ParseMethod(fixture);
+        var model = parser.Context.GetFunctionDefinition(declaration);
+        var graph = model.ControlFlow.Node;
+        var alternateEntry = Assert.Single(
+            graph.Labels(), label => graph.Successor(label) is ConditionalSuccessor);
+        var malformed = new ControlFlowGraph<CilInstructionBlock>(alternateEntry, Definitions(graph));
+
+        Assert.NotSame(graph.EntryLabel, alternateEntry);
+        Assert.Equal(graph.Count, malformed.Labels().Count());
+        var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
+        Assert.Contains("entry must begin at original instruction index 0", exception.Message);
     }
 
     private static MethodBodyAnalysisModel ParseModel()

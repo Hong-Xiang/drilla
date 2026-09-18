@@ -62,6 +62,11 @@ public sealed class MethodBodyAnalysisModel
         LinearCode<Annotated<CilInstructionInfo, PreStack>> preAnnotatedCode,
         ControlFlowGraph<CilInstructionBlock> graph)
     {
+        if (graph[graph.EntryLabel].InstructionIndex != 0)
+            throw new ArgumentException(
+                "The control-flow graph entry must begin at original instruction index 0.",
+                nameof(graph));
+
         var preByIndex = preAnnotatedCode.Instructions.ToFrozenDictionary(item => item.Node.Index);
         var labels = graph.Labels().ToImmutableArray();
         if (graph.Count != labels.Length)
