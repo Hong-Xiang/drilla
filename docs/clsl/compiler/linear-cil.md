@@ -63,6 +63,18 @@ method symbols are available; `PreStackTypes`, `ControlFlowGraph`, labels, and
 label mappings reject access before that point. External compilation callers
 should obtain completed models through `RuntimeReflectionParser` and its symbol
 table rather than treating the model constructor as an eager CFG builder.
+Reachable blocks receive their entry stack in the block constructor; no default
+empty value represents an uninitialized block.
+
+`RuntimeReflectionParser` distinguishes declarations involved in active
+recursive compilation from fully completed method definitions. Recursive calls
+may use an in-progress declaration, but a method enters the completed set only
+after analysis, reachable-callee compilation, and value lowering all succeed.
+Any failure poisons that parser instance, clears its produced method bodies, and
+causes later method/body/module compilation attempts to fail explicitly. Its
+context is then diagnostic-only; retry requires a new parser with a fresh
+compilation context rather than attempting rollback through partially registered
+symbols.
 
 The implemented `CilStackType` domain is:
 
@@ -214,6 +226,13 @@ fail explicitly, never by replacing a stack with an empty/default state.
 The exact supported type domain and merge rule are listed in the implemented
 frontend boundary above. The type analysis does not establish pointer alias
 compatibility or SSA value identity.
+
+All non-scalar stack variants have internal constructors and are produced by the
+single `CilStackType.FromShaderType` classifier. The concrete value visitor uses
+the same classifier for its evaluation-stack normalization. Built-in reflection
+types include `void`, Boolean, signed/unsigned 8/16/32/64-bit integers, and the
+supported floating widths; operation-specific value lowering may still reject a
+call that the normalized CIL stack verifier accepts.
 
 Exception handlers need additional entry/transfer rules and are outside the
 initial design's supported subset. Do not introduce hidden handler behavior or

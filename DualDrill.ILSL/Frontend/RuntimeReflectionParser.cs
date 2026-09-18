@@ -27,7 +27,9 @@ public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
     Dictionary<FunctionDeclaration, FunctionBody4> MethodBodies)
 {
-    private readonly HashSet<MethodBase> ParsedMethodDefinitions = [];
+    private readonly HashSet<MethodBase> CompletedMethodDefinitions = [];
+    private readonly HashSet<MethodBase> InProgressMethodDefinitions = [];
+    private MethodBase? FailedMethod;
 
     // TODO static binding flags should not be used, add code to proper handle static readonly value
     private static readonly BindingFlags VariableBindingFlags =
@@ -175,6 +177,7 @@ public sealed record class RuntimeReflectionParser(
     public ShaderModuleDeclaration<FunctionBody4> ParseShaderModule(
         ISharpShader module)
     {
+        EnsureUsable();
         var moduleType = module.GetType();
 
         var entryMethods = moduleType
@@ -232,26 +235,41 @@ public sealed record class RuntimeReflectionParser(
 
     public FunctionDeclaration ParseMethod(MethodBase method)
     {
+        EnsureUsable();
         var declaration = ParseMethodDeclaration(method);
-        if (!IsMethodDefinition(method) || !ParsedMethodDefinitions.Add(method))
+        if (!IsMethodDefinition(method) || CompletedMethodDefinitions.Contains(method) ||
+            InProgressMethodDefinitions.Contains(method))
             return declaration;
 
-        var symbol = Symbol.Function(method);
-        var model = new MethodBodyAnalysisModel(method);
-        Context.AddFunctionDefinition(symbol, declaration, model);
-        foreach (var variable in model.LocalVariables)
-            _ = ParseType(variable.LocalType);
+        InProgressMethodDefinitions.Add(method);
+        var completed = false;
+        try
+        {
+            var symbol = Symbol.Function(method);
+            var model = new MethodBodyAnalysisModel(method);
+            Context.AddFunctionDefinition(symbol, declaration, model);
+            foreach (var variable in model.LocalVariables)
+                _ = ParseType(variable.LocalType);
 
-        var methodTable = CreateMethodTable(model, declaration);
-        model.Analyze(declaration, methodTable, callee => _ = ParseMethodDeclaration(callee));
+            var methodTable = CreateMethodTable(model, declaration);
+            model.Analyze(declaration, methodTable, callee => _ = ParseMethodDeclaration(callee));
 
-        foreach (var callee in FilterCalledMethods(model.CalledMethods()).Distinct())
-            _ = ParseMethod(callee);
+            foreach (var callee in FilterCalledMethods(model.CalledMethods()).Distinct())
+                _ = ParseMethod(callee);
 
-        if (model.Body is not null)
-            MethodBodies.Add(declaration, ParseMethodBody3(declaration));
+            if (model.Body is not null)
+                MethodBodies.Add(declaration, ParseMethodBody3Core(declaration, model));
 
-        return declaration;
+            CompletedMethodDefinitions.Add(method);
+            completed = true;
+            return declaration;
+        }
+        finally
+        {
+            InProgressMethodDefinitions.Remove(method);
+            if (!completed)
+                MarkFailed(method);
+        }
     }
 
     private FunctionDeclaration ParseMethodDeclaration(MethodBase method)
@@ -319,7 +337,24 @@ public sealed record class RuntimeReflectionParser(
 
     public FunctionBody4 ParseMethodBody3(FunctionDeclaration f)
     {
+        EnsureUsable();
         var model = Context.GetFunctionDefinition(f);
+        var completed = false;
+        try
+        {
+            var result = ParseMethodBody3Core(f, model);
+            completed = true;
+            return result;
+        }
+        finally
+        {
+            if (!completed)
+                MarkFailed(model.Method);
+        }
+    }
+
+    private FunctionBody4 ParseMethodBody3Core(FunctionDeclaration f, MethodBodyAnalysisModel model)
+    {
         var methodTable = CreateMethodTable(model, f);
         model.Analyze(f, methodTable, callee => _ = ParseMethodDeclaration(callee));
         var cfa = model.ControlFlowGraph.ControlFlowAnalysis();
@@ -400,6 +435,21 @@ public sealed record class RuntimeReflectionParser(
                 basicBlocks.Select(kv => (kv.Key, kv.Value))
             )
         );
+    }
+
+    private void EnsureUsable()
+    {
+        if (FailedMethod is not null)
+            throw new InvalidOperationException(
+                $"This runtime-reflection parser failed while compiling {FailedMethod}; " +
+                "create a new parser with a fresh compilation context.");
+    }
+
+    private void MarkFailed(MethodBase method)
+    {
+        FailedMethod ??= method;
+        CompletedMethodDefinitions.Clear();
+        MethodBodies.Clear();
     }
 
     private CompilationContext CreateMethodTable(MethodBodyAnalysisModel model, FunctionDeclaration function)

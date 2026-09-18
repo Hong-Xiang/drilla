@@ -48,11 +48,35 @@ public abstract record CilStackType
         public static Float64 Instance { get; } = new();
     }
 
-    public sealed record Value(IShaderType Type) : CilStackType(Type);
+    public sealed record Value : CilStackType
+    {
+        internal Value(IShaderType type) : base(type)
+        {
+            Type = type;
+        }
 
-    public sealed record ObjectReference(IShaderType Type) : CilStackType(Type);
+        public IShaderType Type { get; }
+    }
 
-    public sealed record ManagedPointer(IPtrType Type) : CilStackType(Type);
+    public sealed record ObjectReference : CilStackType
+    {
+        internal ObjectReference(IShaderType type) : base(type)
+        {
+            Type = type;
+        }
+
+        public IShaderType Type { get; }
+    }
+
+    public sealed record ManagedPointer : CilStackType
+    {
+        internal ManagedPointer(IPtrType type) : base(type)
+        {
+            Type = type;
+        }
+
+        public IPtrType Type { get; }
+    }
 
     internal static CilStackType FromShaderType(IShaderType type) =>
         type switch

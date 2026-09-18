@@ -4,6 +4,7 @@ using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using Lokad.ILPack.IL;
@@ -12,6 +13,80 @@ namespace DualDrill.CLSL.Test;
 
 public sealed class CilPreStackAnalysisTests
 {
+    [Fact]
+    public void UnanalyzedModelDoesNotExposeCompletedAnalysisViews()
+    {
+        var model = new MethodBodyAnalysisModel(GetMethod(nameof(Diamond)));
+
+        Assert.Throws<InvalidOperationException>(() => model.Labels);
+        Assert.Throws<InvalidOperationException>(() => model.PreStackTypes);
+        Assert.Throws<InvalidOperationException>(() => model.ControlFlowGraph);
+    }
+
+    [Fact]
+    public void ParserFailureBeforeModelRegistrationPoisonsOnlyThatParser()
+    {
+        var parser = new RuntimeReflectionParser();
+        var method = GetMethod(nameof(WithFinally));
+
+        Assert.Throws<NotSupportedException>(() => parser.ParseMethod(method));
+        var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
+        Assert.Throws<KeyNotFoundException>(() => parser.Context.GetFunctionDefinition(declaration));
+        Assert.Empty(parser.MethodBodies);
+
+        var retry = Assert.Throws<InvalidOperationException>(() => parser.ParseMethod(method));
+        Assert.Contains("fresh compilation context", retry.Message);
+        Assert.Throws<InvalidOperationException>(() => parser.ParseMethodBody3(declaration));
+
+        _ = new RuntimeReflectionParser().ParseMethod(GetMethod(nameof(Diamond)));
+    }
+
+    [Fact]
+    public void ParserFailureAfterRegistrationCannotBecomeSuccessOnRetry()
+    {
+        var parser = new RuntimeReflectionParser();
+        var method = ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method;
+
+        Assert.Throws<ValidationException>(() => parser.ParseMethod(method));
+        var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
+        var model = parser.Context.GetFunctionDefinition(declaration);
+        var call = Assert.Single(
+            model.Instructions,
+            instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
+
+        Assert.IsType<CilStackType.Int32>(Assert.Single(model.PreStackTypes[call.Index]));
+        Assert.Empty(parser.MethodBodies);
+        var retry = Assert.Throws<InvalidOperationException>(() => parser.ParseMethod(method));
+        Assert.Contains(method.Name, retry.Message);
+        Assert.Throws<InvalidOperationException>(() => parser.ParseMethodBody3(declaration));
+    }
+
+    [Fact]
+    public void RepeatedSuccessfulParseReturnsTheCompletedDefinition()
+    {
+        var parser = new RuntimeReflectionParser();
+        var method = GetMethod(nameof(Diamond));
+
+        var first = parser.ParseMethod(method);
+        var second = parser.ParseMethod(method);
+
+        Assert.Same(first, second);
+        Assert.Single(parser.MethodBodies);
+        Assert.Same(parser.MethodBodies[first], parser.MethodBodies[second]);
+    }
+
+    [Fact]
+    public void ReachableMutualRecursionCompletesBothDefinitions()
+    {
+        var parser = new RuntimeReflectionParser();
+
+        var first = parser.ParseMethod(GetMethod(nameof(MutualA)));
+
+        Assert.Contains(first, parser.MethodBodies.Keys);
+        Assert.Contains(parser.MethodBodies.Keys, declaration => declaration.Name == nameof(MutualB));
+        Assert.Equal(2, parser.MethodBodies.Count);
+    }
+
     [Fact]
     public void DeadSourceIsRetainedButExcludedFromPreGraphAndCalleeCompilation()
     {
@@ -97,6 +172,84 @@ public sealed class CilPreStackAnalysisTests
     }
 
     [Fact]
+    public void ScalarInputsAndStoresUseTheDocumentedPreNormalization()
+    {
+        var model = ParseModel(Fixtures.ScalarStorage);
+        var stores = model.Instructions
+                          .Where(instruction => instruction.Instruction.OpCode.Name?.StartsWith("stloc") == true)
+                          .ToArray();
+        CilStackType[] expected =
+        [
+            CilStackType.Int32.Instance,
+            CilStackType.Int32.Instance,
+            CilStackType.Int32.Instance,
+            CilStackType.Int32.Instance,
+            CilStackType.Int32.Instance,
+            CilStackType.Int32.Instance,
+            CilStackType.Int32.Instance,
+            CilStackType.Int64.Instance,
+            CilStackType.Int64.Instance,
+            CilStackType.Float32.Instance,
+            CilStackType.Float64.Instance
+        ];
+
+        Assert.Equal(expected.Length, stores.Length);
+        foreach (var (store, type) in stores.Zip(expected))
+        {
+            Assert.Equal(type, Assert.Single(model.PreStackTypes[store.Index]));
+            Assert.Empty(model.PreStackTypes[store.Index + 1]);
+        }
+    }
+
+    [Fact]
+    public void SupportedScalarCallsSeeNormalizedPreFacts()
+    {
+        var model = ParseModel(Fixtures.SupportedScalarCalls);
+        var calls = model.Instructions
+                         .Where(instruction => instruction.Instruction.Operand is MethodBase called &&
+                                               called.Name.StartsWith("Identity"))
+                         .ToArray();
+        CilStackType[] expected =
+        [
+            CilStackType.Int32.Instance,
+            CilStackType.Int32.Instance,
+            CilStackType.Int64.Instance,
+            CilStackType.Float32.Instance,
+            CilStackType.Float64.Instance
+        ];
+
+        Assert.Equal(expected.Length, calls.Length);
+        foreach (var (call, type) in calls.Zip(expected))
+            Assert.Equal(type, Assert.Single(model.PreStackTypes[call.Index]));
+    }
+
+    [Theory]
+    [InlineData("CallSByte", false)]
+    [InlineData("CallByte", false)]
+    [InlineData("CallUInt32", false)]
+    [InlineData("CallUInt64", true)]
+    public void NarrowAndUnsignedCallsHaveNormalizedPreBeforeExistingValueRejection(
+        string methodName,
+        bool isInt64)
+    {
+        var parser = new RuntimeReflectionParser();
+        var method = Fixtures.Method(methodName);
+
+        Assert.Throws<ValidationException>(() => parser.ParseMethod(method));
+        var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
+        var model = parser.Context.GetFunctionDefinition(declaration);
+        var call = Assert.Single(
+            model.Instructions,
+            instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
+        var type = Assert.Single(model.PreStackTypes[call.Index]);
+
+        if (isInt64)
+            Assert.IsType<CilStackType.Int64>(type);
+        else
+            Assert.IsType<CilStackType.Int32>(type);
+    }
+
+    [Fact]
     public void DiamondWithEqualTypesMergesAtOriginalInstruction()
     {
         var model = ParseModel(GetMethod(nameof(Diamond)));
@@ -152,6 +305,22 @@ public sealed class CilPreStackAnalysisTests
         return value;
     }
 
+    private static int MutualA(int value) => value <= 0 ? 0 : MutualB(value - 1);
+
+    private static int MutualB(int value) => value <= 0 ? 1 : MutualA(value - 1);
+
+    private static int WithFinally(int value)
+    {
+        try
+        {
+            return value;
+        }
+        finally
+        {
+            GC.KeepAlive(value);
+        }
+    }
+
     private static MethodInfo GetMethod(string name) =>
         typeof(CilPreStackAnalysisTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"{name} fixture was not found.");
@@ -174,8 +343,10 @@ public sealed class CilPreStackAnalysisTests
         public static MethodInfo TwoSlotEdge => Method(nameof(TwoSlotEdge));
         public static MethodInfo HeightMismatch => Method(nameof(HeightMismatch));
         public static MethodInfo TypeMismatch => Method(nameof(TypeMismatch));
+        public static MethodInfo ScalarStorage => Method(nameof(ScalarStorage));
+        public static MethodInfo SupportedScalarCalls => Method(nameof(SupportedScalarCalls));
 
-        private static MethodInfo Method(string name) =>
+        public static MethodInfo Method(string name) =>
             FixtureType.GetMethod(name, BindingFlags.Public | BindingFlags.Static)
             ?? throw new InvalidOperationException($"{name} emitted fixture was not found.");
 
@@ -250,6 +421,8 @@ public sealed class CilPreStackAnalysisTests
             mismatch.DefineParameter(1, ParameterAttributes.None, "choose");
             EmitTypeMismatch(mismatch.GetILGenerator());
 
+            DefineScalarFixtures(type);
+
             return type.CreateType()
                    ?? throw new InvalidOperationException("Failed to create emitted CIL fixture type.");
         }
@@ -292,6 +465,92 @@ public sealed class CilPreStackAnalysisTests
             il.Emit(OpCodes.Ldc_R4, 1.0f);
             il.MarkLabel(join);
             il.Emit(OpCodes.Pop);
+            il.Emit(OpCodes.Ret);
+        }
+
+        private static void DefineScalarFixtures(TypeBuilder type)
+        {
+            Type[] scalarTypes =
+            [
+                typeof(bool),
+                typeof(sbyte),
+                typeof(byte),
+                typeof(short),
+                typeof(ushort),
+                typeof(int),
+                typeof(uint),
+                typeof(long),
+                typeof(ulong),
+                typeof(float),
+                typeof(double)
+            ];
+            var storage = Define(type, nameof(ScalarStorage), typeof(int), scalarTypes);
+            var storageIl = storage.GetILGenerator();
+            foreach (var (index, scalarType) in scalarTypes.Index())
+            {
+                storage.DefineParameter(index + 1, ParameterAttributes.None, $"value{index}");
+                var local = storageIl.DeclareLocal(scalarType);
+                storageIl.Emit(OpCodes.Ldarg, index);
+                storageIl.Emit(OpCodes.Stloc, local);
+            }
+            storageIl.Emit(OpCodes.Ldc_I4_0);
+            storageIl.Emit(OpCodes.Ret);
+
+            var supportedTypes = new[]
+            {
+                (Name: "IdentityBool", Type: typeof(bool)),
+                (Name: "IdentityInt32", Type: typeof(int)),
+                (Name: "IdentityInt64", Type: typeof(long)),
+                (Name: "IdentityFloat32", Type: typeof(float)),
+                (Name: "IdentityFloat64", Type: typeof(double))
+            };
+            var supportedIdentities = supportedTypes
+                                      .Select(item => DefineIdentity(type, item.Name, item.Type))
+                                      .ToArray();
+            var supportedCalls = Define(
+                type,
+                nameof(SupportedScalarCalls),
+                typeof(int),
+                [.. supportedTypes.Select(item => item.Type)]);
+            var supportedCallsIl = supportedCalls.GetILGenerator();
+            foreach (var (index, identity) in supportedIdentities.Index())
+            {
+                supportedCalls.DefineParameter(index + 1, ParameterAttributes.None, $"value{index}");
+                supportedCallsIl.Emit(OpCodes.Ldarg, index);
+                supportedCallsIl.Emit(OpCodes.Call, identity);
+                supportedCallsIl.Emit(OpCodes.Pop);
+            }
+            supportedCallsIl.Emit(OpCodes.Ldc_I4_0);
+            supportedCallsIl.Emit(OpCodes.Ret);
+
+            DefineRejectedCall(type, "CallSByte", "IdentitySByte", typeof(sbyte));
+            DefineRejectedCall(type, "CallByte", "IdentityByte", typeof(byte));
+            DefineRejectedCall(type, "CallUInt32", "IdentityUInt32", typeof(uint));
+            DefineRejectedCall(type, "CallUInt64", "IdentityUInt64", typeof(ulong));
+        }
+
+        private static MethodBuilder DefineIdentity(TypeBuilder type, string name, Type scalarType)
+        {
+            var identity = Define(type, name, scalarType, scalarType);
+            identity.DefineParameter(1, ParameterAttributes.None, "value");
+            var il = identity.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ret);
+            return identity;
+        }
+
+        private static void DefineRejectedCall(
+            TypeBuilder type,
+            string callerName,
+            string calleeName,
+            Type scalarType)
+        {
+            var identity = DefineIdentity(type, calleeName, scalarType);
+            var caller = Define(type, callerName, scalarType, scalarType);
+            caller.DefineParameter(1, ParameterAttributes.None, "value");
+            var il = caller.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Call, identity);
             il.Emit(OpCodes.Ret);
         }
     }

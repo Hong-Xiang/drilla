@@ -18,6 +18,7 @@ public sealed class MethodBodyAnalysisModel
     private FrozenDictionary<Label, int>? labelIndices;
     private FrozenDictionary<int, Label>? offsetLabels;
     private ControlFlowGraph<CilInstructionBlock>? controlFlowGraph;
+    private ImmutableArray<Label>? labels;
     private ImmutableDictionary<int, ImmutableStack<CilStackType>>? preStackTypes;
 
     public MethodBodyAnalysisModel(MethodBase method)
@@ -74,7 +75,8 @@ public sealed class MethodBodyAnalysisModel
     public ControlFlowGraph<CilInstructionBlock> ControlFlowGraph =>
         controlFlowGraph ?? throw new InvalidOperationException($"The CIL CFG has not been built for {Method}.");
 
-    public ImmutableArray<Label> Labels { get; private set; } = [];
+    public ImmutableArray<Label> Labels =>
+        labels ?? throw new InvalidOperationException($"CIL labels have not been built for {Method}.");
 
     public CilInstructionInfo this[int index] => Instructions[index];
     public int LabelToInstructionIndex(Label label) => Require(labelIndices, nameof(labelIndices))[label];
@@ -114,7 +116,7 @@ public sealed class MethodBodyAnalysisModel
         labelIndices = analyzedLabelIndices;
         labelCounts = analyzedLabelCounts;
         offsetLabels = analyzedLabelIndices.ToFrozenDictionary(pair => Offsets[pair.Value], pair => pair.Key);
-        Labels = [.. analyzedLabelIndices.OrderBy(pair => pair.Value).Select(pair => pair.Key)];
+        labels = [.. analyzedLabelIndices.OrderBy(pair => pair.Value).Select(pair => pair.Key)];
     }
 
     internal IEnumerable<int> SuccessorInstructionIndices(CilInstructionInfo instruction)
@@ -255,10 +257,11 @@ public sealed class MethodBodyAnalysisModel
                         $"CIL control and CFG topology disagree at IL_{last.ByteOffset:X4}.")
                 };
 
-                return new CilInstructionBlock(label, instructions, terminator)
-                {
-                    EntryStackTypes = analyzedPre[instructions[0].Index]
-                };
+                return new CilInstructionBlock(
+                    label,
+                    instructions,
+                    terminator,
+                    analyzedPre[instructions[0].Index]);
             },
             static block => block.Terminator.ToSuccessor());
     }
@@ -271,7 +274,8 @@ public sealed class MethodBodyAnalysisModel
         internal CilInstructionBlock(
             Label label,
             ImmutableArray<CilInstructionInfo> instructions,
-            CilControlFlow terminator)
+            CilControlFlow terminator,
+            ImmutableStack<CilStackType> entryStackTypes)
         {
             if (instructions.IsDefaultOrEmpty)
                 throw new ArgumentException("A CIL basic block must contain at least one instruction.",
@@ -294,12 +298,13 @@ public sealed class MethodBodyAnalysisModel
             Label = label;
             Instructions = instructions;
             Terminator = terminator;
+            EntryStackTypes = entryStackTypes;
         }
 
         public Label Label { get; }
         public ImmutableArray<CilInstructionInfo> Instructions { get; }
         public CilControlFlow Terminator { get; }
-        public ImmutableStack<CilStackType> EntryStackTypes { get; internal init; } = [];
+        public ImmutableStack<CilStackType> EntryStackTypes { get; }
         public int InstructionIndex => Instructions[0].Index;
         public int InstructionCount => Instructions.Length;
         public int ByteOffset => Instructions[0].ByteOffset;
