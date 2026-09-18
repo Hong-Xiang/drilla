@@ -18,30 +18,18 @@ namespace DualDrill.CLSL.Test;
 public sealed class CompilerStageDumpTests
 {
     [Fact]
-    public void RawDumpWorksWithoutAnalysisAndAnalyzedDumpsFailBeforeWriting()
+    public void RawPrettyPrintWorksWithoutConstructingCompletedStages()
     {
-        var model = new MethodBodyAnalysisModel(GetMethod(nameof(Choose)));
-
-        var raw = model.DumpRawLinearCil();
+        LinearCode<CilInstructionInfo> code = CilMethodDecoder.Decode(GetMethod(nameof(Choose)));
+        var raw = code.PrettyPrint();
 
         Assert.Contains("linear-cil raw", raw);
         Assert.Contains(" rel=+", raw);
         Assert.Contains(" resolved=IL_", raw);
         Assert.DoesNotContain(" pre=", raw);
-        Assert.Throws<InvalidOperationException>(() => model.PreStackTypes);
-        Assert.Throws<InvalidOperationException>(() => model.ControlFlowGraph);
-        Assert.Throws<InvalidOperationException>(() => model.Labels);
 
-        using var text = new StringWriter(CultureInfo.InvariantCulture);
-        using var writer = new IndentedTextWriter(text);
-        Assert.Throws<InvalidOperationException>(() => model.DumpAnalyzedLinearCil(writer));
-        Assert.Empty(text.ToString());
-        Assert.Throws<InvalidOperationException>(() => model.DumpReachableControlFlowGraph(writer));
-        Assert.Empty(text.ToString());
-
-        var deadSwitch = new MethodBodyAnalysisModel(EmittedFixtures.DeadSwitch);
-        Assert.Contains("switch rels=[", deadSwitch.DumpRawLinearCil());
-        Assert.Throws<InvalidOperationException>(() => deadSwitch.PreStackTypes);
+        var deadSwitch = CilMethodDecoder.Decode(EmittedFixtures.DeadSwitch);
+        Assert.Contains("switch rels=[", deadSwitch.PrettyPrint());
     }
 
     [Fact]
@@ -56,14 +44,14 @@ public sealed class CompilerStageDumpTests
             case "Debug":
                 Assert.Equal(
                 [
-                    "linear-cil analyzed (byte ranges are half-open; stack order: bottom -> top)",
+                    "linear-cil pre-annotated reachable (byte ranges are half-open; stack order: bottom -> top)",
                     "#0 IL_0000..IL_0001 ldarg.0 pre=[]",
                     "#1 IL_0001..IL_0003 brtrue.s rel=+3 resolved=IL_0006 pre=[i32]",
                     "#2 IL_0003..IL_0004 ldarg.2 pre=[]",
                     "#3 IL_0004..IL_0006 br.s rel=+1 resolved=IL_0007 pre=[i32]",
                     "#4 IL_0006..IL_0007 ldarg.1 pre=[]",
                     "#5 IL_0007..IL_0008 ret pre=[i32]"
-                ], Lines(model.DumpAnalyzedLinearCil()));
+                ], Lines(model.PreAnnotatedCode.PrettyPrint()));
                 Assert.Equal(
                 [
                     "reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)",
@@ -76,19 +64,19 @@ public sealed class CompilerStageDumpTests
                     "^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32] " +
                     "predecessors=[^1(0x3), ^2(0x6)]",
                     "    control: native ret"
-                ], Lines(model.DumpReachableControlFlowGraph()));
+                ], Lines(model.ControlFlow.Node.PrettyPrint()));
                 break;
             case "Release":
                 Assert.Equal(
                 [
-                    "linear-cil analyzed (byte ranges are half-open; stack order: bottom -> top)",
+                    "linear-cil pre-annotated reachable (byte ranges are half-open; stack order: bottom -> top)",
                     "#0 IL_0000..IL_0001 ldarg.0 pre=[]",
                     "#1 IL_0001..IL_0003 brtrue.s rel=+2 resolved=IL_0005 pre=[i32]",
                     "#2 IL_0003..IL_0004 ldarg.2 pre=[]",
                     "#3 IL_0004..IL_0005 ret pre=[i32]",
                     "#4 IL_0005..IL_0006 ldarg.1 pre=[]",
                     "#5 IL_0006..IL_0007 ret pre=[i32]"
-                ], Lines(model.DumpAnalyzedLinearCil()));
+                ], Lines(model.PreAnnotatedCode.PrettyPrint()));
                 Assert.Equal(
                 [
                     "reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)",
@@ -98,7 +86,7 @@ public sealed class CompilerStageDumpTests
                     "    control: native ret",
                     "^2(0x5) instructions=#4..#5 bytes=IL_0005..IL_0007 entry=[] predecessors=[^0(0x0)]",
                     "    control: native ret"
-                ], Lines(model.DumpReachableControlFlowGraph()));
+                ], Lines(model.ControlFlow.Node.PrettyPrint()));
                 break;
             default:
                 throw new InvalidOperationException($"Unsupported build configuration {configuration}.");
@@ -106,20 +94,21 @@ public sealed class CompilerStageDumpTests
     }
 
     [Fact]
-    public void AnalyzedDumpDistinguishesDeadSourceFromReachableEmptyStack()
+    public void RawPrintRetainsDeadSourceWhileCompletedPrintUsesOriginalReachableIndices()
     {
         var model = ParseModel(EmittedFixtures.Dead);
 
-        var lines = Lines(model.DumpAnalyzedLinearCil());
-        var deadLoad = Assert.Single(lines, line => line.Contains("operand=99", StringComparison.Ordinal));
-        var deadReturn = Assert.Single(lines, line => line.Contains("ret pre=<unreachable>", StringComparison.Ordinal));
+        var rawLines = Lines(model.RawCode.PrettyPrint());
+        var lines = Lines(model.PreAnnotatedCode.PrettyPrint());
+        Assert.Contains(rawLines, line => line.Contains("operand=99", StringComparison.Ordinal));
+        Assert.Contains(rawLines, line => line.Contains("ret", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("operand=99", StringComparison.Ordinal));
         var liveLoad = Assert.Single(lines, line => line.Contains("operand=42", StringComparison.Ordinal));
 
-        Assert.EndsWith("pre=<unreachable>", deadLoad, StringComparison.Ordinal);
-        Assert.EndsWith("pre=<unreachable>", deadReturn, StringComparison.Ordinal);
         Assert.EndsWith("pre=[]", liveLoad, StringComparison.Ordinal);
-        Assert.Equal(2, model.ControlFlowGraph.Count);
-        Assert.Equal(2, Lines(model.DumpReachableControlFlowGraph()).Count(line => line.StartsWith("^")));
+        Assert.True(model.PreAnnotatedCode.Instructions[1].Node.Index > 1);
+        Assert.Equal(2, model.ControlFlow.Node.Count);
+        Assert.Equal(2, Lines(model.ControlFlow.Node.PrettyPrint()).Count(line => line.StartsWith("^")));
     }
 
     [Fact]
@@ -128,15 +117,15 @@ public sealed class CompilerStageDumpTests
         var twoSlot = ParseModel(EmittedFixtures.TwoSlot);
         var pointer = ParseModel(EmittedFixtures.Pointer);
 
-        Assert.Contains("pre=[i32, f32]", twoSlot.DumpAnalyzedLinearCil());
-        Assert.Contains("pop pre=[managed-ptr<i32, Function>]", pointer.DumpAnalyzedLinearCil());
+        Assert.Contains("pre=[i32, f32]", twoSlot.PreAnnotatedCode.PrettyPrint());
+        Assert.Contains("pop pre=[managed-ptr<i32, Function>]", pointer.PreAnnotatedCode.PrettyPrint());
     }
 
     [Fact]
     public void ConditionalCfgRetainsSameTargetArmsAndOnePredecessorNode()
     {
         var model = ParseModel(EmittedFixtures.SameTarget);
-        var dump = model.DumpReachableControlFlowGraph();
+        var dump = model.ControlFlow.Node.PrettyPrint();
         var conditional = Assert.Single(
             Lines(dump),
             line => line.Contains("control: native brtrue.s", StringComparison.Ordinal));
@@ -153,7 +142,7 @@ public sealed class CompilerStageDumpTests
         using var text = new StringWriter(CultureInfo.GetCultureInfo("fr-FR"));
         using var writer = new IndentedTextWriter(text);
 
-        model.DumpAnalyzedLinearCil(writer);
+        model.PreAnnotatedCode.PrettyPrint(writer, PrettyPrintOption.Default);
 
         Assert.Contains("operand=2.5", text.ToString());
         Assert.DoesNotContain("operand=2,5", text.ToString());

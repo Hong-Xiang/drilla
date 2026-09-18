@@ -27,9 +27,10 @@ public sealed class TerminalCilBlockTests
         var declaration = parser.ParseMethod(method);
         var parsed = parser.MethodBodies[declaration];
         var model = parser.Context.GetFunctionDefinition(declaration);
+        var graph = model.ControlFlow.Node;
         var blocks = model.Labels.ToDictionary(
-            label => model.ControlFlowGraph[label].ByteOffset,
-            label => model.ControlFlowGraph[label]);
+            label => graph[label].ByteOffset,
+            label => graph[label]);
 
         Assert.True(model.Labels.ToHashSet().SetEquals(parsed.Labels));
 
@@ -45,7 +46,7 @@ public sealed class TerminalCilBlockTests
                     (7, 5, 1, 1));
                 Assert.Equal(blocks[7].Label,
                     Assert.IsType<UnconditionalSuccessor>(
-                        model.ControlFlowGraph.Successor(blocks[6].Label)).Target);
+                        graph.Successor(blocks[6].Label)).Target);
                 AssertTerminalRet(model, blocks[7]);
                 AssertDebugValueFlow(parsed, declaration, blocks);
                 break;
@@ -67,7 +68,7 @@ public sealed class TerminalCilBlockTests
     private static int ConditionalReturn(int left, bool choose, int right) => choose ? left : right;
 
     private static void AssertRanges(
-        IReadOnlyDictionary<int, MethodBodyAnalysisModel.CilInstructionBlock> blocks,
+        IReadOnlyDictionary<int, CilInstructionBlock> blocks,
         params (int Offset, int Index, int Count, int Length)[] expected)
     {
         Assert.Equal(expected.Select(item => item.Offset), blocks.Keys.Order());
@@ -82,11 +83,11 @@ public sealed class TerminalCilBlockTests
 
     private static void AssertTerminalRet(
         MethodBodyAnalysisModel model,
-        MethodBodyAnalysisModel.CilInstructionBlock block)
+        CilInstructionBlock block)
     {
-        Assert.IsType<TerminateSuccessor>(model.ControlFlowGraph.Successor(block.Label));
+        Assert.IsType<TerminateSuccessor>(model.ControlFlow.Node.Successor(block.Label));
         var control = Assert.IsType<CilControlFlow.Return>(block.Terminator);
-        var last = block.Instructions[^1];
+        var last = block.Instructions[^1].Node;
         Assert.Equal(OpCodes.Ret, last.Instruction.OpCode);
         Assert.Equal(last, control.Instruction);
         Assert.Same(last.Instruction, control.Instruction.Instruction);
@@ -95,7 +96,7 @@ public sealed class TerminalCilBlockTests
     private static void AssertDebugValueFlow(
         FunctionBody4 body,
         FunctionDeclaration declaration,
-        IReadOnlyDictionary<int, MethodBodyAnalysisModel.CilInstructionBlock> blocks)
+        IReadOnlyDictionary<int, CilInstructionBlock> blocks)
     {
         var branch = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
             body[blocks[0].Label].Body.Last);
@@ -116,7 +117,7 @@ public sealed class TerminalCilBlockTests
     private static void AssertReleaseValueFlow(
         FunctionBody4 body,
         FunctionDeclaration declaration,
-        IReadOnlyDictionary<int, MethodBodyAnalysisModel.CilInstructionBlock> blocks)
+        IReadOnlyDictionary<int, CilInstructionBlock> blocks)
     {
         var branch = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
             body[blocks[0].Label].Body.Last);

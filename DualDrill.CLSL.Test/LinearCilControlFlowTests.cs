@@ -16,22 +16,28 @@ public sealed class LinearCilControlFlowTests
     public void LinearInstructionsRemainOrderedThroughConcreteBlocks()
     {
         var model = CreateModel(nameof(CountDown));
-        var blocks = model.Labels.Select(label => model.ControlFlowGraph[label]).OrderBy(block => block.InstructionIndex);
-        var blockedInstructions = blocks.SelectMany(block => block.Instructions).ToArray();
+        var graph = model.ControlFlow.Node;
+        var blocks = model.Labels.Select(label => graph[label]).OrderBy(block => block.InstructionIndex);
+        var blockedInstructions = blocks.SelectMany(block => block.Instructions).Select(item => item.Node).ToArray();
 
-        Assert.Equal(model.Instructions.Length, blockedInstructions.Length);
-        Assert.Equal(model.Instructions, blockedInstructions);
+        Assert.Equal(model.RawCode.Instructions.Length, blockedInstructions.Length);
+        Assert.Equal(model.RawCode.Instructions, blockedInstructions);
         Assert.Equal(Enumerable.Range(0, model.InstructionCount),
-            model.Instructions.Select(instruction => instruction.Index));
-        Assert.Equal(model.Offsets.SkipLast(1), model.Instructions.Select(instruction => instruction.ByteOffset));
-        Assert.Equal(model.Offsets.Skip(1), model.Instructions.Select(instruction => instruction.NextByteOffset));
+            model.RawCode.Instructions.Select(instruction => instruction.Index));
+        Assert.Equal(
+            model.Environment.Offsets.SkipLast(1),
+            model.RawCode.Instructions.Select(instruction => instruction.ByteOffset));
+        Assert.Equal(
+            model.Environment.Offsets.Skip(1),
+            model.RawCode.Instructions.Select(instruction => instruction.NextByteOffset));
     }
 
     [Fact]
     public void ConcreteControlPreservesForwardBackwardAndFallthroughTopology()
     {
         var model = CreateModel(nameof(CountDown));
-        var blocks = model.Labels.Select(label => model.ControlFlowGraph[label]).ToArray();
+        var graph = model.ControlFlow.Node;
+        var blocks = model.Labels.Select(label => graph[label]).ToArray();
 
         Assert.Contains(blocks,
             block => Targets(block.Terminator).Any(target => model.LabelToInstructionIndex(target) >
@@ -44,7 +50,7 @@ public sealed class LinearCilControlFlowTests
         foreach (var block in blocks)
             Assert.Equal(
                 block.Terminator.ToSuccessor().AllTargets(),
-                model.ControlFlowGraph.Successor(block.Label).AllTargets());
+                graph.Successor(block.Label).AllTargets());
     }
 
     [Fact]
@@ -54,11 +60,12 @@ public sealed class LinearCilControlFlowTests
         var parser = new RuntimeReflectionParser();
         var declaration = parser.ParseMethod(method);
         var model = parser.Context.GetFunctionDefinition(declaration);
-        var control = model.Labels.Select(label => model.ControlFlowGraph[label].Terminator)
+        var graph = model.ControlFlow.Node;
+        var control = model.Labels.Select(label => graph[label].Terminator)
                            .OfType<CilControlFlow.ConditionalBranch>()
                            .Single();
         var successor = Assert.IsType<ConditionalSuccessor>(control.ToSuccessor());
-        var block = model.Labels.Single(label => ReferenceEquals(model.ControlFlowGraph[label].Terminator, control));
+        var block = model.Labels.Single(label => ReferenceEquals(graph[label].Terminator, control));
         var lowered = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
             parser.MethodBodies[declaration][block].Body.Last);
 
@@ -87,7 +94,7 @@ public sealed class LinearCilControlFlowTests
     public void ExceptionHandlingAndItsControlOpcodesAreRejected()
     {
         var method = GetMethod(nameof(TryFinally));
-        var exception = Assert.Throws<NotSupportedException>(() => new MethodBodyAnalysisModel(method));
+        var exception = Assert.Throws<NotSupportedException>(() => CilMethodDecoder.Decode(method));
         var instructions = Decode(method);
         var leave = Assert.Single(instructions,
             instruction => instruction.Instruction.OpCode.ToILOpCode() is ILOpCode.Leave or ILOpCode.Leave_s);
@@ -103,7 +110,8 @@ public sealed class LinearCilControlFlowTests
     public void ConditionalProjectionPreservesParallelArmsAndConcretePayload()
     {
         var model = CreateModel(nameof(Choose));
-        var originalBlock = model.Labels.Select(label => model.ControlFlowGraph[label])
+        var modelGraph = model.ControlFlow.Node;
+        var originalBlock = model.Labels.Select(label => modelGraph[label])
                                  .Single(block => block.Terminator is CilControlFlow.ConditionalBranch);
         var original = Assert.IsType<CilControlFlow.ConditionalBranch>(originalBlock.Terminator);
         var sameTarget = new CilControlFlow.ConditionalBranch(
@@ -111,7 +119,7 @@ public sealed class LinearCilControlFlowTests
             original.BranchTarget,
             original.BranchTarget);
         var successor = Assert.IsType<ConditionalSuccessor>(sameTarget.ToSuccessor());
-        var graph = new ControlFlowGraph<CilControlFlow>(
+        var projectedGraph = new ControlFlowGraph<CilControlFlow>(
             original.BranchTarget,
             new Dictionary<Label, ControlFlowGraph<CilControlFlow>.NodeDefinition>
             {
@@ -119,14 +127,14 @@ public sealed class LinearCilControlFlowTests
             });
 
         Assert.Equal([original.BranchTarget, original.BranchTarget], successor.GetReferencedLabels());
-        Assert.Single(graph.Predecessor(original.BranchTarget));
-        Assert.Same(sameTarget, graph[original.BranchTarget]);
+        Assert.Single(projectedGraph.Predecessor(original.BranchTarget));
+        Assert.Same(sameTarget, projectedGraph[original.BranchTarget]);
 
-        _ = model.ControlFlowGraph.ControlFlowAnalysis();
-        Assert.Same(originalBlock, model.ControlFlowGraph[originalBlock.Label]);
+        Assert.Same(modelGraph, model.ControlFlow.Annotation.ControlFlowGraph);
+        Assert.Same(originalBlock, modelGraph[originalBlock.Label]);
         Assert.Same(original.Instruction.Instruction,
             Assert.IsType<CilControlFlow.ConditionalBranch>(
-                model.ControlFlowGraph[originalBlock.Label].Terminator).Instruction.Instruction);
+                modelGraph[originalBlock.Label].Terminator).Instruction.Instruction);
     }
 
     private static MethodBodyAnalysisModel CreateModel(string name)

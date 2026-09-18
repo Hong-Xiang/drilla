@@ -20,7 +20,7 @@ public class ParseBodyTest(ITestOutputHelper Output)
     FunctionBody4 ParseMethod(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
-        context.AddFunctionDefinition(Symbol.Function(m), f);
+        context.AddFunctionDeclaration(Symbol.Function(m), f);
         var parameters = m.GetParameters();
         foreach (var (ip, p) in f.Parameters.Index())
         {
@@ -28,7 +28,8 @@ public class ParseBodyTest(ITestOutputHelper Output)
         }
 
         var parser = new RuntimeReflectionParser(context);
-        var result = parser.ParseMethodBody3(f);
+        Assert.Same(f, parser.ParseMethod(m));
+        var result = parser.MethodBodies[f];
         Output.WriteLine(result.Dump());
         return result;
     }
@@ -253,9 +254,10 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var fCall = new FunctionDeclaration(nameof(BasicMethodInvocationParseShouldWork), [],
             new FunctionReturn(ShaderType.I32, []), []);
         var method = MethodHelper.GetMethod(DevelopTestShaderModule.MethodInvocation);
-        context.AddFunctionDefinition(Symbol.Function(method), fCall);
+        context.AddFunctionDeclaration(Symbol.Function(method), fCall);
         var parser = new RuntimeReflectionParser(context);
-        var result = parser.ParseMethodBody3(fCall);
+        Assert.Same(fCall, parser.ParseMethod(method));
+        var result = parser.MethodBodies[fCall];
         Output.WriteLine(result.Dump());
         //DumpNew(result);
         //var entry = result[result.Entry];
@@ -974,9 +976,10 @@ public class ParseBodyTest(ITestOutputHelper Output)
 
         var method =
             MethodHelper.GetMethod<vec3f32, vec3f32>(DevelopTestShaderModule.NestedExpressionWithFunctionCall);
-        context.AddFunctionDefinition(Symbol.Function(method), f);
+        context.AddFunctionDeclaration(Symbol.Function(method), f);
         var parser = new RuntimeReflectionParser(context);
-        var result = parser.ParseMethodBody3(f);
+        Assert.Same(f, parser.ParseMethod(method));
+        var result = parser.MethodBodies[f];
         Output.WriteLine(result.Dump());
     }
 

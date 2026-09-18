@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
@@ -14,14 +15,18 @@ namespace DualDrill.CLSL.Frontend;
 
 internal static class CilPreStackAnalyzer
 {
-    public static ImmutableDictionary<int, ImmutableStack<CilStackType>> Analyze(
-        MethodBodyAnalysisModel model,
+    public static LinearCode<Annotated<CilInstructionInfo, PreStack>> Analyze(
+        LinearCode<CilInstructionInfo> source,
         FunctionDeclaration function,
         ISymbolTableView table,
         Action<MethodBase> declareCallee)
     {
-        if (model.InstructionCount == 0)
-            throw new ValidationException("A method body must contain at least one CIL instruction.", model.Method);
+        var environment = source.Environment;
+        if (source.Count == 0)
+            throw new ValidationException("A method body must contain at least one CIL instruction.",
+                environment.Method);
+
+        environment.ValidateControlBoundaries(source);
 
         Dictionary<int, ImmutableStack<CilStackType>> pre = new()
         {
@@ -31,11 +36,11 @@ internal static class CilPreStackAnalyzer
 
         while (worklist.TryDequeue(out var index))
         {
-            var instruction = model[index];
+            var instruction = source[index];
             if (instruction.Instruction.Operand is MethodBase callee)
                 declareCallee(callee);
-            var post = Transfer(model, function, table, instruction, pre[index]);
-            foreach (var target in model.SuccessorInstructionIndices(instruction))
+            var post = Transfer(environment, function, table, instruction, pre[index]);
+            foreach (var target in environment.SuccessorInstructionIndices(source, instruction))
             {
                 if (!pre.TryGetValue(target, out var current))
                 {
@@ -44,15 +49,23 @@ internal static class CilPreStackAnalyzer
                     continue;
                 }
 
-                Merge(model, instruction, target, current, post);
+                Merge(source, instruction, target, current, post);
             }
         }
 
-        return pre.ToImmutableDictionary();
+        var instructions = pre.OrderBy(pair => pair.Key)
+                              .Select(pair => new Annotated<CilInstructionInfo, PreStack>(
+                                  source[pair.Key],
+                                  new PreStack(pair.Value)))
+                              .ToImmutableArray();
+        return new LinearCode<Annotated<CilInstructionInfo, PreStack>>(
+            environment,
+            instructions,
+            CilStagePrettyPrinter.PrintPreAnnotatedLinearCode);
     }
 
     private static ImmutableStack<CilStackType> Transfer(
-        MethodBodyAnalysisModel model,
+        CilMethodEnvironment environment,
         FunctionDeclaration function,
         ISymbolTableView table,
         CilInstructionInfo instruction,
@@ -60,8 +73,8 @@ internal static class CilPreStackAnalyzer
     {
         try
         {
-            var visitor = new TransferVisitor(model, function, table, instruction, pre);
-            return instruction.Evaluate(visitor, model.IsStatic, table);
+            var visitor = new TransferVisitor(environment, function, table, instruction, pre);
+            return instruction.Evaluate(visitor, environment.IsStatic, table);
         }
         catch (ValidationException)
         {
@@ -69,24 +82,24 @@ internal static class CilPreStackAnalyzer
         }
         catch (NotImplementedException exception)
         {
-            throw Unsupported(model, instruction, exception);
+            throw Unsupported(environment, instruction, exception);
         }
         catch (NotSupportedException exception)
         {
-            throw Unsupported(model, instruction, exception);
+            throw Unsupported(environment, instruction, exception);
         }
         catch (KeyNotFoundException exception)
         {
-            throw Invalid(model, instruction, $"symbol resolution failed: {exception.Message}", exception);
+            throw Invalid(environment, instruction, $"symbol resolution failed: {exception.Message}", exception);
         }
         catch (InvalidCastException exception)
         {
-            throw Invalid(model, instruction, $"malformed operand: {exception.Message}", exception);
+            throw Invalid(environment, instruction, $"malformed operand: {exception.Message}", exception);
         }
     }
 
     private static void Merge(
-        MethodBodyAnalysisModel model,
+        LinearCode<CilInstructionInfo> code,
         CilInstructionInfo source,
         int target,
         ImmutableStack<CilStackType> existing,
@@ -94,36 +107,36 @@ internal static class CilPreStackAnalyzer
     {
         if (existing.Count() != incoming.Count())
             throw new ValidationException(
-                $"CIL stack height mismatch from IL_{source.ByteOffset:X4} to IL_{model[target].ByteOffset:X4}: " +
+                $"CIL stack height mismatch from IL_{source.ByteOffset:X4} to IL_{code[target].ByteOffset:X4}: " +
                 $"existing {existing.Count()}, incoming {incoming.Count()}.",
-                model.Method);
+                code.Environment.Method);
 
         foreach (var (slot, pair) in existing.Zip(incoming).Index())
             if (pair.First != pair.Second)
                 throw new ValidationException(
                     $"CIL stack type mismatch at top-based slot {slot} from IL_{source.ByteOffset:X4} " +
-                    $"to IL_{model[target].ByteOffset:X4}: existing {pair.First}, incoming {pair.Second}.",
-                    model.Method);
+                    $"to IL_{code[target].ByteOffset:X4}: existing {pair.First}, incoming {pair.Second}.",
+                    code.Environment.Method);
     }
 
     private static ValidationException Unsupported(
-        MethodBodyAnalysisModel model,
+        CilMethodEnvironment environment,
         CilInstructionInfo instruction,
         Exception exception) =>
-        Invalid(model, instruction, "reachable instruction semantics are not supported", exception);
+        Invalid(environment, instruction, "reachable instruction semantics are not supported", exception);
 
     private static ValidationException Invalid(
-        MethodBodyAnalysisModel model,
+        CilMethodEnvironment environment,
         CilInstructionInfo instruction,
         string message,
         Exception? innerException = null) =>
         new(
             $"{message} at IL_{instruction.ByteOffset:X4} ({instruction.Instruction.OpCode}).",
-            model.Method,
+            environment.Method,
             innerException);
 
     private sealed class TransferVisitor(
-        MethodBodyAnalysisModel model,
+        CilMethodEnvironment environment,
         FunctionDeclaration function,
         ISymbolTableView table,
         CilInstructionInfo instruction,
@@ -394,6 +407,6 @@ internal static class CilPreStackAnalyzer
         private ValidationException Error(string message) =>
             new(
                 $"{message} at IL_{instruction.ByteOffset:X4} ({instruction.Instruction.OpCode}).",
-                model.Method);
+                environment.Method);
     }
 }

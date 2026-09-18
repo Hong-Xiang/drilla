@@ -1,4 +1,6 @@
-﻿using System.Collections.Frozen;
+﻿using System.CodeDom.Compiler;
+using System.Collections.Frozen;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.Common;
@@ -13,8 +15,10 @@ public interface IControlFlowGraph
     public IEnumerable<Label> GetSucc(Label label);
 }
 
-public sealed class ControlFlowGraph<TData> : IControlFlowGraph
+public sealed class ControlFlowGraph<TData> : IControlFlowGraph, IPrintable
 {
+    private readonly Action<ControlFlowGraph<TData>, IndentedTextWriter, PrettyPrintOption> prettyPrint;
+
     /// <summary>
     ///     Create a control flow graph labeled by Label and user TData
     ///     Note arguments must satisfy
@@ -25,7 +29,8 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph
     /// <param name="nodes">label to successor and data map</param>
     public ControlFlowGraph(
         Label entry,
-        IReadOnlyDictionary<Label, NodeDefinition> nodes)
+        IReadOnlyDictionary<Label, NodeDefinition> nodes,
+        Action<ControlFlowGraph<TData>, IndentedTextWriter, PrettyPrintOption>? prettyPrint = null)
     {
         if (!nodes.ContainsKey(entry))
             throw new ArgumentException("Entry label not found in nodes definition", nameof(nodes));
@@ -47,6 +52,7 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph
             var node = new NodeData(kv.Value.Successor, kv.Value.Data, predecessors[kv.Key].ToFrozenSet());
             return KeyValuePair.Create(kv.Key, node);
         }).ToFrozenDictionary();
+        this.prettyPrint = prettyPrint ?? PrettyPrintDefault;
     }
 
     public int Count => Nodes.Count;
@@ -60,6 +66,9 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph
     public IEnumerable<Label> GetSucc(Label label) => Successor(label).AllTargets();
 
     public int LabelCount => throw new NotImplementedException();
+
+    public void PrettyPrint(IndentedTextWriter writer, PrettyPrintOption option) =>
+        prettyPrint(this, writer, option);
 
     public IReadOnlySet<Label> Predecessor(Label label) => Nodes[label].Predecessors;
 
@@ -77,6 +86,25 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph
         TData Data
     )
     {
+    }
+
+    private static void PrettyPrintDefault(
+        ControlFlowGraph<TData> graph,
+        IndentedTextWriter writer,
+        PrettyPrintOption option)
+    {
+        writer.Write("cfg entry=");
+        writer.WriteLine(graph.EntryLabel);
+        foreach (var label in graph.Labels())
+        {
+            writer.Write(label);
+            writer.Write(" predecessors=[");
+            writer.Write(string.Join(", ", graph.Predecessor(label)));
+            writer.Write("] successor=");
+            writer.Write(graph.Successor(label));
+            writer.Write(" data=");
+            writer.WriteLine(graph[label]);
+        }
     }
 }
 

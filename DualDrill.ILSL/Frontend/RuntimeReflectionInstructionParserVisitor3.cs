@@ -25,18 +25,18 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
 
 
     public RuntimeReflectionInstructionParserVisitor3(
-        MethodBodyAnalysisModel model,
+        CilMethodEnvironment environment,
         FunctionDeclaration function,
         CilControlFlow control,
         ImmutableStack<IShaderValue> inputStack)
     {
-        Model = model;
+        Environment = environment;
         Function = function;
         Control = control;
         Stack = inputStack;
     }
 
-    public MethodBodyAnalysisModel Model { get; }
+    public CilMethodEnvironment Environment { get; }
     public FunctionDeclaration Function { get; }
     public CilControlFlow Control { get; }
     public ImmutableStack<IShaderValue> Stack { get; private set; }
@@ -74,20 +74,21 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         if (Stack.IsEmpty)
         {
             if (Function.Return.Type is not UnitType)
-                throw new ValidationException("Function return type is not Unit, but stack is empty.", Model.Method);
+                throw new ValidationException("Function return type is not Unit, but stack is empty.",
+                    Environment.Method);
 
             Terminator = TermF.ReturnVoid();
         }
         else
         {
             if (Function.Return.Type is UnitType)
-                throw new ValidationException("Function return type is Unit, but stack is empty.", Model.Method);
+                throw new ValidationException("Function return type is Unit, but stack is empty.", Environment.Method);
 
             var v = Pop();
             Terminator = TermF.ReturnExpr(v);
             if (!Stack.IsEmpty)
                 throw new ValidationException("Function return type is Unit, but stack has more than one element.",
-                    Model.Method);
+                    Environment.Method);
         }
 
         return default;
@@ -116,7 +117,8 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         var l = Pop();
         var lt = GetValueType(l);
         var rt = GetValueType(r);
-        if (!lt.Equals(rt)) throw new ValidationException($"binary op type not match {l} != {r}", Model.Method);
+        if (!lt.Equals(rt))
+            throw new ValidationException($"binary op type not match {l} != {r}", Environment.Method);
 
         switch (lt)
         {
@@ -139,7 +141,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
                 PushEmitLet2(NumericBinaryArithmeticOperation<FloatType<N64>, TOp>.Instance, l, r);
                 break;
             default:
-                throw new ValidationException($"op {TOp.Instance.Name} not support in type {l}", Model.Method);
+                throw new ValidationException($"op {TOp.Instance.Name} not support in type {l}", Environment.Method);
         }
 
         return default;
@@ -250,7 +252,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         var v = Pop();
         var t = GetValueType(v);
         if (t is not IntType<N32>)
-            throw new ValidationException($"br if expecte a i32 stack value, got {t}", Model.Method);
+            throw new ValidationException($"br if expecte a i32 stack value, got {t}", Environment.Method);
 
         var control = RequireNativeControl<CilControlFlow.ConditionalBranch>(inst);
         var args = GetStackOutput();
@@ -272,7 +274,9 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         var v = EvalExpr2((lt, rt) =>
         {
             if (!lt.Equals(rt))
-                throw new ValidationException($"binary relational op type not match {lt.Name} {rt.Name}", Model.Method);
+                throw new ValidationException(
+                    $"binary relational op type not match {lt.Name} {rt.Name}",
+                    Environment.Method);
             return lt switch
             {
                 IntType<N32> when isUn && TOp.Instance is not BinaryRelational.Ne =>
@@ -289,7 +293,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
                     NumericBinaryRelationalOperation<FloatType<N64>, TOp>.Instance,
                 _ =>
                     throw new ValidationException(
-                        $"Unsupported relational operand {lt}, {rt} for op {TOp.Instance.Name}", Model.Method)
+                        $"Unsupported relational operand {lt}, {rt} for op {TOp.Instance.Name}", Environment.Method)
             };
         });
 
@@ -311,12 +315,12 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         var r = Pop();
         var l = Pop();
         if (!(l.Type is IntType<N32> && r.Type is IntType<N32>))
-            throw new ValidationException($"logical op requires i32 operands, got {l}, {r}", Model.Method);
+            throw new ValidationException($"logical op requires i32 operands, got {l}, {r}", Environment.Method);
 
         if (TOp.Instance is BinaryLogical.IWithBitwiseOp bOp)
             PushEmitLet2(bOp.BitwiseOp.GetNumericBinaryOperation(IntType<N32>.Instance), l, r);
         else
-            throw new ValidationException($"Not support op {TOp.Instance}", Model.Method);
+            throw new ValidationException($"Not support op {TOp.Instance}", Environment.Method);
 
         return default;
     }
@@ -407,7 +411,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
             (UIntType<N16>, IntType<N32>) => ScalarConversionOperation<IntType<N32>, UIntType<N16>>.Instance,
             (UIntType<N32>, IntType<N32>) => ScalarConversionOperation<IntType<N32>, UIntType<N32>>.Instance,
             (UIntType<N64>, IntType<N64>) => ScalarConversionOperation<IntType<N64>, UIntType<N64>>.Instance,
-            _ => throw new ValidationException($"can not store {source} to {target}", Model.Method)
+            _ => throw new ValidationException($"can not store {source} to {target}", Environment.Method)
         };
     }
 
@@ -427,7 +431,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         }
         else
         {
-            throw new ValidationException($"can not store to non ptr type value {tt}", Model.Method);
+            throw new ValidationException($"can not store to non ptr type value {tt}", Environment.Method);
         }
     }
 
@@ -511,14 +515,18 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
         }
         else
         {
-            throw new ValidationException($"can not load from non-ptr type value {p} : {p.Type}", Model.Method);
+            throw new ValidationException(
+                $"can not load from non-ptr type value {p} : {p.Type}",
+                Environment.Method);
         }
     }
 
     private IShaderValue GetMemberPointer(IShaderValue o, MemberDeclaration m)
     {
         if (!(o.Type is IPtrType ptr && ptr.BaseType is StructureType))
-            throw new ValidationException($"can not load field from {o}, expected ptr to structure type", Model.Method);
+            throw new ValidationException(
+                $"can not load field from {o}, expected ptr to structure type",
+                Environment.Method);
 
         //return EmitLet(m.Type.GetPtrType(), Expr.Operation1(Pointer.Member(m), CreateValueExpr(o)));
         var pa = (IPtrType)o.Type;
@@ -539,7 +547,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
                         var lt = GetValueType(l);
                         var rt = GetValueType(r);
                         if (!lt.Equals(be.LeftType) || !rt.Equals(be.RightType))
-                            throw new ValidationException($"{be} operation stack : {l}, {r}", Model.Method);
+                            throw new ValidationException($"{be} operation stack : {l}, {r}", Environment.Method);
                         PushEmitLet2(be, l, r);
                         return;
                     }
@@ -557,7 +565,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
                             {
                                 throw new ValidationException(
                                     $"{bs.Name} {bs.LeftType.Name} {bs.RightType.Name} operation stack : {l.Type.Name}, {r.Type.Name}",
-                                    Model.Method);
+                                    Environment.Method);
                             }
                         }
 
@@ -591,7 +599,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
                             }
                             else
                             {
-                                throw new ValidationException($"{ue} operation stack : {s}", Model.Method);
+                                throw new ValidationException($"{ue} operation stack : {s}", Environment.Method);
                             }
                         }
 
@@ -618,7 +626,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
             if (!GetValueType(ve).Equals(p.Type))
                 throw new ValidationException(
                     $"parameter {p} not match: stack {ve} declaration {p.Type.Name}",
-                    Model.Method);
+                    Environment.Method);
             args.Add(ve);
         }
 
@@ -655,7 +663,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
 
         throw new ValidationException(
             $"CIL control mismatch at IL_{instruction.ByteOffset:X4}: expected {typeof(TControl).Name}, got {Control}.",
-            Model.Method);
+            Environment.Method);
     }
 
 
@@ -676,7 +684,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
             (FloatType<N32>, FloatType<N32>, true) => NumericBinaryRelationalOperation<FloatType<N32>, TOp>.Instance,
             (FloatType<N64>, FloatType<N64>, true) => NumericBinaryRelationalOperation<FloatType<N64>, TOp>.Instance,
             _ => throw new ValidationException($"binary relational op {TOp.Instance.Name} not support in type {l}, {r}",
-                Model.Method)
+                Environment.Method)
         };
     }
 }

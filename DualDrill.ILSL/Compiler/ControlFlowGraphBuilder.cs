@@ -1,4 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.CodeDom.Compiler;
+using System.Diagnostics.CodeAnalysis;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Symbol;
 
@@ -99,18 +101,21 @@ public sealed class ControlFlowGraphBuilder
 
     public ControlFlowGraph<TNode> Build<TNode>(
         Func<Label, InstructionRange, ISuccessor, TNode> createNode,
-        Func<TNode, ISuccessor> getSuccessor)
+        Func<TNode, ISuccessor> getSuccessor,
+        Action<ControlFlowGraph<TNode>, IndentedTextWriter, PrettyPrintOption>? prettyPrint = null)
     {
         return BuildReachable(
             Enumerable.Range(0, TotalInstructionCount).ToHashSet(),
             createNode,
-            getSuccessor);
+            getSuccessor,
+            prettyPrint);
     }
 
     public ControlFlowGraph<TNode> BuildReachable<TNode>(
         IReadOnlySet<int> reachableInstructionIndices,
         Func<Label, InstructionRange, ISuccessor, TNode> createNode,
-        Func<TNode, ISuccessor> getSuccessor)
+        Func<TNode, ISuccessor> getSuccessor,
+        Action<ControlFlowGraph<TNode>, IndentedTextWriter, PrettyPrintOption>? prettyPrint = null)
     {
         if (!reachableInstructionIndices.Contains(0))
             throw new ArgumentException("The reachable instruction set must contain the entry instruction.",
@@ -182,7 +187,7 @@ public sealed class ControlFlowGraphBuilder
                 new ControlFlowGraph<TNode>.NodeDefinition(getSuccessor(node), node));
         }).ToDictionary();
 
-        return new ControlFlowGraph<TNode>(Entry, nodes);
+        return new ControlFlowGraph<TNode>(Entry, nodes, prettyPrint);
     }
 
     public readonly record struct InstructionRange(int Start, int Count)

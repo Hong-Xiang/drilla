@@ -8,8 +8,10 @@ public interface ISymbolTable : ISymbolTableView
 {
     ISymbolTable AddFunctionDeclaration(IFunctionSymbol symbol, FunctionDeclaration declaration);
 
-    ISymbolTable AddFunctionDefinition(IFunctionSymbol symbol, FunctionDeclaration declaration,
-        MethodBodyAnalysisModel? model = null);
+    ISymbolTable AddFunctionDefinition(
+        IFunctionSymbol symbol,
+        FunctionDeclaration declaration,
+        MethodBodyAnalysisModel model);
 
     // all structures/variables locally referenced must be defined, thus no AddStructureDefinitionMethod
     ISymbolTable AddVariable(IVariableSymbol symbol, VariableDeclaration declaration);

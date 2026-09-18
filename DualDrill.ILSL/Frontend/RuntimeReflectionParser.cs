@@ -246,18 +246,30 @@ public sealed record class RuntimeReflectionParser(
         try
         {
             var symbol = Symbol.Function(method);
-            var model = new MethodBodyAnalysisModel(method);
-            Context.AddFunctionDefinition(symbol, declaration, model);
-            foreach (var variable in model.LocalVariables)
+            var rawCode = CilMethodDecoder.Decode(method);
+            foreach (var variable in rawCode.Environment.LocalVariables)
                 _ = ParseType(variable.LocalType);
 
-            var methodTable = CreateMethodTable(model, declaration);
-            model.Analyze(declaration, methodTable, callee => _ = ParseMethodDeclaration(callee));
+            var methodTable = CreateMethodTable(rawCode.Environment, declaration);
+            var preAnnotatedCode = CilPreStackAnalyzer.Analyze(
+                rawCode,
+                declaration,
+                methodTable,
+                callee => _ = ParseMethodDeclaration(callee));
+            var graph = CilControlFlowGraphBuilder.Build(rawCode, preAnnotatedCode);
+            var model = new MethodBodyAnalysisModel(
+                declaration,
+                rawCode,
+                preAnnotatedCode,
+                new Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>(
+                    graph,
+                    graph.ControlFlowAnalysis()));
+            Context.AddFunctionDefinition(symbol, declaration, model);
 
             foreach (var callee in FilterCalledMethods(model.CalledMethods()).Distinct())
                 _ = ParseMethod(callee);
 
-            if (model.Body is not null)
+            if (model.Environment.Body is not null)
                 MethodBodies.Add(declaration, ParseMethodBody3Core(declaration, model));
 
             CompletedMethodDefinitions.Add(method);
@@ -349,32 +361,34 @@ public sealed record class RuntimeReflectionParser(
         finally
         {
             if (!completed)
-                MarkFailed(model.Method);
+                MarkFailed(model.Environment.Method);
         }
     }
 
     private FunctionBody4 ParseMethodBody3Core(FunctionDeclaration f, MethodBodyAnalysisModel model)
     {
-        var methodTable = CreateMethodTable(model, f);
-        model.Analyze(f, methodTable, callee => _ = ParseMethodDeclaration(callee));
-        var cfa = model.ControlFlowGraph.ControlFlowAnalysis();
+        var environment = model.Environment;
+        var methodTable = CreateMethodTable(environment, f);
+        var graph = model.ControlFlow.Node;
+        var analysis = model.ControlFlow.Annotation;
         Dictionary<Label, ShaderRegionBody> basicBlocks = [];
 
-        foreach (var l in model.ControlFlowGraph.Labels())
+        foreach (var l in graph.Labels())
         {
             Debug.WriteLine($"Label {l} == ");
-            var cilBlock = model.ControlFlowGraph[l];
-            var inputStack = CreateInputStack(cilBlock.EntryStackTypes);
+            var cilBlock = graph[l];
+            var inputStack = CreateInputStack(cilBlock.EntryStack.Types);
             var visitor = new RuntimeReflectionInstructionParserVisitor3(
-                model,
+                environment,
                 f,
                 cilBlock.Terminator,
                 inputStack);
-            foreach (var cilInst in cilBlock.Instructions)
+            foreach (var annotatedInstruction in cilBlock.Instructions)
             {
-                ValidateStack(model, cilInst, visitor.Stack);
+                var cilInst = annotatedInstruction.Node;
+                ValidateStack(environment, cilInst, annotatedInstruction.Annotation, visitor.Stack);
                 //Debug.Write($"parse {cilInst.Instruction.OpCode}");
-                cilInst.Evaluate(visitor, model.IsStatic, methodTable);
+                cilInst.Evaluate(visitor, environment.IsStatic, methodTable);
                 //Debug.Write(" -> ");
                 //Debug.WriteLine(string.Join(", ", visitor.Stack.Select(v => visitor.GetValueType(v).Name)));
             }
@@ -391,25 +405,25 @@ public sealed record class RuntimeReflectionParser(
                                 new RegionJump<IShaderValue>(target, args)),
                         CilControlFlow.EndOfCode =>
                             throw new NotSupportedException(
-                                $"Method {model.Method} reaches the end of CIL without an explicit return."),
+                                $"Method {environment.Method} reaches the end of CIL without an explicit return."),
                         _ => throw new ValidationException(
                             $"Native CIL control at IL_{cilBlock.ByteOffset:X4} did not produce a terminator.",
-                            model.Method)
+                            environment.Method)
                     };
                 }
                 else if (cilBlock.Terminator is CilControlFlow.FallThrough or CilControlFlow.EndOfCode)
                 {
                     throw new ValidationException(
                         $"Synthetic CIL control at IL_{cilBlock.ByteOffset:X4} produced a native terminator.",
-                        model.Method);
+                        environment.Method);
                 }
 
                 var successor = cilBlock.Terminator.ToSuccessor();
 
                 foreach (var tl in successor.AllTargets())
                 {
-                    var target = model[model.LabelToInstructionIndex(tl)];
-                    ValidateStack(model, target, visitor.Stack);
+                    var target = graph[tl].Instructions[0];
+                    ValidateStack(environment, target.Node, target.Annotation, visitor.Stack);
                 }
 
                 basicBlocks.Add(l, new ShaderRegionBody(
@@ -419,19 +433,15 @@ public sealed record class RuntimeReflectionParser(
                         [.. visitor.Instructions],
                         terminator ?? throw new NotSupportedException("failed to resolve terminator")
                     ),
-                    cfa.PostDominatorTree.ImmediatePostDominator(l)
+                    analysis.PostDominatorTree.ImmediatePostDominator(l)
                 ));
             }
         }
 
-        // return new StackIRFunctionBody3(
-        //     model.ControlFlowGraph.EntryLabel,
-        //     basicBlocks.ToFrozenDictionary()
-        // );
         return new FunctionBody4(
             f,
             RegionTree.Create(
-                cfa,
+                analysis,
                 basicBlocks.Select(kv => (kv.Key, kv.Value))
             )
         );
@@ -452,10 +462,10 @@ public sealed record class RuntimeReflectionParser(
         MethodBodies.Clear();
     }
 
-    private CompilationContext CreateMethodTable(MethodBodyAnalysisModel model, FunctionDeclaration function)
+    private CompilationContext CreateMethodTable(CilMethodEnvironment environment, FunctionDeclaration function)
     {
         var methodTable = new CompilationContext(Context);
-        foreach (var variable in model.LocalVariables)
+        foreach (var variable in environment.LocalVariables)
             _ = ParseLocalVariable(variable, methodTable);
         foreach (var (index, parameter) in function.Parameters.Index())
             methodTable.AddParameter(Symbol.Parameter(index), parameter);
@@ -471,17 +481,18 @@ public sealed record class RuntimeReflectionParser(
     }
 
     private static void ValidateStack(
-        MethodBodyAnalysisModel model,
+        CilMethodEnvironment environment,
         CilInstructionInfo instruction,
+        PreStack pre,
         ImmutableStack<IShaderValue> actual)
     {
-        var expected = model.PreStackTypes[instruction.Index];
+        var expected = pre.Types;
         var actualTypes = actual.Select(value => CilStackType.FromShaderType(value.Type));
         if (!expected.SequenceEqual(actualTypes))
             throw new ValidationException(
                 $"Value stack does not match analyzed Pre stack at IL_{instruction.ByteOffset:X4}: " +
                 $"expected [{string.Join(", ", expected)}], got [{string.Join(", ", actualTypes)}].",
-                model.Method);
+                environment.Method);
     }
 
     //ILocalDeclarationContext GetMethodLocalDeclaration(MethodBase method)

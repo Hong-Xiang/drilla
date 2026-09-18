@@ -15,8 +15,8 @@ with parsing; later region and AST stages remain separate work.
 
 ### Implemented Frontend Boundary
 
-`MethodBodyAnalysisModel.Instructions` is now the immutable linear view of the
-decoded method: one `CilInstructionInfo` per original instruction, with its
+`CilMethodDecoder.Decode` now returns the immutable
+`LinearCode<CilInstructionInfo>` view: one `CilInstructionInfo` per original instruction, with its
 index, byte range, and original Lokad instruction object. Each
 `CilInstructionBlock` retains its exact non-empty instruction slice and a
 `CilControlFlow` value distinguishing native return, branch, and conditional
@@ -37,7 +37,7 @@ The `ControlFlowGraphBuilder.Build` source API now requires a three-parameter
 node factory `(label, range, successor)` plus the payload's read-only
 `ISuccessor` projection. `CilInstructionBlock` changed from a public positional
 record struct with public construction, deconstruction, and `with` support to an
-internally constructed sealed record obtained from `MethodBodyAnalysisModel`.
+internally constructed sealed record obtained from `CilControlFlowGraphBuilder`.
 Its index/range properties and the model indexer remain computed accessors, not
 compatibility constructors. Repository callers migrated together; there is no
 compatibility overload or alias.
@@ -57,14 +57,14 @@ concrete value stack before every source instruction and at every outgoing edge.
 Reachable called-method discovery uses the same Pre key set; dead calls are not
 declared or compiled merely because their bytes remain available for diagnostics.
 
-`MethodBodyAnalysisModel(MethodBase)` now creates the raw decoded source model
-only. The runtime-reflection frontend completes its internal analysis after
-method symbols are available; `PreStackTypes`, `ControlFlowGraph`, labels, and
-label mappings reject access before that point. External compilation callers
-should obtain completed models through `RuntimeReflectionParser` and its symbol
-table rather than treating the model constructor as an eager CFG builder.
-Reachable blocks receive their entry stack in the block constructor; no default
-empty value represents an uninitialized block.
+`CilMethodEnvironment` owns the immutable signature, locals, source offsets, and
+offset lookup shared by both linear values. `CilPreStackAnalyzer` returns
+`LinearCode<Annotated<CilInstructionInfo, PreStack>>` only after successful
+analysis. `CilControlFlowGraphBuilder` consumes that completed value and the raw
+source. `MethodBodyAnalysisModel` is now only a complete immutable aggregate
+stored by the symbol table; it has no nullable completion fields or `Analyze`
+operation. Reachable blocks carry the exact annotated instruction slice, and no
+default empty value represents pending analysis.
 
 `RuntimeReflectionParser` distinguishes declarations involved in active
 recursive compilation from fully completed method definitions. Recursive calls
@@ -120,24 +120,25 @@ remain valid.
 
 ## Read-Only Stage Diagnostics
 
-`MethodBodyAnalysisModel` has separate diagnostic views for the raw and completed
-stages:
+Each stage implements the existing `IPrintable` contract with a fixed
+representation:
 
 ```csharp
-var rawModel = new MethodBodyAnalysisModel(method);
-Console.Write(rawModel.DumpRawLinearCil());
+LinearCode<CilInstructionInfo> raw = CilMethodDecoder.Decode(method);
+Console.Write(raw.PrettyPrint());
 
 var parser = new RuntimeReflectionParser();
 var declaration = parser.ParseMethod(method);
 var completed = parser.Context.GetFunctionDefinition(declaration);
-Console.Write(completed.DumpAnalyzedLinearCil());
-Console.Write(completed.DumpReachableControlFlowGraph());
+Console.Write(completed.PreAnnotatedCode.PrettyPrint());
+Console.Write(completed.ControlFlow.Node.PrettyPrint());
 ```
 
-Each method also accepts an `IndentedTextWriter`. The raw dump reads only the
-decoded instruction array. The analyzed linear and CFG dumps require successful
-analysis and preserve the model's `InvalidOperationException` when those facts
-are unavailable; printing never starts analysis or lowering.
+The interface operation also accepts an `IndentedTextWriter` and
+`PrettyPrintOption`. Raw printing reads only decoded instructions. Completed
+linear printing intentionally contains only reachable annotated positions; use
+the separate raw value to print dead source. Printing never starts analysis or
+lowering.
 
 For example, the Debug CIL for a small conditional includes:
 
@@ -148,9 +149,28 @@ For example, the Debug CIL for a small conditional includes:
 ```
 
 Byte ranges are half-open and stack entries are printed bottom to top. `rel` is
-the encoded displacement; `resolved` is its original IL target. The analyzed
-linear dump retains every original instruction and uses `<unreachable>` only
-when a successfully completed Pre map has no entry for that position.
+the encoded displacement; `resolved` is its original IL target. The completed
+linear view omits unreachable positions without renumbering later instructions.
+The raw view remains the authoritative complete-source diagnostic.
+
+### Breaking API migration
+
+The three aggregate dump methods and the raw `MethodBodyAnalysisModel`
+constructor were removed without compatibility shims:
+
+| Removed API | Replacement |
+|---|---|
+| `new MethodBodyAnalysisModel(method)` | `CilMethodDecoder.Decode(method)` |
+| `model.Instructions` / `model.PreStackTypes` | `model.RawCode` / `model.PreAnnotatedCode` |
+| `model.ControlFlowGraph` | `model.ControlFlow.Node` |
+| `DumpRawLinearCil()` | `RawCode.PrettyPrint()` |
+| `DumpAnalyzedLinearCil()` | `PreAnnotatedCode.PrettyPrint()` |
+| `DumpReachableControlFlowGraph()` | `ControlFlow.Node.PrettyPrint()` |
+
+`ISymbolTable.AddFunctionDefinition` now requires a complete immutable model.
+Clients that predeclare a reflection method add its `FunctionDeclaration` and
+let `RuntimeReflectionParser.ParseMethod(MethodBase)` build and register all
+stages atomically.
 
 Use the existing `FunctionBody4.Dump` and shader-module formatter for the
 subsequent region and module stages. Nested region bindings in that dump describe
@@ -294,9 +314,16 @@ directly provide the merged entry state needed at a target block.
 ## Lossless Annotated-Linear to CFG Boundary
 
 Decode the linear source and run Pre analysis before materializing the BB CFG.
-The present `MethodBodyAnalysisModel` constructs its CFG eagerly; simply
-constructing that old object first and analyzing it afterward does not satisfy
-this stage ordering.
+The concrete signatures enforce this order:
+
+```text
+CilMethodDecoder.Decode
+  -> LinearCode<CilInstructionInfo>
+CilPreStackAnalyzer.Analyze
+  -> LinearCode<Annotated<CilInstructionInfo, PreStack>>
+CilControlFlowGraphBuilder.Build
+  -> ControlFlowGraph<CilInstructionBlock>
+```
 
 Partition at the entry, branch targets, and appropriate control boundaries, and
 construct downstream blocks only for reachable positions from the completed Pre

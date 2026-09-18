@@ -74,13 +74,22 @@ public sealed class CompilationContext : ISymbolTable
         return this;
     }
 
-    public ISymbolTable AddFunctionDefinition(IFunctionSymbol symbol, FunctionDeclaration declaration,
-        MethodBodyAnalysisModel? model = null)
+    public ISymbolTable AddFunctionDefinition(
+        IFunctionSymbol symbol,
+        FunctionDeclaration declaration,
+        MethodBodyAnalysisModel model)
     {
+        ArgumentNullException.ThrowIfNull(model);
         if (symbol is CSharpMethodFunctionSymbol { Method: var method })
         {
-            model ??= new MethodBodyAnalysisModel(method);
-            Debug.Assert(method.Equals(model.Method));
+            Debug.Assert(method.Equals(model.Environment.Method));
+            if (!method.Equals(model.Environment.Method))
+                throw new ArgumentException($"The completed model belongs to {model.Environment.Method}, not {method}.",
+                    nameof(model));
+            if (!ReferenceEquals(model.Declaration, declaration))
+                throw new ArgumentException(
+                    $"The completed model for {method} belongs to a different function declaration.",
+                    nameof(model));
             if (Functions.TryGetValue(symbol, out var existing) && !ReferenceEquals(existing, declaration))
                 throw new ArgumentException($"A different declaration is already registered for {method}.",
                     nameof(declaration));
