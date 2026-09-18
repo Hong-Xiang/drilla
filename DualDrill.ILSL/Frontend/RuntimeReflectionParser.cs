@@ -501,7 +501,10 @@ public sealed record class RuntimeReflectionParser(
     //    throw new NotImplementedException();
     //}
 
-    private bool IsMethodDefinition(MethodBase m) => !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(m);
+    private bool IsMethodDefinition(MethodBase method) =>
+        !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(method) &&
+        !method.GetCustomAttributes().Any(attribute =>
+            attribute is IOperationMethodAttribute or IShaderOperationMethodAttribute);
 
     private IEnumerable<MethodBase> FilterCalledMethods(IEnumerable<MethodBase> calleeCandidates)
     {

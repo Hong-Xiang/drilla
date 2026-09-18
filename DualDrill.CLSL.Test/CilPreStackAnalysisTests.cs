@@ -5,8 +5,11 @@ using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
+using DualDrill.Mathematics;
 using Lokad.ILPack.IL;
 
 namespace DualDrill.CLSL.Test;
@@ -84,6 +87,40 @@ public sealed class CilPreStackAnalysisTests
 
         Assert.Contains(first, parser.MethodBodies.Keys);
         Assert.Contains(parser.MethodBodies.Keys, declaration => declaration.Name == nameof(MutualB));
+        Assert.Equal(2, parser.MethodBodies.Count);
+    }
+
+    [Theory]
+    [InlineData(nameof(ThrowingShaderIntrinsic))]
+    [InlineData(nameof(ThrowingOperationIntrinsic))]
+    public void UserDefinedIntrinsicIsDeclarationOnlyAndDoesNotPoisonParser(string methodName)
+    {
+        var parser = new RuntimeReflectionParser();
+        var method = GetMethod(methodName);
+
+        var declaration = parser.ParseMethod(method);
+
+        Assert.DoesNotContain(declaration, parser.MethodBodies.Keys);
+        Assert.Throws<KeyNotFoundException>(() => parser.Context.GetFunctionDefinition(declaration));
+        _ = parser.ParseMethod(GetMethod(nameof(Diamond)));
+        Assert.Single(parser.MethodBodies);
+    }
+
+    [Theory]
+    [InlineData(nameof(CallThrowingShaderIntrinsic), nameof(ThrowingShaderIntrinsic))]
+    [InlineData(nameof(CallThrowingOperationIntrinsic), nameof(ThrowingOperationIntrinsic))]
+    public void ReachableUserDefinedIntrinsicCalleeIsNotBodyCompiled(string callerName, string intrinsicName)
+    {
+        var parser = new RuntimeReflectionParser();
+        var intrinsicMethod = GetMethod(intrinsicName);
+
+        var caller = parser.ParseMethod(GetMethod(callerName));
+        var intrinsic = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(intrinsicMethod)]);
+
+        Assert.Contains(caller, parser.MethodBodies.Keys);
+        Assert.DoesNotContain(intrinsic, parser.MethodBodies.Keys);
+        Assert.Throws<KeyNotFoundException>(() => parser.Context.GetFunctionDefinition(intrinsic));
+        _ = parser.ParseMethod(GetMethod(nameof(Diamond)));
         Assert.Equal(2, parser.MethodBodies.Count);
     }
 
@@ -320,6 +357,20 @@ public sealed class CilPreStackAnalysisTests
             GC.KeepAlive(value);
         }
     }
+
+    [VectorCompositeConstructorMethod]
+    private static vec2f32 ThrowingShaderIntrinsic(float left, float right) =>
+        throw new InvalidOperationException("Intrinsic stubs must never execute or compile.");
+
+    private static vec2f32 CallThrowingShaderIntrinsic(float left, float right) =>
+        ThrowingShaderIntrinsic(left, right);
+
+    [OperationMethod<VectorFromScalarConstructOperation<N4, FloatType<N32>>>]
+    private static vec4f32 ThrowingOperationIntrinsic(float value) =>
+        throw new InvalidOperationException("Intrinsic stubs must never execute or compile.");
+
+    private static vec4f32 CallThrowingOperationIntrinsic(float value) =>
+        ThrowingOperationIntrinsic(value);
 
     private static MethodInfo GetMethod(string name) =>
         typeof(CilPreStackAnalysisTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)

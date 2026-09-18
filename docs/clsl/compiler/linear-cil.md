@@ -70,9 +70,12 @@ empty value represents an uninitialized block.
 recursive compilation from fully completed method definitions. Recursive calls
 may use an in-progress declaration, but a method enters the completed set only
 after analysis, reachable-callee compilation, and value lowering all succeed.
-Any failure poisons that parser instance, clears its produced method bodies, and
-causes later method/body/module compilation attempts to fail explicitly. Its
-context is then diagnostic-only; retry requires a new parser with a fresh
+Once an ordinary method enters the body-compilation boundary, any failure in
+model construction, analysis, reachable-callee compilation, or value lowering
+poisons that parser instance, clears its produced method bodies, and causes later
+method/body/module compilation attempts to fail explicitly. Root declaration
+and module-metadata parsing occur before this boundary. After a body-compilation
+failure the context is diagnostic-only; retry requires a new parser with a fresh
 compilation context rather than attempting rollback through partially registered
 symbols.
 
@@ -231,8 +234,10 @@ All non-scalar stack variants have internal constructors and are produced by the
 single `CilStackType.FromShaderType` classifier. The concrete value visitor uses
 the same classifier for its evaluation-stack normalization. Built-in reflection
 types include `void`, Boolean, signed/unsigned 8/16/32/64-bit integers, and the
-supported floating widths; operation-specific value lowering may still reject a
-call that the normalized CIL stack verifier accepts.
+supported floating widths. These registrations provide the metadata required by
+the documented stack domain; they do not broaden ordinary call acceptance, and
+operation-specific value lowering may still reject a call that the normalized
+CIL stack verifier accepts.
 
 Exception handlers need additional entry/transfer rules and are outside the
 initial design's supported subset. Do not introduce hidden handler behavior or
