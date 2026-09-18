@@ -72,14 +72,13 @@ for their output types. Mapping laws apply to the immutable `Node` and
 `Annotation` data; a type-changing map never carries an incompatible printer
 from its input.
 
-The implementation wires these values through decoding, Pre analysis, reachable
-CFG construction, the live parser, and diagnostic callers. The graph-level
-`ControlFlowAnalysis` annotation is the parser's single source for postdominance
-and `RegionTree.Create`; no dominance result is copied onto each block.
-Superseded mutable completion fields and diagnostic-selection shims were
-removed, and the source/API migration is documented in
-[linear-cil.md](compiler/linear-cil.md). Region/AST algorithms and generic
-invalidation frameworks remain outside this refinement.
+The implementation wires these values through a raw-module collector and
+explicit Pre, CFG, flat-value and region passes. `ControlFlowAnalysis` is
+computed from the completed flat value CFG and is reused for immediate
+postdominators and `RegionTree.Create`; no dominance result is copied onto each
+block. Superseded parser-owned completion caches were removed, and the source/API
+migration is documented in [linear-cil.md](compiler/linear-cil.md). Region/AST
+algorithms and generic invalidation frameworks remain outside this refinement.
 
 ## Three Relations, Not One Tree
 
@@ -143,12 +142,16 @@ The current public compiler path is:
 
 ```text
 C# compiled by .NET
-  -> method declarations and `LinearCode<CilInstructionInfo>`
-  -> CilPreStackAnalyzer with method symbols
-  -> `LinearCode<Annotated<CilInstructionInfo, PreStack>>`
-  -> `Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>`
-  -> RuntimeReflectionParser.ParseMethodBody3
-  -> FunctionBody4
+  -> RuntimeReflectionParser
+  -> `ShaderModuleDeclaration<RawCilFunctionBody>`
+  -> CilPreStackPass
+  -> `ShaderModuleDeclaration<PreCilFunctionBody>`
+  -> CilControlFlowPass
+  -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>`
+  -> CilStackToValuePass
+  -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
+  -> CilRegionPass
+  -> `ShaderModuleDeclaration<FunctionBody4>`
   -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
   -> RegionParameterToLocalVariablePass       : FunctionBody4 -> FunctionBody4
   -> SlangEmitter
@@ -156,11 +159,12 @@ C# compiled by .NET
   -> slangc                                  : Slang source -> WGSL
 ```
 
-`FunctionBody4` currently combines typed instructions and parameterized CFG
-terminators with a `RegionTree` built from dominance containment. The frontend
-first computes Pre stack types on the original linear code and constructs only
-the reachable CFG. The parser then uses those facts for block inputs while
-performing stack-to-value translation and region-tree construction. The emitter
+`RuntimeReflectionParser` stops at a complete raw CIL module. Module membership
+follows all original-CIL references, including dead instruction positions, up to
+explicit shared-builtin, operation-attribute and mapped-vector/member boundaries.
+The later Pre pass still filters unreachable positions inside each collected
+function. `FunctionBody4` combines typed instructions and parameterized
+terminators with a `RegionTree` built by the final frontend pass. The emitter
 still performs lexical layout. There is not yet an independent scoped-region
 validator, complete structurization pass, or target AST stage.
 
@@ -177,12 +181,12 @@ implementations.
 
 | Stage | Required invariant | Current owner or implementation boundary |
 |---|---|---|
-| Linear CIL | Instruction boundaries and branch offsets are resolved consistently. | `CilMethodDecoder` produces `LinearCode<CilInstructionInfo>`; unsupported controls remain explicit failures. |
-| Linear Pre facts | Reachable entries have exact normalized stack types; absence from the completed value means unreachable. | `CilPreStackAnalyzer` produces `LinearCode<Annotated<CilInstructionInfo, PreStack>>`; full original source remains separate. |
-| CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `CilControlFlowGraphBuilder` consumes both linear values and produces the graph bound to one `ControlFlowAnalysis`. |
-| Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `RuntimeReflectionParser` and `ShaderRegionBody` build this representation. Validation is partial, not a complete verifier. |
+| Raw CIL module | All declarations and supported metadata references reachable from the roots through original CIL are present; each non-boundary method body is losslessly decoded once. | `RuntimeReflectionParser` produces `ShaderModuleDeclaration<RawCilFunctionBody>` with frozen symbol views. |
+| Linear Pre facts | Reachable entries have exact normalized stack types; absence from the completed value means unreachable. | `CilPreStackPass` produces `ShaderModuleDeclaration<PreCilFunctionBody>`; full original source remains separate. |
+| CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `CilControlFlowPass` produces `ShaderModuleDeclaration<MethodBodyAnalysisModel>`. |
+| Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `CilStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. Validation is partial, not a complete verifier. |
+| Scoped nested region SSA-like IR | Existing control-flow analysis and region organization consume the completed flat value CFG. | `CilRegionPass` produces `FunctionBody4` using the existing `RegionTree.Create`. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
-| Scoped nested region SSA-like IR | Every shared join has a defined owner; loop/continuation transfers resolve within permitted scopes; edge arguments and definition sharing remain explicit. | Intended contract. Dominance containment alone does not establish it. |
 | Target AST | Control targets have a legal target-language realization; shared joins and value transfers have explicit lexical placement; effects retain their order and dynamic multiplicity. | Intended lowering. Current `SlangEmitter` combines these decisions with text emission. |
 
 The typed CFG is SSA-like, not a claim of whole-program SSA: explicit loads,

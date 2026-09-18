@@ -5,10 +5,7 @@ implemented representations and intended stages. A logical pass boundary does
 not require a new CLR type. Conversely, using one CLR type does not excuse
 leaving a consumer's required invariant unspecified.
 
-## Agreed Next Boundary: Parse a Complete CIL Module
-
-This section is the next implementation contract. The implemented table below
-still describes the current parser-orchestrated pipeline until this slice lands.
+## Implemented Boundary: Parse a Complete CIL Module
 
 The parser/collector must finish after collecting the module's declarations,
 referenced types and original CIL bodies. It must not perform Pre stack analysis,
@@ -91,10 +88,12 @@ inside the collection change.
 
 | Component | Input -> output | Current responsibility |
 |---|---|---|
-| `CilMethodDecoder` | Method metadata -> `LinearCode<CilInstructionInfo>` | Preserve every instruction, original index/byte range, and immutable method environment. |
-| `CilPreStackAnalyzer` | Raw linear CIL and method symbols -> `LinearCode<Annotated<CilInstructionInfo, PreStack>>` | Validate whole-source control first, then propagate exact normalized stacks; successful output contains only reachable original positions. |
-| `CilControlFlowGraphBuilder` | Raw and completed Pre-annotated linear values -> reachable `ControlFlowGraph<CilInstructionBlock>` | Filter before predecessor construction, retain concrete native control, and carry each instruction beside its Pre annotation. |
-| `RuntimeReflectionParser.ParseMethodBody3` | `Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>` -> `FunctionBody4` | Create block inputs from adjacent Pre facts, check every concrete instruction/edge stack, and reuse the same graph analysis for postdominance and the region tree. |
+| `RuntimeReflectionParser` | Reflection roots -> `ShaderModuleDeclaration<RawCilFunctionBody>` | Collect declarations, immutable symbol metadata, and every referenced non-boundary original CIL body, including references at unreachable instruction positions. |
+| `CilMethodDecoder` | Method metadata -> `LinearCode<CilInstructionInfo>` | Preserve every instruction, original index/byte range, method body and immutable method environment without semantic lowering. |
+| `CilPreStackPass` | Raw CIL module -> `ShaderModuleDeclaration<PreCilFunctionBody>` | Reject unsupported EH, validate whole-source control, and propagate exact normalized stacks; successful per-function output contains only reachable original positions. |
+| `CilControlFlowPass` | Pre module -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>` | Construct only the reachable `ControlFlowGraph<CilInstructionBlock>`, retaining concrete native control and source annotations. |
+| `CilStackToValuePass` | CIL CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Validate concrete stacks and produce a flat `ControlFlowGraph<CilValueBasicBlock>` with values, ordered edge arguments and lowered terminators. |
+| `CilRegionPass` | Flat value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Compute `ControlFlowAnalysis` from the completed value CFG once, attach immediate-postdominator facts, and invoke the existing `RegionTree.Create`. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
 | `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
 | `SlangEmitter` | `FunctionBody4` -> Slang text | Resolve supported lexical transfers, place code, and emit syntax. These responsibilities are not yet separate passes. |
@@ -117,12 +116,10 @@ linear stack instructions
   -> source text
 ```
 
-This is a staged contract, not a list of already implemented function-body
-classes. Shared instructions, terminators, sequences, labels, and region
-constructors can serve multiple stages. Pre analysis and reachable CFG
-construction are now separate internal operations. Value lifting remains fused
-with parsing, and the emitter still performs work intended for region-to-AST
-lowering.
+Shared instructions, terminators, sequences, labels, and region constructors
+serve multiple stages. Parsing, Pre analysis, reachable CFG construction, flat
+value lifting, and region construction now have distinct typed producer/consumer
+boundaries. The emitter still performs work intended for region-to-AST lowering.
 
 The agreed [linear CIL design](linear-cil.md) refines the frontend ordering:
 preserve native predicates and original offsets, analyze Pre stack types on

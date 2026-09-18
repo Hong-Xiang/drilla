@@ -15,10 +15,11 @@ public sealed class BooleanCallTests
     [Fact]
     public void BoolCallOperandsMatchSignaturesAndPreserveArgumentOrder()
     {
-        var parser = new RuntimeReflectionParser();
-        var entry = parser.ParseMethod(((Func<int, int>)BooleanCallShader.BooleanFragment).Method);
+        var entryMethod = ((Func<int, int>)BooleanCallShader.BooleanFragment).Method;
+        var module = CilModuleCompiler.Compile(CompilerTestPipeline.ParseRaw(entryMethod));
+        var entry = Assert.Single(module.FunctionDefinitions.Keys, function => function.Name == entryMethod.Name);
         var calls = 0;
-        foreach (var body in parser.MethodBodies.Values)
+        foreach (var body in module.FunctionDefinitions.Values)
         {
             var instructions = body.Labels.SelectMany(label => body[label].Body.Elements).ToArray();
             foreach (var call in instructions.Where(instruction => instruction.Operation is CallOperation))
@@ -50,7 +51,7 @@ public sealed class BooleanCallTests
         }
         Assert.Equal(6, calls);
 
-        var entryBody = parser.MethodBodies[entry];
+        var entryBody = module.FunctionDefinitions[entry];
         var elements = entryBody.Labels.SelectMany(label => entryBody[label].Body.Elements).ToArray();
         var selections = elements.Where(instruction => instruction.Operation is CallOperation &&
             instruction.Operand0 is FunctionDeclaration { Name: nameof(BooleanCallShader.Select) }).ToArray();
@@ -68,17 +69,17 @@ public sealed class BooleanCallTests
     [Fact]
     public void OtherScalarMismatchesRemainRejected()
     {
-        var parser = new RuntimeReflectionParser();
         var unsigned = Assert.Throws<ValidationException>(() =>
-            parser.ParseMethod(((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method));
+            CompilerTestPipeline.CompileBody(((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method));
         Assert.Contains("parameter arg(value: u32) not match", unsigned.Message);
 
         // Inject a malformed caller type: ordinary C# cannot pass a float to a bool parameter.
-        parser = new RuntimeReflectionParser();
         var forwarded = ((Func<bool, int>)BooleanCallShader.Forwarded).Method;
-        parser.Context.AddParameter(Symbol.Parameter(Assert.Single(forwarded.GetParameters())),
+        var context = CompilationContext.Create();
+        context.AddParameter(Symbol.Parameter(Assert.Single(forwarded.GetParameters())),
             new ParameterDeclaration("choose", ShaderType.F32, []));
-        var floating = Assert.Throws<ValidationException>(() => parser.ParseMethod(forwarded));
+        var floating = Assert.Throws<ValidationException>(() =>
+            CompilerTestPipeline.CompileBody(forwarded, context));
         Assert.Contains("parameter arg(choose: bool) not match", floating.Message);
     }
 

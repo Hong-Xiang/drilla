@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Reflection;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Types;
@@ -8,8 +9,6 @@ namespace DualDrill.CLSL.Frontend.SymbolTable;
 
 public sealed class CompilationContext : ISymbolTable
 {
-    private readonly Dictionary<FunctionDeclaration, MethodBodyAnalysisModel> FunctionDefinitions = [];
-
     private readonly Dictionary<IFunctionSymbol, FunctionDeclaration> Functions = [];
     private readonly Dictionary<IVariableSymbol, VariableDeclaration> LocalVariables = [];
     private readonly Dictionary<FieldInfo, MemberDeclaration> Members = [];
@@ -61,9 +60,15 @@ public sealed class CompilationContext : ISymbolTable
         return this;
     }
 
-    public ISymbolTable AddStructure(Type symbol, StructureType type)
+    public ISymbolTable AddType(Type symbol, IShaderType type)
     {
         Types.Add(symbol, type);
+        return this;
+    }
+
+    public ISymbolTable AddStructure(Type symbol, StructureType type)
+    {
+        AddType(symbol, type);
         ModuleStructureDeclarations.Add(type.Declaration);
         return this;
     }
@@ -74,37 +79,6 @@ public sealed class CompilationContext : ISymbolTable
         return this;
     }
 
-    public ISymbolTable AddFunctionDefinition(
-        IFunctionSymbol symbol,
-        FunctionDeclaration declaration,
-        MethodBodyAnalysisModel model)
-    {
-        ArgumentNullException.ThrowIfNull(model);
-        if (symbol is CSharpMethodFunctionSymbol { Method: var method })
-        {
-            Debug.Assert(method.Equals(model.Environment.Method));
-            if (!method.Equals(model.Environment.Method))
-                throw new ArgumentException($"The completed model belongs to {model.Environment.Method}, not {method}.",
-                    nameof(model));
-            if (!ReferenceEquals(model.Declaration, declaration))
-                throw new ArgumentException(
-                    $"The completed model for {method} belongs to a different function declaration.",
-                    nameof(model));
-            if (Functions.TryGetValue(symbol, out var existing) && !ReferenceEquals(existing, declaration))
-                throw new ArgumentException($"A different declaration is already registered for {method}.",
-                    nameof(declaration));
-            Functions.TryAdd(symbol, declaration);
-            FunctionDefinitions.Add(declaration, model);
-            return this;
-        }
-
-        throw new NotSupportedException();
-    }
-
-    public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) =>
-        FunctionDefinitions[declaration];
-
-
     public IEnumerable<StructureDeclaration> StructureDeclarations => ModuleStructureDeclarations;
 
     public IEnumerable<VariableDeclaration> VariableDeclarations =>
@@ -112,5 +86,45 @@ public sealed class CompilationContext : ISymbolTable
 
     public IEnumerable<FunctionDeclaration> FunctionDeclarations => Functions.Values;
 
-    public static ISymbolTable Create() => new CompilationContext(SharedBuiltinSymbolTable.Instance);
+    internal ISymbolTableView Freeze() =>
+        new FrozenSymbolTable(
+            Parent,
+            Types.ToFrozenDictionary(),
+            Functions.ToFrozenDictionary(),
+            LocalVariables.ToFrozenDictionary(),
+            Parameters.ToFrozenDictionary(),
+            StructureMembers.ToFrozenDictionary(),
+            [.. ModuleStructureDeclarations]);
+
+    public static CompilationContext Create() => new(SharedBuiltinSymbolTable.Instance);
+}
+
+internal sealed class FrozenSymbolTable(
+    ISymbolTableView? parent,
+    FrozenDictionary<Type, IShaderType> types,
+    FrozenDictionary<IFunctionSymbol, FunctionDeclaration> functions,
+    FrozenDictionary<IVariableSymbol, VariableDeclaration> variables,
+    FrozenDictionary<IParameterSymbol, ParameterDeclaration> parameters,
+    FrozenDictionary<FieldInfo, MemberDeclaration> members,
+    ImmutableArray<StructureDeclaration> structures)
+    : ISymbolTableView
+{
+    public IShaderType? this[Type type] =>
+        types.TryGetValue(type, out var value) ? value : parent?[type];
+
+    public FunctionDeclaration? this[IFunctionSymbol symbol] =>
+        functions.TryGetValue(symbol, out var value) ? value : parent?[symbol];
+
+    public VariableDeclaration? this[IVariableSymbol symbol] =>
+        variables.TryGetValue(symbol, out var value) ? value : parent?[symbol];
+
+    public ParameterDeclaration? this[IParameterSymbol parameter] =>
+        parameters.TryGetValue(parameter, out var value) ? value : parent?[parameter];
+
+    public MemberDeclaration? this[FieldInfo field] =>
+        members.TryGetValue(field, out var value) ? value : parent?[field];
+
+    public IEnumerable<StructureDeclaration> StructureDeclarations => structures;
+    public IEnumerable<VariableDeclaration> VariableDeclarations => variables.Values;
+    public IEnumerable<FunctionDeclaration> FunctionDeclarations => functions.Values;
 }

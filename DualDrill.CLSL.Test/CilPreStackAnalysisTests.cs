@@ -26,58 +26,48 @@ public sealed class CilPreStackAnalysisTests
     }
 
     [Fact]
-    public void ParserFailureBeforeModelRegistrationPoisonsOnlyThatParser()
+    public void RawParserPreservesExceptionHandlingAndPreRejectsIt()
     {
         var parser = new RuntimeReflectionParser();
         var method = GetMethod(nameof(WithFinally));
 
-        Assert.Throws<NotSupportedException>(() => parser.ParseMethod(method));
-        var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
-        Assert.Throws<KeyNotFoundException>(() => parser.Context.GetFunctionDefinition(declaration));
-        Assert.Empty(parser.MethodBodies);
-
-        var retry = Assert.Throws<InvalidOperationException>(() => parser.ParseMethod(method));
-        Assert.Contains("fresh compilation context", retry.Message);
-        Assert.Throws<InvalidOperationException>(() => parser.ParseMethodBody3(declaration));
-
+        var module = parser.ParseMethod(method);
+        var raw = CompilerTestPipeline.RawBody(module, method);
+        Assert.NotEmpty(raw.Code.Environment.Body!.ExceptionHandlingClauses);
+        var exception = Assert.Throws<NotSupportedException>(() => CilPreStackPass.Run(module));
+        Assert.Contains(method.Name, exception.Message);
         _ = new RuntimeReflectionParser().ParseMethod(GetMethod(nameof(Diamond)));
     }
 
     [Fact]
-    public void ParserFailureAfterRegistrationCannotBecomeSuccessOnRetry()
+    public void SemanticFailureDoesNotInvalidateTheRawModuleOrParser()
     {
         var parser = new RuntimeReflectionParser();
         var method = ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method;
 
-        Assert.Throws<ValidationException>(() => parser.ParseMethod(method));
-        var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
-        var model = parser.Context.GetFunctionDefinition(declaration);
+        var module = parser.ParseMethod(method);
+        var model = CompilerTestPipeline.ControlFlow(module, method);
         var call = Assert.Single(
             model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
 
         Assert.IsType<CilStackType.Int32>(Assert.Single(Pre(model, call.Index).Types));
-        Assert.Empty(parser.MethodBodies);
-        var retry = Assert.Throws<InvalidOperationException>(() => parser.ParseMethod(method));
-        Assert.Contains(method.Name, retry.Message);
-        Assert.Throws<InvalidOperationException>(() => parser.ParseMethodBody3(declaration));
+        Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
+        Assert.Same(model.RawCode, CompilerTestPipeline.ControlFlow(module, method).RawCode);
+        _ = parser.ParseMethod(GetMethod(nameof(Diamond)));
     }
 
     [Fact]
-    public void ReachableCalleeFailurePoisonsAndUnwindsTheCallerParser()
+    public void ReachableCalleeFailureOccursAfterCompleteRawCollection()
     {
-        var parser = new RuntimeReflectionParser();
         var callerMethod = GetMethod(nameof(CallFailingCallee));
 
-        Assert.Throws<ValidationException>(() => parser.ParseMethod(callerMethod));
-        var caller = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(callerMethod)]);
-        var callerModel = parser.Context.GetFunctionDefinition(caller);
-
-        Assert.Same(caller, callerModel.Declaration);
-        Assert.Empty(parser.MethodBodies);
-        var retry = Assert.Throws<InvalidOperationException>(() => parser.ParseMethod(callerMethod));
-        Assert.Contains("fresh compilation context", retry.Message);
-        Assert.Throws<InvalidOperationException>(() => parser.ParseMethodBody3(caller));
+        var module = CompilerTestPipeline.ParseRaw(callerMethod);
+        Assert.Contains(module.FunctionDefinitions.Values,
+            body => body.Code.Environment.Method == callerMethod);
+        Assert.Contains(module.FunctionDefinitions.Values,
+            body => body.Code.Environment.Method == ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method);
+        Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
     }
 
     [Fact]
@@ -86,12 +76,11 @@ public sealed class CilPreStackAnalysisTests
         var parser = new RuntimeReflectionParser();
         var method = GetMethod(nameof(Diamond));
 
-        var first = parser.ParseMethod(method);
-        var second = parser.ParseMethod(method);
+        var first = CompilerTestPipeline.RawBody(parser.ParseMethod(method), method);
+        var second = CompilerTestPipeline.RawBody(parser.ParseMethod(method), method);
 
-        Assert.Same(first, second);
-        Assert.Single(parser.MethodBodies);
-        Assert.Same(parser.MethodBodies[first], parser.MethodBodies[second]);
+        Assert.Same(first.Declaration, second.Declaration);
+        Assert.Same(first.Code, second.Code);
     }
 
     [Fact]
@@ -99,11 +88,13 @@ public sealed class CilPreStackAnalysisTests
     {
         var parser = new RuntimeReflectionParser();
 
-        var first = parser.ParseMethod(GetMethod(nameof(MutualA)));
+        var firstMethod = GetMethod(nameof(MutualA));
+        var module = parser.ParseMethod(firstMethod);
+        var first = CompilerTestPipeline.RawBody(module, firstMethod);
 
-        Assert.Contains(first, parser.MethodBodies.Keys);
-        Assert.Contains(parser.MethodBodies.Keys, declaration => declaration.Name == nameof(MutualB));
-        Assert.Equal(2, parser.MethodBodies.Count);
+        Assert.Contains(first.Declaration, module.FunctionDefinitions.Keys);
+        Assert.Contains(module.FunctionDefinitions.Keys, declaration => declaration.Name == nameof(MutualB));
+        Assert.Equal(2, module.FunctionDefinitions.Count);
     }
 
     [Theory]
@@ -114,12 +105,12 @@ public sealed class CilPreStackAnalysisTests
         var parser = new RuntimeReflectionParser();
         var method = GetMethod(methodName);
 
-        var declaration = parser.ParseMethod(method);
+        var module = parser.ParseMethod(method);
+        var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
 
-        Assert.DoesNotContain(declaration, parser.MethodBodies.Keys);
-        Assert.Throws<KeyNotFoundException>(() => parser.Context.GetFunctionDefinition(declaration));
-        _ = parser.ParseMethod(GetMethod(nameof(Diamond)));
-        Assert.Single(parser.MethodBodies);
+        Assert.DoesNotContain(declaration, module.FunctionDefinitions.Keys);
+        var ordinary = parser.ParseMethod(GetMethod(nameof(Diamond)));
+        Assert.Single(ordinary.FunctionDefinitions);
     }
 
     [Theory]
@@ -130,22 +121,20 @@ public sealed class CilPreStackAnalysisTests
         var parser = new RuntimeReflectionParser();
         var intrinsicMethod = GetMethod(intrinsicName);
 
-        var caller = parser.ParseMethod(GetMethod(callerName));
+        var callerMethod = GetMethod(callerName);
+        var module = parser.ParseMethod(callerMethod);
+        var caller = CompilerTestPipeline.RawBody(module, callerMethod).Declaration;
         var intrinsic = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(intrinsicMethod)]);
 
-        Assert.Contains(caller, parser.MethodBodies.Keys);
-        Assert.DoesNotContain(intrinsic, parser.MethodBodies.Keys);
-        Assert.Throws<KeyNotFoundException>(() => parser.Context.GetFunctionDefinition(intrinsic));
-        _ = parser.ParseMethod(GetMethod(nameof(Diamond)));
-        Assert.Equal(2, parser.MethodBodies.Count);
+        Assert.Contains(caller, module.FunctionDefinitions.Keys);
+        Assert.DoesNotContain(intrinsic, module.FunctionDefinitions.Keys);
     }
 
     [Fact]
-    public void DeadSourceIsRetainedButExcludedFromPreGraphAndCalleeCompilation()
+    public void DeadSourceReferencesAreCollectedButExcludedFromPerFunctionPreAndCfg()
     {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(Fixtures.DeadUnsupportedAndCall);
-        var model = parser.Context.GetFunctionDefinition(declaration);
+        var module = CompilerTestPipeline.ParseRaw(Fixtures.DeadUnsupportedAndCall);
+        var model = CompilerTestPipeline.ControlFlow(module, Fixtures.DeadUnsupportedAndCall);
         var deadCall = Assert.Single(
             model.RawCode.Instructions,
             instruction => instruction.Instruction.Operand is MethodBase method &&
@@ -157,7 +146,7 @@ public sealed class CilPreStackAnalysisTests
             model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
         var liveLabel = Assert.IsType<CilControlFlow.Branch>(
-            model.ControlFlow.Node[model.ControlFlow.Node.EntryLabel].Terminator).Target;
+            model.ControlFlow[model.ControlFlow.EntryLabel].Terminator).Target;
         var liveTarget = model[model.LabelToInstructionIndex(liveLabel)];
 
         Assert.DoesNotContain(model.PreAnnotatedCode.Instructions, item => item.Node.Index == deadCall.Index);
@@ -167,20 +156,37 @@ public sealed class CilPreStackAnalysisTests
         Assert.Equal(
             Enumerable.Range(0, model.InstructionCount),
             model.RawCode.Instructions.Select(instruction => instruction.Index));
-        Assert.True(model.ControlFlow.Node.Labels()
-                         .Sum(label => model.ControlFlow.Node[label].InstructionCount) <
+        Assert.True(model.ControlFlow.Labels()
+                         .Sum(label => model.ControlFlow[label].InstructionCount) <
                     model.InstructionCount);
-        Assert.Equal(2, model.ControlFlow.Node.Count);
-        Assert.Single(model.ControlFlow.Node.Predecessor(liveLabel));
-        Assert.Null(parser.Context[Symbol.Function(Fixtures.DeadCallee)]);
-        Assert.DoesNotContain(parser.MethodBodies.Keys, function => function.Name == Fixtures.DeadCallee.Name);
+        Assert.Equal(2, model.ControlFlow.Count);
+        Assert.Single(model.ControlFlow.Predecessor(liveLabel));
+        Assert.Contains(module.FunctionDefinitions.Values,
+            body => body.Code.Environment.Method == Fixtures.DeadCallee);
+        Assert.Contains(module.FunctionDefinitions.Values,
+            body => body.Code.Environment.Method == Fixtures.NestedDeadCallee);
+        Assert.Contains(module.Declarations.OfType<StructureDeclaration>(),
+            declaration => declaration.Name == nameof(Cell));
+        Assert.NotNull(CompilerTestPipeline.RawBody(module, Fixtures.DeadUnsupportedAndCall).Symbols[typeof(Cell)]);
+    }
+
+    [Fact]
+    public void UnsupportedDeadCalleeIsCollectedBeforeLaterCompilationFails()
+    {
+        var module = CompilerTestPipeline.ParseRaw(Fixtures.DeadUnsupportedCalleeCaller);
+
+        Assert.Contains(module.FunctionDefinitions.Values,
+            body => body.Code.Environment.Method == Fixtures.DeadUnsupportedCallee);
+        var exception = Assert.Throws<ValidationException>(() => CilPreStackPass.Run(module));
+        Assert.Contains("initobj", exception.Message);
+        Assert.Contains(Fixtures.DeadUnsupportedCallee.Name, exception.Message);
     }
 
     [Fact]
     public void LoopCarriedNonEmptyStackUsesOriginalBackwardTarget()
     {
         var model = ParseModel(Fixtures.LoopCarried);
-        var backward = model.Labels.Select(label => model.ControlFlow.Node[label])
+        var backward = model.Labels.Select(label => model.ControlFlow[label])
                             .Single(block => block.Terminator is CilControlFlow.ConditionalBranch control &&
                                              model.LabelToInstructionIndex(control.BranchTarget) <
                                              block.InstructionIndex);
@@ -198,8 +204,8 @@ public sealed class CilPreStackAnalysisTests
     [Fact]
     public void DeadSwitchStillFailsWholeSourceControlValidation()
     {
-        var exception = Assert.Throws<NotSupportedException>(() =>
-            new RuntimeReflectionParser().ParseMethod(Fixtures.DeadSwitch));
+        var module = CompilerTestPipeline.ParseRaw(Fixtures.DeadSwitch);
+        var exception = Assert.Throws<NotSupportedException>(() => CilPreStackPass.Run(module));
 
         Assert.Contains("Switch", exception.Message);
         Assert.Contains("IL_", exception.Message);
@@ -209,13 +215,17 @@ public sealed class CilPreStackAnalysisTests
     [Fact]
     public void ParserCreatesBottomToTopBlockParametersFromAnalyzedPre()
     {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(Fixtures.TwoSlotEdge);
-        var model = parser.Context.GetFunctionDefinition(declaration);
+        var stages = CompilerTestPipeline.CompileStages(Fixtures.TwoSlotEdge);
+        var model = Assert.Single(
+            stages.ControlFlow.FunctionDefinitions.Values,
+            body => body.Environment.Method == Fixtures.TwoSlotEdge);
         var branch = Assert.IsType<CilControlFlow.Branch>(
-            model.ControlFlow.Node[model.ControlFlow.Node.EntryLabel].Terminator);
-        var block = model.ControlFlow.Node[branch.Target];
-        var body = parser.MethodBodies[declaration][branch.Target];
+            model.ControlFlow[model.ControlFlow.EntryLabel].Terminator);
+        var block = model.ControlFlow[branch.Target];
+        var value = Assert.Single(
+            stages.ValueControlFlow.FunctionDefinitions.Values,
+            body => body.Source.Environment.Method == Fixtures.TwoSlotEdge);
+        var body = value.Graph[branch.Target];
 
         Assert.Contains(model.RawCode.Instructions, instruction => instruction.Instruction.OpCode == OpCodes.Pop);
         Assert.Collection(
@@ -242,6 +252,19 @@ public sealed class CilPreStackAnalysisTests
 #endif
 
         AssertInitObjectRejected(Fixtures.ReachableInitObject);
+    }
+
+    [Fact]
+    public void ReachableDupIsPreservedByRawParsingAndRejectedByPre()
+    {
+        var module = CompilerTestPipeline.ParseRaw(Fixtures.ReachableDup);
+        Assert.Contains(
+            CompilerTestPipeline.RawBody(module, Fixtures.ReachableDup).Code.Instructions,
+            instruction => instruction.Instruction.OpCode == OpCodes.Dup);
+
+        var exception = Assert.Throws<ValidationException>(() => CilPreStackPass.Run(module));
+        Assert.Contains("dup", exception.Message);
+        Assert.Contains(Fixtures.ReachableDup.Name, exception.Message);
     }
 
     [Fact]
@@ -305,12 +328,11 @@ public sealed class CilPreStackAnalysisTests
         string methodName,
         bool isInt64)
     {
-        var parser = new RuntimeReflectionParser();
         var method = Fixtures.Method(methodName);
 
-        Assert.Throws<ValidationException>(() => parser.ParseMethod(method));
-        var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
-        var model = parser.Context.GetFunctionDefinition(declaration);
+        var module = CompilerTestPipeline.ParseRaw(method);
+        var model = CompilerTestPipeline.ControlFlow(module, method);
+        Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
         var call = Assert.Single(
             model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
@@ -326,8 +348,8 @@ public sealed class CilPreStackAnalysisTests
     public void DiamondWithEqualTypesMergesAtOriginalInstruction()
     {
         var model = ParseModel(GetMethod(nameof(Diamond)));
-        var merge = model.Labels.Select(label => model.ControlFlow.Node[label])
-                         .Single(block => model.ControlFlow.Node.Predecessor(block.Label).Count == 2);
+        var merge = model.Labels.Select(label => model.ControlFlow[label])
+                         .Single(block => model.ControlFlow.Predecessor(block.Label).Count == 2);
 
         Assert.Collection(
             Pre(model, merge.InstructionIndex).Types,
@@ -338,7 +360,8 @@ public sealed class CilPreStackAnalysisTests
     [MemberData(nameof(InvalidJoinMethods))]
     public void UnequalJoinStacksAreRejected(MethodInfo method, string expected)
     {
-        var exception = Assert.Throws<ValidationException>(() => new RuntimeReflectionParser().ParseMethod(method));
+        var exception = Assert.Throws<ValidationException>(() =>
+            CilPreStackPass.Run(CompilerTestPipeline.ParseRaw(method)));
 
         Assert.Contains(expected, exception.Message);
         Assert.Contains("IL_", exception.Message);
@@ -425,7 +448,11 @@ public sealed class CilPreStackAnalysisTests
 
     private static void AssertInitObjectRejected(MethodInfo method)
     {
-        var exception = Assert.Throws<ValidationException>(() => new RuntimeReflectionParser().ParseMethod(method));
+        var module = CompilerTestPipeline.ParseRaw(method);
+        Assert.Contains(
+            CompilerTestPipeline.RawBody(module, method).Code.Instructions,
+            instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
+        var exception = Assert.Throws<ValidationException>(() => CilPreStackPass.Run(module));
 
         Assert.Contains("initobj", exception.Message);
         Assert.Contains("IL_", exception.Message);
@@ -437,11 +464,7 @@ public sealed class CilPreStackAnalysisTests
         ?? throw new InvalidOperationException($"{name} fixture was not found.");
 
     private static MethodBodyAnalysisModel ParseModel(MethodInfo method)
-    {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        return parser.Context.GetFunctionDefinition(declaration);
-    }
+        => CompilerTestPipeline.ControlFlow(method);
 
     private static PreStack Pre(MethodBodyAnalysisModel model, int instructionIndex) =>
         Assert.Single(
@@ -454,6 +477,9 @@ public sealed class CilPreStackAnalysisTests
 
         public static MethodInfo DeadUnsupportedAndCall => Method(nameof(DeadUnsupportedAndCall));
         public static MethodInfo DeadCallee => Method(nameof(DeadCallee));
+        public static MethodInfo NestedDeadCallee => Method(nameof(NestedDeadCallee));
+        public static MethodInfo DeadUnsupportedCallee => Method(nameof(DeadUnsupportedCallee));
+        public static MethodInfo DeadUnsupportedCalleeCaller => Method(nameof(DeadUnsupportedCalleeCaller));
         public static MethodInfo LoopCarried => Method(nameof(LoopCarried));
         public static MethodInfo DeadSwitch => Method(nameof(DeadSwitch));
         public static MethodInfo TwoSlotEdge => Method(nameof(TwoSlotEdge));
@@ -462,6 +488,7 @@ public sealed class CilPreStackAnalysisTests
         public static MethodInfo ScalarStorage => Method(nameof(ScalarStorage));
         public static MethodInfo SupportedScalarCalls => Method(nameof(SupportedScalarCalls));
         public static MethodInfo ReachableInitObject => Method(nameof(ReachableInitObject));
+        public static MethodInfo ReachableDup => Method(nameof(ReachableDup));
 
         public static MethodInfo Method(string name) =>
             FixtureType.GetMethod(name, BindingFlags.Public | BindingFlags.Static)
@@ -477,8 +504,12 @@ public sealed class CilPreStackAnalysisTests
                 "CilPreStackAnalysisFixtures",
                 TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
 
+            var nestedDeadCallee = Define(type, nameof(NestedDeadCallee), typeof(int));
+            nestedDeadCallee.GetILGenerator().Emit(OpCodes.Ldc_I4_0);
+            nestedDeadCallee.GetILGenerator().Emit(OpCodes.Ret);
+
             var deadCallee = Define(type, nameof(DeadCallee), typeof(int));
-            deadCallee.GetILGenerator().Emit(OpCodes.Ldc_I4_0);
+            deadCallee.GetILGenerator().Emit(OpCodes.Call, nestedDeadCallee);
             deadCallee.GetILGenerator().Emit(OpCodes.Ret);
 
             var dead = Define(type, nameof(DeadUnsupportedAndCall), typeof(int));
@@ -497,6 +528,24 @@ public sealed class CilPreStackAnalysisTests
             deadIl.MarkLabel(live);
             deadIl.Emit(OpCodes.Ldc_I4, 42);
             deadIl.Emit(OpCodes.Ret);
+
+            var unsupportedDeadCallee = Define(type, nameof(DeadUnsupportedCallee), typeof(int));
+            var unsupportedDeadCalleeIl = unsupportedDeadCallee.GetILGenerator();
+            var unsupportedCell = unsupportedDeadCalleeIl.DeclareLocal(typeof(Cell));
+            unsupportedDeadCalleeIl.Emit(OpCodes.Ldloca, unsupportedCell);
+            unsupportedDeadCalleeIl.Emit(OpCodes.Initobj, typeof(Cell));
+            unsupportedDeadCalleeIl.Emit(OpCodes.Ldc_I4_0);
+            unsupportedDeadCalleeIl.Emit(OpCodes.Ret);
+
+            var unsupportedDeadCaller = Define(type, nameof(DeadUnsupportedCalleeCaller), typeof(int));
+            var unsupportedDeadCallerIl = unsupportedDeadCaller.GetILGenerator();
+            var unsupportedLive = unsupportedDeadCallerIl.DefineLabel();
+            unsupportedDeadCallerIl.Emit(OpCodes.Br, unsupportedLive);
+            unsupportedDeadCallerIl.Emit(OpCodes.Call, unsupportedDeadCallee);
+            unsupportedDeadCallerIl.Emit(OpCodes.Pop);
+            unsupportedDeadCallerIl.MarkLabel(unsupportedLive);
+            unsupportedDeadCallerIl.Emit(OpCodes.Ldc_I4_1);
+            unsupportedDeadCallerIl.Emit(OpCodes.Ret);
 
             var deadSwitch = Define(type, nameof(DeadSwitch), typeof(int));
             var deadSwitchIl = deadSwitch.GetILGenerator();
@@ -543,6 +592,7 @@ public sealed class CilPreStackAnalysisTests
 
             DefineScalarFixtures(type);
             DefineReachableInitObject(type);
+            DefineReachableDup(type);
 
             return type.CreateType()
                    ?? throw new InvalidOperationException("Failed to create emitted CIL fixture type.");
@@ -666,6 +716,16 @@ public sealed class CilPreStackAnalysisTests
             il.Emit(OpCodes.Initobj, typeof(Cell));
             il.Emit(OpCodes.Ldloca, cell);
             il.Emit(OpCodes.Ldfld, value);
+            il.Emit(OpCodes.Ret);
+        }
+
+        private static void DefineReachableDup(TypeBuilder type)
+        {
+            var method = Define(type, nameof(ReachableDup), typeof(int));
+            var il = method.GetILGenerator();
+            il.Emit(OpCodes.Ldc_I4_1);
+            il.Emit(OpCodes.Dup);
+            il.Emit(OpCodes.Pop);
             il.Emit(OpCodes.Ret);
         }
 

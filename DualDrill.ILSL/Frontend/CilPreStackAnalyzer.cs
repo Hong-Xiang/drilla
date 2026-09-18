@@ -18,8 +18,7 @@ internal static class CilPreStackAnalyzer
     public static LinearCode<Annotated<CilInstructionInfo, PreStack>> Analyze(
         LinearCode<CilInstructionInfo> source,
         FunctionDeclaration function,
-        ISymbolTableView table,
-        Action<MethodBase> declareCallee)
+        ISymbolTableView table)
     {
         var environment = source.Environment;
         if (source.Count == 0)
@@ -37,8 +36,6 @@ internal static class CilPreStackAnalyzer
         while (worklist.TryDequeue(out var index))
         {
             var instruction = source[index];
-            if (instruction.Instruction.Operand is MethodBase callee)
-                declareCallee(callee);
             var post = Transfer(environment, function, table, instruction, pre[index]);
             foreach (var target in environment.SuccessorInstructionIndices(source, instruction))
             {

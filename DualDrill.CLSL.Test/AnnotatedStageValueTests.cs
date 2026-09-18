@@ -112,16 +112,14 @@ public sealed class AnnotatedStageValueTests
     [Fact]
     public void CompletedStagesShareSourceAndGraphFactsByIdentity()
     {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(GetMethod(nameof(Choose)));
-        var model = parser.Context.GetFunctionDefinition(declaration);
+        var method = GetMethod(nameof(Choose));
+        var model = CompilerTestPipeline.ControlFlow(method);
         LinearCode<CilInstructionInfo> raw = model.RawCode;
         LinearCode<Annotated<CilInstructionInfo, PreStack>> pre = model.PreAnnotatedCode;
-        Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis> controlFlow = model.ControlFlow;
+        ControlFlowGraph<CilInstructionBlock> controlFlow = model.ControlFlow;
 
         Assert.Same(raw.Environment, pre.Environment);
-        Assert.Same(controlFlow.Node, controlFlow.Annotation.ControlFlowGraph);
-        Assert.Same(declaration, model.Declaration);
+        Assert.Same(method, model.Environment.Method);
         foreach (var annotated in pre.Instructions)
         {
             var original = raw[annotated.Node.Index];
@@ -129,7 +127,7 @@ public sealed class AnnotatedStageValueTests
             Assert.Same(original.Instruction, annotated.Node.Instruction);
         }
 
-        foreach (var block in controlFlow.Node.Labels().Select(label => controlFlow.Node[label]))
+        foreach (var block in controlFlow.Labels().Select(label => controlFlow[label]))
             foreach (var annotated in block.Instructions)
                 Assert.Same(
                     Assert.Single(pre.Instructions, item => item.Node.Index == annotated.Node.Index).Annotation,
@@ -146,8 +144,7 @@ public sealed class AnnotatedStageValueTests
         Assert.Contains(" pre=", row.PrettyPrint());
         var graph = graphStage.PrettyPrint();
         Assert.Contains("reachable-cil-cfg", graph);
-        Assert.Contains("control-flow-analysis", graph);
-        Assert.Contains("immediate-dominators=", graph);
+        Assert.DoesNotContain("control-flow-analysis", graph);
     }
 
     [Fact]
@@ -182,14 +179,14 @@ public sealed class AnnotatedStageValueTests
     [Fact]
     public void PrettyPrintingAndLoweringDoNotChangeCompletedStageSnapshots()
     {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(GetMethod(nameof(Choose)));
-        var model = parser.Context.GetFunctionDefinition(declaration);
+        var method = GetMethod(nameof(Choose));
+        var rawModule = CompilerTestPipeline.ParseRaw(method);
+        var model = CompilerTestPipeline.ControlFlow(rawModule, method);
         var rawSnapshot = model.RawCode.Instructions.ToArray();
         var preSnapshot = model.PreAnnotatedCode.Instructions
                                .Select(item => (item.Node, item.Annotation))
                                .ToArray();
-        var graph = model.ControlFlow.Node;
+        var graph = model.ControlFlow;
         var graphSnapshot = graph.Labels()
                                  .Select(label => (
                                      Label: label,
@@ -200,7 +197,9 @@ public sealed class AnnotatedStageValueTests
         _ = model.RawCode.PrettyPrint();
         _ = model.PreAnnotatedCode.PrettyPrint();
         _ = model.ControlFlow.PrettyPrint();
-        _ = parser.MethodBodies[declaration];
+        _ = CilStackToValuePass.Run(
+            CilControlFlowPass.Run(
+                CilPreStackPass.Run(rawModule)));
 
         Assert.Equal(rawSnapshot, model.RawCode.Instructions);
         Assert.Equal(preSnapshot, model.PreAnnotatedCode.Instructions.Select(item => (item.Node, item.Annotation)));
@@ -213,46 +212,23 @@ public sealed class AnnotatedStageValueTests
     }
 
     [Fact]
-    public void CompleteAggregateRejectsAnalysisFromAnotherGraph()
+    public void ValueControlFlowAnalysisBelongsToTheFlatValueGraph()
     {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(GetMethod(nameof(Choose)));
-        var model = parser.Context.GetFunctionDefinition(declaration);
-        var graph = model.ControlFlow.Node;
-        var equivalent = new ControlFlowGraph<CilInstructionBlock>(
-            graph.EntryLabel,
-            graph.Labels().ToDictionary(
-                label => label,
-                label => new ControlFlowGraph<CilInstructionBlock>.NodeDefinition(
-                    graph.Successor(label),
-                    graph[label])));
+        var value = CompilerTestPipeline.ValueControlFlow(GetMethod(nameof(Choose)));
+        var analysis = value.Graph.ControlFlowAnalysis();
 
-        var exception = Assert.Throws<ArgumentException>(() => new MethodBodyAnalysisModel(
-            declaration,
-            model.RawCode,
-            model.PreAnnotatedCode,
-            new Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>(
-                graph,
-                equivalent.ControlFlowAnalysis(),
-                PrintNothing)));
-
-        Assert.Contains("belong to the stored graph", exception.Message);
+        Assert.Same(value.Graph, analysis.ControlFlowGraph);
     }
 
     [Fact]
     public void CompleteAggregateRejectsGraphFromAnotherDecodedSource()
     {
-        var firstParser = new RuntimeReflectionParser();
-        var firstDeclaration = firstParser.ParseMethod(GetMethod(nameof(Choose)));
-        var first = firstParser.Context.GetFunctionDefinition(firstDeclaration);
-        var secondParser = new RuntimeReflectionParser();
-        var secondDeclaration = secondParser.ParseMethod(GetMethod(nameof(Choose)));
-        var second = secondParser.Context.GetFunctionDefinition(secondDeclaration);
+        var method = GetMethod(nameof(Choose));
+        var first = CompilerTestPipeline.ControlFlow(method);
+        var second = CompilerTestPipeline.ControlFlow(method);
 
         var exception = Assert.Throws<ArgumentException>(() => new MethodBodyAnalysisModel(
-            firstDeclaration,
-            first.RawCode,
-            first.PreAnnotatedCode,
+            first.Pre,
             second.ControlFlow));
 
         Assert.Contains("does not belong to the stored Pre-annotated source", exception.Message);
@@ -262,7 +238,7 @@ public sealed class AnnotatedStageValueTests
     public void CompleteAggregateRejectsBlocksStoredUnderDifferentLabels()
     {
         var model = ParseModel();
-        var graph = model.ControlFlow.Node;
+        var graph = model.ControlFlow;
         var conditional = Assert.IsType<ConditionalSuccessor>(graph.Successor(graph.EntryLabel));
         var definitions = Definitions(graph);
         (definitions[conditional.TrueTarget], definitions[conditional.FalseTarget]) = (
@@ -279,7 +255,7 @@ public sealed class AnnotatedStageValueTests
     public void CompleteAggregateRejectsSuccessorDifferentFromConcreteTerminator()
     {
         var model = ParseModel();
-        var graph = model.ControlFlow.Node;
+        var graph = model.ControlFlow;
         var conditional = Assert.IsType<ConditionalSuccessor>(graph.Successor(graph.EntryLabel));
         var definitions = Definitions(graph);
         definitions[graph.EntryLabel] = new(
@@ -296,7 +272,7 @@ public sealed class AnnotatedStageValueTests
     public void CompleteAggregateRejectsDisconnectedDefinitions()
     {
         var model = ParseModel();
-        var graph = model.ControlFlow.Node;
+        var graph = model.ControlFlow;
         var definitions = Definitions(graph);
         definitions.Add(
             DualDrill.CLSL.Language.Symbol.Label.Create("disconnected"),
@@ -338,10 +314,8 @@ public sealed class AnnotatedStageValueTests
         il.Emit(OpCodes.Ret);
         var fixture = (type.CreateType() ?? throw new InvalidOperationException("Missing fixture type."))
             .GetMethod("IncrementUntilThree") ?? throw new InvalidOperationException("Missing fixture method.");
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(fixture);
-        var model = parser.Context.GetFunctionDefinition(declaration);
-        var graph = model.ControlFlow.Node;
+        var model = CompilerTestPipeline.ControlFlow(fixture);
+        var graph = model.ControlFlow;
         var alternateEntry = Assert.Single(
             graph.Labels(), label => graph.Successor(label) is ConditionalSuccessor);
         var malformed = new ControlFlowGraph<CilInstructionBlock>(alternateEntry, Definitions(graph));
@@ -353,11 +327,7 @@ public sealed class AnnotatedStageValueTests
     }
 
     private static MethodBodyAnalysisModel ParseModel()
-    {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(GetMethod(nameof(Choose)));
-        return parser.Context.GetFunctionDefinition(declaration);
-    }
+        => CompilerTestPipeline.ControlFlow(GetMethod(nameof(Choose)));
 
     private static Dictionary<DualDrill.CLSL.Language.Symbol.Label,
         ControlFlowGraph<CilInstructionBlock>.NodeDefinition> Definitions(
@@ -371,14 +341,7 @@ public sealed class AnnotatedStageValueTests
     private static MethodBodyAnalysisModel CompleteWithGraph(
         MethodBodyAnalysisModel source,
         ControlFlowGraph<CilInstructionBlock> graph) =>
-        new(
-            source.Declaration,
-            source.RawCode,
-            source.PreAnnotatedCode,
-            new Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>(
-                graph,
-                graph.ControlFlowAnalysis(),
-                PrintNothing));
+        new(source.Pre, graph);
 
     private static void PrintNothing<TNode, TAnnotation>(
         TNode node,

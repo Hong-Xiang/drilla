@@ -27,9 +27,12 @@ public class ParseBodyTest(ITestOutputHelper Output)
             context.AddParameter(Symbol.Parameter(parameters[ip]), p);
         }
 
-        var parser = new RuntimeReflectionParser(context);
-        Assert.Same(f, parser.ParseMethod(m));
-        var result = parser.MethodBodies[f];
+        var rawModule = CompilerTestPipeline.ParseRaw(m, context);
+        var raw = CompilerTestPipeline.RawBody(rawModule, m);
+        Assert.Same(f, raw.Declaration);
+        var result = Assert.Single(
+            CilModuleCompiler.Compile(rawModule).FunctionDefinitions.Values,
+            body => ReferenceEquals(body.Declaration, f));
         Output.WriteLine(result.Dump());
         return result;
     }
@@ -255,9 +258,11 @@ public class ParseBodyTest(ITestOutputHelper Output)
             new FunctionReturn(ShaderType.I32, []), []);
         var method = MethodHelper.GetMethod(DevelopTestShaderModule.MethodInvocation);
         context.AddFunctionDeclaration(Symbol.Function(method), fCall);
-        var parser = new RuntimeReflectionParser(context);
-        Assert.Same(fCall, parser.ParseMethod(method));
-        var result = parser.MethodBodies[fCall];
+        var rawModule = CompilerTestPipeline.ParseRaw(method, context);
+        Assert.Same(fCall, CompilerTestPipeline.RawBody(rawModule, method).Declaration);
+        var result = Assert.Single(
+            CilModuleCompiler.Compile(rawModule).FunctionDefinitions.Values,
+            body => ReferenceEquals(body.Declaration, fCall));
         Output.WriteLine(result.Dump());
         //DumpNew(result);
         //var entry = result[result.Entry];
@@ -977,9 +982,11 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var method =
             MethodHelper.GetMethod<vec3f32, vec3f32>(DevelopTestShaderModule.NestedExpressionWithFunctionCall);
         context.AddFunctionDeclaration(Symbol.Function(method), f);
-        var parser = new RuntimeReflectionParser(context);
-        Assert.Same(f, parser.ParseMethod(method));
-        var result = parser.MethodBodies[f];
+        var rawModule = CompilerTestPipeline.ParseRaw(method, context);
+        Assert.Same(f, CompilerTestPipeline.RawBody(rawModule, method).Declaration);
+        var result = Assert.Single(
+            CilModuleCompiler.Compile(rawModule).FunctionDefinitions.Values,
+            body => ReferenceEquals(body.Declaration, f));
         Output.WriteLine(result.Dump());
     }
 

@@ -23,11 +23,16 @@ public sealed class TerminalCilBlockTests
             nameof(ConditionalReturn),
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Conditional return fixture was not found.");
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        var parsed = parser.MethodBodies[declaration];
-        var model = parser.Context.GetFunctionDefinition(declaration);
-        var graph = model.ControlFlow.Node;
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var raw = CompilerTestPipeline.RawBody(stages.Raw, method);
+        var declaration = raw.Declaration;
+        var parsed = Assert.Single(
+            stages.Compiled.FunctionDefinitions.Values,
+            body => ReferenceEquals(body.Declaration, declaration));
+        var model = Assert.Single(
+            stages.ControlFlow.FunctionDefinitions.Values,
+            body => body.Environment.Method == method);
+        var graph = model.ControlFlow;
         var blocks = model.Labels.ToDictionary(
             label => graph[label].ByteOffset,
             label => graph[label]);
@@ -85,7 +90,7 @@ public sealed class TerminalCilBlockTests
         MethodBodyAnalysisModel model,
         CilInstructionBlock block)
     {
-        Assert.IsType<TerminateSuccessor>(model.ControlFlow.Node.Successor(block.Label));
+        Assert.IsType<TerminateSuccessor>(model.ControlFlow.Successor(block.Label));
         var control = Assert.IsType<CilControlFlow.Return>(block.Terminator);
         var last = block.Instructions[^1].Node;
         Assert.Equal(OpCodes.Ret, last.Instruction.OpCode);

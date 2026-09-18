@@ -68,11 +68,15 @@ public sealed class IntegerInequalityBranchTests
     private static void AssertTypedBranch<TInteger>(MethodInfo method)
         where TInteger : INumericType<TInteger>
     {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        var body = parser.MethodBodies[declaration];
-        var model = parser.Context.GetFunctionDefinition(declaration);
-        var graph = model.ControlFlow.Node;
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var declaration = CompilerTestPipeline.RawBody(stages.Raw, method).Declaration;
+        var body = Assert.Single(
+            stages.Compiled.FunctionDefinitions.Values,
+            value => ReferenceEquals(value.Declaration, declaration));
+        var model = Assert.Single(
+            stages.ControlFlow.FunctionDefinitions.Values,
+            value => value.Environment.Method == method);
+        var graph = model.ControlFlow;
         var blocks = model.Labels.ToDictionary(
             label => graph[label].ByteOffset,
             label => graph[label]);

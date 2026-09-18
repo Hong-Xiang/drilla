@@ -136,8 +136,6 @@ public static class CilMethodDecoder
     {
         ArgumentNullException.ThrowIfNull(method);
         var body = method.GetMethodBody();
-        if (body?.ExceptionHandlingClauses.Count > 0)
-            throw new NotSupportedException($"Exception handling is not supported for method {method}.");
 
         var decodedInstructions = (method.GetInstructions() ?? []).ToImmutableArray();
         var localVariables = (body?.LocalVariables ?? []).ToArray();

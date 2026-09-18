@@ -25,9 +25,6 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
 
     public static SharedBuiltinSymbolTable Instance { get; } = new();
 
-    public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) =>
-        throw new NotSupportedException("All runtime methods have not definitions");
-
     // all entities in shared builtin context can only be directly refrenced
     // declarations is not allowed
     public VariableDeclaration? this[IVariableSymbol symbol] => null;
