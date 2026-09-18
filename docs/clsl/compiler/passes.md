@@ -46,10 +46,13 @@ Every type-bearing root enters the same recursive closure operation: entry and
 referenced method signatures, locals, instruction operands, field owners/types,
 module variables, and static method declaring types. Layout closure includes
 base types and inherited instance fields until an explicit builtin type
-boundary. Type visitation is marked before walking members so reference cycles
-terminate. A CLR value-type shape that cannot be represented without recursive
-construction fails with type context rather than overflowing the parser stack.
-Collection still does not enumerate unrelated assembly methods.
+boundary. Function-pointer signatures contribute their return and parameter
+types, then stop as a non-layout metadata boundary; this does not imply `calli`
+or function-pointer backend support. Type visitation is marked before walking
+members so reference cycles terminate. A CLR value-type shape that cannot be
+represented without recursive construction fails with type context rather than
+overflowing the parser stack. Collection still does not enumerate unrelated
+assembly methods.
 
 Attributed shader module properties are not a supported variable representation.
 The existing CIL frontend resolves fields, while a property access is a getter
@@ -63,12 +66,15 @@ must not observe later mutation through a parent `CompilationContext`; only the
 known immutable shared-builtin table or an already frozen table may remain as a
 fallback.
 
-The whole parse operation is fail-closed, including module-variable and entry
-metadata discovery before method traversal. Any collection failure poisons that
-parser instance even when no root method was identified, and no later call may
-publish declarations accumulated by the failed attempt. Contextual wrapping is
-limited to expected reflection/metadata failures; programmer faults and fatal
-runtime exceptions are not reclassified as unsupported CIL.
+Every public metadata-collection entry point is fail-closed, including
+`ParseType`, `ParseField`, `ParseParameter`, `ParseStaticField`, module-variable
+and entry discovery, and method traversal. Recursive internal helpers stay
+inside the active operation rather than starting nested transactions. Any
+collection failure poisons that parser instance even when no root method was
+identified, and no later call may return cached placeholders or publish
+declarations accumulated by the failed attempt. Contextual wrapping is limited
+to expected reflection/metadata failures; programmer faults and fatal runtime
+exceptions are not reclassified as unsupported CIL.
 
 ### Pass Responsibilities
 

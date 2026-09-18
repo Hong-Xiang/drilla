@@ -84,7 +84,9 @@ symbol snapshot only after closure collection finishes, then publishes
 `RawCilFunctionBody` values with immutable per-method local/argument views.
 All type-bearing roots use the same recursive collector, including locals,
 module-variable types, static declaring types, base types and inherited layout
-fields. Type visitation is recorded before member traversal to terminate
+fields. Function-pointer signatures recursively contribute return and parameter
+types before stopping at a non-layout boundary; runtime `calli` support is not
+implied. Type visitation is recorded before member traversal to terminate
 reference cycles. Unsupported recursive value layouts fail contextually.
 Collection does not execute methods, intrinsic stubs, constructors, or static
 initializers. A decode or metadata-resolution failure publishes no module.
@@ -98,9 +100,10 @@ declaration that later symbol lookup cannot consume.
 
 Frozen symbol views snapshot mutable `CompilationContext` parents recursively.
 Later parent mutation cannot change lookup results in a previously returned raw
-module. The entire module parse, including variable and entry metadata discovery,
-uses one fail-closed lifecycle; failure poisons that parser before any partial
-module can be returned.
+module. Every public collection operation, including direct type/field/parameter
+parsing and module variable/entry discovery, uses the same fail-closed lifecycle.
+Failure poisons that parser before a cached placeholder or partial module can be
+returned; recursive helpers remain inside the active operation.
 
 The implemented `CilStackType` domain is:
 
