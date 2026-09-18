@@ -5,6 +5,8 @@ using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Test.ShaderModule;
 
 namespace DualDrill.CLSL.Test;
@@ -77,6 +79,99 @@ public sealed class CilModulePipelineTests
     }
 
     [Fact]
+    public void PublishedSymbolSnapshotDoesNotObserveMutableParentChanges()
+    {
+        var parent = CompilationContext.Create();
+        var parser = new RuntimeReflectionParser(new CompilationContext(parent));
+        var method = GetMethod(nameof(Identity));
+        var body = CompilerTestPipeline.RawBody(parser.ParseMethod(method), method);
+
+        parent.AddType(typeof(ParentMutationType), new OpaqueType(typeof(ParentMutationType)));
+
+        Assert.Null(body.Symbols[typeof(ParentMutationType)]);
+    }
+
+    [Fact]
+    public void UnusedReferenceLocalContributesItsCompleteTypeClosure()
+    {
+        var method = UnusedReferenceLocalFixture();
+        var body = CompilerTestPipeline.RawBody(CompilerTestPipeline.ParseRaw(method), method);
+
+        Assert.NotNull(body.Symbols[typeof(ReferenceContainer)]);
+        Assert.NotNull(body.Symbols[typeof(ReferenceLeaf)]);
+        Assert.NotNull(body.Symbols[ReferenceContainerLeafField()]);
+    }
+
+    [Fact]
+    public void StaticMethodOwnerContributesItsTypeClosure()
+    {
+        var method = typeof(StaticOwner).GetMethod(nameof(StaticOwner.Entry))
+                     ?? throw new InvalidOperationException("Static owner entry was not found.");
+        var module = CompilerTestPipeline.ParseRaw(method);
+        var body = CompilerTestPipeline.RawBody(module, method);
+
+        Assert.NotNull(body.Symbols[typeof(StaticOwner)]);
+        Assert.NotNull(body.Symbols[typeof(ReferenceContainer)]);
+        Assert.Single(module.FunctionDefinitions);
+    }
+
+    [Fact]
+    public void DerivedStaticOwnerIncludesBaseTypeAndInheritedLayoutFields()
+    {
+        var method = typeof(DerivedStaticOwner).GetMethod(nameof(DerivedStaticOwner.Entry))
+                     ?? throw new InvalidOperationException("Derived owner entry was not found.");
+        var body = CompilerTestPipeline.RawBody(CompilerTestPipeline.ParseRaw(method), method);
+        var inherited = typeof(BaseOwner).GetField(
+            "Inherited",
+            BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                        ?? throw new InvalidOperationException("Inherited field was not found.");
+
+        Assert.NotNull(body.Symbols[typeof(BaseOwner)]);
+        Assert.NotNull(body.Symbols[typeof(ReferenceLeaf)]);
+        Assert.NotNull(body.Symbols[inherited]);
+    }
+
+    [Fact]
+    public void UnusedModuleVariableContributesItsCompleteTypeClosure()
+    {
+        var module = new RuntimeReflectionParser().ParseShaderModule(new UnusedModuleVariableShader());
+        var body = Assert.Single(module.FunctionDefinitions.Values);
+
+        Assert.NotNull(body.Symbols[typeof(ReferenceContainer)]);
+        Assert.NotNull(body.Symbols[typeof(ReferenceLeaf)]);
+        Assert.Contains(module.Declarations.OfType<VariableDeclaration>(),
+            declaration => declaration.Name == nameof(UnusedModuleVariableShader.Value));
+    }
+
+    [Fact]
+    public void SelfReturningStructPropertyUsesTheRegisteredPlaceholder()
+    {
+        var type = Assert.IsType<StructureType>(
+            new RuntimeReflectionParser().ParseType(typeof(SelfReturningStruct)));
+        var member = Assert.Single(type.Declaration.Members,
+            declaration => declaration.Name == nameof(SelfReturningStruct.Self));
+
+        Assert.Same(type, member.Type);
+    }
+
+    [Theory]
+    [InlineData(typeof(PublicPropertyShader))]
+    [InlineData(typeof(PrivatePropertyShader))]
+    public void AttributedModulePropertiesFailClosed(Type shaderType)
+    {
+        var parser = new RuntimeReflectionParser();
+        ISharpShader shader = shaderType == typeof(PublicPropertyShader)
+            ? new PublicPropertyShader()
+            : new PrivatePropertyShader();
+
+        var exception = Assert.Throws<NotSupportedException>(() => parser.ParseShaderModule(shader));
+
+        Assert.Contains("property", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("use an attributed field", exception.Message);
+        Assert.Throws<InvalidOperationException>(() => parser.ParseMethod(GetMethod(nameof(Identity))));
+    }
+
+    [Fact]
     public void EveryPublishedPipelineStageHasReadableModuleOutput()
     {
         var method = GetMethod(nameof(Identity));
@@ -119,13 +214,92 @@ public sealed class CilModulePipelineTests
 
     private sealed class LeftNode
     {
-        public required RightNode Right;
+        public RightNode Right = null!;
     }
 
     private sealed class RightNode
     {
-        public LeftNode? Left;
-        public int Value;
+        public LeftNode? Left = null;
+        public int Value = 0;
+    }
+
+    private sealed class ReferenceLeaf
+    {
+    }
+
+    private sealed class ReferenceContainer
+    {
+        public ReferenceLeaf? Leaf = null;
+    }
+
+    private sealed class ParentMutationType;
+
+    private class StaticOwner
+    {
+        private ReferenceContainer? unused = null;
+
+        public static int Entry() => 1;
+        private ReferenceContainer? ReadUnused() => unused;
+    }
+
+    private class BaseOwner
+    {
+        private ReferenceLeaf? Inherited = null;
+
+        private ReferenceLeaf? ReadInherited() => Inherited;
+    }
+
+    private sealed class DerivedStaticOwner : BaseOwner
+    {
+        public static int Entry() => 1;
+    }
+
+    private struct SelfReturningStruct
+    {
+        public SelfReturningStruct Self => this;
+    }
+
+    private sealed class UnusedModuleVariableShader : ISharpShader
+    {
+        [Uniform]
+        [Group(0)]
+        [Binding(0)]
+        public static readonly ReferenceContainer? Value = null;
+
+        [Vertex]
+        public static int Entry() => 1;
+    }
+
+    private sealed class PublicPropertyShader : ISharpShader
+    {
+        [Uniform]
+        [Group(0)]
+        [Binding(0)]
+        private static readonly int Field = 0;
+
+        [Uniform]
+        [Group(0)]
+        [Binding(1)]
+        public static int Value { get; }
+
+        [Vertex]
+        public static int Entry() => Field;
+    }
+
+    private sealed class PrivatePropertyShader : ISharpShader
+    {
+        [Uniform]
+        [Group(0)]
+        [Binding(0)]
+        private static readonly int Field = 0;
+
+        [Uniform]
+        [Group(0)]
+        [Binding(1)]
+        private static int Value { get; }
+
+        [Vertex]
+        public static int Entry() => Field;
     }
 
     private static MethodInfo GetMethod(string name) =>
@@ -157,6 +331,32 @@ public sealed class CilModulePipelineTests
         il.Emit(OpCodes.Ret);
         return (type.CreateType() ?? throw new InvalidOperationException("Fixture type creation failed."))
             .GetMethod("DeadExternalCall")
+            ?? throw new InvalidOperationException("Fixture method was not found.");
+    }
+
+    private static FieldInfo ReferenceContainerLeafField() =>
+        typeof(ReferenceContainer).GetField(nameof(ReferenceContainer.Leaf))
+        ?? throw new InvalidOperationException("ReferenceContainer.Leaf was not found.");
+
+    private static MethodInfo UnusedReferenceLocalFixture()
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName("UnusedReferenceLocalFixture"),
+            AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("UnusedReferenceLocalFixture").DefineType(
+            "UnusedReferenceLocalFixture",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+        var method = type.DefineMethod(
+            "UnusedReferenceLocal",
+            MethodAttributes.Public | MethodAttributes.Static,
+            typeof(int),
+            Type.EmptyTypes);
+        var il = method.GetILGenerator();
+        _ = il.DeclareLocal(typeof(ReferenceContainer));
+        il.Emit(OpCodes.Ldc_I4_1);
+        il.Emit(OpCodes.Ret);
+        return (type.CreateType() ?? throw new InvalidOperationException("Fixture type creation failed."))
+            .GetMethod("UnusedReferenceLocal")
             ?? throw new InvalidOperationException("Fixture method was not found.");
     }
 }

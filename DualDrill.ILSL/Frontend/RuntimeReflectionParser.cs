@@ -22,7 +22,7 @@ public sealed class RuntimeReflectionParser
     private readonly HashSet<Type> collectedTypes = [];
     private readonly Dictionary<MethodBase, CollectedMethod> collectedMethods = [];
     private readonly HashSet<MethodBase> inProgressMethods = [];
-    private MethodBase? failedMethod;
+    private string? failedSource;
 
     public RuntimeReflectionParser()
         : this(CompilationContext.Create())
@@ -38,25 +38,41 @@ public sealed class RuntimeReflectionParser
 
     public ShaderModuleDeclaration<RawCilFunctionBody> ParseShaderModule(ISharpShader module)
     {
-        EnsureUsable();
         var moduleType = module.GetType();
-        foreach (var variable in ParseAllModuleVariableDeclarations(moduleType))
-            _ = variable;
+        return ParseOperation($"shader module {moduleType}", () =>
+        {
+            foreach (var variable in ParseAllModuleVariableDeclarations(moduleType))
+                _ = variable;
 
-        var entryMethods = moduleType
-                           .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
-                                       BindingFlags.Instance)
-                           .Where(method => method.GetCustomAttributes().Any(attribute =>
-                               attribute is IShaderStageAttribute))
-                           .OrderBy(method => method.Name)
-                           .ToImmutableArray();
-        return ParseMethods(entryMethods);
+            RejectAttributedModuleProperties(moduleType);
+            var entryMethods = moduleType
+                               .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                                           BindingFlags.Instance)
+                               .Where(method => method.GetCustomAttributes().Any(attribute =>
+                                   attribute is IShaderStageAttribute))
+                               .OrderBy(method => method.Name)
+                               .ToImmutableArray();
+            foreach (var method in entryMethods)
+                CollectMethod(method);
+            return BuildModule();
+        });
     }
 
     public ShaderModuleDeclaration<RawCilFunctionBody> ParseMethod(MethodBase method) =>
-        ParseMethods([method]);
+        ParseOperation($"method {method}", () =>
+        {
+            CollectMethod(method);
+            return BuildModule();
+        });
 
     public IShaderType ParseType(Type type)
+    {
+        CollectTypeReferences(type);
+        return Context[type] ??
+               throw new InvalidOperationException($"Type {type} was not registered during collection.");
+    }
+
+    private IShaderType GetOrAddType(Type type)
     {
         if (Context[type] is { } found)
             return found;
@@ -68,8 +84,15 @@ public sealed class RuntimeReflectionParser
             return opaque;
         }
 
-        var structure = ParseStructDeclaration(type);
+        var declaration = new StructureDeclaration
+        {
+            Name = type.Name,
+            Attributes = [.. type.GetCustomAttributes().OfType<IShaderAttribute>()],
+            Members = []
+        };
+        var structure = new StructureType(declaration);
         Context.AddStructure(type, structure);
+        PopulateStructDeclaration(type, declaration);
         return structure;
     }
 
@@ -107,6 +130,9 @@ public sealed class RuntimeReflectionParser
 
     public MemberDeclaration ParseField(FieldInfo field)
     {
+        if (field.DeclaringType is { } declaringType)
+            CollectTypeReferences(declaringType);
+        CollectTypeReferences(field.FieldType);
         if (Context[field] is { } found)
             return found;
 
@@ -118,20 +144,23 @@ public sealed class RuntimeReflectionParser
         return declaration;
     }
 
-    private ShaderModuleDeclaration<RawCilFunctionBody> ParseMethods(IEnumerable<MethodBase> methods)
+    private TResult ParseOperation<TResult>(string source, Func<TResult> parse)
     {
         EnsureUsable();
-        var roots = methods.ToImmutableArray();
+        var completed = false;
         try
         {
-            foreach (var method in roots)
-                CollectMethod(method);
-            return BuildModule();
+            var result = parse();
+            completed = true;
+            return result;
         }
-        catch
+        finally
         {
-            failedMethod ??= inProgressMethods.LastOrDefault() ?? roots.FirstOrDefault();
-            throw;
+            if (!completed)
+            {
+                failedSource ??= source;
+                inProgressMethods.Clear();
+            }
         }
     }
 
@@ -143,13 +172,11 @@ public sealed class RuntimeReflectionParser
             return;
 
         if (method.GetMethodBody() is null)
-        {
-            failedMethod ??= method;
             throw new NotSupportedException(
                 $"Referenced method {method} has no decodable CIL body and is not a registered builtin or intrinsic.");
-        }
 
         inProgressMethods.Add(method);
+        var completed = false;
         try
         {
             var rawCode = CilMethodDecoder.Decode(method);
@@ -165,16 +192,13 @@ public sealed class RuntimeReflectionParser
                 CollectOperand(method, instruction);
 
             completedMethods.Add(method);
-        }
-        catch
-        {
-            collectedMethods.Remove(method);
-            failedMethod ??= method;
-            throw;
+            completed = true;
         }
         finally
         {
             inProgressMethods.Remove(method);
+            if (!completed)
+                collectedMethods.Remove(method);
         }
     }
 
@@ -221,7 +245,7 @@ public sealed class RuntimeReflectionParser
                         $"Metadata operand type {operand.GetType().FullName} is not supported.");
             }
         }
-        catch (Exception exception) when (exception is not ValidationException)
+        catch (Exception exception) when (IsMetadataCollectionException(exception))
         {
             throw new NotSupportedException(
                 $"Failed to collect metadata operand at IL_{instruction.ByteOffset:X4} " +
@@ -249,12 +273,7 @@ public sealed class RuntimeReflectionParser
     private void CollectMethodSignature(MethodBase method)
     {
         if (method.DeclaringType is { } declaringType)
-        {
-            if (method.IsStatic)
-                _ = ParseType(declaringType);
-            else
-                CollectTypeReferences(declaringType);
-        }
+            CollectTypeReferences(declaringType);
         if (method is MethodInfo methodInfo)
             CollectTypeReferences(methodInfo.ReturnType);
         foreach (var parameter in method.GetParameters())
@@ -272,7 +291,7 @@ public sealed class RuntimeReflectionParser
             CollectTypeReferences(element);
         foreach (var argument in type.GetGenericArguments())
             CollectTypeReferences(argument);
-        _ = ParseType(type);
+        _ = GetOrAddType(type);
 
         if (SharedBuiltinSymbolTable.Instance.RuntimeTypes.ContainsKey(type) ||
             type.IsPointer ||
@@ -280,6 +299,9 @@ public sealed class RuntimeReflectionParser
             type.IsArray ||
             type.IsGenericParameter)
             return;
+
+        if (type.BaseType is { } baseType)
+            CollectTypeReferences(baseType);
 
         foreach (var field in type.GetFields(
                      BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance |
@@ -398,25 +420,19 @@ public sealed class RuntimeReflectionParser
         return new FunctionReturn(returnType, attributes);
     }
 
-    private StructureType ParseStructDeclaration(Type type)
+    private void PopulateStructDeclaration(Type type, StructureDeclaration declaration)
     {
         var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                          .Where(field => !field.Name.EndsWith("k__BackingField", StringComparison.Ordinal));
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        var declaration = new StructureDeclaration
-        {
-            Name = type.Name,
-            Attributes = [.. type.GetCustomAttributes().OfType<IShaderAttribute>()],
-            Members =
-            [
-                .. fields.Select(ParseField),
-                .. properties.Select(property => new MemberDeclaration(
-                    property.Name,
-                    ParseType(property.PropertyType),
-                    [.. property.GetCustomAttributes().OfType<IShaderAttribute>()]))
-            ]
-        };
-        return new StructureType(declaration);
+        declaration.Members =
+        [
+            .. fields.Select(ParseField),
+            .. properties.Select(property => new MemberDeclaration(
+                property.Name,
+                ParseType(property.PropertyType),
+                [.. property.GetCustomAttributes().OfType<IShaderAttribute>()]))
+        ];
     }
 
     private VariableDeclaration ParseModuleVariableDeclaration(FieldInfo field)
@@ -427,36 +443,24 @@ public sealed class RuntimeReflectionParser
         return ParseStaticField(field);
     }
 
-    private VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo property)
-    {
-        _ = property.GetGetMethod() ??
-            throw new NotSupportedException("Properties without a getter are not supported.");
-        var symbol = Symbol.Variable(property);
-        if (Context[symbol] is { } found)
-            return found;
-
-        var addressSpace =
-            property.GetCustomAttributes().OfType<IAddressSpaceAttribute>().Single().AddressSpace;
-        var declaration = new VariableDeclaration(
-            addressSpace,
-            property.Name,
-            ParseType(property.PropertyType),
-            [.. property.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.AddVariable(symbol, declaration);
-        return declaration;
-    }
-
     private ImmutableArray<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
     {
         var fields = moduleType.GetFields(VariableBindingFlags)
                                .Where(field => field.GetCustomAttributes().Any(attribute =>
                                    attribute is IAddressSpaceAttribute))
                                .Select(ParseModuleVariableDeclaration);
-        var properties = moduleType.GetProperties(VariableBindingFlags)
-                                   .Where(property => property.GetCustomAttributes().Any(attribute =>
-                                       attribute is IAddressSpaceAttribute))
-                                   .Select(ParseModuleVariableDeclaration);
-        return [.. fields, .. properties];
+        return [.. fields];
+    }
+
+    private static void RejectAttributedModuleProperties(Type moduleType)
+    {
+        var property = moduleType.GetProperties(VariableBindingFlags)
+                                 .FirstOrDefault(property => property.GetCustomAttributes().Any(attribute =>
+                                     attribute is IAddressSpaceAttribute));
+        if (property is not null)
+            throw new NotSupportedException(
+                $"Shader module property {property.DeclaringType}.{property.Name} is not supported; " +
+                "use an attributed field.");
     }
 
     private VariableDeclaration ParseLocalVariable(LocalVariableInfo info) =>
@@ -490,11 +494,21 @@ public sealed class RuntimeReflectionParser
 
     private void EnsureUsable()
     {
-        if (failedMethod is not null)
+        if (failedSource is not null)
             throw new InvalidOperationException(
-                $"This runtime-reflection parser failed while collecting {failedMethod}; " +
+                $"This runtime-reflection parser failed while collecting {failedSource}; " +
                 "create a new parser with a fresh compilation context.");
     }
+
+    private static bool IsMetadataCollectionException(Exception exception) =>
+        exception is NotSupportedException
+            or BadImageFormatException
+            or TypeLoadException
+            or FileLoadException
+            or MissingMemberException
+            or AmbiguousMatchException
+            or TargetInvocationException
+            or InvalidProgramException;
 
     private sealed record CollectedMethod(
         FunctionDeclaration Declaration,

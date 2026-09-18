@@ -88,7 +88,7 @@ public sealed class CompilationContext : ISymbolTable
 
     internal ISymbolTableView Freeze() =>
         new FrozenSymbolTable(
-            Parent,
+            FreezeParent(Parent),
             Types.ToFrozenDictionary(),
             Functions.ToFrozenDictionary(),
             LocalVariables.ToFrozenDictionary(),
@@ -97,6 +97,17 @@ public sealed class CompilationContext : ISymbolTable
             [.. ModuleStructureDeclarations]);
 
     public static CompilationContext Create() => new(SharedBuiltinSymbolTable.Instance);
+
+    private static ISymbolTableView? FreezeParent(ISymbolTableView? parent) =>
+        parent switch
+        {
+            null => null,
+            CompilationContext context => context.Freeze(),
+            FrozenSymbolTable frozen => frozen,
+            SharedBuiltinSymbolTable builtin => builtin,
+            _ => throw new NotSupportedException(
+                $"Cannot freeze symbol-table parent {parent.GetType().FullName}.")
+        };
 }
 
 internal sealed class FrozenSymbolTable(
