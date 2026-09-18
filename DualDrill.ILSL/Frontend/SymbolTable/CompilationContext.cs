@@ -81,7 +81,10 @@ public sealed class CompilationContext : ISymbolTable
         {
             model ??= new MethodBodyAnalysisModel(method);
             Debug.Assert(method.Equals(model.Method));
-            Functions.Add(symbol, declaration);
+            if (Functions.TryGetValue(symbol, out var existing) && !ReferenceEquals(existing, declaration))
+                throw new ArgumentException($"A different declaration is already registered for {method}.",
+                    nameof(declaration));
+            Functions.TryAdd(symbol, declaration);
             FunctionDefinitions.Add(declaration, model);
             return this;
         }

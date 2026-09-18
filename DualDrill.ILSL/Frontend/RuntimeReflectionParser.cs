@@ -27,6 +27,10 @@ public sealed record class RuntimeReflectionParser(
     ISymbolTable Context,
     Dictionary<FunctionDeclaration, FunctionBody4> MethodBodies)
 {
+    private readonly HashSet<MethodBase> CompletedMethodDefinitions = [];
+    private readonly HashSet<MethodBase> InProgressMethodDefinitions = [];
+    private MethodBase? FailedMethod;
+
     // TODO static binding flags should not be used, add code to proper handle static readonly value
     private static readonly BindingFlags VariableBindingFlags =
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
@@ -173,6 +177,7 @@ public sealed record class RuntimeReflectionParser(
     public ShaderModuleDeclaration<FunctionBody4> ParseShaderModule(
         ISharpShader module)
     {
+        EnsureUsable();
         var moduleType = module.GetType();
 
         var entryMethods = moduleType
@@ -213,7 +218,8 @@ public sealed record class RuntimeReflectionParser(
         var returnType = method switch
         {
             MethodInfo m => ParseType(m.ReturnType),
-            ConstructorInfo c => ParseType(c.DeclaringType),
+            ConstructorInfo c => ParseType(c.DeclaringType ??
+                                           throw new NotSupportedException($"Constructor {c} has no declaring type.")),
             _ => throw new NotSupportedException($"Unsupported method {method}")
         };
 
@@ -228,6 +234,45 @@ public sealed record class RuntimeReflectionParser(
     }
 
     public FunctionDeclaration ParseMethod(MethodBase method)
+    {
+        EnsureUsable();
+        var declaration = ParseMethodDeclaration(method);
+        if (!IsMethodDefinition(method) || CompletedMethodDefinitions.Contains(method) ||
+            InProgressMethodDefinitions.Contains(method))
+            return declaration;
+
+        InProgressMethodDefinitions.Add(method);
+        var completed = false;
+        try
+        {
+            var symbol = Symbol.Function(method);
+            var model = new MethodBodyAnalysisModel(method);
+            Context.AddFunctionDefinition(symbol, declaration, model);
+            foreach (var variable in model.LocalVariables)
+                _ = ParseType(variable.LocalType);
+
+            var methodTable = CreateMethodTable(model, declaration);
+            model.Analyze(declaration, methodTable, callee => _ = ParseMethodDeclaration(callee));
+
+            foreach (var callee in FilterCalledMethods(model.CalledMethods()).Distinct())
+                _ = ParseMethod(callee);
+
+            if (model.Body is not null)
+                MethodBodies.Add(declaration, ParseMethodBody3Core(declaration, model));
+
+            CompletedMethodDefinitions.Add(method);
+            completed = true;
+            return declaration;
+        }
+        finally
+        {
+            InProgressMethodDefinitions.Remove(method);
+            if (!completed)
+                MarkFailed(method);
+        }
+    }
+
+    private FunctionDeclaration ParseMethodDeclaration(MethodBase method)
     {
         var symbol = Symbol.Function(method);
         if (Context[symbol] is { } found) return found;
@@ -257,40 +302,22 @@ public sealed record class RuntimeReflectionParser(
             }
         }
 
-        var model = new MethodBodyAnalysisModel(method);
-
-        var isEntryMethod = method.GetCustomAttributes().Any(a => a is IShaderStageAttribute);
-
         var decl = new FunctionDeclaration(
             method.Name,
             method.IsStatic
-                ? [.. model.Parameters.Select(ParseParameter)]
+                ? [.. method.GetParameters().Select(ParseParameter)]
                 :
                 [
                     new ParameterDeclaration("this",
-                        ParseType(method.DeclaringType),
+                        ParseType(method.DeclaringType ??
+                                  throw new NotSupportedException($"Method {method} has no declaring type.")),
                         []),
-                    .. model.Parameters.Select(ParseParameter)
+                    .. method.GetParameters().Select(ParseParameter)
                 ],
             ParseMethodReturn(method),
             ParseAttribute(method));
 
-        if (IsMethodDefinition(method))
-        {
-            Context.AddFunctionDefinition(symbol, decl, model);
-            {
-                foreach (var v in model.LocalVariables) _ = ParseType(v.LocalType);
-            }
-            var callees = FilterCalledMethods(model.CalledMethods()).ToArray();
-            foreach (var callee in callees) _ = ParseMethod(callee);
-
-            if (model.Body is not null) MethodBodies.Add(decl, ParseMethodBody3(decl));
-        }
-        else
-        {
-            Context.AddFunctionDeclaration(symbol, decl);
-        }
-
+        Context.AddFunctionDeclaration(symbol, decl);
         return decl;
     }
 
@@ -310,37 +337,42 @@ public sealed record class RuntimeReflectionParser(
 
     public FunctionBody4 ParseMethodBody3(FunctionDeclaration f)
     {
+        EnsureUsable();
         var model = Context.GetFunctionDefinition(f);
-        // TODO: avoid duplicate
+        var completed = false;
+        try
+        {
+            var result = ParseMethodBody3Core(f, model);
+            completed = true;
+            return result;
+        }
+        finally
+        {
+            if (!completed)
+                MarkFailed(model.Method);
+        }
+    }
+
+    private FunctionBody4 ParseMethodBody3Core(FunctionDeclaration f, MethodBodyAnalysisModel model)
+    {
+        var methodTable = CreateMethodTable(model, f);
+        model.Analyze(f, methodTable, callee => _ = ParseMethodDeclaration(callee));
         var cfa = model.ControlFlowGraph.ControlFlowAnalysis();
-        var methodTable = new CompilationContext(Context);
-        foreach (var v in model.LocalVariables)
-        {
-            var loc = ParseLocalVariable(v, methodTable);
-        }
-
-        {
-            foreach (var (index, p) in f.Parameters.Index()) methodTable.AddParameter(Symbol.Parameter(index), p);
-        }
-
-        Dictionary<Label, ImmutableStack<IShaderValue>> basicBlockInputs = new()
-        {
-            [model.ControlFlowGraph.EntryLabel] = []
-        };
-        //Dictionary<Label, ImmutableStack<ValueDeclaration>> basicBlockOutputs = [];
         Dictionary<Label, ShaderRegionBody> basicBlocks = [];
 
         foreach (var l in model.ControlFlowGraph.Labels())
         {
             Debug.WriteLine($"Label {l} == ");
             var cilBlock = model.ControlFlowGraph[l];
+            var inputStack = CreateInputStack(cilBlock.EntryStackTypes);
             var visitor = new RuntimeReflectionInstructionParserVisitor3(
                 model,
                 f,
                 cilBlock.Terminator,
-                basicBlockInputs[l]);
+                inputStack);
             foreach (var cilInst in cilBlock.Instructions)
             {
+                ValidateStack(model, cilInst, visitor.Stack);
                 //Debug.Write($"parse {cilInst.Instruction.OpCode}");
                 cilInst.Evaluate(visitor, model.IsStatic, methodTable);
                 //Debug.Write(" -> ");
@@ -376,22 +408,13 @@ public sealed record class RuntimeReflectionParser(
 
                 foreach (var tl in successor.AllTargets())
                 {
-                    ImmutableStack<IShaderValue> output =
-                        [.. visitor.Stack.Select(v => (IShaderValue)ShaderValue.Intermediate(v.Type)).Reverse()];
-                    if (basicBlockInputs.TryGetValue(tl, out var existed))
-                    {
-                        if (!existed.Select(v => v.Type).SequenceEqual(output.Select(v => v.Type)))
-                            throw new ValidationException("Stack output mismatch", model.Method);
-                    }
-                    else
-                    {
-                        basicBlockInputs.Add(tl, output);
-                    }
+                    var target = model[model.LabelToInstructionIndex(tl)];
+                    ValidateStack(model, target, visitor.Stack);
                 }
 
                 basicBlocks.Add(l, new ShaderRegionBody(
                     l,
-                    [.. basicBlockInputs[l].Reverse()],
+                    [.. inputStack.Reverse()],
                     Seq.Create(
                         [.. visitor.Instructions],
                         terminator ?? throw new NotSupportedException("failed to resolve terminator")
@@ -414,6 +437,53 @@ public sealed record class RuntimeReflectionParser(
         );
     }
 
+    private void EnsureUsable()
+    {
+        if (FailedMethod is not null)
+            throw new InvalidOperationException(
+                $"This runtime-reflection parser failed while compiling {FailedMethod}; " +
+                "create a new parser with a fresh compilation context.");
+    }
+
+    private void MarkFailed(MethodBase method)
+    {
+        FailedMethod ??= method;
+        CompletedMethodDefinitions.Clear();
+        MethodBodies.Clear();
+    }
+
+    private CompilationContext CreateMethodTable(MethodBodyAnalysisModel model, FunctionDeclaration function)
+    {
+        var methodTable = new CompilationContext(Context);
+        foreach (var variable in model.LocalVariables)
+            _ = ParseLocalVariable(variable, methodTable);
+        foreach (var (index, parameter) in function.Parameters.Index())
+            methodTable.AddParameter(Symbol.Parameter(index), parameter);
+        return methodTable;
+    }
+
+    private static ImmutableStack<IShaderValue> CreateInputStack(ImmutableStack<CilStackType> types)
+    {
+        ImmutableStack<IShaderValue> result = [];
+        foreach (var type in types.Reverse())
+            result = result.Push(ShaderValue.Intermediate(type.ShaderType));
+        return result;
+    }
+
+    private static void ValidateStack(
+        MethodBodyAnalysisModel model,
+        CilInstructionInfo instruction,
+        ImmutableStack<IShaderValue> actual)
+    {
+        var expected = model.PreStackTypes[instruction.Index];
+        var actualTypes = actual.Select(value => CilStackType.FromShaderType(value.Type));
+        if (!expected.SequenceEqual(actualTypes))
+            throw new ValidationException(
+                $"Value stack does not match analyzed Pre stack at IL_{instruction.ByteOffset:X4}: " +
+                $"expected [{string.Join(", ", expected)}], got [{string.Join(", ", actualTypes)}].",
+                model.Method);
+    }
+
     //ILocalDeclarationContext GetMethodLocalDeclaration(MethodBase method)
     //{
     //    var methodBody = method.GetMethodBody();
@@ -431,7 +501,10 @@ public sealed record class RuntimeReflectionParser(
     //    throw new NotImplementedException();
     //}
 
-    private bool IsMethodDefinition(MethodBase m) => !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(m);
+    private bool IsMethodDefinition(MethodBase method) =>
+        !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(method) &&
+        !method.GetCustomAttributes().Any(attribute =>
+            attribute is IOperationMethodAttribute or IShaderOperationMethodAttribute);
 
     private IEnumerable<MethodBase> FilterCalledMethods(IEnumerable<MethodBase> calleeCandidates)
     {
@@ -441,13 +514,15 @@ public sealed record class RuntimeReflectionParser(
                 if (!IsMethodDefinition(m)) return false;
 
                 // generated getter and setters should not be considered
-                var t = m.DeclaringType;
-                if (Context[t] is IVecType st) return false;
+                var declaringType = m.DeclaringType ??
+                                    throw new NotSupportedException($"Method {m} has no declaring type.");
+                if (Context[declaringType] is IVecType) return false;
 
                 if (m.IsSpecialName &&
                     m.CustomAttributes.Any(a => a.AttributeType == typeof(CompilerGeneratedAttribute)))
                 {
-                    var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    var props = declaringType.GetProperties(
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     if (props.Any(p => p.GetMethod == m || p.SetMethod == m)) return false;
                 }
 

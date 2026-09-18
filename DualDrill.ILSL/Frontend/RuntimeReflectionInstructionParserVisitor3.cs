@@ -394,21 +394,6 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
     //public IShaderType GetValueType(IShaderValue value) => ValueTypes[value];
     public IShaderType GetValueType(IShaderValue value) => value.Type;
 
-    private IShaderType ConvertToCilStackType(IShaderType type)
-    {
-        return type switch
-        {
-            BoolType => IntType<N32>.Instance,
-            IntType<N8> => IntType<N32>.Instance,
-            IntType<N16> => IntType<N32>.Instance,
-            UIntType<N8> => IntType<N32>.Instance,
-            UIntType<N16> => IntType<N32>.Instance,
-            UIntType<N32> => IntType<N32>.Instance,
-            UIntType<N64> => IntType<N64>.Instance,
-            _ => type
-        };
-    }
-
     private IUnaryExpressionOperation? StoreConversion(IShaderType target, IShaderType source)
     {
         if (source.Equals(target)) return null;
@@ -465,7 +450,7 @@ internal sealed class RuntimeReflectionInstructionParserVisitor3
     private void Push(IShaderValue v)
     {
         var type = GetValueType(v);
-        var stackType = ConvertToCilStackType(type);
+        var stackType = CilStackType.FromShaderType(type).ShaderType;
         var conv = ConvertToCilStackTypeOperation(type);
         if (conv is not null)
         {

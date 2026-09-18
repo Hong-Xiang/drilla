@@ -196,7 +196,9 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.Equal("Release", configuration);
 #endif
         var method = ((Func<int, int>)ScalarControlFlowFixtures.MultipleReturns).Method;
-        var model = new MethodBodyAnalysisModel(method);
+        var parser = new RuntimeReflectionParser();
+        var declaration = parser.ParseMethod(method);
+        var model = parser.Context.GetFunctionDefinition(declaration);
         var returns = model.Labels.Where(label => model.ControlFlowGraph.Successor(label) is TerminateSuccessor)
             .ToArray();
         var debuggable = assembly.GetCustomAttribute<DebuggableAttribute>() ??
@@ -218,7 +220,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         output.WriteLine($"{configuration}: {model.CodeByteSize} CIL bytes, {model.Labels.Length} blocks, " +
             $"{returns.Length} terminal return blocks.");
 
-        var parser = new RuntimeReflectionParser();
+        parser = new RuntimeReflectionParser();
         var edge = parser.ParseMethod(((Func<int, int>)ScalarControlFlowFixtures.EdgeValue).Method);
         Assert.Contains(parser.MethodBodies[edge].Labels, label => !parser.MethodBodies[edge][label].Parameters.IsEmpty);
     }
@@ -236,7 +238,10 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.Contains(body[tail].Body.Elements,
             instruction => instruction.Operation is IBinaryExpressionOperation { BinaryOp: BinaryArithmetic.Mul });
 
-        var nested = new MethodBodyAnalysisModel(((Func<int, int, int, int, int>)DevelopTestShaderModule.NestedLoop).Method);
+        var nestedParser = new RuntimeReflectionParser();
+        var nestedDeclaration =
+            nestedParser.ParseMethod(((Func<int, int, int, int, int>)DevelopTestShaderModule.NestedLoop).Method);
+        var nested = nestedParser.Context.GetFunctionDefinition(nestedDeclaration);
         var analysis = nested.ControlFlowGraph.ControlFlowAnalysis();
         Assert.Equal(2, nested.Labels.Count(analysis.IsLoop));
     }

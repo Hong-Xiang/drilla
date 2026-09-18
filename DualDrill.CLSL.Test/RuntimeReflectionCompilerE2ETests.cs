@@ -269,7 +269,9 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
             "Select",
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Multiple-return helper method was not found");
-        var actualMethodBody = new MethodBodyAnalysisModel(method);
+        var parser = new RuntimeReflectionParser();
+        var declaration = parser.ParseMethod(method);
+        var actualMethodBody = parser.Context.GetFunctionDefinition(declaration);
         var controlFlowGraph = actualMethodBody.ControlFlowGraph;
         var labels = controlFlowGraph.Labels().ToArray();
         var conditional = Assert.Single(

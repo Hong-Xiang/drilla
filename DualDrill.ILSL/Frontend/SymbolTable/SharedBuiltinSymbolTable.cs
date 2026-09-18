@@ -54,7 +54,12 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
     {
         var result = new Dictionary<Type, IShaderType>
         {
+            [typeof(void)] = UnitType.Instance,
             [typeof(bool)] = BoolType.Instance,
+            [typeof(sbyte)] = IntType<N8>.Instance,
+            [typeof(byte)] = UIntType<N8>.Instance,
+            [typeof(short)] = IntType<N16>.Instance,
+            [typeof(ushort)] = UIntType<N16>.Instance,
             [typeof(int)] = ShaderType.I32,
             [typeof(uint)] = ShaderType.U32,
             [typeof(long)] = ShaderType.I64,
