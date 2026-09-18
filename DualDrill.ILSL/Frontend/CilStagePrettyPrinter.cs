@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
@@ -33,16 +34,54 @@ internal static class CilStagePrettyPrinter
     {
         writer.WriteLine("linear-cil pre-annotated reachable (byte ranges are half-open; stack order: bottom -> top)");
         foreach (var instruction in code.Instructions)
-            instruction.PrettyPrint(
-                writer,
-                option,
-                PrintInstruction,
-                static (pre, output, _) =>
-                {
-                    output.Write(" pre=");
-                    output.Write(Stack(pre.Types));
-                    output.WriteLine();
-                });
+            instruction.PrettyPrint(writer, option);
+    }
+
+    public static void PrintAnnotatedInstruction(
+        CilInstructionInfo instruction,
+        PreStack pre,
+        IndentedTextWriter writer,
+        PrettyPrintOption option)
+    {
+        PrintInstruction(instruction, writer, option);
+        writer.Write(" pre=");
+        writer.Write(Stack(pre.Types));
+        writer.WriteLine();
+    }
+
+    public static void PrintAnalyzedControlFlow(
+        ControlFlowGraph<CilInstructionBlock> graph,
+        ControlFlowAnalysis analysis,
+        IndentedTextWriter writer,
+        PrettyPrintOption option)
+    {
+        graph.PrettyPrint(writer, option);
+        var labels = graph.Labels()
+                          .OrderBy(label => graph[label].InstructionIndex)
+                          .ToImmutableArray();
+        var labelIds = labels.Select((label, index) => (label, index))
+                             .ToDictionary(item => item.label, item => item.index);
+
+        writer.WriteLine("control-flow-analysis");
+        using (writer.IndentedScope())
+        {
+            writer.Write("reverse-postorder=");
+            writer.WriteLine(LabelList(analysis.Labels, labelIds));
+            writer.Write("immediate-dominators=");
+            writer.WriteLine(AnalysisRelation(
+                labels,
+                label => analysis.DominatorTree.ImmediateDominator(label),
+                "<entry>",
+                labelIds));
+            writer.Write("immediate-postdominators=");
+            writer.WriteLine(AnalysisRelation(
+                labels,
+                analysis.PostDominatorTree.ImmediatePostDominator,
+                "<none>",
+                labelIds));
+            writer.Write("loops=");
+            writer.WriteLine(LabelList(labels.Where(analysis.IsLoop), labelIds));
+        }
     }
 
     public static void PrintControlFlowGraph(
@@ -241,6 +280,17 @@ internal static class CilStagePrettyPrinter
         IEnumerable<Label> labels,
         IReadOnlyDictionary<Label, int> labelIds) =>
         "[" + string.Join(", ", labels.Select(label => LabelName(label, labelIds))) + "]";
+
+    private static string AnalysisRelation(
+        IEnumerable<Label> labels,
+        Func<Label, Label?> relation,
+        string missing,
+        IReadOnlyDictionary<Label, int> labelIds) =>
+        "[" + string.Join(
+            ", ",
+            labels.Select(label =>
+                LabelName(label, labelIds) + ":" +
+                (relation(label) is { } related ? LabelName(related, labelIds) : missing))) + "]";
 
     private static string LabelName(Label label, IReadOnlyDictionary<Label, int> labelIds) =>
         "^" + Invariant(labelIds[label]) + "(" + (label.Name ?? "<unnamed>") + ")";

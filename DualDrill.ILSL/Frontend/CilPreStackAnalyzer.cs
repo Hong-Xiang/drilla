@@ -56,7 +56,8 @@ internal static class CilPreStackAnalyzer
         var instructions = pre.OrderBy(pair => pair.Key)
                               .Select(pair => new Annotated<CilInstructionInfo, PreStack>(
                                   source[pair.Key],
-                                  new PreStack(pair.Value)))
+                                  new PreStack(pair.Value),
+                                  CilStagePrettyPrinter.PrintAnnotatedInstruction))
                               .ToImmutableArray();
         return new LinearCode<Annotated<CilInstructionInfo, PreStack>>(
             environment,

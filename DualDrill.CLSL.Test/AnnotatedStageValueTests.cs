@@ -15,7 +15,7 @@ public sealed class AnnotatedStageValueTests
     {
         var node = new object();
         var annotation = new object();
-        var value = new Annotated<object, object>(node, annotation);
+        var value = new Annotated<object, object>(node, annotation, PrintNothing);
         var nodeCalls = 0;
         var annotationCalls = 0;
 
@@ -31,21 +31,24 @@ public sealed class AnnotatedStageValueTests
                 annotationCalls++;
                 Assert.Same(annotation, original);
                 return "annotation";
-            });
+            },
+            static (selectedNode, selectedAnnotation, output, _) =>
+                output.Write($"{selectedNode}:{selectedAnnotation}"));
         var nodeOnly = value.SelectNode(original =>
         {
             Assert.Same(node, original);
             return "node-only";
-        });
+        }, PrintNothing);
         var annotationOnly = value.SelectAnnotation(original =>
         {
             Assert.Same(annotation, original);
             return "annotation-only";
-        });
+        }, PrintNothing);
 
         Assert.Equal(1, nodeCalls);
         Assert.Equal(1, annotationCalls);
-        Assert.Equal(new Annotated<string, string>("node", "annotation"), selected);
+        Assert.Equal(new Annotated<string, string>("node", "annotation", PrintNothing), selected);
+        Assert.Equal("node:annotation", selected.PrettyPrint());
         Assert.Same(annotation, nodeOnly.Annotation);
         Assert.Same(node, annotationOnly.Node);
     }
@@ -53,37 +56,56 @@ public sealed class AnnotatedStageValueTests
     [Fact]
     public void AnnotatedSelectSatisfiesIdentityAndComposition()
     {
-        var value = new Annotated<int, string>(7, "entry");
+        var value = new Annotated<int, string>(7, "entry", PrintNothing);
 
-        var identity = value.Select(static node => node, static annotation => annotation);
-        var sequential = value.Select(static node => node + 1, static annotation => annotation + "!")
-                              .Select(static node => node * 2, static annotation => annotation.Length);
+        var identity = value.Select(static node => node, static annotation => annotation, PrintNothing);
+        var sequential = value.Select(static node => node + 1, static annotation => annotation + "!", PrintNothing)
+                              .Select(static node => node * 2, static annotation => annotation.Length, PrintNothing);
         var composed = value.Select(
             static node => (node + 1) * 2,
-            static annotation => (annotation + "!").Length);
+            static annotation => (annotation + "!").Length,
+            PrintNothing);
 
         Assert.Equal(value, identity);
         Assert.Equal(sequential, composed);
     }
 
     [Fact]
-    public void AnnotatedPrettyPrintUsesExplicitPureComposition()
+    public void AnnotatedPrettyPrintUsesItsFixedTypedComposition()
     {
-        var value = new Annotated<int, string>(7, "entry");
-        using var text = new StringWriter(CultureInfo.InvariantCulture);
-        using var writer = new IndentedTextWriter(text);
-
-        value.PrettyPrint(
-            writer,
-            PrettyPrintOption.Default,
-            static (node, output, _) => output.Write(node),
-            static (annotation, output, _) =>
+        var value = new Annotated<int, string>(
+            7,
+            "entry",
+            static (node, annotation, output, _) =>
             {
+                output.Write(node);
                 output.Write(":");
                 output.Write(annotation);
             });
+        using var text = new StringWriter(CultureInfo.InvariantCulture);
+        using var writer = new IndentedTextWriter(text);
+
+        value.PrettyPrint(writer, PrettyPrintOption.Default);
 
         Assert.Equal("7:entry", text.ToString());
+    }
+
+    [Fact]
+    public void AnnotatedEqualityIgnoresItsFixedPrinter()
+    {
+        var left = new Annotated<int, string>(
+            7,
+            "entry",
+            static (node, annotation, output, _) => output.Write($"{node}:{annotation}"));
+        var right = new Annotated<int, string>(
+            7,
+            "entry",
+            static (node, annotation, output, _) => output.Write($"{annotation}:{node}"));
+
+        Assert.Equal(left, right);
+        Assert.Equal(left.GetHashCode(), right.GetHashCode());
+        Assert.Equal("7:entry", left.PrettyPrint());
+        Assert.Equal("entry:7", right.PrettyPrint());
     }
 
     [Fact]
@@ -114,6 +136,49 @@ public sealed class AnnotatedStageValueTests
     }
 
     [Fact]
+    public void RealAnnotatedRowsAndGraphStageImplementIPrintable()
+    {
+        var model = ParseModel();
+        IPrintable row = model.PreAnnotatedCode.Instructions[0];
+        IPrintable graphStage = model.ControlFlow;
+
+        Assert.Contains(" pre=", row.PrettyPrint());
+        var graph = graphStage.PrettyPrint();
+        Assert.Contains("reachable-cil-cfg", graph);
+        Assert.Contains("control-flow-analysis", graph);
+        Assert.Contains("immediate-dominators=", graph);
+    }
+
+    [Fact]
+    public void GenericGraphPrettyPrintUsesStableInvariantIdsAndOrderedTargets()
+    {
+        var entry = DualDrill.CLSL.Language.Symbol.Label.Create("entry");
+        var whenTrue = DualDrill.CLSL.Language.Symbol.Label.Create("true");
+        var whenFalse = DualDrill.CLSL.Language.Symbol.Label.Create("false");
+        var join = DualDrill.CLSL.Language.Symbol.Label.Create("join");
+        var graph = new ControlFlowGraph<string>(
+            entry,
+            new Dictionary<DualDrill.CLSL.Language.Symbol.Label,
+                ControlFlowGraph<string>.NodeDefinition>
+            {
+                [entry] = new(new ConditionalSuccessor(whenTrue, whenFalse), "entry-data"),
+                [whenTrue] = new(new UnconditionalSuccessor(join), "true-data"),
+                [whenFalse] = new(new UnconditionalSuccessor(join), "false-data"),
+                [join] = new(new TerminateSuccessor(), "join-data")
+            });
+
+        Assert.Equal(
+        [
+            "cfg generic (payload rendering: ToString)",
+            "entry=^0(entry)",
+            "^0(entry) predecessors=[] successor=br_if -> t: ^2(true) f: ^1(false) data=entry-data",
+            "^1(false) predecessors=[^0(entry)] successor=br -> ^3(join) data=false-data",
+            "^2(true) predecessors=[^0(entry)] successor=br -> ^3(join) data=true-data",
+            "^3(join) predecessors=[^1(false), ^2(true)] successor=return data=join-data"
+        ], Lines(graph.PrettyPrint()));
+    }
+
+    [Fact]
     public void PrettyPrintingAndLoweringDoNotChangeCompletedStageSnapshots()
     {
         var parser = new RuntimeReflectionParser();
@@ -133,7 +198,7 @@ public sealed class AnnotatedStageValueTests
 
         _ = model.RawCode.PrettyPrint();
         _ = model.PreAnnotatedCode.PrettyPrint();
-        _ = graph.PrettyPrint();
+        _ = model.ControlFlow.PrettyPrint();
         _ = parser.MethodBodies[declaration];
 
         Assert.Equal(rawSnapshot, model.RawCode.Instructions);
@@ -167,7 +232,8 @@ public sealed class AnnotatedStageValueTests
             model.PreAnnotatedCode,
             new Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>(
                 graph,
-                equivalent.ControlFlowAnalysis())));
+                equivalent.ControlFlowAnalysis(),
+                PrintNothing)));
 
         Assert.Contains("belong to the stored graph", exception.Message);
     }
@@ -191,9 +257,100 @@ public sealed class AnnotatedStageValueTests
         Assert.Contains("does not belong to the stored Pre-annotated source", exception.Message);
     }
 
+    [Fact]
+    public void CompleteAggregateRejectsBlocksStoredUnderDifferentLabels()
+    {
+        var model = ParseModel();
+        var graph = model.ControlFlow.Node;
+        var conditional = Assert.IsType<ConditionalSuccessor>(graph.Successor(graph.EntryLabel));
+        var definitions = Definitions(graph);
+        (definitions[conditional.TrueTarget], definitions[conditional.FalseTarget]) = (
+            definitions[conditional.FalseTarget],
+            definitions[conditional.TrueTarget]);
+        var malformed = new ControlFlowGraph<CilInstructionBlock>(graph.EntryLabel, definitions);
+
+        var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
+
+        Assert.Contains("key does not match its block label", exception.Message);
+    }
+
+    [Fact]
+    public void CompleteAggregateRejectsSuccessorDifferentFromConcreteTerminator()
+    {
+        var model = ParseModel();
+        var graph = model.ControlFlow.Node;
+        var conditional = Assert.IsType<ConditionalSuccessor>(graph.Successor(graph.EntryLabel));
+        var definitions = Definitions(graph);
+        definitions[graph.EntryLabel] = new(
+            new ConditionalSuccessor(conditional.FalseTarget, conditional.TrueTarget),
+            graph[graph.EntryLabel]);
+        var malformed = new ControlFlowGraph<CilInstructionBlock>(graph.EntryLabel, definitions);
+
+        var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
+
+        Assert.Contains("successor does not match its block terminator", exception.Message);
+    }
+
+    [Fact]
+    public void CompleteAggregateRejectsDisconnectedDefinitions()
+    {
+        var model = ParseModel();
+        var graph = model.ControlFlow.Node;
+        var definitions = Definitions(graph);
+        definitions.Add(
+            DualDrill.CLSL.Language.Symbol.Label.Create("disconnected"),
+            new ControlFlowGraph<CilInstructionBlock>.NodeDefinition(
+                new TerminateSuccessor(),
+                graph[graph.EntryLabel]));
+        var malformed = new ControlFlowGraph<CilInstructionBlock>(graph.EntryLabel, definitions);
+
+        var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
+
+        Assert.Contains("definitions disconnected from its entry", exception.Message);
+    }
+
+    private static MethodBodyAnalysisModel ParseModel()
+    {
+        var parser = new RuntimeReflectionParser();
+        var declaration = parser.ParseMethod(GetMethod(nameof(Choose)));
+        return parser.Context.GetFunctionDefinition(declaration);
+    }
+
+    private static Dictionary<DualDrill.CLSL.Language.Symbol.Label,
+        ControlFlowGraph<CilInstructionBlock>.NodeDefinition> Definitions(
+        ControlFlowGraph<CilInstructionBlock> graph) =>
+        graph.Labels().ToDictionary(
+            label => label,
+            label => new ControlFlowGraph<CilInstructionBlock>.NodeDefinition(
+                graph.Successor(label),
+                graph[label]));
+
+    private static MethodBodyAnalysisModel CompleteWithGraph(
+        MethodBodyAnalysisModel source,
+        ControlFlowGraph<CilInstructionBlock> graph) =>
+        new(
+            source.Declaration,
+            source.RawCode,
+            source.PreAnnotatedCode,
+            new Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>(
+                graph,
+                graph.ControlFlowAnalysis(),
+                PrintNothing));
+
+    private static void PrintNothing<TNode, TAnnotation>(
+        TNode node,
+        TAnnotation annotation,
+        IndentedTextWriter writer,
+        PrettyPrintOption option)
+    {
+    }
+
     private static MethodInfo GetMethod(string name) =>
         typeof(AnnotatedStageValueTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"{name} fixture was not found.");
 
     private static int Choose(bool choose, int left, int right) => choose ? left : right;
+
+    private static string[] Lines(string value) =>
+        value.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 }

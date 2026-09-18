@@ -1,5 +1,7 @@
 ﻿using System.CodeDom.Compiler;
 using System.Collections.Frozen;
+using System.Collections.Immutable;
+using System.Globalization;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
@@ -36,6 +38,7 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph, IPrintable
             throw new ArgumentException("Entry label not found in nodes definition", nameof(nodes));
 
         EntryLabel = entry;
+        DefinitionOrder = [.. nodes.Keys];
         var predecessors = nodes.Keys.Select(n => KeyValuePair.Create(n, new HashSet<Label>())).ToDictionary();
         foreach (var (l, s) in nodes.Select(kv => (kv.Key, kv.Value.Successor)))
             s.Traverse(t =>
@@ -59,13 +62,14 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph, IPrintable
 
     public TData this[Label label] => Nodes[label].Data;
     private FrozenDictionary<Label, NodeData> Nodes { get; }
+    private ImmutableArray<Label> DefinitionOrder { get; }
     public Label EntryLabel { get; }
 
     public IEnumerable<Label> GetPred(Label label) => Predecessor(label);
 
     public IEnumerable<Label> GetSucc(Label label) => Successor(label).AllTargets();
 
-    public int LabelCount => throw new NotImplementedException();
+    public int LabelCount => Count;
 
     public void PrettyPrint(IndentedTextWriter writer, PrettyPrintOption option) =>
         prettyPrint(this, writer, option);
@@ -93,18 +97,46 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph, IPrintable
         IndentedTextWriter writer,
         PrettyPrintOption option)
     {
-        writer.Write("cfg entry=");
-        writer.WriteLine(graph.EntryLabel);
-        foreach (var label in graph.Labels())
+        var reachable = graph.Labels().ToImmutableArray();
+        var reachableSet = reachable.ToFrozenSet();
+        var labels = reachable.AddRange(graph.DefinitionOrder.Where(label => !reachableSet.Contains(label)));
+        var labelIds = labels.Select((label, index) => (label, index))
+                             .ToFrozenDictionary(item => item.label, item => item.index);
+        var successorFormatter = new GenericSuccessorFormatter(labelIds);
+
+        writer.WriteLine("cfg generic (payload rendering: ToString)");
+        writer.Write("entry=");
+        writer.WriteLine(LabelName(graph.EntryLabel, labelIds));
+        foreach (var label in labels)
         {
-            writer.Write(label);
+            writer.Write(LabelName(label, labelIds));
             writer.Write(" predecessors=[");
-            writer.Write(string.Join(", ", graph.Predecessor(label)));
+            writer.Write(string.Join(
+                ", ",
+                graph.Predecessor(label)
+                     .OrderBy(predecessor => labelIds[predecessor])
+                     .Select(predecessor => LabelName(predecessor, labelIds))));
             writer.Write("] successor=");
-            writer.Write(graph.Successor(label));
+            writer.Write(graph.Successor(label).Evaluate(successorFormatter, default(Unit)));
             writer.Write(" data=");
-            writer.WriteLine(graph[label]);
+            writer.WriteLine(graph[label] is { } data ? data.ToString() : "<null>");
         }
+    }
+
+    private static string LabelName(Label label, IReadOnlyDictionary<Label, int> labelIds) =>
+        "^" + labelIds[label].ToString(CultureInfo.InvariantCulture) + "(" + (label.Name ?? "<unnamed>") + ")";
+
+    private sealed class GenericSuccessorFormatter(IReadOnlyDictionary<Label, int> labelIds)
+        : ISuccessorSemantic<Unit, Label, string>
+    {
+        public string Unconditional(Unit context, Label target) =>
+            "br -> " + LabelName(target, labelIds);
+
+        public string Conditional(Unit context, Label trueTarget, Label falseTarget) =>
+            "br_if -> t: " + LabelName(trueTarget, labelIds) +
+            " f: " + LabelName(falseTarget, labelIds);
+
+        public string Terminate(Unit context) => "return";
     }
 }
 

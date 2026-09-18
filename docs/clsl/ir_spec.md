@@ -67,6 +67,11 @@ drops the annotation and recomputes facts as needed. Type distinctions can
 prevent passing raw code where completed facts are required, but do not prove
 arbitrary annotations or transformations semantically valid.
 
+`Annotated.Select`, `SelectNode`, and `SelectAnnotation` require a fixed printer
+for their output types. Mapping laws apply to the immutable `Node` and
+`Annotation` data; a type-changing map never carries an incompatible printer
+from its input.
+
 The implementation wires these values through decoding, Pre analysis, reachable
 CFG construction, the live parser, and diagnostic callers. The graph-level
 `ControlFlowAnalysis` annotation is the parser's single source for postdominance

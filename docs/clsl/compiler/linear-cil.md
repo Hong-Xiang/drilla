@@ -64,7 +64,10 @@ analysis. `CilControlFlowGraphBuilder` consumes that completed value and the raw
 source. `MethodBodyAnalysisModel` is now only a complete immutable aggregate
 stored by the symbol table; it has no nullable completion fields or `Analyze`
 operation. Reachable blocks carry the exact annotated instruction slice, and no
-default empty value represents pending analysis.
+default empty value represents pending analysis. Its public constructor checks
+that every graph key is its block's exact label, every stored successor equals
+the concrete terminator projection including ordered arms, all definitions are
+entry-reachable, and the blocks exactly partition the completed annotated source.
 
 `RuntimeReflectionParser` distinguishes declarations involved in active
 recursive compilation from fully completed method definitions. Recursive calls
@@ -131,7 +134,7 @@ var parser = new RuntimeReflectionParser();
 var declaration = parser.ParseMethod(method);
 var completed = parser.Context.GetFunctionDefinition(declaration);
 Console.Write(completed.PreAnnotatedCode.PrettyPrint());
-Console.Write(completed.ControlFlow.Node.PrettyPrint());
+Console.Write(completed.ControlFlow.PrettyPrint());
 ```
 
 The interface operation also accepts an `IndentedTextWriter` and
@@ -165,12 +168,22 @@ constructor were removed without compatibility shims:
 | `model.ControlFlowGraph` | `model.ControlFlow.Node` |
 | `DumpRawLinearCil()` | `RawCode.PrettyPrint()` |
 | `DumpAnalyzedLinearCil()` | `PreAnnotatedCode.PrettyPrint()` |
-| `DumpReachableControlFlowGraph()` | `ControlFlow.Node.PrettyPrint()` |
+| `DumpReachableControlFlowGraph()` | `ControlFlow.PrettyPrint()` |
 
 `ISymbolTable.AddFunctionDefinition` now requires a complete immutable model.
 Clients that predeclare a reflection method add its `FunctionDeclaration` and
 let `RuntimeReflectionParser.ParseMethod(MethodBase)` build and register all
 stages atomically.
+
+Every `Annotated<TNode, TAnnotation>` carries a readonly typed printer chosen by
+its producer and implements `IPrintable` directly. Equality and hashing compare
+only `Node` and `Annotation`; presentation is not analysis identity. Instruction
+annotations print the instruction and its entry stack together. The graph
+annotation prints the typed CFG followed by reverse-postorder, immediate-dominator,
+immediate-postdominator, and loop facts from its bound `ControlFlowAnalysis`.
+Type-changing annotation maps must supply a printer for the output types; the
+identity and composition laws concern mapped `Node` and `Annotation` data, not
+reuse of an incompatible presentation function.
 
 Use the existing `FunctionBody4.Dump` and shader-module formatter for the
 subsequent region and module stages. Nested region bindings in that dump describe

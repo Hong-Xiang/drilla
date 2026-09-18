@@ -263,7 +263,8 @@ public sealed record class RuntimeReflectionParser(
                 preAnnotatedCode,
                 new Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>(
                     graph,
-                    graph.ControlFlowAnalysis()));
+                    graph.ControlFlowAnalysis(),
+                    CilStagePrettyPrinter.PrintAnalyzedControlFlow));
             Context.AddFunctionDefinition(symbol, declaration, model);
 
             foreach (var callee in FilterCalledMethods(model.CalledMethods()).Distinct())

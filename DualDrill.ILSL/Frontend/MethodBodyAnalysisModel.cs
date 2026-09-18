@@ -63,18 +63,34 @@ public sealed class MethodBodyAnalysisModel
         ControlFlowGraph<CilInstructionBlock> graph)
     {
         var preByIndex = preAnnotatedCode.Instructions.ToFrozenDictionary(item => item.Node.Index);
+        var labels = graph.Labels().ToImmutableArray();
+        if (graph.Count != labels.Length)
+            throw new ArgumentException(
+                "The control-flow graph contains definitions disconnected from its entry.",
+                nameof(graph));
+
         var graphIndices = new HashSet<int>();
-        foreach (var block in graph.Labels().Select(label => graph[label]))
-        foreach (var item in block.Instructions)
+        foreach (var label in labels)
         {
-            if (!graphIndices.Add(item.Node.Index) ||
-                !preByIndex.TryGetValue(item.Node.Index, out var source) ||
-                !source.Node.Equals(item.Node) ||
-                !ReferenceEquals(source.Node.Instruction, item.Node.Instruction) ||
-                !ReferenceEquals(source.Annotation, item.Annotation))
+            var block = graph[label];
+            if (!ReferenceEquals(label, block.Label))
                 throw new ArgumentException(
-                    "The control-flow graph does not belong to the stored Pre-annotated source.",
+                    "A control-flow graph key does not match its block label.",
                     nameof(graph));
+            if (!graph.Successor(label).Equals(block.Terminator.ToSuccessor()))
+                throw new ArgumentException(
+                    "A control-flow graph successor does not match its block terminator.",
+                    nameof(graph));
+
+            foreach (var item in block.Instructions)
+                if (!graphIndices.Add(item.Node.Index) ||
+                    !preByIndex.TryGetValue(item.Node.Index, out var source) ||
+                    !source.Node.Equals(item.Node) ||
+                    !ReferenceEquals(source.Node.Instruction, item.Node.Instruction) ||
+                    !ReferenceEquals(source.Annotation, item.Annotation))
+                    throw new ArgumentException(
+                        "The control-flow graph does not belong to the stored Pre-annotated source.",
+                        nameof(graph));
         }
 
         if (graphIndices.Count != preByIndex.Count)
