@@ -1,0 +1,290 @@
+using System.CodeDom.Compiler;
+using System.Globalization;
+using System.Reflection;
+using System.Reflection.Emit;
+using DualDrill.CLSL.Frontend;
+using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.CodeTextWriter;
+using Label = DualDrill.CLSL.Language.Symbol.Label;
+
+namespace DualDrill.CLSL.Test;
+
+public sealed class CompilerStageDumpTests
+{
+    [Fact]
+    public void RawDumpWorksWithoutAnalysisAndAnalyzedDumpsFailBeforeWriting()
+    {
+        var model = new MethodBodyAnalysisModel(GetMethod(nameof(Choose)));
+
+        var raw = model.DumpRawLinearCil();
+
+        Assert.Contains("linear-cil raw", raw);
+        Assert.Contains(" rel=+", raw);
+        Assert.Contains(" resolved=IL_", raw);
+        Assert.DoesNotContain(" pre=", raw);
+        Assert.Throws<InvalidOperationException>(() => model.PreStackTypes);
+        Assert.Throws<InvalidOperationException>(() => model.ControlFlowGraph);
+        Assert.Throws<InvalidOperationException>(() => model.Labels);
+
+        using var text = new StringWriter(CultureInfo.InvariantCulture);
+        using var writer = new IndentedTextWriter(text);
+        Assert.Throws<InvalidOperationException>(() => model.DumpAnalyzedLinearCil(writer));
+        Assert.Empty(text.ToString());
+        Assert.Throws<InvalidOperationException>(() => model.DumpReachableControlFlowGraph(writer));
+        Assert.Empty(text.ToString());
+
+        var deadSwitch = new MethodBodyAnalysisModel(EmittedFixtures.DeadSwitch);
+        Assert.Contains("switch rels=[", deadSwitch.DumpRawLinearCil());
+        Assert.Throws<InvalidOperationException>(() => deadSwitch.PreStackTypes);
+    }
+
+    [Fact]
+    public void ChooseDumpsActualConfigurationSpecificLinearCilAndCfg()
+    {
+        var model = ParseModel(GetMethod(nameof(Choose)));
+        var configuration = GetType().Assembly
+                                     .GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration;
+
+        switch (configuration)
+        {
+            case "Debug":
+                Assert.Equal(
+                [
+                    "linear-cil analyzed (byte ranges are half-open; stack order: bottom -> top)",
+                    "#0 IL_0000..IL_0001 ldarg.0 pre=[]",
+                    "#1 IL_0001..IL_0003 brtrue.s rel=+3 resolved=IL_0006 pre=[i32]",
+                    "#2 IL_0003..IL_0004 ldarg.2 pre=[]",
+                    "#3 IL_0004..IL_0006 br.s rel=+1 resolved=IL_0007 pre=[i32]",
+                    "#4 IL_0006..IL_0007 ldarg.1 pre=[]",
+                    "#5 IL_0007..IL_0008 ret pre=[i32]"
+                ], Lines(model.DumpAnalyzedLinearCil()));
+                Assert.Equal(
+                [
+                    "reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)",
+                    "^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[] predecessors=[]",
+                    "    control: native brtrue.s rel=+3 resolved=IL_0006 taken=^2(0x6) fallthrough=^1(0x3)",
+                    "^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0006 entry=[] predecessors=[^0(0x0)]",
+                    "    control: native br.s rel=+1 resolved=IL_0007 target=^3(0x7)",
+                    "^2(0x6) instructions=#4..#4 bytes=IL_0006..IL_0007 entry=[] predecessors=[^0(0x0)]",
+                    "    control: synthetic fallthrough target=^3(0x7)",
+                    "^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32] " +
+                    "predecessors=[^1(0x3), ^2(0x6)]",
+                    "    control: native ret"
+                ], Lines(model.DumpReachableControlFlowGraph()));
+                break;
+            case "Release":
+                Assert.Equal(
+                [
+                    "linear-cil analyzed (byte ranges are half-open; stack order: bottom -> top)",
+                    "#0 IL_0000..IL_0001 ldarg.0 pre=[]",
+                    "#1 IL_0001..IL_0003 brtrue.s rel=+2 resolved=IL_0005 pre=[i32]",
+                    "#2 IL_0003..IL_0004 ldarg.2 pre=[]",
+                    "#3 IL_0004..IL_0005 ret pre=[i32]",
+                    "#4 IL_0005..IL_0006 ldarg.1 pre=[]",
+                    "#5 IL_0006..IL_0007 ret pre=[i32]"
+                ], Lines(model.DumpAnalyzedLinearCil()));
+                Assert.Equal(
+                [
+                    "reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)",
+                    "^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[] predecessors=[]",
+                    "    control: native brtrue.s rel=+2 resolved=IL_0005 taken=^2(0x5) fallthrough=^1(0x3)",
+                    "^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0005 entry=[] predecessors=[^0(0x0)]",
+                    "    control: native ret",
+                    "^2(0x5) instructions=#4..#5 bytes=IL_0005..IL_0007 entry=[] predecessors=[^0(0x0)]",
+                    "    control: native ret"
+                ], Lines(model.DumpReachableControlFlowGraph()));
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported build configuration {configuration}.");
+        }
+    }
+
+    [Fact]
+    public void AnalyzedDumpDistinguishesDeadSourceFromReachableEmptyStack()
+    {
+        var model = ParseModel(EmittedFixtures.Dead);
+
+        var lines = Lines(model.DumpAnalyzedLinearCil());
+        var deadLoad = Assert.Single(lines, line => line.Contains("operand=99", StringComparison.Ordinal));
+        var deadReturn = Assert.Single(lines, line => line.Contains("ret pre=<unreachable>", StringComparison.Ordinal));
+        var liveLoad = Assert.Single(lines, line => line.Contains("operand=42", StringComparison.Ordinal));
+
+        Assert.EndsWith("pre=<unreachable>", deadLoad, StringComparison.Ordinal);
+        Assert.EndsWith("pre=<unreachable>", deadReturn, StringComparison.Ordinal);
+        Assert.EndsWith("pre=[]", liveLoad, StringComparison.Ordinal);
+        Assert.Equal(2, model.ControlFlowGraph.Count);
+        Assert.Equal(2, Lines(model.DumpReachableControlFlowGraph()).Count(line => line.StartsWith("^")));
+    }
+
+    [Fact]
+    public void StackDumpUsesBottomToTopOrderAndCompactPointerAddressSpace()
+    {
+        var twoSlot = ParseModel(EmittedFixtures.TwoSlot);
+        var pointer = ParseModel(EmittedFixtures.Pointer);
+
+        Assert.Contains("pre=[i32, f32]", twoSlot.DumpAnalyzedLinearCil());
+        Assert.Contains("pop pre=[managed-ptr<i32, Function>]", pointer.DumpAnalyzedLinearCil());
+    }
+
+    [Fact]
+    public void ConditionalCfgRetainsSameTargetArmsAndOnePredecessorNode()
+    {
+        var model = ParseModel(EmittedFixtures.SameTarget);
+        var dump = model.DumpReachableControlFlowGraph();
+        var conditional = Assert.Single(
+            Lines(dump),
+            line => line.Contains("control: native brtrue.s", StringComparison.Ordinal));
+
+        Assert.Contains("taken=^1(0x3) fallthrough=^1(0x3)", conditional);
+        Assert.Contains("^1(0x3)", dump);
+        Assert.Contains("predecessors=[^0(0x0)]", dump);
+    }
+
+    [Fact]
+    public void NumericFormattingIgnoresCallerWriterCulture()
+    {
+        var model = ParseModel(EmittedFixtures.TwoSlot);
+        using var text = new StringWriter(CultureInfo.GetCultureInfo("fr-FR"));
+        using var writer = new IndentedTextWriter(text);
+
+        model.DumpAnalyzedLinearCil(writer);
+
+        Assert.Contains("operand=2.5", text.ToString());
+        Assert.DoesNotContain("operand=2,5", text.ToString());
+    }
+
+    [Fact]
+    public void ExistingRegionDumpReportsMissingLoopBreakMetadataHonestly()
+    {
+        var label = Label.Create("loop");
+        var declaration = new FunctionDeclaration(
+            "Loop",
+            [],
+            new FunctionReturn(ShaderType.Unit, []),
+            []);
+        var region = ShaderRegionBody.Create(
+            label,
+            [],
+            [],
+            Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>(),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree<Label, ShaderRegionBody>.Loop(label, [], region, null, null));
+
+        var dump = body.Dump();
+
+        Assert.Contains("loop ^0(loop) | break -> <not recorded>", dump);
+        Assert.DoesNotContain("<null>", dump);
+    }
+
+    private static string[] Lines(string value) =>
+        value.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+
+    private static MethodBodyAnalysisModel ParseModel(MethodInfo method)
+    {
+        var parser = new RuntimeReflectionParser();
+        var declaration = parser.ParseMethod(method);
+        return parser.Context.GetFunctionDefinition(declaration);
+    }
+
+    private static MethodInfo GetMethod(string name) =>
+        typeof(CompilerStageDumpTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"{name} fixture was not found.");
+
+    private static int Choose(bool choose, int left, int right) => choose ? left : right;
+
+    private static class EmittedFixtures
+    {
+        private static readonly Type FixtureType = BuildType();
+
+        public static MethodInfo Dead => Method(nameof(Dead));
+        public static MethodInfo DeadSwitch => Method(nameof(DeadSwitch));
+        public static MethodInfo Pointer => Method(nameof(Pointer));
+        public static MethodInfo SameTarget => Method(nameof(SameTarget));
+        public static MethodInfo TwoSlot => Method(nameof(TwoSlot));
+
+        private static MethodInfo Method(string name) =>
+            FixtureType.GetMethod(name, BindingFlags.Public | BindingFlags.Static)
+            ?? throw new InvalidOperationException($"{name} emitted fixture was not found.");
+
+        private static Type BuildType()
+        {
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(
+                new AssemblyName("CompilerStageDumpFixtures"),
+                AssemblyBuilderAccess.Run);
+            var type = assembly.DefineDynamicModule("CompilerStageDumpFixtures")
+                               .DefineType(
+                                   "CompilerStageDumpFixtures",
+                                   TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+
+            var dead = Define(type, nameof(Dead), typeof(int));
+            var deadIl = dead.GetILGenerator();
+            var live = deadIl.DefineLabel();
+            deadIl.Emit(OpCodes.Br_S, live);
+            deadIl.Emit(OpCodes.Ldc_I4, 99);
+            deadIl.Emit(OpCodes.Ret);
+            deadIl.MarkLabel(live);
+            deadIl.Emit(OpCodes.Ldc_I4, 42);
+            deadIl.Emit(OpCodes.Ret);
+
+            var deadSwitch = Define(type, nameof(DeadSwitch), typeof(int));
+            var deadSwitchIl = deadSwitch.GetILGenerator();
+            var deadSwitchTarget = deadSwitchIl.DefineLabel();
+            deadSwitchIl.Emit(OpCodes.Br_S, deadSwitchTarget);
+            deadSwitchIl.Emit(OpCodes.Ldc_I4_0);
+            deadSwitchIl.Emit(OpCodes.Switch, [deadSwitchTarget]);
+            deadSwitchIl.MarkLabel(deadSwitchTarget);
+            deadSwitchIl.Emit(OpCodes.Ldc_I4_1);
+            deadSwitchIl.Emit(OpCodes.Ret);
+
+            var pointer = Define(type, nameof(Pointer), typeof(int), typeof(int));
+            pointer.DefineParameter(1, ParameterAttributes.None, "value");
+            var pointerIl = pointer.GetILGenerator();
+            pointerIl.Emit(OpCodes.Ldarga_S, (byte)0);
+            pointerIl.Emit(OpCodes.Pop);
+            pointerIl.Emit(OpCodes.Ldc_I4_0);
+            pointerIl.Emit(OpCodes.Ret);
+
+            var sameTarget = Define(type, nameof(SameTarget), typeof(int), typeof(bool));
+            sameTarget.DefineParameter(1, ParameterAttributes.None, "choose");
+            var sameTargetIl = sameTarget.GetILGenerator();
+            var target = sameTargetIl.DefineLabel();
+            sameTargetIl.Emit(OpCodes.Ldarg_0);
+            sameTargetIl.Emit(OpCodes.Brtrue_S, target);
+            sameTargetIl.MarkLabel(target);
+            sameTargetIl.Emit(OpCodes.Ldc_I4_1);
+            sameTargetIl.Emit(OpCodes.Ret);
+
+            var twoSlot = Define(type, nameof(TwoSlot), typeof(int));
+            var twoSlotIl = twoSlot.GetILGenerator();
+            var twoSlotTarget = twoSlotIl.DefineLabel();
+            twoSlotIl.Emit(OpCodes.Ldc_I4_7);
+            twoSlotIl.Emit(OpCodes.Ldc_R4, 2.5f);
+            twoSlotIl.Emit(OpCodes.Br_S, twoSlotTarget);
+            twoSlotIl.MarkLabel(twoSlotTarget);
+            twoSlotIl.Emit(OpCodes.Pop);
+            twoSlotIl.Emit(OpCodes.Ret);
+
+            return type.CreateType()
+                   ?? throw new InvalidOperationException("Failed to create compiler stage dump fixture type.");
+        }
+
+        private static MethodBuilder Define(
+            TypeBuilder type,
+            string name,
+            Type returnType,
+            params Type[] parameterTypes) =>
+            type.DefineMethod(
+                name,
+                MethodAttributes.Public | MethodAttributes.Static,
+                returnType,
+                parameterTypes);
+    }
+}
