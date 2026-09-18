@@ -154,6 +154,38 @@ public sealed class CilModulePipelineTests
         Assert.Same(type, member.Type);
     }
 
+    [Fact]
+    public unsafe void FunctionPointerSignatureContributesNestedReferenceTypes()
+    {
+        var method = GetMethod(nameof(FunctionPointerSignature));
+        var body = CompilerTestPipeline.RawBody(CompilerTestPipeline.ParseRaw(method), method);
+        var functionPointer = Assert.Single(method.GetParameters()).ParameterType;
+        var field = typeof(FunctionPointerPayload).GetField(nameof(FunctionPointerPayload.Leaf))
+                    ?? throw new InvalidOperationException("FunctionPointerPayload.Leaf was not found.");
+
+        Assert.True(functionPointer.IsFunctionPointer);
+        Assert.NotNull(body.Symbols[functionPointer]);
+        Assert.NotNull(body.Symbols[typeof(FunctionPointerPayload)]);
+        Assert.NotNull(body.Symbols[typeof(ReferenceLeaf)]);
+        Assert.NotNull(body.Symbols[field]);
+    }
+
+    [Fact]
+    public void DirectTypeFailurePoisonsParserAndCannotReturnCachedPlaceholder()
+    {
+        var parser = new RuntimeReflectionParser();
+
+        Assert.Throws<InvalidOperationException>(() => parser.ParseType(typeof(BrokenAttributedStruct)));
+        var typeRetry = Assert.Throws<InvalidOperationException>(() =>
+            parser.ParseType(typeof(BrokenAttributedStruct)));
+        var methodRetry = Assert.Throws<InvalidOperationException>(() =>
+            parser.ParseMethod(GetMethod(nameof(AcceptBrokenAttributedStruct))));
+        Assert.Contains("failed while collecting", typeRetry.Message);
+        Assert.Contains("failed while collecting", methodRetry.Message);
+
+        _ = new RuntimeReflectionParser().ParseMethod(GetMethod(nameof(Identity)));
+    }
+
     [Theory]
     [InlineData(typeof(PublicPropertyShader))]
     [InlineData(typeof(PrivatePropertyShader))]
@@ -209,6 +241,8 @@ public sealed class CilModulePipelineTests
 
     private static int Identity(int value) => value;
     private static int Increment(int value) => value + 1;
+    private static int AcceptBrokenAttributedStruct(BrokenAttributedStruct value) => 1;
+    private static unsafe int FunctionPointerSignature(delegate*<FunctionPointerPayload, int> callback) => 1;
 
     private static int ReadCycle(LeftNode value) => value.Right.Value;
 
@@ -228,6 +262,11 @@ public sealed class CilModulePipelineTests
     }
 
     private sealed class ReferenceContainer
+    {
+        public ReferenceLeaf? Leaf = null;
+    }
+
+    private sealed class FunctionPointerPayload
     {
         public ReferenceLeaf? Leaf = null;
     }
@@ -257,6 +296,19 @@ public sealed class CilModulePipelineTests
     private struct SelfReturningStruct
     {
         public SelfReturningStruct Self => this;
+    }
+
+    private struct BrokenAttributedStruct
+    {
+        [ThrowingShader]
+        public int Value => 0;
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    private sealed class ThrowingShaderAttribute : Attribute, IShaderAttribute
+    {
+        public ThrowingShaderAttribute() =>
+            throw new InvalidOperationException("Attribute construction must fail.");
     }
 
     private sealed class UnusedModuleVariableShader : ISharpShader

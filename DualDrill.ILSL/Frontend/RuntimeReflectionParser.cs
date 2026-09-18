@@ -65,7 +65,19 @@ public sealed class RuntimeReflectionParser
             return BuildModule();
         });
 
-    public IShaderType ParseType(Type type)
+    public IShaderType ParseType(Type type) =>
+        ParseOperation($"type {type}", () => ParseTypeCore(type));
+
+    public ParameterDeclaration ParseParameter(ParameterInfo parameter) =>
+        ParseOperation($"parameter {parameter}", () => ParseParameterCore(parameter));
+
+    public VariableDeclaration ParseStaticField(FieldInfo field) =>
+        ParseOperation($"static field {field}", () => ParseStaticFieldCore(field));
+
+    public MemberDeclaration ParseField(FieldInfo field) =>
+        ParseOperation($"field {field}", () => ParseFieldCore(field));
+
+    private IShaderType ParseTypeCore(Type type)
     {
         CollectTypeReferences(type);
         return Context[type] ??
@@ -96,7 +108,7 @@ public sealed class RuntimeReflectionParser
         return structure;
     }
 
-    public ParameterDeclaration ParseParameter(ParameterInfo parameter)
+    private ParameterDeclaration ParseParameterCore(ParameterInfo parameter)
     {
         var symbol = Symbol.Parameter(parameter);
         if (Context[symbol] is { } found)
@@ -104,13 +116,13 @@ public sealed class RuntimeReflectionParser
 
         var declaration = new ParameterDeclaration(
             parameter.Name ?? throw new NotSupportedException("Cannot parse a parameter without a name."),
-            ParseType(parameter.ParameterType),
+            ParseTypeCore(parameter.ParameterType),
             ParseAttribute(parameter));
         Context.AddParameter(symbol, declaration);
         return declaration;
     }
 
-    public VariableDeclaration ParseStaticField(FieldInfo field)
+    private VariableDeclaration ParseStaticFieldCore(FieldInfo field)
     {
         var symbol = Symbol.Variable(field);
         if (Context[symbol] is { } found)
@@ -122,13 +134,13 @@ public sealed class RuntimeReflectionParser
         var declaration = new VariableDeclaration(
             addressSpace,
             field.Name,
-            ParseType(field.FieldType),
+            ParseTypeCore(field.FieldType),
             [.. field.GetCustomAttributes().OfType<IShaderAttribute>()]);
         Context.AddVariable(symbol, declaration);
         return declaration;
     }
 
-    public MemberDeclaration ParseField(FieldInfo field)
+    private MemberDeclaration ParseFieldCore(FieldInfo field)
     {
         if (field.DeclaringType is { } declaringType)
             CollectTypeReferences(declaringType);
@@ -138,7 +150,7 @@ public sealed class RuntimeReflectionParser
 
         var declaration = new MemberDeclaration(
             field.Name,
-            ParseType(field.FieldType),
+            ParseTypeCore(field.FieldType),
             [.. field.GetCustomAttributes().OfType<IShaderAttribute>()]);
         Context.AddStructureMember(field, declaration);
         return declaration;
@@ -245,12 +257,37 @@ public sealed class RuntimeReflectionParser
                         $"Metadata operand type {operand.GetType().FullName} is not supported.");
             }
         }
-        catch (Exception exception) when (IsMetadataCollectionException(exception))
+        catch (NotSupportedException exception)
         {
-            throw new NotSupportedException(
-                $"Failed to collect metadata operand at IL_{instruction.ByteOffset:X4} " +
-                $"({instruction.Instruction.OpCode}) in {source}.",
-                exception);
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (BadImageFormatException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (TypeLoadException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (FileLoadException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (MissingMemberException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (AmbiguousMatchException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (TargetInvocationException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (InvalidProgramException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
         }
     }
 
@@ -263,11 +300,11 @@ public sealed class RuntimeReflectionParser
         if (field.IsStatic)
         {
             if (field.GetCustomAttributes().OfType<IAddressSpaceAttribute>().Any())
-                _ = ParseStaticField(field);
+                _ = ParseStaticFieldCore(field);
             return;
         }
 
-        _ = ParseField(field);
+        _ = ParseFieldCore(field);
     }
 
     private void CollectMethodSignature(MethodBase method)
@@ -287,6 +324,15 @@ public sealed class RuntimeReflectionParser
     {
         if (!collectedTypes.Add(type))
             return;
+        if (type.IsFunctionPointer)
+        {
+            _ = GetOrAddType(type);
+            CollectTypeReferences(type.GetFunctionPointerReturnType());
+            foreach (var parameterType in type.GetFunctionPointerParameterTypes())
+                CollectTypeReferences(parameterType);
+            return;
+        }
+
         if (type.HasElementType && type.GetElementType() is { } element)
             CollectTypeReferences(element);
         foreach (var argument in type.GetGenericArguments())
@@ -307,7 +353,7 @@ public sealed class RuntimeReflectionParser
                      BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance |
                      BindingFlags.DeclaredOnly))
         {
-            _ = ParseField(field);
+            _ = ParseFieldCore(field);
             CollectTypeReferences(field.FieldType);
         }
     }
@@ -381,7 +427,7 @@ public sealed class RuntimeReflectionParser
             is { } shaderOperationAttribute)
         {
             var result = ParseMethodReturn(method);
-            var parameters = method.GetParameters().Select(ParseParameter);
+            var parameters = method.GetParameters().Select(ParseParameterCore);
             var operation = shaderOperationAttribute.GetOperation(result.Type, parameters.Select(p => p.Type));
             Context.AddFunctionDeclaration(symbol, operation.Function);
             return operation.Function;
@@ -390,15 +436,15 @@ public sealed class RuntimeReflectionParser
         var declaration = new FunctionDeclaration(
             method.Name,
             method.IsStatic
-                ? [.. method.GetParameters().Select(ParseParameter)]
+                ? [.. method.GetParameters().Select(ParseParameterCore)]
                 :
                 [
                     new ParameterDeclaration(
                         "this",
-                        ParseType(method.DeclaringType ??
-                                  throw new NotSupportedException($"Method {method} has no declaring type.")),
+                        ParseTypeCore(method.DeclaringType ??
+                                      throw new NotSupportedException($"Method {method} has no declaring type.")),
                         []),
-                    .. method.GetParameters().Select(ParseParameter)
+                    .. method.GetParameters().Select(ParseParameterCore)
                 ],
             ParseMethodReturn(method),
             ParseAttribute(method));
@@ -410,10 +456,10 @@ public sealed class RuntimeReflectionParser
     {
         var returnType = method switch
         {
-            MethodInfo methodInfo => ParseType(methodInfo.ReturnType),
-            ConstructorInfo constructor => ParseType(constructor.DeclaringType ??
-                                                      throw new NotSupportedException(
-                                                          $"Constructor {constructor} has no declaring type.")),
+            MethodInfo methodInfo => ParseTypeCore(methodInfo.ReturnType),
+            ConstructorInfo constructor => ParseTypeCore(constructor.DeclaringType ??
+                                                          throw new NotSupportedException(
+                                                              $"Constructor {constructor} has no declaring type.")),
             _ => throw new NotSupportedException($"Unsupported method {method}.")
         };
         var attributes = method is MethodInfo returnMethod ? ParseAttribute(returnMethod.ReturnParameter) : [];
@@ -427,10 +473,10 @@ public sealed class RuntimeReflectionParser
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         declaration.Members =
         [
-            .. fields.Select(ParseField),
+            .. fields.Select(ParseFieldCore),
             .. properties.Select(property => new MemberDeclaration(
                 property.Name,
-                ParseType(property.PropertyType),
+                ParseTypeCore(property.PropertyType),
                 [.. property.GetCustomAttributes().OfType<IShaderAttribute>()]))
         ];
     }
@@ -440,7 +486,7 @@ public sealed class RuntimeReflectionParser
         var symbol = Symbol.Variable(field);
         if (Context[symbol] is { } found)
             return found;
-        return ParseStaticField(field);
+        return ParseStaticFieldCore(field);
     }
 
     private ImmutableArray<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
@@ -467,7 +513,7 @@ public sealed class RuntimeReflectionParser
         new(
             FunctionAddressSpace.Instance,
             $"loc_{info.LocalIndex}",
-            ParseType(info.LocalType),
+            ParseTypeCore(info.LocalType),
             []);
 
     private bool IsMethodBoundary(MethodBase method)
@@ -500,15 +546,14 @@ public sealed class RuntimeReflectionParser
                 "create a new parser with a fresh compilation context.");
     }
 
-    private static bool IsMetadataCollectionException(Exception exception) =>
-        exception is NotSupportedException
-            or BadImageFormatException
-            or TypeLoadException
-            or FileLoadException
-            or MissingMemberException
-            or AmbiguousMatchException
-            or TargetInvocationException
-            or InvalidProgramException;
+    private static NotSupportedException OperandCollectionFailure(
+        MethodBase source,
+        CilInstructionInfo instruction,
+        Exception exception) =>
+        new(
+            $"Failed to collect metadata operand at IL_{instruction.ByteOffset:X4} " +
+            $"({instruction.Instruction.OpCode}) in {source}.",
+            exception);
 
     private sealed record CollectedMethod(
         FunctionDeclaration Declaration,
