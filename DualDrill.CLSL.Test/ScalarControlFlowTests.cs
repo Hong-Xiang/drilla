@@ -155,9 +155,9 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.True(model.Labels.ToHashSet().SetEquals(original.Labels));
         foreach (var label in model.Labels)
         {
-            var range = model.ControlFlowGraph[label];
+            var range = model.ControlFlow.Node[label];
             output.WriteLine($"{method.Name} {label}: IL_{range.ByteOffset:X4}, {range.InstructionCount} instructions, " +
-                $"successors {string.Join(", ", model.ControlFlowGraph.GetSucc(label))}");
+                $"successors {string.Join(", ", model.ControlFlow.Node.GetSucc(label))}");
         }
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
@@ -199,7 +199,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var parser = new RuntimeReflectionParser();
         var declaration = parser.ParseMethod(method);
         var model = parser.Context.GetFunctionDefinition(declaration);
-        var returns = model.Labels.Where(label => model.ControlFlowGraph.Successor(label) is TerminateSuccessor)
+        var returns = model.Labels.Where(label => model.ControlFlow.Node.Successor(label) is TerminateSuccessor)
             .ToArray();
         var debuggable = assembly.GetCustomAttribute<DebuggableAttribute>() ??
             throw new InvalidOperationException("Missing compiler configuration metadata.");
@@ -208,7 +208,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             case "Debug":
                 Assert.True(debuggable.IsJITOptimizerDisabled);
                 Assert.Single(returns);
-                Assert.Equal(3, model.ControlFlowGraph.GetPred(returns[0]).Count());
+                Assert.Equal(3, model.ControlFlow.Node.GetPred(returns[0]).Count());
                 break;
             case "Release":
                 Assert.False(debuggable.IsJITOptimizerDisabled);
@@ -242,7 +242,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var nestedDeclaration =
             nestedParser.ParseMethod(((Func<int, int, int, int, int>)DevelopTestShaderModule.NestedLoop).Method);
         var nested = nestedParser.Context.GetFunctionDefinition(nestedDeclaration);
-        var analysis = nested.ControlFlowGraph.ControlFlowAnalysis();
+        var analysis = nested.ControlFlow.Annotation;
         Assert.Equal(2, nested.Labels.Count(analysis.IsLoop));
     }
 

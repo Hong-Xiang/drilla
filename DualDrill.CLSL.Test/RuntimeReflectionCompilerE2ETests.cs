@@ -272,13 +272,13 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         var parser = new RuntimeReflectionParser();
         var declaration = parser.ParseMethod(method);
         var actualMethodBody = parser.Context.GetFunctionDefinition(declaration);
-        var controlFlowGraph = actualMethodBody.ControlFlowGraph;
+        var controlFlowGraph = actualMethodBody.ControlFlow.Node;
         var labels = controlFlowGraph.Labels().ToArray();
         var conditional = Assert.Single(
             labels,
             label => controlFlowGraph.GetSucc(label).Count() == 2);
         var branchTargets = controlFlowGraph.GetSucc(conditional).ToArray();
-        var postDominators = controlFlowGraph.ControlFlowAnalysis().PostDominatorTree;
+        var postDominators = actualMethodBody.ControlFlow.Annotation.PostDominatorTree;
 
         switch (configuration)
         {

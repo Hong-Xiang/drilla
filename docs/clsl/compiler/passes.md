@@ -9,10 +9,10 @@ leaving a consumer's required invariant unspecified.
 
 | Component | Input -> output | Current responsibility |
 |---|---|---|
-| `MethodBodyAnalysisModel` source decoding | Method metadata -> original linear CIL | Preserve every instruction and its original index/byte range; construction alone does not build a CFG. |
-| `CilPreStackAnalyzer` | Linear CIL and method symbols -> sparse Pre stacks | Type-only propagation over original positions with exact normalized joins; successful output contains only reachable positions. |
-| `MethodBodyAnalysisModel.Analyze` / `ControlFlowGraphBuilder.BuildReachable` | Completed Pre facts and source -> reachable CIL block graph | Filter before predecessor construction, retain concrete native control, and attach Pre-derived entry stacks. |
-| `RuntimeReflectionParser.ParseMethodBody3` | Analyzed CIL blocks -> `FunctionBody4` | Create block inputs from Pre, lower values, and check each concrete instruction/edge stack; the parser also creates a dominance-based region tree. |
+| `CilMethodDecoder` | Method metadata -> `LinearCode<CilInstructionInfo>` | Preserve every instruction, original index/byte range, and immutable method environment. |
+| `CilPreStackAnalyzer` | Raw linear CIL and method symbols -> `LinearCode<Annotated<CilInstructionInfo, PreStack>>` | Validate whole-source control first, then propagate exact normalized stacks; successful output contains only reachable original positions. |
+| `CilControlFlowGraphBuilder` | Raw and completed Pre-annotated linear values -> reachable `ControlFlowGraph<CilInstructionBlock>` | Filter before predecessor construction, retain concrete native control, and carry each instruction beside its Pre annotation. |
+| `RuntimeReflectionParser.ParseMethodBody3` | `Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>` -> `FunctionBody4` | Create block inputs from adjacent Pre facts, check every concrete instruction/edge stack, and reuse the same graph analysis for postdominance and the region tree. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
 | `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
 | `SlangEmitter` | `FunctionBody4` -> Slang text | Resolve supported lexical transfers, place code, and emit syntax. These responsibilities are not yet separate passes. |

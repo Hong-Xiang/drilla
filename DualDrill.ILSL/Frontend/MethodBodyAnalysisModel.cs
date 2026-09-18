@@ -1,313 +1,146 @@
 ﻿using System.Collections.Frozen;
 using System.Collections.Immutable;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Reflection.Metadata;
-using DualDrill.CLSL.Compiler;
-using DualDrill.CLSL.Frontend.SymbolTable;
+using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Symbol;
 using Lokad.ILPack.IL;
-using Label = DualDrill.CLSL.Language.Symbol.Label;
 
 namespace DualDrill.CLSL.Frontend;
 
 public sealed class MethodBodyAnalysisModel
 {
-    private FrozenDictionary<Label, int>? labelCounts;
-    private FrozenDictionary<Label, int>? labelIndices;
-    private FrozenDictionary<int, Label>? offsetLabels;
-    private ControlFlowGraph<CilInstructionBlock>? controlFlowGraph;
-    private ImmutableArray<Label>? labels;
-    private ImmutableDictionary<int, ImmutableStack<CilStackType>>? preStackTypes;
+    private readonly FrozenDictionary<Label, int> labelIndices;
 
-    public MethodBodyAnalysisModel(MethodBase method)
+    public MethodBodyAnalysisModel(
+        FunctionDeclaration declaration,
+        LinearCode<CilInstructionInfo> rawCode,
+        LinearCode<Annotated<CilInstructionInfo, PreStack>> preAnnotatedCode,
+        Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis> controlFlow)
     {
-        Method = method;
-        Body = method.GetMethodBody();
-        if (Body?.ExceptionHandlingClauses.Count > 0)
-            throw new NotSupportedException($"Exception handling is not supported for method {method}.");
+        ArgumentNullException.ThrowIfNull(declaration);
+        ArgumentNullException.ThrowIfNull(rawCode);
+        ArgumentNullException.ThrowIfNull(preAnnotatedCode);
+        ArgumentNullException.ThrowIfNull(controlFlow);
+        if (!ReferenceEquals(rawCode.Environment, preAnnotatedCode.Environment))
+            throw new ArgumentException("Raw and Pre-annotated code must share one method environment.",
+                nameof(preAnnotatedCode));
+        if (!ReferenceEquals(controlFlow.Node, controlFlow.Annotation.ControlFlowGraph))
+            throw new ArgumentException("Control-flow analysis must belong to the stored graph.", nameof(controlFlow));
+        ValidateControlFlowSource(preAnnotatedCode, controlFlow.Node);
 
-        Parameters = [.. method.GetParameters()];
-        var decodedInstructions = (method.GetInstructions() ?? []).ToImmutableArray();
-
-        {
-            var localVariables = (method.GetMethodBody()?.LocalVariables ?? []).ToArray();
-            var localVariablesFromInsturctions = decodedInstructions.Select(inst => inst.Operand)
-                                                                    .OfType<LocalVariableInfo>()
-                                                                    .Distinct()
-                                                                    .OrderBy(v => v.LocalIndex);
-            foreach (var l in localVariablesFromInsturctions) localVariables[l.LocalIndex] = l;
-
-            LocalVariables = [.. localVariables];
-        }
-        {
-            var offsets = decodedInstructions.Select(inst => inst.Offset).ToList();
-            offsets.Add(method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0);
-            Offsets = [.. offsets];
-        }
-
-        OffsetsToIndex = Offsets.Index().ToFrozenDictionary(x => x.Item, x => x.Index);
-        Instructions =
-        [
-            .. decodedInstructions.Select((instruction, index) =>
-                new CilInstructionInfo(index, Offsets[index], Offsets[index + 1], instruction))
-        ];
-
+        Declaration = declaration;
+        RawCode = rawCode;
+        PreAnnotatedCode = preAnnotatedCode;
+        ControlFlow = controlFlow;
+        labelIndices = controlFlow.Node.Labels()
+                                  .ToFrozenDictionary(
+                                      label => label,
+                                      label => controlFlow.Node[label].InstructionIndex);
+        Labels = [.. labelIndices.OrderBy(pair => pair.Value).Select(pair => pair.Key)];
     }
 
-    public ImmutableArray<ParameterInfo> Parameters { get; }
-    public ImmutableArray<LocalVariableInfo> LocalVariables { get; }
-    public ImmutableArray<int> Offsets { get; }
-    public ImmutableArray<CilInstructionInfo> Instructions { get; }
-    public MethodBase Method { get; }
-    public MethodBody? Body { get; }
-    public bool IsStatic => Method.IsStatic;
+    public FunctionDeclaration Declaration { get; }
+    public LinearCode<CilInstructionInfo> RawCode { get; }
+    public LinearCode<Annotated<CilInstructionInfo, PreStack>> PreAnnotatedCode { get; }
+    public Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis> ControlFlow { get; }
+    public ImmutableArray<Label> Labels { get; }
+    public CilMethodEnvironment Environment => RawCode.Environment;
+    public int InstructionCount => RawCode.Count;
+    public int CodeByteSize => Environment.CodeByteSize;
+    public CilInstructionInfo this[int index] => RawCode[index];
 
-    public int InstructionCount => Instructions.Length;
-    public int CodeByteSize => Offsets[InstructionCount];
+    public int LabelToInstructionIndex(Label label) => labelIndices[label];
 
-    public FrozenDictionary<int, int> OffsetsToIndex { get; }
+    public IEnumerable<System.Reflection.MethodBase> CalledMethods() =>
+        PreAnnotatedCode.Instructions
+                        .Select(instruction => instruction.Node.Instruction.Operand)
+                        .OfType<System.Reflection.MethodBase>();
 
-    public ImmutableDictionary<int, ImmutableStack<CilStackType>> PreStackTypes =>
-        preStackTypes ?? throw new InvalidOperationException($"CIL Pre stacks have not been analyzed for {Method}.");
-
-    public ControlFlowGraph<CilInstructionBlock> ControlFlowGraph =>
-        controlFlowGraph ?? throw new InvalidOperationException($"The CIL CFG has not been built for {Method}.");
-
-    public ImmutableArray<Label> Labels =>
-        labels ?? throw new InvalidOperationException($"CIL labels have not been built for {Method}.");
-
-    public CilInstructionInfo this[int index] => Instructions[index];
-    public int LabelToInstructionIndex(Label label) => Require(labelIndices, nameof(labelIndices))[label];
-    public int LabelToInstructionCount(Label label) => Require(labelCounts, nameof(labelCounts))[label];
-
-    public Label? OffsetToLabel(int offset) =>
-        Require(offsetLabels, nameof(offsetLabels)).TryGetValue(offset, out var label) ? label : null;
-
-    public IEnumerable<MethodBase> CalledMethods()
+    private static void ValidateControlFlowSource(
+        LinearCode<Annotated<CilInstructionInfo, PreStack>> preAnnotatedCode,
+        ControlFlowGraph<CilInstructionBlock> graph)
     {
-        return PreStackTypes.Keys.Select(index => Instructions[index].Instruction.Operand)
-                           .OfType<MethodBase>();
-    }
+        if (graph[graph.EntryLabel].InstructionIndex != 0)
+            throw new ArgumentException(
+                "The control-flow graph entry must begin at original instruction index 0.",
+                nameof(graph));
 
-    internal void Analyze(
-        FunctionDeclaration function,
-        ISymbolTableView table,
-        Action<MethodBase> declareCallee)
-    {
-        if (preStackTypes is not null)
-            return;
+        var preByIndex = preAnnotatedCode.Instructions.ToFrozenDictionary(item => item.Node.Index);
+        var labels = graph.Labels().ToImmutableArray();
+        if (graph.Count != labels.Length)
+            throw new ArgumentException(
+                "The control-flow graph contains definitions disconnected from its entry.",
+                nameof(graph));
 
-        foreach (var instruction in Instructions)
-            ValidateControlBoundary(instruction);
-
-        var analyzedPre = CilPreStackAnalyzer.Analyze(this, function, table, declareCallee);
-        var graph = GetControlFlowGraph(analyzedPre.Keys.ToFrozenSet(), analyzedPre);
-        var analyzedLabelIndices = graph.Labels()
-                                        .ToFrozenDictionary(label => label,
-                                            label => graph[label].InstructionIndex);
-        var analyzedLabelCounts = graph.Labels()
-                                       .ToFrozenDictionary(label => label,
-                                           label => graph[label].InstructionCount);
-
-        preStackTypes = analyzedPre;
-        controlFlowGraph = graph;
-        labelIndices = analyzedLabelIndices;
-        labelCounts = analyzedLabelCounts;
-        offsetLabels = analyzedLabelIndices.ToFrozenDictionary(pair => Offsets[pair.Value], pair => pair.Key);
-        labels = [.. analyzedLabelIndices.OrderBy(pair => pair.Value).Select(pair => pair.Key)];
-    }
-
-    internal IEnumerable<int> SuccessorInstructionIndices(CilInstructionInfo instruction)
-    {
-        var opCode = instruction.Instruction.OpCode.ToILOpCode();
-        switch (instruction.Instruction.OpCode.FlowControl)
+        var graphIndices = new HashSet<int>();
+        foreach (var label in labels)
         {
-            case FlowControl.Branch when CilControlFlow.IsUnconditionalBranch(opCode):
-                yield return ResolveBranchTarget(instruction);
-                yield break;
-            case FlowControl.Cond_Branch when CilControlFlow.IsConditionalBranch(opCode):
-                yield return ResolveBranchTarget(instruction);
-                if (instruction.Index + 1 >= InstructionCount)
-                    throw new InvalidProgramException(
-                        $"Conditional branch at IL_{instruction.ByteOffset:X4} has no fallthrough instruction in {Method}.");
-                yield return instruction.Index + 1;
-                yield break;
-            case FlowControl.Return when CilControlFlow.IsReturn(opCode):
-                yield break;
-            case FlowControl.Next:
-            case FlowControl.Call:
-                if (instruction.Index + 1 >= InstructionCount)
-                    throw new InvalidProgramException(
-                        $"Method {Method} reaches the end of CIL after IL_{instruction.ByteOffset:X4} without a return.");
-                yield return instruction.Index + 1;
-                yield break;
-            default:
-                throw new NotSupportedException(
-                    $"CIL control {opCode} at IL_{instruction.ByteOffset:X4} is not supported for method {Method}.");
-        }
-    }
-
-    private void ValidateControlBoundary(CilInstructionInfo instruction)
-    {
-        var opCode = instruction.Instruction.OpCode.ToILOpCode();
-        switch (instruction.Instruction.OpCode.FlowControl)
-        {
-            case FlowControl.Branch when CilControlFlow.IsUnconditionalBranch(opCode):
-                _ = ResolveBranchTarget(instruction);
-                return;
-            case FlowControl.Cond_Branch when CilControlFlow.IsConditionalBranch(opCode):
-                _ = ResolveBranchTarget(instruction);
-                if (instruction.Index + 1 >= InstructionCount)
-                    throw new InvalidProgramException(
-                        $"Conditional branch at IL_{instruction.ByteOffset:X4} has no fallthrough instruction in {Method}.");
-                return;
-            case FlowControl.Return when CilControlFlow.IsReturn(opCode):
-            case FlowControl.Next:
-            case FlowControl.Call:
-                return;
-            default:
-                throw new NotSupportedException(
-                    $"CIL control {opCode} at IL_{instruction.ByteOffset:X4} is not supported for method {Method}.");
-        }
-    }
-
-    internal int ResolveBranchTarget(CilInstructionInfo instruction)
-    {
-        var jumpOffset = instruction.Instruction.Operand switch
-        {
-            sbyte value => value,
-            int value => value,
-            _ => throw new InvalidProgramException(
-                $"Unsupported branch operand at IL_{instruction.ByteOffset:X4} in {Method}.")
-        };
-
-        int target;
-        try
-        {
-            target = checked(instruction.NextByteOffset + jumpOffset);
-        }
-        catch (OverflowException exception)
-        {
-            throw new InvalidProgramException(
-                $"Branch target overflows at IL_{instruction.ByteOffset:X4} in {Method}.",
-                exception);
-        }
-
-        if (!OffsetsToIndex.TryGetValue(target, out var targetIndex) || targetIndex >= InstructionCount)
-            throw new InvalidProgramException(
-                $"Branch target IL_{target:X4} from IL_{instruction.ByteOffset:X4} in {Method} " +
-                "is not an instruction boundary.");
-
-        return targetIndex;
-    }
-
-    private ControlFlowGraph<CilInstructionBlock> GetControlFlowGraph(
-        IReadOnlySet<int> reachable,
-        IReadOnlyDictionary<int, ImmutableStack<CilStackType>> analyzedPre)
-    {
-        var builder = new ControlFlowGraphBuilder(InstructionCount, index => Label.Create(Offsets[index]));
-
-        foreach (var index in reachable.Order())
-        {
-            var inst = Instructions[index];
-            var opCode = inst.Instruction.OpCode.ToILOpCode();
-
-            switch (inst.Instruction.OpCode.FlowControl)
-            {
-                case FlowControl.Branch when CilControlFlow.IsUnconditionalBranch(opCode):
-                    builder.AddBr(inst.Index, ResolveBranchTarget(inst));
-                    break;
-                case FlowControl.Cond_Branch when CilControlFlow.IsConditionalBranch(opCode):
-                    builder.AddBrIf(inst.Index, ResolveBranchTarget(inst));
-                    break;
-                case FlowControl.Return when CilControlFlow.IsReturn(opCode):
-                    builder.AddReturn(inst.Index);
-                    break;
-                case FlowControl.Next:
-                case FlowControl.Call:
-                    continue;
-                default:
-                    throw new NotSupportedException(
-                        $"CIL control {opCode} at IL_{inst.ByteOffset:X4} is not supported for method {Method}.");
-            }
-        }
-
-        return builder.BuildReachable(
-            reachable,
-            (label, range, successor) =>
-            {
-                var instructions = Instructions.Slice(range.Start, range.Count);
-                var last = instructions[^1];
-                CilControlFlow terminator = (last.Instruction.OpCode.FlowControl, successor) switch
-                {
-                    (FlowControl.Branch, UnconditionalSuccessor { Target: var target }) =>
-                        new CilControlFlow.Branch(last, target),
-                    (FlowControl.Cond_Branch,
-                        ConditionalSuccessor { TrueTarget: var branchTarget, FalseTarget: var fallThroughTarget }) =>
-                        new CilControlFlow.ConditionalBranch(last, branchTarget, fallThroughTarget),
-                    (FlowControl.Return, TerminateSuccessor) =>
-                        new CilControlFlow.Return(last),
-                    (FlowControl.Next or FlowControl.Call, UnconditionalSuccessor { Target: var target }) =>
-                        new CilControlFlow.FallThrough(target),
-                    (FlowControl.Next or FlowControl.Call, TerminateSuccessor) =>
-                        new CilControlFlow.EndOfCode(),
-                    _ => throw new InvalidProgramException(
-                        $"CIL control and CFG topology disagree at IL_{last.ByteOffset:X4}.")
-                };
-
-                return new CilInstructionBlock(
-                    label,
-                    instructions,
-                    terminator,
-                    analyzedPre[instructions[0].Index]);
-            },
-            static block => block.Terminator.ToSuccessor());
-    }
-
-    private static T Require<T>(T? value, string property) where T : class =>
-        value ?? throw new InvalidOperationException($"{property} is unavailable before CIL analysis.");
-
-    public sealed record CilInstructionBlock
-    {
-        internal CilInstructionBlock(
-            Label label,
-            ImmutableArray<CilInstructionInfo> instructions,
-            CilControlFlow terminator,
-            ImmutableStack<CilStackType> entryStackTypes)
-        {
-            if (instructions.IsDefaultOrEmpty)
-                throw new ArgumentException("A CIL basic block must contain at least one instruction.",
-                    nameof(instructions));
-
-            var last = instructions[^1];
-            var nativeInstruction = terminator switch
-            {
-                CilControlFlow.Return control => control.Instruction,
-                CilControlFlow.Branch control => control.Instruction,
-                CilControlFlow.ConditionalBranch control => control.Instruction,
-                _ => (CilInstructionInfo?)null
-            };
-            if (nativeInstruction is { } source &&
-                (!source.Equals(last) || !ReferenceEquals(source.Instruction, last.Instruction)))
+            var block = graph[label];
+            if (!ReferenceEquals(label, block.Label))
                 throw new ArgumentException(
-                    "The native CIL terminator must retain the block's final original instruction.",
-                    nameof(terminator));
+                    "A control-flow graph key does not match its block label.",
+                    nameof(graph));
+            if (!graph.Successor(label).Equals(block.Terminator.ToSuccessor()))
+                throw new ArgumentException(
+                    "A control-flow graph successor does not match its block terminator.",
+                    nameof(graph));
 
-            Label = label;
-            Instructions = instructions;
-            Terminator = terminator;
-            EntryStackTypes = entryStackTypes;
+            foreach (var item in block.Instructions)
+                if (!graphIndices.Add(item.Node.Index) ||
+                    !preByIndex.TryGetValue(item.Node.Index, out var source) ||
+                    !source.Node.Equals(item.Node) ||
+                    !ReferenceEquals(source.Node.Instruction, item.Node.Instruction) ||
+                    !ReferenceEquals(source.Annotation, item.Annotation))
+                    throw new ArgumentException(
+                        "The control-flow graph does not belong to the stored Pre-annotated source.",
+                        nameof(graph));
         }
 
-        public Label Label { get; }
-        public ImmutableArray<CilInstructionInfo> Instructions { get; }
-        public CilControlFlow Terminator { get; }
-        public ImmutableStack<CilStackType> EntryStackTypes { get; }
-        public int InstructionIndex => Instructions[0].Index;
-        public int InstructionCount => Instructions.Length;
-        public int ByteOffset => Instructions[0].ByteOffset;
-        public int ByteLength => Instructions[^1].NextByteOffset - ByteOffset;
+        if (graphIndices.Count != preByIndex.Count)
+            throw new ArgumentException(
+                "The control-flow graph does not partition the complete reachable Pre-annotated source.",
+                nameof(graph));
     }
+}
+
+public sealed record CilInstructionBlock
+{
+    internal CilInstructionBlock(
+        Label label,
+        ImmutableArray<Annotated<CilInstructionInfo, PreStack>> instructions,
+        CilControlFlow terminator)
+    {
+        if (instructions.IsDefaultOrEmpty)
+            throw new ArgumentException("A CIL basic block must contain at least one instruction.",
+                nameof(instructions));
+
+        var last = instructions[^1].Node;
+        var nativeInstruction = terminator switch
+        {
+            CilControlFlow.Return control => control.Instruction,
+            CilControlFlow.Branch control => control.Instruction,
+            CilControlFlow.ConditionalBranch control => control.Instruction,
+            _ => (CilInstructionInfo?)null
+        };
+        if (nativeInstruction is { } source &&
+            (!source.Equals(last) || !ReferenceEquals(source.Instruction, last.Instruction)))
+            throw new ArgumentException(
+                "The native CIL terminator must retain the block's final original instruction.",
+                nameof(terminator));
+
+        Label = label;
+        Instructions = instructions;
+        Terminator = terminator;
+    }
+
+    public Label Label { get; }
+    public ImmutableArray<Annotated<CilInstructionInfo, PreStack>> Instructions { get; }
+    public CilControlFlow Terminator { get; }
+    public PreStack EntryStack => Instructions[0].Annotation;
+    public int InstructionIndex => Instructions[0].Node.Index;
+    public int InstructionCount => Instructions.Length;
+    public int ByteOffset => Instructions[0].Node.ByteOffset;
+    public int ByteLength => Instructions[^1].Node.NextByteOffset - ByteOffset;
 }

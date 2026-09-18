@@ -10,6 +10,77 @@ hierarchy for every pass. An optimization or lowering may legitimately return
 the same CLR type it consumes. Nested region IR and target-language AST remain
 different logical stages, even when they reuse constructors.
 
+## Implemented Refinement: Immutable Annotated Stage Values
+
+The runtime-reflection frontend now uses one shared
+`Annotated<TNode, TAnnotation>` constructor.
+
+Use annotation at the scope of the fact:
+
+```text
+LinearCode<CilInstructionInfo>
+LinearCode<Annotated<CilInstructionInfo, PreStack>>
+CFG<Annotated<TBasicBlock, DominanceNodeInfo>>
+Annotated<CFG<TBasicBlock>, DominatorTree>
+```
+
+These are type-shape examples, not a requirement to materialize all four forms
+or duplicate the complete dominance result per block. A graph-wide analysis
+should have one authoritative result; per-node projections can be derived when
+needed. `Annotated` contains `Node` and `Annotation`, not an analysis-in-progress
+flag or proof of semantic correctness.
+
+Raw linear CIL and completed Pre-annotated linear CIL must be different
+immutable values, not nullable fields gradually populated on the same model.
+The reachable annotated sequence pairs each instruction with its entry stack.
+It preserves original instruction identities, offsets and order; its compact
+array index is not a replacement for the original instruction index. The
+complete raw source remains available for diagnostics, including dead code.
+Both stages may share the immutable instruction data.
+
+The worklist may still use an index-to-stack dictionary internally. On success
+it produces a completed stage value consumed by CFG construction. No pending
+state is published as an empty stack; failures do not publish a partial stage.
+Method signatures, local declarations and source metadata are a shared immutable
+environment, not a reason to keep raw/Pre/CFG completion caches in one object.
+Mutable parser symbol/recursion/failure bookkeeping stays separate from the IR.
+
+Each real stage has a fixed, read-only `PrettyPrint` operation using the existing
+`IPrintable` contract. The receiver's type determines the printed representation;
+it must not change output stages according to mutable availability flags or
+implicitly run analysis. Reuse the current stage formatting instead of adding
+another printer registry. A small annotation constructor is preferred to
+`ValueTuple` so the owned type can participate in typed printing composition.
+Do not create wrappers whose only purpose is renaming `DumpXXX` calls while
+leaving the old nullable-stage model authoritative.
+
+Generic annotations do not automatically inherit a wrapped BB's control
+interface. Topology consumers must obtain the original node's control projection
+through explicit composition; predicate/edge data remain on the concrete node.
+Do not duplicate an editable successor or special-case each annotation payload
+inside CFG analysis.
+
+Analysis validity belongs to the pass contract. A pure `Select` maps exactly the
+requested fields; it does not secretly discard facts or claim an arbitrary node
+rewrite preserves them. A rewriting pass explicitly preserves, replaces, or
+drops the annotation and recomputes facts as needed. Type distinctions can
+prevent passing raw code where completed facts are required, but do not prove
+arbitrary annotations or transformations semantically valid.
+
+`Annotated.Select`, `SelectNode`, and `SelectAnnotation` require a fixed printer
+for their output types. Mapping laws apply to the immutable `Node` and
+`Annotation` data; a type-changing map never carries an incompatible printer
+from its input.
+
+The implementation wires these values through decoding, Pre analysis, reachable
+CFG construction, the live parser, and diagnostic callers. The graph-level
+`ControlFlowAnalysis` annotation is the parser's single source for postdominance
+and `RegionTree.Create`; no dominance result is copied onto each block.
+Superseded mutable completion fields and diagnostic-selection shims were
+removed, and the source/API migration is documented in
+[linear-cil.md](compiler/linear-cil.md). Region/AST algorithms and generic
+invalidation frameworks remain outside this refinement.
+
 ## Three Relations, Not One Tree
 
 - **Containment:** which expression or region owns a definition.
@@ -72,9 +143,10 @@ The current public compiler path is:
 
 ```text
 C# compiled by .NET
-  -> method declarations and original MethodBodyAnalysisModel.Instructions
+  -> method declarations and `LinearCode<CilInstructionInfo>`
   -> CilPreStackAnalyzer with method symbols
-  -> sparse PreStackTypes and reachable ControlFlowGraph<CilInstructionBlock>
+  -> `LinearCode<Annotated<CilInstructionInfo, PreStack>>`
+  -> `Annotated<ControlFlowGraph<CilInstructionBlock>, ControlFlowAnalysis>`
   -> RuntimeReflectionParser.ParseMethodBody3
   -> FunctionBody4
   -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
@@ -105,9 +177,9 @@ implementations.
 
 | Stage | Required invariant | Current owner or implementation boundary |
 |---|---|---|
-| Linear CIL | Instruction boundaries and branch offsets are resolved consistently. | `MethodBodyAnalysisModel`; unsupported instructions remain explicit failures. |
-| Linear Pre facts | Reachable entries have exact normalized stack types; absent entries are unreachable only after successful completion. | `CilPreStackAnalyzer`, before CFG construction; full original source is retained. |
-| CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `ControlFlowGraphBuilder.BuildReachable` and the completed Pre facts. |
+| Linear CIL | Instruction boundaries and branch offsets are resolved consistently. | `CilMethodDecoder` produces `LinearCode<CilInstructionInfo>`; unsupported controls remain explicit failures. |
+| Linear Pre facts | Reachable entries have exact normalized stack types; absence from the completed value means unreachable. | `CilPreStackAnalyzer` produces `LinearCode<Annotated<CilInstructionInfo, PreStack>>`; full original source remains separate. |
+| CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `CilControlFlowGraphBuilder` consumes both linear values and produces the graph bound to one `ControlFlowAnalysis`. |
 | Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `RuntimeReflectionParser` and `ShaderRegionBody` build this representation. Validation is partial, not a complete verifier. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
 | Scoped nested region SSA-like IR | Every shared join has a defined owner; loop/continuation transfers resolve within permitted scopes; edge arguments and definition sharing remain explicit. | Intended contract. Dominance containment alone does not establish it. |

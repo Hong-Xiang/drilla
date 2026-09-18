@@ -72,9 +72,10 @@ public sealed class IntegerInequalityBranchTests
         var declaration = parser.ParseMethod(method);
         var body = parser.MethodBodies[declaration];
         var model = parser.Context.GetFunctionDefinition(declaration);
+        var graph = model.ControlFlow.Node;
         var blocks = model.Labels.ToDictionary(
-            label => model.ControlFlowGraph[label].ByteOffset,
-            label => model.ControlFlowGraph[label]);
+            label => graph[label].ByteOffset,
+            label => graph[label]);
 
         Assert.True(model.Labels.ToHashSet().SetEquals(body.Labels));
 
@@ -89,7 +90,7 @@ public sealed class IntegerInequalityBranchTests
                     (9, 7, 3, 5),
                     (14, 10, 3, 5),
                     (19, 13, 2, 2));
-                Assert.Equal(OpCodes.Ceq, model[model.OffsetsToIndex[3]].Instruction.OpCode);
+                Assert.Equal(OpCodes.Ceq, model[model.Environment.OffsetsToIndex[3]].Instruction.OpCode);
                 AssertRelationalOperation<TInteger, BinaryRelational.Eq>(body[blocks[0].Label]);
                 AssertArms(body, blocks[0].Label, blocks[9].Label, blocks[14].Label);
                 AssertArmLiteral(body[blocks[9].Label], 11);
@@ -101,11 +102,11 @@ public sealed class IntegerInequalityBranchTests
                     (0, 0, 3, 4),
                     (4, 3, 2, 3),
                     (7, 5, 2, 3));
-                Assert.Equal(OpCodes.Bne_Un_S, model[model.OffsetsToIndex[2]].Instruction.OpCode);
+                Assert.Equal(OpCodes.Bne_Un_S, model[model.Environment.OffsetsToIndex[2]].Instruction.OpCode);
                 var nativeBranch =
                     Assert.IsType<CilControlFlow.ConditionalBranch>(blocks[0].Terminator);
                 Assert.Equal(OpCodes.Bne_Un_S, nativeBranch.Instruction.Instruction.OpCode);
-                Assert.Same(model[model.OffsetsToIndex[2]].Instruction,
+                Assert.Same(model[model.Environment.OffsetsToIndex[2]].Instruction,
                     nativeBranch.Instruction.Instruction);
                 AssertRelationalOperation<TInteger, BinaryRelational.Ne>(body[blocks[0].Label]);
                 AssertArms(body, blocks[0].Label, blocks[7].Label, blocks[4].Label);
@@ -118,7 +119,7 @@ public sealed class IntegerInequalityBranchTests
     }
 
     private static void AssertRanges(
-        IReadOnlyDictionary<int, MethodBodyAnalysisModel.CilInstructionBlock> blocks,
+        IReadOnlyDictionary<int, CilInstructionBlock> blocks,
         params (int Offset, int Index, int Count, int Length)[] expected)
     {
         Assert.Equal(expected.Select(item => item.Offset), blocks.Keys.Order());

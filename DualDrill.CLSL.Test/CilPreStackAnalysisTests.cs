@@ -17,13 +17,12 @@ namespace DualDrill.CLSL.Test;
 public sealed class CilPreStackAnalysisTests
 {
     [Fact]
-    public void UnanalyzedModelDoesNotExposeCompletedAnalysisViews()
+    public void RawDecodeProducesOnlyTheRawLinearStage()
     {
-        var model = new MethodBodyAnalysisModel(GetMethod(nameof(Diamond)));
+        LinearCode<CilInstructionInfo> raw = CilMethodDecoder.Decode(GetMethod(nameof(Diamond)));
 
-        Assert.Throws<InvalidOperationException>(() => model.Labels);
-        Assert.Throws<InvalidOperationException>(() => model.PreStackTypes);
-        Assert.Throws<InvalidOperationException>(() => model.ControlFlowGraph);
+        Assert.NotEmpty(raw.Instructions);
+        Assert.All(raw.Instructions, instruction => Assert.InRange(instruction.Index, 0, raw.Count - 1));
     }
 
     [Fact]
@@ -54,14 +53,31 @@ public sealed class CilPreStackAnalysisTests
         var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
         var model = parser.Context.GetFunctionDefinition(declaration);
         var call = Assert.Single(
-            model.Instructions,
+            model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
 
-        Assert.IsType<CilStackType.Int32>(Assert.Single(model.PreStackTypes[call.Index]));
+        Assert.IsType<CilStackType.Int32>(Assert.Single(Pre(model, call.Index).Types));
         Assert.Empty(parser.MethodBodies);
         var retry = Assert.Throws<InvalidOperationException>(() => parser.ParseMethod(method));
         Assert.Contains(method.Name, retry.Message);
         Assert.Throws<InvalidOperationException>(() => parser.ParseMethodBody3(declaration));
+    }
+
+    [Fact]
+    public void ReachableCalleeFailurePoisonsAndUnwindsTheCallerParser()
+    {
+        var parser = new RuntimeReflectionParser();
+        var callerMethod = GetMethod(nameof(CallFailingCallee));
+
+        Assert.Throws<ValidationException>(() => parser.ParseMethod(callerMethod));
+        var caller = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(callerMethod)]);
+        var callerModel = parser.Context.GetFunctionDefinition(caller);
+
+        Assert.Same(caller, callerModel.Declaration);
+        Assert.Empty(parser.MethodBodies);
+        var retry = Assert.Throws<InvalidOperationException>(() => parser.ParseMethod(callerMethod));
+        Assert.Contains("fresh compilation context", retry.Message);
+        Assert.Throws<InvalidOperationException>(() => parser.ParseMethodBody3(caller));
     }
 
     [Fact]
@@ -131,32 +147,31 @@ public sealed class CilPreStackAnalysisTests
         var declaration = parser.ParseMethod(Fixtures.DeadUnsupportedAndCall);
         var model = parser.Context.GetFunctionDefinition(declaration);
         var deadCall = Assert.Single(
-            model.Instructions,
+            model.RawCode.Instructions,
             instruction => instruction.Instruction.Operand is MethodBase method &&
                            method.Name == Fixtures.DeadCallee.Name);
         var deadUnsupported = Assert.Single(
-            model.Instructions,
+            model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Dup);
         var deadInitObject = Assert.Single(
-            model.Instructions,
+            model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
         var liveLabel = Assert.IsType<CilControlFlow.Branch>(
-            model.ControlFlowGraph[model.ControlFlowGraph.EntryLabel].Terminator).Target;
+            model.ControlFlow.Node[model.ControlFlow.Node.EntryLabel].Terminator).Target;
         var liveTarget = model[model.LabelToInstructionIndex(liveLabel)];
 
-        Assert.False(model.PreStackTypes.ContainsKey(deadCall.Index));
-        Assert.False(model.PreStackTypes.ContainsKey(deadUnsupported.Index));
-        Assert.False(model.PreStackTypes.ContainsKey(deadInitObject.Index));
-        Assert.True(model.PreStackTypes.TryGetValue(liveTarget.Index, out var livePre));
-        Assert.Empty(livePre);
+        Assert.DoesNotContain(model.PreAnnotatedCode.Instructions, item => item.Node.Index == deadCall.Index);
+        Assert.DoesNotContain(model.PreAnnotatedCode.Instructions, item => item.Node.Index == deadUnsupported.Index);
+        Assert.DoesNotContain(model.PreAnnotatedCode.Instructions, item => item.Node.Index == deadInitObject.Index);
+        Assert.Empty(Pre(model, liveTarget.Index).Types);
         Assert.Equal(
             Enumerable.Range(0, model.InstructionCount),
-            model.Instructions.Select(instruction => instruction.Index));
-        Assert.True(model.ControlFlowGraph.Labels()
-                         .Sum(label => model.ControlFlowGraph[label].InstructionCount) <
+            model.RawCode.Instructions.Select(instruction => instruction.Index));
+        Assert.True(model.ControlFlow.Node.Labels()
+                         .Sum(label => model.ControlFlow.Node[label].InstructionCount) <
                     model.InstructionCount);
-        Assert.Equal(2, model.ControlFlowGraph.Count);
-        Assert.Single(model.ControlFlowGraph.Predecessor(liveLabel));
+        Assert.Equal(2, model.ControlFlow.Node.Count);
+        Assert.Single(model.ControlFlow.Node.Predecessor(liveLabel));
         Assert.Null(parser.Context[Symbol.Function(Fixtures.DeadCallee)]);
         Assert.DoesNotContain(parser.MethodBodies.Keys, function => function.Name == Fixtures.DeadCallee.Name);
     }
@@ -165,7 +180,7 @@ public sealed class CilPreStackAnalysisTests
     public void LoopCarriedNonEmptyStackUsesOriginalBackwardTarget()
     {
         var model = ParseModel(Fixtures.LoopCarried);
-        var backward = model.Labels.Select(label => model.ControlFlowGraph[label])
+        var backward = model.Labels.Select(label => model.ControlFlow.Node[label])
                             .Single(block => block.Terminator is CilControlFlow.ConditionalBranch control &&
                                              model.LabelToInstructionIndex(control.BranchTarget) <
                                              block.InstructionIndex);
@@ -173,10 +188,10 @@ public sealed class CilPreStackAnalysisTests
         var targetIndex = model.LabelToInstructionIndex(control.BranchTarget);
 
         Assert.Collection(
-            model.PreStackTypes[targetIndex],
+            Pre(model, targetIndex).Types,
             type => Assert.IsType<CilStackType.Int32>(type));
         Assert.Collection(
-            model.PreStackTypes[backward.InstructionIndex],
+            Pre(model, backward.InstructionIndex).Types,
             type => Assert.IsType<CilStackType.Int32>(type));
     }
 
@@ -198,13 +213,13 @@ public sealed class CilPreStackAnalysisTests
         var declaration = parser.ParseMethod(Fixtures.TwoSlotEdge);
         var model = parser.Context.GetFunctionDefinition(declaration);
         var branch = Assert.IsType<CilControlFlow.Branch>(
-            model.ControlFlowGraph[model.ControlFlowGraph.EntryLabel].Terminator);
-        var block = model.ControlFlowGraph[branch.Target];
+            model.ControlFlow.Node[model.ControlFlow.Node.EntryLabel].Terminator);
+        var block = model.ControlFlow.Node[branch.Target];
         var body = parser.MethodBodies[declaration][branch.Target];
 
-        Assert.Contains(model.Instructions, instruction => instruction.Instruction.OpCode == OpCodes.Pop);
+        Assert.Contains(model.RawCode.Instructions, instruction => instruction.Instruction.OpCode == OpCodes.Pop);
         Assert.Collection(
-            block.EntryStackTypes,
+            block.EntryStack.Types,
             type => Assert.IsType<CilStackType.Float32>(type),
             type => Assert.IsType<CilStackType.Int32>(type));
         Assert.Collection(
@@ -221,7 +236,7 @@ public sealed class CilPreStackAnalysisTests
 #if DEBUG
         var ordinary = GetMethod(nameof(ResetAfterWrite));
         Assert.Contains(
-            new MethodBodyAnalysisModel(ordinary).Instructions,
+            CilMethodDecoder.Decode(ordinary).Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
         AssertInitObjectRejected(ordinary);
 #endif
@@ -233,7 +248,7 @@ public sealed class CilPreStackAnalysisTests
     public void ScalarInputsAndStoresUseTheDocumentedPreNormalization()
     {
         var model = ParseModel(Fixtures.ScalarStorage);
-        var stores = model.Instructions
+        var stores = model.RawCode.Instructions
                           .Where(instruction => instruction.Instruction.OpCode.Name?.StartsWith("stloc") == true)
                           .ToArray();
         CilStackType[] expected =
@@ -254,8 +269,8 @@ public sealed class CilPreStackAnalysisTests
         Assert.Equal(expected.Length, stores.Length);
         foreach (var (store, type) in stores.Zip(expected))
         {
-            Assert.Equal(type, Assert.Single(model.PreStackTypes[store.Index]));
-            Assert.Empty(model.PreStackTypes[store.Index + 1]);
+            Assert.Equal(type, Assert.Single(Pre(model, store.Index).Types));
+            Assert.Empty(Pre(model, store.Index + 1).Types);
         }
     }
 
@@ -263,7 +278,7 @@ public sealed class CilPreStackAnalysisTests
     public void SupportedScalarCallsSeeNormalizedPreFacts()
     {
         var model = ParseModel(Fixtures.SupportedScalarCalls);
-        var calls = model.Instructions
+        var calls = model.RawCode.Instructions
                          .Where(instruction => instruction.Instruction.Operand is MethodBase called &&
                                                called.Name.StartsWith("Identity"))
                          .ToArray();
@@ -278,7 +293,7 @@ public sealed class CilPreStackAnalysisTests
 
         Assert.Equal(expected.Length, calls.Length);
         foreach (var (call, type) in calls.Zip(expected))
-            Assert.Equal(type, Assert.Single(model.PreStackTypes[call.Index]));
+            Assert.Equal(type, Assert.Single(Pre(model, call.Index).Types));
     }
 
     [Theory]
@@ -297,9 +312,9 @@ public sealed class CilPreStackAnalysisTests
         var declaration = Assert.IsType<FunctionDeclaration>(parser.Context[Symbol.Function(method)]);
         var model = parser.Context.GetFunctionDefinition(declaration);
         var call = Assert.Single(
-            model.Instructions,
+            model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
-        var type = Assert.Single(model.PreStackTypes[call.Index]);
+        var type = Assert.Single(Pre(model, call.Index).Types);
 
         if (isInt64)
             Assert.IsType<CilStackType.Int64>(type);
@@ -311,11 +326,11 @@ public sealed class CilPreStackAnalysisTests
     public void DiamondWithEqualTypesMergesAtOriginalInstruction()
     {
         var model = ParseModel(GetMethod(nameof(Diamond)));
-        var merge = model.Labels.Select(label => model.ControlFlowGraph[label])
-                         .Single(block => model.ControlFlowGraph.Predecessor(block.Label).Count == 2);
+        var merge = model.Labels.Select(label => model.ControlFlow.Node[label])
+                         .Single(block => model.ControlFlow.Node.Predecessor(block.Label).Count == 2);
 
         Assert.Collection(
-            model.PreStackTypes[merge.InstructionIndex],
+            Pre(model, merge.InstructionIndex).Types,
             type => Assert.IsType<CilStackType.Int32>(type));
     }
 
@@ -334,15 +349,15 @@ public sealed class CilPreStackAnalysisTests
     public void MalformedBranchTargetIsRejectedWithSourceAndTargetContext()
     {
         var method = GetMethod(nameof(Diamond));
-        var model = new MethodBodyAnalysisModel(method);
-        var branch = model.Instructions.First(instruction =>
+        var raw = CilMethodDecoder.Decode(method);
+        var branch = raw.Instructions.First(instruction =>
             instruction.Instruction.OpCode.FlowControl == FlowControl.Cond_Branch);
         var malformed = branch with { NextByteOffset = int.MaxValue };
-        var resolver = typeof(MethodBodyAnalysisModel).GetMethod(
+        var resolver = typeof(CilMethodEnvironment).GetMethod(
             "ResolveBranchTarget",
             BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Branch target resolver was not found.");
-        var invocation = Assert.Throws<TargetInvocationException>(() => resolver.Invoke(model, [malformed]));
+        var invocation = Assert.Throws<TargetInvocationException>(() => resolver.Invoke(raw.Environment, [malformed]));
         var exception = Assert.IsType<InvalidProgramException>(invocation.InnerException);
 
         Assert.Contains("Branch target overflows", exception.Message);
@@ -366,6 +381,8 @@ public sealed class CilPreStackAnalysisTests
     private static int MutualA(int value) => value <= 0 ? 0 : MutualB(value - 1);
 
     private static int MutualB(int value) => value <= 0 ? 1 : MutualA(value - 1);
+
+    private static uint CallFailingCallee(uint value) => BooleanCallShader.ForwardUnsigned(value);
 
     private static int WithFinally(int value)
     {
@@ -425,6 +442,11 @@ public sealed class CilPreStackAnalysisTests
         var declaration = parser.ParseMethod(method);
         return parser.Context.GetFunctionDefinition(declaration);
     }
+
+    private static PreStack Pre(MethodBodyAnalysisModel model, int instructionIndex) =>
+        Assert.Single(
+            model.PreAnnotatedCode.Instructions,
+            instruction => instruction.Node.Index == instructionIndex).Annotation;
 
     private static class Fixtures
     {
