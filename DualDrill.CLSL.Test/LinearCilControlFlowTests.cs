@@ -131,7 +131,9 @@ public sealed class LinearCilControlFlowTests
 
     private static MethodBodyAnalysisModel CreateModel(string name)
     {
-        return new MethodBodyAnalysisModel(GetMethod(name));
+        var parser = new RuntimeReflectionParser();
+        var declaration = parser.ParseMethod(GetMethod(name));
+        return parser.Context.GetFunctionDefinition(declaration);
     }
 
     private static MethodInfo GetMethod(string name)
