@@ -5,6 +5,88 @@ implemented representations and intended stages. A logical pass boundary does
 not require a new CLR type. Conversely, using one CLR type does not excuse
 leaving a consumer's required invariant unspecified.
 
+## Agreed Next Boundary: Parse a Complete CIL Module
+
+This section is the next implementation contract. The implemented table below
+still describes the current parser-orchestrated pipeline until this slice lands.
+
+The parser/collector must finish after collecting the module's declarations,
+referenced types and original CIL bodies. It must not perform Pre stack analysis,
+construct a BB CFG, lift stack values, compute dominance, or create region IR.
+Subsequent transformations are explicit pass functions orchestrated outside the
+parser, each with one semantic responsibility.
+
+### Deliberate Collection-Policy Change
+
+Module membership is based on all references in the original CIL, not on
+instruction reachability. Recursively collect referenced methods and their
+referenced types/bodies until an explicitly mapped builtin type/method or
+intrinsic declaration boundary is reached. Include references in syntactically
+dead instruction positions. Declaration-first cycle handling supports repeated
+references and mutual recursion without executing the methods.
+
+Collect types required by signatures, locals, fields, construction and other
+supported metadata operands. This means the reference closure, not enumerating
+every unrelated method in an assembly. A builtin/intrinsic boundary is explicit;
+an unfamiliar method is not silently treated as a builtin just because parsing
+its body is inconvenient.
+
+This supersedes the previous "dead callees are not declared or compiled" rule.
+Collection is allowed to do additional work on dead references. A non-builtin
+referenced method with unsupported content may now cause later compilation to
+fail even when the call site is unreachable. Record such cases as an intentional
+policy change rather than changing tests silently.
+
+Parsing collects raw code and metadata; semantic support checks belong to the
+appropriate later pass where possible. Do not drop references to `throw` or
+exception-handling code to make collection succeed, and do not claim support
+for those semantics. If collection cannot decode or resolve a reference, report
+the source method/operand explicitly instead of publishing a partial module.
+
+### Pass Responsibilities
+
+```text
+parse/collect the all-reference CIL module
+  -> Pre stack analysis over each collected function
+  -> reachable CFG construction using completed Pre facts
+  -> explicit stack-value / operation lowering
+  -> control-flow analysis and region construction
+  -> existing operation/parameter lowering
+  -> target emission
+```
+
+Moving code into passes must change the actual public producer/consumer path,
+not leave `ParseShaderModule` returning already-lowered `FunctionBody4` while
+renaming its private helpers. Reuse the module/body generics where appropriate
+and document any necessary public API migration without compatibility shims.
+
+The later Pre pass may still omit unreachable positions inside a collected
+method's CFG; that is independent of which method bodies were collected into
+the module. Preserve complete source, native predicates, original labels and
+offsets, pointer constraints, exact type joins, and explicit unsupported
+operation failures.
+
+Pass-local scratch dictionaries and worklists are allowed. Published IR stage
+values remain immutable and printable. A pass explicitly preserves, drops or
+recomputes annotations; there is no automatic invalidation framework.
+
+### Separate Follow-Up: BB-Local Analysis Facts
+
+Where a fact is about one BB, prefer a result shaped like
+`CFG<Annotated<TBasicBlock, TBlockFacts>>`. Immediate dominance, postdominance,
+loop-header and relevant ordering facts can reference other blocks by stable
+labels. Their global computation does not require a permanent global
+BB-to-facts dictionary as the consumer API.
+
+Choose one authoritative representation, deriving auxiliary indexes as needed;
+do not publish duplicate mutable copies of the same facts. A topology-changing
+pass may invalidate annotations on multiple BBs and can return a globally
+rebuilt immutable result. General incremental maintenance is not required.
+
+Implement this analysis-result reorganization as a separately reviewable slice
+after the parser/pass boundary, not as a new structurization algorithm hidden
+inside the collection change.
+
 ## Implemented Public Path
 
 | Component | Input -> output | Current responsibility |

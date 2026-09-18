@@ -2,6 +2,15 @@
 
 ## Status and Scope
 
+**Next collection contract:** [parse a complete all-reference CIL module](passes.md#agreed-next-boundary-parse-a-complete-cil-module).
+The user has superseded the reachability-based callee-discovery rule described
+in the implemented pipeline below. The next parser boundary recursively collects
+all original-CIL method/type references up to explicit builtin/intrinsic
+boundaries and ends at raw CIL IR; Pre and later transformations move into
+passes. This changes module membership, not the later per-function reachable
+instruction analysis. Until that slice lands, the remaining implementation
+description documents the existing behavior.
+
 This is the agreed next frontend design for issue #96, following the shared
 constructs in [the IR contract](../ir_spec.md). It supersedes the earlier proposal
 to require basic-block construction before stack-type analysis, or to split the
