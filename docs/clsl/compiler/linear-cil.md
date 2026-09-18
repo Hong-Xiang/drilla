@@ -47,13 +47,14 @@ native controls accept only supported opcode families (`ret`, `br`/`br.s`, and
 the supported conditional branches). Unsupported `switch`, exception flow, and
 reaching the end of CIL without an explicit return fail explicitly.
 
-Pre-stack typing, annotated CFG construction, stack-value lifting, and later
-region/AST work below remain planned stages, not implemented behavior.
+Pre-stack typing and reachable CFG consumption are the next integrated slice.
+They are not implemented merely by exposing the instruction array. Independent
+stack-value lifting and later region/AST work remain subsequent steps.
 
 ```text
 LinearCode<CilInstruction>
-  -> LinearCode<(CilInstruction, PreStackState)>
-  -> CFG<TypedStackBlock>
+  -> original linear code + completed reachable-position Pre map
+  -> reachable CFG<TypedStackBlock>
   -> CFG<ValueBlock>
   -> scoped nested region SSA-like representation
   -> target AST
@@ -117,17 +118,24 @@ required.
 
 ## Pre-Instruction Stack Analysis
 
-The proposed result decorates the original linear code:
+The agreed first result preserves the full original linear source and associates
+Pre states only with reachable original instruction positions:
 
 ```text
-PreStackState =
-    Unreachable
-  | Reachable(ImmutableStack<CilStackType>)
+PreTypes:
+    InstructionId -> ImmutableStack<CilStackType>
 ```
 
-`Reachable(empty)` means reachable with an empty evaluation stack. It is not
-unreachable or not-yet-analyzed. Pending state belongs inside the analysis;
-successful completed output contains no unresolved pending states.
+A present entry with an empty stack is a reachable empty-stack position. During
+analysis, an absent entry means only that the position has not yet been reached;
+do not discard it while propagation is unfinished. Only after successful
+completion does absence identify a position that is unreachable from the normal
+entry under the supported control-flow model.
+
+This replaces the earlier per-instruction `Unreachable | Reachable` result.
+Downstream stages need not carry an unreachable-state variant. Retain original
+instructions, positions, and offsets even when their positions are absent from
+the completed map.
 
 The algorithm is a type-level abstract interpreter, not execution of the
 compiled method. Its inputs include the method signature, arguments, locals,
@@ -154,11 +162,23 @@ instruction immediately before it in the array. The analysis needs control
 relations but does not require materializing a basic-block CFG or computing
 dominators first.
 
+Consider both conditional arms regardless of observed values or whether a
+particular CPU execution took them. This is entry reachability, not constant
+propagation or general dead-code optimization. Unsupported reachable operations,
+stack conflicts, malformed targets, and incomplete/failed analysis must not be
+reclassified as unreachable.
+
 Check stack underflow, height compatibility, slot compatibility, and the
 supported opcode's transfer rules. Define `CilStackType` for the actual supported
 scalar, value/reference, and managed-pointer cases; do not substitute
 `System.Type` or shader types indiscriminately. Unsupported joins and instructions
 fail explicitly, never by replacing a stack with an empty/default state.
+
+Before implementation, specify the exact supported type domain and per-slot
+merge rule using existing supported CIL behavior. Do not silently introduce
+general reference-type widening, erase managed-pointer distinctions, or widen
+the accepted opcode set. The type analysis does not establish pointer alias
+compatibility or SSA value identity.
 
 Exception handlers need additional entry/transfer rules and are outside the
 initial design's supported subset. Do not introduce hidden handler behavior or
@@ -171,16 +191,33 @@ directly provide the merged entry state needed at a target block.
 
 ## Lossless Annotated-Linear to CFG Boundary
 
-Partition the annotated sequence at the entry, branch targets, and appropriate
-control boundaries. A stack BB contains ordinary instructions plus an explicit
-terminator. Its entry stack types come from the first instruction's Pre state;
-splitting does not re-infer them.
+Decode the linear source and run Pre analysis before materializing the BB CFG.
+The present `MethodBodyAnalysisModel` constructs its CFG eagerly; simply
+constructing that old object first and analyzing it afterward does not satisfy
+this stage ordering.
+
+Partition at the entry, branch targets, and appropriate control boundaries, and
+construct downstream blocks only for reachable positions from the completed Pre
+map. A stack BB contains ordinary instructions plus an explicit terminator. Its
+entry stack types come from the first instruction's Pre state; splitting does
+not re-infer them.
+
+Filter before building the resulting graph's predecessor indexes as well as its
+successors. A reachable-only traversal of a graph that still includes dead
+predecessors is not a reachable-only CFG. Keep original positions stable rather
+than deleting source bytes and renumbering the linear code.
 
 Represent implicit fallthrough explicitly in the CFG without inserting bytes
 into the original linear code. A synthesized fallthrough must be distinguishable
-from an original CIL control instruction. Retain every original instruction,
-including the original terminating instruction, through the BB body/terminator
-representation and source provenance.
+from an original CIL control instruction. Retain every reachable original instruction, including the
+original terminating instruction, through the BB body/terminator representation.
+Unreachable instructions remain available in the original linear source but do
+not require fabricated entry types or emitted blocks.
+
+Instruction and callee discovery used for compilation must consistently consume
+the reachable view; retaining the full source for diagnostics must not cause a
+dead call to be lowered through a separate path. Existing method-level rejection
+of unsupported exception handling remains in force.
 
 Use `CFG<TBasicBlock>` to preserve the concrete payload type. CFG and graph
 analysis need only a read-only control capability. They must not convert the
@@ -230,8 +267,10 @@ lossless round trip.
 1. **Lossless source/control boundary:** explicit linear representation or view,
    concrete native CIL control retained through CFG construction, generic
    projections, and at least one real existing frontend consumer.
-2. **Pre-stack analysis:** reuse supported CIL semantics, compute completed entry
-   states on instruction positions, and check joins before BB formation.
+2. **Integrated Pre-stack analysis:** reuse supported CIL semantics, compute
+   completed entry states on instruction positions, check joins before BB
+   formation, and wire the result into reachable CFG construction and the live
+   frontend. An unused analysis helper is not completion.
 3. **Annotated CFG and lifting:** consume those annotations, assign stable labels
    and ordered block values, and separate the existing parser's fused steps.
 
