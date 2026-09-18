@@ -40,6 +40,36 @@ exception-handling code to make collection succeed, and do not claim support
 for those semantics. If collection cannot decode or resolve a reference, report
 the source method/operand explicitly instead of publishing a partial module.
 
+### Boundary Audit Clarifications
+
+Every type-bearing root enters the same recursive closure operation: entry and
+referenced method signatures, locals, instruction operands, field owners/types,
+module variables, and static method declaring types. Layout closure includes
+base types and inherited instance fields until an explicit builtin type
+boundary. Type visitation is marked before walking members so reference cycles
+terminate. A CLR value-type shape that cannot be represented without recursive
+construction fails with type context rather than overflowing the parser stack.
+Collection still does not enumerate unrelated assembly methods.
+
+Attributed shader module properties are not a supported variable representation.
+The existing CIL frontend resolves fields, while a property access is a getter
+call and has no established variable/getter ABI. Parsing therefore rejects an
+attributed module property explicitly instead of publishing a declaration that
+later Pre cannot resolve. Attributed fields remain the supported module-variable
+form.
+
+The frozen symbol view snapshots the complete parent chain. A returned raw body
+must not observe later mutation through a parent `CompilationContext`; only the
+known immutable shared-builtin table or an already frozen table may remain as a
+fallback.
+
+The whole parse operation is fail-closed, including module-variable and entry
+metadata discovery before method traversal. Any collection failure poisons that
+parser instance even when no root method was identified, and no later call may
+publish declarations accumulated by the failed attempt. Contextual wrapping is
+limited to expected reflection/metadata failures; programmer faults and fatal
+runtime exceptions are not reclassified as unsupported CIL.
+
 ### Pass Responsibilities
 
 ```text

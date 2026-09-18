@@ -82,10 +82,25 @@ entry-reachable, and the blocks exactly partition the completed annotated source
 and mutually recursive references terminate. It freezes the complete shared
 symbol snapshot only after closure collection finishes, then publishes
 `RawCilFunctionBody` values with immutable per-method local/argument views.
+All type-bearing roots use the same recursive collector, including locals,
+module-variable types, static declaring types, base types and inherited layout
+fields. Type visitation is recorded before member traversal to terminate
+reference cycles. Unsupported recursive value layouts fail contextually.
 Collection does not execute methods, intrinsic stubs, constructors, or static
 initializers. A decode or metadata-resolution failure publishes no module.
 Failures in later passes do not invalidate or mutate an already returned raw
 module.
+
+Shader module variables are field-backed. An attributed property is rejected
+during metadata collection because the current CIL frontend has no property
+getter/backing-field variable ABI. The parser does not publish a property
+declaration that later symbol lookup cannot consume.
+
+Frozen symbol views snapshot mutable `CompilationContext` parents recursively.
+Later parent mutation cannot change lookup results in a previously returned raw
+module. The entire module parse, including variable and entry metadata discovery,
+uses one fail-closed lifecycle; failure poisons that parser before any partial
+module can be returned.
 
 The implemented `CilStackType` domain is:
 
