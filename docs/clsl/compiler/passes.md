@@ -9,8 +9,10 @@ leaving a consumer's required invariant unspecified.
 
 | Component | Input -> output | Current responsibility |
 |---|---|---|
-| `MethodBodyAnalysisModel` / `ControlFlowGraphBuilder` | CIL -> CIL block graph | Instruction ranges, successors, and control-flow analyses. |
-| `RuntimeReflectionParser.ParseMethodBody3` | CIL blocks -> `FunctionBody4` | Stack values become typed operations and block arguments; the parser also creates a dominance-based region tree. |
+| `MethodBodyAnalysisModel` source decoding | Method metadata -> original linear CIL | Preserve every instruction and its original index/byte range; construction alone does not build a CFG. |
+| `CilPreStackAnalyzer` | Linear CIL and method symbols -> sparse Pre stacks | Type-only propagation over original positions with exact normalized joins; successful output contains only reachable positions. |
+| `MethodBodyAnalysisModel.Analyze` / `ControlFlowGraphBuilder.BuildReachable` | Completed Pre facts and source -> reachable CIL block graph | Filter before predecessor construction, retain concrete native control, and attach Pre-derived entry stacks. |
+| `RuntimeReflectionParser.ParseMethodBody3` | Analyzed CIL blocks -> `FunctionBody4` | Create block inputs from Pre, lower values, and check each concrete instruction/edge stack; the parser also creates a dominance-based region tree. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
 | `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
 | `SlangEmitter` | `FunctionBody4` -> Slang text | Resolve supported lexical transfers, place code, and emit syntax. These responsibilities are not yet separate passes. |
@@ -25,8 +27,8 @@ optimization-level pipeline, or comprehensive inter-pass verifier here.
 
 ```text
 linear stack instructions
-  -> linear instructions with completed Pre stack-state annotations
-  -> CFG of typed stack instructions
+  -> complete linear source + sparse reachable-position Pre map
+  -> reachable CFG of typed stack instructions
   -> typed CFG with block arguments
   -> scoped nested regions with shared joins and SSA-like values
   -> target-language AST
@@ -35,8 +37,9 @@ linear stack instructions
 
 This is a staged contract, not a list of already implemented function-body
 classes. Shared instructions, terminators, sequences, labels, and region
-constructors can serve multiple stages. The current parser fuses some of these
-steps, and the current emitter still performs work intended for region-to-AST
+constructors can serve multiple stages. Pre analysis and reachable CFG
+construction are now separate internal operations. Value lifting remains fused
+with parsing, and the emitter still performs work intended for region-to-AST
 lowering.
 
 The agreed [linear CIL design](linear-cil.md) refines the frontend ordering:

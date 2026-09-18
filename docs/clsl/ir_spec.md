@@ -72,7 +72,9 @@ The current public compiler path is:
 
 ```text
 C# compiled by .NET
-  -> CIL and MethodBodyAnalysisModel.ControlFlowGraph
+  -> method declarations and original MethodBodyAnalysisModel.Instructions
+  -> CilPreStackAnalyzer with method symbols
+  -> sparse PreStackTypes and reachable ControlFlowGraph<CilInstructionBlock>
   -> RuntimeReflectionParser.ParseMethodBody3
   -> FunctionBody4
   -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
@@ -83,10 +85,12 @@ C# compiled by .NET
 ```
 
 `FunctionBody4` currently combines typed instructions and parameterized CFG
-terminators with a `RegionTree` built from dominance containment. The parser
-performs stack-to-value translation and creates that region tree in one path.
-The emitter still performs lexical layout. There is not yet an independent
-scoped-region validator, complete structurization pass, or target AST stage.
+terminators with a `RegionTree` built from dominance containment. The frontend
+first computes Pre stack types on the original linear code and constructs only
+the reachable CFG. The parser then uses those facts for block inputs while
+performing stack-to-value translation and region-tree construction. The emitter
+still performs lexical layout. There is not yet an independent scoped-region
+validator, complete structurization pass, or target AST stage.
 
 `ExprValue`/`ExprTree` and the `AbstractSyntaxTree` directory do not constitute a
 complete AST function-body stage in this pipeline. Older design examples,
@@ -102,7 +106,8 @@ implementations.
 | Stage | Required invariant | Current owner or implementation boundary |
 |---|---|---|
 | Linear CIL | Instruction boundaries and branch offsets are resolved consistently. | `MethodBodyAnalysisModel`; unsupported instructions remain explicit failures. |
-| CFG of CIL blocks | Instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved. | `ControlFlowGraphBuilder` and the analysis model. |
+| Linear Pre facts | Reachable entries have exact normalized stack types; absent entries are unreachable only after successful completion. | `CilPreStackAnalyzer`, before CFG construction; full original source is retained. |
+| CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `ControlFlowGraphBuilder.BuildReachable` and the completed Pre facts. |
 | Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `RuntimeReflectionParser` and `ShaderRegionBody` build this representation. Validation is partial, not a complete verifier. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
 | Scoped nested region SSA-like IR | Every shared join has a defined owner; loop/continuation transfers resolve within permitted scopes; edge arguments and definition sharing remain explicit. | Intended contract. Dominance containment alone does not establish it. |
@@ -112,13 +117,14 @@ The typed CFG is SSA-like, not a claim of whole-program SSA: explicit loads,
 stores, and mutable local storage coexist with intermediate values and block
 parameters.
 
-The agreed [linear CIL frontend design](compiler/linear-cil.md) refines the next
-steps: type-level Pre stack analysis can decorate the original linear
-instructions before basic-block construction. Preserve native CIL predicates
-and concrete terminator payload behind narrow generic control views; do not split
-`TE` merely to expose data unused by topology analysis. Instruction-changing
-lowering follows stable CFG label construction. These refinements do not describe
-already completed pipeline changes.
+The [linear CIL frontend contract](compiler/linear-cil.md) describes the now
+implemented Pre-before-CFG ordering and exact supported type/merge rules. It
+retains full source plus a sparse completed Pre map rather than propagating an
+unreachable-state variant downstream. Native CIL predicates and concrete
+terminator payload remain behind narrow generic control views; `TE` is not split
+merely to expose data unused by topology analysis. Instruction-changing lowering
+follows stable CFG label construction. Independent value lifting and scoped
+region/AST stages remain later work.
 
 Structurization and block-parameter elimination are distinct transformations.
 Keeping parameters through a scoped region stage is valid. Eliminating them
