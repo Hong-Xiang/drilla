@@ -10,6 +10,75 @@ hierarchy for every pass. An optimization or lowering may legitimately return
 the same CLR type it consumes. Nested region IR and target-language AST remain
 different logical stages, even when they reuse constructors.
 
+## Agreed Next Refinement: Immutable Annotated Stage Values
+
+This section specifies the next implementation slice, not the state of the
+current mutable frontend model described below. It replaces the proposed
+unspecified `Analyzed<TCode, TFacts>` wrapper with one shared
+`Annotated<TNode, TAnnotation>` constructor.
+
+Use annotation at the scope of the fact:
+
+```text
+LinearCode<CilInstructionInfo>
+LinearCode<Annotated<CilInstructionInfo, PreStack>>
+CFG<Annotated<TBasicBlock, DominanceNodeInfo>>
+Annotated<CFG<TBasicBlock>, DominatorTree>
+```
+
+These are type-shape examples, not a requirement to materialize all four forms
+or duplicate the complete dominance result per block. A graph-wide analysis
+should have one authoritative result; per-node projections can be derived when
+needed. `Annotated` contains `Node` and `Annotation`, not an analysis-in-progress
+flag or proof of semantic correctness.
+
+Raw linear CIL and completed Pre-annotated linear CIL must be different
+immutable values, not nullable fields gradually populated on the same model.
+The reachable annotated sequence pairs each instruction with its entry stack.
+It preserves original instruction identities, offsets and order; its compact
+array index is not a replacement for the original instruction index. The
+complete raw source remains available for diagnostics, including dead code.
+Both stages may share the immutable instruction data.
+
+The worklist may still use an index-to-stack dictionary internally. On success
+it produces a completed stage value consumed by CFG construction. No pending
+state is published as an empty stack; failures do not publish a partial stage.
+Method signatures, local declarations and source metadata are a shared immutable
+environment, not a reason to keep raw/Pre/CFG completion caches in one object.
+Mutable parser symbol/recursion/failure bookkeeping stays separate from the IR.
+
+Each real stage has a fixed, read-only `PrettyPrint` operation using the existing
+`IPrintable` contract. The receiver's type determines the printed representation;
+it must not change output stages according to mutable availability flags or
+implicitly run analysis. Reuse the current stage formatting instead of adding
+another printer registry. A small annotation constructor is preferred to
+`ValueTuple` so the owned type can participate in typed printing composition.
+Do not create wrappers whose only purpose is renaming `DumpXXX` calls while
+leaving the old nullable-stage model authoritative.
+
+Generic annotations do not automatically inherit a wrapped BB's control
+interface. Topology consumers must obtain the original node's control projection
+through explicit composition; predicate/edge data remain on the concrete node.
+Do not duplicate an editable successor or special-case each annotation payload
+inside CFG analysis.
+
+Analysis validity belongs to the pass contract. A pure `Select` maps exactly the
+requested fields; it does not secretly discard facts or claim an arbitrary node
+rewrite preserves them. A rewriting pass explicitly preserves, replaces, or
+drops the annotation and recomputes facts as needed. Type distinctions can
+prevent passing raw code where completed facts are required, but do not prove
+arbitrary annotations or transformations semantically valid.
+
+The first implementation must wire these values through decoding, Pre analysis,
+reachable CFG construction, the live parser, and diagnostic callers. Reuse
+existing topology analysis through a graph-level annotation in a real consumer
+where that is part of the slice; do not introduce unused dominance-node fields.
+Remove superseded mutable completion fields and diagnostic-selection shims,
+update all callers, and document source/API migration. Preserve compiler
+semantics and the existing pointer, unsupported-operation, reachability and
+parser-failure contracts. Region/AST algorithms and generic invalidation
+frameworks are outside this refinement.
+
 ## Three Relations, Not One Tree
 
 - **Containment:** which expression or region owns a definition.
