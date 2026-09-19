@@ -405,8 +405,10 @@ internal static class CilStagePrettyPrinter
         switch (value)
         {
             case IntermediateValue:
-            case LiteralValue:
                 value.Dump(context, writer);
+                return;
+            case LiteralValue literal:
+                literal.Value.PrettyPrint(writer, PrettyPrintOption.Default);
                 return;
             case ParameterPointerValue parameter:
                 writer.Write("&arg(");
