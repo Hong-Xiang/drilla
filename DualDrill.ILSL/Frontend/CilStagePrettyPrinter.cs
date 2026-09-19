@@ -39,6 +39,19 @@ internal static class CilStagePrettyPrinter
             WriteOptionalLabel(facts.ImmediateDominator, context, writer);
             writer.Write(" ipdom=");
             WriteOptionalLabel(facts.ImmediatePostDominator, context, writer);
+            writer.Write(" incoming=[");
+            var separator = "";
+            foreach (var arm in facts.IncomingArms)
+            {
+                writer.Write(separator);
+                arm.Source.Dump(context, writer);
+                writer.Write("[");
+                writer.Write(Invariant(arm.SuccessorIndex));
+                writer.Write("]:");
+                writer.Write(arm.IsBackedge ? "backedge" : "forward");
+                separator = ",";
+            }
+            writer.Write("]");
             writer.Write(" loop-header=");
             writer.Write(facts.IsLoopHeader ? "true" : "false");
             writer.WriteLine("}");

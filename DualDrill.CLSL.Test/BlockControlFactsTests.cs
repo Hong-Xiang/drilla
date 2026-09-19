@@ -94,7 +94,11 @@ public sealed class BlockControlFactsTests
                     body,
                     new Annotated<ISuccessor, BlockControlFacts>(
                         body,
-                        new BlockControlFacts(0, null, null, true),
+                        new BlockControlFacts(
+                            0,
+                            null,
+                            null,
+                            [new IncomingControlArm(entry, 0, true)]),
                         PrintNothing))
             });
 
@@ -116,10 +120,14 @@ public sealed class BlockControlFactsTests
             {
                 [entry] = Definition(
                     new UnconditionalSuccessor(exit),
-                    new BlockControlFacts(0, null, foreign, false)),
+                    new BlockControlFacts(0, null, foreign, [])),
                 [exit] = Definition(
                     new TerminateSuccessor(),
-                    new BlockControlFacts(1, entry, null, false))
+                    new BlockControlFacts(
+                        1,
+                        entry,
+                        null,
+                        [new IncomingControlArm(entry, 0, false)]))
             });
 
         var exception = Assert.Throws<ArgumentException>(() =>
