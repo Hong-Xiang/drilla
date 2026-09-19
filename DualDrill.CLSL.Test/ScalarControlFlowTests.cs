@@ -197,18 +197,18 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             stages.Compiled.FunctionDefinitions.Values,
             body => body.Declaration.Name == method.Name);
         var model = Assert.Single(
-            stages.ControlFlow.FunctionDefinitions.Values,
+            stages.Labelled.FunctionDefinitions.Values,
             body => body.Environment.Method == method);
         Assert.True(model.Labels.ToHashSet().SetEquals(original.Labels));
         foreach (var label in model.Labels)
         {
-            var range = model.ControlFlow[label];
+            var range = model[label];
             output.WriteLine($"{method.Name} {label}: IL_{range.ByteOffset:X4}, {range.InstructionCount} instructions, " +
-                $"successors {string.Join(", ", model.ControlFlow.GetSucc(label))}");
+                $"successors {string.Join(", ", range.Terminator.ToSuccessor().AllTargets())}");
         }
         var valueControlFlow = Assert.Single(
             stages.ValueControlFlow.FunctionDefinitions.Values,
-            body => body.Source.Environment.Method == method);
+            body => body.Source.Source.Source.Environment.Method == method);
         output.WriteLine("ACTUAL input value CFG:");
         output.WriteLine(valueControlFlow.Graph.PrettyPrint());
         output.WriteLine("ACTUAL output region/control:");
@@ -256,14 +256,6 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             [body.Declaration], ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
         .Emit();
 
-    private static void AssertEquivalent(Execution expected, Execution actual)
-    {
-        Assert.True(expected.Trace.SequenceEqual(actual.Trace),
-            $"Expected result: {expected.Result}; actual: {actual.Result}\n" +
-            $"Original blocks: {string.Join(" -> ", expected.Trace)}\nExecuted blocks: {string.Join(" -> ", actual.Trace)}");
-        Assert.Equal(expected.Result, actual.Result);
-    }
-
     [Fact]
     public void FixtureHasActualConfigurationSpecificCil()
     {
@@ -275,8 +267,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.Equal("Release", configuration);
 #endif
         var method = ((Func<int, int>)ScalarControlFlowFixtures.MultipleReturns).Method;
-        var model = CompilerTestPipeline.ControlFlow(method);
-        var returns = model.Labels.Where(label => model.ControlFlow.Successor(label) is TerminateSuccessor)
+        var model = CompilerTestPipeline.Labelled(method);
+        var returns = model.Labels.Where(label => model[label].Terminator.ToSuccessor() is TerminateSuccessor)
             .ToArray();
         var debuggable = assembly.GetCustomAttribute<DebuggableAttribute>() ??
             throw new InvalidOperationException("Missing compiler configuration metadata.");
@@ -285,7 +277,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             case "Debug":
                 Assert.True(debuggable.IsJITOptimizerDisabled);
                 Assert.Single(returns);
-                Assert.Equal(3, model.ControlFlow.GetPred(returns[0]).Count());
+                Assert.Equal(3, model.Blocks.Blocks.Count(
+                    block => block.Terminator.ToSuccessor().AllTargets().Contains(returns[0])));
                 break;
             case "Release":
                 Assert.False(debuggable.IsJITOptimizerDisabled);

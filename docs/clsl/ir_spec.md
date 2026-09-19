@@ -184,9 +184,15 @@ C# compiled by .NET
   -> `ShaderModuleDeclaration<RawCilFunctionBody>`
   -> CilPreStackPass
   -> `ShaderModuleDeclaration<PreCilFunctionBody>`
-  -> CilControlFlowPass
-  -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>`
-  -> CilStackToValuePass
+  -> CilBlockPartitionPass
+  -> `ShaderModuleDeclaration<LabelledCilFunctionBody>`
+  -> CilToShaderStackPass
+  -> `ShaderModuleDeclaration<ShaderStackFunctionBody>`
+  -> ShaderStackControlFlowPass
+  -> `ShaderModuleDeclaration<ShaderStackControlFlowBody>`
+  -> ShaderStackToValuePass
+  -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
+  -> CilLocalPromotionPass
   -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
   -> CilBlockControlFactsPass
   -> `ShaderModuleDeclaration<CilValueControlFactsBody>`
@@ -224,8 +230,12 @@ target AST lowering remains planned.
 |---|---|---|
 | Raw CIL module | All declarations and supported metadata references reachable from the roots through original CIL are present; each non-boundary method body is losslessly decoded once. | `RuntimeReflectionParser` produces `ShaderModuleDeclaration<RawCilFunctionBody>` with frozen symbol views. |
 | Linear Pre facts | Reachable entries have exact normalized stack types; absence from the completed value means unreachable. | `CilPreStackPass` produces `ShaderModuleDeclaration<PreCilFunctionBody>`; full original source remains separate. |
-| CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `CilControlFlowPass` produces `ShaderModuleDeclaration<MethodBodyAnalysisModel>`. |
-| Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `CilStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. Validation is partial, not a complete verifier. |
+| Labelled block list | Nonempty immutable storage; unique payload-owned label identities; entry and all projected control targets are defined. No reachability requirement or graph indexes. | `BlockList<TBlock>` with existing `ILabeledEntity`; `InstructionBlockPartitioner` preserves original CIL ranges and binds labels before payload construction. |
+| Labelled CIL blocks | Reachable instruction ranges exactly partition completed Pre; explicit terminators, labels and legitimate fallthrough edges retain source identity. | `CilBlockPartitionPass` produces `ShaderModuleDeclaration<LabelledCilFunctionBody>`. |
+| Labelled shader stack blocks | Every operation and terminator has checked typed Pre/Post, explicit pop behavior and numeric source provenance. | `CilToShaderStackPass` produces `ShaderModuleDeclaration<ShaderStackFunctionBody>`. |
+| Shader stack CFG | Every edge has exact source-exit/destination-entry stack equality; graph construction interprets only projected control. | `ShaderStackControlFlowPass` produces `ShaderModuleDeclaration<ShaderStackControlFlowBody>`. |
+| Typed CFG with block arguments | Mechanical stack elimination preserves operations, provenance, labels, arm order and bottom-to-top edge arguments. | `ShaderStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. |
+| Promoted typed CFG | Direct nonescaping function-local `i32` and `bool` storage is replaced by values and appended block parameters when definitions reach all uses; exact raw `InitLocals` metadata supplies only typed zero/false entry definitions. Escaped, unsupported and incompletely initialized locals remain memory operations. | `CilLocalPromotionPass` maps the value module to the same body type before control facts. |
 | BB-annotated value CFG | Original blocks, labels and ordered edges remain unchanged; local facts hold existing RPO, IDom, IPDom and loop-header results. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
 | Region binding tree | Consume published local facts, preserve descending-RPO dominator-child order without reanalysis, and check lexical control plus edge arguments. | `CilRegionPass` produces `FunctionBody4`; `FunctionBody4.Control` exposes the checked scoped-continuation index. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
@@ -240,9 +250,13 @@ implemented Pre-before-CFG ordering and exact supported type/merge rules. It
 retains full source plus a sparse completed Pre map rather than propagating an
 unreachable-state variant downstream. Native CIL predicates and concrete
 terminator payload remain behind narrow generic control views; `TE` is not split
-merely to expose data unused by topology analysis. Instruction-changing lowering
-follows stable CFG label construction. Value lifting and checked scoped regions
-are implemented; target AST lowering remains later work.
+merely to expose data unused by topology analysis. Instruction-changing lowering follows stable block-list label binding. Issue
+#114's foundation separates partitioning from `ControlFlowGraph.Create`, which
+preserves all stored block definitions and their concrete payloads. The former
+public CIL CFG and `MethodBodyAnalysisModel` are removed. CIL-to-shader-stack
+instruction/type lowering happens **before** generic CFG construction, followed
+by CIL-independent stack-to-explicit-values conversion, local promotion and
+checked scoped regions. Target AST lowering remains later work.
 
 Structurization and block-parameter elimination are distinct transformations.
 Keeping parameters through a scoped region stage is valid. Eliminating them

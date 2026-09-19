@@ -1,5 +1,6 @@
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Reflection;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
@@ -30,6 +31,23 @@ public sealed class PromoteLocalsPassTests
                       limit,
                       limit <= 0 ? 0 : limit * (limit - 1) / 2
                   });
+
+    [Fact]
+    public void ValueControlFlowGraphFormatterIsTheOnlyPublicPrinterContract()
+    {
+        var type = typeof(CilStagePrettyPrinter);
+        Assert.True(type.IsPublic);
+
+        var method = Assert.Single(type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly));
+        Assert.Equal(nameof(CilStagePrettyPrinter.PrintValueControlFlow), method.Name);
+        Assert.Equal(
+            [
+                typeof(ControlFlowGraph<CilValueBasicBlock>),
+                typeof(ILocalDeclarationContext),
+                typeof(IndentedTextWriter)
+            ],
+            method.GetParameters().Select(parameter => parameter.ParameterType));
+    }
 
     [Theory]
     [InlineData(false, false, 30)]
