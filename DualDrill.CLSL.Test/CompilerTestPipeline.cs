@@ -15,6 +15,7 @@ internal static class CompilerTestPipeline
         ShaderModuleDeclaration<ShaderStackFunctionBody> ShaderStack,
         ShaderModuleDeclaration<ShaderStackControlFlowBody> ShaderControlFlow,
         ShaderModuleDeclaration<CilValueControlFlowBody> ValueControlFlow,
+        ShaderModuleDeclaration<CilValueControlFlowBody> PromotedValueControlFlow,
         ShaderModuleDeclaration<CilValueControlFactsBody> ControlFacts,
         ShaderModuleDeclaration<FunctionBody4> Compiled);
 
@@ -28,7 +29,8 @@ internal static class CompilerTestPipeline
         var shaderStack = CilToShaderStackPass.Run(labelled);
         var shaderControlFlow = ShaderStackControlFlowPass.Run(shaderStack);
         var valueControlFlow = ShaderStackToValuePass.Run(shaderControlFlow);
-        var controlFacts = CilBlockControlFactsPass.Run(valueControlFlow);
+        var promotedValueControlFlow = CilLocalPromotionPass.Run(valueControlFlow);
+        var controlFacts = CilBlockControlFactsPass.Run(promotedValueControlFlow);
         var compiled = CilRegionPass.Run(controlFacts);
         return new Stages(
             raw,
@@ -37,6 +39,7 @@ internal static class CompilerTestPipeline
             shaderStack,
             shaderControlFlow,
             valueControlFlow,
+            promotedValueControlFlow,
             controlFacts,
             compiled);
     }
@@ -100,11 +103,12 @@ internal static class CompilerTestPipeline
         MethodBase method,
         CompilationContext? context = null) =>
         Assert.Single(
-            CilBlockControlFactsPass.Run(ShaderStackToValuePass.Run(
-                    ShaderStackControlFlowPass.Run(
-                        CilToShaderStackPass.Run(
-                            CilBlockPartitionPass.Run(
-                                CilPreStackPass.Run(ParseRaw(method, context)))))))
+            CilBlockControlFactsPass.Run(CilLocalPromotionPass.Run(
+                    ShaderStackToValuePass.Run(
+                        ShaderStackControlFlowPass.Run(
+                            CilToShaderStackPass.Run(
+                                CilBlockPartitionPass.Run(
+                                    CilPreStackPass.Run(ParseRaw(method, context))))))))
                 .FunctionDefinitions.Values,
             body => body.Source.Source.Source.Source.Environment.Method == method);
 

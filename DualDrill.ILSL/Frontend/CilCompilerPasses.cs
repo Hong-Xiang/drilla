@@ -255,6 +255,26 @@ public static class ShaderStackToValuePass
     }
 }
 
+public static class CilLocalPromotionPass
+{
+    public static ShaderModuleDeclaration<CilValueControlFlowBody> Run(
+        ShaderModuleDeclaration<CilValueControlFlowBody> module) =>
+        module.MapBody(static (_, _, body) =>
+        {
+            var raw = body.Source.Source.Source.Raw;
+            var methodBody = raw.Code.Environment.Body
+                             ?? throw new InvalidOperationException(
+                                 $"Cannot promote locals for {raw.Code.Environment.Method}: " +
+                                 "MethodBody metadata is unavailable.");
+            return new CilValueControlFlowBody(
+                body.Source,
+                PromoteLocalsPass.Run(
+                    body.Graph,
+                    raw.DeclarationContext.LocalVariables,
+                    methodBody.InitLocals));
+        });
+}
+
 public static class CilBlockControlFactsPass
 {
     public static ShaderModuleDeclaration<CilValueControlFactsBody> Run(
@@ -291,9 +311,10 @@ public static class CilModuleCompiler
         ShaderModuleDeclaration<RawCilFunctionBody> module) =>
         CilRegionPass.Run(
             CilBlockControlFactsPass.Run(
-                ShaderStackToValuePass.Run(
-                    ShaderStackControlFlowPass.Run(
-                        CilToShaderStackPass.Run(
-                            CilBlockPartitionPass.Run(
-                                CilPreStackPass.Run(module)))))));
+                CilLocalPromotionPass.Run(
+                    ShaderStackToValuePass.Run(
+                        ShaderStackControlFlowPass.Run(
+                            CilToShaderStackPass.Run(
+                                CilBlockPartitionPass.Run(
+                                    CilPreStackPass.Run(module))))))));
 }

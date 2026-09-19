@@ -156,6 +156,8 @@ C# compiled by .NET
   -> `ShaderModuleDeclaration<ShaderStackControlFlowBody>`
   -> ShaderStackToValuePass
   -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
+  -> CilLocalPromotionPass
+  -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
   -> CilBlockControlFactsPass
   -> `ShaderModuleDeclaration<CilValueControlFactsBody>`
   -> CilRegionPass
@@ -196,6 +198,7 @@ claim of complete scoped-control legality; target AST lowering remains planned.
 | Labelled shader stack blocks | Every operation and terminator has checked typed Pre/Post, explicit pop behavior and numeric source provenance. | `CilToShaderStackPass` produces `ShaderModuleDeclaration<ShaderStackFunctionBody>`. |
 | Shader stack CFG | Every edge has exact source-exit/destination-entry stack equality; graph construction interprets only projected control. | `ShaderStackControlFlowPass` produces `ShaderModuleDeclaration<ShaderStackControlFlowBody>`. |
 | Typed CFG with block arguments | Mechanical stack elimination preserves operations, provenance, labels, arm order and bottom-to-top edge arguments. | `ShaderStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. |
+| Promoted typed CFG | Direct nonescaping function-local `i32` and `bool` storage is replaced by values and appended block parameters when definitions reach all uses; exact raw `InitLocals` metadata supplies only typed zero/false entry definitions. Escaped, unsupported and incompletely initialized locals remain memory operations. | `CilLocalPromotionPass` maps the value module to the same body type before control facts. |
 | BB-annotated value CFG | Original blocks, labels and ordered edges remain unchanged; local facts hold existing RPO, IDom, IPDom and loop-header results. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
 | Region binding tree | Consume published local facts and preserve descending-RPO dominator-child order without reanalysis. | `CilRegionPass` produces `FunctionBody4`; general structurization and scoped-join legality remain later work. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |

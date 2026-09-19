@@ -75,7 +75,7 @@ Direct IR regression tests cover address identity, chains, cycles, rejected inpu
 parameter slots, and idempotence. Existing Slang end-to-end tests remain compilation checks,
 not GPU execution-equivalence proofs.
 
-### Private scalar local promotion
+### Public scalar local promotion
 
 `PromoteLocalsPass.Run` operates on the flat `ControlFlowGraph<CilValueBasicBlock>` after
 stack-to-value conversion. It promotes each supplied function-local independently when every
@@ -94,8 +94,10 @@ The pass validates connected CFG structure, block labels and successors, empty e
 every individual edge arity/type, duplicate supplied declarations, and load/store arity/types.
 Malformed input throws `ArgumentException`. Labels, topology, retained operations/results,
 payloads, and effect order are preserved, and an unchanged invocation returns the original graph.
-The pass does not update frontend wrappers or cached analyses; callers own orchestration and
-analysis recomputation.
+`CilLocalPromotionPass` maps the public value module through this transform using the raw method's
+exact local declarations and required `MethodBody.InitLocals` metadata. `CilModuleCompiler` runs it
+after `ShaderStackToValuePass` and before `CilBlockControlFactsPass`, so value indexes and
+topology-dependent facts are rebuilt from the promoted graph.
 
 ## CLSL Built in Attributes
 Some attributes are defined to extend C# language's semantic for shaders,

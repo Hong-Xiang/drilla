@@ -56,12 +56,15 @@ public sealed class ShaderStackPipelineTests(ITestOutputHelper output)
         output.WriteLine(Body(stages.ShaderControlFlow, method).PrettyPrint());
         output.WriteLine("=== value-cfg ===");
         output.WriteLine(Body(stages.ValueControlFlow, method).PrettyPrint());
+        output.WriteLine("=== promoted-value-cfg ===");
+        output.WriteLine(Body(stages.PromotedValueControlFlow, method).PrettyPrint());
         output.WriteLine("=== slang ===");
         output.WriteLine(ScalarControlFlowTests.Emit(Body(stages.Compiled, method)));
 
         Assert.Contains("linear-cil raw", CompilerTestPipeline.RawBody(stages.Raw, method).PrettyPrint());
         Assert.Contains("labelled-shader-stack-block-list", Body(stages.ShaderStack, method).PrettyPrint());
         Assert.Contains("flat-value-cfg", Body(stages.ValueControlFlow, method).PrettyPrint());
+        Assert.Contains("flat-value-cfg", Body(stages.PromotedValueControlFlow, method).PrettyPrint());
     }
 
     [Fact]

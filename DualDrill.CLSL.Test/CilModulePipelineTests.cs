@@ -57,7 +57,8 @@ public sealed class CilModulePipelineTests
         var shaderStack = CilToShaderStackPass.Run(labelled);
         var shaderControlFlow = ShaderStackControlFlowPass.Run(shaderStack);
         var values = ShaderStackToValuePass.Run(shaderControlFlow);
-        var facts = CilBlockControlFactsPass.Run(values);
+        var promoted = CilLocalPromotionPass.Run(values);
+        var facts = CilBlockControlFactsPass.Run(promoted);
         _ = CilRegionPass.Run(facts);
 
         Assert.Equal(instructions, rawBody.Code.Instructions);
@@ -216,7 +217,8 @@ public sealed class CilModulePipelineTests
         var shaderStack = CilToShaderStackPass.Run(labelled);
         var shaderControlFlow = ShaderStackControlFlowPass.Run(shaderStack);
         var values = ShaderStackToValuePass.Run(shaderControlFlow);
-        var facts = CilBlockControlFactsPass.Run(values);
+        var promoted = CilLocalPromotionPass.Run(values);
+        var facts = CilBlockControlFactsPass.Run(promoted);
 
         Assert.Contains("linear-cil raw", Format(raw));
         Assert.Contains("linear-cil pre-annotated reachable", Format(pre));
@@ -224,6 +226,7 @@ public sealed class CilModulePipelineTests
         Assert.Contains("labelled-shader-stack-block-list", Format(shaderStack));
         Assert.Contains("shader-stack-cfg", Format(shaderControlFlow));
         Assert.Contains("flat-value-cfg", Format(values));
+        Assert.Contains("flat-value-cfg", Format(promoted));
         Assert.Contains("control-facts-cfg", Format(facts));
         Assert.Contains(" facts={rpo=", Format(facts));
     }
@@ -266,7 +269,7 @@ public sealed class CilModulePipelineTests
                             CompilerTestPipeline.ParseRaw(method))))));
         var valueBody = Assert.Single(valueModule.FunctionDefinitions.Values);
         var factsBody = Assert.Single(
-            CilBlockControlFactsPass.Run(valueModule).FunctionDefinitions.Values);
+            CilBlockControlFactsPass.Run(CilLocalPromotionPass.Run(valueModule)).FunctionDefinitions.Values);
         var valueText = valueBody.PrettyPrint();
         var factsText = factsBody.PrettyPrint();
 

@@ -30,6 +30,7 @@ Raw CIL LinearCode -> strict Pre -> Typed CIL LinearCode
   -> CilToShaderStackPass -> ShaderStackFunctionBody
   -> ShaderStackControlFlowPass -> ShaderStackControlFlowBody
   -> ShaderStackToValuePass -> CilValueControlFlowBody
+  -> CilLocalPromotionPass -> CilValueControlFlowBody
   -> existing control facts / regions
 ```
 
@@ -39,8 +40,10 @@ a resolved literal/function/stable-address symbol. `ShaderStackInstruction`
 contains operations with explicit pop counts, stable alias pushes, or drops.
 Every emitted instruction and terminator has a derived typed transition and
 numeric original-index/byte-range/ordinal provenance. Instruction normalization
-is separate from mechanical stack elimination. No local promotion, region,
-target-AST, or wider call support is included here.
+is separate from mechanical stack elimination. The following public stage
+promotes only definitely assigned direct nonescaping `i32` and `bool` locals;
+escaped, unsupported and incompletely initialized locals remain in storage.
+Region, target-AST and wider call support remain separate.
 
 ### Implemented Frontend Boundary
 
@@ -201,11 +204,13 @@ var labelledModule = CilBlockPartitionPass.Run(preModule);
 var stackModule = CilToShaderStackPass.Run(labelledModule);
 var stackCfgModule = ShaderStackControlFlowPass.Run(stackModule);
 var valueModule = ShaderStackToValuePass.Run(stackCfgModule);
+var promotedValueModule = CilLocalPromotionPass.Run(valueModule);
 Console.Write(preModule.FunctionDefinitions.Values.Single().Code.PrettyPrint());
 Console.Write(labelledModule.FunctionDefinitions.Values.Single().Blocks.PrettyPrint());
 Console.Write(stackModule.FunctionDefinitions.Values.Single().Blocks.PrettyPrint());
 Console.Write(stackCfgModule.FunctionDefinitions.Values.Single().Graph.PrettyPrint());
 Console.Write(valueModule.FunctionDefinitions.Values.Single().Dump());
+Console.Write(promotedValueModule.FunctionDefinitions.Values.Single().Dump());
 ```
 
 The interface operation also accepts an `IndentedTextWriter` and
@@ -274,7 +279,7 @@ shims:
 | `RuntimeReflectionParser.ParseMethod(...) -> FunctionDeclaration` | `ParseMethod(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
 | `RuntimeReflectionParser.ParseShaderModule(...) -> ShaderModuleDeclaration<FunctionBody4>` | `ParseShaderModule(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
 | `CLSLCompiler.Parse(...) -> ShaderModuleDeclaration<FunctionBody4>` | `Parse(...)` for raw CIL; `Compile(...)` for `FunctionBody4` |
-| `parser.MethodBodies` / `ParseMethodBody3` | `CilPreStackPass` -> `CilBlockPartitionPass` -> `CilToShaderStackPass` -> `ShaderStackControlFlowPass` -> `ShaderStackToValuePass` -> `CilBlockControlFactsPass` -> `CilRegionPass` |
+| `parser.MethodBodies` / `ParseMethodBody3` | `CilPreStackPass` -> `CilBlockPartitionPass` -> `CilToShaderStackPass` -> `ShaderStackControlFlowPass` -> `ShaderStackToValuePass` -> `CilLocalPromotionPass` -> `CilBlockControlFactsPass` -> `CilRegionPass` |
 | Public CIL CFG / `MethodBodyAnalysisModel` | `LabelledCilFunctionBody.Blocks`; the first CFG is `ShaderStackControlFlowBody.Graph` |
 | `MethodBodyAnalysisModel.CilInstructionBlock` | `CilInstructionBlock` in `DualDrill.CLSL.Frontend` |
 | `block.Instructions[i]` as a bare CIL instruction | `block.Instructions[i].Node`, with `.Annotation` holding its `PreStack` |
@@ -455,6 +460,8 @@ ShaderStackControlFlowPass / ControlFlowGraph.Create
   -> ControlFlowGraph<ShaderStackBasicBlock>
 ShaderStackToValuePass
   -> ControlFlowGraph<CilValueBasicBlock>
+CilLocalPromotionPass
+  -> ControlFlowGraph<CilValueBasicBlock>
 ```
 
 `CilBlockPartitionPass` retains the raw/Pre source-association and
@@ -513,8 +520,9 @@ by the target shader language.
 Keep the existing scalar conversion, stable-address pointer, and explicit
 unsupported-pattern constraints until separate reviewed changes extend them.
 Retain original labels and distinguish synthetic blocks from original blocks.
-Do not add region/AST layout or general SSA promotion of mutable locals to these
-frontend slices.
+The following bounded promotion stage handles only direct nonescaping `i32` and
+`bool` locals. Do not add region/AST layout or broader mutable-local SSA
+eligibility to these frontend slices.
 
 ## Mapping and Analysis Lifetime
 
