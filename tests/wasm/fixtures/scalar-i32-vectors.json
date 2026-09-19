@@ -1,0 +1,75 @@
+{
+  "source": "scalar-i32.wat",
+  "binary": "scalar-i32.wasm",
+  "malformedBinary": "scalar-i32-truncated.wasm",
+  "nodeMajor": 22,
+  "functions": [
+    {
+      "export": "add",
+      "parameters": 2,
+      "cases": [
+        {
+          "input": [2147483647, 1],
+          "expected": -2147483648
+        },
+        {
+          "input": [-1, 1],
+          "expected": 0
+        },
+        {
+          "input": [-2147483648, -1],
+          "expected": 2147483647
+        }
+      ]
+    },
+    {
+      "export": "choose",
+      "parameters": 3,
+      "cases": [
+        {
+          "input": [0, 7, 9],
+          "expected": 9
+        },
+        {
+          "input": [-1, 7, 9],
+          "expected": 7
+        },
+        {
+          "input": [2, -3, 4],
+          "expected": -3
+        }
+      ]
+    },
+    {
+      "export": "sum",
+      "parameters": 1,
+      "domain": {
+        "parameter": 0,
+        "minimum": -1,
+        "maximum": 10000
+      },
+      "cases": [
+        {
+          "input": [-1],
+          "expected": 0
+        },
+        {
+          "input": [0],
+          "expected": 0
+        },
+        {
+          "input": [1],
+          "expected": 0
+        },
+        {
+          "input": [5],
+          "expected": 10
+        },
+        {
+          "input": [10000],
+          "expected": 49995000
+        }
+      ]
+    }
+  ]
+}
