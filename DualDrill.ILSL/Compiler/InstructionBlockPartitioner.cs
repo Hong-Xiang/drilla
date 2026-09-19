@@ -1,4 +1,5 @@
 ﻿using System.CodeDom.Compiler;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
@@ -7,15 +8,13 @@ using DualDrill.CLSL.Language.Symbol;
 namespace DualDrill.CLSL.Compiler;
 
 /// <summary>
-///     ControlFlowGraphBuilder build control flow graph from linear instructions with control flow instructions like
-///     br, br.if, switch, return, etc.
-///     When building nodes of control flow graph, basis blocks could be constructed
+///     Partitions original instruction positions and binds labels before constructing block payloads.
 /// </summary>
-public sealed class ControlFlowGraphBuilder
+public sealed class InstructionBlockPartitioner
 {
     private readonly Dictionary<int, ISuccessor> IndexSuccessors = [];
 
-    public ControlFlowGraphBuilder(int totalInstructionCount, Func<int, Label> instructionIndexToLabelFactory)
+    public InstructionBlockPartitioner(int totalInstructionCount, Func<int, Label> instructionIndexToLabelFactory)
     {
         if (!(totalInstructionCount >= 1))
             throw new ArgumentException($"instruction count >= 1 is required, got {totalInstructionCount}");
@@ -99,23 +98,25 @@ public sealed class ControlFlowGraphBuilder
         _ = TryGetOrCreateLabel(source + 1, out _);
     }
 
-    public ControlFlowGraph<TNode> Build<TNode>(
-        Func<Label, InstructionRange, ISuccessor, TNode> createNode,
-        Func<TNode, ISuccessor> getSuccessor,
-        Action<ControlFlowGraph<TNode>, IndentedTextWriter, PrettyPrintOption>? prettyPrint = null)
+    public BlockList<TBlock> Build<TBlock>(
+        Func<Label, InstructionRange, ISuccessor, TBlock> createBlock,
+        Func<TBlock, ISuccessor> getSuccessor,
+        Action<BlockList<TBlock>, IndentedTextWriter, PrettyPrintOption> prettyPrint)
+        where TBlock : ILabeledEntity
     {
         return BuildReachable(
             Enumerable.Range(0, TotalInstructionCount).ToHashSet(),
-            createNode,
+            createBlock,
             getSuccessor,
             prettyPrint);
     }
 
-    public ControlFlowGraph<TNode> BuildReachable<TNode>(
+    public BlockList<TBlock> BuildReachable<TBlock>(
         IReadOnlySet<int> reachableInstructionIndices,
-        Func<Label, InstructionRange, ISuccessor, TNode> createNode,
-        Func<TNode, ISuccessor> getSuccessor,
-        Action<ControlFlowGraph<TNode>, IndentedTextWriter, PrettyPrintOption>? prettyPrint = null)
+        Func<Label, InstructionRange, ISuccessor, TBlock> createBlock,
+        Func<TBlock, ISuccessor> getSuccessor,
+        Action<BlockList<TBlock>, IndentedTextWriter, PrettyPrintOption> prettyPrint)
+        where TBlock : ILabeledEntity
     {
         if (!reachableInstructionIndices.Contains(0))
             throw new ArgumentException("The reachable instruction set must contain the entry instruction.",
@@ -179,15 +180,16 @@ public sealed class ControlFlowGraphBuilder
             labelSuccessors.Add(label, Successor.Unconditional(indexToLabel[nextInstruction]));
         }
 
-        var nodes = labelInstructionCount.OrderBy(pair => LabelToIndex[pair.Key]).Select(pair =>
+        var blocks = labelInstructionCount.OrderBy(pair => LabelToIndex[pair.Key]).Select(pair =>
         {
             var range = new InstructionRange(LabelToIndex[pair.Key], pair.Value);
-            var node = createNode(pair.Key, range, labelSuccessors[pair.Key]);
-            return KeyValuePair.Create(pair.Key,
-                new ControlFlowGraph<TNode>.NodeDefinition(getSuccessor(node), node));
-        }).ToDictionary();
+            var block = createBlock(pair.Key, range, labelSuccessors[pair.Key]);
+            if (!ReferenceEquals(pair.Key, block.Label))
+                throw new ArgumentException("The block factory must preserve its bound label.", nameof(createBlock));
+            return block;
+        }).ToImmutableArray();
 
-        return new ControlFlowGraph<TNode>(Entry, nodes, prettyPrint);
+        return new BlockList<TBlock>(Entry, blocks, getSuccessor, prettyPrint);
     }
 
     public readonly record struct InstructionRange(int Start, int Count)

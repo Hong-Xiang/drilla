@@ -16,9 +16,11 @@ using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Test.ShaderModule;
+using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
+using static DualDrill.CLSL.Test.ScopedContinuationOracle;
 
 namespace DualDrill.CLSL.Test;
 
@@ -49,20 +51,62 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     [InlineData("LoopWithInnerConditionalBreak", 2047, 2052)]
     public void ScalarCilMatchesCpuAndEmittedControl(string fixture, int input, int golden)
     {
-        Func<int, int> reference = fixture switch
-        {
-            "SharedTail" => ScalarControlFlowFixtures.SharedTail,
-            "MultipleReturns" => ScalarControlFlowFixtures.MultipleReturns,
-            "MinimumLoop" => DevelopTestShaderModule.MinimumLoop,
-            "ContinueAndBreak" => ScalarControlFlowFixtures.ContinueAndBreak,
-            "LoopCarriedSwap" => ScalarControlFlowFixtures.LoopCarriedSwap,
-            "EdgeValue" => ScalarControlFlowFixtures.EdgeValue,
-            "LoopWithInnerConditionalBreak" => DevelopTestShaderModule.LoopWithInnerConditionalBreak,
-            _ => throw new ArgumentOutOfRangeException(nameof(fixture))
-        };
+        var reference = ScalarFixture(fixture);
         var expected = reference(input);
         Assert.Equal(golden, expected);
         Check(reference.Method, [new Value.Integer(input)], new Value.Integer(expected));
+    }
+
+    [Theory]
+    [InlineData("shared-tail")]
+    [InlineData("multiple-return")]
+    [InlineData("zero-loop")]
+    [InlineData("ordinary-loop")]
+    [InlineData("continue-break")]
+    [InlineData("nested-loop")]
+    [InlineData("inner-early-return")]
+    public void RepresentativeScalarCilCaptures(string scenario)
+    {
+        var (method, arguments, expected) = scenario switch
+        {
+            "shared-tail" => Case(
+                (Func<int, int>)ScalarControlFlowFixtures.SharedTail,
+                [new Value.Integer(2)],
+                58),
+            "multiple-return" => Case(
+                (Func<int, int>)ScalarControlFlowFixtures.MultipleReturns,
+                [new Value.Integer(-2)],
+                -9),
+            "zero-loop" => Case(
+                (Func<int, int>)DevelopTestShaderModule.MinimumLoop,
+                [new Value.Integer(0)],
+                0),
+            "ordinary-loop" => Case(
+                (Func<int, int>)DevelopTestShaderModule.MinimumLoop,
+                [new Value.Integer(4)],
+                4),
+            "continue-break" => Case(
+                (Func<int, int>)ScalarControlFlowFixtures.ContinueAndBreak,
+                [new Value.Integer(8)],
+                120),
+            "nested-loop" => Case(
+                (Func<int, int, int, int, int>)DevelopTestShaderModule.NestedLoop,
+                [
+                    new Value.Integer(5),
+                    new Value.Integer(7),
+                    new Value.Integer(2),
+                    new Value.Integer(3)
+                ],
+                52),
+            "inner-early-return" => Case(
+                (Func<int, int, int, int>)ScalarControlFlowFixtures.NestedEarlyReturn,
+                [new Value.Integer(2), new Value.Integer(3), new Value.Integer(1)],
+                1003),
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario))
+        };
+
+        output.WriteLine($"ACTUAL capture scenario={scenario}");
+        Check(method, arguments, expected);
     }
 
     [Theory]
@@ -153,40 +197,64 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             stages.Compiled.FunctionDefinitions.Values,
             body => body.Declaration.Name == method.Name);
         var model = Assert.Single(
-            stages.ControlFlow.FunctionDefinitions.Values,
+            stages.Labelled.FunctionDefinitions.Values,
             body => body.Environment.Method == method);
         Assert.True(model.Labels.ToHashSet().SetEquals(original.Labels));
         foreach (var label in model.Labels)
         {
-            var range = model.ControlFlow[label];
+            var range = model[label];
             output.WriteLine($"{method.Name} {label}: IL_{range.ByteOffset:X4}, {range.InstructionCount} instructions, " +
-                $"successors {string.Join(", ", model.ControlFlow.GetSucc(label))}");
+                $"successors {string.Join(", ", range.Terminator.ToSuccessor().AllTargets())}");
         }
+        var valueControlFlow = Assert.Single(
+            stages.ValueControlFlow.FunctionDefinitions.Values,
+            body => body.Source.Source.Source.Environment.Method == method);
+        output.WriteLine("ACTUAL input value CFG:");
+        output.WriteLine(valueControlFlow.Graph.PrettyPrint());
+        output.WriteLine("ACTUAL output region/control:");
+        output.WriteLine(original.Dump());
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
         var source = Emit(lowered);
         output.WriteLine(source);
         var cfg = RunCfg(original, arguments);
+        var scoped = RunScoped(original, arguments);
         Assert.Equal(expected, cfg.Result);
+        AssertEquivalent(cfg, scoped);
         AssertEquivalent(cfg, RunCfg(lowered, arguments));
         var emitted = new EmittedScalarProgram(lowered, source).Run(arguments);
-        output.WriteLine($"CPU/original CFG: {cfg.Result}; emitted: {emitted.Result}");
+        output.WriteLine(
+            $"ACTUAL original CFG result={cfg.Result} trace={string.Join(" -> ", cfg.Trace)}");
+        output.WriteLine(
+            $"ACTUAL scoped result={scoped.Result} trace={string.Join(" -> ", scoped.Trace)}");
+        output.WriteLine($"ACTUAL emitted result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}");
         AssertEquivalent(cfg, emitted);
         return source;
     }
+
+    private static (MethodInfo Method, ImmutableArray<Value> Arguments, Value Expected) Case(
+        Delegate reference,
+        ImmutableArray<Value> arguments,
+        int expected) =>
+        (reference.Method, arguments, new Value.Integer(expected));
+
+    private static Func<int, int> ScalarFixture(string fixture) =>
+        fixture switch
+        {
+            "SharedTail" => ScalarControlFlowFixtures.SharedTail,
+            "MultipleReturns" => ScalarControlFlowFixtures.MultipleReturns,
+            "MinimumLoop" => DevelopTestShaderModule.MinimumLoop,
+            "ContinueAndBreak" => ScalarControlFlowFixtures.ContinueAndBreak,
+            "LoopCarriedSwap" => ScalarControlFlowFixtures.LoopCarriedSwap,
+            "EdgeValue" => ScalarControlFlowFixtures.EdgeValue,
+            "LoopWithInnerConditionalBreak" => DevelopTestShaderModule.LoopWithInnerConditionalBreak,
+            _ => throw new ArgumentOutOfRangeException(nameof(fixture))
+        };
 
     internal static string Emit(FunctionBody4 body) =>
         new SlangEmitter(new ShaderModuleDeclaration<FunctionBody4>(
             [body.Declaration], ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
         .Emit();
-
-    private static void AssertEquivalent(Execution expected, Execution actual)
-    {
-        Assert.True(expected.Trace.SequenceEqual(actual.Trace),
-            $"Expected result: {expected.Result}; actual: {actual.Result}\n" +
-            $"Original blocks: {string.Join(" -> ", expected.Trace)}\nExecuted blocks: {string.Join(" -> ", actual.Trace)}");
-        Assert.Equal(expected.Result, actual.Result);
-    }
 
     [Fact]
     public void FixtureHasActualConfigurationSpecificCil()
@@ -199,8 +267,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.Equal("Release", configuration);
 #endif
         var method = ((Func<int, int>)ScalarControlFlowFixtures.MultipleReturns).Method;
-        var model = CompilerTestPipeline.ControlFlow(method);
-        var returns = model.Labels.Where(label => model.ControlFlow.Successor(label) is TerminateSuccessor)
+        var model = CompilerTestPipeline.Labelled(method);
+        var returns = model.Labels.Where(label => model[label].Terminator.ToSuccessor() is TerminateSuccessor)
             .ToArray();
         var debuggable = assembly.GetCustomAttribute<DebuggableAttribute>() ??
             throw new InvalidOperationException("Missing compiler configuration metadata.");
@@ -209,7 +277,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             case "Debug":
                 Assert.True(debuggable.IsJITOptimizerDisabled);
                 Assert.Single(returns);
-                Assert.Equal(3, model.ControlFlow.GetPred(returns[0]).Count());
+                Assert.Equal(3, model.Blocks.Blocks.Count(
+                    block => block.Terminator.ToSuccessor().AllTargets().Contains(returns[0])));
                 break;
             case "Release":
                 Assert.False(debuggable.IsJITOptimizerDisabled);
@@ -245,7 +314,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             ITerminator<RegionJump<IShaderValue>, IShaderValue>>
         Terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
-    private static FunctionBody4 HandBody()
+    internal static FunctionBody4 HandBody()
     {
         var entry = Label.Create("entry");
         var tail = Label.Create("tail");
@@ -284,8 +353,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         };
         return new FunctionBody4(declaration,
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
-                RegionTree<Label, ShaderRegionBody>.Block(tail, [], blocks[1], exit),
-                RegionTree<Label, ShaderRegionBody>.Block(exit, [], blocks[2], null)
+                RegionTree<Label, ShaderRegionBody>.Block(exit, [], blocks[2], null),
+                RegionTree<Label, ShaderRegionBody>.Block(tail, [], blocks[1], exit)
             ], blocks[0], tail));
     }
 
@@ -375,31 +444,36 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             Terms.ReturnExpr(answer),
             new ExitPostDominance.FunctionExit(false));
         var body = new FunctionBody4(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry, [
-            RegionTree<Label, ShaderRegionBody>.Loop(loop, [], loopBody, exit, exit),
-            RegionTree<Label, ShaderRegionBody>.Block(exit, [], exitBody, null)
+            RegionTree<Label, ShaderRegionBody>.Block(exit, [], exitBody, null),
+            RegionTree<Label, ShaderRegionBody>.Loop(loop, [], loopBody, exit, exit)
         ], entryBody, loop));
         var expected = new Execution(new Value.Integer(21), [entry, loop, loop, exit]);
         AssertEquivalent(expected, RunCfg(body, []));
+        AssertEquivalent(expected, RunScoped(body, []));
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(body);
         AssertEquivalent(expected, RunCfg(lowered, []));
+        AssertEquivalent(expected, RunScoped(lowered, []));
     }
 
     [Fact]
     public void UnsupportedOperationsAndBothExecutionBudgetsFailExplicitly()
     {
         var body = HandBody();
-        var entry = body[body.Entry];
-        var cycleBody = entry with
-        {
-            Body = Seq.Create(entry.Body.Elements, Terms.Br(new(body.Entry, []))),
-            PostDominance = ExitPostDominance.NoExitPath.Instance
-        };
+        var cycleLabel = Label.Create("cycle");
+        var cycleRegion = ShaderRegionBody.Create(
+            cycleLabel,
+            [],
+            [],
+            Terms.Br(new(cycleLabel, [])),
+            ExitPostDominance.NoExitPath.Instance);
         var cycle = new FunctionBody4(
-            body.Declaration,
-            RegionTree<Label, ShaderRegionBody>.Block(body.Entry, [], cycleBody, null));
+            new FunctionDeclaration("Cycle", [], new FunctionReturn(ShaderType.I32, []), []),
+            RegionTree<Label, ShaderRegionBody>.Loop(cycleLabel, [], cycleRegion, null, null));
         Assert.Single(cycle.Labels);
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
-            () => RunCfg(cycle, [new Value.Integer(0)], 100)).Message);
+            () => RunCfg(cycle, [], 100)).Message);
+        Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
+            () => RunScoped(cycle, [], 100)).Message);
         var infinite = "i32 Probe(i32 x, )\n{\nwhile(true)\n{\n}\n}";
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
             () => new EmittedScalarProgram(body, infinite).Run([new Value.Integer(0)], 10)).Message);

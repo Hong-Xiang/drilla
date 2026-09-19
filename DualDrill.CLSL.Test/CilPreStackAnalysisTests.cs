@@ -46,14 +46,14 @@ public sealed class CilPreStackAnalysisTests
         var method = ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method;
 
         var module = parser.ParseMethod(method);
-        var model = CompilerTestPipeline.ControlFlow(module, method);
+        var model = CompilerTestPipeline.Labelled(module, method);
         var call = Assert.Single(
             model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
 
         Assert.IsType<CilStackType.Int32>(Assert.Single(Pre(model, call.Index).Types));
         Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
-        Assert.Same(model.RawCode, CompilerTestPipeline.ControlFlow(module, method).RawCode);
+        Assert.Same(model.RawCode, CompilerTestPipeline.Labelled(module, method).RawCode);
         _ = parser.ParseMethod(GetMethod(nameof(Diamond)));
     }
 
@@ -134,7 +134,7 @@ public sealed class CilPreStackAnalysisTests
     public void DeadSourceReferencesAreCollectedButExcludedFromPerFunctionPreAndCfg()
     {
         var module = CompilerTestPipeline.ParseRaw(Fixtures.DeadUnsupportedAndCall);
-        var model = CompilerTestPipeline.ControlFlow(module, Fixtures.DeadUnsupportedAndCall);
+        var model = CompilerTestPipeline.Labelled(module, Fixtures.DeadUnsupportedAndCall);
         var deadCall = Assert.Single(
             model.RawCode.Instructions,
             instruction => instruction.Instruction.Operand is MethodBase method &&
@@ -146,7 +146,7 @@ public sealed class CilPreStackAnalysisTests
             model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
         var liveLabel = Assert.IsType<CilControlFlow.Branch>(
-            model.ControlFlow[model.ControlFlow.EntryLabel].Terminator).Target;
+            model[model.Blocks.EntryLabel].Terminator).Target;
         var liveTarget = model[model.LabelToInstructionIndex(liveLabel)];
 
         Assert.DoesNotContain(model.PreAnnotatedCode.Instructions, item => item.Node.Index == deadCall.Index);
@@ -156,11 +156,11 @@ public sealed class CilPreStackAnalysisTests
         Assert.Equal(
             Enumerable.Range(0, model.InstructionCount),
             model.RawCode.Instructions.Select(instruction => instruction.Index));
-        Assert.True(model.ControlFlow.Labels()
-                         .Sum(label => model.ControlFlow[label].InstructionCount) <
+        Assert.True(model.Blocks.Blocks.Sum(block => block.InstructionCount) <
                     model.InstructionCount);
-        Assert.Equal(2, model.ControlFlow.Count);
-        Assert.Single(model.ControlFlow.Predecessor(liveLabel));
+        Assert.Equal(2, model.Blocks.Blocks.Length);
+        Assert.Single(model.Blocks.Blocks.Where(
+            block => block.Terminator.ToSuccessor().AllTargets().Contains(liveLabel)));
         Assert.Contains(module.FunctionDefinitions.Values,
             body => body.Code.Environment.Method == Fixtures.DeadCallee);
         Assert.Contains(module.FunctionDefinitions.Values,
@@ -186,7 +186,7 @@ public sealed class CilPreStackAnalysisTests
     public void LoopCarriedNonEmptyStackUsesOriginalBackwardTarget()
     {
         var model = ParseModel(Fixtures.LoopCarried);
-        var backward = model.Labels.Select(label => model.ControlFlow[label])
+        var backward = model.Blocks.Blocks
                             .Single(block => block.Terminator is CilControlFlow.ConditionalBranch control &&
                                              model.LabelToInstructionIndex(control.BranchTarget) <
                                              block.InstructionIndex);
@@ -217,14 +217,14 @@ public sealed class CilPreStackAnalysisTests
     {
         var stages = CompilerTestPipeline.CompileStages(Fixtures.TwoSlotEdge);
         var model = Assert.Single(
-            stages.ControlFlow.FunctionDefinitions.Values,
+            stages.Labelled.FunctionDefinitions.Values,
             body => body.Environment.Method == Fixtures.TwoSlotEdge);
         var branch = Assert.IsType<CilControlFlow.Branch>(
-            model.ControlFlow[model.ControlFlow.EntryLabel].Terminator);
-        var block = model.ControlFlow[branch.Target];
+            model[model.Blocks.EntryLabel].Terminator);
+        var block = model[branch.Target];
         var value = Assert.Single(
             stages.ValueControlFlow.FunctionDefinitions.Values,
-            body => body.Source.Environment.Method == Fixtures.TwoSlotEdge);
+            body => body.Source.Source.Source.Environment.Method == Fixtures.TwoSlotEdge);
         var body = value.Graph[branch.Target];
 
         Assert.Contains(model.RawCode.Instructions, instruction => instruction.Instruction.OpCode == OpCodes.Pop);
@@ -331,7 +331,7 @@ public sealed class CilPreStackAnalysisTests
         var method = Fixtures.Method(methodName);
 
         var module = CompilerTestPipeline.ParseRaw(method);
-        var model = CompilerTestPipeline.ControlFlow(module, method);
+        var model = CompilerTestPipeline.Labelled(module, method);
         Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
         var call = Assert.Single(
             model.RawCode.Instructions,
@@ -348,8 +348,9 @@ public sealed class CilPreStackAnalysisTests
     public void DiamondWithEqualTypesMergesAtOriginalInstruction()
     {
         var model = ParseModel(GetMethod(nameof(Diamond)));
-        var merge = model.Labels.Select(label => model.ControlFlow[label])
-                         .Single(block => model.ControlFlow.Predecessor(block.Label).Count == 2);
+        var merge = model.Blocks.Blocks.Single(block =>
+            model.Blocks.Blocks.Count(source =>
+                source.Terminator.ToSuccessor().AllTargets().Contains(block.Label)) == 2);
 
         Assert.Collection(
             Pre(model, merge.InstructionIndex).Types,
@@ -463,10 +464,10 @@ public sealed class CilPreStackAnalysisTests
         typeof(CilPreStackAnalysisTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"{name} fixture was not found.");
 
-    private static MethodBodyAnalysisModel ParseModel(MethodInfo method)
-        => CompilerTestPipeline.ControlFlow(method);
+    private static LabelledCilFunctionBody ParseModel(MethodInfo method)
+        => CompilerTestPipeline.Labelled(method);
 
-    private static PreStack Pre(MethodBodyAnalysisModel model, int instructionIndex) =>
+    private static PreStack Pre(LabelledCilFunctionBody model, int instructionIndex) =>
         Assert.Single(
             model.PreAnnotatedCode.Instructions,
             instruction => instruction.Node.Index == instructionIndex).Annotation;

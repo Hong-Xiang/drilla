@@ -126,6 +126,42 @@ Raw constructors are not checked function boundaries. In particular, generic
 signatures do not prevent all null runtime values or a default `ImmutableArray`,
 and do not prove that an argument has the target parameter's shader type.
 
+### Checked Scoped Continuations
+
+`FunctionBody4` is the checked boundary for region control. Construction rejects
+duplicate, unknown, unreachable, mismatched, incorrectly typed, or incorrectly
+scoped definitions and transfers. Its public `Control` index records each
+transfer by source label and arm ordinal without copying edge arguments.
+
+Bindings follow declared `RegionTree.Bindings` order. A child definition sees
+the outer environment plus earlier siblings; a block does not see itself, while
+a loop sees itself as a recursive `Repeat`. After a child is defined, its label
+is a `Forward` continuation owned by the parent. The parent's body sees every
+child. A transfer evaluates all original jump arguments before binding target
+parameters, then tail-invokes the target under its definition-site environment;
+the source activation never resumes. Returns exit from any nesting depth.
+
+`Forward` and `Repeat` ownership describe source-language scope only. They do not
+infer target `break`/`continue`, copy arguments, duplicate bodies, or use
+postdominators as continuation authority. Same-target conditional arms remain
+distinct transfers. Edge-specific target lowering is still owned by later
+lowering; `RegionParameterToLocalVariablePass` continues to reject differing
+tuples on two arms that share a target.
+
+The checked control index certifies lexical label visibility and transfer
+argument arity/types; it is not a full SSA verifier. Correct value
+definition/use dominance is an input precondition. Runtime values live in the
+dynamic machine state rather than the control-label environment, so defining a
+child continuation does not capture a dominating value before its parent body
+executes.
+
+Construction retains descending-RPO dominator-child bindings and checks every
+resulting reference. With correct input control facts, this supports reducible
+graphs, including nested loops, early returns and outer-owned transfers.
+Irreducible sibling cycles and references into later siblings or private
+descendants fail explicitly; there is no node splitting or dispatcher fallback.
+`Next`, `BreakNext` and postdominator hints do not establish lexical visibility.
+
 ### Control Projection Is Lossy
 
 `ToSuccessor` projects a terminator to its control successors. It discards return
@@ -148,9 +184,15 @@ C# compiled by .NET
   -> `ShaderModuleDeclaration<RawCilFunctionBody>`
   -> CilPreStackPass
   -> `ShaderModuleDeclaration<PreCilFunctionBody>`
-  -> CilControlFlowPass
-  -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>`
-  -> CilStackToValuePass
+  -> CilBlockPartitionPass
+  -> `ShaderModuleDeclaration<LabelledCilFunctionBody>`
+  -> CilToShaderStackPass
+  -> `ShaderModuleDeclaration<ShaderStackFunctionBody>`
+  -> ShaderStackControlFlowPass
+  -> `ShaderModuleDeclaration<ShaderStackControlFlowBody>`
+  -> ShaderStackToValuePass
+  -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
+  -> CilLocalPromotionPass
   -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
   -> CilBlockControlFactsPass
   -> `ShaderModuleDeclaration<CilValueControlFactsBody>`
@@ -167,30 +209,35 @@ C# compiled by .NET
 follows all original-CIL references, including dead instruction positions, up to
 explicit shared-builtin, operation-attribute and mapped-vector/member boundaries.
 The later Pre pass still filters unreachable positions inside each collected
-function. `FunctionBody4` combines typed instructions and parameterized
-terminators with a `RegionTree` built by the final frontend pass. The emitter
-still performs lexical layout. There is not yet an independent scoped-region
-validator, complete structurization pass, or target AST stage.
+function. `FunctionBody4` combines typed instructions and parameterized terminators with a
+`RegionTree` built by the final frontend pass and a checked scoped-control index.
+The emitter still performs target layout. There is not yet a separate target AST
+stage.
 
-`ExprValue`/`ExprTree` and the `AbstractSyntaxTree` directory do not constitute a
-complete AST function-body stage in this pipeline. Older design examples,
-experimental backends, and the identity `CommonOperationLoweringPass` must not
-be presented as additional active compilation stages.
+The `AbstractSyntaxTree` directory does not constitute a complete AST
+function-body stage in this pipeline. Older design examples and
+experimental backends must not be presented as additional active compilation
+stages.
 
 ## Logical Stages and Their Obligations
 
 These boundaries split reasoning and testing; they do not require unrelated
-IR implementations for each pass. The existing region binding tree is not a
-claim of complete scoped-control legality; target AST lowering remains planned.
+IR implementations for each pass. The checked region boundary establishes the
+lexical control contract above, not full SSA validity or target realizability;
+target AST lowering remains planned.
 
 | Stage | Required invariant | Current owner or implementation boundary |
 |---|---|---|
 | Raw CIL module | All declarations and supported metadata references reachable from the roots through original CIL are present; each non-boundary method body is losslessly decoded once. | `RuntimeReflectionParser` produces `ShaderModuleDeclaration<RawCilFunctionBody>` with frozen symbol views. |
 | Linear Pre facts | Reachable entries have exact normalized stack types; absence from the completed value means unreachable. | `CilPreStackPass` produces `ShaderModuleDeclaration<PreCilFunctionBody>`; full original source remains separate. |
-| CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `CilControlFlowPass` produces `ShaderModuleDeclaration<MethodBodyAnalysisModel>`. |
-| Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `CilStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. Validation is partial, not a complete verifier. |
-| BB-annotated value CFG | Original blocks, labels and ordered edges remain unchanged; local facts hold existing RPO, IDom, IPDom and loop-header results. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
-| Region binding tree | Consume published local facts and preserve descending-RPO dominator-child order without reanalysis. | `CilRegionPass` produces `FunctionBody4`; general structurization and scoped-join legality remain later work. |
+| Labelled block list | Nonempty immutable storage; unique payload-owned label identities; entry and all projected control targets are defined. No reachability requirement or graph indexes. | `BlockList<TBlock>` with existing `ILabeledEntity`; `InstructionBlockPartitioner` preserves original CIL ranges and binds labels before payload construction. |
+| Labelled CIL blocks | Reachable instruction ranges exactly partition completed Pre; explicit terminators, labels and legitimate fallthrough edges retain source identity. | `CilBlockPartitionPass` produces `ShaderModuleDeclaration<LabelledCilFunctionBody>`. |
+| Labelled shader stack blocks | Every operation and terminator has checked typed Pre/Post, explicit pop behavior and numeric source provenance. | `CilToShaderStackPass` produces `ShaderModuleDeclaration<ShaderStackFunctionBody>`. |
+| Shader stack CFG | Every edge has exact source-exit/destination-entry stack equality; graph construction interprets only projected control. | `ShaderStackControlFlowPass` produces `ShaderModuleDeclaration<ShaderStackControlFlowBody>`. |
+| Typed CFG with block arguments | Mechanical stack elimination preserves operations, provenance, labels, arm order and bottom-to-top edge arguments. | `ShaderStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. |
+| Promoted typed CFG | Direct nonescaping function-local `i32` and `bool` storage is replaced by values and appended block parameters when definitions reach all uses; exact raw `InitLocals` metadata supplies only typed zero/false entry definitions. Escaped, unsupported and incompletely initialized locals remain memory operations. | `CilLocalPromotionPass` maps the value module to the same body type before control facts. |
+| BB-annotated value CFG | Promoted blocks, labels and ordered edges remain unchanged; local facts hold RPO, IDom, ordered incoming arms and typed finite-exit `PostDominance` (`Block`, `FunctionExit` or `NoExitPath`) with structural `MayDiverge`. Loop-header status is derived from dominance-backed incoming arms, not target placement. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>` after `CilLocalPromotionPass`. |
+| Region binding tree | Consume published local facts, preserve descending-RPO dominator-child order without reanalysis, and check lexical control plus edge arguments. | `CilRegionPass` produces `FunctionBody4`; `FunctionBody4.Control` exposes the checked scoped-continuation index. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
 | Target AST | Control targets have a legal target-language realization; shared joins and value transfers have explicit lexical placement; effects retain their order and dynamic multiplicity. | Intended lowering. Current `SlangEmitter` combines these decisions with text emission. |
 
@@ -203,9 +250,13 @@ implemented Pre-before-CFG ordering and exact supported type/merge rules. It
 retains full source plus a sparse completed Pre map rather than propagating an
 unreachable-state variant downstream. Native CIL predicates and concrete
 terminator payload remain behind narrow generic control views; `TE` is not split
-merely to expose data unused by topology analysis. Instruction-changing lowering
-follows stable CFG label construction. Independent value lifting and scoped
-region/AST stages remain later work.
+merely to expose data unused by topology analysis. Instruction-changing lowering follows stable block-list label binding. Issue
+#114's foundation separates partitioning from `ControlFlowGraph.Create`, which
+preserves all stored block definitions and their concrete payloads. The former
+public CIL CFG and `MethodBodyAnalysisModel` are removed. CIL-to-shader-stack
+instruction/type lowering happens **before** generic CFG construction, followed
+by CIL-independent stack-to-explicit-values conversion, local promotion and
+checked scoped regions. Target AST lowering remains later work.
 
 Structurization and block-parameter elimination are distinct transformations.
 Keeping parameters through a scoped region stage is valid. Eliminating them
@@ -247,7 +298,8 @@ During Slang emission, the current emitter supports a lexical loop with zero or
 one distinct non-terminating destination outside its existing region subtree. Direct
 terminal targets retain their actions and return in the selected arm. Multiple
 distinct normal destinations are explicitly rejected. This emission-time layout
-does not transform the input IR into a checked scoped-region representation.
+consumes the same body but does not yet use `FunctionBody4.Control` as a separate
+target-lowering stage.
 It is not the complete Beyond Relooper algorithm or a general irreducible-CFG
 policy.
 
@@ -287,8 +339,8 @@ cases describe observable behavior for effectful callbacks.
 ## Subsequent Slices
 
 The next independently scoped steps are to make analysis availability and
-continuation absence unambiguous, establish checked region scope and shared-join
-ownership, and lower those owned references and values into a target AST.
+continuation absence unambiguous and lower the checked scoped references and
+values into a target AST.
 Expression tree packing and final source formatting need not be the same pass
 as control layout. Each step must preserve the existing semantic/trace corpus.
 
