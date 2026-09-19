@@ -85,6 +85,7 @@ parse/collect the all-reference CIL module
   -> CIL-to-shader-stack instruction/type lowering
   -> generic CFG construction over shader-stack blocks
   -> stack-to-explicit-value lowering
+  -> eligible private-local promotion
   -> control-flow analysis and region construction
   -> existing operation/parameter lowering
   -> target emission

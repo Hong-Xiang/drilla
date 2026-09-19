@@ -296,9 +296,12 @@ its producer and implements `IPrintable` directly. Equality and hashing compare
 only `Node` and `Annotation`; presentation is not analysis identity. Instruction
 annotations print the instruction and its entry stack together. The labelled CIL list, labelled shader-stack list, shader-stack CFG, flat value
 CFG and BB-annotated value CFG have fixed readable formats.
-`CilBlockControlFactsPass` computes the existing analysis internally and attaches
-only each block's RPO, IDom, IPDom and loop-header facts. `CilRegionPass` reads
-those annotations; it neither queries a separate analysis object nor reruns it.
+After `CilLocalPromotionPass`, `CilBlockControlFactsPass` attaches each block's
+RPO, IDom, ordered incoming arms and typed finite-exit `PostDominance`
+(`Block`, `FunctionExit` or `NoExitPath`), including structural `MayDiverge`.
+Loop-header status is derived from incoming dominance-backed arms.
+`CilRegionPass` reads those annotations; it neither queries a separate analysis
+object nor reruns it. Postdominance does not establish continuation ownership.
 Type-changing annotation maps must supply a printer for the output types; the
 identity and composition laws concern mapped `Node` and `Annotation` data, not
 reuse of an incompatible presentation function.
