@@ -178,15 +178,12 @@ function run(command, arguments_, expectedStatus = 0) {
   if (output) {
     console.log(output);
   }
-  if (expectedStatus === 0) {
-    assert.equal(result.status, 0, `${command} failed`);
-  } else {
-    assert.notEqual(
-      result.status,
-      0,
-      `${command} unexpectedly accepted malformed WebAssembly`,
-    );
-  }
+  assert.equal(result.signal, null, `${command} terminated by a signal`);
+  assert.equal(
+    result.status,
+    expectedStatus,
+    `${command} returned an unexpected exit status`,
+  );
 }
 
 async function executeWithDeadline(binaryPath, functions) {
@@ -292,7 +289,7 @@ async function verify() {
       "malformed fixture must be the committed binary truncated by one byte",
     );
 
-    run("wasm-validate", [malformedPath], "rejection");
+    run("wasm-validate", [malformedPath], 1);
     assert.equal(
       WebAssembly.validate(malformed),
       false,
