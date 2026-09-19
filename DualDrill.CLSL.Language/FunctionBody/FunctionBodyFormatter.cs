@@ -168,6 +168,17 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
             Writer.WriteLine();
         }
 
+        Writer.WriteLine("scoped control:");
+        using (Writer.IndentedScope())
+        {
+            Function.Control.Dump(Writer, label =>
+            {
+                var name = label.Name is null ? string.Empty : $"({label.Name})";
+                return $"^{Model.LabelIndex(label)}{name}";
+            });
+        }
+        Writer.WriteLine();
+
         Function.Body.Fold(this);
     }
 

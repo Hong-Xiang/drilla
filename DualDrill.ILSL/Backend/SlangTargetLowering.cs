@@ -1,14 +1,15 @@
 using System.Collections.Immutable;
 using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Backend;
 
@@ -34,52 +35,295 @@ public sealed class SlangTargetLowering
     {
         private readonly Dictionary<IShaderValue, SlangPlace> aliases =
             new(ReferenceEqualityComparer.Instance);
-        private readonly HashSet<Label> active = [];
         private readonly List<RegionTree<Label, ShaderRegionBody>> blockOrder = [];
         private readonly Dictionary<Label, RegionTree<Label, ShaderRegionBody>> blocks = [];
         private readonly Dictionary<IShaderValue, VariableDeclaration> captures =
             new(ReferenceEqualityComparer.Instance);
-        private readonly Stack<LoopOwner> loopOwners = [];
-        private readonly HashSet<Label> placedNonterminals = [];
+        private readonly Dictionary<IShaderValue, VariableDeclaration> parameterSlots =
+            new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<Continuation, int> tokenIds = [];
         private readonly FunctionBody4 source;
+        private readonly VariableDeclaration? token;
 
-        public FunctionLowerer(FunctionBody4 source)
+        internal FunctionLowerer(FunctionBody4 source)
         {
             this.source = source;
             source.Body.Traverse(region =>
             {
-                if (!blocks.TryAdd(region.Label, region))
-                    throw Error($"duplicate region definition '{region.Label.Name}'");
+                blocks.Add(region.Label, region);
                 blockOrder.Add(region);
-                if (!region.Label.Equals(region.Body.Label))
-                    throw Error(
-                        $"region definition '{region.Label.Name}' contains body '{region.Body.Label.Name}'");
+                foreach (var parameter in region.Body.Parameters)
+                {
+                    if (parameter.Type is IPtrType)
+                        throw Error(
+                            $"block '{region.Label.Name}' retains a pointer parameter; " +
+                            "run stable pointer parameter lowering before Slang target lowering");
+                    parameterSlots.Add(
+                        parameter,
+                        new VariableDeclaration(
+                            FunctionAddressSpace.Instance,
+                            $"parameter_{parameterSlots.Count}",
+                            parameter.Type,
+                            []));
+                }
             });
-            ValidateControl();
+
+            foreach (var transfer in source.Control.Transfers)
+            {
+                var continuation = Continuation.From(transfer);
+                if (!tokenIds.ContainsKey(continuation))
+                    tokenIds.Add(continuation, tokenIds.Count);
+            }
+            if (tokenIds.Count > 0)
+                token = new VariableDeclaration(
+                    FunctionAddressSpace.Instance,
+                    "control",
+                    ShaderType.I32,
+                    []);
+
             FindCrossLabelCaptures();
         }
 
-        public SlangFunctionBody Lower()
+        internal SlangFunctionBody Lower()
         {
-            var declarations = source.LocalVariables.Concat(captures.Values)
-                .Select(variable => (SlangStatement)new SlangDeclare(variable))
-                .ToImmutableArray();
-            var body = Expand(source.Entry, new NormalTransfer(source.Entry, [source.Entry]), null);
+            var lowered = LowerRegion(source.Body);
+            if (!lowered.Escapes.IsEmpty)
+                throw Error(
+                    $"root region has unresolved scoped transfers: " +
+                    string.Join(", ", lowered.Escapes.Select(Format)));
+
+            var declarations = source.LocalVariables
+                .Concat(parameterSlots.Values)
+                .Concat(captures.Values)
+                .Concat(token is null ? [] : [token])
+                .Select(variable => (SlangStatement)new SlangDeclare(variable));
             return new SlangFunctionBody(
                 source.Declaration,
-                new SlangBlock([.. declarations, .. body.Statements]));
+                new SlangBlock([.. declarations, .. lowered.Statements]));
+        }
+
+        private Lowered LowerRegion(RegionTree<Label, ShaderRegionBody> region)
+        {
+            var activation = LowerActivation(region);
+            if (region.Definition.Kind is not RegionKind.Loop)
+                return activation;
+
+            var repeat = new Continuation(
+                region.Label,
+                region.Label,
+                ScopedContinuationKind.Repeat);
+            var repeats = activation.Escapes.Contains(repeat);
+            var outward = activation.Escapes.Remove(repeat);
+            var statements = activation.Statements.ToBuilder();
+
+            if (repeats && outward.IsEmpty)
+            {
+                statements.Add(new SlangContinue());
+            }
+            else if (repeats)
+            {
+                var condition = TokenEquals(repeat, statements);
+                statements.Add(new SlangIf(
+                    condition,
+                    new SlangBlock([(SlangStatement)new SlangContinue()]),
+                    new SlangBlock([(SlangStatement)new SlangBreak()])));
+            }
+            else if (!outward.IsEmpty)
+            {
+                statements.Add(new SlangBreak());
+            }
+
+            return new Lowered(
+                [(SlangStatement)new SlangLoop(region.Label, new SlangBlock(statements.ToImmutable()))],
+                outward);
+        }
+
+        private Lowered LowerActivation(RegionTree<Label, ShaderRegionBody> region)
+        {
+            var suffix = LowerRaw(region);
+            var bindings = region.Bindings.ToImmutableArray();
+            var innermost = true;
+
+            for (var index = bindings.Length - 1; index >= 0; index--)
+            {
+                var child = bindings[index];
+                var caught = new Continuation(
+                    child.Label,
+                    region.Label,
+                    ScopedContinuationKind.Forward);
+                if (!suffix.Escapes.Contains(caught))
+                    throw Error(
+                        $"binding '{child.Label.Name}' owned by '{region.Label.Name}' is not consumed " +
+                        "by any reachable scoped transfer");
+
+                var statements = ImmutableArray.CreateBuilder<SlangStatement>();
+                if (innermost)
+                {
+                    statements.AddRange(suffix.Statements);
+                    innermost = false;
+                }
+                else
+                {
+                    var carrier = suffix.Statements.ToBuilder();
+                    if (!suffix.Escapes.IsEmpty)
+                        carrier.Add(new SlangBreak());
+                    statements.Add(new SlangDoOnce(new SlangBlock(carrier.ToImmutable())));
+                }
+
+                var childLowered = LowerRegion(child);
+                if (suffix.Escapes.Count == 1)
+                {
+                    statements.AddRange(childLowered.Statements);
+                }
+                else
+                {
+                    var condition = TokenEquals(caught, statements);
+                    statements.Add(new SlangIf(
+                        condition,
+                        new SlangBlock(childLowered.Statements),
+                        SlangBlock.Empty));
+                }
+
+                suffix = new Lowered(
+                    statements.ToImmutable(),
+                    suffix.Escapes.Remove(caught).Union(childLowered.Escapes));
+            }
+
+            return suffix;
+        }
+
+        private Lowered LowerRaw(RegionTree<Label, ShaderRegionBody> region)
+        {
+            var statements = ImmutableArray.CreateBuilder<SlangStatement>();
+            foreach (var parameter in region.Body.Parameters)
+            {
+                var load = Instruction<SlangOperand, IShaderValue>.Create(
+                    new LoadOperation(),
+                    parameter,
+                    [new SlangPlaceOperand(new SlangVariablePlace(parameterSlots[parameter]))]);
+                statements.Add(new SlangBind(load));
+                CaptureDefinition(parameter, statements);
+            }
+            foreach (var instruction in region.Body.Body.Elements)
+                LowerInstruction(instruction, statements);
+
+            var terminated = LowerTerminator(region.Body.Body.Last, region.Label);
+            statements.AddRange(terminated.Statements);
+            var original = new SlangScope(
+                region.Definition.Kind is RegionKind.Loop ? null : region.Label,
+                new SlangBlock(statements.ToImmutable()));
+            return new Lowered(
+                [(SlangStatement)new SlangDoOnce(new SlangBlock([original]))],
+                terminated.Escapes);
+        }
+
+        private Lowered LowerTerminator(
+            ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
+            Label sourceLabel) =>
+            terminator switch
+            {
+                Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> =>
+                    Lowered.Completed(new SlangReturnVoid()),
+                Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
+                    Lowered.Completed(new SlangReturnValue(Operand(returned.Expr))),
+                Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    LowerTransfer(sourceLabel, 0, branch.Target),
+                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    LowerConditional(sourceLabel, branch),
+                _ => throw Error($"unsupported terminator in block '{sourceLabel.Name}'")
+            };
+
+        private Lowered LowerConditional(
+            Label sourceLabel,
+            Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch)
+        {
+            var whenTrue = LowerTransfer(sourceLabel, 0, branch.TrueTarget);
+            var whenFalse = LowerTransfer(sourceLabel, 1, branch.FalseTarget);
+            return new Lowered(
+                [
+                    new SlangIf(
+                        Operand(branch.Condition),
+                        new SlangBlock(whenTrue.Statements),
+                        new SlangBlock(whenFalse.Statements))
+                ],
+                whenTrue.Escapes.Union(whenFalse.Escapes));
+        }
+
+        private Lowered LowerTransfer(
+            Label sourceLabel,
+            int arm,
+            RegionJump<IShaderValue> jump)
+        {
+            var transfer = source.Control.Resolve(sourceLabel, arm);
+            if (!transfer.Target.Equals(jump.Label))
+                throw Error(
+                    $"checked transfer from '{sourceLabel.Name}', arm {arm}, resolves to " +
+                    $"'{transfer.Target.Name}', not '{jump.Label.Name}'");
+
+            var target = blocks[transfer.Target].Body;
+            var statements = ImmutableArray.CreateBuilder<SlangStatement>();
+            var values = ImmutableArray.CreateBuilder<IShaderValue>();
+            foreach (var argument in jump.Arguments)
+            {
+                if (argument.Type is IPtrType)
+                    throw Error(
+                        $"transfer from '{sourceLabel.Name}', arm {arm}, retains a pointer argument");
+                var captured = ShaderValue.Intermediate(argument.Type);
+                statements.Add(new SlangBind(
+                    Instruction<SlangOperand, IShaderValue>.Create(
+                        new LoadOperation(),
+                        captured,
+                        [Operand(argument)])));
+                values.Add(captured);
+            }
+
+            foreach (var (parameter, value) in target.Parameters.Zip(values))
+                statements.Add(new SlangAssign(
+                    new SlangVariablePlace(parameterSlots[parameter]),
+                    new SlangValueOperand(value)));
+
+            var continuation = Continuation.From(transfer);
+            statements.Add(new SlangAssign(
+                new SlangVariablePlace(token ??
+                    throw Error("a scoped transfer requires a control token")),
+                new SlangValueOperand(Int(tokenIds[continuation]))));
+            statements.Add(new SlangBreak());
+            return new Lowered(
+                statements.ToImmutable(),
+                ImmutableHashSet.Create(continuation));
+        }
+
+        private SlangOperand TokenEquals(
+            Continuation continuation,
+            ImmutableArray<SlangStatement>.Builder statements)
+        {
+            var result = ShaderValue.Intermediate(ShaderType.Bool);
+            statements.Add(new SlangBind(
+                Instruction<SlangOperand, IShaderValue>.Create(
+                    NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>.Instance,
+                    result,
+                    [
+                        new SlangPlaceOperand(new SlangVariablePlace(token ??
+                            throw Error("a scoped gate requires a control token"))),
+                        new SlangValueOperand(Int(tokenIds[continuation]))
+                    ])));
+            return new SlangValueOperand(result);
         }
 
         private void FindCrossLabelCaptures()
         {
             var definitions = new Dictionary<IShaderValue, Label>(ReferenceEqualityComparer.Instance);
             foreach (var block in blockOrder)
+            {
+                foreach (var parameter in block.Body.Parameters)
+                    if (!definitions.TryAdd(parameter, block.Label))
+                        throw Error($"value '{parameter}' has multiple parameter definitions");
                 foreach (var instruction in block.Body.Body.Elements)
                     if (instruction.Result is { } result && !definitions.TryAdd(result, block.Label))
                         throw Error($"value '{result}' has multiple instruction definitions");
+            }
 
             foreach (var block in blockOrder)
-            {
                 foreach (var value in block.Body.Body.Elements.SelectMany(instruction => instruction.Operands)
                              .Concat(TerminatorValues(block.Body.Body.Last)))
                 {
@@ -98,266 +342,20 @@ public sealed class SlangTargetLowering
                             value.Type,
                             []));
                 }
-            }
         }
 
         private static IEnumerable<IShaderValue> TerminatorValues(
             ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
             terminator switch
             {
-                Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned => [returned.Expr],
-                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch => [branch.Condition],
-                _ => []
-            };
-
-        private void ValidateControl()
-        {
-            foreach (var block in blocks.Values)
-                if (!block.Body.Parameters.IsEmpty)
-                    throw Error(
-                        $"block '{block.Label.Name}' has residual region parameters; " +
-                        "run region parameter lowering before Slang target lowering");
-
-            foreach (var block in blocks.Values)
-            {
-                foreach (var jump in Jumps(block.Body.Body.Last))
-                {
-                    if (!jump.Arguments.IsEmpty)
-                        throw Error(
-                            $"jump from '{block.Label.Name}' to '{jump.Label.Name}' has residual arguments; " +
-                            "run region parameter lowering before Slang target lowering");
-                    if (!blocks.ContainsKey(jump.Label))
-                        throw Error(
-                            $"jump from '{block.Label.Name}' references missing label '{jump.Label.Name}'");
-                }
-            }
-        }
-
-        private static IEnumerable<RegionJump<IShaderValue>> Jumps(
-            ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
-            terminator switch
-            {
-                Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => [branch.Target],
-                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
-                    [branch.TrueTarget, branch.FalseTarget],
-                _ => []
-            };
-
-        private Sequence LowerRegion(
-            RegionTree<Label, ShaderRegionBody> region,
-            Label? enclosingNext) =>
-            region.Definition.Kind switch
-            {
-                RegionKind.Block => LowerBlock(region, enclosingNext),
-                RegionKind.Loop => LowerLoop(region, enclosingNext),
-                _ => throw Error($"unknown region kind for '{region.Label.Name}'")
-            };
-
-        private Sequence LowerBlock(
-            RegionTree<Label, ShaderRegionBody> region,
-            Label? enclosingNext)
-        {
-            var next = region.Body.ImmediatePostDominator;
-            var statements = ImmutableArray.CreateBuilder<SlangStatement>();
-            foreach (var instruction in region.Body.Body.Elements)
-                LowerInstruction(instruction, statements);
-            var terminated = LowerTerminator(region.Body.Body.Last, region.Label, next);
-            statements.AddRange(terminated.Statements);
-            var canFallThrough = terminated.CanFallThrough;
-            if (canFallThrough && next is not null && !IsCurrentLoopTransfer(next))
-            {
-                var continuation = Expand(next, new NormalTransfer(next, [region.Label]), enclosingNext);
-                statements.AddRange(continuation.Statements);
-                canFallThrough = continuation.CanFallThrough;
-            }
-            return new Sequence(
-                [(SlangStatement)new SlangScope(region.Label, new SlangBlock(statements.ToImmutable()))],
-                canFallThrough);
-        }
-
-        private Sequence LowerLoop(
-            RegionTree<Label, ShaderRegionBody> region,
-            Label? enclosingNext)
-        {
-            var next = region.Body.ImmediatePostDominator;
-            var normalTransfer = FindNormalTransfer(region);
-            var statements = ImmutableArray.CreateBuilder<SlangStatement>();
-            loopOwners.Push(new LoopOwner(region.Label, normalTransfer));
-            try
-            {
-                foreach (var instruction in region.Body.Body.Elements)
-                    LowerInstruction(instruction, statements);
-                var terminated = LowerTerminator(region.Body.Body.Last, region.Label, next);
-                statements.AddRange(terminated.Statements);
-                if (terminated.CanFallThrough && next is not null && !IsCurrentLoopTransfer(next))
-                    statements.AddRange(Expand(
-                        next,
-                        new NormalTransfer(next, [region.Label]),
-                        enclosingNext).Statements);
-            }
-            finally
-            {
-                loopOwners.Pop();
-            }
-
-            var result = new Sequence(
-                [(SlangStatement)new SlangLoop(region.Label, new SlangBlock(statements.ToImmutable()))],
-                normalTransfer is not null);
-            return normalTransfer is null
-                ? result
-                : result.Then(Expand(normalTransfer.Target, normalTransfer, enclosingNext));
-        }
-
-        private Sequence LowerTerminator(
-            ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
-            Label sourceLabel,
-            Label? next) =>
-            terminator switch
-            {
-                Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> =>
-                    Sequence.Completed(new SlangReturnVoid()),
                 Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
-                    Sequence.Completed(new SlangReturnValue(Operand(returned.Expr))),
+                    [returned.Expr],
                 Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch =>
-                    Expand(branch.Target.Label, new NormalTransfer(branch.Target.Label, [sourceLabel]), next),
+                    branch.Target.Arguments,
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
-                    LowerConditional(branch, sourceLabel, next),
-                _ => throw Error($"unsupported terminator in block '{sourceLabel.Name}'")
+                    [branch.Condition, .. branch.TrueTarget.Arguments, .. branch.FalseTarget.Arguments],
+                _ => []
             };
-
-        private Sequence LowerConditional(
-            Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch,
-            Label sourceLabel,
-            Label? next)
-        {
-            var whenTrue = Expand(
-                branch.TrueTarget.Label,
-                new NormalTransfer(branch.TrueTarget.Label, [sourceLabel]),
-                next);
-            var whenFalse = Expand(
-                branch.FalseTarget.Label,
-                new NormalTransfer(branch.FalseTarget.Label, [sourceLabel]),
-                next);
-            return new Sequence(
-                [
-                    new SlangIf(
-                        Operand(branch.Condition),
-                        new SlangBlock(whenTrue.Statements),
-                        new SlangBlock(whenFalse.Statements))
-                ],
-                whenTrue.CanFallThrough || whenFalse.CanFallThrough);
-        }
-
-        private Sequence Expand(Label target, NormalTransfer transfer, Label? next)
-        {
-            if (loopOwners.TryPeek(out var owner))
-            {
-                if (owner.Header.Equals(target))
-                    return Sequence.Completed(new SlangContinue());
-                if (owner.NormalTransfer?.Target.Equals(target) ?? false)
-                    return Sequence.Completed(new SlangBreak());
-            }
-
-            var terminal = blocks[target].Body.Successor is TerminateSuccessor;
-            if (!(loopOwners.Count > 0 && terminal) && next is not null && target.Equals(next))
-                return Sequence.FallThrough;
-            if (active.Contains(target))
-                throw UnsupportedTransfer(transfer, "an unowned expansion cycle was detected");
-            if (!terminal && TryLowerLoopTransferContinuation(target, out var resolved))
-                return resolved;
-            if (!terminal && next is not null && TryLowerEdgeContinuation(target, next, out resolved))
-                return resolved;
-            if (!terminal && !placedNonterminals.Add(target))
-                throw UnsupportedTransfer(
-                    transfer,
-                    $"the nonterminal target already has an executable AST placement " +
-                    $"(lexical next: {next?.ToString() ?? "<exit>"}, " +
-                    $"loop owners: {string.Join(" > ", loopOwners.Select(loop => loop.Header))})");
-
-            active.Add(target);
-            try
-            {
-                return LowerRegion(blocks[target], next);
-            }
-            finally
-            {
-                active.Remove(target);
-            }
-        }
-
-        private bool TryLowerEdgeContinuation(Label target, Label next, out Sequence result)
-        {
-            var region = blocks[target];
-            if (region.Definition.Kind != RegionKind.Block ||
-                region.Body.Body.Last is not Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch ||
-                !branch.Target.Arguments.IsEmpty ||
-                !branch.Target.Label.Equals(next))
-            {
-                result = default;
-                return false;
-            }
-
-            active.Add(target);
-            try
-            {
-                var statements = ImmutableArray.CreateBuilder<SlangStatement>();
-                foreach (var instruction in region.Body.Body.Elements)
-                    LowerInstruction(instruction, statements);
-                result = new Sequence(
-                    [(SlangStatement)new SlangScope(target, new SlangBlock(statements.ToImmutable()))],
-                    true);
-                return true;
-            }
-            finally
-            {
-                active.Remove(target);
-            }
-        }
-
-        private bool TryLowerLoopTransferContinuation(Label target, out Sequence result)
-        {
-            var region = blocks[target];
-            if (region.Definition.Kind != RegionKind.Block ||
-                region.Body.Body.Last is not Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch ||
-                !branch.Target.Arguments.IsEmpty)
-            {
-                result = default;
-                return false;
-            }
-            if (!loopOwners.TryPeek(out var owner))
-            {
-                result = default;
-                return false;
-            }
-
-            SlangStatement? transfer = branch.Target.Label switch
-            {
-                var label when label.Equals(owner.Header) => new SlangContinue(),
-                var label when owner.NormalTransfer?.Target.Equals(label) ?? false => new SlangBreak(),
-                _ => null
-            };
-            if (transfer is null)
-            {
-                result = default;
-                return false;
-            }
-
-            active.Add(target);
-            try
-            {
-                var statements = ImmutableArray.CreateBuilder<SlangStatement>();
-                foreach (var instruction in region.Body.Body.Elements)
-                    LowerInstruction(instruction, statements);
-                statements.Add(transfer);
-                result = Sequence.Completed(
-                    new SlangScope(target, new SlangBlock(statements.ToImmutable())));
-                return true;
-            }
-            finally
-            {
-                active.Remove(target);
-            }
-        }
 
         private void LowerInstruction(
             Instruction<IShaderValue, IShaderValue> instruction,
@@ -410,7 +408,9 @@ public sealed class SlangTargetLowering
             var lowered = instruction.Select(Operand, static result => result);
             if (lowered.Result is null ||
                 instruction.Operation is CallOperation { ResultType: UnitType })
+            {
                 statements.Add(new SlangEffect(lowered));
+            }
             else
             {
                 if (lowered.Result.Type is UnitType)
@@ -418,11 +418,18 @@ public sealed class SlangTargetLowering
                 if (lowered.Result.Type is IPtrType)
                     throw UnsupportedOperation(instruction, "pointer results must lower to typed places");
                 statements.Add(new SlangBind(lowered));
-                if (captures.TryGetValue(lowered.Result, out var capture))
-                    statements.Add(new SlangAssign(
-                        new SlangVariablePlace(capture),
-                        new SlangValueOperand(lowered.Result)));
+                CaptureDefinition(lowered.Result, statements);
             }
+        }
+
+        private void CaptureDefinition(
+            IShaderValue value,
+            ImmutableArray<SlangStatement>.Builder statements)
+        {
+            if (captures.TryGetValue(value, out var capture))
+                statements.Add(new SlangAssign(
+                    new SlangVariablePlace(capture),
+                    new SlangValueOperand(value)));
         }
 
         private static bool IsSupportedExpression(IOperation operation) =>
@@ -473,65 +480,36 @@ public sealed class SlangTargetLowering
             };
         }
 
-        private NormalTransfer? FindNormalTransfer(RegionTree<Label, ShaderRegionBody> region)
-        {
-            HashSet<Label> regionLabels = [region.Label, .. region.Bindings.SelectMany(child => child.DefinedLabels())];
-            var transfers = regionLabels
-                .SelectMany(sourceLabel => blocks[sourceLabel].Body.Successor.AllTargets()
-                    .Where(target => !regionLabels.Contains(target) &&
-                                     blocks[target].Body.Successor is not TerminateSuccessor)
-                    .Select(target => (Source: sourceLabel, Target: target)))
-                .GroupBy(transfer => transfer.Target)
-                .Select(group => new NormalTransfer(
-                    group.Key,
-                    [.. group.Select(transfer => transfer.Source)
-                        .Distinct()
-                        .OrderBy(label => label.ToString())]))
-                .OrderBy(transfer => transfer.Target.ToString())
-                .ToArray();
-            return transfers switch
-            {
-                [] => null,
-                [var transfer] => transfer,
-                _ => throw Error(
-                    $"unsupported loop transfers from '{region.Label.Name}': " +
-                    string.Join("; ", transfers.Select(FormatTransfer)))
-            };
-        }
-
-        private bool IsCurrentLoopTransfer(Label target) =>
-            loopOwners.TryPeek(out var owner) &&
-            (owner.Header.Equals(target) || (owner.NormalTransfer?.Target.Equals(target) ?? false));
-
         private NotSupportedException UnsupportedOperation(
             Instruction<IShaderValue, IShaderValue> instruction,
             string reason) =>
             Error($"operation '{instruction.Operation.Name}': {reason}");
 
-        private NotSupportedException UnsupportedTransfer(NormalTransfer transfer, string reason) =>
-            Error($"unsupported transfer {FormatTransfer(transfer)}: {reason}");
-
-        private static string FormatTransfer(NormalTransfer transfer) =>
-            $"from [{string.Join(", ", transfer.Sources)}] to {transfer.Target}";
-
         private NotSupportedException Error(string message) =>
             new($"Function '{source.Declaration.Name}': {message}.");
 
-        private readonly record struct Sequence(
-            ImmutableArray<SlangStatement> Statements,
-            bool CanFallThrough)
+        private static IShaderValue Int(int value) =>
+            ShaderValue.Literal(new I32Literal(value));
+
+        private static string Format(Continuation continuation) =>
+            $"{continuation.Kind.ToString().ToLowerInvariant()} " +
+            $"{continuation.Target} owned by {continuation.Owner}";
+
+        private sealed record Continuation(
+            Label Target,
+            Label Owner,
+            ScopedContinuationKind Kind)
         {
-            public static Sequence FallThrough { get; } = new([], true);
-
-            public static Sequence Completed(SlangStatement statement) => new([statement], false);
-
-            public Sequence Then(Sequence next) =>
-                CanFallThrough
-                    ? new Sequence([.. Statements, .. next.Statements], next.CanFallThrough)
-                    : this;
+            internal static Continuation From(ScopedTransfer<Label> transfer) =>
+                new(transfer.Target, transfer.Owner, transfer.Kind);
         }
 
-        private sealed record NormalTransfer(Label Target, ImmutableArray<Label> Sources);
-        private readonly record struct LoopOwner(Label Header, NormalTransfer? NormalTransfer);
+        private readonly record struct Lowered(
+            ImmutableArray<SlangStatement> Statements,
+            ImmutableHashSet<Continuation> Escapes)
+        {
+            internal static Lowered Completed(SlangStatement statement) =>
+                new([statement], ImmutableHashSet<Continuation>.Empty);
+        }
     }
 }

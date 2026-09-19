@@ -139,8 +139,9 @@ not claim reducibility, forward merges, reconvergence, or general structurizatio
 | `CilBlockControlFactsPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute the existing reverse-postorder, immediate-dominator, immediate-postdominator, and natural-loop-header results once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
 | `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
-| `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
-| `SlangTargetLowering` | `ShaderModuleDeclaration<FunctionBody4>` -> `ShaderModuleDeclaration<SlangFunctionBody>` | Validate the argument-free Region contract and place declarations, typed values/places, scopes, conditionals, loops, returns, and owned transfers in an immutable target AST. |
+| `StablePointerRegionParameterPass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported stable pointer aliases while preserving ordinary parameters and ordered jump arguments. This is the public Slang/WGSL path. |
+| `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Compose stable-pointer resolution with the older generic all-parameter lowering for remaining callers. |
+| `SlangTargetLowering` | `ShaderModuleDeclaration<FunctionBody4>` -> `ShaderModuleDeclaration<SlangFunctionBody>` | Structurally lower checked `Forward`/`Repeat` transfers, selected-edge parallel copies, typed values/places, scopes, gates, loops and returns into an immutable target AST. |
 | `SlangEmitter` | `ShaderModuleDeclaration<SlangFunctionBody>` -> Slang text | Render target expressions, declarations, attributes/resources, control syntax, braces, and punctuation without consulting Region definitions or inferring layout. |
 | `SlangService` | Slang text -> WGSL | Invoke the external Slang compiler. |
 
@@ -166,9 +167,9 @@ serve multiple stages. Parsing, Pre analysis, reachable CFG construction, flat
 value lifting, BB-local control facts, and region construction now have distinct
 typed producer/consumer boundaries. A topology-changing pass must rerun
 `CilBlockControlFactsPass`; there is no incremental cache or invalidation manager.
-The Slang path now has a distinct target AST boundary. The lowering is
-deliberately limited to the current dominator-organized, argument-free Region
-producer; it is not a general structurizer.
+The Slang path now has a distinct target AST boundary. The lowering consumes the
+checked dominator-organized Region producer with ordinary block arguments still
+present. It is not an irreducible-CFG structurizer or a GPU reconvergence policy.
 
 The agreed [linear CIL design](linear-cil.md) refines the frontend ordering:
 preserve native predicates and original offsets, analyze Pre stack types on
@@ -202,16 +203,17 @@ a shared effectful definition at every reference as if it were a pure expression
 
 `SlangFunctionBody` contains immutable `SlangBlock` statement arrays. Its
 statements explicitly represent declarations, value bindings, effects,
-assignments to typed places, provenance scopes, conditionals, loops, returns,
-breaks, and continues. Address-of-member and vector-component instructions
-become typed place aliases during lowering; they are not printer-side string
-substitutions.
+assignments to typed places, provenance scopes, conditionals, one-shot carriers,
+repeat loops, returns, breaks, and continues. `SlangDoOnce` and `SlangLoop` are
+distinct nodes; provenance does not select their semantics. Address-of-member
+and vector-component instructions become typed place aliases during lowering;
+they are not printer-side string substitutions.
 
-`SlangScope` is a real lexical scope. A block's ordinary continuation is nested
-inside that block scope so dominating immutable bindings remain visible.
-Non-pointer instruction results used from another original label are captured
-immediately into explicit function-local slots; this also carries the final
-iteration's loop value across the loop's lexical boundary.
+`SlangScope` is a real lexical scope around one original body. Non-pointer
+instruction results or block parameters used from another original label are
+captured immediately into explicit function-local slots; this also carries the
+final iteration's loop value across the loop's lexical boundary. Stable pointer
+projections remain typed places and do not become mutable pointer slots.
 
 Operation classification remains typed: logical-not renders as Slang's `!`
 operator, while a `CallOperation` returning `Unit` is an effect statement even

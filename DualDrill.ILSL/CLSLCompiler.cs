@@ -59,7 +59,7 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
             case CLSLCompileTarget.WGSL:
                 {
                     module = module.RunPass(new FunctionToOperationPass());
-                    module = module.RunPass(new RegionParameterToLocalVariablePass());
+                    module = module.RunPass(new StablePointerRegionParameterPass());
                     var target = new SlangTargetLowering().Lower(module);
                     var emitter = new SlangEmitter(target);
                     var slangCode = emitter.Emit();
@@ -70,7 +70,7 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
             case CLSLCompileTarget.SLang:
                 {
                     module = module.RunPass(new FunctionToOperationPass());
-                    module = module.RunPass(new RegionParameterToLocalVariablePass());
+                    module = module.RunPass(new StablePointerRegionParameterPass());
                     var target = new SlangTargetLowering().Lower(module);
                     var emitter = new SlangEmitter(target);
                     var code = emitter.Emit();
