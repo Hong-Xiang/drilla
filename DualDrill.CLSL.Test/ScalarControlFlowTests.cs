@@ -106,7 +106,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         };
 
         output.WriteLine($"ACTUAL capture scenario={scenario}");
-        Check(method, arguments, expected, scenario);
+        Check(method, arguments, expected, $"cil/{scenario}");
     }
 
     [Theory]
@@ -483,11 +483,11 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var source = Emit(pointerLowered);
         var emitted = new EmittedScalarProgram(pointerLowered, source).Run([]);
         AssertEquivalent(expected, emitted);
-        Capture("cyclic-swap.region.txt", pointerLowered.Dump());
-        Capture("cyclic-swap.ast.txt", target.PrettyPrint());
-        Capture("cyclic-swap.slang", source);
+        Capture("hand/block-parameter-swap.region.txt", pointerLowered.Dump());
+        Capture("hand/block-parameter-swap.ast.txt", target.PrettyPrint());
+        Capture("hand/block-parameter-swap.slang", source);
         Capture(
-            "cyclic-swap.execution.txt",
+            "hand/block-parameter-swap.execution.txt",
             $"arguments=[] result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}" +
             Environment.NewLine);
 
@@ -545,11 +545,11 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
         Assert.Contains("SharedTail", slang);
         Assert.Contains("ContinueAndBreak", slang);
-        Capture("public-scalar.slang", slang);
+        Capture("public/scalar.slang", slang);
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
         Assert.Contains("@fragment", wgsl);
         Assert.Contains("fn ScalarFragment", wgsl);
-        Capture("public-scalar.wgsl", wgsl);
+        Capture("public/scalar.wgsl", wgsl);
     }
 
     [Fact]
@@ -557,14 +557,16 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     {
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(new ScalarBooleanCallShader());
         Assert.Contains("fn BooleanFragment", wgsl);
-        Capture("public-boolean.wgsl", wgsl);
+        Capture("public/boolean.wgsl", wgsl);
     }
 
     private static void Capture(string name, string content)
     {
         var directory = Environment.GetEnvironmentVariable("DRILLA_E2_CAPTURE_DIR");
         if (string.IsNullOrWhiteSpace(directory)) return;
-        Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory, name), content);
+        var path = Path.Combine(directory, name);
+        Directory.CreateDirectory(Path.GetDirectoryName(path) ??
+                                  throw new InvalidOperationException("Capture path has no directory."));
+        File.WriteAllText(path, content);
     }
 }

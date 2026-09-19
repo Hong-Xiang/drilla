@@ -45,7 +45,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         Assert.Equal(source.Slang, new SlangEmitter(source.Module).Emit());
         var firstDump = target.PrettyPrint();
         Assert.Equal(firstDump, target.PrettyPrint());
-        Capture("shared-tail", source.Region, target.PrettyPrint(), source.Slang);
+        Capture("target-cil/shared-tail", source.Region, target.PrettyPrint(), source.Slang);
     }
 
     [Fact]
@@ -527,9 +527,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         Assert.Single(
             Statements(target.Body).OfType<SlangScope>(),
             scope => scope.OriginalLabel == exit);
-        Capture("same-target-selected", body, target.PrettyPrint(), source);
+        Capture("hand/same-target-selected", body, target.PrettyPrint(), source);
         CaptureText(
-            "same-target-selected.execution.txt",
+            "hand/same-target-selected.execution.txt",
             $"arguments=true result={selectedTrue.Result} trace={string.Join(" -> ", selectedTrue.Trace)}" +
             Environment.NewLine +
             $"arguments=false result={selectedFalse.Result} trace={string.Join(" -> ", selectedFalse.Trace)}" +
@@ -620,7 +620,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
 
         await AssertEmittedEquivalent(body, arguments, new Value.Integer(expected));
         CaptureExecution(
-            "outer-owner-transfers",
+            "hand/outer-owner-transfers",
             body,
             [
                 ([new Value.Boolean(false)], new Value.Integer(1)),
@@ -714,7 +714,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
 
         await AssertEmittedEquivalent(body, arguments, new Value.Integer(expected));
         CaptureExecution(
-            "distinct-forward-exits",
+            "hand/distinct-forward-exits",
             body,
             [
                 ([new Value.Boolean(false)], new Value.Integer(11)),
@@ -918,7 +918,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             item => item.Variable.Type is IPtrType);
         Assert.Contains(".x = 2.5;", source);
         await new SlangService().ValidateAsync(source);
-        Capture("cross-label-pointer-projection", body, target.PrettyPrint(), source);
+        Capture("hand/cross-label-pointer-projection", body, target.PrettyPrint(), source);
     }
 
     [Fact]
@@ -986,7 +986,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             assignment => assignment.Target is SlangComponentPlace { Component: "y" });
         Assert.Contains(".y = 3.5;", source);
         await new SlangService().ValidateAsync(source);
-        Capture("loop-exit-pointer-projection", body, target.PrettyPrint(), source);
+        Capture("hand/loop-exit-pointer-projection", body, target.PrettyPrint(), source);
     }
 
     [Fact]
@@ -1251,10 +1251,10 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     {
         var fixtures = new (string Name, System.Reflection.MethodInfo Method)[]
         {
-            ("ordinary-zero-loop", ((Func<int, int>)DevelopTestShaderModule.MinimumLoop).Method),
-            ("early-return", ((Func<int, int, int, int>)ScalarControlFlowFixtures.NestedEarlyReturn).Method),
-            ("nested-outer-transfer", ((Func<int, int, int>)ScalarControlFlowFixtures.NestedLoopControl).Method),
-            ("cyclic-swap", ((Func<int, int>)ScalarControlFlowFixtures.LoopCarriedSwap).Method)
+            ("target-cil/ordinary-zero-loop", ((Func<int, int>)DevelopTestShaderModule.MinimumLoop).Method),
+            ("target-cil/early-return", ((Func<int, int, int, int>)ScalarControlFlowFixtures.NestedEarlyReturn).Method),
+            ("target-cil/nested-outer-transfer", ((Func<int, int, int>)ScalarControlFlowFixtures.NestedLoopControl).Method),
+            ("target-cil/loop-carried-swap", ((Func<int, int>)ScalarControlFlowFixtures.LoopCarriedSwap).Method)
         };
 
         foreach (var (name, method) in fixtures)
@@ -1306,9 +1306,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             statement => statement.OriginalLabel == loop);
         Assert.Throws<InvalidOperationException>(
             () => new EmittedScalarProgram(body, source).Run([], 100));
-        Capture("nonterminating-repeat", body, target.PrettyPrint(), source);
+        Capture("hand/nonterminating-repeat", body, target.PrettyPrint(), source);
         CaptureText(
-            "nonterminating-repeat.execution.txt",
+            "hand/nonterminating-repeat.execution.txt",
             "arguments=[] emitted=step budget exhausted; no fabricated return" + Environment.NewLine);
     }
 
@@ -1425,18 +1425,27 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     {
         var directory = Environment.GetEnvironmentVariable("DRILLA_E2_CAPTURE_DIR");
         if (string.IsNullOrWhiteSpace(directory)) return;
-        Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory, $"{name}.region.txt"), region.Dump());
-        File.WriteAllText(Path.Combine(directory, $"{name}.ast.txt"), ast);
-        File.WriteAllText(Path.Combine(directory, $"{name}.slang"), slang);
+        Write($"{name}.region.txt", region.Dump());
+        Write($"{name}.ast.txt", ast);
+        Write($"{name}.slang", slang);
+
+        void Write(string relativePath, string content)
+        {
+            var path = Path.Combine(directory, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ??
+                                      throw new InvalidOperationException("Capture path has no directory."));
+            File.WriteAllText(path, content);
+        }
     }
 
     private static void CaptureText(string name, string content)
     {
         var directory = Environment.GetEnvironmentVariable("DRILLA_E2_CAPTURE_DIR");
         if (string.IsNullOrWhiteSpace(directory)) return;
-        Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory, name), content);
+        var path = Path.Combine(directory, name);
+        Directory.CreateDirectory(Path.GetDirectoryName(path) ??
+                                  throw new InvalidOperationException("Capture path has no directory."));
+        File.WriteAllText(path, content);
     }
 
     private sealed record LoweredFixture(
