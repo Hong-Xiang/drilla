@@ -1,7 +1,10 @@
 using System.Collections.Immutable;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Symbol;
@@ -75,14 +78,71 @@ internal static class ScalarControlFlowOracle
         var context = $"CFG {body.Declaration.Name}";
         if (!IsScalar(body.Declaration.ReturnType) || body.Declaration.Parameters.Any(p => !IsScalar(p.Type)))
             throw new NotSupportedException($"{context}: only i32/bool function signatures are supported.");
-        var budget = new Budget(context, stepLimit);
-        var values = new Dictionary<IShaderValue, Value>();
-        var memory = new Dictionary<IShaderValue, Value>();
-        var trace = ImmutableArray.CreateBuilder<Label>();
         if (arguments.Length != body.Declaration.Parameters.Length)
             throw new InvalidOperationException($"{context}: incorrect argument count.");
+        var memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
         foreach (var (parameter, argument) in body.Declaration.Parameters.Zip(arguments))
-            Write(memory, parameter.Value, argument, parameter.Type);
+        {
+            if (!HasType(argument, parameter.Type))
+                throw new NotSupportedException($"{context}: expected {parameter.Type.Name}, got {argument}.");
+            memory.Add(parameter.Value, argument);
+        }
+
+        return RunCfg(
+            context,
+            body.Entry,
+            label =>
+            {
+                var block = body[label];
+                return new ScalarBlock(block.Parameters, block.Body);
+            },
+            memory,
+            body.Declaration.ReturnType,
+            stepLimit);
+    }
+
+    internal static Execution RunCfg(
+        ControlFlowGraph<CilValueBasicBlock> graph,
+        ImmutableArray<VariableDeclaration> locals,
+        bool initLocals,
+        int stepLimit = 10000)
+    {
+        var memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
+        if (initLocals)
+            foreach (var local in locals)
+                memory.Add(local.Value, local.Type switch
+                {
+                    IntType<DualDrill.Common.Nat.N32> => new Value.Integer(0),
+                    BoolType => new Value.Boolean(false),
+                    _ => throw new NotSupportedException(
+                        $"Flat CFG: unsupported initialized local type {local.Type.Name}.")
+                });
+
+        return RunCfg(
+            "Flat CFG",
+            graph.EntryLabel,
+            label =>
+            {
+                var block = graph[label];
+                return new ScalarBlock(block.Parameters, block.Body);
+            },
+            memory,
+            null,
+            stepLimit);
+    }
+
+    private static Execution RunCfg(
+        string context,
+        Label entry,
+        Func<Label, ScalarBlock> getBlock,
+        IReadOnlyDictionary<IShaderValue, Value> initialMemory,
+        IShaderType? returnType,
+        int stepLimit)
+    {
+        var budget = new Budget(context, stepLimit);
+        var values = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
+        var memory = new Dictionary<IShaderValue, Value>(initialMemory, ReferenceEqualityComparer.Instance);
+        var trace = ImmutableArray.CreateBuilder<Label>();
 
         Value Read(IShaderValue? value) => value switch
         {
@@ -100,12 +160,12 @@ internal static class ScalarControlFlowOracle
             target[key] = value;
         }
 
-        var label = body.Entry;
+        var label = entry;
         while (true)
         {
             budget.Step(label.ToString());
             trace.Add(label);
-            var block = body[label];
+            var block = getBlock(label);
             foreach (var instruction in block.Body.Elements)
             {
                 budget.Step($"{label}: {instruction.Operation.Name}");
@@ -157,7 +217,10 @@ internal static class ScalarControlFlowOracle
             if (block.Body.Last is Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned)
             {
                 // CIL represents bool on the evaluation stack as i32; normalize at the method boundary.
-                return new Execution(Convert(Read(returned.Expr), body.Declaration.ReturnType), trace.ToImmutable());
+                var result = Read(returned.Expr);
+                return new Execution(
+                    returnType is null ? result : Convert(result, returnType),
+                    trace.ToImmutable());
             }
             var jump = block.Body.Last switch
             {
@@ -166,7 +229,7 @@ internal static class ScalarControlFlowOracle
                     Read(branch.Condition).Bool ? branch.TrueTarget : branch.FalseTarget,
                 _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {block.Body.Last}.")
             };
-            var parameters = body[jump.Label].Parameters;
+            var parameters = getBlock(jump.Label).Parameters;
             if (parameters.Length != jump.Arguments.Length)
                 throw new InvalidOperationException($"{context}: invalid edge {label} -> {jump.Label} arity.");
             // All sources are read before any destination is overwritten (parallel edge copies).
@@ -176,6 +239,11 @@ internal static class ScalarControlFlowOracle
             label = jump.Label;
         }
     }
+
+    private sealed record ScalarBlock(
+        ImmutableArray<IShaderValue> Parameters,
+        Seq<Instruction<IShaderValue, IShaderValue>,
+            ITerminator<RegionJump<IShaderValue>, IShaderValue>> Body);
 
     private static bool IsScalar(IShaderType type) => type.Equals(ShaderType.I32) || type.Equals(ShaderType.Bool);
 }
