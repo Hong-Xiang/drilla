@@ -19,6 +19,7 @@ using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Common.Nat;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
+using static DualDrill.CLSL.Test.ScopedContinuationOracle;
 
 namespace DualDrill.CLSL.Test;
 
@@ -168,6 +169,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         output.WriteLine(source);
         var cfg = RunCfg(original, arguments);
         Assert.Equal(expected, cfg.Result);
+        AssertEquivalent(cfg, RunScoped(original, arguments));
         AssertEquivalent(cfg, RunCfg(lowered, arguments));
         var emitted = new EmittedScalarProgram(lowered, source).Run(arguments);
         output.WriteLine($"CPU/original CFG: {cfg.Result}; emitted: {emitted.Result}");
@@ -246,7 +248,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             ITerminator<RegionJump<IShaderValue>, IShaderValue>>
         Terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
-    private static FunctionBody4 HandBody()
+    internal static FunctionBody4 HandBody()
     {
         var entry = Label.Create("entry");
         var tail = Label.Create("tail");
@@ -284,8 +286,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         };
         return new FunctionBody4(declaration,
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
-                RegionTree<Label, ShaderRegionBody>.Block(tail, [], blocks[1], exit),
-                RegionTree<Label, ShaderRegionBody>.Block(exit, [], blocks[2], null)
+                RegionTree<Label, ShaderRegionBody>.Block(exit, [], blocks[2], null),
+                RegionTree<Label, ShaderRegionBody>.Block(tail, [], blocks[1], exit)
             ], blocks[0], tail));
     }
 
@@ -369,8 +371,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             new(exit, [result])), exit);
         var exitBody = ShaderRegionBody.Create(exit, [answer], [], Terms.ReturnExpr(answer), null);
         var body = new FunctionBody4(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry, [
-            RegionTree<Label, ShaderRegionBody>.Loop(loop, [], loopBody, exit, exit),
-            RegionTree<Label, ShaderRegionBody>.Block(exit, [], exitBody, null)
+            RegionTree<Label, ShaderRegionBody>.Block(exit, [], exitBody, null),
+            RegionTree<Label, ShaderRegionBody>.Loop(loop, [], loopBody, exit, exit)
         ], entryBody, loop));
         var expected = new Execution(new Value.Integer(21), [entry, loop, loop, exit]);
         AssertEquivalent(expected, RunCfg(body, []));
@@ -382,12 +384,20 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     public void UnsupportedOperationsAndBothExecutionBudgetsFailExplicitly()
     {
         var body = HandBody();
-        var cycle = body.MapRegionBody(block => block.Label != body.Entry ? block : block with
-        {
-            Body = Seq.Create(block.Body.Elements, Terms.Br(new(body.Entry, [])))
-        });
+        var cycleLabel = Label.Create("cycle");
+        var cycleRegion = ShaderRegionBody.Create(
+            cycleLabel,
+            [],
+            [],
+            Terms.Br(new(cycleLabel, [])),
+            null);
+        var cycle = new FunctionBody4(
+            new FunctionDeclaration("Cycle", [], new FunctionReturn(ShaderType.I32, []), []),
+            RegionTree<Label, ShaderRegionBody>.Loop(cycleLabel, [], cycleRegion, null, null));
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
-            () => RunCfg(cycle, [new Value.Integer(0)], 100)).Message);
+            () => RunCfg(cycle, [], 100)).Message);
+        Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
+            () => RunScoped(cycle, [], 100)).Message);
         var infinite = "i32 Probe(i32 x, )\n{\nwhile(true)\n{\n}\n}";
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
             () => new EmittedScalarProgram(body, infinite).Run([new Value.Integer(0)], 10)).Message);
