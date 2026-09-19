@@ -150,6 +150,8 @@ public sealed class AnnotatedStageValueTests
         Assert.DoesNotContain("control-flow-analysis", graph);
         var printedFact = factRow.PrettyPrint();
         Assert.Contains(" facts={rpo=0 idom=none", printedFact);
+        Assert.Contains(" incoming=[", printedFact);
+        Assert.Contains(" loop-header=", printedFact);
         Assert.Contains("control:", printedFact);
         Assert.DoesNotContain(nameof(CilValueBasicBlock), printedFact);
         Assert.DoesNotContain(nameof(BlockControlFacts), printedFact);
