@@ -1,0 +1,38 @@
+%0 : ptr<i32, Function> = $0(n)
+block ^0(entry):
+    block ^1(header):
+
+        |=> exit
+        %1 : i32 = region $0
+        %2 : i32 = region $1
+        %3 : i32 = region $2
+
+        %4 : bool = lt.i32  (%2 : i32) (%3 : i32)
+        br_if %4 : bool
+            ^2(step)(%1 : i32, %2 : i32, %3 : i32)
+        else
+            ^3(exit)(%1 : i32)
+
+    block ^2(step):
+
+        |=> exit
+        %5 : i32 = region $0
+        %6 : i32 = region $1
+        %7 : i32 = region $2
+
+        %8 : i32 = add.i32  (%5 : i32) (%6 : i32)
+        %9 : i32 = add.i32  (%6 : i32) (1_i32)
+        br ^1(header)(%8 : i32, %9 : i32, %7 : i32)
+
+    block ^3(exit):
+
+        |=> exit
+        %10 : i32 = region $0
+
+        return %10 : i32
+
+
+    |=> exit
+
+    %11 : i32 = load  (%0 : ptr<i32, Function>)
+    br ^1(header)(0_i32, 0_i32, %11 : i32)
