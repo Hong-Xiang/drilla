@@ -408,10 +408,13 @@ public sealed class SlangTargetLowering
             if (!IsSupportedExpression(instruction.Operation))
                 throw UnsupportedOperation(instruction, "operation has no Slang expression spelling");
             var lowered = instruction.Select(Operand, static result => result);
-            if (lowered.Result is null)
+            if (lowered.Result is null ||
+                instruction.Operation is CallOperation { ResultType: UnitType })
                 statements.Add(new SlangEffect(lowered));
             else
             {
+                if (lowered.Result.Type is UnitType)
+                    throw UnsupportedOperation(instruction, "only calls may produce Unit effects");
                 if (lowered.Result.Type is IPtrType)
                     throw UnsupportedOperation(instruction, "pointer results must lower to typed places");
                 statements.Add(new SlangBind(lowered));

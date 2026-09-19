@@ -226,6 +226,7 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                     $"{Operand(0)}.{component.Component.Name}",
                 IVectorFromScalarConstructOperation construction when operands.Length == 1 =>
                     $"{construction.ResultType.Name}({Operand(0)})",
+                LogicalNotOperation when operands.Length == 1 => $"!{Operand(0)}",
                 UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate>
                     when operands.Length == 1 => $"- {Operand(0)}",
                 VectorNumericUnaryOperation<N3, FloatType<N32>, UnaryArithmetic.Negate>
@@ -360,7 +361,7 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
             }
         }
 
-        private void VisitType(IShaderType type) => writer.Write(type.Name);
+        private void VisitType(IShaderType type) => writer.Write(type is UnitType ? "void" : type.Name);
 
         private void DumpTypeAliases()
         {

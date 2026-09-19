@@ -752,6 +752,88 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task LogicalNotAndUnitCallUseTargetOperationSyntax()
+    {
+        var notEntry = Label.Create("not-entry");
+        var input = new ParameterDeclaration("input", ShaderType.Bool, []);
+        var loaded = ShaderValue.Intermediate(ShaderType.Bool);
+        var negated = ShaderValue.Intermediate(ShaderType.Bool);
+        var notDeclaration = new FunctionDeclaration(
+            "Negate", [input], new FunctionReturn(ShaderType.Bool, []), []);
+        var notBody = new FunctionBody4(
+            notDeclaration,
+            RegionTree.Block(notEntry, [], ShaderRegionBody.Create(
+                notEntry,
+                [],
+                [
+                    Instruction.Factory.Load(default, new LoadOperation(), loaded, input.Value),
+                    Instruction.Factory.Operation1(
+                        default,
+                        LogicalNotOperation.Instance,
+                        negated,
+                        loaded)
+                ],
+                Terms.ReturnExpr(negated),
+                null), null));
+        var notSource = Emit(Lower(notBody));
+
+        Assert.Contains(" = !v_", notSource);
+        Assert.DoesNotContain("not(", notSource);
+        await new SlangService().ValidateAsync(notSource);
+
+        var observeEntry = Label.Create("observe-entry");
+        var callerEntry = Label.Create("caller-entry");
+        var observed = new ParameterDeclaration("value", ShaderType.I32, []);
+        var callerInput = new ParameterDeclaration("value", ShaderType.I32, []);
+        var observe = new FunctionDeclaration(
+            "Observe", [observed], new FunctionReturn(ShaderType.Unit, []), []);
+        var caller = new FunctionDeclaration(
+            "CallObserve", [callerInput], new FunctionReturn(ShaderType.I32, []), []);
+        var callerValue = ShaderValue.Intermediate(ShaderType.I32);
+        var unitResult = ShaderValue.Intermediate(ShaderType.Unit);
+        var observeBody = new FunctionBody4(
+            observe,
+            RegionTree.Block(observeEntry, [], ShaderRegionBody.Create(
+                observeEntry, [], [], Terms.ReturnVoid(), null), null));
+        var callerBody = new FunctionBody4(
+            caller,
+            RegionTree.Block(callerEntry, [], ShaderRegionBody.Create(
+                callerEntry,
+                [],
+                [
+                    Instruction.Factory.Load(
+                        default,
+                        new LoadOperation(),
+                        callerValue,
+                        callerInput.Value),
+                    Instruction.Factory.Call(
+                        default,
+                        new CallOperation(Assert.IsType<FunctionType>(observe.Type)),
+                        unitResult,
+                        observe,
+                        [callerValue])
+                ],
+                Terms.ReturnExpr(callerValue),
+                null), null));
+        var module = new ShaderModuleDeclaration<FunctionBody4>(
+            [observe, caller],
+            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty
+                .Add(observe, observeBody)
+                .Add(caller, callerBody));
+        var target = new SlangTargetLowering().Lower(module);
+        var effect = Assert.Single(
+            Statements(target.GetBody(caller).Body).OfType<SlangEffect>(),
+            statement => statement.Instruction.Operation is CallOperation);
+        Assert.IsType<UnitType>(effect.Instruction.Result!.Type);
+        var source = new SlangEmitter(target).Emit();
+
+        Assert.Contains("void Observe(", source);
+        Assert.Contains("Observe(v_", source);
+        Assert.DoesNotContain(": Unit =", source);
+        await new SlangService().ValidateAsync(source);
+    }
+
+    [Fact]
     public void UnsupportedAccessChainsAndScalarZeroConstructionFailInLowering()
     {
         var entry = Label.Create("entry");

@@ -319,7 +319,7 @@ public sealed record SlangEffect : SlangStatement
 {
     public SlangEffect(Instruction<SlangOperand, IShaderValue> instruction)
     {
-        if (instruction.Result is not null)
+        if (instruction.Result is { Type: not UnitType })
             throw new ArgumentException("A Slang effect cannot discard an instruction result.", nameof(instruction));
         Instruction = instruction;
     }

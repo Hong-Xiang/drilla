@@ -213,6 +213,11 @@ Non-pointer instruction results used from another original label are captured
 immediately into explicit function-local slots; this also carries the final
 iteration's loop value across the loop's lexical boundary.
 
+Operation classification remains typed: logical-not renders as Slang's `!`
+operator, while a `CallOperation` returning `Unit` is an effect statement even
+when the source instruction carries a `Unit`-typed result. Unit function
+signatures render as `void`; no unsupported Unit-valued local binding is emitted.
+
 ### Value Lowering
 
 Block parameters, SSA phi operands, mutable locals, and typed stack results are
