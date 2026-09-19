@@ -120,6 +120,11 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
                             DumpBlock(writer, conditional.WhenFalse);
                     }
                     break;
+                case SlangDoOnce once:
+                    writer.WriteLine("once");
+                    using (writer.IndentedScope())
+                        DumpBlock(writer, once.Body);
+                    break;
                 case SlangLoop loop:
                     writer.Write("loop");
                     DumpLabel(writer, loop.OriginalLabel);
@@ -256,6 +261,9 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
                     foreach (var nested in Statements(conditional.WhenTrue)) yield return nested;
                     foreach (var nested in Statements(conditional.WhenFalse)) yield return nested;
                     break;
+                case SlangDoOnce once:
+                    foreach (var nested in Statements(once.Body)) yield return nested;
+                    break;
                 case SlangLoop loop:
                     foreach (var nested in Statements(loop.Body)) yield return nested;
                     break;
@@ -345,6 +353,7 @@ public sealed record SlangAssign : SlangStatement
 
 public sealed record SlangScope(Label? OriginalLabel, SlangBlock Body) : SlangStatement;
 public sealed record SlangIf(SlangOperand Condition, SlangBlock WhenTrue, SlangBlock WhenFalse) : SlangStatement;
+public sealed record SlangDoOnce(SlangBlock Body) : SlangStatement;
 public sealed record SlangLoop(Label? OriginalLabel, SlangBlock Body) : SlangStatement;
 public sealed record SlangReturnValue(SlangOperand Value) : SlangStatement;
 public sealed record SlangReturnVoid : SlangStatement;

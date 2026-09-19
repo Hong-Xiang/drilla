@@ -203,16 +203,17 @@ a shared effectful definition at every reference as if it were a pure expression
 
 `SlangFunctionBody` contains immutable `SlangBlock` statement arrays. Its
 statements explicitly represent declarations, value bindings, effects,
-assignments to typed places, provenance scopes, conditionals, loops, returns,
-breaks, and continues. Address-of-member and vector-component instructions
-become typed place aliases during lowering; they are not printer-side string
-substitutions.
+assignments to typed places, provenance scopes, conditionals, one-shot carriers,
+repeat loops, returns, breaks, and continues. `SlangDoOnce` and `SlangLoop` are
+distinct nodes; provenance does not select their semantics. Address-of-member
+and vector-component instructions become typed place aliases during lowering;
+they are not printer-side string substitutions.
 
-`SlangScope` is a real lexical scope. A block's ordinary continuation is nested
-inside that block scope so dominating immutable bindings remain visible.
-Non-pointer instruction results used from another original label are captured
-immediately into explicit function-local slots; this also carries the final
-iteration's loop value across the loop's lexical boundary.
+`SlangScope` is a real lexical scope around one original body. Non-pointer
+instruction results or block parameters used from another original label are
+captured immediately into explicit function-local slots; this also carries the
+final iteration's loop value across the loop's lexical boundary. Stable pointer
+projections remain typed places and do not become mutable pointer slots.
 
 Operation classification remains typed: logical-not renders as Slang's `!`
 operator, while a `CallOperation` returning `Unit` is an effect statement even

@@ -17,6 +17,7 @@ using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
+using static DualDrill.CLSL.Test.ScopedContinuationOracle;
 
 namespace DualDrill.CLSL.Test;
 
@@ -222,14 +223,14 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void NestedLoopsUseUnmarkedCarriersAndExplicitTransfers()
+    public void NestedLoopsUseExplicitDoOnceCarriersAndTransfers()
     {
         var target = Lower(((Func<int, int, int>)ScalarControlFlowFixtures.NestedLoopControl).Method).Target;
         var loops = Statements(target.Body).OfType<SlangLoop>().ToArray();
 
-        Assert.True(loops.Length > 2);
-        Assert.Equal(2, loops.Count(loop => loop.OriginalLabel is not null));
-        Assert.Contains(loops, loop => loop.OriginalLabel is null);
+        Assert.Equal(2, loops.Length);
+        Assert.All(loops, loop => Assert.NotNull(loop.OriginalLabel));
+        Assert.NotEmpty(Statements(target.Body).OfType<SlangDoOnce>());
         Assert.Contains(Statements(target.Body), statement => statement is SlangBreak);
         Assert.Contains(Statements(target.Body), statement => statement is SlangContinue);
     }
@@ -535,6 +536,192 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             Environment.NewLine);
     }
 
+    [Theory]
+    [InlineData(false, 1)]
+    [InlineData(true, 2)]
+    public async Task InnerTransferExecutesOuterRepeatAndRootForward(bool repeatOuter, int expected)
+    {
+        var entry = Label.Create("entry");
+        var done = Label.Create("done");
+        var outer = Label.Create("outer");
+        var inner = Label.Create("inner");
+        var repeatInput = new ParameterDeclaration("repeatOuter", ShaderType.Bool, []);
+        var repeatValue = ShaderValue.Intermediate(ShaderType.Bool);
+        var outerRepeat = ShaderValue.Intermediate(ShaderType.Bool);
+        var innerRepeat = ShaderValue.Intermediate(ShaderType.Bool);
+        var answer = ShaderValue.Intermediate(ShaderType.I32);
+        var before = ShaderValue.Intermediate(ShaderType.I32);
+        var after = ShaderValue.Intermediate(ShaderType.I32);
+        var counter = new VariableDeclaration(
+            FunctionAddressSpace.Instance,
+            "counter",
+            ShaderType.I32,
+            []);
+        var declaration = new FunctionDeclaration(
+            "OuterOwnedTransfers",
+            [repeatInput],
+            new FunctionReturn(ShaderType.I32, []),
+            []);
+        var entryBody = ShaderRegionBody.Create(
+            entry,
+            [],
+            [
+                Instruction.Factory.Store(default, new StoreOperation(), counter.Value, Int(0)),
+                Instruction.Factory.Load(default, new LoadOperation(), repeatValue, repeatInput.Value)
+            ],
+            Terms.Br(new(outer, [repeatValue])),
+            outer);
+        var doneBody = ShaderRegionBody.Create(
+            done,
+            [answer],
+            [],
+            Terms.ReturnExpr(answer),
+            null);
+        var outerBody = ShaderRegionBody.Create(
+            outer,
+            [outerRepeat],
+            [],
+            Terms.Br(new(inner, [outerRepeat])),
+            inner);
+        var innerBody = ShaderRegionBody.Create(
+            inner,
+            [innerRepeat],
+            [
+                Instruction.Factory.Load(default, new LoadOperation(), before, counter.Value),
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    after,
+                    before,
+                    Int(1)),
+                Instruction.Factory.Store(default, new StoreOperation(), counter.Value, after)
+            ],
+            Terms.BrIf(
+                innerRepeat,
+                new(outer, [ShaderValue.Literal(new BoolLiteral(false))]),
+                new(done, [after])),
+            done);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [
+                    RegionTree.Block(done, [], doneBody, null),
+                    RegionTree.Loop(
+                        outer,
+                        [RegionTree.Loop(inner, [], innerBody, done, done)],
+                        outerBody,
+                        done,
+                        done)
+                ],
+                entryBody,
+                outer));
+        var arguments = ImmutableArray.Create<Value>(new Value.Boolean(repeatOuter));
+
+        await AssertEmittedEquivalent(body, arguments, new Value.Integer(expected));
+        CaptureExecution(
+            "outer-owner-transfers",
+            body,
+            [
+                ([new Value.Boolean(false)], new Value.Integer(1)),
+                ([new Value.Boolean(true)], new Value.Integer(2))
+            ]);
+    }
+
+    [Theory]
+    [InlineData(false, 11)]
+    [InlineData(true, 1)]
+    public async Task TwoDistinctForwardExitTargetsExecuteSelectedPath(bool chooseFirst, int expected)
+    {
+        var entry = Label.Create("entry");
+        var loop = Label.Create("loop");
+        var firstExit = Label.Create("first-exit");
+        var secondExit = Label.Create("second-exit");
+        var choose = new ParameterDeclaration("chooseFirst", ShaderType.Bool, []);
+        var condition = ShaderValue.Intermediate(ShaderType.Bool);
+        var firstAnswer = ShaderValue.Intermediate(ShaderType.I32);
+        var secondAnswer = ShaderValue.Intermediate(ShaderType.I32);
+        var before = ShaderValue.Intermediate(ShaderType.I32);
+        var after = ShaderValue.Intermediate(ShaderType.I32);
+        var alternate = ShaderValue.Intermediate(ShaderType.I32);
+        var counter = new VariableDeclaration(
+            FunctionAddressSpace.Instance,
+            "counter",
+            ShaderType.I32,
+            []);
+        var declaration = new FunctionDeclaration(
+            "DistinctForwardExits",
+            [choose],
+            new FunctionReturn(ShaderType.I32, []),
+            []);
+        var entryBody = ShaderRegionBody.Create(
+            entry,
+            [],
+            [
+                Instruction.Factory.Store(default, new StoreOperation(), counter.Value, Int(0)),
+                Instruction.Factory.Load(default, new LoadOperation(), condition, choose.Value)
+            ],
+            Terms.Br(new(loop, [])),
+            loop);
+        var firstExitBody = ShaderRegionBody.Create(
+            firstExit,
+            [firstAnswer],
+            [],
+            Terms.ReturnExpr(firstAnswer),
+            null);
+        var secondExitBody = ShaderRegionBody.Create(
+            secondExit,
+            [secondAnswer],
+            [],
+            Terms.ReturnExpr(secondAnswer),
+            null);
+        var loopBody = ShaderRegionBody.Create(
+            loop,
+            [],
+            [
+                Instruction.Factory.Load(default, new LoadOperation(), before, counter.Value),
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    after,
+                    before,
+                    Int(1)),
+                Instruction.Factory.Store(default, new StoreOperation(), counter.Value, after),
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    alternate,
+                    after,
+                    Int(10))
+            ],
+            Terms.BrIf(
+                condition,
+                new(firstExit, [after]),
+                new(secondExit, [alternate])),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [
+                    RegionTree.Block(firstExit, [], firstExitBody, null),
+                    RegionTree.Block(secondExit, [], secondExitBody, null),
+                    RegionTree.Loop(loop, [], loopBody, null, null)
+                ],
+                entryBody,
+                loop));
+        var arguments = ImmutableArray.Create<Value>(new Value.Boolean(chooseFirst));
+
+        await AssertEmittedEquivalent(body, arguments, new Value.Integer(expected));
+        CaptureExecution(
+            "distinct-forward-exits",
+            body,
+            [
+                ([new Value.Boolean(false)], new Value.Integer(11)),
+                ([new Value.Boolean(true)], new Value.Integer(1))
+            ]);
+    }
+
     [Fact]
     public void MissingLabelsAreRejectedBeforeLayout()
     {
@@ -618,7 +805,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                 null), null));
 
         var target = Lower(body);
-        var assignment = Assert.Single(Statements(target.Body).OfType<SlangAssign>());
+        var assignment = Assert.Single(
+            Statements(target.Body).OfType<SlangAssign>(),
+            item => item.Target is SlangComponentPlace);
         var place = Assert.IsType<SlangComponentPlace>(assignment.Target);
         Assert.Equal("x", place.Component);
         Assert.Equal(ShaderType.F32, place.Type);
@@ -671,6 +860,133 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         Assert.Same(member, place.Member);
         Assert.Equal(ShaderType.F32, place.Type);
         Assert.Contains(".field = 1.5;", Emit(target));
+    }
+
+    [Fact]
+    public async Task DominatingPointerProjectionRemainsAPlaceAcrossContinuation()
+    {
+        var entry = Label.Create("entry");
+        var exit = Label.Create("exit");
+        var vectorType = VecType<N2, FloatType<N32>>.Instance;
+        var vector = new VariableDeclaration(
+            FunctionAddressSpace.Instance,
+            "value",
+            vectorType,
+            []);
+        var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType());
+        var declaration = Function("CrossLabelProjection", ShaderType.Unit);
+        var entryBody = ShaderRegionBody.Create(
+            entry,
+            [],
+            [
+                Instruction.Factory.AddressOfChain(
+                    default,
+                    new AddressOfVecComponentOperation(vectorType, Swizzle.X.Instance),
+                    address,
+                    vector.Value)
+            ],
+            Terms.Br(new(exit, [])),
+            exit);
+        var exitBody = ShaderRegionBody.Create(
+            exit,
+            [],
+            [
+                Instruction.Factory.Store(
+                    default,
+                    new StoreOperation(),
+                    address,
+                    ShaderValue.Literal(new F32Literal(2.5f)))
+            ],
+            Terms.ReturnVoid(),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [RegionTree.Block(exit, [], exitBody, null)],
+                entryBody,
+                exit));
+        var target = Lower(body);
+        var source = Emit(target);
+        var assignment = Assert.Single(
+            Statements(target.Body).OfType<SlangAssign>(),
+            item => item.Target is SlangComponentPlace);
+
+        Assert.IsType<SlangComponentPlace>(assignment.Target);
+        Assert.DoesNotContain(
+            target.Body.Statements.OfType<SlangDeclare>(),
+            item => item.Variable.Type is IPtrType);
+        Assert.Contains(".x = 2.5;", source);
+        await new SlangService().ValidateAsync(source);
+        Capture("cross-label-pointer-projection", body, target.PrettyPrint(), source);
+    }
+
+    [Fact]
+    public async Task LoopHeaderPointerProjectionRemainsAPlaceAtExit()
+    {
+        var entry = Label.Create("entry");
+        var loop = Label.Create("loop");
+        var exit = Label.Create("exit");
+        var vectorType = VecType<N2, FloatType<N32>>.Instance;
+        var vector = new VariableDeclaration(
+            FunctionAddressSpace.Instance,
+            "value",
+            vectorType,
+            []);
+        var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType());
+        var declaration = Function("LoopExitProjection", ShaderType.Unit);
+        var entryBody = ShaderRegionBody.Create(
+            entry,
+            [],
+            [],
+            Terms.Br(new(loop, [])),
+            loop);
+        var loopBody = ShaderRegionBody.Create(
+            loop,
+            [],
+            [
+                Instruction.Factory.AddressOfChain(
+                    default,
+                    new AddressOfVecComponentOperation(vectorType, Swizzle.Y.Instance),
+                    address,
+                    vector.Value)
+            ],
+            Terms.BrIf(
+                ShaderValue.Literal(new BoolLiteral(false)),
+                new(loop, []),
+                new(exit, [])),
+            exit);
+        var exitBody = ShaderRegionBody.Create(
+            exit,
+            [],
+            [
+                Instruction.Factory.Store(
+                    default,
+                    new StoreOperation(),
+                    address,
+                    ShaderValue.Literal(new F32Literal(3.5f)))
+            ],
+            Terms.ReturnVoid(),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [
+                    RegionTree.Block(exit, [], exitBody, null),
+                    RegionTree.Loop(loop, [], loopBody, exit, exit)
+                ],
+                entryBody,
+                loop));
+        var target = Lower(body);
+        var source = Emit(target);
+
+        Assert.Contains(
+            Statements(target.Body).OfType<SlangAssign>(),
+            assignment => assignment.Target is SlangComponentPlace { Component: "y" });
+        Assert.Contains(".y = 3.5;", source);
+        await new SlangService().ValidateAsync(source);
+        Capture("loop-exit-pointer-projection", body, target.PrettyPrint(), source);
     }
 
     [Fact]
@@ -733,6 +1049,42 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         Assert.Contains("var v_0_answer : i32;", first);
         Assert.Contains("v_0_answer = 42;", first);
         Assert.Contains("return v_0_answer;", first);
+    }
+
+    [Fact]
+    public void LoopProvenanceDoesNotSelectLoopSemantics()
+    {
+        var declaration = Function("LoopSyntax", ShaderType.Unit);
+        var label = Label.Create("loop");
+        SlangFunctionBody Loop(Label? provenance) =>
+            new(
+                declaration,
+                new SlangBlock(
+                [
+                    new SlangLoop(
+                        provenance,
+                        new SlangBlock([(SlangStatement)new SlangBreak()])),
+                    new SlangReturnVoid()
+                ]));
+        var unlabeled = Emit(Loop(null));
+        var labeled = Emit(Loop(label));
+        var once = Emit(new SlangFunctionBody(
+            declaration,
+            new SlangBlock(
+            [
+                new SlangDoOnce(new SlangBlock([(SlangStatement)new SlangBreak()])),
+                new SlangReturnVoid()
+            ])));
+
+        Assert.Contains("while(true)", unlabeled);
+        Assert.Contains("while(true)", labeled);
+        Assert.DoesNotContain("while(false)", unlabeled);
+        Assert.DoesNotContain("while(false)", labeled);
+        Assert.Contains("do", once);
+        Assert.Contains("while(false);", once);
+        Assert.Contains("once", new SlangFunctionBody(
+            declaration,
+            new SlangBlock([new SlangDoOnce(SlangBlock.Empty)])).PrettyPrint());
     }
 
     [Fact]
@@ -929,9 +1281,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
 
         Assert.Equal(fixture.Region.Control.Labels.Length, sites.Length);
         Assert.True(fixture.Region.Control.Labels.ToHashSet().SetEquals(sites));
-        Assert.Contains(
-            Statements(fixture.Target.Body).OfType<SlangLoop>(),
-            loop => loop.OriginalLabel is null);
+        Assert.NotEmpty(Statements(fixture.Target.Body).OfType<SlangDoOnce>());
     }
 
     [Fact]
@@ -997,9 +1347,14 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     {
         var source = Emit(Lower(body));
         var cfg = RunCfg(body, arguments);
+        var scoped = RunScoped(body, arguments);
         var emitted = new EmittedScalarProgram(body, source).Run(arguments);
 
         Assert.Equal(expected, cfg.Result);
+        Assert.Equal(cfg.Result, scoped.Result);
+        Assert.True(cfg.Trace.SequenceEqual(scoped.Trace),
+            $"CFG trace: {string.Join(" -> ", cfg.Trace)}\n" +
+            $"Scoped trace: {string.Join(" -> ", scoped.Trace)}");
         Assert.Equal(cfg.Result, emitted.Result);
         Assert.True(cfg.Trace.SequenceEqual(emitted.Trace),
             $"CFG trace: {string.Join(" -> ", cfg.Trace)}\n" +
@@ -1027,11 +1382,43 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     foreach (var nested in Statements(conditional.WhenTrue)) yield return nested;
                     foreach (var nested in Statements(conditional.WhenFalse)) yield return nested;
                     break;
+                case SlangDoOnce once:
+                    foreach (var nested in Statements(once.Body)) yield return nested;
+                    break;
                 case SlangLoop loop:
                     foreach (var nested in Statements(loop.Body)) yield return nested;
                     break;
             }
         }
+    }
+
+    private static void CaptureExecution(
+        string name,
+        FunctionBody4 body,
+        ImmutableArray<(ImmutableArray<Value> Arguments, Value Expected)> cases)
+    {
+        var target = Lower(body);
+        var source = Emit(target);
+        var lines = new List<string>();
+        foreach (var (arguments, expected) in cases)
+        {
+            var cfg = RunCfg(body, arguments);
+            var scoped = RunScoped(body, arguments);
+            var emitted = new EmittedScalarProgram(body, source).Run(arguments);
+            Assert.Equal(expected, cfg.Result);
+            Assert.Equal(cfg.Result, scoped.Result);
+            Assert.Equal(cfg.Result, emitted.Result);
+            Assert.True(cfg.Trace.SequenceEqual(scoped.Trace));
+            Assert.True(cfg.Trace.SequenceEqual(emitted.Trace));
+            lines.Add(
+                $"arguments={string.Join(", ", arguments)} expected={expected}{Environment.NewLine}" +
+                $"cfg result={cfg.Result} trace={string.Join(" -> ", cfg.Trace)}{Environment.NewLine}" +
+                $"scoped result={scoped.Result} trace={string.Join(" -> ", scoped.Trace)}{Environment.NewLine}" +
+                $"emitted result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}");
+        }
+
+        Capture(name, body, target.PrettyPrint(), source);
+        CaptureText($"{name}.execution.txt", string.Join(Environment.NewLine + Environment.NewLine, lines));
     }
 
     private static void Capture(string name, FunctionBody4 region, string ast, string slang)

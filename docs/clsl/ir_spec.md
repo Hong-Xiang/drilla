@@ -290,7 +290,7 @@ restriction.
 control ownership. Each original region has one AST provenance site. Selected
 transfers first snapshot all arguments into immutable values, then assign target
 parameter slots, set a scoped continuation token, and unwind through synthetic
-one-shot loops. Forward gates and real repeat loops consume exact
+`SlangDoOnce` carriers. Forward gates and real `SlangLoop` nodes consume exact
 target/owner/kind continuations; returns remain direct. Multiple distinct exits,
 same-target/different-tuples, cyclic parameter copies, outer repeats and
 entry-owned forward exits are supported without IPDom/`Next`/`BreakNext`
@@ -304,6 +304,10 @@ dominance proof, so valid definition/use dominance remains an input precondition
 Synthetic one-shot nesting and unwind work are linear in lexical depth. The pass
 does not implement irreducible control, node splitting, GPU reconvergence, or a
 general Beyond Relooper policy.
+
+`SlangDoOnce` and `SlangLoop` are distinct target statements. The syntax-only
+emitter prints them as `do { ... } while(false)` and `while(true)` respectively;
+an optional original-label provenance marker never selects control semantics.
 
 Original `Label` identity denotes original control-flow provenance. If a future
 pass introduces synthetic edge blocks, it must distinguish them from original

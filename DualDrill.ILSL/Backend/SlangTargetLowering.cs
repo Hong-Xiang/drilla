@@ -167,7 +167,7 @@ public sealed class SlangTargetLowering
                     var carrier = suffix.Statements.ToBuilder();
                     if (!suffix.Escapes.IsEmpty)
                         carrier.Add(new SlangBreak());
-                    statements.Add(new SlangLoop(null, new SlangBlock(carrier.ToImmutable())));
+                    statements.Add(new SlangDoOnce(new SlangBlock(carrier.ToImmutable())));
                 }
 
                 var childLowered = LowerRegion(child);
@@ -213,7 +213,7 @@ public sealed class SlangTargetLowering
                 region.Definition.Kind is RegionKind.Loop ? null : region.Label,
                 new SlangBlock(statements.ToImmutable()));
             return new Lowered(
-                [(SlangStatement)new SlangLoop(null, new SlangBlock([original]))],
+                [(SlangStatement)new SlangDoOnce(new SlangBlock([original]))],
                 terminated.Escapes);
         }
 

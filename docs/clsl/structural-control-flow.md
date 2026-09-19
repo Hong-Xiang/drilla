@@ -14,10 +14,11 @@ layout is a separate obligation from identifying region owners and shared joins.
 
 `SlangTargetLowering` now consumes the checked lexical `Forward`/`Repeat`
 continuations on `FunctionBody4`. It places each original region once, realizes
-selected-edge parameter copies, and uses scoped one-shot carriers plus exact
-continuation gates to unwind multiple exits and outer-loop transfers.
+selected-edge parameter copies, and uses explicit `SlangDoOnce` carriers plus
+exact continuation gates to unwind multiple exits and outer-loop transfers.
 `SlangEmitter` consumes only the resulting immutable `SlangFunctionBody`; it
-does not inspect Region graphs or infer joins and loop ownership.
+prints `SlangDoOnce` and `SlangLoop` directly, and does not inspect Region graphs,
+infer joins, or derive loop kind from provenance.
 
 The public Slang/WGSL path resolves stable pointer parameters first and leaves
 ordinary parameters for selected-edge lowering. Synthetic carrier nesting and
