@@ -178,7 +178,7 @@ public static class RegionTree
                     nameof(graph));
             seenRpoIndices[facts.ReversePostOrderIndex] = true;
 
-            if (facts.ImmediatePostDominator is { } postDominator &&
+            if (facts.PostDominance is ExitPostDominance.Block { Target: var postDominator } &&
                 !children.ContainsKey(postDominator))
                 throw new ArgumentException(
                     "A block control fact references an immediate postdominator outside the graph.",

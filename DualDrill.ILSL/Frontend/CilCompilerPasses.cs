@@ -302,7 +302,7 @@ public static class CilRegionPass
                             label,
                             block.Parameters,
                             block.Body,
-                            facts.ImmediatePostDominator))));
+                            facts.PostDominance))));
 }
 
 public static class CilModuleCompiler

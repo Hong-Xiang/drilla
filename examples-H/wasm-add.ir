@@ -5,7 +5,7 @@ scoped control:
 
 block ^0(entry):
 
-    |=> exit
+    |=> postdom function-exit finite
 
     %2 : i32 = load  (%0 : ptr<i32, Function>)
     %3 : i32 = load  (%1 : ptr<i32, Function>)

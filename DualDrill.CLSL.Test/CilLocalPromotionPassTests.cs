@@ -15,6 +15,7 @@ using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Language.Transform;
+using DualDrill.Common.CodeTextWriter;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
 
@@ -287,6 +288,17 @@ public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
         Assert.True(promoted.Graph.Labels().Sum(label => promoted.Graph[label].Parameters.Length) >
                     lifted.Graph.Labels().Sum(label => lifted.Graph[label].Parameters.Length));
         Assert.Same(promoted, facts.Source);
+        foreach (var label in promoted.Graph.Labels())
+        {
+            Assert.Same(promoted.Graph[label], facts.Graph[label].Node);
+            Assert.Same(facts.Graph[label].Annotation.PostDominance, region[label].PostDominance);
+            foreach (var (arm, target) in promoted.Graph.Successor(label).AllTargets().Index())
+                Assert.Same(target, region.Control.Resolve(label, arm).Target);
+            foreach (var incoming in facts.Graph[label].Annotation.IncomingArms)
+                Assert.Same(
+                    label,
+                    promoted.Graph.Successor(incoming.Source).AllTargets().ElementAt(incoming.SuccessorIndex));
+        }
 
         var reference = Invoke(method, arguments);
         Assert.Equal(expected, reference);
@@ -313,6 +325,10 @@ public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
         output.WriteLine(lifted.PrettyPrint());
         output.WriteLine("=== after promotion ===");
         output.WriteLine(promoted.PrettyPrint());
+        output.WriteLine("=== post-promotion control facts ===");
+        output.WriteLine(facts.PrettyPrint());
+        output.WriteLine("=== checked region with preserved postdominance ===");
+        output.WriteLine(region.Dump());
         output.WriteLine($"result={before.Result}; trace={string.Join(" -> ", before.Trace)}");
         output.WriteLine(source);
     }

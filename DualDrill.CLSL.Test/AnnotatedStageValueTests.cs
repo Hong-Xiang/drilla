@@ -149,6 +149,8 @@ public sealed class AnnotatedStageValueTests
         Assert.Contains("shader-stack-cfg", shaderGraphStage.PrettyPrint());
         var printedFact = factRow.PrettyPrint();
         Assert.Contains(" facts={rpo=0 idom=none", printedFact);
+        Assert.Contains(" incoming=[", printedFact);
+        Assert.Contains(" loop-header=", printedFact);
         Assert.Contains("control:", printedFact);
         Assert.DoesNotContain(nameof(CilValueBasicBlock), printedFact);
         Assert.DoesNotContain(nameof(BlockControlFacts), printedFact);
