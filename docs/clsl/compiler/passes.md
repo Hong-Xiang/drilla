@@ -122,9 +122,10 @@ new structurization algorithm inside collection or region construction.
 
 The implemented `BlockControlFacts` fields have deliberately narrow meanings.
 Analysis requires every definition to be entry-reachable.
-`ReversePostOrderIndex` is the existing DFS reverse-postorder number;
-`ImmediateDominator` and `ImmediatePostDominator` are stable original labels, or
-`null` when the existing computations produce no immediate relation.
+`ReversePostOrderIndex` is the existing DFS reverse-postorder number and
+`ImmediateDominator` is a stable original label, or `null` for the entry.
+`PostDominance` distinguishes a real `Block`, the analysis-only `FunctionExit`,
+and `NoExitPath`; every alternative also exposes structural `MayDiverge`.
 `IncomingArms` preserves every arm, ordered by source reverse-postorder then
 successor ordinal, including parallel arms to one target. An arm is a backedge
 exactly when its target dominates its source; forward means only “not a
@@ -141,7 +142,7 @@ natural-loop membership, reconvergence, or general structurization.
 | `CilPreStackPass` | Raw CIL module -> `ShaderModuleDeclaration<PreCilFunctionBody>` | Reject unsupported EH, validate whole-source control, and propagate exact normalized stacks; successful per-function output contains only reachable original positions. |
 | `CilControlFlowPass` | Pre module -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>` | Construct only the reachable `ControlFlowGraph<CilInstructionBlock>`, retaining concrete native control and source annotations. |
 | `CilStackToValuePass` | CIL CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Validate concrete stacks and produce a flat `ControlFlowGraph<CilValueBasicBlock>` with values, ordered edge arguments and lowered terminators. |
-| `CilBlockControlFactsPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute reverse-postorder, immediate dominators, the existing nullable immediate-postdominator result, and ordered incoming-arm/backedge facts once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`; loop-header status is derived from incoming backedges. |
+| `CilBlockControlFactsPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute reverse-postorder, immediate dominators, finite-exit postdominance with explicit function-exit/no-exit results, structural may-diverge, and ordered incoming-arm/backedge facts once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`; loop-header status is derived from incoming backedges. |
 | `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
 | `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
