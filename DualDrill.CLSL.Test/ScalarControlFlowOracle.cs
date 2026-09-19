@@ -1,7 +1,9 @@
 using System.Collections.Immutable;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Symbol;
@@ -16,10 +18,22 @@ internal static class ScalarControlFlowOracle
     {
         private Value() { }
         internal sealed record Integer(int Data) : Value;
+        internal sealed record UnsignedInteger(uint Data) : Value;
+        internal sealed record Float32(float Data) : Value;
+        internal sealed record Float64(double Data) : Value;
         internal sealed record Boolean(bool Data) : Value;
         internal sealed record Address(IShaderValue Storage) : Value;
 
         internal int Int => this is Integer i ? i.Data : throw new NotSupportedException($"Expected i32, got {this}");
+        internal uint UInt => this is UnsignedInteger i
+            ? i.Data
+            : throw new NotSupportedException($"Expected u32, got {this}");
+        internal float Single => this is Float32 f
+            ? f.Data
+            : throw new NotSupportedException($"Expected f32, got {this}");
+        internal double Double => this is Float64 f
+            ? f.Data
+            : throw new NotSupportedException($"Expected f64, got {this}");
         internal bool Bool => this is Boolean b ? b.Data : throw new NotSupportedException($"Expected bool, got {this}");
     }
 
@@ -39,6 +53,10 @@ internal static class ScalarControlFlowOracle
     {
         (Value.Integer, BoolType) => new Value.Boolean(value.Int != 0),
         (Value.Boolean, var t) when t.Equals(ShaderType.I32) => new Value.Integer(value.Bool ? 1 : 0),
+        (Value.Integer, var t) when t.Equals(ShaderType.U32) =>
+            new Value.UnsignedInteger(unchecked((uint)value.Int)),
+        (Value.UnsignedInteger, var t) when t.Equals(ShaderType.I32) =>
+            new Value.Integer(unchecked((int)value.UInt)),
         _ when HasType(value, type) => value,
         _ => throw new NotSupportedException($"Unsupported scalar conversion {value} -> {type.Name}")
     };
@@ -46,6 +64,9 @@ internal static class ScalarControlFlowOracle
     internal static bool HasType(Value value, IShaderType type) => value switch
     {
         Value.Integer => type.Equals(ShaderType.I32),
+        Value.UnsignedInteger => type.Equals(ShaderType.U32),
+        Value.Float32 => type.Equals(ShaderType.F32),
+        Value.Float64 => type.Equals(ShaderType.F64),
         Value.Boolean => type.Equals(ShaderType.Bool),
         Value.Address a => a.Storage.Type.Equals(type),
         _ => throw new NotSupportedException($"Unsupported value {value}")
@@ -53,40 +74,107 @@ internal static class ScalarControlFlowOracle
 
     internal static Value Binary(IBinaryOp op, Value left, Value right)
     {
-        if ((left, right) is not ((Value.Integer, Value.Integer) or (Value.Boolean, Value.Boolean)))
-            throw new NotSupportedException($"Unsupported binary operands {left}, {right}.");
-        return op switch
+        return (left, right, op) switch
         {
-            BinaryRelational.Eq => new Value.Boolean(left == right),
-            BinaryRelational.Ne => new Value.Boolean(left != right),
-            BinaryRelational.Lt => new Value.Boolean(left.Int < right.Int),
-            BinaryRelational.Le => new Value.Boolean(left.Int <= right.Int),
-            BinaryRelational.Gt => new Value.Boolean(left.Int > right.Int),
-            BinaryRelational.Ge => new Value.Boolean(left.Int >= right.Int),
-            BinaryArithmetic.Add => new Value.Integer(unchecked(left.Int + right.Int)),
-            BinaryArithmetic.Sub => new Value.Integer(unchecked(left.Int - right.Int)),
-            BinaryArithmetic.Mul => new Value.Integer(unchecked(left.Int * right.Int)),
-            _ => throw new NotSupportedException($"Unsupported scalar binary operation {op}")
+            (Value.Integer l, Value.Integer r, BinaryRelational.Eq) => new Value.Boolean(l.Data == r.Data),
+            (Value.Integer l, Value.Integer r, BinaryRelational.Ne) => new Value.Boolean(l.Data != r.Data),
+            (Value.Integer l, Value.Integer r, BinaryRelational.Lt) => new Value.Boolean(l.Data < r.Data),
+            (Value.Integer l, Value.Integer r, BinaryRelational.Le) => new Value.Boolean(l.Data <= r.Data),
+            (Value.Integer l, Value.Integer r, BinaryRelational.Gt) => new Value.Boolean(l.Data > r.Data),
+            (Value.Integer l, Value.Integer r, BinaryRelational.Ge) => new Value.Boolean(l.Data >= r.Data),
+            (Value.Integer l, Value.Integer r, BinaryArithmetic.Add) =>
+                new Value.Integer(unchecked(l.Data + r.Data)),
+            (Value.Integer l, Value.Integer r, BinaryArithmetic.Sub) =>
+                new Value.Integer(unchecked(l.Data - r.Data)),
+            (Value.Integer l, Value.Integer r, BinaryArithmetic.Mul) =>
+                new Value.Integer(unchecked(l.Data * r.Data)),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Eq) =>
+                new Value.Boolean(l.Data == r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Ne) =>
+                new Value.Boolean(l.Data != r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Lt) =>
+                new Value.Boolean(l.Data < r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Le) =>
+                new Value.Boolean(l.Data <= r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Gt) =>
+                new Value.Boolean(l.Data > r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Ge) =>
+                new Value.Boolean(l.Data >= r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryArithmetic.Div) =>
+                new Value.UnsignedInteger(l.Data / r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryArithmetic.Rem) =>
+                new Value.UnsignedInteger(l.Data % r.Data),
+            (Value.Float32 l, Value.Float32 r, BinaryRelational.Eq) => new Value.Boolean(l.Data == r.Data),
+            (Value.Float32 l, Value.Float32 r, BinaryRelational.Ne) => new Value.Boolean(l.Data != r.Data),
+            (Value.Float32 l, Value.Float32 r, BinaryRelational.Lt) => new Value.Boolean(l.Data < r.Data),
+            (Value.Float32 l, Value.Float32 r, BinaryRelational.Le) => new Value.Boolean(l.Data <= r.Data),
+            (Value.Float32 l, Value.Float32 r, BinaryRelational.Gt) => new Value.Boolean(l.Data > r.Data),
+            (Value.Float32 l, Value.Float32 r, BinaryRelational.Ge) => new Value.Boolean(l.Data >= r.Data),
+            (Value.Float64 l, Value.Float64 r, BinaryRelational.Eq) => new Value.Boolean(l.Data == r.Data),
+            (Value.Float64 l, Value.Float64 r, BinaryRelational.Ne) => new Value.Boolean(l.Data != r.Data),
+            (Value.Float64 l, Value.Float64 r, BinaryRelational.Lt) => new Value.Boolean(l.Data < r.Data),
+            (Value.Float64 l, Value.Float64 r, BinaryRelational.Le) => new Value.Boolean(l.Data <= r.Data),
+            (Value.Float64 l, Value.Float64 r, BinaryRelational.Gt) => new Value.Boolean(l.Data > r.Data),
+            (Value.Float64 l, Value.Float64 r, BinaryRelational.Ge) => new Value.Boolean(l.Data >= r.Data),
+            (Value.Boolean l, Value.Boolean r, BinaryRelational.Eq) => new Value.Boolean(l.Data == r.Data),
+            (Value.Boolean l, Value.Boolean r, BinaryRelational.Ne) => new Value.Boolean(l.Data != r.Data),
+            _ => throw new NotSupportedException($"Unsupported scalar binary operation {op} for {left}, {right}.")
         };
     }
 
     internal static Execution RunCfg(FunctionBody4 body, ImmutableArray<Value> arguments, int stepLimit = 10000)
+        => Run(
+            body.Declaration,
+            body.Entry,
+            label => body[label].Parameters,
+            label => body[label].Body.Elements,
+            label => body[label].Body.Last,
+            arguments,
+            stepLimit,
+            "CFG");
+
+    internal static Execution RunValueCfg(
+        CilValueControlFlowBody body,
+        ImmutableArray<Value> arguments,
+        int stepLimit = 10000) =>
+        Run(
+            body.Declaration,
+            body.Graph.EntryLabel,
+            label => body.Graph[label].Parameters,
+            label => body.Graph[label].Body.Elements,
+            label => body.Graph[label].Body.Last,
+            arguments,
+            stepLimit,
+            "value CFG");
+
+    private static Execution Run(
+        FunctionDeclaration declaration,
+        Label entry,
+        Func<Label, ImmutableArray<IShaderValue>> parametersAt,
+        Func<Label, IEnumerable<Instruction<IShaderValue, IShaderValue>>> instructionsAt,
+        Func<Label, ITerminator<RegionJump<IShaderValue>, IShaderValue>> terminatorAt,
+        ImmutableArray<Value> arguments,
+        int stepLimit,
+        string stage)
     {
-        var context = $"CFG {body.Declaration.Name}";
-        if (!IsScalar(body.Declaration.ReturnType) || body.Declaration.Parameters.Any(p => !IsScalar(p.Type)))
-            throw new NotSupportedException($"{context}: only i32/bool function signatures are supported.");
+        var context = $"{stage} {declaration.Name}";
+        if (!IsScalar(declaration.ReturnType) || declaration.Parameters.Any(p => !IsScalar(p.Type)))
+            throw new NotSupportedException($"{context}: unsupported scalar function signature.");
         var budget = new Budget(context, stepLimit);
         var values = new Dictionary<IShaderValue, Value>();
         var memory = new Dictionary<IShaderValue, Value>();
         var trace = ImmutableArray.CreateBuilder<Label>();
-        if (arguments.Length != body.Declaration.Parameters.Length)
+        if (arguments.Length != declaration.Parameters.Length)
             throw new InvalidOperationException($"{context}: incorrect argument count.");
-        foreach (var (parameter, argument) in body.Declaration.Parameters.Zip(arguments))
+        foreach (var (parameter, argument) in declaration.Parameters.Zip(arguments))
             Write(memory, parameter.Value, argument, parameter.Type);
 
         Value Read(IShaderValue? value) => value switch
         {
             LiteralValue { Value: I32Literal i } => new Value.Integer(i.Value),
+            LiteralValue { Value: U32Literal i } => new Value.UnsignedInteger(i.Value),
+            LiteralValue { Value: F32Literal f } => new Value.Float32(f.Value),
+            LiteralValue { Value: F64Literal f } => new Value.Float64(f.Value),
             LiteralValue { Value: BoolLiteral b } => new Value.Boolean(b.Value),
             ParameterPointerValue or VariablePointerValue => new Value.Address(value),
             not null when values.TryGetValue(value, out var result) => result,
@@ -100,13 +188,12 @@ internal static class ScalarControlFlowOracle
             target[key] = value;
         }
 
-        var label = body.Entry;
+        var label = entry;
         while (true)
         {
             budget.Step(label.ToString());
             trace.Add(label);
-            var block = body[label];
-            foreach (var instruction in block.Body.Elements)
+            foreach (var instruction in instructionsAt(label))
             {
                 budget.Step($"{label}: {instruction.Operation.Name}");
                 Value result;
@@ -138,11 +225,13 @@ internal static class ScalarControlFlowOracle
                         result = Binary(binary.BinaryOp, left, right);
                         break;
                     case IConversionOperation conversion:
-                        // Match emitted target-type constructors, not a static IR type verifier:
-                        // relational branches currently tag bool -> bool as i32 -> bool.
-                        if (!IsScalar(conversion.SourceType))
+                        var source = Read(instruction.Operand0);
+                        if (!IsScalar(conversion.SourceType) || !HasType(source, conversion.SourceType))
                             throw new NotSupportedException($"{context}, {label}: unsupported conversion {conversion.Name}.");
-                        result = Convert(Read(instruction.Operand0), conversion.ResultType);
+                        result = Convert(source, conversion.ResultType);
+                        break;
+                    case LogicalNotOperation:
+                        result = new Value.Boolean(!Read(instruction.Operand0).Bool);
                         break;
                     default:
                         throw new NotSupportedException(
@@ -154,19 +243,23 @@ internal static class ScalarControlFlowOracle
             }
 
             budget.Step($"{label}: terminator");
-            if (block.Body.Last is Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned)
+            var terminator = terminatorAt(label);
+            if (terminator is Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned)
             {
-                // CIL represents bool on the evaluation stack as i32; normalize at the method boundary.
-                return new Execution(Convert(Read(returned.Expr), body.Declaration.ReturnType), trace.ToImmutable());
+                var result = Read(returned.Expr);
+                if (!HasType(result, declaration.ReturnType))
+                    throw new NotSupportedException(
+                        $"{context}, {label}: return value does not match {declaration.ReturnType.Name}.");
+                return new Execution(result, trace.ToImmutable());
             }
-            var jump = block.Body.Last switch
+            var jump = terminator switch
             {
                 Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => branch.Target,
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                     Read(branch.Condition).Bool ? branch.TrueTarget : branch.FalseTarget,
-                _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {block.Body.Last}.")
+                _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {terminator}.")
             };
-            var parameters = body[jump.Label].Parameters;
+            var parameters = parametersAt(jump.Label);
             if (parameters.Length != jump.Arguments.Length)
                 throw new InvalidOperationException($"{context}: invalid edge {label} -> {jump.Label} arity.");
             // All sources are read before any destination is overwritten (parallel edge copies).
@@ -177,5 +270,18 @@ internal static class ScalarControlFlowOracle
         }
     }
 
-    private static bool IsScalar(IShaderType type) => type.Equals(ShaderType.I32) || type.Equals(ShaderType.Bool);
+    internal static void AssertEquivalent(Execution expected, Execution actual)
+    {
+        Assert.True(expected.Trace.SequenceEqual(actual.Trace),
+            $"Expected result: {expected.Result}; actual: {actual.Result}\n" +
+            $"Original blocks: {string.Join(" -> ", expected.Trace)}\nExecuted blocks: {string.Join(" -> ", actual.Trace)}");
+        Assert.Equal(expected.Result, actual.Result);
+    }
+
+    private static bool IsScalar(IShaderType type) =>
+        type.Equals(ShaderType.I32) ||
+        type.Equals(ShaderType.U32) ||
+        type.Equals(ShaderType.F32) ||
+        type.Equals(ShaderType.F64) ||
+        type.Equals(ShaderType.Bool);
 }

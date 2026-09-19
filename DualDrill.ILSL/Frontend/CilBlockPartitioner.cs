@@ -9,16 +9,8 @@ using FlowControl = System.Reflection.Emit.FlowControl;
 
 namespace DualDrill.CLSL.Frontend;
 
-internal static class CilControlFlowGraphBuilder
+internal static class CilBlockPartitioner
 {
-    public static ControlFlowGraph<CilInstructionBlock> Build(
-        LinearCode<CilInstructionInfo> raw,
-        LinearCode<Annotated<CilInstructionInfo, PreStack>> preAnnotated) =>
-        ControlFlowGraph.Create(
-            Partition(raw, preAnnotated),
-            static block => block.Terminator.ToSuccessor(),
-            CilStagePrettyPrinter.PrintControlFlowGraph);
-
     internal static BlockList<CilInstructionBlock> Partition(
         LinearCode<CilInstructionInfo> raw,
         LinearCode<Annotated<CilInstructionInfo, PreStack>> preAnnotated)

@@ -113,10 +113,9 @@ public sealed class AnnotatedStageValueTests
     public void CompletedStagesShareSourceAndGraphFactsByIdentity()
     {
         var method = GetMethod(nameof(Choose));
-        var model = CompilerTestPipeline.ControlFlow(method);
+        var model = CompilerTestPipeline.Labelled(method);
         LinearCode<CilInstructionInfo> raw = model.RawCode;
         LinearCode<Annotated<CilInstructionInfo, PreStack>> pre = model.PreAnnotatedCode;
-        ControlFlowGraph<CilInstructionBlock> controlFlow = model.ControlFlow;
 
         Assert.Same(raw.Environment, pre.Environment);
         Assert.Same(method, model.Environment.Method);
@@ -127,7 +126,7 @@ public sealed class AnnotatedStageValueTests
             Assert.Same(original.Instruction, annotated.Node.Instruction);
         }
 
-        foreach (var block in controlFlow.Labels().Select(label => controlFlow[label]))
+        foreach (var block in model.Blocks.Blocks)
             foreach (var annotated in block.Instructions)
                 Assert.Same(
                     Assert.Single(pre.Instructions, item => item.Node.Index == annotated.Node.Index).Annotation,
@@ -140,14 +139,14 @@ public sealed class AnnotatedStageValueTests
         var model = ParseModel();
         var facts = CompilerTestPipeline.ControlFacts(GetMethod(nameof(Choose)));
         IPrintable row = model.PreAnnotatedCode.Instructions[0];
-        IPrintable graphStage = model.ControlFlow;
+        IPrintable blockStage = model.Blocks;
+        IPrintable shaderGraphStage = CompilerTestPipeline.ShaderControlFlow(GetMethod(nameof(Choose)));
         IPrintable factRow = facts.Graph[facts.Graph.EntryLabel];
         IPrintable factsStage = facts;
 
         Assert.Contains(" pre=", row.PrettyPrint());
-        var graph = graphStage.PrettyPrint();
-        Assert.Contains("reachable-cil-cfg", graph);
-        Assert.DoesNotContain("control-flow-analysis", graph);
+        Assert.Contains("labelled-cil-block-list", blockStage.PrettyPrint());
+        Assert.Contains("shader-stack-cfg", shaderGraphStage.PrettyPrint());
         var printedFact = factRow.PrettyPrint();
         Assert.Contains(" facts={rpo=0 idom=none", printedFact);
         Assert.Contains("control:", printedFact);
@@ -190,34 +189,25 @@ public sealed class AnnotatedStageValueTests
     {
         var method = GetMethod(nameof(Choose));
         var rawModule = CompilerTestPipeline.ParseRaw(method);
-        var model = CompilerTestPipeline.ControlFlow(rawModule, method);
+        var model = CompilerTestPipeline.Labelled(rawModule, method);
         var rawSnapshot = model.RawCode.Instructions.ToArray();
         var preSnapshot = model.PreAnnotatedCode.Instructions
                                .Select(item => (item.Node, item.Annotation))
                                .ToArray();
-        var graph = model.ControlFlow;
-        var graphSnapshot = graph.Labels()
-                                 .Select(label => (
-                                     Label: label,
-                                     Block: graph[label],
-                                     Predecessors: graph.Predecessor(label).ToArray()))
-                                 .ToArray();
+        var blockSnapshot = model.Blocks.Blocks.ToArray();
 
         _ = model.RawCode.PrettyPrint();
         _ = model.PreAnnotatedCode.PrettyPrint();
-        _ = model.ControlFlow.PrettyPrint();
-        _ = CilStackToValuePass.Run(
-            CilControlFlowPass.Run(
-                CilPreStackPass.Run(rawModule)));
+        _ = model.Blocks.PrettyPrint();
+        _ = ShaderStackToValuePass.Run(
+            ShaderStackControlFlowPass.Run(
+                CilToShaderStackPass.Run(
+                    CilBlockPartitionPass.Run(
+                        CilPreStackPass.Run(rawModule)))));
 
         Assert.Equal(rawSnapshot, model.RawCode.Instructions);
         Assert.Equal(preSnapshot, model.PreAnnotatedCode.Instructions.Select(item => (item.Node, item.Annotation)));
-        Assert.Equal(graphSnapshot.Select(item => item.Label), graph.Labels());
-        foreach (var item in graphSnapshot)
-        {
-            Assert.Same(item.Block, graph[item.Label]);
-            Assert.Equal(item.Predecessors, graph.Predecessor(item.Label));
-        }
+        Assert.Equal(blockSnapshot, model.Blocks.Blocks);
     }
 
     [Fact]
@@ -252,66 +242,98 @@ public sealed class AnnotatedStageValueTests
     public void CompleteAggregateRejectsGraphFromAnotherDecodedSource()
     {
         var method = GetMethod(nameof(Choose));
-        var first = CompilerTestPipeline.ControlFlow(method);
-        var second = CompilerTestPipeline.ControlFlow(method);
+        var first = CompilerTestPipeline.Labelled(method);
+        var second = CompilerTestPipeline.Labelled(method);
 
-        var exception = Assert.Throws<ArgumentException>(() => new MethodBodyAnalysisModel(
+        var exception = Assert.Throws<ArgumentException>(() => new LabelledCilFunctionBody(
             first.Pre,
-            second.ControlFlow));
+            second.Blocks));
 
-        Assert.Contains("does not belong to the stored Pre-annotated source", exception.Message);
+        Assert.Contains("do not belong to the stored Pre-annotated source", exception.Message);
     }
 
     [Fact]
-    public void CompleteAggregateRejectsBlocksStoredUnderDifferentLabels()
+    public void CompleteAggregateRejectsBlockWithForeignInstructionIdentity()
     {
         var model = ParseModel();
-        var graph = model.ControlFlow;
-        var conditional = Assert.IsType<ConditionalSuccessor>(graph.Successor(graph.EntryLabel));
-        var definitions = Definitions(graph);
-        (definitions[conditional.TrueTarget], definitions[conditional.FalseTarget]) = (
-            definitions[conditional.FalseTarget],
-            definitions[conditional.TrueTarget]);
-        var malformed = new ControlFlowGraph<CilInstructionBlock>(graph.EntryLabel, definitions);
+        var original = model.Blocks.Blocks[0];
+        var instructions = original.Instructions.SetItem(
+            0,
+            new Annotated<CilInstructionInfo, PreStack>(
+                original.Instructions[0].Node,
+                new PreStack(original.Instructions[0].Annotation.Types),
+                CilStagePrettyPrinter.PrintAnnotatedInstruction));
+        var replacement = new CilInstructionBlock(
+            original.Label,
+            instructions,
+            original.Terminator);
+        var malformed = new BlockList<CilInstructionBlock>(
+            model.Blocks.EntryLabel,
+            [replacement, .. model.Blocks.Blocks[1..]],
+            static block => block.Terminator.ToSuccessor(),
+            CilStagePrettyPrinter.PrintBlockList);
 
-        var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
-
-        Assert.Contains("key does not match its block label", exception.Message);
+        var exception = Assert.Throws<ArgumentException>(() => new LabelledCilFunctionBody(model.Pre, malformed));
+        Assert.Contains("do not belong", exception.Message);
     }
 
     [Fact]
-    public void CompleteAggregateRejectsSuccessorDifferentFromConcreteTerminator()
+    public void CompleteAggregateRejectsMissingReachableInstructions()
     {
-        var model = ParseModel();
-        var graph = model.ControlFlow;
-        var conditional = Assert.IsType<ConditionalSuccessor>(graph.Successor(graph.EntryLabel));
-        var definitions = Definitions(graph);
-        definitions[graph.EntryLabel] = new(
-            new ConditionalSuccessor(conditional.FalseTarget, conditional.TrueTarget),
-            graph[graph.EntryLabel]);
-        var malformed = new ControlFlowGraph<CilInstructionBlock>(graph.EntryLabel, definitions);
+        var model = CompilerTestPipeline.Labelled(BuildLinearFixture());
+        var blocks = model.Blocks.Blocks;
+        var original = Assert.Single(blocks);
+        var truncated = new CilInstructionBlock(
+            original.Label,
+            original.Instructions.RemoveAt(1),
+            original.Terminator);
+        var malformed = new BlockList<CilInstructionBlock>(
+            model.Blocks.EntryLabel,
+            [truncated],
+            static block => block.Terminator.ToSuccessor(),
+            CilStagePrettyPrinter.PrintBlockList);
 
-        var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
-
-        Assert.Contains("successor does not match its block terminator", exception.Message);
+        var exception = Assert.Throws<ArgumentException>(() => new LabelledCilFunctionBody(model.Pre, malformed));
+        Assert.Contains("do not partition the complete reachable", exception.Message);
     }
 
     [Fact]
-    public void CompleteAggregateRejectsDisconnectedDefinitions()
+    public void CompleteAggregateRejectsDuplicateReachableInstructions()
     {
         var model = ParseModel();
-        var graph = model.ControlFlow;
-        var definitions = Definitions(graph);
-        definitions.Add(
+        var blocks = model.Blocks.Blocks;
+        var original = blocks[0];
+        var duplicate = new CilInstructionBlock(
+            original.Label,
+            original.Instructions.Insert(0, original.Instructions[0]),
+            original.Terminator);
+        var malformed = new BlockList<CilInstructionBlock>(
+            model.Blocks.EntryLabel,
+            blocks.SetItem(0, duplicate),
+            static block => block.Terminator.ToSuccessor(),
+            CilStagePrettyPrinter.PrintBlockList);
+
+        var exception = Assert.Throws<ArgumentException>(() => new LabelledCilFunctionBody(model.Pre, malformed));
+        Assert.Contains("do not belong to the stored Pre-annotated source", exception.Message);
+    }
+
+    [Fact]
+    public void CompleteAggregateRejectsDisconnectedBlocks()
+    {
+        var model = ParseModel();
+        var blocks = model.Blocks.Blocks;
+        var disconnected = new CilInstructionBlock(
             DualDrill.CLSL.Language.Symbol.Label.Create("disconnected"),
-            new ControlFlowGraph<CilInstructionBlock>.NodeDefinition(
-                new TerminateSuccessor(),
-                graph[graph.EntryLabel]));
-        var malformed = new ControlFlowGraph<CilInstructionBlock>(graph.EntryLabel, definitions);
+            blocks[^1].Instructions,
+            blocks[^1].Terminator);
+        var malformed = new BlockList<CilInstructionBlock>(
+            model.Blocks.EntryLabel,
+            [.. blocks, disconnected],
+            static block => block.Terminator.ToSuccessor(),
+            CilStagePrettyPrinter.PrintBlockList);
 
-        var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
-
-        Assert.Contains("definitions disconnected from its entry", exception.Message);
+        var exception = Assert.Throws<ArgumentException>(() => new LabelledCilFunctionBody(model.Pre, malformed));
+        Assert.Contains("disconnected from the entry", exception.Message);
     }
 
     [Fact]
@@ -342,34 +364,24 @@ public sealed class AnnotatedStageValueTests
         il.Emit(OpCodes.Ret);
         var fixture = (type.CreateType() ?? throw new InvalidOperationException("Missing fixture type."))
             .GetMethod("IncrementUntilThree") ?? throw new InvalidOperationException("Missing fixture method.");
-        var model = CompilerTestPipeline.ControlFlow(fixture);
-        var graph = model.ControlFlow;
+        var model = CompilerTestPipeline.Labelled(fixture);
+        var graph = ControlFlowGraph.Create(model.Blocks, static block => block.Terminator.ToSuccessor());
         var alternateEntry = Assert.Single(
             graph.Labels(), label => graph.Successor(label) is ConditionalSuccessor);
-        var malformed = new ControlFlowGraph<CilInstructionBlock>(alternateEntry, Definitions(graph));
+        var malformed = new BlockList<CilInstructionBlock>(
+            alternateEntry,
+            model.Blocks.Blocks,
+            static block => block.Terminator.ToSuccessor(),
+            CilStagePrettyPrinter.PrintBlockList);
 
         Assert.NotSame(graph.EntryLabel, alternateEntry);
-        Assert.Equal(graph.Count, malformed.Labels().Count());
-        var exception = Assert.Throws<ArgumentException>(() => CompleteWithGraph(model, malformed));
+        Assert.Equal(graph.Count, malformed.Blocks.Length);
+        var exception = Assert.Throws<ArgumentException>(() => new LabelledCilFunctionBody(model.Pre, malformed));
         Assert.Contains("entry must begin at original instruction index 0", exception.Message);
     }
 
-    private static MethodBodyAnalysisModel ParseModel()
-        => CompilerTestPipeline.ControlFlow(GetMethod(nameof(Choose)));
-
-    private static Dictionary<DualDrill.CLSL.Language.Symbol.Label,
-        ControlFlowGraph<CilInstructionBlock>.NodeDefinition> Definitions(
-        ControlFlowGraph<CilInstructionBlock> graph) =>
-        graph.Labels().ToDictionary(
-            label => label,
-            label => new ControlFlowGraph<CilInstructionBlock>.NodeDefinition(
-                graph.Successor(label),
-                graph[label]));
-
-    private static MethodBodyAnalysisModel CompleteWithGraph(
-        MethodBodyAnalysisModel source,
-        ControlFlowGraph<CilInstructionBlock> graph) =>
-        new(source.Pre, graph);
+    private static LabelledCilFunctionBody ParseModel()
+        => CompilerTestPipeline.Labelled(GetMethod(nameof(Choose)));
 
     private static void PrintNothing<TNode, TAnnotation>(
         TNode node,
@@ -382,6 +394,31 @@ public sealed class AnnotatedStageValueTests
     private static MethodInfo GetMethod(string name) =>
         typeof(AnnotatedStageValueTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"{name} fixture was not found.");
+
+    private static MethodInfo BuildLinearFixture()
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName("AnnotatedStageLinearFixture"),
+            AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("AnnotatedStageLinearFixture").DefineType(
+            "AnnotatedStageLinearFixture",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+        var method = type.DefineMethod(
+            "AddThree",
+            MethodAttributes.Public | MethodAttributes.Static,
+            typeof(int),
+            [typeof(int)]);
+        method.DefineParameter(1, ParameterAttributes.None, "value");
+        var il = method.GetILGenerator();
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldc_I4_1);
+        il.Emit(OpCodes.Add);
+        il.Emit(OpCodes.Ldc_I4_2);
+        il.Emit(OpCodes.Add);
+        il.Emit(OpCodes.Ret);
+        return (type.CreateType() ?? throw new InvalidOperationException("Missing fixture type."))
+            .GetMethod("AddThree") ?? throw new InvalidOperationException("Missing fixture method.");
+    }
 
     private static int Choose(bool choose, int left, int right) => choose ? left : right;
 

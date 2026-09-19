@@ -15,43 +15,32 @@ to require basic-block construction before stack-type analysis, or to split the
 condition/return generic parameters of `ITerminatorSemantic`.
 
 The current implementation decodes and retains the complete linear source,
-computes reachable pre-instruction stack types, partitions a labelled block list,
-constructs the reachable basic-block CFG, and lifts it to a flat value CFG. A dedicated pass publishes
+computes reachable pre-instruction stack types, partitions a labelled CIL block
+list, lowers it to typed shader-stack blocks, constructs the shader-stack CFG,
+and mechanically lifts it to a flat value CFG. A dedicated pass publishes
 existing control-flow results as BB-local annotations; region organization
 consumes those annotations without reanalysis. Target AST separation remains
 later work.
 
-### Issue #114: Foundation and Remaining Dependencies
-
-This first foundation slice separates instruction-position partitioning from
-generic graph construction. The **implemented interim path** is:
+### Issue #114: Implemented frontend path
 
 ```text
 Raw CIL LinearCode -> strict Pre -> Typed CIL LinearCode
-  -> InstructionBlockPartitioner -> BlockList<CilInstructionBlock>
-  -> ControlFlowGraph.Create(blocks, controlProjection)
-  -> existing CIL CFG / MethodBodyAnalysisModel
-  -> existing stack-to-value lowering -> value CFG -> control facts / regions
-```
-
-The **accepted remaining path**, not yet implemented by this slice, is:
-
-```text
-Typed CIL LinearCode
-  -> labelled CIL BlockList
-  -> CIL instruction/type lowering -> labelled shader stack BlockList
-  -> generic CFG construction -> shader stack CFG
-  -> stack-to-explicit-values -> shader value CFG
+  -> CilBlockPartitionPass -> LabelledCilFunctionBody
+  -> CilToShaderStackPass -> ShaderStackFunctionBody
+  -> ShaderStackControlFlowPass -> ShaderStackControlFlowBody
+  -> ShaderStackToValuePass -> CilValueControlFlowBody
   -> existing control facts / regions
 ```
 
-The dependent semantic slice must use existing `IShaderType`, preserve normalized
-stack joins (including bool/i32), and derive new stack annotations for one-to-many
-instruction expansions. It must then migrate the actual consumers and remove the
-public CIL CFG / `MethodBodyAnalysisModel` boundary. This foundation deliberately
-keeps that boundary unchanged, not renamed or presented as the final architecture.
-Instruction normalization is not stack elimination. No new semantic support or
-other issue's region, local-promotion, or target-AST work is included here.
+The public CIL CFG and `MethodBodyAnalysisModel` boundary no longer exist.
+`ShaderStackOperand` is either a typed depth into one pre-operation snapshot or
+a resolved literal/function/stable-address symbol. `ShaderStackInstruction`
+contains operations with explicit pop counts, stable alias pushes, or drops.
+Every emitted instruction and terminator has a derived typed transition and
+numeric original-index/byte-range/ordinal provenance. Instruction normalization
+is separate from mechanical stack elimination. No local promotion, region,
+target-AST, or wider call support is included here.
 
 ### Implemented Frontend Boundary
 
@@ -96,7 +85,7 @@ payloads and are not retained there.
 
 `CilInstructionBlock` changed from a public positional
 record struct with public construction, deconstruction, and `with` support to an
-internally constructed sealed record obtained from `CilControlFlowGraphBuilder`.
+internally constructed sealed record obtained from `CilBlockPartitioner`.
 Its index/range properties and the model indexer remain computed accessors, not
 compatibility constructors. Repository callers migrated together; there is no
 compatibility overload or alias.
@@ -111,25 +100,22 @@ reaching the end of CIL without an explicit return fail explicitly.
 `CilPreStackAnalyzer` is a worklist over original instruction indexes. It uses
 `CilInstructionInfo.Evaluate` for the existing opcode dispatch, resolves branch
 targets without constructing a CFG, and produces
-`LinearCode<Annotated<CilInstructionInfo, PreStack>>`. `CilStackToValuePass`
-creates all basic-block input values from those completed
-Pre facts and validates its concrete value stack before every source instruction
-and at every outgoing edge. Method discovery is independent: the raw collector
+`LinearCode<Annotated<CilInstructionInfo, PreStack>>`.
+`CilToShaderStackPass` validates its typed stack before every source instruction
+and at every outgoing edge. `ShaderStackToValuePass` consumes only shader-stack
+operations and transitions; it does not inspect opcodes, reflection metadata, or
+`CilStackType`. Method discovery is independent: the raw collector
 walks every original instruction operand, so dead calls and their recursive
 reference closure are included in module membership.
 
 `CilMethodEnvironment` owns the immutable signature, locals, source offsets, and
 offset lookup shared by both linear values. `CilPreStackAnalyzer` returns
 `LinearCode<Annotated<CilInstructionInfo, PreStack>>` only after successful
-analysis. `CilControlFlowGraphBuilder` consumes that completed value and the raw
-source. `MethodBodyAnalysisModel` is the immutable reachable-CIL-CFG stage produced by
-`CilControlFlowPass`; it is not a parser cache. Reachable blocks carry the exact
-annotated instruction slice, and no default empty value represents pending
-analysis. Its public constructor checks
-that execution begins at original instruction index zero, every graph key is its
-block's exact label, every stored successor equals
-the concrete terminator projection including ordered arms, all definitions are
-entry-reachable, and the blocks exactly partition the completed annotated source.
+analysis. `CilBlockPartitioner` consumes that completed value and the raw source.
+`LabelledCilFunctionBody` retains the exact annotated instruction slices and
+checks that execution begins at original instruction zero, all definitions are
+entry-reachable, and the blocks exactly partition completed Pre while preserving
+instruction and annotation identity.
 
 `RuntimeReflectionParser` declares a method before scanning its body, so repeated
 and mutually recursive references terminate. It freezes the complete shared
@@ -211,10 +197,14 @@ Console.Write(raw.PrettyPrint());
 
 var rawModule = new RuntimeReflectionParser().ParseMethod(method);
 var preModule = CilPreStackPass.Run(rawModule);
-var cfgModule = CilControlFlowPass.Run(preModule);
-var valueModule = CilStackToValuePass.Run(cfgModule);
+var labelledModule = CilBlockPartitionPass.Run(preModule);
+var stackModule = CilToShaderStackPass.Run(labelledModule);
+var stackCfgModule = ShaderStackControlFlowPass.Run(stackModule);
+var valueModule = ShaderStackToValuePass.Run(stackCfgModule);
 Console.Write(preModule.FunctionDefinitions.Values.Single().Code.PrettyPrint());
-Console.Write(cfgModule.FunctionDefinitions.Values.Single().ControlFlow.PrettyPrint());
+Console.Write(labelledModule.FunctionDefinitions.Values.Single().Blocks.PrettyPrint());
+Console.Write(stackModule.FunctionDefinitions.Values.Single().Blocks.PrettyPrint());
+Console.Write(stackCfgModule.FunctionDefinitions.Values.Single().Graph.PrettyPrint());
 Console.Write(valueModule.FunctionDefinitions.Values.Single().Dump());
 ```
 
@@ -239,7 +229,7 @@ linear-cil pre-annotated reachable (byte ranges are half-open; stack order: bott
 #5 IL_0007..IL_0008 ret pre=[i32]
 ```
 
-After partitioning, `CilControlFlowGraphBuilder.Partition(raw, pre).PrettyPrint()`
+After partitioning, `CilBlockPartitioner.Partition(raw, pre).PrettyPrint()`
 (an internal compiler/test boundary) produces:
 
 ```text
@@ -261,24 +251,13 @@ different optimized Release shape (two returning arms, without the separate
 fallthrough/return blocks). `BlockListPrintsStorageOrderIncludingDisconnectedDefinitionsAndNonFirstEntry`
 also exercises reordered storage, a non-first entry, and disconnected payloads.
 
-The existing CFG output remains unchanged after generic graph construction:
-
-```text
-reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)
-^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[] predecessors=[]
-    control: native brtrue.s rel=+3 resolved=IL_0006 taken=^2(0x6) fallthrough=^1(0x3)
-^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0006 entry=[] predecessors=[^0(0x0)]
-    control: native br.s rel=+1 resolved=IL_0007 target=^3(0x7)
-^2(0x6) instructions=#4..#4 bytes=IL_0006..IL_0007 entry=[] predecessors=[^0(0x0)]
-    control: synthetic fallthrough target=^3(0x7)
-^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32] predecessors=[^1(0x3), ^2(0x6)]
-    control: native ret
-```
-
 Byte ranges are half-open and stack entries are printed bottom to top. `rel` is
 the encoded displacement; `resolved` is its original IL target. The completed
 linear view omits unreachable positions without renumbering later instructions.
-The raw view remains the authoritative complete-source diagnostic.
+The raw view remains the authoritative complete-source diagnostic. Shader-stack
+diagnostics show each expansion's `#original.ordinal`, numeric byte span,
+typed `pre`/`post`, explicit depth operands and pop count. Captured outputs are
+maintained by the compiler-stage tests rather than duplicated here.
 
 ### Breaking API migration
 
@@ -295,13 +274,13 @@ shims:
 | `RuntimeReflectionParser.ParseMethod(...) -> FunctionDeclaration` | `ParseMethod(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
 | `RuntimeReflectionParser.ParseShaderModule(...) -> ShaderModuleDeclaration<FunctionBody4>` | `ParseShaderModule(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
 | `CLSLCompiler.Parse(...) -> ShaderModuleDeclaration<FunctionBody4>` | `Parse(...)` for raw CIL; `Compile(...)` for `FunctionBody4` |
-| `parser.MethodBodies` / `ParseMethodBody3` | `CilPreStackPass` -> `CilControlFlowPass` -> `CilStackToValuePass` -> `CilBlockControlFactsPass` -> `CilRegionPass` |
-| `model.ControlFlowGraph` | `model.ControlFlow` |
+| `parser.MethodBodies` / `ParseMethodBody3` | `CilPreStackPass` -> `CilBlockPartitionPass` -> `CilToShaderStackPass` -> `ShaderStackControlFlowPass` -> `ShaderStackToValuePass` -> `CilBlockControlFactsPass` -> `CilRegionPass` |
+| Public CIL CFG / `MethodBodyAnalysisModel` | `LabelledCilFunctionBody.Blocks`; the first CFG is `ShaderStackControlFlowBody.Graph` |
 | `MethodBodyAnalysisModel.CilInstructionBlock` | `CilInstructionBlock` in `DualDrill.CLSL.Frontend` |
 | `block.Instructions[i]` as a bare CIL instruction | `block.Instructions[i].Node`, with `.Annotation` holding its `PreStack` |
 | `DumpRawLinearCil()` | `RawCode.PrettyPrint()` |
 | `DumpAnalyzedLinearCil()` | `PreAnnotatedCode.PrettyPrint()` |
-| `DumpReachableControlFlowGraph()` | `ControlFlow.PrettyPrint()` |
+| `DumpReachableControlFlowGraph()` | `ShaderStackControlFlowBody.Graph.PrettyPrint()` |
 
 `ISymbolTable` no longer stores compiled body caches. Clients that predeclare a
 reflection method add its `FunctionDeclaration`; parsing freezes a symbol view
@@ -310,8 +289,8 @@ into the raw module, and later passes consume only that returned module.
 Every `Annotated<TNode, TAnnotation>` carries a readonly typed printer chosen by
 its producer and implements `IPrintable` directly. Equality and hashing compare
 only `Node` and `Annotation`; presentation is not analysis identity. Instruction
-annotations print the instruction and its entry stack together. The reachable
-CIL CFG, flat value CFG and BB-annotated value CFG have fixed readable formats.
+annotations print the instruction and its entry stack together. The labelled CIL list, labelled shader-stack list, shader-stack CFG, flat value
+CFG and BB-annotated value CFG have fixed readable formats.
 `CilBlockControlFactsPass` computes the existing analysis internally and attaches
 only each block's RPO, IDom, IPDom and loop-header facts. `CilRegionPass` reads
 those annotations; it neither queries a separate analysis object nor reruns it.
@@ -468,15 +447,19 @@ CilMethodDecoder.Decode
   -> LinearCode<CilInstructionInfo>
 CilPreStackAnalyzer.Analyze
   -> LinearCode<Annotated<CilInstructionInfo, PreStack>>
-CilControlFlowGraphBuilder.Partition
+CilBlockPartitioner.Partition
   -> BlockList<CilInstructionBlock>
-ControlFlowGraph.Create
-  -> ControlFlowGraph<CilInstructionBlock>
+CilToShaderStackPass
+  -> BlockList<ShaderStackBasicBlock>
+ShaderStackControlFlowPass / ControlFlowGraph.Create
+  -> ControlFlowGraph<ShaderStackBasicBlock>
+ShaderStackToValuePass
+  -> ControlFlowGraph<CilValueBasicBlock>
 ```
 
-`CilControlFlowGraphBuilder.Build` composes those final two operations on the
-actual current path. It retains the raw/Pre source-association checks;
-`MethodBodyAnalysisModel` retains its additional source/coverage checks.
+`CilBlockPartitionPass` retains the raw/Pre source-association and
+source-coverage checks. Generic graph construction occurs only after every CIL
+instruction has been lowered to explicit shader-stack operations.
 
 Partition at the entry, branch targets, and appropriate control boundaries, and
 construct downstream blocks only for reachable positions from the completed Pre

@@ -4,6 +4,7 @@ using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
@@ -25,61 +26,47 @@ public static class CilPreStackPass
         });
 }
 
-public static class CilControlFlowPass
+public static class CilBlockPartitionPass
 {
-    public static ShaderModuleDeclaration<MethodBodyAnalysisModel> Run(
+    public static ShaderModuleDeclaration<LabelledCilFunctionBody> Run(
         ShaderModuleDeclaration<PreCilFunctionBody> module) =>
         module.MapBody(static (_, _, body) =>
-            new MethodBodyAnalysisModel(
+            new LabelledCilFunctionBody(
                 body,
-                CilControlFlowGraphBuilder.Build(body.Raw.Code, body.Code)));
+                CilBlockPartitioner.Partition(body.Raw.Code, body.Code)));
 }
 
-public static class CilStackToValuePass
+public static class CilToShaderStackPass
 {
-    public static ShaderModuleDeclaration<CilValueControlFlowBody> Run(
-        ShaderModuleDeclaration<MethodBodyAnalysisModel> module) =>
-        module.MapBody(static (_, _, body) => Lift(body));
+    public static ShaderModuleDeclaration<ShaderStackFunctionBody> Run(
+        ShaderModuleDeclaration<LabelledCilFunctionBody> module) =>
+        module.MapBody(static (_, _, body) => Lower(body));
 
-    private static CilValueControlFlowBody Lift(MethodBodyAnalysisModel source)
+    private static ShaderStackFunctionBody Lower(LabelledCilFunctionBody source)
     {
-        var graph = source.ControlFlow;
-        Dictionary<Label, ControlFlowGraph<CilValueBasicBlock>.NodeDefinition> definitions = [];
-        foreach (var label in graph.Labels())
+        var blocks = source.Blocks.Blocks.Select(cilBlock =>
         {
-            var cilBlock = graph[label];
-            var inputStack = CreateInputStack(cilBlock.EntryStack.Types);
-            var visitor = new RuntimeReflectionInstructionParserVisitor3(
+            var inputStack = cilBlock.EntryStack.Types.Reverse()
+                                     .Select(type => type.ShaderType)
+                                     .ToImmutableArray();
+            var visitor = new CilToShaderStackVisitor(
                 source.Environment,
                 source.Declaration,
                 cilBlock.Terminator,
                 inputStack);
             foreach (var annotatedInstruction in cilBlock.Instructions)
             {
-                var cilInstruction = annotatedInstruction.Node;
                 ValidateStack(
                     source.Environment,
-                    cilInstruction,
+                    annotatedInstruction.Node,
                     annotatedInstruction.Annotation,
                     visitor.Stack);
-                cilInstruction.Evaluate(visitor, source.Environment.IsStatic, source.Raw.Symbols);
+                visitor.Lower(annotatedInstruction.Node, source.Raw.Symbols);
             }
 
-            var arguments = visitor.GetStackOutput();
             var terminator = visitor.Terminator;
             if (terminator is null)
-                terminator = cilBlock.Terminator switch
-                {
-                    CilControlFlow.FallThrough { Target: var target } =>
-                        Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
-                            new RegionJump<IShaderValue>(target, arguments)),
-                    CilControlFlow.EndOfCode =>
-                        throw new NotSupportedException(
-                            $"Method {source.Environment.Method} reaches the end of CIL without an explicit return."),
-                    _ => throw new ValidationException(
-                        $"Native CIL control at IL_{cilBlock.ByteOffset:X4} did not produce a terminator.",
-                        source.Environment.Method)
-                };
+                terminator = visitor.SyntheticTerminator(cilBlock.Terminator, cilBlock.Instructions[^1].Node);
             else if (cilBlock.Terminator is CilControlFlow.FallThrough or CilControlFlow.EndOfCode)
                 throw new ValidationException(
                     $"Synthetic CIL control at IL_{cilBlock.ByteOffset:X4} produced a native terminator.",
@@ -87,17 +74,114 @@ public static class CilStackToValuePass
 
             foreach (var targetLabel in cilBlock.Terminator.ToSuccessor().AllTargets())
             {
-                var target = graph[targetLabel].Instructions[0];
+                var target = source.Blocks.Blocks.Single(block => ReferenceEquals(block.Label, targetLabel))
+                                   .Instructions[0];
                 ValidateStack(source.Environment, target.Node, target.Annotation, visitor.Stack);
             }
 
+            return new ShaderStackBasicBlock(
+                cilBlock.Label,
+                inputStack,
+                Seq.Create([.. visitor.Instructions], terminator));
+        }).ToImmutableArray();
+
+        return new ShaderStackFunctionBody(
+            source,
+            new BlockList<ShaderStackBasicBlock>(
+                source.Blocks.EntryLabel,
+                blocks,
+                static block => block.Successor,
+                CilStagePrettyPrinter.PrintShaderStackBlockList));
+    }
+
+    internal static void ValidateStack(
+        CilMethodEnvironment environment,
+        CilInstructionInfo instruction,
+        PreStack pre,
+        ImmutableArray<IShaderType> actual)
+    {
+        var expected = pre.Types.Reverse().Select(type => type.ShaderType).ToImmutableArray();
+        if (!expected.SequenceEqual(actual))
+            throw new ValidationException(
+                $"Value stack does not match analyzed Pre stack at IL_{instruction.ByteOffset:X4}: " +
+                $"expected [{string.Join(", ", expected.Select(type => type.Name))}], " +
+                $"got [{string.Join(", ", actual.Select(type => type.Name))}].",
+                environment.Method);
+    }
+}
+
+public static class ShaderStackControlFlowPass
+{
+    public static ShaderModuleDeclaration<ShaderStackControlFlowBody> Run(
+        ShaderModuleDeclaration<ShaderStackFunctionBody> module) =>
+        module.MapBody(static (_, _, body) =>
+            new ShaderStackControlFlowBody(
+                body,
+                ControlFlowGraph.Create(
+                    body.Blocks,
+                    static block => block.Successor,
+                    CilStagePrettyPrinter.PrintShaderStackGraph)));
+}
+
+public static class ShaderStackToValuePass
+{
+    public static ShaderModuleDeclaration<CilValueControlFlowBody> Run(
+        ShaderModuleDeclaration<ShaderStackControlFlowBody> module) =>
+        module.MapBody(static (_, _, body) => Lift(body));
+
+    private static CilValueControlFlowBody Lift(ShaderStackControlFlowBody source)
+    {
+        var graph = source.Graph;
+        Dictionary<Label, ControlFlowGraph<CilValueBasicBlock>.NodeDefinition> definitions = [];
+        foreach (var label in graph.Labels())
+        {
+            var sourceBlock = graph[label];
+            var parameters = sourceBlock.EntryStack
+                                        .Select(type => (IShaderValue)ShaderValue.Intermediate(type))
+                                        .ToImmutableArray();
+            var stack = parameters.ToList();
+            var instructions = new List<Instruction<IShaderValue, IShaderValue>>();
+            foreach (var annotated in sourceBlock.Body.Elements)
+            {
+                ValidateTransition(stack, annotated.Annotation.Pre);
+                switch (annotated.Node)
+                {
+                    case ShaderStackInstruction.Operation operation:
+                        var snapshot = stack.ToImmutableArray();
+                        var operands = operation.Instruction.Operands
+                                                .Select(operand => Resolve(operand, snapshot))
+                                                .ToImmutableArray();
+                        var result = operation.Instruction.Result is { } resultType
+                            ? ShaderValue.Intermediate(resultType)
+                            : null;
+                        instructions.Add(Instruction<IShaderValue, IShaderValue>.Create(
+                            operation.Instruction.Operation,
+                            result,
+                            operands,
+                            annotated.Annotation.Provenance));
+                        stack.RemoveRange(stack.Count - operation.PopCount, operation.PopCount);
+                        if (result is not null && result.Type is not UnitType)
+                            stack.Add(result);
+                        break;
+                    case ShaderStackInstruction.PushAlias alias:
+                        stack.Add(alias.Value.Value);
+                        break;
+                    case ShaderStackInstruction.Drop:
+                        stack.RemoveAt(stack.Count - 1);
+                        break;
+                    default:
+                        throw new NotSupportedException(
+                            $"Unknown shader-stack instruction {annotated.Node.GetType().FullName}.");
+                }
+                ValidateTransition(stack, annotated.Annotation.Post);
+            }
+
+            var terminator = LiftTerminator(sourceBlock.Body.Last, stack);
             var block = new CilValueBasicBlock(
                 label,
-                [.. inputStack.Reverse()],
-                Seq.Create([.. visitor.Instructions], terminator));
-            definitions.Add(label, new ControlFlowGraph<CilValueBasicBlock>.NodeDefinition(
-                block.Successor,
-                block));
+                parameters,
+                Seq.Create(instructions, terminator));
+            definitions.Add(label, new(block.Successor, block));
         }
 
         return new CilValueControlFlowBody(
@@ -107,27 +191,67 @@ public static class CilStackToValuePass
                 definitions));
     }
 
-    private static ImmutableStack<IShaderValue> CreateInputStack(ImmutableStack<CilStackType> types)
+    private static ITerminator<RegionJump<IShaderValue>, IShaderValue> LiftTerminator(
+        Annotated<ITerminator<Label, ShaderStackOperand>, ShaderStackTransition> annotated,
+        List<IShaderValue> stack)
     {
-        ImmutableStack<IShaderValue> result = [];
-        foreach (var type in types.Reverse())
-            result = result.Push(ShaderValue.Intermediate(type.ShaderType));
+        ValidateTransition(stack, annotated.Annotation.Pre);
+        var result = annotated.Node.Evaluate(new LiftTerminatorSemantic(stack));
+        ValidateTransition(stack, annotated.Annotation.Post);
         return result;
     }
 
-    private static void ValidateStack(
-        CilMethodEnvironment environment,
-        CilInstructionInfo instruction,
-        PreStack pre,
-        ImmutableStack<IShaderValue> actual)
+    private static IShaderValue Resolve(
+        ShaderStackOperand operand,
+        IReadOnlyList<IShaderValue> stack) =>
+        operand switch
+        {
+            ShaderStackOperand.Immediate immediate => immediate.Value,
+            ShaderStackOperand.Depth depth when depth.Index < stack.Count =>
+                stack[stack.Count - 1 - depth.Index],
+            ShaderStackOperand.Depth depth =>
+                throw new ArgumentException($"Shader-stack depth {depth.Index} exceeds value stack size {stack.Count}."),
+            _ => throw new NotSupportedException($"Unknown shader-stack operand {operand.GetType().FullName}.")
+        };
+
+    private static void ValidateTransition(
+        IReadOnlyList<IShaderValue> values,
+        ImmutableArray<IShaderType> expected)
     {
-        var expected = pre.Types;
-        var actualTypes = actual.Select(value => CilStackType.FromShaderType(value.Type));
-        if (!expected.SequenceEqual(actualTypes))
-            throw new ValidationException(
-                $"Value stack does not match analyzed Pre stack at IL_{instruction.ByteOffset:X4}: " +
-                $"expected [{string.Join(", ", expected)}], got [{string.Join(", ", actualTypes)}].",
-                environment.Method);
+        if (!values.Select(value => value.Type).SequenceEqual(expected))
+            throw new ArgumentException("Mechanical shader-stack lifting disagrees with the typed transition.");
+    }
+
+    private sealed class LiftTerminatorSemantic(List<IShaderValue> stack)
+        : ITerminatorSemantic<Label, ShaderStackOperand, ITerminator<RegionJump<IShaderValue>, IShaderValue>>
+    {
+        public ITerminator<RegionJump<IShaderValue>, IShaderValue> ReturnVoid() =>
+            Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>();
+
+        public ITerminator<RegionJump<IShaderValue>, IShaderValue> ReturnExpr(ShaderStackOperand expr)
+        {
+            var value = Resolve(expr, stack);
+            stack.Clear();
+            return Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(value);
+        }
+
+        public ITerminator<RegionJump<IShaderValue>, IShaderValue> Br(Label target) =>
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                new RegionJump<IShaderValue>(target, [.. stack]));
+
+        public ITerminator<RegionJump<IShaderValue>, IShaderValue> BrIf(
+            ShaderStackOperand condition,
+            Label trueTarget,
+            Label falseTarget)
+        {
+            var value = Resolve(condition, stack);
+            stack.RemoveAt(stack.Count - 1);
+            var arguments = stack.ToImmutableArray();
+            return Terminator.B.BrIf(
+                value,
+                new RegionJump<IShaderValue>(trueTarget, arguments),
+                new RegionJump<IShaderValue>(falseTarget, arguments));
+        }
     }
 }
 
@@ -167,7 +291,9 @@ public static class CilModuleCompiler
         ShaderModuleDeclaration<RawCilFunctionBody> module) =>
         CilRegionPass.Run(
             CilBlockControlFactsPass.Run(
-                CilStackToValuePass.Run(
-                    CilControlFlowPass.Run(
-                        CilPreStackPass.Run(module)))));
+                ShaderStackToValuePass.Run(
+                    ShaderStackControlFlowPass.Run(
+                        CilToShaderStackPass.Run(
+                            CilBlockPartitionPass.Run(
+                                CilPreStackPass.Run(module)))))));
 }

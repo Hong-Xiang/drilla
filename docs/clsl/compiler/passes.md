@@ -135,8 +135,10 @@ not claim reducibility, forward merges, reconvergence, or general structurizatio
 | `RuntimeReflectionParser` | Reflection roots -> `ShaderModuleDeclaration<RawCilFunctionBody>` | Collect declarations, immutable symbol metadata, and every referenced non-boundary original CIL body, including references at unreachable instruction positions. |
 | `CilMethodDecoder` | Method metadata -> `LinearCode<CilInstructionInfo>` | Preserve every instruction, original index/byte range, method body and immutable method environment without semantic lowering. |
 | `CilPreStackPass` | Raw CIL module -> `ShaderModuleDeclaration<PreCilFunctionBody>` | Reject unsupported EH, validate whole-source control, and propagate exact normalized stacks; successful per-function output contains only reachable original positions. |
-| `CilControlFlowPass` | Pre module -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>` | Partition a `BlockList<CilInstructionBlock>`, then construct the existing reachable CIL CFG through the generic factory, retaining concrete native control and source annotations. |
-| `CilStackToValuePass` | CIL CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Validate concrete stacks and produce a flat `ControlFlowGraph<CilValueBasicBlock>` with values, ordered edge arguments and lowered terminators. |
+| `CilBlockPartitionPass` | Pre module -> `ShaderModuleDeclaration<LabelledCilFunctionBody>` | Partition the complete reachable Pre source into `BlockList<CilInstructionBlock>` while retaining original instruction and annotation identity. |
+| `CilToShaderStackPass` | Labelled CIL module -> `ShaderModuleDeclaration<ShaderStackFunctionBody>` | Lower each CIL instruction to explicit typed stack operations, aliases and drops with derived Pre/Post transitions and numeric provenance. |
+| `ShaderStackControlFlowPass` | Shader-stack block module -> `ShaderModuleDeclaration<ShaderStackControlFlowBody>` | Validate exact edge stack equality and construct the first frontend CFG through the generic factory. |
+| `ShaderStackToValuePass` | Shader-stack CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Mechanically read depths, pop/push the declared transition, preserve provenance in instruction payloads, and produce ordered block arguments. |
 | `CilBlockControlFactsPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute the existing reverse-postorder, immediate-dominator, immediate-postdominator, and natural-loop-header results once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
 | `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
@@ -163,19 +165,18 @@ raw CIL LinearCode
   -> source text
 ```
 
-Issue #114's first foundation slice implements the block-list/CFG separation,
-not early shader stack lowering. `InstructionBlockPartitioner` binds labels and
+Issue #114's frontend slices implement the block-list/CFG separation and early
+shader-stack lowering. `InstructionBlockPartitioner` binds labels and
 original ranges; immutable `BlockList<TBlock>` validates definitions and targets
 without graph indexes. `ControlFlowGraph.Create` consumes the stored list and an
 explicit pure control projection, including disconnected definitions and ordered
 duplicate arms; it has no CIL opcode or source-index semantics.
 
-The interim public `MethodBodyAnalysisModel` / CIL CFG remains unchanged. Removing
-it depends on the subsequent CIL-to-shader stack instruction/type lowering and
-consumer migration. That slice must use existing `IShaderType`, preserve exact
-normalized stack joins, and annotate each instruction in one-to-many expansions
-correctly. No new public CIL CFG alias or additional module-stage wrapper is
-introduced by this foundation. See the [actual before/after diagnostics](linear-cil.md#read-only-stage-diagnostics).
+There is no public CIL CFG. The generic CFG is constructed only after CIL has
+become shader-stack IR. Shader operands are typed stack depths or resolved
+literals/function/stable-address symbols; they never contain intermediate
+values. Every expansion and terminator records its own transition and source
+provenance. See the [actual diagnostics](linear-cil.md#read-only-stage-diagnostics).
 
 Shared instructions, terminators, sequences, labels, and region constructors
 serve multiple stages. Parsing, Pre analysis, reachable CFG construction, flat
