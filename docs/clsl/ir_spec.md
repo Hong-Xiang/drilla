@@ -172,10 +172,10 @@ terminators with a `RegionTree` built by the final frontend pass. The emitter
 still performs lexical layout. There is not yet an independent scoped-region
 validator, complete structurization pass, or target AST stage.
 
-`ExprValue`/`ExprTree` and the `AbstractSyntaxTree` directory do not constitute a
-complete AST function-body stage in this pipeline. Older design examples,
-experimental backends, and the identity `CommonOperationLoweringPass` must not
-be presented as additional active compilation stages.
+The `AbstractSyntaxTree` directory does not constitute a complete AST
+function-body stage in this pipeline. Older design examples and
+experimental backends must not be presented as additional active compilation
+stages.
 
 ## Logical Stages and Their Obligations
 
