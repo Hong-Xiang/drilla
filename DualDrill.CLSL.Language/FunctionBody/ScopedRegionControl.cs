@@ -24,6 +24,9 @@ internal static class ScopedRegionControl
                 throw Invalid($"region '{region.Label}' has a default parameter array");
             if (root && !region.Body.Parameters.IsEmpty)
                 throw Invalid($"entry region '{region.Label}' must not declare parameters");
+            foreach (var (index, parameter) in region.Body.Parameters.Index())
+                if (parameter.Type is null)
+                    throw Invalid($"region '{region.Label}' parameter at index {index} type is missing");
             if (!bodies.TryAdd(region.Label, region.Body))
                 throw Invalid($"duplicate defined label '{region.Label}'");
             foreach (var (arm, jump) in Jumps(region.Body).Index())
@@ -41,23 +44,23 @@ internal static class ScopedRegionControl
             context);
 
         foreach (var source in control.Labels)
-        foreach (var (arm, jump) in Jumps(bodies[source]).Index())
-        {
-            var target = bodies[jump.Label];
-            if (jump.Arguments.Length != target.Parameters.Length)
-                throw Invalid(
-                    $"transfer from '{source}', arm {arm}, to '{jump.Label}' has incorrect argument count " +
-                    $"{jump.Arguments.Length}; " +
-                    $"expected {target.Parameters.Length}");
-            foreach (var (index, pair) in target.Parameters.Zip(jump.Arguments).Index())
+            foreach (var (arm, jump) in Jumps(bodies[source]).Index())
             {
-                if (!SameType(pair.First.Type, pair.Second.Type))
+                var target = bodies[jump.Label];
+                if (jump.Arguments.Length != target.Parameters.Length)
                     throw Invalid(
-                        $"transfer from '{source}', arm {arm}, to '{jump.Label}' has incorrect argument type at " +
-                        $"index {index}: " +
-                        $"'{pair.Second.Type.Name}'; expected '{pair.First.Type.Name}'");
+                        $"transfer from '{source}', arm {arm}, to '{jump.Label}' has incorrect argument count " +
+                        $"{jump.Arguments.Length}; " +
+                        $"expected {target.Parameters.Length}");
+                foreach (var (index, pair) in target.Parameters.Zip(jump.Arguments).Index())
+                {
+                    if (!SameType(pair.First.Type, pair.Second.Type))
+                        throw Invalid(
+                            $"transfer from '{source}', arm {arm}, to '{jump.Label}' has incorrect argument type at " +
+                            $"index {index}: " +
+                            $"'{pair.Second.Type.Name}'; expected '{pair.First.Type.Name}'");
+                }
             }
-        }
 
         return control;
 
