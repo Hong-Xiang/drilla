@@ -103,7 +103,7 @@ Pass-local scratch dictionaries and worklists are allowed. Published IR stage
 values remain immutable and printable. A pass explicitly preserves, drops or
 recomputes annotations; there is no automatic invalidation framework.
 
-### Separate Follow-Up: BB-Local Analysis Facts
+### Implemented BB-Local Analysis Facts
 
 Where a fact is about one BB, prefer a result shaped like
 `CFG<Annotated<TBasicBlock, TBlockFacts>>`. Immediate dominance, postdominance,
@@ -116,9 +116,9 @@ do not publish duplicate mutable copies of the same facts. A topology-changing
 pass may invalidate annotations on multiple BBs and can return a globally
 rebuilt immutable result. General incremental maintenance is not required.
 
-Implement this analysis-result reorganization as a separately reviewable slice
-after the parser/pass boundary, not as a new structurization algorithm hidden
-inside the collection change.
+This analysis-result reorganization is a separate control-facts pass after the
+parser/pass boundary. It reuses the existing algorithms and does not introduce a
+new structurization algorithm inside collection or region construction.
 
 The implemented `BlockControlFacts` fields have deliberately narrow meanings:
 `ReversePostOrderIndex` is the existing reachable DFS reverse-postorder number;

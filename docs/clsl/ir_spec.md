@@ -73,10 +73,12 @@ for their output types. Mapping laws apply to the immutable `Node` and
 from its input.
 
 The implementation wires these values through a raw-module collector and
-explicit Pre, CFG, flat-value and region passes. `ControlFlowAnalysis` is
-computed from the completed flat value CFG and is reused for immediate
-postdominators and `RegionTree.Create`; no dominance result is copied onto each
-block. Superseded parser-owned completion caches were removed, and the source/API
+explicit Pre, CFG, flat-value, BB-control-facts and region passes. Existing
+`ControlFlowAnalysis` algorithms are internal to the control-facts producer;
+their RPO, immediate-dominator, immediate-postdominator and loop-header results
+are published locally as `CFG<Annotated<TBlock, BlockControlFacts>>`. The region
+consumer reads those facts instead of recomputing or retaining the global
+analysis object. Superseded parser-owned completion caches were removed, and the source/API
 migration is documented in [linear-cil.md](compiler/linear-cil.md). Region/AST
 algorithms and generic invalidation frameworks remain outside this refinement.
 
@@ -150,6 +152,8 @@ C# compiled by .NET
   -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>`
   -> CilStackToValuePass
   -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
+  -> CilBlockControlFactsPass
+  -> `ShaderModuleDeclaration<CilValueControlFactsBody>`
   -> CilRegionPass
   -> `ShaderModuleDeclaration<FunctionBody4>`
   -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
@@ -175,9 +179,9 @@ be presented as additional active compilation stages.
 
 ## Logical Stages and Their Obligations
 
-These boundaries split reasoning and testing; they do not require six unrelated
-IR implementations. The last two rows describe intended stages, not completed
-implementations.
+These boundaries split reasoning and testing; they do not require unrelated
+IR implementations for each pass. The existing region binding tree is not a
+claim of complete scoped-control legality; target AST lowering remains planned.
 
 | Stage | Required invariant | Current owner or implementation boundary |
 |---|---|---|
@@ -185,7 +189,8 @@ implementations.
 | Linear Pre facts | Reachable entries have exact normalized stack types; absence from the completed value means unreachable. | `CilPreStackPass` produces `ShaderModuleDeclaration<PreCilFunctionBody>`; full original source remains separate. |
 | CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `CilControlFlowPass` produces `ShaderModuleDeclaration<MethodBodyAnalysisModel>`. |
 | Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `CilStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. Validation is partial, not a complete verifier. |
-| Scoped nested region SSA-like IR | Existing control-flow analysis and region organization consume the completed flat value CFG. | `CilRegionPass` produces `FunctionBody4` using the existing `RegionTree.Create`. |
+| BB-annotated value CFG | Original blocks, labels and ordered edges remain unchanged; local facts hold existing RPO, IDom, IPDom and loop-header results. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
+| Region binding tree | Consume published local facts and preserve descending-RPO dominator-child order without reanalysis. | `CilRegionPass` produces `FunctionBody4`; general structurization and scoped-join legality remain later work. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
 | Target AST | Control targets have a legal target-language realization; shared joins and value transfers have explicit lexical placement; effects retain their order and dynamic multiplicity. | Intended lowering. Current `SlangEmitter` combines these decisions with text emission. |
 
