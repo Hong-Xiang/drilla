@@ -67,8 +67,9 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                                     "with no finite exit path; the Slang backend may erase nontermination.");
 
                     module = module.RunPass(new FunctionToOperationPass());
-                    module = module.RunPass(new RegionParameterToLocalVariablePass());
-                    var emitter = new SlangEmitter(module);
+                    module = module.RunPass(new StablePointerRegionParameterPass());
+                    var target = new SlangTargetLowering().Lower(module);
+                    var emitter = new SlangEmitter(target);
                     var slangCode = emitter.Emit();
                     // Compile Slang to WGSL using slangc
                     var wgslCode = _slangService.CompileToWgslAsync(slangCode).GetAwaiter().GetResult();
@@ -77,8 +78,9 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
             case CLSLCompileTarget.SLang:
                 {
                     module = module.RunPass(new FunctionToOperationPass());
-                    module = module.RunPass(new RegionParameterToLocalVariablePass());
-                    var emitter = new SlangEmitter(module);
+                    module = module.RunPass(new StablePointerRegionParameterPass());
+                    var target = new SlangTargetLowering().Lower(module);
+                    var emitter = new SlangEmitter(target);
                     var code = emitter.Emit();
                     return code;
                 }

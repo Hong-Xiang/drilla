@@ -308,6 +308,32 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
         new RegionParameterToLocalVariablePass().VisitFunctionBody(body);
 
     [Fact]
+    public void PointerOnlyPassPreservesOrdinaryParametersAndSelectedArguments()
+    {
+        var entry = Label.Create("entry");
+        var target = Label.Create("target");
+        var pointer = ShaderValue.Intermediate(source.Value.Type);
+        var value = ShaderValue.Intermediate(ShaderType.I32);
+        var left = ShaderValue.Intermediate(ShaderType.I32);
+        var right = ShaderValue.Intermediate(ShaderType.I32);
+        var body = CreateBody([
+            Block(entry, [], Terminators.BrIf(
+                condition,
+                new(target, [source.Value, left]),
+                new(target, [source.Value, right]))),
+            Block(target, [pointer, value], Terminators.ReturnExpr(value))
+        ]);
+
+        var result = new StablePointerRegionParameterPass().VisitFunctionBody(body);
+        var branch = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
+            result[entry].Body.Last);
+
+        Assert.Same(value, Assert.Single(result[target].Parameters));
+        Assert.Same(left, Assert.Single(branch.TrueTarget.Arguments));
+        Assert.Same(right, Assert.Single(branch.FalseTarget.Arguments));
+    }
+
+    [Fact]
     public void InterleavedParametersPreserveParallelCopiesAndAllCallOperands()
     {
         var entry = Label.Create("entry");

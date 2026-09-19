@@ -21,6 +21,7 @@ using DualDrill.Common.Nat;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
 using static DualDrill.CLSL.Test.ScopedContinuationOracle;
+using static DualDrill.CLSL.Test.RegionFixture;
 
 namespace DualDrill.CLSL.Test;
 
@@ -213,9 +214,10 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         output.WriteLine(valueControlFlow.Graph.PrettyPrint());
         output.WriteLine("ACTUAL output region/control:");
         output.WriteLine(original.Dump());
-        var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
+        var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
-        var source = Emit(lowered);
+        var target = Lower(lowered);
+        var source = Emit(target);
         output.WriteLine(source);
         var cfg = RunCfg(original, arguments);
         var scoped = RunScoped(original, arguments);
@@ -251,10 +253,19 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             _ => throw new ArgumentOutOfRangeException(nameof(fixture))
         };
 
-    internal static string Emit(FunctionBody4 body) =>
-        new SlangEmitter(new ShaderModuleDeclaration<FunctionBody4>(
-            [body.Declaration], ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
+    internal static string Emit(FunctionBody4 body) => Emit(Lower(body));
+
+    internal static string Emit(SlangFunctionBody body) =>
+        new SlangEmitter(new ShaderModuleDeclaration<SlangFunctionBody>(
+            [body.Declaration],
+            ImmutableDictionary<FunctionDeclaration, SlangFunctionBody>.Empty.Add(body.Declaration, body)))
         .Emit();
+
+    internal static SlangFunctionBody Lower(FunctionBody4 body) =>
+        new SlangTargetLowering().Lower(new ShaderModuleDeclaration<FunctionBody4>(
+            [body.Declaration],
+            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
+        .GetBody(body.Declaration);
 
     [Fact]
     public void FixtureHasActualConfigurationSpecificCil()
@@ -332,29 +343,28 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var result = ShaderValue.Intermediate(ShaderType.I32);
         var blocks = new[]
         {
-            ShaderRegionBody.Create(entry, [], [
+            Body(entry, [], [
                 Instruction.Factory.Store(default, new StoreOperation(), local.Value, Int(0)),
                 Instruction.Factory.Load(default, new LoadOperation(), argument, input.Value),
                 Instruction.Factory.Operation2(default, NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Gt>.Instance,
                     condition, argument, Int(0))
-            ], Terms.BrIf(condition, new(tail, [Int(10)]), new(tail, [Int(20)])),
-                new ExitPostDominance.Block(tail, false)),
-            ShaderRegionBody.Create(tail, [incoming], [
+            ], Terms.BrIf(condition, new(tail, [Int(10)]), new(tail, [Int(20)]))),
+            Body(tail, [incoming], [
                 Instruction.Factory.Load(default, new LoadOperation(), before, local.Value),
                 Instruction.Factory.Operation2(default, NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                     incremented, before, Int(1)),
                 Instruction.Factory.Store(default, new StoreOperation(), local.Value, incremented)
-            ], Terms.Br(new(exit, [incoming])), new ExitPostDominance.Block(exit, false)),
-            ShaderRegionBody.Create(exit, [carried], [
+            ], Terms.Br(new(exit, [incoming]))),
+            Body(exit, [carried], [
                 Instruction.Factory.Load(default, new LoadOperation(), after, local.Value),
                 Instruction.Factory.Operation2(default, NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                     result, after, carried)
-            ], Terms.ReturnExpr(result), new ExitPostDominance.FunctionExit(false))
+            ], Terms.ReturnExpr(result))
         };
-        return new FunctionBody4(declaration,
-            RegionTree<Label, ShaderRegionBody>.Block(entry, [
-                RegionTree<Label, ShaderRegionBody>.Block(exit, [], blocks[2], null),
-                RegionTree<Label, ShaderRegionBody>.Block(tail, [], blocks[1], exit)
+        return CreateFunctionBody(declaration,
+            RegionTree.Block(entry, [
+                RegionTree.Block(exit, [], blocks[2], null),
+                RegionTree.Block(tail, [], blocks[1], exit)
             ], blocks[0], tail));
     }
 
@@ -427,25 +437,23 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var tens = ShaderValue.Intermediate(ShaderType.I32);
         var answer = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = new FunctionDeclaration("Swap", [], new FunctionReturn(ShaderType.I32, []), []);
-        var entryBody = ShaderRegionBody.Create(entry, [], [],
-            Terms.Br(new(loop, [Int(1), Int(2), ShaderValue.Literal(new BoolLiteral(true))])),
-            new ExitPostDominance.Block(loop, true));
-        var loopBody = ShaderRegionBody.Create(loop, [a, b, again], [
+        var entryBody = Body(entry, [], [],
+            Terms.Br(new(loop, [Int(1), Int(2), ShaderValue.Literal(new BoolLiteral(true))])));
+        var loopBody = Body(loop, [a, b, again], [
             Instruction.Factory.Operation2(default, NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Mul>.Instance,
                 tens, a, Int(10)),
             Instruction.Factory.Operation2(default, NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                 result, tens, b)
         ], Terms.BrIf(again, new(loop, [b, a, ShaderValue.Literal(new BoolLiteral(false))]),
-            new(exit, [result])), new ExitPostDominance.Block(exit, true));
-        var exitBody = ShaderRegionBody.Create(
+            new(exit, [result])));
+        var exitBody = Body(
             exit,
             [answer],
             [],
-            Terms.ReturnExpr(answer),
-            new ExitPostDominance.FunctionExit(false));
-        var body = new FunctionBody4(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry, [
-            RegionTree<Label, ShaderRegionBody>.Block(exit, [], exitBody, null),
-            RegionTree<Label, ShaderRegionBody>.Loop(loop, [], loopBody, exit, exit)
+            Terms.ReturnExpr(answer));
+        var body = CreateFunctionBody(declaration, RegionTree.Block(entry, [
+            RegionTree.Block(exit, [], exitBody, null),
+            RegionTree.Loop(loop, [], loopBody, exit, exit)
         ], entryBody, loop));
         var expected = new Execution(new Value.Integer(21), [entry, loop, loop, exit]);
         AssertEquivalent(expected, RunCfg(body, []));
@@ -460,15 +468,14 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     {
         var body = HandBody();
         var cycleLabel = Label.Create("cycle");
-        var cycleRegion = ShaderRegionBody.Create(
+        var cycleRegion = Body(
             cycleLabel,
             [],
             [],
-            Terms.Br(new(cycleLabel, [])),
-            ExitPostDominance.NoExitPath.Instance);
-        var cycle = new FunctionBody4(
+            Terms.Br(new(cycleLabel, [])));
+        var cycle = CreateFunctionBody(
             new FunctionDeclaration("Cycle", [], new FunctionReturn(ShaderType.I32, []), []),
-            RegionTree<Label, ShaderRegionBody>.Loop(cycleLabel, [], cycleRegion, null, null));
+            RegionTree.Loop(cycleLabel, [], cycleRegion, null, null));
         Assert.Single(cycle.Labels);
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
             () => RunCfg(cycle, [], 100)).Message);

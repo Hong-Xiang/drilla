@@ -187,8 +187,8 @@ public sealed class ShaderStackPipelineTests(ITestOutputHelper output)
             instruction => instruction.Operation is CallOperation && instruction.Result?.Type is UnitType);
         var lowered = CilModuleCompiler.Compile(CompilerTestPipeline.ParseRaw(method))
                                        .RunPass(new FunctionToOperationPass())
-                                       .RunPass(new RegionParameterToLocalVariablePass());
-        var slang = new SlangEmitter(lowered).Emit();
+                                       .RunPass(new StablePointerRegionParameterPass());
+        var slang = new SlangEmitter(new SlangTargetLowering().Lower(lowered)).Emit();
         Assert.Contains("Observe(", slang);
         Assert.DoesNotContain(": void =", slang);
         await new SlangService().ValidateAsync(slang);
@@ -580,7 +580,7 @@ public sealed class ShaderStackPipelineTests(ITestOutputHelper output)
         var original = Body(stages.Compiled, method);
         var labelled = Body(stages.Labelled, method);
         Assert.True(labelled.Labels.ToHashSet().SetEquals(original.Labels));
-        var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
+        var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
         var source = ScalarControlFlowTests.Emit(lowered);
         var originalExecution = RunCfg(original, arguments);
@@ -607,8 +607,8 @@ public sealed class ShaderStackPipelineTests(ITestOutputHelper output)
     {
         var module = CilModuleCompiler.Compile(CompilerTestPipeline.ParseRaw(method))
                                       .RunPass(new FunctionToOperationPass())
-                                      .RunPass(new RegionParameterToLocalVariablePass());
-        return new SlangEmitter(module).Emit();
+                                      .RunPass(new StablePointerRegionParameterPass());
+        return new SlangEmitter(new SlangTargetLowering().Lower(module)).Emit();
     }
 
     private static bool Unordered(double left, double right) =>

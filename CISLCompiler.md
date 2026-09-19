@@ -53,9 +53,10 @@ Then we use structured [control flow conversion algorithm](https://dl.acm.org/do
 
 ### Region parameter lowering in the SSA / Slang pipeline
 
-`RegionParameterToLocalVariablePass` collects region bodies with a fold and jump edges
-with a terminator algebra. It checks edge arity and types, including pointer address spaces,
-before lowering parameters.
+The public Slang/WGSL path runs `StablePointerRegionParameterPass` after
+`FunctionToOperationPass`. It checks edge arity and types, resolves only stable pointer
+aliases, and deliberately preserves ordinary parameters and every ordered arm argument for
+`SlangTargetLowering`.
 
 Pointer parameters are constraints on address identity, not values to copy into pointer locals.
 A finite dependency-graph traversal resolves each parameter to a single parameter or variable
@@ -65,15 +66,14 @@ addresses, and cycles without a stable address fail explicitly with function/blo
 Every pointer parameter is checked, including unused parameters and those in unreachable regions.
 This is deliberately not general pointer-phi or resource-pointer lowering.
 
-The resulting substitutions are applied through the existing maps. Ordinary value parameters
-continue to lower to local loads/stores; consumed jump arguments are removed along with their
-parameters, so running the pass again does not introduce more locals or instructions.
-Conditional edges to the same target may share identical value arguments; differing arguments
-are explicitly rejected until edge-specific value lowering is implemented, rather than
-unconditionally storing both argument lists and silently selecting the wrong one.
-Direct IR regression tests cover address identity, chains, cycles, rejected inputs, mixed
-parameter slots, and idempotence. Existing Slang end-to-end tests remain compilation checks,
-not GPU execution-equivalence proofs.
+`SlangTargetLowering` consumes the checked scoped-control index, snapshots all values from the
+selected arm before writing destination slots, and produces a typed target AST with distinct
+one-shot and repeating loop nodes. Cross-label values use explicit typed captures. The
+syntax-only emitter never inspects Region layout or postdominance.
+
+The generic `RegionParameterToLocalVariablePass` remains for non-target callers. It composes
+the same stable-pointer pass before erasing ordinary parameters into local loads/stores; its
+legacy same-target/different-value restriction does not apply to the public target path.
 
 ### Public scalar local promotion
 

@@ -151,14 +151,18 @@ natural-loop membership, reconvergence, or general structurization.
 | `CilBlockControlFactsPass` | Promoted value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute reverse-postorder, immediate dominators, finite-exit postdominance with explicit function-exit/no-exit results, structural may-diverge, and ordered incoming-arm/backedge facts once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`; loop-header status is derived from incoming backedges. |
 | `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
-| `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
-| `SlangEmitter` | `FunctionBody4` -> Slang text | Resolve supported lexical transfers, place code, and emit syntax. These responsibilities are not yet separate passes. |
+| `StablePointerRegionParameterPass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases while preserving ordinary parameters and ordered arm arguments. |
+| `SlangTargetLowering` | `FunctionBody4` -> `SlangFunctionBody` | Consume checked scoped transfers, place each original body once, snapshot selected-arm values before writes, and materialize typed captures plus explicit one-shot/repeat control. |
+| `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Legacy non-target erasure of ordinary parameters after applying the shared stable-pointer policy. |
+| `SlangEmitter` | `SlangFunctionBody` -> Slang text | Format the target AST without Region traversal, postdominance queries, or control-layout inference. |
 | `SlangService` | Slang text -> WGSL | Invoke the external Slang compiler. |
 
-The `IR` output option formats `FunctionBody4`; it does not produce a distinct
-target AST. `IShaderModuleSimplePass` is the existing same-body-type pass
-interface. There is no implemented general pass scheduler, configurable
-optimization-level pipeline, or comprehensive inter-pass verifier here.
+The `IR` output option formats `FunctionBody4`. Public WGSL output rejects any
+original `NoExitPath` block before operation, pointer, or target lowering; IR and
+Slang remain available for those modules. `IShaderModuleSimplePass` is the
+existing same-body-type pass interface. There is no implemented general pass
+scheduler, configurable optimization-level pipeline, or comprehensive
+inter-pass verifier here.
 
 ## Desired Logical Separation
 
@@ -194,9 +198,8 @@ value lifting, local promotion, BB-local control facts, and region construction 
 typed producer/consumer boundaries. Changing the entry, block set, successor
 destination/order, or arm multiplicity requires rerunning
 `CilBlockControlFactsPass`; a payload-only mapping may preserve facts only when
-topology and ordered arm identity are unchanged. There is no incremental cache
-or invalidation manager. The emitter still performs work intended for
-region-to-AST lowering.
+topology and ordered arm identity are unchanged. There is no incremental cache or invalidation manager. Target layout is performed
+once by `SlangTargetLowering`; the emitter is syntax-only.
 
 The agreed [linear CIL design](linear-cil.md) refines the frontend ordering:
 preserve native predicates and original offsets, analyze Pre stack types on
