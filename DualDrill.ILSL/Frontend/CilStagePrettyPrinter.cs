@@ -37,8 +37,8 @@ internal static class CilStagePrettyPrinter
             writer.Write(Invariant(facts.ReversePostOrderIndex));
             writer.Write(" idom=");
             WriteOptionalLabel(facts.ImmediateDominator, context, writer);
-            writer.Write(" ipdom=");
-            WriteOptionalLabel(facts.ImmediatePostDominator, context, writer);
+            writer.Write(" postdom=");
+            WritePostDominance(facts.PostDominance, context, writer);
             writer.Write(" incoming=[");
             var separator = "";
             foreach (var arm in facts.IncomingArms)
@@ -57,6 +57,27 @@ internal static class CilStagePrettyPrinter
             writer.WriteLine("}");
             PrintValueBlockBody(block, context, writer);
         };
+
+    private static void WritePostDominance(
+        ExitPostDominance postDominance,
+        ILocalDeclarationContext context,
+        IndentedTextWriter writer)
+    {
+        switch (postDominance)
+        {
+            case ExitPostDominance.Block block:
+                block.Target.Dump(context, writer);
+                break;
+            case ExitPostDominance.FunctionExit:
+                writer.Write("function-exit");
+                break;
+            case ExitPostDominance.NoExitPath:
+                writer.Write("no-exit-path");
+                break;
+        }
+
+        writer.Write(postDominance.MayDiverge ? "(may-diverge)" : "(finite)");
+    }
 
     public static void PrintRawLinearCode(
         LinearCode<CilInstructionInfo> code,

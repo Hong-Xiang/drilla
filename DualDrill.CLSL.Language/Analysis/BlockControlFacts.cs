@@ -13,7 +13,7 @@ public readonly record struct IncomingControlArm(
 public sealed record BlockControlFacts(
     int ReversePostOrderIndex,
     Label? ImmediateDominator,
-    Label? ImmediatePostDominator,
+    ExitPostDominance PostDominance,
     ImmutableArray<IncomingControlArm> IncomingArms)
 {
     public bool IsLoopHeader => IncomingArms.Any(static arm => arm.IsBackedge);
@@ -55,7 +55,7 @@ public static class ControlFlowFacts
                     new BlockControlFacts(
                         analysis.IndexOf(label),
                         analysis.DominatorTree.ImmediateDominator(label),
-                        analysis.PostDominatorTree.ImmediatePostDominator(label),
+                        analysis.PostDominatorTree.ExitPostDominance(label),
                         incomingArms[label].ToImmutable()),
                     blockPrettyPrint)));
 

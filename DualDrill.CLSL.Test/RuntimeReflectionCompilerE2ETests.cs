@@ -302,14 +302,17 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
                                 sharedReturn,
                                 Assert.IsType<UnconditionalSuccessor>(
                                     controlFlowGraph.Successor(target)).Target);
-                            Assert.Equal(
+                            Assert.Same(
                                 sharedReturn,
-                                factsBody.Graph[target].Annotation.ImmediatePostDominator);
+                                Assert.IsType<ExitPostDominance.Block>(
+                                    factsBody.Graph[target].Annotation.PostDominance).Target);
                         });
-                    Assert.Equal(
+                    Assert.Same(
                         sharedReturn,
-                        factsBody.Graph[conditional].Annotation.ImmediatePostDominator);
-                    Assert.Null(factsBody.Graph[sharedReturn].Annotation.ImmediatePostDominator);
+                        Assert.IsType<ExitPostDominance.Block>(
+                            factsBody.Graph[conditional].Annotation.PostDominance).Target);
+                    Assert.IsType<ExitPostDominance.FunctionExit>(
+                        factsBody.Graph[sharedReturn].Annotation.PostDominance);
                     break;
                 }
             case "Release":
@@ -321,10 +324,12 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 
                     Assert.Equal(2, terminalReturns.Length);
                     Assert.Equal(2, branchTargets.Intersect(terminalReturns).Count());
-                    Assert.Null(factsBody.Graph[conditional].Annotation.ImmediatePostDominator);
+                    Assert.IsType<ExitPostDominance.FunctionExit>(
+                        factsBody.Graph[conditional].Annotation.PostDominance);
                     Assert.All(
                         terminalReturns,
-                        terminal => Assert.Null(factsBody.Graph[terminal].Annotation.ImmediatePostDominator));
+                        terminal => Assert.IsType<ExitPostDominance.FunctionExit>(
+                            factsBody.Graph[terminal].Annotation.PostDominance));
                     break;
                 }
             default:

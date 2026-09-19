@@ -29,9 +29,9 @@ public sealed class BlockControlFactsTests
                 Assert.Same(
                     baseline.DominatorTree.ImmediateDominator(label),
                     row.Annotation.ImmediateDominator);
-                Assert.Same(
-                    baseline.PostDominatorTree.ImmediatePostDominator(label),
-                    row.Annotation.ImmediatePostDominator);
+                AssertPostDominance(
+                    baseline.PostDominatorTree.ExitPostDominance(label),
+                    row.Annotation.PostDominance);
                 Assert.Equal(baseline.IsLoop(label), row.Annotation.IsLoopHeader);
             }
         }
@@ -97,7 +97,7 @@ public sealed class BlockControlFactsTests
                         new BlockControlFacts(
                             0,
                             null,
-                            null,
+                            ExitPostDominance.NoExitPath.Instance,
                             [new IncomingControlArm(entry, 0, true)]),
                         PrintNothing))
             });
@@ -120,13 +120,17 @@ public sealed class BlockControlFactsTests
             {
                 [entry] = Definition(
                     new UnconditionalSuccessor(exit),
-                    new BlockControlFacts(0, null, foreign, [])),
+                    new BlockControlFacts(
+                        0,
+                        null,
+                        new ExitPostDominance.Block(foreign, false),
+                        [])),
                 [exit] = Definition(
                     new TerminateSuccessor(),
                     new BlockControlFacts(
                         1,
                         entry,
-                        null,
+                        new ExitPostDominance.FunctionExit(false),
                         [new IncomingControlArm(entry, 0, false)]))
             });
 
@@ -134,6 +138,25 @@ public sealed class BlockControlFactsTests
             RegionTree.Create(graph, static (_, node, _) => node));
 
         Assert.Contains("postdominator outside the graph", exception.Message);
+    }
+
+    private static void AssertPostDominance(
+        ExitPostDominance expected,
+        ExitPostDominance actual)
+    {
+        Assert.Equal(expected.MayDiverge, actual.MayDiverge);
+        switch (expected)
+        {
+            case ExitPostDominance.Block block:
+                Assert.Same(block.Target, Assert.IsType<ExitPostDominance.Block>(actual).Target);
+                break;
+            case ExitPostDominance.FunctionExit:
+                Assert.IsType<ExitPostDominance.FunctionExit>(actual);
+                break;
+            case ExitPostDominance.NoExitPath:
+                Assert.Same(ExitPostDominance.NoExitPath.Instance, actual);
+                break;
+        }
     }
 
     private static IEnumerable<ControlFlowGraph<object>> Graphs()

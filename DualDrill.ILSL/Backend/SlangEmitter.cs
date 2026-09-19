@@ -288,12 +288,10 @@ public class SlangEmitter
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// block " + GetLabelName(label));
-            Writer.Write("// => ");
-            if (body.Last.ImmediatePostDominator is { } dl)
-                Writer.WriteLine(GetLabelName(dl));
-            else
-                Writer.WriteLine("exit");
-            var nextL = body.Last.ImmediatePostDominator;
+            WritePostDominance(body.Last.PostDominance);
+            var nextL = body.Last.PostDominance is ExitPostDominance.Block block
+                ? block.Target
+                : null;
             NextBlock.Push(nextL);
             SourceBlocks.Push(label);
             OnShaderRegionBody(body.Last);
@@ -311,7 +309,9 @@ public class SlangEmitter
     Unit IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>.Loop(
         Label label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody> body, Label? next, Label? breakNext)
     {
-        var nextL = body.Last.ImmediatePostDominator;
+        var nextL = body.Last.PostDominance is ExitPostDominance.Block block
+            ? block.Target
+            : null;
         HashSet<Label> regionLabels = [label, .. body.Elements.SelectMany(r => r.DefinedLabels())];
         var normalTransfer = FindNormalTransfer(label, regionLabels);
 
@@ -319,11 +319,7 @@ public class SlangEmitter
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// loop " + GetLabelName(label));
-            Writer.Write("// => ");
-            if (body.Last.ImmediatePostDominator is { } dl)
-                Writer.WriteLine(GetLabelName(dl));
-            else
-                Writer.WriteLine("exit");
+            WritePostDominance(body.Last.PostDominance);
             LoopOwners.Push(new(label, normalTransfer));
             NextBlock.Push(nextL);
             SourceBlocks.Push(label);
@@ -342,6 +338,25 @@ public class SlangEmitter
             EmitBranch(normalTransfer);
 
         return default;
+    }
+
+    private void WritePostDominance(ExitPostDominance postDominance)
+    {
+        Writer.Write("// => ");
+        switch (postDominance)
+        {
+            case ExitPostDominance.Block block:
+                Writer.Write(GetLabelName(block.Target));
+                break;
+            case ExitPostDominance.FunctionExit:
+                Writer.Write("function-exit");
+                break;
+            case ExitPostDominance.NoExitPath:
+                Writer.Write("no-exit-path");
+                break;
+        }
+
+        Writer.WriteLine(postDominance.MayDiverge ? " may-diverge" : " finite");
     }
 
 

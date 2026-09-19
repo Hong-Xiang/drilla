@@ -19,8 +19,14 @@ reachable basic block:
 
 - `ReversePostOrderIndex` is the existing DFS reverse-postorder number.
 - `ImmediateDominator` is the nearest strict dominator, or `null` for the entry.
-- `ImmediatePostDominator` retains the existing nullable result. Its
-  finite-exit semantics are not established by the ordered-arm change.
+- `PostDominance` is a closed result: `Block` names the nearest real block on
+  every finite path to a real return, `FunctionExit` names the analysis-only
+  virtual exit, and `NoExitPath` means no real return is reachable. Every
+  alternative reports whether a directed cycle is reachable as `MayDiverge`;
+  `NoExitPath` always may diverge.
+- The old nullable `ImmediatePostDominator` projection is removed. Consumers
+  must match the closed result and may use `Block.Target` only when the result
+  is a real block.
 - `IncomingArms` is ordered by source reverse-postorder, then source successor
   ordinal. Each `IncomingControlArm` records the original source label and
   ordinal; the target is the block that owns the facts.
@@ -39,6 +45,11 @@ multiplicity, and successor order. Changing the entry, block set, successor
 destination/order, or arm multiplicity invalidates all published control facts.
 A payload-only mapping may retain them only when topology and ordered arm
 identity are unchanged. There is no incremental invalidation registry.
+
+Finite-exit postdominance considers only finite directed walks to original
+zero-successor blocks. The virtual function exit is analysis-only and never
+creates an executable label or return. Absence of an exit path is a successful
+`NoExitPath` result; malformed input and unknown-label queries throw.
 
 See also:
 

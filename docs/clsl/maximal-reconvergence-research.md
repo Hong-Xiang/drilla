@@ -499,7 +499,7 @@ documentation addition.
 |---|---|
 | `DualDrill.CLSL.Language/Analysis/ControlFlowAnalysis.cs` | Builds DFS, dominator, and post-dominator information; exposes a loop-header query, not an explicit convergence model. |
 | `DualDrill.CLSL.Language/Region/RegionTree.cs` | `Create` builds regions from the dominator tree and loop classification, passing null next/break targets. |
-| `DualDrill.CLSL.Language/ControlFlow/PostDominatorAnalysis.cs` | Contains loop-aware merge heuristics; these are not a specified maximal-reconvergence contract. |
+| Historical `PostDominatorAnalysis` (removed after this snapshot) | Contained loop-aware merge heuristics; these were not a specified maximal-reconvergence contract. |
 | `DualDrill.ILSL/Backend/SlangEmitter.cs` | Uses immediate post-dominators and target stacks, with duplicate target expansion in `EmitBranch`. |
 | `DualDrill.ILSL/SlangService.cs` | Invokes Slang CLI; the current compilation path emits WGSL. |
 | `DualDrill.CLSL.Test/StructuredControlFlowTests.cs` | Tests representative region shapes, not multi-invocation dynamic participation. |

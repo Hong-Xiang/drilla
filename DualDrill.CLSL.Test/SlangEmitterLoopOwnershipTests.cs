@@ -3,19 +3,109 @@ using System.Reflection;
 using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
 [Collection(SlangProcessTestCollection.Name)]
-public sealed class SlangEmitterLoopOwnershipTests
+public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
 {
+    [Fact]
+    public async Task OrdinaryLoopExitKeepsRealExitAndMayDivergeFact()
+    {
+        var method = ((Func<int, int>)OrdinaryLoopExit).Method;
+        var facts = CompilerTestPipeline.ControlFacts(method);
+        var source = Emit(method);
+        await new SlangService().ValidateAsync(source);
+
+        Assert.Contains(
+            facts.Graph.Labels(),
+            label => facts.Graph[label].Annotation.PostDominance is ExitPostDominance.Block
+            {
+                MayDiverge: true
+            });
+        Assert.DoesNotContain(
+            facts.Graph.Labels(),
+            label => facts.Graph[label].Annotation.PostDominance is ExitPostDominance.NoExitPath);
+        Assert.Contains("while(true)", source);
+        Assert.Contains("return ", source);
+        WriteActualCompilerOutput(nameof(OrdinaryLoopExit), facts, source);
+    }
+
+    [Fact]
+    public async Task AllDivergingLoopHasNoExitPathAndEmitsNoReturn()
+    {
+        var method = ((Func<bool, int>)AllDiverging).Method;
+        var facts = CompilerTestPipeline.ControlFacts(method);
+        var source = Emit(method);
+        await new SlangService().ValidateAsync(source);
+
+        Assert.All(
+            facts.Graph.Labels(),
+            label => Assert.Same(
+                ExitPostDominance.NoExitPath.Instance,
+                facts.Graph[label].Annotation.PostDominance));
+        Assert.Contains("while(true)", source);
+        Assert.DoesNotContain("return ", source);
+        WriteActualCompilerOutput(nameof(AllDiverging), facts, source);
+    }
+
+    [Fact]
+    public async Task MixedReturnAndDivergenceEmitsLoopArmThenRealReturn()
+    {
+        var method = ((Func<bool, int>)MixedReturnDivergence).Method;
+        var facts = CompilerTestPipeline.ControlFacts(method);
+        var source = Emit(method);
+        await new SlangService().ValidateAsync(source);
+
+        Assert.Contains(
+            facts.Graph.Labels(),
+            label => facts.Graph[label].Annotation.PostDominance is ExitPostDominance.NoExitPath);
+        Assert.Contains(
+            facts.Graph.Labels(),
+            label => facts.Graph[label].Annotation.PostDominance is ExitPostDominance.FunctionExit
+            {
+                MayDiverge: false
+            });
+        Assert.Contains(
+            facts.Graph.Labels(),
+            label => facts.Graph[label].Annotation.PostDominance is ExitPostDominance.Block
+            {
+                MayDiverge: true
+            });
+        Assert.Contains("if(", source);
+        Assert.Contains("while(true)", source);
+        Assert.Contains("return ", source);
+        WriteActualCompilerOutput(nameof(MixedReturnDivergence), facts, source);
+    }
+
+    [Fact]
+    public void SupportedLoopExitAndMixedDivergenceCompileThroughPublicWgslApi()
+    {
+        var shader = new ExitPostDominanceRegressionShader();
+        var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
+        var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
+
+        Assert.Contains("while(true)", slang);
+        Assert.Contains("return ", slang);
+        Assert.Contains("fn Ordinary", wgsl);
+        Assert.Contains("fn Mixed", wgsl);
+        Assert.Contains("return", wgsl);
+        output.WriteLine("=== supported C2 regressions: actual Slang ===");
+        output.WriteLine(slang);
+        output.WriteLine("=== supported C2 regressions: actual WGSL ===");
+        output.WriteLine(wgsl);
+    }
+
     [Fact]
     public async Task NestedBreakAndContinueRetestTheOuterHeader()
     {
@@ -56,12 +146,22 @@ public sealed class SlangEmitterLoopOwnershipTests
         var condition = ShaderValue.Literal(new BoolLiteral(true));
         var declaration = new FunctionDeclaration("SharedNormalTransfer", [],
             new FunctionReturn(ShaderType.Unit, []), []);
-        var outerBody = Body(outer, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])), null);
+        var outerBody = Body(
+            outer,
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])),
+            ExitPostDominance.NoExitPath.Instance);
         var innerBody = Body(inner,
             Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
-                condition, new RegionJump<IShaderValue>(left, []), new RegionJump<IShaderValue>(right, [])), null);
-        var leftBody = Body(left, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])), outer);
-        var rightBody = Body(right, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])), outer);
+                condition, new RegionJump<IShaderValue>(left, []), new RegionJump<IShaderValue>(right, [])),
+            ExitPostDominance.NoExitPath.Instance);
+        var leftBody = Body(
+            left,
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])),
+            ExitPostDominance.NoExitPath.Instance);
+        var rightBody = Body(
+            right,
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])),
+            ExitPostDominance.NoExitPath.Instance);
         var body = new FunctionBody4(declaration,
             RegionTree.Loop(outer,
             [
@@ -88,13 +188,23 @@ public sealed class SlangEmitterLoopOwnershipTests
         var condition = ShaderValue.Literal(new BoolLiteral(true));
         var declaration = new FunctionDeclaration("MultipleNormalTargets", [],
             new FunctionReturn(ShaderType.Unit, []), []);
-        var outerBody = Body(outer, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])), null);
+        var outerBody = Body(
+            outer,
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])),
+            new ExitPostDominance.Block(inner, true));
         var innerBody = Body(inner,
             Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
-                condition, new RegionJump<IShaderValue>(outer, []), new RegionJump<IShaderValue>(exit, [])), null);
+                condition, new RegionJump<IShaderValue>(outer, []), new RegionJump<IShaderValue>(exit, [])),
+            new ExitPostDominance.Block(exit, true));
         var exitBody =
-            Body(exit, Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(terminal, [])), terminal);
-        var terminalBody = Body(terminal, Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>(), null);
+            Body(
+                exit,
+                Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(terminal, [])),
+                new ExitPostDominance.Block(terminal, false));
+        var terminalBody = Body(
+            terminal,
+            Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>(),
+            new ExitPostDominance.FunctionExit(false));
         var body = new FunctionBody4(declaration,
             RegionTree.Loop(outer,
             [
@@ -114,8 +224,8 @@ public sealed class SlangEmitterLoopOwnershipTests
     private static ShaderRegionBody Body(
         Label label,
         ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
-        Label? immediatePostDominator) =>
-        ShaderRegionBody.Create(label, [], [], terminator, immediatePostDominator);
+        ExitPostDominance postDominance) =>
+        ShaderRegionBody.Create(label, [], [], terminator, postDominance);
 
     private static string Emit(MethodInfo method)
     {
@@ -130,6 +240,19 @@ public sealed class SlangEmitterLoopOwnershipTests
             [body.Declaration],
             ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
         .Emit();
+
+    private void WriteActualCompilerOutput(
+        string name,
+        CilValueControlFactsBody facts,
+        string slang)
+    {
+        output.WriteLine($"=== {name}: actual CIL ===");
+        output.WriteLine(facts.Source.Source.RawCode.PrettyPrint());
+        output.WriteLine($"=== {name}: actual control facts ===");
+        output.WriteLine(facts.Graph.PrettyPrint());
+        output.WriteLine($"=== {name}: actual Slang ===");
+        output.WriteLine(slang);
+    }
 
     private static void AssertLexicalUnwind(string source, int depth)
     {
@@ -246,6 +369,39 @@ public sealed class SlangEmitterLoopOwnershipTests
         }
 
         return result + 17;
+    }
+
+    private static int OrdinaryLoopExit(int count)
+    {
+        while (count > 0)
+            count--;
+        return count;
+    }
+
+    private static int AllDiverging(bool choose)
+    {
+        while (true)
+            choose = !choose;
+    }
+
+    private static int MixedReturnDivergence(bool shouldReturn)
+    {
+        if (shouldReturn)
+            return 7;
+        while (true)
+            shouldReturn = !shouldReturn;
+    }
+
+    private sealed class ExitPostDominanceRegressionShader : ISharpShader
+    {
+        [Fragment]
+        [return: Location(0)]
+        public static int Ordinary([Location(0)] int count) => OrdinaryLoopExit(count);
+
+        [Fragment]
+        [return: Location(0)]
+        public static int Mixed([Location(0)] int value) =>
+            MixedReturnDivergence(value > 0);
     }
 
     private readonly record struct TextScope(int Start, int End);
