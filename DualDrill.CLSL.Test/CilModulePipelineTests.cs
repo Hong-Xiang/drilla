@@ -55,7 +55,8 @@ public sealed class CilModulePipelineTests
         var pre = CilPreStackPass.Run(rawModule);
         var controlFlow = CilControlFlowPass.Run(pre);
         var values = CilStackToValuePass.Run(controlFlow);
-        _ = CilRegionPass.Run(values);
+        var facts = CilBlockControlFactsPass.Run(values);
+        _ = CilRegionPass.Run(facts);
 
         Assert.Equal(instructions, rawBody.Code.Instructions);
         Assert.Equal(declarations, rawModule.Declarations);
@@ -211,11 +212,14 @@ public sealed class CilModulePipelineTests
         var pre = CilPreStackPass.Run(raw);
         var controlFlow = CilControlFlowPass.Run(pre);
         var values = CilStackToValuePass.Run(controlFlow);
+        var facts = CilBlockControlFactsPass.Run(values);
 
         Assert.Contains("linear-cil raw", Format(raw));
         Assert.Contains("linear-cil pre-annotated reachable", Format(pre));
         Assert.Contains("reachable-cil-cfg", Format(controlFlow));
         Assert.Contains("flat-value-cfg", Format(values));
+        Assert.Contains("control-facts-cfg", Format(facts));
+        Assert.Contains(" facts={rpo=", Format(facts));
     }
 
     [Fact]

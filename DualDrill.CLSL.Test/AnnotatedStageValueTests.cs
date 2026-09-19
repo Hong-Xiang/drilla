@@ -135,16 +135,25 @@ public sealed class AnnotatedStageValueTests
     }
 
     [Fact]
-    public void RealAnnotatedRowsAndGraphStageImplementIPrintable()
+    public void RealAnnotatedRowsAndGraphStagesImplementIPrintable()
     {
         var model = ParseModel();
+        var facts = CompilerTestPipeline.ControlFacts(GetMethod(nameof(Choose)));
         IPrintable row = model.PreAnnotatedCode.Instructions[0];
         IPrintable graphStage = model.ControlFlow;
+        IPrintable factRow = facts.Graph[facts.Graph.EntryLabel];
+        IPrintable factsStage = facts;
 
         Assert.Contains(" pre=", row.PrettyPrint());
         var graph = graphStage.PrettyPrint();
         Assert.Contains("reachable-cil-cfg", graph);
         Assert.DoesNotContain("control-flow-analysis", graph);
+        var printedFact = factRow.PrettyPrint();
+        Assert.Contains(" facts={rpo=0 idom=none", printedFact);
+        Assert.Contains("control:", printedFact);
+        Assert.DoesNotContain(nameof(CilValueBasicBlock), printedFact);
+        Assert.DoesNotContain(nameof(BlockControlFacts), printedFact);
+        Assert.Contains("control-facts-cfg", factsStage.PrettyPrint());
     }
 
     [Fact]
@@ -218,6 +227,25 @@ public sealed class AnnotatedStageValueTests
         var analysis = value.Graph.ControlFlowAnalysis();
 
         Assert.Same(value.Graph, analysis.ControlFlowGraph);
+    }
+
+    [Fact]
+    public void ControlFactsStagePreservesTheFlatValueGraphByIdentity()
+    {
+        var stages = CompilerTestPipeline.CompileStages(GetMethod(nameof(Choose)));
+        var value = Assert.Single(stages.ValueControlFlow.FunctionDefinitions.Values);
+        var facts = Assert.Single(stages.ControlFacts.FunctionDefinitions.Values);
+
+        Assert.Same(value, facts.Source);
+        Assert.Same(value.Declaration, facts.Declaration);
+        Assert.Same(value.DeclarationContext, facts.DeclarationContext);
+        Assert.Same(value.Graph.EntryLabel, facts.Graph.EntryLabel);
+        Assert.Equal(value.Graph.Labels(), facts.Graph.Labels());
+        foreach (var label in value.Graph.Labels())
+        {
+            Assert.Same(value.Graph[label], facts.Graph[label].Node);
+            Assert.Same(value.Graph.Successor(label), facts.Graph.Successor(label));
+        }
     }
 
     [Fact]

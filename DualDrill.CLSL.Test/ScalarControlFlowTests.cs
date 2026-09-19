@@ -237,9 +237,9 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             instruction => instruction.Operation is IBinaryExpressionOperation { BinaryOp: BinaryArithmetic.Mul });
 
         var nestedMethod = ((Func<int, int, int, int, int>)DevelopTestShaderModule.NestedLoop).Method;
-        var nested = CompilerTestPipeline.ValueControlFlow(nestedMethod);
-        var analysis = nested.Graph.ControlFlowAnalysis();
-        Assert.Equal(2, nested.Graph.Labels().Count(analysis.IsLoop));
+        var nested = CompilerTestPipeline.ControlFacts(nestedMethod);
+        Assert.Equal(2, nested.Graph.Labels().Count(
+            label => nested.Graph[label].Annotation.IsLoopHeader));
     }
 
     private static readonly ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,

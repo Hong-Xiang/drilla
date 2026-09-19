@@ -3,6 +3,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -257,6 +258,58 @@ public sealed class CilValueControlFlowBody : IFunctionBody, IPrintable
             RegionJump<IShaderValue> trueTarget,
             RegionJump<IShaderValue> falseTarget) =>
             [condition, .. trueTarget.Arguments, .. falseTarget.Arguments];
+    }
+}
+
+public sealed class CilValueControlFactsBody : IFunctionBody, IPrintable
+{
+    internal CilValueControlFactsBody(
+        CilValueControlFlowBody source,
+        ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>> graph)
+    {
+        Source = source;
+        Graph = graph;
+        ValidateSource(source, graph);
+    }
+
+    public CilValueControlFlowBody Source { get; }
+    public FunctionDeclaration Declaration => Source.Declaration;
+    public ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>> Graph { get; }
+    public ILocalDeclarationContext DeclarationContext => Source.DeclarationContext;
+
+    public void Dump(IndentedTextWriter writer) =>
+        Graph.PrettyPrint(writer, PrettyPrintOption.Default);
+
+    public void PrettyPrint(IndentedTextWriter writer, PrettyPrintOption option) =>
+        Graph.PrettyPrint(writer, option);
+
+    private static void ValidateSource(
+        CilValueControlFlowBody source,
+        ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>> graph)
+    {
+        var sourceLabels = source.Graph.Labels().ToImmutableArray();
+        var labels = graph.Labels().ToImmutableArray();
+        if (graph.Count != source.Graph.Count ||
+            !ReferenceEquals(graph.EntryLabel, source.Graph.EntryLabel) ||
+            !labels.SequenceEqual(sourceLabels))
+            throw new ArgumentException(
+                "The control-facts graph does not preserve the source graph labels and entry.",
+                nameof(graph));
+
+        foreach (var (index, label) in labels.Index())
+        {
+            var annotated = graph[label];
+            if (!ReferenceEquals(annotated.Node, source.Graph[label]) ||
+                !ReferenceEquals(annotated.Node.Label, label) ||
+                !ReferenceEquals(graph.Successor(label), source.Graph.Successor(label)))
+                throw new ArgumentException(
+                    "The control-facts graph does not preserve source block and edge identity.",
+                    nameof(graph));
+            if (annotated.Annotation.ReversePostOrderIndex != index)
+                throw new ArgumentException(
+                    "The control-facts graph does not preserve source reverse-postorder numbering.",
+                    nameof(graph));
+        }
     }
 }
 

@@ -152,26 +152,71 @@ public static class RegionTree
         foreach (var child in region.Bindings) child.Traverse(f);
     }
 
-    public static RegionTree<Label, TB> Create<TB>(ControlFlowAnalysis controlFlowAnalysis,
-        params IEnumerable<(Label Label, TB Body)> regions
-    )
+    public static RegionTree<Label, TResult> Create<TBlock, TResult>(
+        ControlFlowGraph<Annotated<TBlock, BlockControlFacts>> graph,
+        Func<Label, TBlock, BlockControlFacts, TResult> selectBody)
     {
-        var regions_ = regions.ToDictionary(x => x.Label, x => x);
-        // TODO: argument validation :
-        // labels are unique in regions.
-        // all successor target labels are defined in region labels.
-        var dt = controlFlowAnalysis.DominatorTree;
+        ArgumentNullException.ThrowIfNull(graph);
+        ArgumentNullException.ThrowIfNull(selectBody);
 
-        RegionTree<Label, TB> ToRegion(Label l)
+        var labels = graph.Labels().ToImmutableArray();
+        if (labels.Length != graph.Count)
+            throw new ArgumentException(
+                "Region construction requires every graph definition to be reachable from the entry.",
+                nameof(graph));
+
+        var children = labels.ToDictionary(label => label, static _ => new List<Label>());
+        var seenRpoIndices = new bool[labels.Length];
+        foreach (var label in labels)
         {
-            var children = dt.GetChildren(l);
-            var childrenExpressions = children.Reverse().Select(ToRegion).ToImmutableArray();
-            return controlFlowAnalysis.IsLoop(l)
-                ? Loop(l, [.. childrenExpressions], regions_[l].Body, null, null)
-                : Block(l, [.. childrenExpressions], regions_[l].Body, null);
+            var facts = graph[label].Annotation;
+            if (facts.ReversePostOrderIndex < 0 ||
+                facts.ReversePostOrderIndex >= labels.Length ||
+                seenRpoIndices[facts.ReversePostOrderIndex])
+                throw new ArgumentException(
+                    "Block control facts must have unique contiguous reverse-postorder indices.",
+                    nameof(graph));
+            seenRpoIndices[facts.ReversePostOrderIndex] = true;
+
+            if (facts.ImmediatePostDominator is { } postDominator &&
+                !children.ContainsKey(postDominator))
+                throw new ArgumentException(
+                    "A block control fact references an immediate postdominator outside the graph.",
+                    nameof(graph));
+
+            if (ReferenceEquals(label, graph.EntryLabel))
+            {
+                if (facts.ReversePostOrderIndex != 0 || facts.ImmediateDominator is not null)
+                    throw new ArgumentException(
+                        "The entry block must have reverse-postorder index zero and no immediate dominator.",
+                        nameof(graph));
+                continue;
+            }
+
+            if (facts.ImmediateDominator is not { } dominator ||
+                !children.ContainsKey(dominator) ||
+                graph[dominator].Annotation.ReversePostOrderIndex >= facts.ReversePostOrderIndex)
+                throw new ArgumentException(
+                    "Every non-entry block must reference an earlier graph block as its immediate dominator.",
+                    nameof(graph));
+            children[dominator].Add(label);
         }
 
-        return ToRegion(controlFlowAnalysis.ControlFlowGraph.EntryLabel);
+        RegionTree<Label, TResult> ToRegion(Label label)
+        {
+            var annotated = graph[label];
+            var childRegions = children[label]
+                               .OrderBy(child => graph[child].Annotation.ReversePostOrderIndex)
+                               .Reverse()
+                               .Select(ToRegion)
+                               .ToImmutableArray();
+            var body = selectBody(label, annotated.Node, annotated.Annotation);
+            return annotated.Annotation.IsLoopHeader
+                ? Loop(label, [.. childRegions], body, null, null)
+                : Block(label, [.. childRegions], body, null);
+        }
+
+        return ToRegion(graph.EntryLabel);
     }
 }
 
