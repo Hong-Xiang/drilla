@@ -60,14 +60,16 @@ public sealed class WasmBackendTests
         {
             $"sum(-1) = {sum.Execute(-1)}",
             $"sum(0) = {sum.Execute(0)}",
+            $"sum(1) = {sum.Execute(1)}",
             $"sum(5) = {sum.Execute(5)}",
             $"sum(10000) = {sum.Execute(10000)}"
         };
         Assert.Equal(0, sum.Execute(-1));
         Assert.Equal(0, sum.Execute(0));
+        Assert.Equal(0, sum.Execute(1));
         Assert.Equal(10, sum.Execute(5));
         Assert.Equal(49_995_000, sum.Execute(10_000));
-        foreach (var n in new[] { -1, 0, 5, 10 })
+        foreach (var n in new[] { -1, 0, 1, 5, 10 })
         {
             var expected = ScalarControlFlowOracle.RunCfg(
                 sumBody,

@@ -6,6 +6,8 @@ These files are generated and checked by `WasmBackendTests`:
 - `wasm-choose`: `i32`-to-`bool` normalization and two differently bound edges
   targeting the same block.
 - `wasm-sum`: loop-carried sum/counter values through the CFG dispatcher.
+  Its captured boundary inputs are `-1, 0, 1, 5, 10000`, producing
+  `0, 0, 0, 10, 49995000`.
 
 Each `.ir` is actual `FunctionBody4.Dump()` output with only trailing whitespace
 removed by the test-local capture helper. Each `.wat` is actual
