@@ -144,9 +144,9 @@ the source activation never resumes. Returns exit from any nesting depth.
 `Forward` and `Repeat` ownership describe source-language scope only. They do not
 infer target `break`/`continue`, copy arguments, duplicate bodies, or use
 postdominators as continuation authority. Same-target conditional arms remain
-distinct transfers. Edge-specific target lowering is still owned by later
-lowering; `RegionParameterToLocalVariablePass` continues to reject differing
-tuples on two arms that share a target.
+distinct transfers. `SlangTargetLowering` realizes their edge-specific parallel
+copies. The older generic `RegionParameterToLocalVariablePass` remains live for
+other callers and still rejects differing tuples on two arms that share a target.
 
 The checked control index certifies lexical label visibility and transfer
 argument arity/types; it is not a full SSA verifier. Correct value
@@ -193,7 +193,7 @@ C# compiled by .NET
   -> CilRegionPass
   -> `ShaderModuleDeclaration<FunctionBody4>`
   -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
-  -> RegionParameterToLocalVariablePass       : FunctionBody4 -> FunctionBody4
+  -> StablePointerRegionParameterPass         : FunctionBody4 -> FunctionBody4
   -> SlangTargetLowering
   -> `ShaderModuleDeclaration<SlangFunctionBody>`
   -> SlangEmitter
@@ -208,8 +208,9 @@ The later Pre pass still filters unreachable positions inside each collected
 function. `FunctionBody4` combines typed instructions and parameterized
 terminators with a `RegionTree` and checked scoped-control index built by the
 final frontend pass.
-`SlangTargetLowering` validates the current argument-free input contract and
-performs the supported lexical layout before the syntax-only emitter runs.
+`SlangTargetLowering` consumes checked scoped transfers plus retained ordinary
+region parameters and ordered arguments, then performs lexical layout before
+the syntax-only emitter runs.
 There is not yet a complete general structurization pass.
 
 `ExprValue`/`ExprTree` and the `AbstractSyntaxTree` directory do not constitute a
@@ -245,8 +246,8 @@ retains full source plus a sparse completed Pre map rather than propagating an
 unreachable-state variant downstream. Native CIL predicates and concrete
 terminator payload remain behind narrow generic control views; `TE` is not split
 merely to expose data unused by topology analysis. Instruction-changing lowering
-follows stable CFG label construction. Value lifting and checked scoped regions
-are implemented; target AST lowering remains later work.
+follows stable CFG label construction. Value lifting, checked scoped regions and
+the Slang target AST lowering are implemented.
 
 Structurization and block-parameter elimination are distinct transformations.
 Keeping parameters through a scoped region stage is valid. Eliminating them
@@ -278,29 +279,31 @@ fixing the generic absence representation is a separate step.
 
 ## Current Lowering Limits
 
-`RegionParameterToLocalVariablePass` resolves only supported stable pointer
-aliases. It rejects different arguments on conditional arms sharing one target.
-For distinct targets, its current value stores are inserted before the branch,
-not represented as general edge-local actions. Removing the arguments does not
-prove that a general edge-value lowering has been implemented.
+`StablePointerRegionParameterPass` is the public Slang/WGSL preparation pass. It
+resolves the existing supported stable pointer aliases while retaining every
+ordinary region parameter and ordered jump argument. The older
+`RegionParameterToLocalVariablePass` composes the same pointer pass before its
+legacy all-parameter lowering, including its same-target/different-tuples
+restriction.
 
-During Slang target lowering, the current implementation supports a lexical
-loop with zero or one distinct non-terminating destination outside its existing
-region subtree. Direct terminal targets retain their actions and return in the
-selected arm. Multiple distinct normal destinations, residual region
-parameters/arguments, missing labels, unowned expansion cycles, and repeated
-effectful nonterminal placements outside supported loop-transfer continuations
-are explicitly rejected. The pass preserves the current parameter pass's store
-order; it does not recover selected-edge ownership already erased there. It is
-not the complete Beyond Relooper algorithm or a general irreducible-CFG policy.
+`SlangTargetLowering` uses only `FunctionBody4.Control.Resolve(source, arm)` for
+control ownership. Each original region has one AST provenance site. Selected
+transfers first snapshot all arguments into immutable values, then assign target
+parameter slots, set a scoped continuation token, and unwind through synthetic
+one-shot loops. Forward gates and real repeat loops consume exact
+target/owner/kind continuations; returns remain direct. Multiple distinct exits,
+same-target/different-tuples, cyclic parameter copies, outer repeats and
+entry-owned forward exits are supported without IPDom/`Next`/`BreakNext`
+inference, body cloning, or a function-wide program-counter dispatcher.
 
-Target scopes are lexical. Ordinary continuations remain inside the predecessor
-scope, while non-pointer instruction results referenced by another original
-label are copied immediately to typed function-local capture slots. The only
-repeated nonterminal exceptions are direct continuation bodies whose sole jump
-targets the already-scoped lexical continuation or the current loop transfer.
-Each selected site receives one copy; mutually exclusive source arms cannot
-execute both copies in one source execution.
+Target scopes are lexical. Non-pointer instruction results or block parameters
+used by another original label are copied immediately to typed function-local
+capture slots; same-label values remain immutable bindings. Stable pointer
+aliases stay typed places. The checked control boundary is not a full SSA
+dominance proof, so valid definition/use dominance remains an input precondition.
+Synthetic one-shot nesting and unwind work are linear in lexical depth. The pass
+does not implement irreducible control, node splitting, GPU reconvergence, or a
+general Beyond Relooper policy.
 
 Original `Label` identity denotes original control-flow provenance. If a future
 pass introduces synthetic edge blocks, it must distinguish them from original

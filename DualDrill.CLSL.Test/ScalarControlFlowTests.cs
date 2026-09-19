@@ -106,7 +106,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         };
 
         output.WriteLine($"ACTUAL capture scenario={scenario}");
-        Check(method, arguments, expected);
+        Check(method, arguments, expected, scenario);
     }
 
     [Theory]
@@ -190,7 +190,11 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             [new Value.Integer(outer), new Value.Integer(inner), new Value.Integer(stop)], new Value.Integer(golden));
     }
 
-    private string Check(MethodInfo method, ImmutableArray<Value> arguments, Value expected)
+    private string Check(
+        MethodInfo method,
+        ImmutableArray<Value> arguments,
+        Value expected,
+        string? captureName = null)
     {
         var stages = CompilerTestPipeline.CompileStages(method);
         var original = Assert.Single(
@@ -213,7 +217,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         output.WriteLine(valueControlFlow.Graph.PrettyPrint());
         output.WriteLine("ACTUAL output region/control:");
         output.WriteLine(original.Dump());
-        var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
+        var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
         var target = Lower(lowered);
         output.WriteLine(target.PrettyPrint());
@@ -231,6 +235,19 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             $"ACTUAL scoped result={scoped.Result} trace={string.Join(" -> ", scoped.Trace)}");
         output.WriteLine($"ACTUAL emitted result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}");
         AssertEquivalent(cfg, emitted);
+        if (captureName is not null)
+        {
+            Capture($"{captureName}.input-value-cfg.txt", valueControlFlow.Graph.PrettyPrint());
+            Capture($"{captureName}.region.txt", original.Dump());
+            Capture($"{captureName}.ast.txt", target.PrettyPrint());
+            Capture($"{captureName}.slang", source);
+            Capture(
+                $"{captureName}.execution.txt",
+                $"arguments={string.Join(", ", arguments)}{Environment.NewLine}" +
+                $"cfg result={cfg.Result} trace={string.Join(" -> ", cfg.Trace)}{Environment.NewLine}" +
+                $"scoped result={scoped.Result} trace={string.Join(" -> ", scoped.Trace)}{Environment.NewLine}" +
+                $"emitted result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}{Environment.NewLine}");
+        }
         return source;
     }
 
@@ -459,6 +476,21 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var expected = new Execution(new Value.Integer(21), [entry, loop, loop, exit]);
         AssertEquivalent(expected, RunCfg(body, []));
         AssertEquivalent(expected, RunScoped(body, []));
+        var pointerLowered = new StablePointerRegionParameterPass().VisitFunctionBody(body);
+        AssertEquivalent(expected, RunCfg(pointerLowered, []));
+        AssertEquivalent(expected, RunScoped(pointerLowered, []));
+        var target = Lower(pointerLowered);
+        var source = Emit(pointerLowered);
+        var emitted = new EmittedScalarProgram(pointerLowered, source).Run([]);
+        AssertEquivalent(expected, emitted);
+        Capture("cyclic-swap.region.txt", pointerLowered.Dump());
+        Capture("cyclic-swap.ast.txt", target.PrettyPrint());
+        Capture("cyclic-swap.slang", source);
+        Capture(
+            "cyclic-swap.execution.txt",
+            $"arguments=[] result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}" +
+            Environment.NewLine);
+
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(body);
         AssertEquivalent(expected, RunCfg(lowered, []));
         AssertEquivalent(expected, RunScoped(lowered, []));
@@ -513,6 +545,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
         Assert.Contains("SharedTail", slang);
         Assert.Contains("ContinueAndBreak", slang);
+        Capture("public-scalar.slang", slang);
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
         Assert.Contains("@fragment", wgsl);
         Assert.Contains("fn ScalarFragment", wgsl);
@@ -523,5 +556,13 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     {
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(new ScalarBooleanCallShader());
         Assert.Contains("fn BooleanFragment", wgsl);
+    }
+
+    private static void Capture(string name, string content)
+    {
+        var directory = Environment.GetEnvironmentVariable("DRILLA_E2_CAPTURE_DIR");
+        if (string.IsNullOrWhiteSpace(directory)) return;
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, name), content);
     }
 }

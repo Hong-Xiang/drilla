@@ -182,11 +182,21 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                         WriteBlock(conditional.WhenFalse);
                     break;
                 case SlangLoop loop:
-                    writer.WriteLine("while(true)");
-                    using (writer.IndentedScopeWithBracket())
+                    if (loop.OriginalLabel is null)
                     {
-                        WriteMarker("loop", loop.OriginalLabel);
-                        WriteBlock(loop.Body);
+                        writer.WriteLine("do");
+                        using (writer.IndentedScopeWithBracket())
+                            WriteBlock(loop.Body);
+                        writer.WriteLine("while(false);");
+                    }
+                    else
+                    {
+                        writer.WriteLine("while(true)");
+                        using (writer.IndentedScopeWithBracket())
+                        {
+                            WriteMarker("loop", loop.OriginalLabel);
+                            WriteBlock(loop.Body);
+                        }
                     }
                     break;
                 case SlangReturnValue returned:

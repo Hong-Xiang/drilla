@@ -149,6 +149,16 @@ internal sealed class EmittedScalarProgram
                     }
                 };
             }
+            if (line == "do")
+            {
+                var loop = Block();
+                Expect("while(false);");
+                return state => loop(state) switch
+                {
+                    Flow.Break or Flow.Continue => new Flow.Next(),
+                    var flow => flow
+                };
+            }
             if (Regex.Match(line, @"^if\((.+)\)$") is { Success: true } conditional)
             {
                 var condition = Expression(conditional.Groups[1].Value);

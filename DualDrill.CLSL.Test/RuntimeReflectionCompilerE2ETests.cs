@@ -63,7 +63,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         Dump("IR", module);
         //module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
         module = module.RunPass(new FunctionToOperationPass());
-        module = module.RunPass(new RegionParameterToLocalVariablePass());
+        module = module.RunPass(new StablePointerRegionParameterPass());
 
         //Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
         Dump("IR after passes", module);
