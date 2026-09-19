@@ -7,18 +7,23 @@ namespace DualDrill.CLSL.Test;
 
 public class ControlFlowGraphBuilderTests
 {
-    public readonly record struct SimpleNode(int Start, int Count)
-    {
-    }
+    public readonly record struct SimpleNode(int Start, int Count, ISuccessor Successor);
 
-    static SimpleNode CreateNode(Label labe, ControlFlowGraphBuilder.InstructionRange range) => new(range.Start, range.Count);
+    static SimpleNode CreateNode(
+        Label label,
+        ControlFlowGraphBuilder.InstructionRange range,
+        ISuccessor successor) =>
+        new(range.Start, range.Count, successor);
+
+    static ControlFlowGraph<SimpleNode> Build(ControlFlowGraphBuilder builder) =>
+        builder.Build(CreateNode, static node => node.Successor);
 
     [Fact]
     public void SimpleSingleNodeShouldWork()
     {
         var builder = new ControlFlowGraphBuilder(3, Label.Create);
 
-        var cfg = builder.Build(CreateNode);
+        var cfg = Build(builder);
 
         Assert.Equal(1, cfg.Count);
 
@@ -26,7 +31,7 @@ public class ControlFlowGraphBuilderTests
         Assert.IsType<TerminateSuccessor>(cfg.Successor(e));
         Assert.Empty(cfg.Predecessor(e));
 
-        Assert.Equal(new(0, 3), cfg[e]);
+        Assert.Equal(new SimpleNode(0, 3, cfg.Successor(e)), cfg[e]);
 
         Assert.Equal([e], cfg.Labels());
     }
@@ -37,7 +42,7 @@ public class ControlFlowGraphBuilderTests
         var builder = new ControlFlowGraphBuilder(3, Label.Create);
 
         builder.AddBr(2, 0);
-        var cfg = builder.Build(CreateNode);
+        var cfg = Build(builder);
 
         Assert.Equal(1, cfg.Count);
 
@@ -46,7 +51,7 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(e, se.Target);
         Assert.Equal([e], cfg.Predecessor(e));
 
-        Assert.Equal(new(0, 3), cfg[e]);
+        Assert.Equal(new SimpleNode(0, 3, cfg.Successor(e)), cfg[e]);
 
         Assert.Equal([e], cfg.Labels());
     }
@@ -57,7 +62,7 @@ public class ControlFlowGraphBuilderTests
         var builder = new ControlFlowGraphBuilder(5, Label.Create);
 
         var n = builder.AddBr(2, 3);
-        var cfg = builder.Build(CreateNode);
+        var cfg = Build(builder);
 
         var e = cfg.EntryLabel;
         Assert.Equal(2, cfg.Count);
@@ -69,11 +74,26 @@ public class ControlFlowGraphBuilderTests
         Assert.IsType<TerminateSuccessor>(cfg.Successor(n));
         Assert.Equal([e], cfg.Predecessor(n));
 
-        Assert.Equal(new(0, 3), cfg[e]);
-        Assert.Equal(new(3, 2), cfg[n]);
+        Assert.Equal(new SimpleNode(0, 3, cfg.Successor(e)), cfg[e]);
+        Assert.Equal(new SimpleNode(3, 2, cfg.Successor(n)), cfg[n]);
 
 
         Assert.Equal([e, n], cfg.Labels());
+    }
+
+    [Fact]
+    public void PenultimateBlockShouldFallThroughToFinalInstruction()
+    {
+        var builder = new ControlFlowGraphBuilder(3, Label.Create);
+
+        var final = builder.AddBr(0, 2);
+        var cfg = Build(builder);
+        var penultimate = Assert.Single(cfg.Predecessor(final), label => label != cfg.EntryLabel);
+
+        Assert.Equal(new SimpleNode(1, 1, cfg.Successor(penultimate)), cfg[penultimate]);
+        Assert.Equal(final, Assert.IsType<UnconditionalSuccessor>(cfg.Successor(penultimate)).Target);
+        Assert.Equal(new SimpleNode(2, 1, cfg.Successor(final)), cfg[final]);
+        Assert.IsType<TerminateSuccessor>(cfg.Successor(final));
     }
 
     [Fact]
@@ -82,7 +102,7 @@ public class ControlFlowGraphBuilderTests
         var builder = new ControlFlowGraphBuilder(5, Label.Create);
 
         var e2 = builder.AddBrIf(2, 0);
-        var cfg = builder.Build(CreateNode);
+        var cfg = Build(builder);
 
         Assert.Equal(2, cfg.Count);
 
@@ -97,8 +117,8 @@ public class ControlFlowGraphBuilderTests
         Assert.IsType<TerminateSuccessor>(cfg.Successor(n));
         Assert.Equal([e], cfg.Predecessor(n));
 
-        Assert.Equal(new(0, 3), cfg[e]);
-        Assert.Equal(new(3, 2), cfg[n]);
+        Assert.Equal(new SimpleNode(0, 3, cfg.Successor(e)), cfg[e]);
+        Assert.Equal(new SimpleNode(3, 2, cfg.Successor(n)), cfg[n]);
 
         Assert.Equal([e, n], cfg.Labels());
     }
@@ -115,7 +135,7 @@ public class ControlFlowGraphBuilderTests
         var t = builder.AddBrIf(2, 5);
         var m = builder.AddBr(4, 8);
 
-        var cfg = builder.Build(CreateNode);
+        var cfg = Build(builder);
 
         Assert.Equal(4, cfg.Count);
 
@@ -137,10 +157,10 @@ public class ControlFlowGraphBuilderTests
         Assert.Contains(t, cfg.Predecessor(m));
         Assert.Contains(f, cfg.Predecessor(m));
 
-        Assert.Equal(new(0, 3), cfg[e]);
-        Assert.Equal(new(5, 3), cfg[t]);
-        Assert.Equal(new(3, 2), cfg[f]);
-        Assert.Equal(new(8, 2), cfg[m]);
+        Assert.Equal(new SimpleNode(0, 3, cfg.Successor(e)), cfg[e]);
+        Assert.Equal(new SimpleNode(5, 3, cfg.Successor(t)), cfg[t]);
+        Assert.Equal(new SimpleNode(3, 2, cfg.Successor(f)), cfg[f]);
+        Assert.Equal(new SimpleNode(8, 2, cfg.Successor(m)), cfg[m]);
 
 
         Assert.Equal([e, f, t, m], cfg.Labels());
@@ -160,7 +180,7 @@ public class ControlFlowGraphBuilderTests
         var m2 = builder.AddBr(7, 8);
         Assert.Equal(m, m2);
 
-        var cfg = builder.Build(CreateNode);
+        var cfg = Build(builder);
 
         Assert.Equal(4, cfg.Count);
     }
@@ -179,7 +199,7 @@ public class ControlFlowGraphBuilderTests
         var b = builder.AddBr(2, 3);
         var a = builder.AddBrIf(5, 0);
 
-        var cfg = builder.Build(CreateNode);
+        var cfg = Build(builder);
 
         Assert.Equal(3, cfg.Count);
 
@@ -198,9 +218,9 @@ public class ControlFlowGraphBuilderTests
         Assert.IsType<TerminateSuccessor>(cfg.Successor(c));
         Assert.Equal([b], cfg.Predecessor(c));
 
-        Assert.Equal(new(0, 3), cfg[a]);
-        Assert.Equal(new(3, 3), cfg[b]);
-        Assert.Equal(new(6, 3), cfg[c]);
+        Assert.Equal(new SimpleNode(0, 3, cfg.Successor(a)), cfg[a]);
+        Assert.Equal(new SimpleNode(3, 3, cfg.Successor(b)), cfg[b]);
+        Assert.Equal(new SimpleNode(6, 3, cfg.Successor(c)), cfg[c]);
 
         Assert.Equal([a, b, c], cfg.Labels());
     }
@@ -224,7 +244,7 @@ public class ControlFlowGraphBuilderTests
         var f2 = builder.AddBrIf(12, 16);
         Assert.Equal(f, f2);
 
-        var cfg = builder.Build(CreateNode);
+        var cfg = Build(builder);
 
         Assert.Equal(6, cfg.Count);
 
@@ -244,12 +264,12 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal(f, sd.TrueTarget);
         Assert.Equal(f, se.Target);
 
-        Assert.Equal(new(0, 4), cfg[a]);
-        Assert.Equal(new(4, 3), cfg[b]);
-        Assert.Equal(new(7, 3), cfg[c]);
-        Assert.Equal(new(10, 3), cfg[d]);
-        Assert.Equal(new(13, 3), cfg[e]);
-        Assert.Equal(new(16, 3), cfg[f]);
+        Assert.Equal(new SimpleNode(0, 4, cfg.Successor(a)), cfg[a]);
+        Assert.Equal(new SimpleNode(4, 3, cfg.Successor(b)), cfg[b]);
+        Assert.Equal(new SimpleNode(7, 3, cfg.Successor(c)), cfg[c]);
+        Assert.Equal(new SimpleNode(10, 3, cfg.Successor(d)), cfg[d]);
+        Assert.Equal(new SimpleNode(13, 3, cfg.Successor(e)), cfg[e]);
+        Assert.Equal(new SimpleNode(16, 3, cfg.Successor(f)), cfg[f]);
 
         Assert.Equal([], cfg.Predecessor(a));
         Assert.Equal([a], cfg.Predecessor(b));
@@ -259,5 +279,22 @@ public class ControlFlowGraphBuilderTests
         Assert.Equal([c, d, e], cfg.Predecessor(f));
 
         Assert.Equal([a, b, c, d, e, f], cfg.Labels());
+    }
+
+    [Fact]
+    public void ConditionalBranchRequiresFallthroughInstruction()
+    {
+        var builder = new ControlFlowGraphBuilder(1, Label.Create);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.AddBrIf(0, 0));
+    }
+
+    [Fact]
+    public void BranchTargetMustReferenceInstruction()
+    {
+        var builder = new ControlFlowGraphBuilder(2, Label.Create);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.AddBr(0, 2));
+        Assert.Throws<ArgumentOutOfRangeException>(() => builder.AddBr(0, -1));
     }
 }

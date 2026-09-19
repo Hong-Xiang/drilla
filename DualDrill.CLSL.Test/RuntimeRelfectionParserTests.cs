@@ -62,7 +62,8 @@ public class RuntimeRelfectionParserTests
     public void ShouldParseMinimumHelloTriangleVertexShader()
     {
         var vsm = ((Func<uint, vec4f32>)MinimumHelloTriangleShaderModule.vs).Method;
-        var parsed = Parser.ParseMethod(vsm);
+        var module = Parser.ParseMethod(vsm);
+        var parsed = CompilerTestPipeline.RawBody(module, vsm).Declaration;
 
         Assert.Single(parsed.Parameters);
         var p0 = parsed.Parameters[0];

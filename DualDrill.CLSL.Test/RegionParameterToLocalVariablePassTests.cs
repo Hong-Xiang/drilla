@@ -15,8 +15,9 @@ public class RegionParameterToLocalVariablePassTests
 {
     private readonly ParameterDeclaration source = new("source", ShaderType.I32, []);
     private readonly IShaderValue condition = ShaderValue.Intermediate(ShaderType.Bool);
-    private static readonly ITerminatorSemantic<RegionJump, IShaderValue, ITerminator<RegionJump, IShaderValue>>
-        Terminators = Terminator.Factory<RegionJump, IShaderValue>();
+    private static readonly ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,
+            ITerminator<RegionJump<IShaderValue>, IShaderValue>>
+        Terminators = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
     [Theory]
     [InlineData(1)]
@@ -36,7 +37,7 @@ public class RegionParameterToLocalVariablePassTests
         foreach (var order in new[] { blocks, [.. blocks.Reverse()] })
         {
             var result = Lower(CreateBody([first, .. order]));
-            var returned = Assert.IsType<Terminator.D.ReturnExpr<RegionJump, IShaderValue>>(
+            var returned = Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(
                 result[labels[^1]].Body.Last);
             Assert.Same(source.Value, returned.Expr);
             AssertLowered(result);
@@ -270,7 +271,8 @@ public class RegionParameterToLocalVariablePassTests
         Assert.Same(argument, store.Operand1);
         Assert.Same(store.Operand0, load.Operand0);
         Assert.Same(load.Result,
-            Assert.IsType<Terminator.D.ReturnExpr<RegionJump, IShaderValue>>(result[target].Body.Last).Expr);
+            Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(
+                result[target].Body.Last).Expr);
         Assert.Single(result.LocalVariables);
 
         var twice = Lower(result);
@@ -279,7 +281,7 @@ public class RegionParameterToLocalVariablePassTests
         Assert.Equal(result[target].Body.Elements, twice[target].Body.Elements);
         Assert.Equal(result.LocalVariables, twice.LocalVariables);
         Assert.Single(body[target].Parameters.Where(p => p.Type is not IPtrType));
-        Assert.NotEmpty(Assert.IsType<Terminator.D.Br<RegionJump, IShaderValue>>(body[entry].Body.Last)
+        Assert.NotEmpty(Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(body[entry].Body.Last)
             .Target.Arguments);
     }
 
@@ -372,7 +374,7 @@ public class RegionParameterToLocalVariablePassTests
     private FunctionBody4 CreateBody(ShaderRegionBody[] blocks) =>
         new(new FunctionDeclaration("test", [source],
                 new FunctionReturn(blocks.Select(b => b.Body.Last)
-                    .OfType<Terminator.D.ReturnExpr<RegionJump, IShaderValue>>()
+                    .OfType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>()
                     .Select(t => t.Expr.Type).FirstOrDefault(UnitType.Instance), []), []),
             RegionTree<Label, ShaderRegionBody>.Block(blocks[0].Label,
                 [.. blocks.Skip(1).Select(Region)], blocks[0], null));
@@ -381,11 +383,12 @@ public class RegionParameterToLocalVariablePassTests
         RegionTree<Label, ShaderRegionBody>.Block(block.Label, [], block, null);
 
     private static ShaderRegionBody Block(Label label, ImmutableArray<IShaderValue> parameters,
-        ITerminator<RegionJump, IShaderValue> terminator) =>
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
         ShaderRegionBody.Create(label, parameters, [], terminator, null);
 
-    private static ITerminator<RegionJump, IShaderValue> Jump(Label target, params IShaderValue[] arguments) =>
-        Terminators.Br(new RegionJump(target, [.. arguments]));
+    private static ITerminator<RegionJump<IShaderValue>, IShaderValue> Jump(Label target,
+        params IShaderValue[] arguments) =>
+        Terminators.Br(new RegionJump<IShaderValue>(target, [.. arguments]));
 
     private static void AssertLowered(FunctionBody4 body)
     {

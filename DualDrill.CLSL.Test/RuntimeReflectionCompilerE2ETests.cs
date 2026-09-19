@@ -30,7 +30,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 {
     void Dump(string title, ShaderModuleDeclaration<FunctionBody4> module)
     {
-        var formatter = new ShaderModuleFormatter();
+        var formatter = new ShaderModuleFormatter<FunctionBody4>();
         Output.WriteLine($"=== {title} ===");
         module.Accept(formatter);
         Output.WriteLine(formatter.Dump());
@@ -58,7 +58,8 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         var sep = $"\n{new string('-', 10)}\n";
         var context = CompilationContext.Create();
         var parser = new RuntimeReflectionParser(context);
-        var module = parser.ParseShaderModule(shader);
+        var rawModule = parser.ParseShaderModule(shader);
+        var module = CilModuleCompiler.Compile(rawModule);
         Dump("IR", module);
         //module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
         module = module.RunPass(new FunctionToOperationPass());
@@ -269,14 +270,19 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
             "Select",
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Multiple-return helper method was not found");
-        var actualMethodBody = new MethodBodyAnalysisModel(method);
-        var controlFlowGraph = actualMethodBody.ControlFlowGraph;
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var actualMethodBody = Assert.Single(
+            stages.ControlFlow.FunctionDefinitions.Values,
+            body => body.Environment.Method == method);
+        var controlFlowGraph = actualMethodBody.ControlFlow;
         var labels = controlFlowGraph.Labels().ToArray();
         var conditional = Assert.Single(
             labels,
             label => controlFlowGraph.GetSucc(label).Count() == 2);
         var branchTargets = controlFlowGraph.GetSucc(conditional).ToArray();
-        var postDominators = controlFlowGraph.ControlFlowAnalysis().PostDominatorTree;
+        var factsBody = Assert.Single(
+            stages.ControlFacts.FunctionDefinitions.Values,
+            body => body.Source.Source.Environment.Method == method);
 
         switch (configuration)
         {
@@ -296,10 +302,14 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
                                 sharedReturn,
                                 Assert.IsType<UnconditionalSuccessor>(
                                     controlFlowGraph.Successor(target)).Target);
-                            Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(target));
+                            Assert.Equal(
+                                sharedReturn,
+                                factsBody.Graph[target].Annotation.ImmediatePostDominator);
                         });
-                    Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(conditional));
-                    Assert.Null(postDominators.ImmediatePostDominator(sharedReturn));
+                    Assert.Equal(
+                        sharedReturn,
+                        factsBody.Graph[conditional].Annotation.ImmediatePostDominator);
+                    Assert.Null(factsBody.Graph[sharedReturn].Annotation.ImmediatePostDominator);
                     break;
                 }
             case "Release":
@@ -311,10 +321,10 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 
                     Assert.Equal(2, terminalReturns.Length);
                     Assert.Equal(2, branchTargets.Intersect(terminalReturns).Count());
-                    Assert.Null(postDominators.ImmediatePostDominator(conditional));
+                    Assert.Null(factsBody.Graph[conditional].Annotation.ImmediatePostDominator);
                     Assert.All(
                         terminalReturns,
-                        terminal => Assert.Null(postDominators.ImmediatePostDominator(terminal)));
+                        terminal => Assert.Null(factsBody.Graph[terminal].Annotation.ImmediatePostDominator));
                     break;
                 }
             default:

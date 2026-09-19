@@ -58,7 +58,7 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
         {
             Parameters = [.. block.Parameters.Where(p => p.Type is not IPtrType)],
             Body = Seq.Create(block.Body.Elements, block.Body.Last.Select(
-                jump => new RegionJump(jump.Label,
+                jump => new RegionJump<IShaderValue>(jump.Label,
                     [.. jump.Arguments.Where((_, index) => blocks[jump.Label].Parameters[index].Type is not IPtrType)]),
                 static value => value))
         }).MapValueUse(value => replacements.TryGetValue(value, out var root) ? root : value);
@@ -101,13 +101,15 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
         return root ?? throw Unsupported("no stable address");
     }
 
-    private sealed class JumpsSemantic : ITerminatorSemantic<RegionJump, IShaderValue, ImmutableArray<RegionJump>>
+    private sealed class JumpsSemantic
+        : ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, ImmutableArray<RegionJump<IShaderValue>>>
     {
-        public ImmutableArray<RegionJump> Br(RegionJump target) => [target];
-        public ImmutableArray<RegionJump> BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget) =>
+        public ImmutableArray<RegionJump<IShaderValue>> Br(RegionJump<IShaderValue> target) => [target];
+        public ImmutableArray<RegionJump<IShaderValue>> BrIf(IShaderValue condition,
+            RegionJump<IShaderValue> trueTarget, RegionJump<IShaderValue> falseTarget) =>
             [trueTarget, falseTarget];
-        public ImmutableArray<RegionJump> ReturnExpr(IShaderValue expr) => [];
-        public ImmutableArray<RegionJump> ReturnVoid() => [];
+        public ImmutableArray<RegionJump<IShaderValue>> ReturnExpr(IShaderValue expr) => [];
+        public ImmutableArray<RegionJump<IShaderValue>> ReturnVoid() => [];
     }
 
     private sealed class RegionBodiesSemantic
@@ -147,7 +149,8 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
                         .. bb.Body.Elements,
                         .. bb.Body.Last.Evaluate(new JumpStoreSemantic(regionParameters, parameterVariables))
                     ],
-                    bb.Body.Last.Select(static jump => new RegionJump(jump.Label, []), static value => value)
+                    bb.Body.Last.Select(static jump => new RegionJump<IShaderValue>(jump.Label, []),
+                        static value => value)
                 )
             };
         }).MapValueUse(v =>
@@ -171,14 +174,15 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
     private sealed record class JumpStoreSemantic(
         IReadOnlyDictionary<Label, ImmutableArray<IShaderValue>> Parameters,
         IReadOnlyDictionary<IShaderValue, VariableDeclaration> ParameterVars
-    ) : ITerminatorSemantic<RegionJump, IShaderValue, IEnumerable<Instruction<IShaderValue, IShaderValue>>>
+    ) : ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,
+        IEnumerable<Instruction<IShaderValue, IShaderValue>>>
     {
-        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Br(RegionJump target) =>
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Br(RegionJump<IShaderValue> target) =>
             Parameters[target.Label].Zip(target.Arguments, StoreLocalVar);
 
 
-        public IEnumerable<Instruction<IShaderValue, IShaderValue>> BrIf(IShaderValue condition, RegionJump trueTarget,
-            RegionJump falseTarget)
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> BrIf(IShaderValue condition,
+            RegionJump<IShaderValue> trueTarget, RegionJump<IShaderValue> falseTarget)
         {
             if (trueTarget.Label == falseTarget.Label)
             {
