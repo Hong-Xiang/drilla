@@ -91,6 +91,11 @@ public sealed class WasmBackendTests
 
         var local = WasmProgram.Compile(LocalBody(), "wasm-local");
         Assert.Equal(42, local.Execute());
+
+        var literalAndBoolLocal = WasmProgram.Compile(
+            LiteralAndBoolLocalBody(),
+            "wasm-literal-bool-local");
+        Assert.Equal(42, literalAndBoolLocal.Execute());
     }
 
     [Fact]
@@ -150,6 +155,8 @@ public sealed class WasmBackendTests
     [Fact]
     public void UnsupportedAndMalformedInputsAreRejectedContextually()
     {
+        Assert.Throws<ArgumentNullException>(() => WasmLowering.Lower(null!));
+
         AssertRejected(
             WithSignature(AddBody(), ShaderType.Bool, [ShaderType.I32]),
             "public signature");
@@ -162,6 +169,9 @@ public sealed class WasmBackendTests
         AssertRejected(
             UninitializedLocalBody(),
             "read before");
+        AssertRejected(
+            LocalInitializedOutsideEntryBody(),
+            "unconditionally stored in the entry block");
         AssertRejected(
             CrossBlockUseBody(),
             "earlier result");
@@ -198,6 +208,60 @@ public sealed class WasmBackendTests
         AssertRejected(
             TreeLabelMismatchBody(),
             "does not match");
+        AssertRejected(
+            DefaultBlockParametersBody(),
+            "block parameter sequence is default");
+        AssertRejected(
+            DefaultEdgeArgumentsBody(),
+            "edge arguments are default");
+        AssertRejected(
+            DefaultRestOperandsBody(),
+            "rest operands are default");
+        AssertRejected(
+            NullBlockParameterTypeBody(),
+            "type is missing");
+        AssertRejected(
+            NullReturnBody(),
+            "return value is missing");
+        AssertRejected(
+            NullLiteralPayloadBody(),
+            "literal payload is missing");
+        AssertRejected(
+            VoidBody(),
+            "public signature");
+        AssertRejected(
+            CallBody(),
+            "unsupported operation call");
+        AssertRejected(
+            FloatSignatureBody(),
+            "public signature");
+        AssertRejected(
+            U32SignatureBody(),
+            "public signature");
+        AssertRejected(
+            ParameterAttributeBody(),
+            "shader semantic attributes");
+        AssertRejected(
+            ReturnAttributeBody(),
+            "shader semantic attributes");
+        AssertRejected(
+            LocalAttributeBody(),
+            "local shader semantic attributes");
+    }
+
+    [Fact]
+    public void FunctionBodyConstructorRejectsUnknownTargetsBeforeLowering()
+    {
+        var entry = Label.Create("entry");
+        var missing = Label.Create("missing");
+        var block = Block(entry, [], [], Terms.Br(Jump(missing)));
+
+        var exception = Assert.Throws<KeyNotFoundException>(() =>
+            new FunctionBody4(
+                Declaration("missing-target", []),
+                RegionTree<Label, ShaderRegionBody>.Block(entry, [], block, null)));
+
+        Assert.Contains("not found", exception.Message);
     }
 
     private static void AssertRejected(FunctionBody4 body, string message)
@@ -331,6 +395,27 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(reloaded)));
     }
 
+    private static FunctionBody4 LiteralAndBoolLocalBody()
+    {
+        var entry = Label.Create("entry");
+        var local = new VariableDeclaration(FunctionAddressSpace.Instance, "flag", ShaderType.Bool, []);
+        var integer = Value(ShaderType.I32, "integer");
+        var boolean = Value(ShaderType.Bool, "boolean");
+        var loaded = Value(ShaderType.Bool, "loaded");
+        var converted = Value(ShaderType.I32, "converted");
+        var result = Value(ShaderType.I32, "result");
+        return Body("literal-bool-local", [],
+            Block(entry, [], [
+                Instruction.Factory.Literal(default, new LiteralOperation(), integer, Int(41)),
+                Instruction.Factory.Literal(default, new LiteralOperation(), boolean, Bool(true)),
+                Store(local.Value, boolean),
+                Load(loaded, local.Value),
+                Unary(ScalarConversionOperation<BoolType, IntType<N32>>.Instance, converted, loaded),
+                Binary(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    result, integer, converted)
+            ], Terms.ReturnExpr(result)));
+    }
+
     private static FunctionBody4 ComparisonBody(IBinaryOp op)
     {
         var entry = Label.Create("entry");
@@ -392,6 +477,16 @@ public sealed class WasmBackendTests
         var loaded = Value(ShaderType.I32, "loaded");
         return Body("uninitialized", [],
             Block(entry, [], [Load(loaded, local.Value)], Terms.ReturnExpr(loaded)));
+    }
+
+    private static FunctionBody4 LocalInitializedOutsideEntryBody()
+    {
+        var entry = Label.Create("entry");
+        var initialize = Label.Create("initialize");
+        var local = new VariableDeclaration(FunctionAddressSpace.Instance, "local", ShaderType.I32, []);
+        return Body("path-local-initialization", [],
+            Block(entry, [], [], Terms.Br(Jump(initialize))),
+            Block(initialize, [], [Store(local.Value, Int(1))], Terms.ReturnExpr(Int(0))));
     }
 
     private static FunctionBody4 CrossBlockUseBody()
@@ -525,6 +620,146 @@ public sealed class WasmBackendTests
         return new FunctionBody4(
             Declaration("tree-label-mismatch", []),
             RegionTree<Label, ShaderRegionBody>.Block(treeLabel, [], region, null));
+    }
+
+    private static FunctionBody4 DefaultBlockParametersBody()
+    {
+        var entry = Label.Create("entry");
+        var region = new ShaderRegionBody(
+            entry,
+            default,
+            Seq.Create<Instruction<IShaderValue, IShaderValue>,
+                ITerminator<RegionJump<IShaderValue>, IShaderValue>>([], Terms.ReturnExpr(Int(0))),
+            null);
+        return new FunctionBody4(
+            Declaration("default-block-parameters", []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+    }
+
+    private static FunctionBody4 DefaultEdgeArgumentsBody()
+    {
+        var entry = Label.Create("entry");
+        var exit = Label.Create("exit");
+        return Body("default-edge-arguments", [],
+            Block(entry, [], [], Terms.Br(new RegionJump<IShaderValue>(exit, default))),
+            Block(exit, [], [], Terms.ReturnExpr(Int(0))));
+    }
+
+    private static FunctionBody4 DefaultRestOperandsBody()
+    {
+        var entry = Label.Create("entry");
+        var instruction = new Instruction<IShaderValue, IShaderValue>(
+            NopOperation.Instance, 0, null, null, null, default, null);
+        return Body("default-rest-operands", [],
+            Block(entry, [], [instruction], Terms.ReturnExpr(Int(0))));
+    }
+
+    private static FunctionBody4 NullBlockParameterTypeBody()
+    {
+        var entry = Label.Create("entry");
+        var exit = Label.Create("exit");
+        var bad = ShaderValue.Intermediate(null!, "bad");
+        return Body("null-block-parameter-type", [],
+            Block(entry, [], [], Terms.Br(Jump(exit, Int(0)))),
+            Block(exit, [bad], [], Terms.ReturnExpr(Int(0))));
+    }
+
+    private static FunctionBody4 NullReturnBody()
+    {
+        var entry = Label.Create("entry");
+        return Body("null-return", [],
+            Block(entry, [], [], Terms.ReturnExpr(null!)));
+    }
+
+    private static FunctionBody4 NullLiteralPayloadBody()
+    {
+        var entry = Label.Create("entry");
+        var literal = new LiteralValue(null!);
+        return Body("null-literal-payload", [],
+            Block(entry, [], [], Terms.ReturnExpr(literal)));
+    }
+
+    private static FunctionBody4 VoidBody()
+    {
+        var entry = Label.Create("entry");
+        var region = Block(entry, [], [], Terms.ReturnVoid());
+        return new FunctionBody4(
+            new FunctionDeclaration("void", [], new FunctionReturn(ShaderType.Unit, []), []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+    }
+
+    private static FunctionBody4 CallBody()
+    {
+        var entry = Label.Create("entry");
+        var callee = Declaration("callee", []);
+        var result = Value(ShaderType.I32, "result");
+        return Body("call", [],
+            Block(entry, [], [
+                Instruction.Factory.Call(
+                    default,
+                    new CallOperation(Assert.IsType<FunctionType>(callee.Type)),
+                    result,
+                    callee,
+                    [])
+            ], Terms.ReturnExpr(result)));
+    }
+
+    private static FunctionBody4 FloatSignatureBody()
+    {
+        var entry = Label.Create("entry");
+        var region = Block(entry, [], [], Terms.ReturnExpr(ShaderValue.Literal(new F32Literal(0))));
+        return new FunctionBody4(
+            new FunctionDeclaration("float", [], new FunctionReturn(ShaderType.F32, []), []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+    }
+
+    private static FunctionBody4 U32SignatureBody()
+    {
+        var entry = Label.Create("entry");
+        var parameter = Parameter("value", ShaderType.U32);
+        var region = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
+        return new FunctionBody4(
+            new FunctionDeclaration("u32", [parameter], new FunctionReturn(ShaderType.I32, []), []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+    }
+
+    private static FunctionBody4 ParameterAttributeBody()
+    {
+        var entry = Label.Create("entry");
+        var parameter = new ParameterDeclaration("value", ShaderType.I32, [new LocationAttribute(0)]);
+        var region = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
+        return new FunctionBody4(
+            new FunctionDeclaration("parameter-attribute", [parameter], new FunctionReturn(ShaderType.I32, []), []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+    }
+
+    private static FunctionBody4 ReturnAttributeBody()
+    {
+        var entry = Label.Create("entry");
+        var region = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
+        return new FunctionBody4(
+            new FunctionDeclaration(
+                "return-attribute",
+                [],
+                new FunctionReturn(ShaderType.I32, [new LocationAttribute(0)]),
+                []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+    }
+
+    private static FunctionBody4 LocalAttributeBody()
+    {
+        var entry = Label.Create("entry");
+        var local = new VariableDeclaration(
+            FunctionAddressSpace.Instance,
+            "local",
+            ShaderType.I32,
+            [new LocationAttribute(0)]);
+        var loaded = Value(ShaderType.I32, "loaded");
+        return Body("local-attribute", [],
+            Block(entry, [], [
+                Store(local.Value, Int(0)),
+                Load(loaded, local.Value)
+            ], Terms.ReturnExpr(loaded)));
     }
 
     private static FunctionBody4 WithSignature(

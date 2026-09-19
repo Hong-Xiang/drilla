@@ -21,6 +21,8 @@ public static class WasmLowering
     public static WasmFunctionPlan Lower(FunctionBody4 body)
     {
         ArgumentNullException.ThrowIfNull(body);
+        if (body.Declaration is null)
+            throw new WasmLoweringException("WASM function <missing>: function declaration is missing.");
         return new Lowerer(body).Lower();
     }
 
@@ -50,7 +52,7 @@ public static class WasmLowering
         internal Lowerer(FunctionBody4 body)
         {
             this.body = body;
-            context = $"WASM function {body.Declaration.Name}";
+            context = $"WASM function {body.Declaration.Name ?? "<unnamed>"}";
         }
 
         internal WasmFunctionPlan Lower()
@@ -81,6 +83,16 @@ public static class WasmLowering
         private void ValidateSignature()
         {
             var declaration = body.Declaration;
+            if (declaration.Parameters.IsDefault)
+                Reject("the function parameter sequence is default.");
+            if (declaration.Return is null || declaration.Return.Type is null)
+                Reject("the function result type is missing.");
+            if (declaration.Attributes is null ||
+                declaration.Return.Attributes is null ||
+                declaration.Parameters.Any(parameter => parameter is null || parameter.Attributes is null))
+                Reject("the function attribute sets are missing.");
+            if (declaration.Parameters.Any(parameter => parameter.Type is null))
+                Reject("a function parameter type is missing.");
             if (declaration.Attributes.Count != 0 ||
                 declaration.Return.Attributes.Count != 0 ||
                 declaration.Parameters.Any(parameter => parameter.Attributes.Count != 0))
@@ -96,6 +108,8 @@ public static class WasmLowering
 
         private void DiscoverDefinitions(RegionTree<Label, ShaderRegionBody> tree)
         {
+            if (tree.Body.Parameters.IsDefault)
+                Reject($"{Describe(tree.Label)}: the block parameter sequence is default.");
             if (!ReferenceEquals(tree.Label, tree.Body.Label))
                 Reject($"tree label {Describe(tree.Label)} does not match its body label {Describe(tree.Body.Label)}.");
             if (!definitions.TryAdd(tree.Label, tree.Body))
@@ -151,11 +165,12 @@ public static class WasmLowering
 
         private void AddDefinition(
             HashSet<IShaderValue> allDefinitions,
-            IShaderValue value,
+            IShaderValue? value,
             Label label,
             string kind)
         {
-            if (value is not IntermediateValue || !IsScalar(value.Type))
+            var type = ValueType(label, value, kind);
+            if (value is not IntermediateValue || !IsScalar(type))
                 Reject($"{Describe(label)}: {kind} must be a distinct i32 or bool intermediate value.");
             if (!allDefinitions.Add(value))
                 Reject($"{Describe(label)}: duplicate value definition {Describe(value)}.");
@@ -276,6 +291,8 @@ public static class WasmLowering
         {
             if (instruction.Operation is null)
                 Reject($"{Describe(label)}: instruction operation is missing.");
+            if (instruction.RestOperands.IsDefault)
+                Reject($"{Describe(label)}: instruction rest operands are default.");
             if (instruction.Payload is not null)
                 Reject($"{Describe(label)}: instruction payloads are not supported.");
             var valid = instruction.OperandCount switch
@@ -338,20 +355,23 @@ public static class WasmLowering
 
         private void ValidateValueUse(
             Label label,
-            IShaderValue value,
+            IShaderValue? value,
             HashSet<IShaderValue> available,
             IShaderType expectedType,
             string role)
         {
-            if (value is LiteralValue)
-                ValidateLiteral(label, value);
-            else if (!available.Contains(value))
-                Reject($"{Describe(label)}: {role} {Describe(value)} is not a current block parameter or earlier result.");
-            RequireType(label, value, expectedType, role);
+            var checkedValue = RequireValue(label, value, role);
+            if (checkedValue is LiteralValue)
+                ValidateLiteral(label, checkedValue);
+            else if (!available.Contains(checkedValue))
+                Reject($"{Describe(label)}: {role} {Describe(checkedValue)} is not a current block parameter or earlier result.");
+            RequireType(label, checkedValue, expectedType, role);
         }
 
         private void ValidateLiteral(Label label, IShaderValue value)
         {
+            if (value is LiteralValue { Value: null })
+                Reject($"{Describe(label)}: literal payload is missing.");
             if (value is not LiteralValue { Value: I32Literal or BoolLiteral })
                 Reject($"{Describe(label)}: only i32 and bool literals are supported.");
         }
@@ -361,6 +381,8 @@ public static class WasmLowering
             RegionJump<IShaderValue> edge,
             HashSet<IShaderValue> available)
         {
+            if (edge.Arguments.IsDefault)
+                Reject($"{Describe(source)} -> {Describe(edge.Label)}: edge arguments are default.");
             if (!definitions.TryGetValue(edge.Label, out var target))
                 Reject($"{Describe(source)}: target {Describe(edge.Label)} has no definition.");
             if (edge.Arguments.Length != target.Parameters.Length)
@@ -412,7 +434,7 @@ public static class WasmLowering
         {
             var instructions = ImmutableArray.CreateBuilder<WasmInstruction>();
             foreach (var instruction in block.Body.Elements)
-                LowerInstruction(instruction, instructions);
+                LowerInstruction(block.Label, instruction, instructions);
             switch (block.Body.Last)
             {
                 case Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned:
@@ -430,11 +452,15 @@ public static class WasmLowering
                     LowerTransfer(branch.FalseTarget, 2, whenFalse);
                     instructions.Add(new WasmInstruction.If(whenTrue.ToImmutable(), whenFalse.ToImmutable()));
                     break;
+                default:
+                    throw new UnreachableException(
+                        $"{context}, block {Describe(block.Label)}: unsupported terminator escaped validation.");
             }
             return instructions.ToImmutable();
         }
 
         private void LowerInstruction(
+            Label label,
             Instruction<IShaderValue, IShaderValue> instruction,
             ImmutableArray<WasmInstruction>.Builder output)
         {
@@ -485,6 +511,9 @@ public static class WasmLowering
                     EmitValue(instruction.Operand0!, output);
                     output.Add(new WasmInstruction.LocalSet(valueLocals[instruction.Result!]));
                     break;
+                default:
+                    throw new UnreachableException(
+                        $"{context}, block {Describe(label)}: unsupported operation escaped validation.");
             }
         }
 
@@ -563,19 +592,43 @@ public static class WasmLowering
             throw new WasmLoweringException(
                 $"WASM block {Describe(label)}: {instruction.Operation.Name} operand {index} is missing.");
 
-        private void RequireType(Label label, IShaderValue value, IShaderType type, string role)
+        private IShaderValue RequireValue(Label label, IShaderValue? value, string role)
         {
-            if (!value.Type.Equals(type))
-                Reject($"{Describe(label)}: {role} must be {type.Name}, got {value.Type.Name}.");
+            if (value is null)
+                Reject($"{Describe(label)}: {role} is missing.");
+            return value;
         }
 
-        private static bool IsI32(IShaderType type) => type.Equals(ShaderType.I32);
-        private static bool IsScalar(IShaderType type) => IsI32(type) || type.Equals(ShaderType.Bool);
-        private static string Describe(Label label) => label.Name is null ? "<unnamed>" : label.Name;
-        private static string Describe(IShaderValue value) =>
-            value is IntermediateValue intermediate && intermediate.Name is { } name
+        private IShaderType ValueType(Label label, IShaderValue? value, string role)
+        {
+            var checkedValue = RequireValue(label, value, role);
+            if (checkedValue is LiteralValue { Value: null })
+                Reject($"{Describe(label)}: {role} has a missing literal payload.");
+            var type = checkedValue.Type;
+            if (type is null)
+                Reject($"{Describe(label)}: {role} type is missing.");
+            return type;
+        }
+
+        private void RequireType(Label label, IShaderValue value, IShaderType type, string role)
+        {
+            var actualType = ValueType(label, value, role);
+            if (!actualType.Equals(type))
+                Reject($"{Describe(label)}: {role} must be {type.Name}, got {actualType.Name}.");
+        }
+
+        private static bool IsI32(IShaderType? type) => type is not null && type.Equals(ShaderType.I32);
+        private static bool IsScalar(IShaderType? type) =>
+            type is not null && (IsI32(type) || type.Equals(ShaderType.Bool));
+        private static string Describe(Label? label) => label?.Name ?? "<unnamed>";
+        private static string Describe(IShaderValue? value)
+        {
+            if (value is null)
+                return "<missing>";
+            return value is IntermediateValue intermediate && intermediate.Name is { } name
                 ? name
                 : value.GetType().Name;
+        }
 
         [DoesNotReturn]
         private void Reject(string message) => throw new WasmLoweringException($"{context}: {message}");
