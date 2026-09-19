@@ -142,6 +142,79 @@ public sealed class LinearCilControlFlowTests
                 modelGraph[originalBlock.Label].Terminator).Instruction.Instruction);
     }
 
+    [Fact]
+    public void PartitionAndGenericFactoryPreserveExactCilSourceAndControlObjects()
+    {
+        var method = GetMethod(nameof(CountDown));
+        var pre = Assert.Single(CilPreStackPass.Run(CompilerTestPipeline.ParseRaw(method)).FunctionDefinitions.Values);
+        var blocks = CilControlFlowGraphBuilder.Partition(pre.Raw.Code, pre.Code);
+        var graph = ControlFlowGraph.Create(
+            blocks, static block => block.Terminator.ToSuccessor(), CilStagePrettyPrinter.PrintControlFlowGraph);
+        var model = new MethodBodyAnalysisModel(pre, graph);
+
+        Assert.Same(blocks.EntryLabel, graph.EntryLabel);
+        Assert.Equal(pre.Code.Instructions, blocks.Blocks.SelectMany(block => block.Instructions));
+        foreach (var block in blocks.Blocks)
+        {
+            Assert.Same(block, graph[block.Label]);
+            Assert.Same(block.Terminator, graph[block.Label].Terminator);
+            Assert.Same(block.Label, graph[block.Label].Label);
+            foreach (var item in block.Instructions)
+            {
+                var source = Assert.Single(pre.Code.Instructions, row => row.Node.Index == item.Node.Index);
+                Assert.Same(source, item);
+                Assert.Same(source.Annotation, item.Annotation);
+                Assert.Same(pre.Raw.Code[item.Node.Index].Instruction, item.Node.Instruction);
+            }
+        }
+
+        Assert.Equal(
+            CilControlFlowGraphBuilder.Build(pre.Raw.Code, pre.Code).PrettyPrint(),
+            model.ControlFlow.PrettyPrint());
+    }
+
+    [Fact]
+    public void PartitionStillRejectsForeignEnvironmentReorderedAndForeignInstructions()
+    {
+        var method = GetMethod(nameof(Choose));
+        var first = CreateModel(nameof(Choose));
+        var other = CilMethodDecoder.Decode(method);
+        Assert.Throws<ArgumentException>(() =>
+            CilControlFlowGraphBuilder.Partition(other, first.PreAnnotatedCode));
+
+        var reordered = new LinearCode<Annotated<CilInstructionInfo, PreStack>>(
+            first.Environment,
+            [.. first.PreAnnotatedCode.Instructions.Reverse()],
+            CilStagePrettyPrinter.PrintPreAnnotatedLinearCode);
+        Assert.Throws<ArgumentException>(() =>
+            CilControlFlowGraphBuilder.Partition(first.RawCode, reordered));
+
+        var foreign = new LinearCode<Annotated<CilInstructionInfo, PreStack>>(
+            first.Environment,
+            [.. first.PreAnnotatedCode.Instructions.Select(row => row.SelectNode(
+                node => other[node.Index], CilStagePrettyPrinter.PrintAnnotatedInstruction))],
+            CilStagePrettyPrinter.PrintPreAnnotatedLinearCode);
+        Assert.Throws<ArgumentException>(() =>
+            CilControlFlowGraphBuilder.Partition(first.RawCode, foreign));
+    }
+
+    [Fact]
+    public void PartitionDoesNotInventANativeReturnAtEndOfCode()
+    {
+        var model = CreateModel(nameof(Choose));
+        var first = model.PreAnnotatedCode.Instructions[0];
+        var raw = new LinearCode<CilInstructionInfo>(
+            model.Environment, [first.Node], CilStagePrettyPrinter.PrintRawLinearCode);
+        var pre = new LinearCode<Annotated<CilInstructionInfo, PreStack>>(
+            model.Environment, [first], CilStagePrettyPrinter.PrintPreAnnotatedLinearCode);
+
+        var blocks = CilControlFlowGraphBuilder.Partition(raw, pre);
+
+        Assert.IsType<CilControlFlow.EndOfCode>(Assert.Single(blocks.Blocks).Terminator);
+        Assert.Contains("control: synthetic end-of-code", blocks.PrettyPrint());
+        Assert.DoesNotContain("native ret", blocks.PrettyPrint());
+    }
+
     private static MethodBodyAnalysisModel CreateModel(string name)
         => CompilerTestPipeline.ControlFlow(GetMethod(name));
 

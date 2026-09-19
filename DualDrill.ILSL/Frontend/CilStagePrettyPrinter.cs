@@ -95,25 +95,58 @@ internal static class CilStagePrettyPrinter
         foreach (var label in labels)
         {
             var block = graph[label];
-            var last = block.Instructions[^1].Node;
-            writer.Write(LabelName(label, labelIds));
-            writer.Write(" instructions=");
-            writer.Write(IndexRange(block.InstructionIndex, block.InstructionCount));
-            writer.Write(" bytes=");
-            writer.Write(ByteRange(block.ByteOffset, last.NextByteOffset));
-            writer.Write(" entry=");
-            writer.Write(Stack(block.EntryStack.Types));
+            PrintBlockHeader(block, labelIds, writer);
             writer.Write(" predecessors=");
             writer.Write(LabelList(
                 graph.Predecessor(label).OrderBy(predecessor => graph[predecessor].InstructionIndex),
                 labelIds));
             writer.WriteLine();
-            using (writer.IndentedScope())
-            {
-                writer.Write("control: ");
-                PrintControl(block.Terminator, labelIds, writer);
-                writer.WriteLine();
-            }
+            PrintBlockControl(block, labelIds, writer);
+        }
+    }
+
+    public static void PrintBlockList(
+        BlockList<CilInstructionBlock> blocks,
+        IndentedTextWriter writer,
+        PrettyPrintOption option)
+    {
+        var labelIds = blocks.Blocks.Select((block, index) => (block.Label, index))
+                             .ToDictionary(item => item.Label, item => item.index);
+        writer.WriteLine("labelled-cil-block-list (storage order; byte ranges are half-open; stack order: bottom -> top)");
+        writer.Write("entry=");
+        writer.WriteLine(LabelName(blocks.EntryLabel, labelIds));
+        foreach (var block in blocks.Blocks)
+        {
+            PrintBlockHeader(block, labelIds, writer);
+            writer.WriteLine();
+            PrintBlockControl(block, labelIds, writer);
+        }
+    }
+
+    private static void PrintBlockHeader(
+        CilInstructionBlock block,
+        IReadOnlyDictionary<Label, int> labelIds,
+        IndentedTextWriter writer)
+    {
+        writer.Write(LabelName(block.Label, labelIds));
+        writer.Write(" instructions=");
+        writer.Write(IndexRange(block.InstructionIndex, block.InstructionCount));
+        writer.Write(" bytes=");
+        writer.Write(ByteRange(block.ByteOffset, block.Instructions[^1].Node.NextByteOffset));
+        writer.Write(" entry=");
+        writer.Write(Stack(block.EntryStack.Types));
+    }
+
+    private static void PrintBlockControl(
+        CilInstructionBlock block,
+        IReadOnlyDictionary<Label, int> labelIds,
+        IndentedTextWriter writer)
+    {
+        using (writer.IndentedScope())
+        {
+            writer.Write("control: ");
+            PrintControl(block.Terminator, labelIds, writer);
+            writer.WriteLine();
         }
     }
 

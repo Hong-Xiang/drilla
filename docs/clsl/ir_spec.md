@@ -187,6 +187,7 @@ claim of complete scoped-control legality; target AST lowering remains planned.
 |---|---|---|
 | Raw CIL module | All declarations and supported metadata references reachable from the roots through original CIL are present; each non-boundary method body is losslessly decoded once. | `RuntimeReflectionParser` produces `ShaderModuleDeclaration<RawCilFunctionBody>` with frozen symbol views. |
 | Linear Pre facts | Reachable entries have exact normalized stack types; absence from the completed value means unreachable. | `CilPreStackPass` produces `ShaderModuleDeclaration<PreCilFunctionBody>`; full original source remains separate. |
+| Labelled block list | Nonempty immutable storage; unique payload-owned label identities; entry and all projected control targets are defined. No reachability requirement or graph indexes. | `BlockList<TBlock>` with existing `ILabeledEntity`; `InstructionBlockPartitioner` preserves original CIL ranges and binds labels before payload construction. |
 | CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `CilControlFlowPass` produces `ShaderModuleDeclaration<MethodBodyAnalysisModel>`. |
 | Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `CilStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. Validation is partial, not a complete verifier. |
 | BB-annotated value CFG | Original blocks, labels and ordered edges remain unchanged; local facts hold existing RPO, IDom, IPDom and loop-header results. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
@@ -204,8 +205,14 @@ retains full source plus a sparse completed Pre map rather than propagating an
 unreachable-state variant downstream. Native CIL predicates and concrete
 terminator payload remain behind narrow generic control views; `TE` is not split
 merely to expose data unused by topology analysis. Instruction-changing lowering
-follows stable CFG label construction. Independent value lifting and scoped
-region/AST stages remain later work.
+follows stable block-list label binding. Issue #114's foundation now separates
+partitioning from `ControlFlowGraph.Create`, which preserves all stored block
+definitions and their concrete payloads. The interim CIL CFG and
+`MethodBodyAnalysisModel` remain unchanged. Their removal depends on subsequent
+CIL-to-shader stack instruction/type lowering **before** generic CFG construction,
+followed by separate stack-to-explicit-values conversion. This accepted path
+uses existing `IShaderType` and must derive annotations for instruction expansions;
+it is not implemented by the foundation. Scoped region/AST work remains separate.
 
 Structurization and block-parameter elimination are distinct transformations.
 Keeping parameters through a scoped region stage is valid. Eliminating them
