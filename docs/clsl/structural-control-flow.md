@@ -12,13 +12,20 @@ separation between typed CFG, scoped nested region IR, and target AST.
 Region containment alone does not prove structural legality, and target AST
 layout is a separate obligation from identifying region owners and shared joins.
 
-During Slang emission, the implemented emitter permits zero or one distinct
-non-terminating destination outside an existing region subtree; direct terminal
-paths retain their actions and return. It rejects multiple distinct normal
-destinations rather than choosing one. This emission-time layout does not repair
-the input IR or establish a checked scoped-region invariant. General multi-exit
-structurization, edge-local value lowering, and an explicit irreducible-input
-policy remain follow-up work.
+`SlangTargetLowering` now consumes the checked lexical `Forward`/`Repeat`
+continuations on `FunctionBody4`. It places each original region once, realizes
+selected-edge parameter copies, and uses explicit `SlangDoOnce` carriers plus
+exact continuation gates to unwind multiple exits and outer-loop transfers.
+`SlangEmitter` consumes only the resulting immutable `SlangFunctionBody`; it
+prints `SlangDoOnce` and `SlangLoop` directly, and does not inspect Region graphs,
+infer joins, or derive loop kind from provenance.
+
+The public Slang/WGSL path resolves stable pointer parameters first and leaves
+ordinary parameters for selected-edge lowering. Synthetic carrier nesting and
+unwind work are linear in lexical depth. Checked Region construction rejects
+irreducible/side-entry input; there is no node splitting, full-function program
+counter, fabricated return, GPU reconvergence guarantee, or general Beyond
+Relooper implementation.
 
 ## GPU Reconvergence Research
 

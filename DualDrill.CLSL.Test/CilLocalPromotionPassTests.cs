@@ -89,7 +89,7 @@ public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
     public async Task PromotedBoolInitializationEmitsValidSlang()
     {
         var body = CompilerTestPipeline.CompileBody(EmittedFixtures.Method(EmittedFixtures.InitBoolName));
-        var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
+        var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(body));
         var source = ScalarControlFlowTests.Emit(lowered);
         output.WriteLine(source);
@@ -308,7 +308,7 @@ public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
         AssertEquivalent(before, RunFactsCfg(facts, arguments));
         AssertEquivalent(before, RunCfg(region, arguments));
 
-        var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
+        var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(region));
         AssertEquivalent(before, RunCfg(lowered, arguments));
         var source = ScalarControlFlowTests.Emit(lowered);
