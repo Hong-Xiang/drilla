@@ -206,7 +206,12 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             output.WriteLine($"{method.Name} {label}: IL_{range.ByteOffset:X4}, {range.InstructionCount} instructions, " +
                 $"successors {string.Join(", ", model.ControlFlow.GetSucc(label))}");
         }
-        output.WriteLine("ACTUAL original region/control:");
+        var valueControlFlow = Assert.Single(
+            stages.ValueControlFlow.FunctionDefinitions.Values,
+            body => body.Source.Environment.Method == method);
+        output.WriteLine("ACTUAL input value CFG:");
+        output.WriteLine(valueControlFlow.Graph.PrettyPrint());
+        output.WriteLine("ACTUAL output region/control:");
         output.WriteLine(original.Dump());
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));

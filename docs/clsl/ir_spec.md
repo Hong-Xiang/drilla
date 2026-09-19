@@ -133,7 +133,7 @@ duplicate, unknown, unreachable, mismatched, incorrectly typed, or incorrectly
 scoped definitions and transfers. Its public `Control` index records each
 transfer by source label and arm ordinal without copying edge arguments.
 
-Bindings follow declared `RegionTree.Elements` order. A child definition sees
+Bindings follow declared `RegionTree.Bindings` order. A child definition sees
 the outer environment plus earlier siblings; a block does not see itself, while
 a loop sees itself as a recursive `Repeat`. After a child is defined, its label
 is a `Forward` continuation owned by the parent. The parent's body sees every
@@ -154,6 +154,13 @@ definition/use dominance is an input precondition. Runtime values live in the
 dynamic machine state rather than the control-label environment, so defining a
 child continuation does not capture a dominating value before its parent body
 executes.
+
+Construction retains descending-RPO dominator-child bindings and checks every
+resulting reference. With correct input control facts, this supports reducible
+graphs, including nested loops, early returns and outer-owned transfers.
+Irreducible sibling cycles and references into later siblings or private
+descendants fail explicitly; there is no node splitting or dispatcher fallback.
+`Next`, `BreakNext` and postdominator hints do not establish lexical visibility.
 
 ### Control Projection Is Lossy
 
@@ -209,8 +216,9 @@ be presented as additional active compilation stages.
 ## Logical Stages and Their Obligations
 
 These boundaries split reasoning and testing; they do not require unrelated
-IR implementations for each pass. The existing region binding tree is not a
-claim of complete scoped-control legality; target AST lowering remains planned.
+IR implementations for each pass. The checked region boundary establishes the
+lexical control contract above, not full SSA validity or target realizability;
+target AST lowering remains planned.
 
 | Stage | Required invariant | Current owner or implementation boundary |
 |---|---|---|
@@ -233,8 +241,8 @@ retains full source plus a sparse completed Pre map rather than propagating an
 unreachable-state variant downstream. Native CIL predicates and concrete
 terminator payload remain behind narrow generic control views; `TE` is not split
 merely to expose data unused by topology analysis. Instruction-changing lowering
-follows stable CFG label construction. Independent value lifting and scoped
-region/AST stages remain later work.
+follows stable CFG label construction. Value lifting and checked scoped regions
+are implemented; target AST lowering remains later work.
 
 Structurization and block-parameter elimination are distinct transformations.
 Keeping parameters through a scoped region stage is valid. Eliminating them
@@ -317,8 +325,8 @@ cases describe observable behavior for effectful callbacks.
 ## Subsequent Slices
 
 The next independently scoped steps are to make analysis availability and
-continuation absence unambiguous, establish checked region scope and shared-join
-ownership, and lower those owned references and values into a target AST.
+continuation absence unambiguous and lower the checked scoped references and
+values into a target AST.
 Expression tree packing and final source formatting need not be the same pass
 as control layout. Each step must preserve the existing semantic/trace corpus.
 
