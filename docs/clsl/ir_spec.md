@@ -213,10 +213,10 @@ region parameters and ordered arguments, then performs lexical layout before
 the syntax-only emitter runs.
 There is not yet a complete general structurization pass.
 
-`ExprValue`/`ExprTree` and the `AbstractSyntaxTree` directory do not constitute a
-complete AST function-body stage in this pipeline. Older design examples,
-experimental backends, and the identity `CommonOperationLoweringPass` must not
-be presented as additional active compilation stages.
+The `AbstractSyntaxTree` directory does not constitute a complete AST
+function-body stage in this pipeline. Older design examples and
+experimental backends must not be presented as additional active compilation
+stages.
 
 ## Logical Stages and Their Obligations
 

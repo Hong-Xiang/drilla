@@ -1,7 +1,10 @@
 using System.Collections.Immutable;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Symbol;
@@ -44,16 +47,16 @@ internal static class ScalarControlFlowOracle
 
     internal sealed class Machine
     {
-        private readonly FunctionBody4 body;
         private readonly string context;
         private readonly Budget budget;
-        private readonly Dictionary<IShaderValue, Value> values = new();
-        private readonly Dictionary<IShaderValue, Value> memory = new();
+        private readonly Func<Value, Value> normalizeResult;
+        private readonly Dictionary<IShaderValue, Value> values =
+            new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<IShaderValue, Value> memory;
         private readonly ImmutableArray<Label>.Builder trace = ImmutableArray.CreateBuilder<Label>();
 
         internal Machine(FunctionBody4 body, ImmutableArray<Value> arguments, string kind, int stepLimit)
         {
-            this.body = body;
             context = $"{kind} {body.Declaration.Name}";
             if (!IsScalar(body.Declaration.ReturnType) || body.Declaration.Parameters.Any(p => !IsScalar(p.Type)))
                 throw new NotSupportedException($"{context}: only i32/bool function signatures are supported.");
@@ -61,15 +64,56 @@ internal static class ScalarControlFlowOracle
                 throw new InvalidOperationException($"{context}: incorrect argument count.");
 
             budget = new Budget(context, stepLimit);
+            normalizeResult = result => Convert(result, body.Declaration.ReturnType);
+            memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
             foreach (var (parameter, argument) in body.Declaration.Parameters.Zip(arguments))
                 Write(memory, parameter.Value, argument, parameter.Type);
         }
 
+        private Machine(
+            string context,
+            Dictionary<IShaderValue, Value> memory,
+            Func<Value, Value> normalizeResult,
+            int stepLimit)
+        {
+            this.context = context;
+            budget = new Budget(context, stepLimit);
+            this.memory = memory;
+            this.normalizeResult = normalizeResult;
+        }
+
+        internal static Machine ForFlatCfg(
+            ImmutableArray<VariableDeclaration> locals,
+            bool initLocals,
+            int stepLimit)
+        {
+            var memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
+            if (initLocals)
+                foreach (var local in locals)
+                    memory.Add(local.Value, local.Type switch
+                    {
+                        IntType<DualDrill.Common.Nat.N32> => new Value.Integer(0),
+                        BoolType => new Value.Boolean(false),
+                        _ => throw new NotSupportedException(
+                            $"Flat CFG: unsupported initialized local type {local.Type.Name}.")
+                    });
+            return new Machine("Flat CFG", memory, result => result, stepLimit);
+        }
+
         internal Control Execute(Label label, ShaderRegionBody block)
+            => Execute(label, block.Body);
+
+        internal Control Execute(Label label, CilValueBasicBlock block)
+            => Execute(label, block.Body);
+
+        private Control Execute(
+            Label label,
+            Seq<Instruction<IShaderValue, IShaderValue>,
+                ITerminator<RegionJump<IShaderValue>, IShaderValue>> body)
         {
             budget.Step(label.ToString());
             trace.Add(label);
-            foreach (var instruction in block.Body.Elements)
+            foreach (var instruction in body.Elements)
             {
                 budget.Step($"{label}: {instruction.Operation.Name}");
                 Value result;
@@ -115,7 +159,7 @@ internal static class ScalarControlFlowOracle
             }
 
             budget.Step($"{label}: terminator");
-            return block.Body.Last switch
+            return body.Last switch
             {
                 Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
                     new Control.Returned(Read(returned.Expr)),
@@ -123,7 +167,7 @@ internal static class ScalarControlFlowOracle
                     new Control.Transfer(branch.Target),
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                     new Control.Transfer(Read(branch.Condition).Bool ? branch.TrueTarget : branch.FalseTarget),
-                _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {block.Body.Last}.")
+                _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {body.Last}.")
             };
         }
 
@@ -131,15 +175,24 @@ internal static class ScalarControlFlowOracle
             [.. jump.Arguments.Select(Read)];
 
         internal void Bind(ShaderRegionBody target, ImmutableArray<Value> incoming)
+            => Bind(target.Label, target.Parameters, incoming);
+
+        internal void Bind(CilValueBasicBlock target, ImmutableArray<Value> incoming)
+            => Bind(target.Label, target.Parameters, incoming);
+
+        private void Bind(
+            Label label,
+            ImmutableArray<IShaderValue> parameters,
+            ImmutableArray<Value> incoming)
         {
-            if (target.Parameters.Length != incoming.Length)
-                throw new InvalidOperationException($"{context}: invalid edge to {target.Label} arity.");
-            foreach (var (parameter, argument) in target.Parameters.Zip(incoming))
+            if (parameters.Length != incoming.Length)
+                throw new InvalidOperationException($"{context}: invalid edge to {label} arity.");
+            foreach (var (parameter, argument) in parameters.Zip(incoming))
                 Write(values, parameter, argument, parameter.Type);
         }
 
         internal Execution Complete(Value result) =>
-            new(Convert(result, body.Declaration.ReturnType), trace.ToImmutable());
+            new(normalizeResult(result), trace.ToImmutable());
 
         private Value Read(IShaderValue? value) => value switch
         {
@@ -207,6 +260,31 @@ internal static class ScalarControlFlowOracle
                 case Control.Transfer transfer:
                     var incoming = machine.ReadArguments(transfer.Jump);
                     var target = body[transfer.Jump.Label];
+                    machine.Bind(target, incoming);
+                    label = transfer.Jump.Label;
+                    break;
+            }
+        }
+    }
+
+    internal static Execution RunCfg(
+        ControlFlowGraph<CilValueBasicBlock> graph,
+        ImmutableArray<VariableDeclaration> locals,
+        bool initLocals,
+        int stepLimit = 10000)
+    {
+        var machine = Machine.ForFlatCfg(locals, initLocals, stepLimit);
+        var label = graph.EntryLabel;
+        while (true)
+        {
+            var block = graph[label];
+            switch (machine.Execute(label, block))
+            {
+                case Control.Returned returned:
+                    return machine.Complete(returned.Value);
+                case Control.Transfer transfer:
+                    var incoming = machine.ReadArguments(transfer.Jump);
+                    var target = graph[transfer.Jump.Label];
                     machine.Bind(target, incoming);
                     label = transfer.Jump.Label;
                     break;

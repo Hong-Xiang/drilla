@@ -247,6 +247,21 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void CheckedBoundaryRejectsMissingBlockParameterType()
+    {
+        var entry = Label.Create("entry");
+        var exit = Label.Create("exit");
+        var parameter = ShaderValue.Intermediate(null!, "bad");
+
+        Rejects(
+            "Function 'Scoped': region 'Label(exit)' parameter at index 0 type is missing",
+            RegionTree.Block(entry, [
+                RegionTree.Block(exit, [],
+                    Body(exit, Terms.ReturnVoid(), [parameter]), null)
+            ], Body(entry, Terms.Br(new(exit, [ShaderValue.Literal(new I32Literal(0))]))), null));
+    }
+
+    [Fact]
     public void LoopSelfRepeatIsCheckedAndBudgeted()
     {
         var loop = Label.Create("loop");
