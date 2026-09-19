@@ -98,9 +98,9 @@ public sealed class SlangEmitterLoopOwnershipTests
         var body = new FunctionBody4(declaration,
             RegionTree.Loop(outer,
             [
-                RegionTree.Loop(inner, [], innerBody, null, null),
+                RegionTree.Block(terminal, [], terminalBody, null),
                 RegionTree.Block(exit, [], exitBody, null),
-                RegionTree.Block(terminal, [], terminalBody, null)
+                RegionTree.Loop(inner, [], innerBody, null, null)
             ], outerBody, null, null));
 
         var error = Assert.Throws<NotSupportedException>(() => Emit(body));

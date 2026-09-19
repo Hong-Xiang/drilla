@@ -15,6 +15,7 @@ public sealed class FunctionBody4
     {
         Declaration = declaration;
         Body = body;
+        Control = ScopedRegionControl.Create(declaration, body);
         {
             var labels = ImmutableArray.CreateBuilder<Label>();
             var enqueued = new HashSet<Label>();
@@ -50,6 +51,7 @@ public sealed class FunctionBody4
     public ImmutableArray<IShaderValue> Values { get; }
     public FunctionDeclaration Declaration { get; }
     public RegionTree<Label, ShaderRegionBody> Body { get; }
+    public ScopedControlIndex<Label> Control { get; }
 
     public void Dump(IndentedTextWriter writer)
     {
