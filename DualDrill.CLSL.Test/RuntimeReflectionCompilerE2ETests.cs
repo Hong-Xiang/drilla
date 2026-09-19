@@ -68,7 +68,11 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         //Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
         Dump("IR after passes", module);
 
-        var emitter = new SlangEmitter(module);
+        var target = new SlangTargetLowering().Lower(module);
+        Output.WriteLine("=== Slang target AST ===");
+        foreach (var body in target.FunctionDefinitions.Values)
+            Output.WriteLine(body.PrettyPrint());
+        var emitter = new SlangEmitter(target);
 
         var code = emitter.Emit();
         Output.WriteLine("=== SLang ===");

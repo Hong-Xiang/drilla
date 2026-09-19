@@ -5,17 +5,19 @@ using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation.Pointer;
 
-public sealed class AddressOfMemberOperation(MemberDeclaration Member)
+public sealed class AddressOfMemberOperation(MemberDeclaration member)
     : IAddressOfOperation
 {
+    public MemberDeclaration Member => member;
+
     public FunctionDeclaration Function => throw new NotImplementedException();
 
-    public string Name => Member.Name;
+    public string Name => member.Name;
 
 
     public IShaderType SourceType => throw new NotImplementedException();
 
-    public IShaderType ResultType => Member.Type.GetPtrType();
+    public IShaderType ResultType => member.Type.GetPtrType();
 
     public TR Evaluate<TX, TR>(IUnaryExpressionOperationSemantic<TX, TR> semantic, TX context) =>
         throw new NotImplementedException();

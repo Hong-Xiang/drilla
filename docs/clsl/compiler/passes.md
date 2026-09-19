@@ -140,7 +140,8 @@ not claim reducibility, forward merges, reconvergence, or general structurizatio
 | `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
 | `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
-| `SlangEmitter` | `FunctionBody4` -> Slang text | Resolve supported lexical transfers, place code, and emit syntax. These responsibilities are not yet separate passes. |
+| `SlangTargetLowering` | `ShaderModuleDeclaration<FunctionBody4>` -> `ShaderModuleDeclaration<SlangFunctionBody>` | Validate the argument-free Region contract and place declarations, typed values/places, scopes, conditionals, loops, returns, and owned transfers in an immutable target AST. |
+| `SlangEmitter` | `ShaderModuleDeclaration<SlangFunctionBody>` -> Slang text | Render target expressions, declarations, attributes/resources, control syntax, braces, and punctuation without consulting Region definitions or inferring layout. |
 | `SlangService` | Slang text -> WGSL | Invoke the external Slang compiler. |
 
 The `IR` output option formats `FunctionBody4`; it does not produce a distinct
@@ -165,7 +166,9 @@ serve multiple stages. Parsing, Pre analysis, reachable CFG construction, flat
 value lifting, BB-local control facts, and region construction now have distinct
 typed producer/consumer boundaries. A topology-changing pass must rerun
 `CilBlockControlFactsPass`; there is no incremental cache or invalidation manager.
-The emitter still performs work intended for region-to-AST lowering.
+The Slang path now has a distinct target AST boundary. The lowering is
+deliberately limited to the current dominator-organized, argument-free Region
+producer; it is not a general structurizer.
 
 The agreed [linear CIL design](linear-cil.md) refines the frontend ordering:
 preserve native predicates and original offsets, analyze Pre stack types on
@@ -196,6 +199,13 @@ WGSL syntax: exiting several scopes is not the same as emitting a nearest-loop
 Target AST construction must preserve the dynamic occurrence and order of
 original effects. It may introduce explicit local bindings; it must not expand
 a shared effectful definition at every reference as if it were a pure expression.
+
+`SlangFunctionBody` contains immutable `SlangBlock` statement arrays. Its
+statements explicitly represent declarations, value bindings, effects,
+assignments to typed places, provenance scopes, conditionals, loops, returns,
+breaks, and continues. Address-of-member and vector-component instructions
+become typed place aliases during lowering; they are not printer-side string
+substitutions.
 
 ### Value Lowering
 

@@ -12,13 +12,17 @@ separation between typed CFG, scoped nested region IR, and target AST.
 Region containment alone does not prove structural legality, and target AST
 layout is a separate obligation from identifying region owners and shared joins.
 
-During Slang emission, the implemented emitter permits zero or one distinct
-non-terminating destination outside an existing region subtree; direct terminal
-paths retain their actions and return. It rejects multiple distinct normal
-destinations rather than choosing one. This emission-time layout does not repair
-the input IR or establish a checked scoped-region invariant. General multi-exit
-structurization, edge-local value lowering, and an explicit irreducible-input
-policy remain follow-up work.
+`SlangTargetLowering` now owns the existing bounded layout policy before text
+emission. It permits zero or one distinct non-terminating destination outside
+an existing loop subtree; direct terminal paths retain their actions and return.
+It rejects multiple distinct normal destinations rather than choosing one.
+`SlangEmitter` consumes only the resulting immutable `SlangFunctionBody` and
+does not inspect Region graphs or infer joins and loop ownership.
+
+This extraction does not repair the input Region IR or establish a general
+checked scoped-control invariant. General multi-exit structurization,
+edge-local value lowering, and an explicit irreducible-input policy remain
+follow-up work.
 
 ## GPU Reconvergence Research
 

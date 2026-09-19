@@ -1,13 +1,11 @@
-﻿using System.CodeDom.Compiler;
-using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.ControlFlow;
+using System.CodeDom.Compiler;
+using System.Globalization;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
-using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Symbol;
@@ -18,690 +16,390 @@ using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Backend;
 
-public class SlangEmitter
-    : IDeclarationVisitor<FunctionBody4, Unit>
-    , IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>
-    , ILiteralSemantic<string>
-    , ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>
-    , IOperationSemantic<Instruction<string, string>, string, string, string>
+public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> module)
 {
-    private readonly Dictionary<Label, RegionTree<Label, ShaderRegionBody>> Blocks = [];
+    public ShaderModuleDeclaration<SlangFunctionBody> Module { get; } = module;
 
-    private readonly Dictionary<Label, int> Emitted = [];
+    public string Emit() => new PrintSession(Module).Emit();
 
-    private readonly Dictionary<FunctionDeclaration, int> functionIndicies = [];
-
-    private readonly Dictionary<Label, int> labelIndices = [];
-    private readonly Stack<LoopOwner> LoopOwners = [];
-    private readonly Stack<Label?> NextBlock = [];
-    private readonly Stack<Label> SourceBlocks = [];
-
-    private readonly Dictionary<IShaderValue, int> ValueIds = [];
-
-    private readonly Stack<VisitingEntity> Visiting = [];
-
-    private readonly Dictionary<IShaderValue, string> RValues = [];
-    private FunctionDeclaration? CurrentFunction;
-
-    public SlangEmitter(
-        ShaderModuleDeclaration<FunctionBody4> module
-    )
+    private sealed class PrintSession(ShaderModuleDeclaration<SlangFunctionBody> module)
+        : IDeclarationVisitor<SlangFunctionBody, Unit>
     {
-        Writer = new IndentedTextWriter(new StringWriter());
-        Module = module;
-    }
+        private readonly Dictionary<IShaderValue, int> valueIds =
+            new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<Label, int> labelIds = [];
+        private readonly IndentedTextWriter writer = new(new StringWriter());
+        private readonly Stack<VisitingEntity> visiting = [];
 
-    private IndentedTextWriter Writer { get; }
-    public ShaderModuleDeclaration<FunctionBody4> Module { get; }
-
-    public Unit VisitFunction(FunctionDeclaration decl)
-    {
-        CurrentFunction = decl;
-        Visiting.Push(VisitingEntity.Function);
-        WriteAttributes(decl.Attributes);
-        if (decl.Return.Type is not null)
+        public string Emit()
         {
-            Visiting.Push(VisitingEntity.FunctionReturn);
-            VisitType(decl.Return.Type);
-            Visiting.Pop();
+            DumpTypeAliases();
+            writer.WriteLine();
+            module.Accept(this);
+            return writer.InnerWriter.ToString() ?? string.Empty;
         }
 
-        Writer.Write(" ");
-        Writer.Write(decl.Name);
-        Writer.Write("(");
-        Visiting.Push(VisitingEntity.Parameter);
-        foreach (var p in decl.Parameters) p.AcceptVisitor(this);
-        Visiting.Pop();
-
-        Writer.Write(")");
-        if (decl.Return.Attributes.Count > 0)
+        public Unit VisitFunction(FunctionDeclaration declaration)
         {
-            // TODO: only semantic binding is supported here
-            Visiting.Push(VisitingEntity.FunctionReturn);
-            WriteAttributes(decl.Return.Attributes);
-            Visiting.Pop();
-        }
+            if (!module.TryGetBody(declaration, out var body))
+                throw new NotSupportedException(
+                    $"Slang emission requires a target body for function '{declaration.Name}'.");
 
-        Writer.WriteLine();
-        using (Writer.IndentedScopeWithBracket())
-        {
-            if (Module.TryGetBody(decl, out var b))
-                OnBody(b);
-            else
-                Writer.WriteLine($"...{Module.GetType().CSharpFullName()}...");
-        }
-
-        Writer.WriteLine();
-        Visiting.Pop();
-        CurrentFunction = null;
-
-        return default;
-    }
-
-    public Unit VisitMember(MemberDeclaration decl)
-    {
-        VisitType(decl.Type);
-        Writer.Write(decl.Name);
-        Writer.WriteLine(";");
-        return default;
-    }
-
-    public Unit VisitModule(ShaderModuleDeclaration<FunctionBody4> decl)
-    {
-        foreach (var d in decl.Declarations) d.AcceptVisitor(this);
-        return default;
-    }
-
-    public Unit VisitParameter(ParameterDeclaration decl)
-    {
-        VisitType(decl.Type);
-        Writer.Write(" ");
-        Writer.Write(decl.Name);
-        WriteAttributes(decl.Attributes);
-        Writer.Write(", ");
-        return default;
-    }
-
-    public Unit VisitStructure(StructureDeclaration decl)
-    {
-        Writer.Write("struct ");
-        Writer.Write(decl.Name);
-        using (Writer.IndentedScopeWithBracket())
-        {
-            foreach (var m in decl.Members) m.AcceptVisitor(this);
-        }
-
-        Writer.WriteLine();
-        return default;
-    }
-
-    public Unit VisitValue(ValueDeclaration decl) => throw new NotImplementedException();
-
-    public Unit VisitVariable(VariableDeclaration decl)
-    {
-        int? group = null;
-        int? binding = null;
-        if (decl.Attributes.OfType<GroupAttribute>().FirstOrDefault() is { } g)
-        {
-            group = g.Binding;
-        }
-        if (decl.Attributes.OfType<BindingAttribute>().FirstOrDefault() is { } b)
-        {
-            binding = b.Binding;
-        }
-        switch (group, binding)
-        {
-            case (int gv, int bv):
-                Writer.WriteLine($"[[vk::binding({bv}, {gv})]]");
-                break;
-            default:
-                break;
-        }
-        var isUniform = decl.Attributes.OfType<UniformAttribute>().FirstOrDefault() is not null;
-
-        if (isUniform)
-        {
-            Writer.Write("ConstantBuffer<");
-        }
-        VisitType(decl.Type);
-        if (isUniform)
-        {
-            Writer.Write(">");
-        }
-        Writer.Write(" ");
-        var name = GetValueName(decl.Value);
-        Writer.Write(name);
-        Writer.WriteLine(";");
-        return default;
-    }
-
-
-    string ILiteralSemantic<string>.Bool(bool value)
-        => value.ToString();
-
-    string ILiteralSemantic<string>.I32(int value)
-        => value.ToString();
-
-
-    string ILiteralSemantic<string>.I64(long value)
-        => value.ToString();
-
-    string ILiteralSemantic<string>.U32(uint value)
-        => value.ToString();
-
-    string ILiteralSemantic<string>.U64(ulong value)
-        => value.ToString();
-
-    string ILiteralSemantic<string>.F32(float value)
-        => value.ToString();
-
-    string ILiteralSemantic<string>.F64(double value)
-        => value.ToString();
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.Nop(
-        Instruction<string, string> ctx, NopOperation op)
-        => "";
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.Load(
-        Instruction<string, string> ctx, LoadOperation op, string result, string ptr)
-        => $"{result} = {ptr};";
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.Store(
-        Instruction<string, string> ctx, StoreOperation op, string ptr, string value)
-        => $"{ptr} = {value};";
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.VectorSwizzleSet(
-        Instruction<string, string> ctx, IVectorSwizzleSetOperation op, string ptr, string value)
-        => $"{ptr}.{op.Pattern.Name} = {value};";
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.Call(
-        Instruction<string, string> ctx, CallOperation op, string result, string f, IReadOnlyList<string> arguments) =>
-        // TODO: handle void type
-        $"{result} = {f}({string.Join(',', arguments)});";
-
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.Literal(
-        Instruction<string, string> ctx, LiteralOperation op, string result, string value) =>
-        $"{result} = {value};";
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.AddressOfChain(
-        Instruction<string, string> ctx, IAddressOfOperation op, string result, string target)
-    {
-        switch (op)
-        {
-            case AddressOfVecComponentOperation vcop:
-                return $"{result} = {target}.{vcop.Component.Name};";
-            default:
-                return $"{result} = {op.Name}({target});";
-        }
-    }
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.AddressOfChain(
-        Instruction<string, string> ctx, IAddressOfOperation op, string result, string target, string index)
-    {
-        if (op is AddressOfVecComponentOperation vcop) return $"{result} = {target}.{vcop.Component.Name};";
-        return $"{result} = {op.Name}({target});";
-    }
-
-    public string AccessChain(Instruction<string, string> ctx, AccessChainOperation op, string result, string target,
-        IReadOnlyList<string> indices) => throw new NotImplementedException();
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.Operation1(
-        Instruction<string, string> ctx, IUnaryExpressionOperation op, string result, string e)
-    {
-        var code = op switch
-        {
-            IConversionOperation c => $"{c.ResultType.Name}({e})",
-            IVectorSwizzleGetOperation o => $"{e}.{o.Pattern.Name}",
-            IVectorComponentGetOperation o => $"{e}.{o.Component.Name}",
-            IVectorFromScalarConstructOperation o => $"{op.ResultType.Name}({e})",
-            UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
-            VectorNumericUnaryOperation<N3, FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
-            _ => $"{op.Name}({e})"
-        };
-        return $"{result} = {code};";
-    }
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.Operation2(
-        Instruction<string, string> ctx, IBinaryExpressionOperation op, string result, string l, string r)
-    {
-        if (op.BinaryOp is ISymbolOp s) return $"{result} = {l} {s.Symbol} {r};";
-
-        return $"{result} = {op.Name}({l},{r});";
-    }
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.VectorCompositeConstruction(
-        Instruction<string, string> ctx, VectorCompositeConstructionOperation op, string result,
-        IReadOnlyList<string> components)
-    {
-        var rv = (IVecType)op.ResultType;
-        return $"{result} = vector<{rv.ElementType.Name}, {rv.Size.Value}>({string.Join(',', components)});";
-    }
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.VectorComponentSet(
-        Instruction<string, string> ctx, IVectorComponentSetOperation op, string ptr, string value) =>
-        $"{ptr}.{op.Component.Name} = {value};";
-
-    Unit IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>.Block(
-        Label label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody> body, Label? next)
-    {
-        using (Writer.IndentedScopeWithBracket())
-        {
-            Writer.WriteLine("// block " + GetLabelName(label));
-            Writer.Write("// => ");
-            if (body.Last.ImmediatePostDominator is { } dl)
-                Writer.WriteLine(GetLabelName(dl));
-            else
-                Writer.WriteLine("exit");
-            var nextL = body.Last.ImmediatePostDominator;
-            NextBlock.Push(nextL);
-            SourceBlocks.Push(label);
-            OnShaderRegionBody(body.Last);
-            SourceBlocks.Pop();
-            NextBlock.Pop();
-            if (nextL is not null && !IsCurrentLoopTransfer(nextL))
+            visiting.Push(VisitingEntity.Function);
+            WriteAttributes(declaration.Attributes);
+            visiting.Push(VisitingEntity.FunctionReturn);
+            VisitType(declaration.Return.Type);
+            visiting.Pop();
+            writer.Write(' ');
+            writer.Write(declaration.Name);
+            writer.Write('(');
+            visiting.Push(VisitingEntity.Parameter);
+            foreach (var parameter in declaration.Parameters) parameter.AcceptVisitor(this);
+            visiting.Pop();
+            writer.Write(')');
+            if (declaration.Return.Attributes.Count > 0)
             {
-                EmitBranch(nextL, label);
+                visiting.Push(VisitingEntity.FunctionReturn);
+                WriteAttributes(declaration.Return.Attributes);
+                visiting.Pop();
             }
+
+            writer.WriteLine();
+            using (writer.IndentedScopeWithBracket())
+                WriteBlock(body.Body);
+            writer.WriteLine();
+            visiting.Pop();
+            return default;
         }
 
-        return default;
-    }
-
-    Unit IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>.Loop(
-        Label label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody> body, Label? next, Label? breakNext)
-    {
-        var nextL = body.Last.ImmediatePostDominator;
-        HashSet<Label> regionLabels = [label, .. body.Elements.SelectMany(r => r.DefinedLabels())];
-        var normalTransfer = FindNormalTransfer(label, regionLabels);
-
-        Writer.Write("while(true)");
-        using (Writer.IndentedScopeWithBracket())
+        public Unit VisitMember(MemberDeclaration declaration)
         {
-            Writer.WriteLine("// loop " + GetLabelName(label));
-            Writer.Write("// => ");
-            if (body.Last.ImmediatePostDominator is { } dl)
-                Writer.WriteLine(GetLabelName(dl));
-            else
-                Writer.WriteLine("exit");
-            LoopOwners.Push(new(label, normalTransfer));
-            NextBlock.Push(nextL);
-            SourceBlocks.Push(label);
-            OnShaderRegionBody(body.Last);
+            VisitType(declaration.Type);
+            writer.Write(declaration.Name);
+            writer.WriteLine(';');
+            return default;
+        }
 
-            SourceBlocks.Pop();
-            NextBlock.Pop();
-            if (nextL is not null && !IsCurrentLoopTransfer(nextL))
+        public Unit VisitModule(ShaderModuleDeclaration<SlangFunctionBody> declaration)
+        {
+            foreach (var item in declaration.Declarations) item.AcceptVisitor(this);
+            return default;
+        }
+
+        public Unit VisitParameter(ParameterDeclaration declaration)
+        {
+            VisitType(declaration.Type);
+            writer.Write(' ');
+            writer.Write(declaration.Name);
+            WriteAttributes(declaration.Attributes);
+            writer.Write(", ");
+            return default;
+        }
+
+        public Unit VisitStructure(StructureDeclaration declaration)
+        {
+            writer.Write("struct ");
+            writer.Write(declaration.Name);
+            using (writer.IndentedScopeWithBracket())
+                foreach (var member in declaration.Members)
+                    member.AcceptVisitor(this);
+            writer.WriteLine();
+            return default;
+        }
+
+        public Unit VisitValue(ValueDeclaration declaration) =>
+            throw new NotSupportedException($"Slang emission does not support value declaration '{declaration.Name}'.");
+
+        public Unit VisitVariable(VariableDeclaration declaration)
+        {
+            var group = declaration.Attributes.OfType<GroupAttribute>().FirstOrDefault()?.Binding;
+            var binding = declaration.Attributes.OfType<BindingAttribute>().FirstOrDefault()?.Binding;
+            if ((group, binding) is (int groupValue, int bindingValue))
+                writer.WriteLine($"[[vk::binding({bindingValue}, {groupValue})]]");
+
+            var isUniform = declaration.Attributes.OfType<UniformAttribute>().Any();
+            if (isUniform) writer.Write("ConstantBuffer<");
+            VisitType(declaration.Type);
+            if (isUniform) writer.Write('>');
+            writer.Write(' ');
+            writer.Write(GetValueName(declaration.Value));
+            writer.WriteLine(';');
+            return default;
+        }
+
+        private void WriteBlock(SlangBlock block)
+        {
+            foreach (var statement in block.Statements) WriteStatement(statement);
+        }
+
+        private void WriteStatement(SlangStatement statement)
+        {
+            switch (statement)
             {
-                EmitBranch(nextL, label);
-            }
-            LoopOwners.Pop();
-        }
-
-        if (normalTransfer is not null)
-            EmitBranch(normalTransfer);
-
-        return default;
-    }
-
-
-    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnVoid()
-    {
-        Writer.WriteLine("return;");
-        return default;
-    }
-
-    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
-    {
-        Writer.Write("return ");
-        Writer.Write(GetValueName(expr));
-        Writer.WriteLine(";");
-        return default;
-    }
-
-    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Br(RegionJump<IShaderValue> target)
-    {
-        Writer.WriteLine($"// br {GetLabelName(target.Label)}");
-        EmitBranch(target.Label, SourceBlocks.Peek());
-        return default;
-    }
-
-    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.BrIf(IShaderValue condition,
-        RegionJump<IShaderValue> trueTarget, RegionJump<IShaderValue> falseTarget)
-    {
-        Writer.WriteLine($"// br if {GetLabelName(trueTarget.Label)} {GetLabelName(falseTarget.Label)}");
-        Writer.Write("if");
-        Writer.Write("(");
-        Writer.Write(GetValueName(condition));
-        Writer.Write(")");
-        var next = NextBlock.Peek();
-        using (Writer.IndentedScopeWithBracket())
-        {
-            Writer.WriteLine("// ... true ...");
-            EmitBranch(trueTarget.Label, SourceBlocks.Peek());
-        }
-
-        Writer.Write("else");
-        using (Writer.IndentedScopeWithBracket())
-        {
-            Writer.WriteLine("// ... false ...");
-            EmitBranch(falseTarget.Label, SourceBlocks.Peek());
-        }
-
-        return default;
-    }
-
-    private string GetLabelName(Label l)
-    {
-        var id = 0;
-        if (labelIndices.TryGetValue(l, out var i))
-        {
-            id = i;
-        }
-        else
-        {
-            labelIndices.Add(l, labelIndices.Count);
-            id = labelIndices[l];
-        }
-
-        return $"^{id}{l}";
-    }
-
-    private int GetFunctionIndex(FunctionDeclaration f)
-    {
-        if (functionIndicies.TryGetValue(f, out var index)) return index;
-
-        index = functionIndicies.Count;
-        functionIndicies[f] = index;
-        return index;
-    }
-
-    private int GetId(IShaderValue v)
-    {
-        if (ValueIds.TryGetValue(v, out var index)) return index;
-
-        ValueIds.Add(v, ValueIds.Count);
-        return ValueIds[v];
-    }
-
-    private string GetVariableName(VariableDeclaration v) => $"v_{GetId(v.Value)}_{v.Name}";
-
-    private string GetValueName(IShaderValue v)
-    {
-        return v switch
-        {
-            _ when RValues.TryGetValue(v, out var n) => n,
-            LiteralValue { Value: var val } => val.Evaluate(this),
-            VariablePointerValue x => GetVariableName(x.Declaration),
-            ParameterPointerValue p => p.Declaration.Name,
-            _ => $"v_{GetId(v)}"
-        };
-    }
-
-    private Unit WriteAttribute(IShaderAttribute attr)
-    {
-        switch (attr)
-        {
-            case ShaderMethodAttribute:
-                break;
-            case FragmentAttribute:
-                Writer.WriteLine("[shader(\"fragment\")]");
-                break;
-            case VertexAttribute:
-                Writer.WriteLine("[shader(\"vertex\")]");
-                break;
-            case BuiltinAttribute b:
-                Writer.Write(" : ");
-                switch (b.Slot)
-                {
-                    case BuiltinBinding.position:
-                        Writer.Write("SV_POSITION");
-                        break;
-                    case BuiltinBinding.vertex_index:
-                        Writer.Write("SV_VertexId");
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
-
-                break;
-            case LocationAttribute a:
-                switch (Visiting.Peek())
-                {
-                    case VisitingEntity.FunctionReturn:
-                        Writer.Write($" : SV_TARGET{a.Binding}");
-                        break;
-                    case VisitingEntity.Parameter:
-                        Writer.Write($" : TEXCOORD{a.Binding}");
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
-
-                break;
-            case IShaderMetadataAttribute:
-                break;
-            default:
-                throw new NotSupportedException($"WriteAttribute not support {attr}");
-        }
-
-        return default;
-    }
-
-    private Unit WriteAttributes(IEnumerable<IShaderAttribute> attributes, bool newLine = false)
-    {
-        foreach (var a in attributes)
-        {
-            WriteAttribute(a);
-            if (newLine)
-                Writer.WriteLine();
-            else
-                Writer.Write(' ');
-        }
-
-        return default;
-    }
-
-    private void VisitType(IShaderType type)
-    {
-        Writer.Write(type.Name);
-    }
-
-    private void OnBody(FunctionBody4 body)
-    {
-        foreach (var v in body.LocalVariables)
-        {
-            Writer.Write("var ");
-            Writer.Write(GetVariableName(v));
-            Writer.Write(" : ");
-            VisitType(v.Type);
-            Writer.WriteLine(";");
-        }
-
-        body.Body.Traverse(t => { Blocks.Add(t.Label, t); });
-        EmitBranch(body.Entry, body.Entry);
-    }
-
-    private void TypeAlias(string name, string target)
-    {
-        Writer.Write("typealias ");
-        Writer.Write(name);
-        Writer.Write(" = ");
-        Writer.Write(target);
-        Writer.WriteLine(";");
-    }
-
-    private void DumpTypeAlias()
-    {
-        TypeAlias("f32", "float");
-        TypeAlias("u32", "uint");
-        TypeAlias("i32", "int");
-        TypeAlias("vec4<t>", "vector<t, 4>");
-        TypeAlias("vec3<t>", "vector<t, 3>");
-        TypeAlias("vec2<t>", "vector<t, 2>");
-    }
-
-    public string Emit()
-    {
-        DumpTypeAlias();
-        Writer.WriteLine();
-        Module.Accept(this);
-        return Writer.InnerWriter.ToString();
-    }
-
-    private void OnShaderRegionBody(ShaderRegionBody basicBlock)
-    {
-        foreach (var s in basicBlock.Body.Elements)
-        {
-            switch (s.Operation)
-            {
-                case AddressOfVecComponentOperation op:
+                case SlangDeclare declaration:
+                    writer.Write("var ");
+                    writer.Write(GetValueName(declaration.Variable.Value));
+                    writer.Write(" : ");
+                    VisitType(declaration.Variable.Type);
+                    writer.WriteLine(';');
+                    break;
+                case SlangBind binding:
+                    writer.Write("let ");
+                    writer.Write(GetValueName(binding.Instruction.Result!));
+                    writer.Write(" : ");
+                    VisitType(binding.Instruction.Result!.Type);
+                    writer.Write(" = ");
+                    writer.Write(RenderExpression(binding.Instruction));
+                    writer.WriteLine(';');
+                    break;
+                case SlangEffect effect:
+                    if (RenderEffect(effect.Instruction) is { Length: > 0 } expression)
                     {
-                        var r = s.Result!;
-                        var t = s[0]!;
-                        RValues.Add(r, $"{GetValueName(t)}.{op.Component.Name}");
-                        break;
+                        writer.Write(expression);
+                        writer.WriteLine(';');
                     }
-                case AddressOfMemberOperation op:
+                    break;
+                case SlangAssign assignment:
+                    writer.Write(RenderPlace(assignment.Target));
+                    writer.Write(" = ");
+                    writer.Write(RenderOperand(assignment.Value));
+                    writer.WriteLine(';');
+                    break;
+                case SlangScope scope:
+                    using (writer.IndentedScopeWithBracket())
                     {
-                        var r = s.Result!;
-                        var t = s[0]!;
-                        RValues.Add(r, $"{GetValueName(t)}.{op.Name}");
-                        break;
+                        WriteMarker("block", scope.OriginalLabel);
+                        WriteBlock(scope.Body);
                     }
+                    break;
+                case SlangIf conditional:
+                    writer.Write("if(");
+                    writer.Write(RenderOperand(conditional.Condition));
+                    writer.WriteLine(')');
+                    using (writer.IndentedScopeWithBracket())
+                        WriteBlock(conditional.WhenTrue);
+                    writer.WriteLine("else");
+                    using (writer.IndentedScopeWithBracket())
+                        WriteBlock(conditional.WhenFalse);
+                    break;
+                case SlangLoop loop:
+                    writer.WriteLine("while(true)");
+                    using (writer.IndentedScopeWithBracket())
+                    {
+                        WriteMarker("loop", loop.OriginalLabel);
+                        WriteBlock(loop.Body);
+                    }
+                    break;
+                case SlangReturnValue returned:
+                    writer.Write("return ");
+                    writer.Write(RenderOperand(returned.Value));
+                    writer.WriteLine(';');
+                    break;
+                case SlangReturnVoid:
+                    writer.WriteLine("return;");
+                    break;
+                case SlangBreak:
+                    writer.WriteLine("break;");
+                    break;
+                case SlangContinue:
+                    writer.WriteLine("continue;");
+                    break;
                 default:
+                    throw new NotSupportedException($"Unknown Slang statement {statement.GetType().Name}.");
+            }
+        }
+
+        private string RenderExpression(Instruction<SlangOperand, IShaderValue> instruction)
+        {
+            var operands = instruction.Operands.ToArray();
+            string Operand(int index) => RenderOperand(operands[index]);
+            return instruction.Operation switch
+            {
+                LoadOperation when operands.Length == 1 => Operand(0),
+                CallOperation when operands.Length >= 1 =>
+                    $"{Operand(0)}({string.Join(',', operands[1..].Select(RenderOperand))})",
+                LiteralOperation when operands.Length == 1 => Operand(0),
+                IConversionOperation conversion when operands.Length == 1 =>
+                    $"{conversion.ResultType.Name}({Operand(0)})",
+                IVectorSwizzleGetOperation swizzle when operands.Length == 1 =>
+                    $"{Operand(0)}.{swizzle.Pattern.Name}",
+                IVectorComponentGetOperation component when operands.Length == 1 =>
+                    $"{Operand(0)}.{component.Component.Name}",
+                IVectorFromScalarConstructOperation construction when operands.Length == 1 =>
+                    $"{construction.ResultType.Name}({Operand(0)})",
+                UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate>
+                    when operands.Length == 1 => $"- {Operand(0)}",
+                VectorNumericUnaryOperation<N3, FloatType<N32>, UnaryArithmetic.Negate>
+                    when operands.Length == 1 => $"- {Operand(0)}",
+                IUnaryExpressionOperation unary when operands.Length == 1 =>
+                    $"{unary.Name}({Operand(0)})",
+                IBinaryExpressionOperation { BinaryOp: ISymbolOp symbol } when operands.Length == 2 =>
+                    $"{Operand(0)} {symbol.Symbol} {Operand(1)}",
+                IBinaryExpressionOperation binary when operands.Length == 2 =>
+                    $"{binary.Name}({Operand(0)},{Operand(1)})",
+                VectorCompositeConstructionOperation vector =>
+                    $"vector<{vector.ElementType.Name}, {vector.Size.Value}>" +
+                    $"({string.Join(',', operands.Select(RenderOperand))})",
+                ZeroConstructorOperation { ResultType: IVecType } => "{}",
+                _ => throw MalformedInstruction(instruction)
+            };
+        }
+
+        private string? RenderEffect(Instruction<SlangOperand, IShaderValue> instruction) =>
+            instruction.Operation switch
+            {
+                NopOperation when instruction.OperandCount == 0 => null,
+                CallOperation => RenderExpression(instruction),
+                _ => throw MalformedInstruction(instruction)
+            };
+
+        private static NotSupportedException MalformedInstruction(
+            Instruction<SlangOperand, IShaderValue> instruction) =>
+            new($"Malformed Slang target instruction '{instruction.Operation.Name}'.");
+
+        private string RenderOperand(SlangOperand operand) =>
+            operand switch
+            {
+                SlangValueOperand value => GetValueName(value.Value),
+                SlangPlaceOperand place => RenderPlace(place.Place),
+                _ => throw new NotSupportedException($"Unknown Slang operand {operand.GetType().Name}.")
+            };
+
+        private string RenderPlace(SlangPlace place) =>
+            place switch
+            {
+                SlangVariablePlace variable => GetValueName(variable.Variable.Value),
+                SlangParameterPlace parameter => parameter.Parameter.Name,
+                SlangMemberPlace member => $"{RenderPlace(member.Target)}.{member.Member.Name}",
+                SlangComponentPlace component => $"{RenderPlace(component.Target)}.{component.Component}",
+                SlangSwizzlePlace swizzle => $"{RenderPlace(swizzle.Target)}.{swizzle.Pattern}",
+                _ => throw new NotSupportedException($"Unknown Slang place {place.GetType().Name}.")
+            };
+
+        private string GetValueName(IShaderValue value) =>
+            value switch
+            {
+                LiteralValue literal => RenderLiteral(literal.Value),
+                FunctionDeclaration function => function.Name == "mix" ? "lerp" : function.Name,
+                VariablePointerValue variable =>
+                    $"v_{GetValueId(variable)}_{variable.Declaration.Name}",
+                ParameterPointerValue parameter => parameter.Declaration.Name,
+                _ => $"v_{GetValueId(value)}"
+            };
+
+        private static string RenderLiteral(ILiteral literal) =>
+            literal switch
+            {
+                BoolLiteral value => value.Value.ToString(),
+                I32Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
+                I64Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
+                U32Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
+                U64Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
+                F32Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
+                F64Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
+                _ => throw new NotSupportedException($"Unknown Slang literal {literal.GetType().Name}.")
+            };
+
+        private int GetValueId(IShaderValue value)
+        {
+            if (valueIds.TryGetValue(value, out var index)) return index;
+            index = valueIds.Count;
+            valueIds.Add(value, index);
+            return index;
+        }
+
+        private void WriteMarker(string kind, Label? label)
+        {
+            if (label is null) return;
+            writer.Write("// ");
+            writer.Write(kind);
+            writer.Write(' ');
+            writer.Write('^');
+            writer.Write(GetLabelId(label));
+            writer.WriteLine(label.ToString());
+        }
+
+        private int GetLabelId(Label label)
+        {
+            if (labelIds.TryGetValue(label, out var index)) return index;
+            index = labelIds.Count;
+            labelIds.Add(label, index);
+            return index;
+        }
+
+        private Unit WriteAttribute(IShaderAttribute attribute)
+        {
+            switch (attribute)
+            {
+                case ShaderMethodAttribute:
+                case IShaderMetadataAttribute:
+                    break;
+                case FragmentAttribute:
+                    writer.WriteLine("[shader(\"fragment\")]");
+                    break;
+                case VertexAttribute:
+                    writer.WriteLine("[shader(\"vertex\")]");
+                    break;
+                case BuiltinAttribute builtin:
+                    writer.Write(" : ");
+                    writer.Write(builtin.Slot switch
                     {
-                        var ns = s.Select(v =>
-                            v switch
-                            {
-                                FunctionDeclaration f => f.Name switch
-                                {
-                                    "mix" => "lerp",
-                                    _ => f.Name
-                                },
-                                _ => GetValueName(v)
-                            }, v => $"let {GetValueName(v)} : {v.Type.Name}");
-                        Writer.WriteLine(ns.Evaluate(this));
-                        break;
-                    }
+                        BuiltinBinding.position => "SV_POSITION",
+                        BuiltinBinding.vertex_index => "SV_VertexId",
+                        _ => throw new NotSupportedException(
+                            $"Unsupported Slang builtin binding {builtin.Slot}.")
+                    });
+                    break;
+                case LocationAttribute location:
+                    writer.Write(visiting.Peek() switch
+                    {
+                        VisitingEntity.FunctionReturn => $" : SV_TARGET{location.Binding}",
+                        VisitingEntity.Parameter => $" : TEXCOORD{location.Binding}",
+                        _ => throw new NotSupportedException(
+                            $"Slang location is invalid while visiting {visiting.Peek()}.")
+                    });
+                    break;
+                default:
+                    throw new NotSupportedException($"Slang attribute {attribute} is not supported.");
             }
+            return default;
         }
 
-        basicBlock.Body.Last.Evaluate(this);
-    }
-
-    private bool IsCurrentLoopTransfer(Label target) =>
-        LoopOwners.TryPeek(out var owner) &&
-        (owner.Header.Equals(target) || (owner.NormalTransfer?.Target.Equals(target) ?? false));
-
-    private NormalTransfer? FindNormalTransfer(Label header, IReadOnlySet<Label> regionLabels)
-    {
-        var transfers = regionLabels
-            .SelectMany(source => Blocks[source].Body.Successor.AllTargets()
-                .Where(target => !regionLabels.Contains(target) &&
-                                 Blocks[target].Body.Successor is not TerminateSuccessor)
-                .Select(target => (Source: source, Target: target)))
-            .GroupBy(transfer => transfer.Target)
-            .Select(group => new NormalTransfer(group.Key,
-                [.. group.Select(transfer => transfer.Source).Distinct().OrderBy(source => source.ToString())]))
-            .OrderBy(transfer => transfer.Target.ToString())
-            .ToArray();
-
-        return transfers switch
+        private void WriteAttributes(IEnumerable<IShaderAttribute> attributes)
         {
-            [] => null,
-            [var transfer] => transfer,
-            _ => throw UnsupportedLoopTransfers(header, transfers)
-        };
-    }
-
-    private NotSupportedException UnsupportedLoopTransfers(Label header, IReadOnlyList<NormalTransfer> transfers) =>
-        new($"Unsupported loop transfers in function '{CurrentFunction?.Name ?? "<unknown>"}' " +
-            $"from loop {header}: {string.Join("; ", transfers.Select(FormatTransfer))}.");
-
-    private NotSupportedException UnsupportedLoopTransfer(NormalTransfer transfer, string reason) =>
-        new($"Unsupported loop transfer in function '{CurrentFunction?.Name ?? "<unknown>"}' " +
-            $"{FormatTransfer(transfer)}: {reason}.");
-
-    private static string FormatTransfer(NormalTransfer transfer) =>
-        $"from [{string.Join(", ", transfer.Sources)}] to {transfer.Target}";
-
-    private void EmitBranch(Label target, Label source) => EmitBranch(new(target, [source]));
-
-    private void EmitBranch(NormalTransfer transfer)
-    {
-        var target = transfer.Target;
-        Writer.Write("// emitting branch: ");
-        Writer.WriteLine(GetLabelName(target));
-        Writer.Write("// next target");
-        if (NextBlock.TryPeek(out var next) && next is not null)
-            Writer.WriteLine(GetLabelName(next));
-        else
-            Writer.WriteLine("exit");
-        Writer.Write("// continue target");
-        if (LoopOwners.TryPeek(out var owner))
-            Writer.WriteLine(GetLabelName(owner.Header));
-        else
-            Writer.WriteLine();
-
-        if (LoopOwners.TryPeek(out owner))
-        {
-            if (owner.Header.Equals(target))
+            foreach (var attribute in attributes)
             {
-                Writer.WriteLine("continue;");
-                return;
-            }
-
-            if (owner.NormalTransfer?.Target.Equals(target) ?? false)
-            {
-                Writer.WriteLine("break;");
-                return;
+                WriteAttribute(attribute);
+                writer.Write(' ');
             }
         }
 
-        var isTerminalTransfer = LoopOwners.Count > 0 && Blocks[target].Body.Successor is TerminateSuccessor;
-        if (!isTerminalTransfer && NextBlock.Count > 0 && target.Equals(NextBlock.Peek()))
+        private void VisitType(IShaderType type) => writer.Write(type.Name);
+
+        private void DumpTypeAliases()
         {
-            return;
+            TypeAlias("f32", "float");
+            TypeAlias("u32", "uint");
+            TypeAlias("i32", "int");
+            TypeAlias("vec4<t>", "vector<t, 4>");
+            TypeAlias("vec3<t>", "vector<t, 3>");
+            TypeAlias("vec2<t>", "vector<t, 2>");
         }
 
-        var emitCount = Emitted.TryGetValue(target, out var c) ? c : 0;
-        if (emitCount > 0)
+        private void TypeAlias(string name, string target)
         {
-            Writer.WriteLine($"// multiple emit label {GetLabelName(target)} -> {emitCount}");
-
-            if (Blocks[target].Definition.Kind == RegionKind.Loop)
-            {
-                throw UnsupportedLoopTransfer(transfer,
-                    "the target is not owned by the current lexical loop");
-            }
-            Writer.WriteLine("// duplicated label emitting");
-            Blocks[target].Definition.Evaluate(this);
+            writer.Write("typealias ");
+            writer.Write(name);
+            writer.Write(" = ");
+            writer.Write(target);
+            writer.WriteLine(';');
         }
 
-        Emitted[target] = emitCount + 1;
-        Blocks[target].Definition.Evaluate(this);
-    }
-
-    private sealed record NormalTransfer(Label Target, IReadOnlyList<Label> Sources);
-
-    private readonly record struct LoopOwner(Label Header, NormalTransfer? NormalTransfer);
-
-    string IOperationSemantic<Instruction<string, string>, string, string, string>.ZeroConstructorOperation(Instruction<string, string> ctx, ZeroConstructorOperation op, string result)
-    {
-        switch (op.ResultType)
+        private enum VisitingEntity
         {
-            case IVecType v:
-                return $"{result} = {{}};";
-            default:
-                throw new NotSupportedException();
+            Function,
+            Parameter,
+            FunctionReturn
         }
-    }
-
-    private enum VisitingEntity
-    {
-        Function,
-        Parameter,
-        FunctionReturn
     }
 }

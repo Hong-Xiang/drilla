@@ -164,6 +164,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         }
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
+        var target = Lower(lowered);
+        output.WriteLine(target.PrettyPrint());
         var source = Emit(lowered);
         output.WriteLine(source);
         var cfg = RunCfg(original, arguments);
@@ -176,9 +178,15 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     }
 
     internal static string Emit(FunctionBody4 body) =>
-        new SlangEmitter(new ShaderModuleDeclaration<FunctionBody4>(
-            [body.Declaration], ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
+        new SlangEmitter(new SlangTargetLowering().Lower(new ShaderModuleDeclaration<FunctionBody4>(
+            [body.Declaration], ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body))))
         .Emit();
+
+    internal static SlangFunctionBody Lower(FunctionBody4 body) =>
+        new SlangTargetLowering().Lower(new ShaderModuleDeclaration<FunctionBody4>(
+            [body.Declaration],
+            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
+        .GetBody(body.Declaration);
 
     private static void AssertEquivalent(Execution expected, Execution actual)
     {

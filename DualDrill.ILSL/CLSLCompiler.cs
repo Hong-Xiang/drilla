@@ -60,7 +60,8 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                 {
                     module = module.RunPass(new FunctionToOperationPass());
                     module = module.RunPass(new RegionParameterToLocalVariablePass());
-                    var emitter = new SlangEmitter(module);
+                    var target = new SlangTargetLowering().Lower(module);
+                    var emitter = new SlangEmitter(target);
                     var slangCode = emitter.Emit();
                     // Compile Slang to WGSL using slangc
                     var wgslCode = _slangService.CompileToWgslAsync(slangCode).GetAwaiter().GetResult();
@@ -70,7 +71,8 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                 {
                     module = module.RunPass(new FunctionToOperationPass());
                     module = module.RunPass(new RegionParameterToLocalVariablePass());
-                    var emitter = new SlangEmitter(module);
+                    var target = new SlangTargetLowering().Lower(module);
+                    var emitter = new SlangEmitter(target);
                     var code = emitter.Emit();
                     return code;
                 }
