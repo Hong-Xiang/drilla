@@ -213,7 +213,7 @@ public sealed class CompilerStageDumpTests(ITestOutputHelper output)
             [],
             Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>(),
             new ExitPostDominance.FunctionExit(false));
-        var body = new FunctionBody4(
+        var body = new RegionFunctionBody(
             declaration,
             RegionTree<Label, ShaderRegionBody>.Loop(label, [], region, null, null));
 

@@ -92,7 +92,7 @@ parse/collect the all-reference CIL module
 ```
 
 Moving code into passes must change the actual public producer/consumer path,
-not leave `ParseShaderModule` returning already-lowered `FunctionBody4` while
+not leave `ParseShaderModule` returning already-lowered `RegionFunctionBody` while
 renaming its private helpers. Reuse the module/body generics where appropriate
 and document any necessary public API migration without compatibility shims.
 
@@ -149,15 +149,15 @@ natural-loop membership, reconvergence, or general structurization.
 | `ShaderStackToValuePass` | Shader-stack CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Mechanically read depths, pop/push the declared transition, preserve provenance in instruction payloads, and produce ordered block arguments. |
 | `CilLocalPromotionPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Promote definitely assigned, direct nonescaping function-local `i32` and `bool` loads/stores through the existing SSA transform, using the raw method's exact locals and `InitLocals` metadata. Escaped, unsupported and incompletely initialized locals remain in storage. |
 | `CilBlockControlFactsPass` | Promoted value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute reverse-postorder, immediate dominators, finite-exit postdominance with explicit function-exit/no-exit results, structural may-diverge, and ordered incoming-arm/backedge facts once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`; loop-header status is derived from incoming backedges. |
-| `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
-| `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
-| `StablePointerRegionParameterPass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases while preserving ordinary parameters and ordered arm arguments. |
-| `SlangTargetLowering` | `FunctionBody4` -> `SlangFunctionBody` | Consume checked scoped transfers, place each original body once, snapshot selected-arm values before writes, and materialize typed captures plus explicit one-shot/repeat control. |
-| `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Legacy non-target erasure of ordinary parameters after applying the shared stable-pointer policy. |
+| `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<RegionFunctionBody>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
+| `FunctionToOperationPass` | `RegionFunctionBody` -> `RegionFunctionBody` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
+| `StablePointerRegionParameterPass` | `RegionFunctionBody` -> `RegionFunctionBody` | Resolve supported pointer aliases while preserving ordinary parameters and ordered arm arguments. |
+| `SlangTargetLowering` | `RegionFunctionBody` -> `SlangFunctionBody` | Consume checked scoped transfers, place each original body once, snapshot selected-arm values before writes, and materialize typed captures plus explicit one-shot/repeat control. |
+| `RegionParameterToLocalVariablePass` | `RegionFunctionBody` -> `RegionFunctionBody` | Legacy non-target erasure of ordinary parameters after applying the shared stable-pointer policy. |
 | `SlangEmitter` | `SlangFunctionBody` -> Slang text | Format the target AST without Region traversal, postdominance queries, or control-layout inference. |
 | `SlangService` | Slang text -> WGSL | Invoke the external Slang compiler. |
 
-The `IR` output option formats `FunctionBody4`. Public WGSL output rejects any
+The `IR` output option formats `RegionFunctionBody`. Public WGSL output rejects any
 original `NoExitPath` block before operation, pointer, or target lowering; IR and
 Slang remain available for those modules. `IShaderModuleSimplePass` is the
 existing same-body-type pass interface. There is no implemented general pass

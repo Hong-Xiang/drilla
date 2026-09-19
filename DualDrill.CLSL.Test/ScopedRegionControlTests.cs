@@ -140,7 +140,7 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
         var value = ShaderValue.Intermediate(ShaderType.I32);
         var incremented = ShaderValue.Intermediate(ShaderType.I32);
         var result = ShaderValue.Intermediate(ShaderType.I32);
-        var body = new FunctionBody4(
+        var body = new RegionFunctionBody(
             new FunctionDeclaration("DominatingValue", [choose], new FunctionReturn(ShaderType.I32, []), []),
             RegionTree.Block(entry, [
                 RegionTree.Block(join, [], Body(
@@ -373,7 +373,7 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
         var source = new ParameterDeclaration("source", ShaderType.I32, []);
         var parameter = ShaderValue.Intermediate(
             new PtrType(ShaderType.I32, FunctionAddressSpace.Instance));
-        var body = new FunctionBody4(
+        var body = new RegionFunctionBody(
             new FunctionDeclaration("Pointers", [source], new FunctionReturn(UnitType.Instance, []), []),
             RegionTree.Block(entry, [
                 RegionTree.Block(target, [], Body(
@@ -468,7 +468,7 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
 
     private static string LabelName(Label label) => label.Name ?? "<unnamed>";
 
-    private static string FormatControl(FunctionBody4 body)
+    private static string FormatControl(RegionFunctionBody body)
     {
         using var text = new StringWriter(CultureInfo.InvariantCulture);
         using var writer = new IndentedTextWriter(text);
@@ -483,7 +483,7 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
         output.WriteLine($"ACTUAL rejection: {error.Message}");
     }
 
-    private static FunctionBody4 Function(
+    private static RegionFunctionBody Function(
         RegionTree<Label, ShaderRegionBody> tree,
         IShaderType? returnType = null) =>
         new(

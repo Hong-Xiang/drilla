@@ -12,8 +12,8 @@ namespace DualDrill.CLSL;
 public interface ICLSLCompiler
 {
     public ShaderModuleDeclaration<RawCilFunctionBody> Parse(ISharpShader shader);
-    public ShaderModuleDeclaration<FunctionBody4> Compile(ISharpShader shader);
-    public ShaderModuleDeclaration<FunctionBody4> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module);
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ISharpShader shader);
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module);
     public string Emit(ISharpShader shader);
 }
 
@@ -41,9 +41,9 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
         return parser.ParseShaderModule(shader);
     }
 
-    public ShaderModuleDeclaration<FunctionBody4> Compile(ISharpShader shader) => Compile(Parse(shader));
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ISharpShader shader) => Compile(Parse(shader));
 
-    public ShaderModuleDeclaration<FunctionBody4> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module) =>
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module) =>
         CilModuleCompiler.Compile(module);
 
     public string Emit(ISharpShader shader)
@@ -53,7 +53,7 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
         {
             case CLSLCompileTarget.IR:
                 {
-                    var formatter = new ShaderModuleFormatter<FunctionBody4>();
+                    var formatter = new ShaderModuleFormatter<RegionFunctionBody>();
                     module.Accept(formatter);
                     return formatter.Dump();
                 }

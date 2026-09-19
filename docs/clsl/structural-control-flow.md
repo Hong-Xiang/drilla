@@ -13,7 +13,7 @@ Region containment alone does not prove structural legality, and target AST
 layout is a separate obligation from identifying region owners and shared joins.
 
 `SlangTargetLowering` now consumes the checked lexical `Forward`/`Repeat`
-continuations on `FunctionBody4`. It places each original region once, realizes
+continuations on `RegionFunctionBody`. It places each original region once, realizes
 selected-edge parameter copies, and uses explicit `SlangDoOnce` carriers plus
 exact continuation gates to unwind multiple exits and outer-loop transfers.
 `SlangEmitter` consumes only the resulting immutable `SlangFunctionBody`; it

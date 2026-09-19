@@ -18,7 +18,7 @@ public sealed class WasmLoweringException(string message) : NotSupportedExceptio
 
 public static class WasmLowering
 {
-    public static WasmFunctionPlan Lower(FunctionBody4 body)
+    public static WasmFunctionPlan Lower(RegionFunctionBody body)
     {
         ArgumentNullException.ThrowIfNull(body);
         if (body.Declaration is null)
@@ -28,7 +28,7 @@ public static class WasmLowering
 
     private sealed class Lowerer
     {
-        private readonly FunctionBody4 body;
+        private readonly RegionFunctionBody body;
         private readonly string context;
         private readonly Dictionary<Label, ShaderRegionBody> definitions =
             new(ReferenceEqualityComparer.Instance);
@@ -49,7 +49,7 @@ public static class WasmLowering
         private int scratchBase;
         private int scratchCount;
 
-        internal Lowerer(FunctionBody4 body)
+        internal Lowerer(RegionFunctionBody body)
         {
             this.body = body;
             context = $"WASM function {body.Declaration.Name ?? "<unnamed>"}";

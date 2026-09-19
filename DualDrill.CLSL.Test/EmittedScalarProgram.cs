@@ -55,10 +55,10 @@ internal sealed class EmittedScalarProgram
         }
     }
 
-    private readonly FunctionBody4 body;
+    private readonly RegionFunctionBody body;
     private readonly Func<State, Flow> execute;
 
-    internal EmittedScalarProgram(FunctionBody4 body, string source)
+    internal EmittedScalarProgram(RegionFunctionBody body, string source)
     {
         this.body = body;
         var lines = source.Replace("{", "\n{\n", StringComparison.Ordinal)

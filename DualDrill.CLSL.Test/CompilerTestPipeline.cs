@@ -17,7 +17,7 @@ internal static class CompilerTestPipeline
         ShaderModuleDeclaration<CilValueControlFlowBody> ValueControlFlow,
         ShaderModuleDeclaration<CilValueControlFlowBody> PromotedValueControlFlow,
         ShaderModuleDeclaration<CilValueControlFactsBody> ControlFacts,
-        ShaderModuleDeclaration<FunctionBody4> Compiled);
+        ShaderModuleDeclaration<RegionFunctionBody> Compiled);
 
     public static Stages CompileStages(
         MethodBase method,
@@ -112,7 +112,7 @@ internal static class CompilerTestPipeline
                 .FunctionDefinitions.Values,
             body => body.Source.Source.Source.Source.Environment.Method == method);
 
-    public static FunctionBody4 CompileBody(
+    public static RegionFunctionBody CompileBody(
         MethodBase method,
         CompilationContext? context = null) =>
         Assert.Single(

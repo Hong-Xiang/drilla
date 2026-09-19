@@ -17,7 +17,7 @@ namespace DualDrill.CLSL.Test;
 
 public class ParseBodyTest(ITestOutputHelper Output)
 {
-    FunctionBody4 ParseMethod(FunctionDeclaration f, MethodBase m)
+    RegionFunctionBody ParseMethod(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
         context.AddFunctionDeclaration(Symbol.Function(m), f);

@@ -149,7 +149,7 @@ public sealed class IntegerInequalityBranchTests
         Assert.Equal(TInteger.Instance, operation.RightType);
     }
 
-    private static void AssertArms(FunctionBody4 body, Label branch, Label trueTarget, Label falseTarget)
+    private static void AssertArms(RegionFunctionBody body, Label branch, Label trueTarget, Label falseTarget)
     {
         var terminator =
             Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(body[branch].Body.Last);

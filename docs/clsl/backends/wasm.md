@@ -5,7 +5,7 @@ backend. It deliberately lowers explicit CFG control to a local program-counter
 dispatcher. A later native lowering will consume D's checked regions instead
 of treating `RegionTree` layout metadata as control semantics.
 
-`WasmLowering.Lower(FunctionBody4)` validates shared compiler IR and produces an
+`WasmLowering.Lower(RegionFunctionBody)` validates shared compiler IR and produces an
 immutable backend-local `WasmFunctionPlan`. `WatEmitter.Emit(plan)` only formats
 that plan as deterministic WAT exporting `run`.
 
@@ -25,7 +25,7 @@ WASI, floats, unsigned arithmetic, and other operations outside this bounded
 slice. It does not inspect `RegionTree` layout metadata or route through Slang.
 Calls are not supported by this prototype.
 
-`FunctionBody4` construction checks scoped structure, edge argument consistency,
+`RegionFunctionBody` construction checks scoped structure, edge argument consistency,
 and block-parameter types before the backend runs. These boundary errors use
 contextual `ArgumentException` diagnostics. Inputs that do reach lowering receive
 contextual `WasmLoweringException` diagnostics for malformed payloads, values,
@@ -34,7 +34,7 @@ and source-side types. The public `WasmLowering.Lower(null)` boundary retains
 
 The checked-in `examples-H/wasm-{add,choose,sum}.{ir,wat,results}` files are
 captured from the constructor fixtures. The `.ir` files use the existing
-`FunctionBody4.Dump()` formatter with only trailing whitespace removed by the
+`RegionFunctionBody.Dump()` formatter with only trailing whitespace removed by the
 test-local capture helper; the `.wat` files use `WatEmitter`.
 
 Run the acceptance tests in the pinned shell:

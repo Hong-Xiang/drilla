@@ -27,7 +27,7 @@ public sealed class SemanticModel
     private int ValueCount = 0;
 
 
-    public SemanticModel(FunctionBody4 body)
+    public SemanticModel(RegionFunctionBody body)
     {
         FunctionBody = body;
         ValueIndices = body.GetValueDefinitions().Concat(body.GetUsedValues()).Distinct().Select((v, i) => (v, i))
@@ -39,7 +39,7 @@ public sealed class SemanticModel
                 LabelUsage.Add(l, []);
     }
 
-    public FunctionBody4 FunctionBody { get; }
+    public RegionFunctionBody FunctionBody { get; }
 
     private Label? CurrentScope => Scope.IsEmpty ? null : Scope.Peek();
 

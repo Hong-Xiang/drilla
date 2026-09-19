@@ -7,7 +7,7 @@ using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
 namespace DualDrill.CLSL.Test;
 
 // Independent test interpreter: transfers resolve through captured lexical environments,
-// never through FunctionBody4's label indexer or checked control metadata.
+// never through RegionFunctionBody's label indexer or checked control metadata.
 internal static class ScopedContinuationOracle
 {
     private sealed record Continuation(
@@ -15,7 +15,7 @@ internal static class ScopedContinuationOracle
         ImmutableDictionary<Label, Continuation> Outer);
 
     internal static Execution RunScoped(
-        FunctionBody4 body,
+        RegionFunctionBody body,
         ImmutableArray<Value> arguments,
         int stepLimit = 10000)
     {

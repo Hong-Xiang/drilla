@@ -271,6 +271,7 @@ shims:
 
 | Removed API | Replacement |
 |---|---|
+| `FunctionBody4` | `RegionFunctionBody` |
 | `ControlFlowGraphBuilder` and its combined CFG-building `Build` / `BuildReachable` | `InstructionBlockPartitioner.Build` / `BuildReachable` -> `BlockList<TBlock>`, then `ControlFlowGraph.Create(blocks, projection, graphPrinter)` |
 | A partitioner factory returning an unlabelled payload | A payload implementing existing `ILabeledEntity`, retaining the supplied label |
 | The old partitioner CFG printer callback | A fixed `Action<BlockList<TBlock>, IndentedTextWriter, PrettyPrintOption>`; CFG printing is selected separately at graph construction |
@@ -278,7 +279,7 @@ shims:
 | `model.Instructions` / `model.PreStackTypes` | `model.RawCode` / `model.PreAnnotatedCode` |
 | `RuntimeReflectionParser.ParseMethod(...) -> FunctionDeclaration` | `ParseMethod(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
 | `RuntimeReflectionParser.ParseShaderModule(...) -> ShaderModuleDeclaration<FunctionBody4>` | `ParseShaderModule(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
-| `CLSLCompiler.Parse(...) -> ShaderModuleDeclaration<FunctionBody4>` | `Parse(...)` for raw CIL; `Compile(...)` for `FunctionBody4` |
+| `CLSLCompiler.Parse(...) -> ShaderModuleDeclaration<FunctionBody4>` | `Parse(...)` for raw CIL; `Compile(...) -> ShaderModuleDeclaration<RegionFunctionBody>` |
 | `parser.MethodBodies` / `ParseMethodBody3` | `CilPreStackPass` -> `CilBlockPartitionPass` -> `CilToShaderStackPass` -> `ShaderStackControlFlowPass` -> `ShaderStackToValuePass` -> `CilLocalPromotionPass` -> `CilBlockControlFactsPass` -> `CilRegionPass` |
 | Public CIL CFG / `MethodBodyAnalysisModel` | `LabelledCilFunctionBody.Blocks`; the first CFG is `ShaderStackControlFlowBody.Graph` |
 | `MethodBodyAnalysisModel.CilInstructionBlock` | `CilInstructionBlock` in `DualDrill.CLSL.Frontend` |
@@ -286,6 +287,8 @@ shims:
 | `DumpRawLinearCil()` | `RawCode.PrettyPrint()` |
 | `DumpAnalyzedLinearCil()` | `PreAnnotatedCode.PrettyPrint()` |
 | `DumpReachableControlFlowGraph()` | `ShaderStackControlFlowBody.Graph.PrettyPrint()` |
+
+`RegionFunctionBody` remains in `DualDrill.CLSL.Language.FunctionBody` and keeps the same API shape. Source consumers must update the type name, and binary consumers must rebuild against the renamed CLR type. No alias or compatibility shim is provided.
 
 `ISymbolTable` no longer stores compiled body caches. Clients that predeclare a
 reflection method add its `FunctionDeclaration`; parsing freezes a symbol view
@@ -306,7 +309,7 @@ Type-changing annotation maps must supply a printer for the output types; the
 identity and composition laws concern mapped `Node` and `Annotation` data, not
 reuse of an incompatible presentation function.
 
-Use the existing `FunctionBody4.Dump` and shader-module formatter for the
+Use the existing `RegionFunctionBody.Dump` and shader-module formatter for the
 subsequent region and module stages. Nested region bindings in that dump describe
 structural ownership, not a linear execution sequence. A loop's
 `break -> <not recorded>` means that continuation metadata was not populated at

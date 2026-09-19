@@ -139,7 +139,7 @@ public class RegionJumpTests
             terms.ReturnVoid(),
             new ExitPostDominance.FunctionExit(false));
         var declaration = new FunctionDeclaration("Map", [], new FunctionReturn(UnitType.Instance, []), []);
-        var body = new FunctionBody4(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry,
+        var body = new RegionFunctionBody(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry,
             [RegionTree<Label, ShaderRegionBody>.Block(target, [], targetBody, null)], entryBody, target));
 
         var mapped = body.MapValueUse(value => ReferenceEquals(value, source) ? replacement : value);

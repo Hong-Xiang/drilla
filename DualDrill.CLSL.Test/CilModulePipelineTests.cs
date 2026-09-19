@@ -245,7 +245,7 @@ public sealed class CilModulePipelineTests
         var shader = new MinimumHelloTriangleShaderModule();
 
         ShaderModuleDeclaration<RawCilFunctionBody> raw = compiler.Parse(shader);
-        ShaderModuleDeclaration<FunctionBody4> compiled = compiler.Compile(raw);
+        ShaderModuleDeclaration<RegionFunctionBody> compiled = compiler.Compile(raw);
 
         Assert.NotEmpty(raw.FunctionDefinitions);
         Assert.NotEmpty(compiled.FunctionDefinitions);

@@ -118,7 +118,7 @@ argument order, and duplicates. It applies the mapper once per argument in order
 mapper failures propagate rather than becoming an empty or partially successful
 jump.
 
-This is a payload map, not a graph rewrite or a binder. `FunctionBody4.MapValueUse`
+This is a payload map, not a graph rewrite or a binder. `RegionFunctionBody.MapValueUse`
 uses it for existing value-use rewriting. Parameter removal changes arity and
 therefore remains an explicit reconstruction, not a payload map.
 
@@ -128,7 +128,7 @@ and do not prove that an argument has the target parameter's shader type.
 
 ### Checked Scoped Continuations
 
-`FunctionBody4` is the checked boundary for region control. Construction rejects
+`RegionFunctionBody` is the checked boundary for region control. Construction rejects
 duplicate, unknown, unreachable, mismatched, incorrectly typed, or incorrectly
 scoped definitions and transfers. Its public `Control` index records each
 transfer by source label and arm ordinal without copying edge arguments.
@@ -197,10 +197,10 @@ C# compiled by .NET
   -> CilBlockControlFactsPass
   -> `ShaderModuleDeclaration<CilValueControlFactsBody>`
   -> CilRegionPass
-  -> `ShaderModuleDeclaration<FunctionBody4>`
-  -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
-  -> StablePointerRegionParameterPass         : FunctionBody4 -> FunctionBody4
-  -> SlangTargetLowering                      : FunctionBody4 -> SlangFunctionBody
+  -> `ShaderModuleDeclaration<RegionFunctionBody>`
+  -> FunctionToOperationPass                  : RegionFunctionBody -> RegionFunctionBody
+  -> StablePointerRegionParameterPass         : RegionFunctionBody -> RegionFunctionBody
+  -> SlangTargetLowering                      : RegionFunctionBody -> SlangFunctionBody
   -> SlangEmitter                             : SlangFunctionBody -> Slang source
   -> slangc                                  : Slang source -> WGSL
 ```
@@ -209,7 +209,7 @@ C# compiled by .NET
 follows all original-CIL references, including dead instruction positions, up to
 explicit shared-builtin, operation-attribute and mapped-vector/member boundaries.
 The later Pre pass still filters unreachable positions inside each collected
-function. `FunctionBody4` combines typed instructions and parameterized terminators with a
+function. `RegionFunctionBody` combines typed instructions and parameterized terminators with a
 `RegionTree` built by the final frontend pass and a checked scoped-control index.
 `SlangTargetLowering` consumes that checked representation and produces the
 separate typed `SlangFunctionBody`; the emitter only formats it.
@@ -238,7 +238,7 @@ facts.
 | Typed CFG with block arguments | Mechanical stack elimination preserves operations, provenance, labels, arm order and bottom-to-top edge arguments. | `ShaderStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. |
 | Promoted typed CFG | Direct nonescaping function-local `i32` and `bool` storage is replaced by values and appended block parameters when definitions reach all uses; exact raw `InitLocals` metadata supplies only typed zero/false entry definitions. Escaped, unsupported and incompletely initialized locals remain memory operations. | `CilLocalPromotionPass` maps the value module to the same body type before control facts. |
 | BB-annotated value CFG | Promoted blocks, labels and ordered edges remain unchanged; local facts hold RPO, IDom, ordered incoming arms and typed finite-exit `PostDominance` (`Block`, `FunctionExit` or `NoExitPath`) with structural `MayDiverge`. Loop-header status is derived from dominance-backed incoming arms, not target placement. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>` after `CilLocalPromotionPass`. |
-| Region binding tree | Consume published local facts, preserve descending-RPO dominator-child order without reanalysis, and check lexical control plus edge arguments. | `CilRegionPass` produces `FunctionBody4`; `FunctionBody4.Control` exposes the checked scoped-continuation index. |
+| Region binding tree | Consume published local facts, preserve descending-RPO dominator-child order without reanalysis, and check lexical control plus edge arguments. | `CilRegionPass` produces `RegionFunctionBody`; `RegionFunctionBody.Control` exposes the checked scoped-continuation index. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
 | Target AST | Control targets have a legal target-language realization; shared joins and value transfers have explicit lexical placement; effects retain their order and dynamic multiplicity. | `SlangTargetLowering` produces `SlangFunctionBody`; `SlangEmitter` only formats it. |
 
@@ -292,7 +292,7 @@ fixing the generic absence representation is a separate step.
 `StablePointerRegionParameterPass` resolves supported stable pointer aliases but
 retains ordinary block parameters and arm arguments. `SlangTargetLowering`
 snapshots a selected arm's arguments before any destination-slot writes, uses
-typed captures for cross-label SSA values, and consumes `FunctionBody4.Control`
+typed captures for cross-label SSA values, and consumes `RegionFunctionBody.Control`
 to realize `Forward` and `Repeat` transfers. `SlangDoOnce` and `SlangLoop` are
 distinct target nodes; provenance cannot change execution semantics.
 
@@ -301,7 +301,7 @@ callers and composes the same pointer policy before ordinary parameter erasure.
 The target path does not use that erasure. The implementation is not the
 complete Beyond Relooper algorithm or a general irreducible-CFG policy.
 
-WGSL emission checks the original `FunctionBody4` for `NoExitPath` before
+WGSL emission checks the original `RegionFunctionBody` for `NoExitPath` before
 `FunctionToOperationPass`, pointer lowering, or target lowering. IR and Slang
 remain available, while ordinary finite-exit loops carrying `MayDiverge` remain
 supported by WGSL.

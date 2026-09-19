@@ -277,10 +277,10 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         return Emit(body);
     }
 
-    private static string Emit(FunctionBody4 body) =>
-        new SlangEmitter(new SlangTargetLowering().Lower(new ShaderModuleDeclaration<FunctionBody4>(
+    private static string Emit(RegionFunctionBody body) =>
+        new SlangEmitter(new SlangTargetLowering().Lower(new ShaderModuleDeclaration<RegionFunctionBody>(
             [body.Declaration],
-            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body))))
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(body.Declaration, body))))
         .Emit();
 
     private void WriteActualCompilerOutput(
