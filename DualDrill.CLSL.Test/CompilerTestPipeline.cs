@@ -13,6 +13,7 @@ internal static class CompilerTestPipeline
         ShaderModuleDeclaration<PreCilFunctionBody> Pre,
         ShaderModuleDeclaration<MethodBodyAnalysisModel> ControlFlow,
         ShaderModuleDeclaration<CilValueControlFlowBody> ValueControlFlow,
+        ShaderModuleDeclaration<CilValueControlFactsBody> ControlFacts,
         ShaderModuleDeclaration<FunctionBody4> Compiled);
 
     public static Stages CompileStages(
@@ -23,8 +24,9 @@ internal static class CompilerTestPipeline
         var pre = CilPreStackPass.Run(raw);
         var controlFlow = CilControlFlowPass.Run(pre);
         var valueControlFlow = CilStackToValuePass.Run(controlFlow);
-        var compiled = CilRegionPass.Run(valueControlFlow);
-        return new Stages(raw, pre, controlFlow, valueControlFlow, compiled);
+        var controlFacts = CilBlockControlFactsPass.Run(valueControlFlow);
+        var compiled = CilRegionPass.Run(controlFacts);
+        return new Stages(raw, pre, controlFlow, valueControlFlow, controlFacts, compiled);
     }
 
     public static ShaderModuleDeclaration<RawCilFunctionBody> ParseRaw(
@@ -58,6 +60,17 @@ internal static class CompilerTestPipeline
                         CilPreStackPass.Run(ParseRaw(method, context))))
                 .FunctionDefinitions.Values,
             body => body.Source.Environment.Method == method);
+
+    public static CilValueControlFactsBody ControlFacts(
+        MethodBase method,
+        CompilationContext? context = null) =>
+        Assert.Single(
+            CilBlockControlFactsPass.Run(
+                    CilStackToValuePass.Run(
+                        CilControlFlowPass.Run(
+                            CilPreStackPass.Run(ParseRaw(method, context)))))
+                .FunctionDefinitions.Values,
+            body => body.Source.Source.Environment.Method == method);
 
     public static FunctionBody4 CompileBody(
         MethodBase method,

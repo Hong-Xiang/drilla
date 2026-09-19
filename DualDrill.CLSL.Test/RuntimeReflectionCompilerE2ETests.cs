@@ -280,10 +280,9 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
             labels,
             label => controlFlowGraph.GetSucc(label).Count() == 2);
         var branchTargets = controlFlowGraph.GetSucc(conditional).ToArray();
-        var valueBody = Assert.Single(
-            stages.ValueControlFlow.FunctionDefinitions.Values,
-            body => body.Source.Environment.Method == method);
-        var postDominators = valueBody.Graph.ControlFlowAnalysis().PostDominatorTree;
+        var factsBody = Assert.Single(
+            stages.ControlFacts.FunctionDefinitions.Values,
+            body => body.Source.Source.Environment.Method == method);
 
         switch (configuration)
         {
@@ -303,10 +302,14 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
                                 sharedReturn,
                                 Assert.IsType<UnconditionalSuccessor>(
                                     controlFlowGraph.Successor(target)).Target);
-                            Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(target));
+                            Assert.Equal(
+                                sharedReturn,
+                                factsBody.Graph[target].Annotation.ImmediatePostDominator);
                         });
-                    Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(conditional));
-                    Assert.Null(postDominators.ImmediatePostDominator(sharedReturn));
+                    Assert.Equal(
+                        sharedReturn,
+                        factsBody.Graph[conditional].Annotation.ImmediatePostDominator);
+                    Assert.Null(factsBody.Graph[sharedReturn].Annotation.ImmediatePostDominator);
                     break;
                 }
             case "Release":
@@ -318,10 +321,10 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 
                     Assert.Equal(2, terminalReturns.Length);
                     Assert.Equal(2, branchTargets.Intersect(terminalReturns).Count());
-                    Assert.Null(postDominators.ImmediatePostDominator(conditional));
+                    Assert.Null(factsBody.Graph[conditional].Annotation.ImmediatePostDominator);
                     Assert.All(
                         terminalReturns,
-                        terminal => Assert.Null(postDominators.ImmediatePostDominator(terminal)));
+                        terminal => Assert.Null(factsBody.Graph[terminal].Annotation.ImmediatePostDominator));
                     break;
                 }
             default:

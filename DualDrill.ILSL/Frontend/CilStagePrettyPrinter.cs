@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -24,33 +25,25 @@ internal static class CilStagePrettyPrinter
         var context = body.DeclarationContext;
         writer.WriteLine("flat-value-cfg");
         foreach (var label in graph.Labels())
-        {
-            var block = graph[label];
-            label.Dump(context, writer);
-            writer.Write(" parameters=[");
-            WriteValues(block.Parameters, context, writer);
-            writer.WriteLine("]");
-            using (writer.IndentedScope())
-            {
-                foreach (var instruction in block.Body.Elements)
-                {
-                    if (instruction.Result is { } result)
-                    {
-                        result.Dump(context, writer);
-                        writer.Write(" = ");
-                    }
-
-                    writer.Write(instruction.Operation.Name);
-                    writer.Write("(");
-                    WriteValues(instruction.Operands, context, writer);
-                    writer.WriteLine(")");
-                }
-
-                writer.Write("control: ");
-                writer.WriteLine(block.Body.Last.Evaluate(new ValueTerminatorFormatter(context)));
-            }
-        }
+            PrintValueBlock(graph[label], context, writer);
     }
+
+    public static Action<CilValueBasicBlock, BlockControlFacts, IndentedTextWriter, PrettyPrintOption>
+        CreateValueBlockControlFactsPrinter(ILocalDeclarationContext context) =>
+        (block, facts, writer, _) =>
+        {
+            PrintValueBlockHeader(block, context, writer);
+            writer.Write(" facts={rpo=");
+            writer.Write(Invariant(facts.ReversePostOrderIndex));
+            writer.Write(" idom=");
+            WriteOptionalLabel(facts.ImmediateDominator, context, writer);
+            writer.Write(" ipdom=");
+            WriteOptionalLabel(facts.ImmediatePostDominator, context, writer);
+            writer.Write(" loop-header=");
+            writer.Write(facts.IsLoopHeader ? "true" : "false");
+            writer.WriteLine("}");
+            PrintValueBlockBody(block, context, writer);
+        };
 
     public static void PrintRawLinearCode(
         LinearCode<CilInstructionInfo> code,
@@ -346,6 +339,64 @@ internal static class CilStagePrettyPrinter
         }
     }
 
+    private static void PrintValueBlock(
+        CilValueBasicBlock block,
+        ILocalDeclarationContext context,
+        IndentedTextWriter writer)
+    {
+        PrintValueBlockHeader(block, context, writer);
+        writer.WriteLine();
+        PrintValueBlockBody(block, context, writer);
+    }
+
+    private static void PrintValueBlockHeader(
+        CilValueBasicBlock block,
+        ILocalDeclarationContext context,
+        IndentedTextWriter writer)
+    {
+        block.Label.Dump(context, writer);
+        writer.Write(" parameters=[");
+        WriteValues(block.Parameters, context, writer);
+        writer.Write("]");
+    }
+
+    private static void PrintValueBlockBody(
+        CilValueBasicBlock block,
+        ILocalDeclarationContext context,
+        IndentedTextWriter writer)
+    {
+        using (writer.IndentedScope())
+        {
+            foreach (var instruction in block.Body.Elements)
+            {
+                if (instruction.Result is { } result)
+                {
+                    result.Dump(context, writer);
+                    writer.Write(" = ");
+                }
+
+                writer.Write(instruction.Operation.Name);
+                writer.Write("(");
+                WriteValues(instruction.Operands, context, writer);
+                writer.WriteLine(")");
+            }
+
+            writer.Write("control: ");
+            writer.WriteLine(block.Body.Last.Evaluate(new ValueTerminatorFormatter(context)));
+        }
+    }
+
+    private static void WriteOptionalLabel(
+        Label? label,
+        ILocalDeclarationContext context,
+        IndentedTextWriter writer)
+    {
+        if (label is null)
+            writer.Write("none");
+        else
+            label.Dump(context, writer);
+    }
+
     private static void WriteValue(
         IShaderValue value,
         ILocalDeclarationContext context,
@@ -354,8 +405,10 @@ internal static class CilStagePrettyPrinter
         switch (value)
         {
             case IntermediateValue:
-            case LiteralValue:
                 value.Dump(context, writer);
+                return;
+            case LiteralValue literal:
+                literal.Value.PrettyPrint(writer, PrettyPrintOption.Default);
                 return;
             case ParameterPointerValue parameter:
                 writer.Write("&arg(");

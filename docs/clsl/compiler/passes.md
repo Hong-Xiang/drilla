@@ -103,7 +103,7 @@ Pass-local scratch dictionaries and worklists are allowed. Published IR stage
 values remain immutable and printable. A pass explicitly preserves, drops or
 recomputes annotations; there is no automatic invalidation framework.
 
-### Separate Follow-Up: BB-Local Analysis Facts
+### Implemented BB-Local Analysis Facts
 
 Where a fact is about one BB, prefer a result shaped like
 `CFG<Annotated<TBasicBlock, TBlockFacts>>`. Immediate dominance, postdominance,
@@ -116,9 +116,16 @@ do not publish duplicate mutable copies of the same facts. A topology-changing
 pass may invalidate annotations on multiple BBs and can return a globally
 rebuilt immutable result. General incremental maintenance is not required.
 
-Implement this analysis-result reorganization as a separately reviewable slice
-after the parser/pass boundary, not as a new structurization algorithm hidden
-inside the collection change.
+This analysis-result reorganization is a separate control-facts pass after the
+parser/pass boundary. It reuses the existing algorithms and does not introduce a
+new structurization algorithm inside collection or region construction.
+
+The implemented `BlockControlFacts` fields have deliberately narrow meanings:
+`ReversePostOrderIndex` is the existing reachable DFS reverse-postorder number;
+`ImmediateDominator` and `ImmediatePostDominator` are stable original labels, or
+`null` when the existing computations produce no immediate relation; and
+`IsLoopHeader` is the existing dominance-backed predecessor test. These facts do
+not claim reducibility, forward merges, reconvergence, or general structurization.
 
 ## Implemented Public Path
 
@@ -129,7 +136,8 @@ inside the collection change.
 | `CilPreStackPass` | Raw CIL module -> `ShaderModuleDeclaration<PreCilFunctionBody>` | Reject unsupported EH, validate whole-source control, and propagate exact normalized stacks; successful per-function output contains only reachable original positions. |
 | `CilControlFlowPass` | Pre module -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>` | Construct only the reachable `ControlFlowGraph<CilInstructionBlock>`, retaining concrete native control and source annotations. |
 | `CilStackToValuePass` | CIL CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Validate concrete stacks and produce a flat `ControlFlowGraph<CilValueBasicBlock>` with values, ordered edge arguments and lowered terminators. |
-| `CilRegionPass` | Flat value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Compute `ControlFlowAnalysis` from the completed value CFG once, attach immediate-postdominator facts, and invoke the existing `RegionTree.Create`. |
+| `CilBlockControlFactsPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute the existing reverse-postorder, immediate-dominator, immediate-postdominator, and natural-loop-header results once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
+| `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
 | `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
 | `SlangEmitter` | `FunctionBody4` -> Slang text | Resolve supported lexical transfers, place code, and emit syntax. These responsibilities are not yet separate passes. |
@@ -154,8 +162,10 @@ linear stack instructions
 
 Shared instructions, terminators, sequences, labels, and region constructors
 serve multiple stages. Parsing, Pre analysis, reachable CFG construction, flat
-value lifting, and region construction now have distinct typed producer/consumer
-boundaries. The emitter still performs work intended for region-to-AST lowering.
+value lifting, BB-local control facts, and region construction now have distinct
+typed producer/consumer boundaries. A topology-changing pass must rerun
+`CilBlockControlFactsPass`; there is no incremental cache or invalidation manager.
+The emitter still performs work intended for region-to-AST lowering.
 
 The agreed [linear CIL design](linear-cil.md) refines the frontend ordering:
 preserve native predicates and original offsets, analyze Pre stack types on

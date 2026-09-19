@@ -55,7 +55,8 @@ public sealed class CilModulePipelineTests
         var pre = CilPreStackPass.Run(rawModule);
         var controlFlow = CilControlFlowPass.Run(pre);
         var values = CilStackToValuePass.Run(controlFlow);
-        _ = CilRegionPass.Run(values);
+        var facts = CilBlockControlFactsPass.Run(values);
+        _ = CilRegionPass.Run(facts);
 
         Assert.Equal(instructions, rawBody.Code.Instructions);
         Assert.Equal(declarations, rawModule.Declarations);
@@ -211,11 +212,21 @@ public sealed class CilModulePipelineTests
         var pre = CilPreStackPass.Run(raw);
         var controlFlow = CilControlFlowPass.Run(pre);
         var values = CilStackToValuePass.Run(controlFlow);
+        var facts = CilBlockControlFactsPass.Run(values);
 
         Assert.Contains("linear-cil raw", Format(raw));
         Assert.Contains("linear-cil pre-annotated reachable", Format(pre));
         Assert.Contains("reachable-cil-cfg", Format(controlFlow));
         Assert.Contains("flat-value-cfg", Format(values));
+        Assert.Contains("control-facts-cfg", Format(facts));
+        Assert.Contains(" facts={rpo=", Format(facts));
+    }
+
+    [Fact]
+    public void LiteralBearingValueAndFactsStagesPrettyPrintThroughActualPipeline()
+    {
+        AssertLiteralStagePrinting(GetMethod(nameof(Nested)), ["0_i32", "1_i32", "5_i32", "7_i32"]);
+        AssertLiteralStagePrinting(GetMethod(nameof(Return42)), ["42_i32"]);
     }
 
     [Fact]
@@ -239,8 +250,42 @@ public sealed class CilModulePipelineTests
         return formatter.Dump();
     }
 
+    private static void AssertLiteralStagePrinting(MethodInfo method, string[] expectedLiterals)
+    {
+        var valueModule = CilStackToValuePass.Run(
+            CilControlFlowPass.Run(
+                CilPreStackPass.Run(
+                    CompilerTestPipeline.ParseRaw(method))));
+        var valueBody = Assert.Single(valueModule.FunctionDefinitions.Values);
+        var factsBody = Assert.Single(
+            CilBlockControlFactsPass.Run(valueModule).FunctionDefinitions.Values);
+        var valueText = valueBody.PrettyPrint();
+        var factsText = factsBody.PrettyPrint();
+
+        foreach (var literal in expectedLiterals)
+        {
+            Assert.Contains(literal, valueText);
+            Assert.Contains(literal, factsText);
+        }
+    }
+
     private static int Identity(int value) => value;
     private static int Increment(int value) => value + 1;
+    private static int Return42() => 42;
+
+    private static int Nested(int outer, int inner)
+    {
+        var sum = 0;
+        for (var i = 0; i < outer; i++)
+        {
+            for (var j = 0; j < inner; j++)
+                sum += 7;
+            sum += 5;
+        }
+
+        return sum;
+    }
+
     private static int AcceptBrokenAttributedStruct(BrokenAttributedStruct value) => 1;
     private static unsafe int FunctionPointerSignature(delegate*<FunctionPointerPayload, int> callback) => 1;
 

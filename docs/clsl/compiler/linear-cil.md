@@ -16,8 +16,10 @@ condition/return generic parameters of `ITerminatorSemantic`.
 
 The current implementation decodes and retains the complete linear source,
 computes reachable pre-instruction stack types, constructs the reachable
-basic-block CFG, lifts it to a flat value CFG, then runs existing control-flow
-analysis and region organization. Target AST separation remains later work.
+basic-block CFG, and lifts it to a flat value CFG. A dedicated pass publishes
+existing control-flow results as BB-local annotations; region organization
+consumes those annotations without reanalysis. Target AST separation remains
+later work.
 
 ### Implemented Frontend Boundary
 
@@ -195,7 +197,7 @@ shims:
 | `RuntimeReflectionParser.ParseMethod(...) -> FunctionDeclaration` | `ParseMethod(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
 | `RuntimeReflectionParser.ParseShaderModule(...) -> ShaderModuleDeclaration<FunctionBody4>` | `ParseShaderModule(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
 | `CLSLCompiler.Parse(...) -> ShaderModuleDeclaration<FunctionBody4>` | `Parse(...)` for raw CIL; `Compile(...)` for `FunctionBody4` |
-| `parser.MethodBodies` / `ParseMethodBody3` | `CilPreStackPass` -> `CilControlFlowPass` -> `CilStackToValuePass` -> `CilRegionPass` |
+| `parser.MethodBodies` / `ParseMethodBody3` | `CilPreStackPass` -> `CilControlFlowPass` -> `CilStackToValuePass` -> `CilBlockControlFactsPass` -> `CilRegionPass` |
 | `model.ControlFlowGraph` | `model.ControlFlow` |
 | `MethodBodyAnalysisModel.CilInstructionBlock` | `CilInstructionBlock` in `DualDrill.CLSL.Frontend` |
 | `block.Instructions[i]` as a bare CIL instruction | `block.Instructions[i].Node`, with `.Annotation` holding its `PreStack` |
@@ -210,9 +212,11 @@ into the raw module, and later passes consume only that returned module.
 Every `Annotated<TNode, TAnnotation>` carries a readonly typed printer chosen by
 its producer and implements `IPrintable` directly. Equality and hashing compare
 only `Node` and `Annotation`; presentation is not analysis identity. Instruction
-annotations print the instruction and its entry stack together. The reachable CIL CFG and flat value CFG each have their own fixed readable
-format. `ControlFlowAnalysis` is computed after flat value lifting and consumed
-directly by `CilRegionPass`.
+annotations print the instruction and its entry stack together. The reachable
+CIL CFG, flat value CFG and BB-annotated value CFG have fixed readable formats.
+`CilBlockControlFactsPass` computes the existing analysis internally and attaches
+only each block's RPO, IDom, IPDom and loop-header facts. `CilRegionPass` reads
+those annotations; it neither queries a separate analysis object nor reruns it.
 Type-changing annotation maps must supply a printer for the output types; the
 identity and composition laws concern mapped `Node` and `Annotation` data, not
 reuse of an incompatible presentation function.

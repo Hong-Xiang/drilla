@@ -131,26 +131,34 @@ public static class CilStackToValuePass
     }
 }
 
+public static class CilBlockControlFactsPass
+{
+    public static ShaderModuleDeclaration<CilValueControlFactsBody> Run(
+        ShaderModuleDeclaration<CilValueControlFlowBody> module) =>
+        module.MapBody(static (_, _, body) =>
+            new CilValueControlFactsBody(
+                body,
+                ControlFlowFacts.Annotate(
+                    body.Graph,
+                    CilStagePrettyPrinter.CreateValueBlockControlFactsPrinter(
+                        body.DeclarationContext))));
+}
+
 public static class CilRegionPass
 {
     public static ShaderModuleDeclaration<FunctionBody4> Run(
-        ShaderModuleDeclaration<CilValueControlFlowBody> module) =>
+        ShaderModuleDeclaration<CilValueControlFactsBody> module) =>
         module.MapBody(static (_, declaration, body) =>
-        {
-            var analysis = body.Graph.ControlFlowAnalysis();
-            var blocks = body.Graph.Labels().Select(label =>
-            {
-                var block = body.Graph[label];
-                return (
-                    label,
-                    new ShaderRegionBody(
-                        label,
-                        block.Parameters,
-                        block.Body,
-                        analysis.PostDominatorTree.ImmediatePostDominator(label)));
-            });
-            return new FunctionBody4(declaration, RegionTree.Create(analysis, blocks));
-        });
+            new FunctionBody4(
+                declaration,
+                RegionTree.Create(
+                    body.Graph,
+                    static (label, block, facts) =>
+                        new ShaderRegionBody(
+                            label,
+                            block.Parameters,
+                            block.Body,
+                            facts.ImmediatePostDominator))));
 }
 
 public static class CilModuleCompiler
@@ -158,7 +166,8 @@ public static class CilModuleCompiler
     public static ShaderModuleDeclaration<FunctionBody4> Compile(
         ShaderModuleDeclaration<RawCilFunctionBody> module) =>
         CilRegionPass.Run(
-            CilStackToValuePass.Run(
-                CilControlFlowPass.Run(
-                    CilPreStackPass.Run(module))));
+            CilBlockControlFactsPass.Run(
+                CilStackToValuePass.Run(
+                    CilControlFlowPass.Run(
+                        CilPreStackPass.Run(module)))));
 }
