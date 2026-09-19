@@ -14,6 +14,7 @@ using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
+using static DualDrill.CLSL.Test.RegionFixture;
 
 namespace DualDrill.CLSL.Test;
 
@@ -202,22 +203,18 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         var declaration = new FunctionDeclaration("SharedNormalTransfer", [],
             new FunctionReturn(ShaderType.Unit, []), []);
         var outerBody = Body(
-            outer,
-            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])),
-            ExitPostDominance.NoExitPath.Instance);
-        var innerBody = Body(inner,
+            outer, [], [],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])));
+        var innerBody = Body(inner, [], [],
             Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
-                condition, new RegionJump<IShaderValue>(left, []), new RegionJump<IShaderValue>(right, [])),
-            ExitPostDominance.NoExitPath.Instance);
+                condition, new RegionJump<IShaderValue>(left, []), new RegionJump<IShaderValue>(right, [])));
         var leftBody = Body(
-            left,
-            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])),
-            ExitPostDominance.NoExitPath.Instance);
+            left, [], [],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])));
         var rightBody = Body(
-            right,
-            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])),
-            ExitPostDominance.NoExitPath.Instance);
-        var body = new FunctionBody4(declaration,
+            right, [], [],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(outer, [])));
+        var body = CreateFunctionBody(declaration,
             RegionTree.Loop(outer,
             [
                 RegionTree.Loop(inner,
@@ -244,23 +241,19 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         var declaration = new FunctionDeclaration("MultipleNormalTargets", [],
             new FunctionReturn(ShaderType.Unit, []), []);
         var outerBody = Body(
-            outer,
-            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])),
-            new ExitPostDominance.Block(inner, true));
-        var innerBody = Body(inner,
+            outer, [], [],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(inner, [])));
+        var innerBody = Body(inner, [], [],
             Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
-                condition, new RegionJump<IShaderValue>(outer, []), new RegionJump<IShaderValue>(exit, [])),
-            new ExitPostDominance.Block(exit, true));
+                condition, new RegionJump<IShaderValue>(outer, []), new RegionJump<IShaderValue>(exit, [])));
         var exitBody =
             Body(
-                exit,
-                Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(terminal, [])),
-                new ExitPostDominance.Block(terminal, false));
+                exit, [], [],
+                Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(terminal, [])));
         var terminalBody = Body(
-            terminal,
-            Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>(),
-            new ExitPostDominance.FunctionExit(false));
-        var body = new FunctionBody4(declaration,
+            terminal, [], [],
+            Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>());
+        var body = CreateFunctionBody(declaration,
             RegionTree.Loop(outer,
             [
                 RegionTree.Block(terminal, [], terminalBody, null),
@@ -275,12 +268,6 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         Assert.Contains("break;", source);
         await new SlangService().ValidateAsync(source);
     }
-
-    private static ShaderRegionBody Body(
-        Label label,
-        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
-        ExitPostDominance postDominance) =>
-        ShaderRegionBody.Create(label, [], [], terminator, postDominance);
 
     private static string Emit(MethodInfo method)
     {

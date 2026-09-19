@@ -19,6 +19,7 @@ using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
+using static DualDrill.CLSL.Test.RegionFixture;
 using static DualDrill.CLSL.Test.ScopedContinuationOracle;
 
 namespace DualDrill.CLSL.Test;
@@ -1333,49 +1334,6 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         new(name, [], new FunctionReturn(returnType, []), []);
 
     private static IShaderValue Int(int value) => ShaderValue.Literal(new I32Literal(value));
-
-    private sealed record BodySpec(
-        Label Label,
-        ImmutableArray<IShaderValue> Parameters,
-        ImmutableArray<Instruction<IShaderValue, IShaderValue>> Instructions,
-        ITerminator<RegionJump<IShaderValue>, IShaderValue> Terminator);
-
-    private static BodySpec Body(
-        Label label,
-        ImmutableArray<IShaderValue> parameters,
-        IEnumerable<Instruction<IShaderValue, IShaderValue>> instructions,
-        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
-        new(label, parameters, [.. instructions], terminator);
-
-    private static FunctionBody4 CreateFunctionBody(
-        FunctionDeclaration declaration,
-        RegionTree<Label, BodySpec> region)
-    {
-        var blocks = new Dictionary<Label, BodySpec>();
-        region.Traverse((_, label, body) =>
-        {
-            blocks.Add(label, body);
-            return false;
-        });
-        var graph = new ControlFlowGraph<BodySpec>(
-            region.Label,
-            blocks.ToDictionary(
-                item => item.Key,
-                item => new ControlFlowGraph<BodySpec>.NodeDefinition(
-                    item.Value.Terminator.ToSuccessor(),
-                    item.Value)));
-        var postDominance = graph.ControlFlowAnalysis().PostDominatorTree;
-        return new FunctionBody4(
-            declaration,
-            region.Select(
-                static label => label,
-                body => ShaderRegionBody.Create(
-                    body.Label,
-                    body.Parameters,
-                    body.Instructions,
-                    body.Terminator,
-                    postDominance.ExitPostDominance(body.Label))));
-    }
 
     private static IEnumerable<SlangStatement> Statements(SlangBlock block)
     {
