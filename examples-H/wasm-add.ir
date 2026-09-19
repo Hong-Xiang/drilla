@@ -1,5 +1,8 @@
 %0 : ptr<i32, Function> = $0(a)
 %1 : ptr<i32, Function> = $1(b)
+scoped control:
+    scope ^0(entry): []
+
 block ^0(entry):
 
     |=> exit

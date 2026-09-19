@@ -50,6 +50,203 @@ internal static class ScalarControlFlowOracle
         }
     }
 
+    internal abstract record Control
+    {
+        private Control() { }
+        internal sealed record Returned(Value Value) : Control;
+        internal sealed record Transfer(RegionJump<IShaderValue> Jump) : Control;
+    }
+
+    internal sealed class Machine
+    {
+        private readonly string context;
+        private readonly Budget budget;
+        private readonly Func<Value, Value> normalizeResult;
+        private readonly Dictionary<IShaderValue, Value> values =
+            new(ReferenceEqualityComparer.Instance);
+        private readonly Dictionary<IShaderValue, Value> memory;
+        private readonly ImmutableArray<Label>.Builder trace = ImmutableArray.CreateBuilder<Label>();
+
+        internal Machine(FunctionBody4 body, ImmutableArray<Value> arguments, string kind, int stepLimit)
+            : this(body.Declaration, arguments, [], false, kind, stepLimit)
+        {
+        }
+
+        private Machine(
+            FunctionDeclaration declaration,
+            ImmutableArray<Value> arguments,
+            ImmutableArray<VariableDeclaration> locals,
+            bool initLocals,
+            string kind,
+            int stepLimit)
+        {
+            context = $"{kind} {declaration.Name}";
+            if (!IsScalar(declaration.ReturnType) || declaration.Parameters.Any(p => !IsScalar(p.Type)))
+                throw new NotSupportedException($"{context}: unsupported scalar function signature.");
+            if (arguments.Length != declaration.Parameters.Length)
+                throw new InvalidOperationException($"{context}: incorrect argument count.");
+
+            budget = new Budget(context, stepLimit);
+            normalizeResult = result => Convert(result, declaration.ReturnType);
+            memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
+            foreach (var (parameter, argument) in declaration.Parameters.Zip(arguments))
+                Write(memory, parameter.Value, argument, parameter.Type);
+            if (initLocals)
+                foreach (var local in locals)
+                    memory.Add(local.Value, Zero(local.Type, context));
+        }
+
+        private Machine(
+            string context,
+            Dictionary<IShaderValue, Value> memory,
+            Func<Value, Value> normalizeResult,
+            int stepLimit)
+        {
+            this.context = context;
+            budget = new Budget(context, stepLimit);
+            this.memory = memory;
+            this.normalizeResult = normalizeResult;
+        }
+
+        internal static Machine ForFlatCfg(
+            ImmutableArray<VariableDeclaration> locals,
+            bool initLocals,
+            int stepLimit)
+        {
+            var memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
+            if (initLocals)
+                foreach (var local in locals)
+                    memory.Add(local.Value, Zero(local.Type, "Flat CFG"));
+            return new Machine("Flat CFG", memory, result => result, stepLimit);
+        }
+
+        internal static Machine ForValueCfg(
+            FunctionDeclaration declaration,
+            ImmutableArray<Value> arguments,
+            ImmutableArray<VariableDeclaration> locals,
+            bool initLocals,
+            string kind,
+            int stepLimit) =>
+            new(declaration, arguments, locals, initLocals, kind, stepLimit);
+
+        internal Control Execute(Label label, ShaderRegionBody block)
+            => Execute(label, block.Body);
+
+        internal Control Execute(Label label, CilValueBasicBlock block)
+            => Execute(label, block.Body);
+
+        private Control Execute(
+            Label label,
+            Seq<Instruction<IShaderValue, IShaderValue>,
+                ITerminator<RegionJump<IShaderValue>, IShaderValue>> body)
+        {
+            budget.Step(label.ToString());
+            trace.Add(label);
+            foreach (var instruction in body.Elements)
+            {
+                budget.Step($"{label}: {instruction.Operation.Name}");
+                Value result;
+                switch (instruction.Operation)
+                {
+                    case NopOperation:
+                        continue;
+                    case StoreOperation:
+                        if (Read(instruction.Operand0) is not Value.Address store)
+                            throw new NotSupportedException($"{context}, {label}: store needs a stable address.");
+                        if (store.Storage.Type is not IPtrType pointer)
+                            throw new NotSupportedException($"{context}, {label}: unsupported store type.");
+                        Write(memory, store.Storage, Read(instruction.Operand1), pointer.BaseType);
+                        continue;
+                    case LoadOperation:
+                        if (Read(instruction.Operand0) is not Value.Address load ||
+                            !memory.TryGetValue(load.Storage, out var loaded))
+                            throw new InvalidOperationException($"{context}, {label}: uninitialized or unsupported load.");
+                        result = loaded;
+                        break;
+                    case LiteralOperation:
+                        result = Read(instruction.Operand0);
+                        break;
+                    case IBinaryExpressionOperation binary:
+                        var left = Read(instruction.Operand0);
+                        var right = Read(instruction.Operand1);
+                        if (!HasType(left, binary.LeftType) || !HasType(right, binary.RightType))
+                            throw new NotSupportedException($"{context}, {label}: invalid binary operand types.");
+                        result = Binary(binary.BinaryOp, left, right);
+                        break;
+                    case IConversionOperation conversion:
+                        var source = Read(instruction.Operand0);
+                        if (!IsScalar(conversion.SourceType) || !HasType(source, conversion.SourceType))
+                            throw new NotSupportedException($"{context}, {label}: unsupported conversion {conversion.Name}.");
+                        result = Convert(source, conversion.ResultType);
+                        break;
+                    case LogicalNotOperation:
+                        result = new Value.Boolean(!Read(instruction.Operand0).Bool);
+                        break;
+                    default:
+                        throw new NotSupportedException(
+                            $"{context}, {label}: unsupported operation {instruction.Operation.Name}.");
+                }
+                var destination = instruction.Result ??
+                    throw new InvalidOperationException($"{context}, {label}: missing instruction result.");
+                Write(values, destination, result, destination.Type);
+            }
+
+            budget.Step($"{label}: terminator");
+            return body.Last switch
+            {
+                Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
+                    new Control.Returned(Read(returned.Expr)),
+                Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    new Control.Transfer(branch.Target),
+                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    new Control.Transfer(Read(branch.Condition).Bool ? branch.TrueTarget : branch.FalseTarget),
+                _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {body.Last}.")
+            };
+        }
+
+        internal ImmutableArray<Value> ReadArguments(RegionJump<IShaderValue> jump) =>
+            [.. jump.Arguments.Select(Read)];
+
+        internal void Bind(ShaderRegionBody target, ImmutableArray<Value> incoming)
+            => Bind(target.Label, target.Parameters, incoming);
+
+        internal void Bind(CilValueBasicBlock target, ImmutableArray<Value> incoming)
+            => Bind(target.Label, target.Parameters, incoming);
+
+        private void Bind(
+            Label label,
+            ImmutableArray<IShaderValue> parameters,
+            ImmutableArray<Value> incoming)
+        {
+            if (parameters.Length != incoming.Length)
+                throw new InvalidOperationException($"{context}: invalid edge to {label} arity.");
+            foreach (var (parameter, argument) in parameters.Zip(incoming))
+                Write(values, parameter, argument, parameter.Type);
+        }
+
+        internal Execution Complete(Value result) =>
+            new(normalizeResult(result), trace.ToImmutable());
+
+        private Value Read(IShaderValue? value) => value switch
+        {
+            LiteralValue { Value: I32Literal i } => new Value.Integer(i.Value),
+            LiteralValue { Value: U32Literal i } => new Value.UnsignedInteger(i.Value),
+            LiteralValue { Value: F32Literal f } => new Value.Float32(f.Value),
+            LiteralValue { Value: F64Literal f } => new Value.Float64(f.Value),
+            LiteralValue { Value: BoolLiteral b } => new Value.Boolean(b.Value),
+            ParameterPointerValue or VariablePointerValue => new Value.Address(value),
+            not null when values.TryGetValue(value, out var result) => result,
+            _ => throw new NotSupportedException($"{context}: unsupported or undefined value {value}.")
+        };
+
+        private void Write(Dictionary<IShaderValue, Value> target, IShaderValue key, Value value, IShaderType type)
+        {
+            if (!HasType(value, type))
+                throw new NotSupportedException($"{context}: expected {type.Name}, got {value}.");
+            target[key] = value;
+        }
+    }
+
     internal static Value Convert(Value value, IShaderType type) => (value, type) switch
     {
         (Value.Integer, BoolType) => new Value.Boolean(value.Int != 0),
@@ -124,15 +321,25 @@ internal static class ScalarControlFlowOracle
     }
 
     internal static Execution RunCfg(FunctionBody4 body, ImmutableArray<Value> arguments, int stepLimit = 10000)
-        => Run(
-            body.Declaration,
-            body.Entry,
-            label => body[label].Parameters,
-            label => body[label].Body.Elements,
-            label => body[label].Body.Last,
-            arguments,
-            stepLimit,
-            "CFG");
+    {
+        var machine = new Machine(body, arguments, "CFG", stepLimit);
+        var label = body.Entry;
+        while (true)
+        {
+            var block = body[label];
+            switch (machine.Execute(label, block))
+            {
+                case Control.Returned returned:
+                    return machine.Complete(returned.Value);
+                case Control.Transfer transfer:
+                    var incoming = machine.ReadArguments(transfer.Jump);
+                    var target = body[transfer.Jump.Label];
+                    machine.Bind(target, incoming);
+                    label = transfer.Jump.Label;
+                    break;
+            }
+        }
+    }
 
     internal static Execution RunValueCfg(
         CilValueControlFlowBody body,
@@ -143,75 +350,63 @@ internal static class ScalarControlFlowOracle
         var methodBody = raw.Code.Environment.Body
                          ?? throw new InvalidOperationException(
                              $"Value CFG {raw.Code.Environment.Method} has no MethodBody metadata.");
-        return Run(
+        var machine = Machine.ForValueCfg(
             body.Declaration,
-            body.Graph.EntryLabel,
-            label => body.Graph[label].Parameters,
-            label => body.Graph[label].Body.Elements,
-            label => body.Graph[label].Body.Last,
             arguments,
-            stepLimit,
-            "value CFG",
             raw.DeclarationContext.LocalVariables,
-            methodBody.InitLocals);
+            methodBody.InitLocals,
+            "value CFG",
+            stepLimit);
+        var label = body.Graph.EntryLabel;
+        while (true)
+        {
+            var block = body.Graph[label];
+            switch (machine.Execute(label, block))
+            {
+                case Control.Returned returned:
+                    return machine.Complete(returned.Value);
+                case Control.Transfer transfer:
+                    var incoming = machine.ReadArguments(transfer.Jump);
+                    var target = body.Graph[transfer.Jump.Label];
+                    machine.Bind(target, incoming);
+                    label = transfer.Jump.Label;
+                    break;
+            }
+        }
     }
 
     internal static Execution RunFactsCfg(
         CilValueControlFactsBody body,
         ImmutableArray<Value> arguments,
-        int stepLimit = 10000) =>
-        Run(
-            body.Declaration,
-            body.Graph.EntryLabel,
-            label => body.Graph[label].Node.Parameters,
-            label => body.Graph[label].Node.Body.Elements,
-            label => body.Graph[label].Node.Body.Last,
-            arguments,
-            stepLimit,
-            "control-facts CFG",
-            body.DeclarationContext.LocalVariables,
-            body.Source.Source.Source.Source.Raw.Code.Environment.Body?.InitLocals
-            ?? throw new InvalidOperationException(
-                $"Control-facts CFG {body.Source.Source.Source.Source.Raw.Code.Environment.Method} " +
-                "has no MethodBody metadata."));
-
-    private static Execution Run(
-        FunctionDeclaration declaration,
-        Label entry,
-        Func<Label, ImmutableArray<IShaderValue>> parametersAt,
-        Func<Label, IEnumerable<Instruction<IShaderValue, IShaderValue>>> instructionsAt,
-        Func<Label, ITerminator<RegionJump<IShaderValue>, IShaderValue>> terminatorAt,
-        ImmutableArray<Value> arguments,
-        int stepLimit,
-        string stage,
-        ImmutableArray<VariableDeclaration> locals = default,
-        bool initLocals = false)
+        int stepLimit = 10000)
     {
-        var context = $"{stage} {declaration.Name}";
-        if (!IsScalar(declaration.ReturnType) || declaration.Parameters.Any(p => !IsScalar(p.Type)))
-            throw new NotSupportedException($"{context}: unsupported scalar function signature.");
-        if (arguments.Length != declaration.Parameters.Length)
-            throw new InvalidOperationException($"{context}: incorrect argument count.");
-        var memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
-        foreach (var (parameter, argument) in declaration.Parameters.Zip(arguments))
-        {
-            if (!HasType(argument, parameter.Type))
-                throw new NotSupportedException($"{context}: expected {parameter.Type.Name}, got {argument}.");
-            memory.Add(parameter.Value, argument);
-        }
-        if (initLocals)
-            foreach (var local in locals)
-                memory.Add(local.Value, Zero(local.Type, context));
-
-        return Execute(
-            context,
-            entry,
-            label => new ScalarBlock(
-                parametersAt(label),
-                Seq.Create(instructionsAt(label), terminatorAt(label))),
-            memory,
-            declaration.ReturnType,
+        var raw = body.Source.Source.Source.Source.Raw;
+        var methodBody = raw.Code.Environment.Body
+                         ?? throw new InvalidOperationException(
+                             $"Control-facts CFG {raw.Code.Environment.Method} has no MethodBody metadata.");
+        var machine = Machine.ForValueCfg(
+            body.Declaration,
+            arguments,
+            raw.DeclarationContext.LocalVariables,
+            methodBody.InitLocals,
+            "control-facts CFG",
             stepLimit);
+        var label = body.Graph.EntryLabel;
+        while (true)
+        {
+            var block = body.Graph[label].Node;
+            switch (machine.Execute(label, block))
+            {
+                case Control.Returned returned:
+                    return machine.Complete(returned.Value);
+                case Control.Transfer transfer:
+                    var incoming = machine.ReadArguments(transfer.Jump);
+                    var target = body.Graph[transfer.Jump.Label].Node;
+                    machine.Bind(target, incoming);
+                    label = transfer.Jump.Label;
+                    break;
+            }
+        }
     }
 
     internal static Execution RunCfg(
@@ -220,22 +415,23 @@ internal static class ScalarControlFlowOracle
         bool initLocals,
         int stepLimit = 10000)
     {
-        var memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
-        if (initLocals)
-            foreach (var local in locals)
-                memory.Add(local.Value, Zero(local.Type, "Flat CFG"));
-
-        return Execute(
-            "Flat CFG",
-            graph.EntryLabel,
-            label =>
+        var machine = Machine.ForFlatCfg(locals, initLocals, stepLimit);
+        var label = graph.EntryLabel;
+        while (true)
+        {
+            var block = graph[label];
+            switch (machine.Execute(label, block))
             {
-                var block = graph[label];
-                return new ScalarBlock(block.Parameters, block.Body);
-            },
-            memory,
-            null,
-            stepLimit);
+                case Control.Returned returned:
+                    return machine.Complete(returned.Value);
+                case Control.Transfer transfer:
+                    var incoming = machine.ReadArguments(transfer.Jump);
+                    var target = graph[transfer.Jump.Label];
+                    machine.Bind(target, incoming);
+                    label = transfer.Jump.Label;
+                    break;
+            }
+        }
     }
 
     private static Value Zero(IShaderType type, string context) => type switch
@@ -248,121 +444,6 @@ internal static class ScalarControlFlowOracle
         _ => throw new NotSupportedException(
             $"{context}: unsupported initialized local type {type.Name}.")
     };
-
-    private static Execution Execute(
-        string context,
-        Label entry,
-        Func<Label, ScalarBlock> getBlock,
-        IReadOnlyDictionary<IShaderValue, Value> initialMemory,
-        IShaderType? declaredReturnType,
-        int stepLimit)
-    {
-        var budget = new Budget(context, stepLimit);
-        var values = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
-        var memory = new Dictionary<IShaderValue, Value>(initialMemory, ReferenceEqualityComparer.Instance);
-        var trace = ImmutableArray.CreateBuilder<Label>();
-
-        Value Read(IShaderValue? value) => value switch
-        {
-            LiteralValue { Value: I32Literal i } => new Value.Integer(i.Value),
-            LiteralValue { Value: U32Literal i } => new Value.UnsignedInteger(i.Value),
-            LiteralValue { Value: F32Literal f } => new Value.Float32(f.Value),
-            LiteralValue { Value: F64Literal f } => new Value.Float64(f.Value),
-            LiteralValue { Value: BoolLiteral b } => new Value.Boolean(b.Value),
-            ParameterPointerValue or VariablePointerValue => new Value.Address(value),
-            not null when values.TryGetValue(value, out var result) => result,
-            _ => throw new NotSupportedException($"{context}: unsupported or undefined value {value}.")
-        };
-
-        void Write(Dictionary<IShaderValue, Value> target, IShaderValue key, Value value, IShaderType type)
-        {
-            if (!HasType(value, type))
-                throw new NotSupportedException($"{context}: expected {type.Name}, got {value}.");
-            target[key] = value;
-        }
-
-        var label = entry;
-        while (true)
-        {
-            budget.Step(label.ToString());
-            trace.Add(label);
-            var block = getBlock(label);
-            foreach (var instruction in block.Body.Elements)
-            {
-                budget.Step($"{label}: {instruction.Operation.Name}");
-                Value result;
-                switch (instruction.Operation)
-                {
-                    case NopOperation:
-                        continue;
-                    case StoreOperation:
-                        if (Read(instruction.Operand0) is not Value.Address store)
-                            throw new NotSupportedException($"{context}, {label}: store needs a stable address.");
-                        if (store.Storage.Type is not IPtrType pointer)
-                            throw new NotSupportedException($"{context}, {label}: unsupported store type.");
-                        Write(memory, store.Storage, Read(instruction.Operand1), pointer.BaseType);
-                        continue;
-                    case LoadOperation:
-                        if (Read(instruction.Operand0) is not Value.Address load ||
-                            !memory.TryGetValue(load.Storage, out var loaded))
-                            throw new InvalidOperationException($"{context}, {label}: uninitialized or unsupported load.");
-                        result = loaded;
-                        break;
-                    case LiteralOperation:
-                        result = Read(instruction.Operand0);
-                        break;
-                    case IBinaryExpressionOperation binary:
-                        var left = Read(instruction.Operand0);
-                        var right = Read(instruction.Operand1);
-                        if (!HasType(left, binary.LeftType) || !HasType(right, binary.RightType))
-                            throw new NotSupportedException($"{context}, {label}: invalid binary operand types.");
-                        result = Binary(binary.BinaryOp, left, right);
-                        break;
-                    case IConversionOperation conversion:
-                        var source = Read(instruction.Operand0);
-                        if (!IsScalar(conversion.SourceType) || !HasType(source, conversion.SourceType))
-                            throw new NotSupportedException($"{context}, {label}: unsupported conversion {conversion.Name}.");
-                        result = Convert(source, conversion.ResultType);
-                        break;
-                    case LogicalNotOperation:
-                        result = new Value.Boolean(!Read(instruction.Operand0).Bool);
-                        break;
-                    default:
-                        throw new NotSupportedException(
-                            $"{context}, {label}: unsupported operation {instruction.Operation.Name}.");
-                }
-                var destination = instruction.Result ??
-                    throw new InvalidOperationException($"{context}, {label}: missing instruction result.");
-                Write(values, destination, result, destination.Type);
-            }
-
-            budget.Step($"{label}: terminator");
-            var terminator = block.Body.Last;
-            if (terminator is Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned)
-            {
-                var result = Read(returned.Expr);
-                if (declaredReturnType is not null && !HasType(result, declaredReturnType))
-                    throw new NotSupportedException(
-                        $"{context}, {label}: return value does not match {declaredReturnType.Name}.");
-                return new Execution(result, trace.ToImmutable());
-            }
-            var jump = terminator switch
-            {
-                Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => branch.Target,
-                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
-                    Read(branch.Condition).Bool ? branch.TrueTarget : branch.FalseTarget,
-                _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {terminator}.")
-            };
-            var parameters = getBlock(jump.Label).Parameters;
-            if (parameters.Length != jump.Arguments.Length)
-                throw new InvalidOperationException($"{context}: invalid edge {label} -> {jump.Label} arity.");
-            // All sources are read before any destination is overwritten (parallel edge copies).
-            var incoming = jump.Arguments.Select(a => Read(a)).ToImmutableArray();
-            foreach (var (parameter, argument) in parameters.Zip(incoming))
-                Write(values, parameter, argument, parameter.Type);
-            label = jump.Label;
-        }
-    }
 
     internal static void AssertEquivalent(Execution expected, Execution actual)
     {
@@ -378,9 +459,4 @@ internal static class ScalarControlFlowOracle
         type.Equals(ShaderType.F32) ||
         type.Equals(ShaderType.F64) ||
         type.Equals(ShaderType.Bool);
-
-    private sealed record ScalarBlock(
-        ImmutableArray<IShaderValue> Parameters,
-        Seq<Instruction<IShaderValue, IShaderValue>,
-            ITerminator<RegionJump<IShaderValue>, IShaderValue>> Body);
 }

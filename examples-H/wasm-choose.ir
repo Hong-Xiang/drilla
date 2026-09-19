@@ -1,6 +1,12 @@
 %0 : ptr<i32, Function> = $0(condition)
 %1 : ptr<i32, Function> = $1(whenTrue)
 %2 : ptr<i32, Function> = $2(whenFalse)
+scoped control:
+    scope ^0(entry): [^1(join) forward owner=^0(entry)]
+    scope ^1(join): []
+    transfer ^0(entry)#0 -> ^1(join) forward owner=^0(entry)
+    transfer ^0(entry)#1 -> ^1(join) forward owner=^0(entry)
+
 block ^0(entry):
     block ^1(join):
 

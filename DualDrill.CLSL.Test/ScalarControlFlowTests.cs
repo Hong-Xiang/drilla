@@ -16,9 +16,11 @@ using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Test.ShaderModule;
+using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
+using static DualDrill.CLSL.Test.ScopedContinuationOracle;
 
 namespace DualDrill.CLSL.Test;
 
@@ -49,20 +51,62 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     [InlineData("LoopWithInnerConditionalBreak", 2047, 2052)]
     public void ScalarCilMatchesCpuAndEmittedControl(string fixture, int input, int golden)
     {
-        Func<int, int> reference = fixture switch
-        {
-            "SharedTail" => ScalarControlFlowFixtures.SharedTail,
-            "MultipleReturns" => ScalarControlFlowFixtures.MultipleReturns,
-            "MinimumLoop" => DevelopTestShaderModule.MinimumLoop,
-            "ContinueAndBreak" => ScalarControlFlowFixtures.ContinueAndBreak,
-            "LoopCarriedSwap" => ScalarControlFlowFixtures.LoopCarriedSwap,
-            "EdgeValue" => ScalarControlFlowFixtures.EdgeValue,
-            "LoopWithInnerConditionalBreak" => DevelopTestShaderModule.LoopWithInnerConditionalBreak,
-            _ => throw new ArgumentOutOfRangeException(nameof(fixture))
-        };
+        var reference = ScalarFixture(fixture);
         var expected = reference(input);
         Assert.Equal(golden, expected);
         Check(reference.Method, [new Value.Integer(input)], new Value.Integer(expected));
+    }
+
+    [Theory]
+    [InlineData("shared-tail")]
+    [InlineData("multiple-return")]
+    [InlineData("zero-loop")]
+    [InlineData("ordinary-loop")]
+    [InlineData("continue-break")]
+    [InlineData("nested-loop")]
+    [InlineData("inner-early-return")]
+    public void RepresentativeScalarCilCaptures(string scenario)
+    {
+        var (method, arguments, expected) = scenario switch
+        {
+            "shared-tail" => Case(
+                (Func<int, int>)ScalarControlFlowFixtures.SharedTail,
+                [new Value.Integer(2)],
+                58),
+            "multiple-return" => Case(
+                (Func<int, int>)ScalarControlFlowFixtures.MultipleReturns,
+                [new Value.Integer(-2)],
+                -9),
+            "zero-loop" => Case(
+                (Func<int, int>)DevelopTestShaderModule.MinimumLoop,
+                [new Value.Integer(0)],
+                0),
+            "ordinary-loop" => Case(
+                (Func<int, int>)DevelopTestShaderModule.MinimumLoop,
+                [new Value.Integer(4)],
+                4),
+            "continue-break" => Case(
+                (Func<int, int>)ScalarControlFlowFixtures.ContinueAndBreak,
+                [new Value.Integer(8)],
+                120),
+            "nested-loop" => Case(
+                (Func<int, int, int, int, int>)DevelopTestShaderModule.NestedLoop,
+                [
+                    new Value.Integer(5),
+                    new Value.Integer(7),
+                    new Value.Integer(2),
+                    new Value.Integer(3)
+                ],
+                52),
+            "inner-early-return" => Case(
+                (Func<int, int, int, int>)ScalarControlFlowFixtures.NestedEarlyReturn,
+                [new Value.Integer(2), new Value.Integer(3), new Value.Integer(1)],
+                1003),
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario))
+        };
+
+        output.WriteLine($"ACTUAL capture scenario={scenario}");
+        Check(method, arguments, expected);
     }
 
     [Theory]
@@ -162,18 +206,50 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             output.WriteLine($"{method.Name} {label}: IL_{range.ByteOffset:X4}, {range.InstructionCount} instructions, " +
                 $"successors {string.Join(", ", range.Terminator.ToSuccessor().AllTargets())}");
         }
+        var valueControlFlow = Assert.Single(
+            stages.ValueControlFlow.FunctionDefinitions.Values,
+            body => body.Source.Source.Source.Environment.Method == method);
+        output.WriteLine("ACTUAL input value CFG:");
+        output.WriteLine(valueControlFlow.Graph.PrettyPrint());
+        output.WriteLine("ACTUAL output region/control:");
+        output.WriteLine(original.Dump());
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
         var source = Emit(lowered);
         output.WriteLine(source);
         var cfg = RunCfg(original, arguments);
+        var scoped = RunScoped(original, arguments);
         Assert.Equal(expected, cfg.Result);
+        AssertEquivalent(cfg, scoped);
         AssertEquivalent(cfg, RunCfg(lowered, arguments));
         var emitted = new EmittedScalarProgram(lowered, source).Run(arguments);
-        output.WriteLine($"CPU/original CFG: {cfg.Result}; emitted: {emitted.Result}");
+        output.WriteLine(
+            $"ACTUAL original CFG result={cfg.Result} trace={string.Join(" -> ", cfg.Trace)}");
+        output.WriteLine(
+            $"ACTUAL scoped result={scoped.Result} trace={string.Join(" -> ", scoped.Trace)}");
+        output.WriteLine($"ACTUAL emitted result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}");
         AssertEquivalent(cfg, emitted);
         return source;
     }
+
+    private static (MethodInfo Method, ImmutableArray<Value> Arguments, Value Expected) Case(
+        Delegate reference,
+        ImmutableArray<Value> arguments,
+        int expected) =>
+        (reference.Method, arguments, new Value.Integer(expected));
+
+    private static Func<int, int> ScalarFixture(string fixture) =>
+        fixture switch
+        {
+            "SharedTail" => ScalarControlFlowFixtures.SharedTail,
+            "MultipleReturns" => ScalarControlFlowFixtures.MultipleReturns,
+            "MinimumLoop" => DevelopTestShaderModule.MinimumLoop,
+            "ContinueAndBreak" => ScalarControlFlowFixtures.ContinueAndBreak,
+            "LoopCarriedSwap" => ScalarControlFlowFixtures.LoopCarriedSwap,
+            "EdgeValue" => ScalarControlFlowFixtures.EdgeValue,
+            "LoopWithInnerConditionalBreak" => DevelopTestShaderModule.LoopWithInnerConditionalBreak,
+            _ => throw new ArgumentOutOfRangeException(nameof(fixture))
+        };
 
     internal static string Emit(FunctionBody4 body) =>
         new SlangEmitter(new ShaderModuleDeclaration<FunctionBody4>(
@@ -239,7 +315,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             ITerminator<RegionJump<IShaderValue>, IShaderValue>>
         Terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
-    private static FunctionBody4 HandBody()
+    internal static FunctionBody4 HandBody()
     {
         var entry = Label.Create("entry");
         var tail = Label.Create("tail");
@@ -277,8 +353,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         };
         return new FunctionBody4(declaration,
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
-                RegionTree<Label, ShaderRegionBody>.Block(tail, [], blocks[1], exit),
-                RegionTree<Label, ShaderRegionBody>.Block(exit, [], blocks[2], null)
+                RegionTree<Label, ShaderRegionBody>.Block(exit, [], blocks[2], null),
+                RegionTree<Label, ShaderRegionBody>.Block(tail, [], blocks[1], exit)
             ], blocks[0], tail));
     }
 
@@ -362,25 +438,35 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             new(exit, [result])), exit);
         var exitBody = ShaderRegionBody.Create(exit, [answer], [], Terms.ReturnExpr(answer), null);
         var body = new FunctionBody4(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry, [
-            RegionTree<Label, ShaderRegionBody>.Loop(loop, [], loopBody, exit, exit),
-            RegionTree<Label, ShaderRegionBody>.Block(exit, [], exitBody, null)
+            RegionTree<Label, ShaderRegionBody>.Block(exit, [], exitBody, null),
+            RegionTree<Label, ShaderRegionBody>.Loop(loop, [], loopBody, exit, exit)
         ], entryBody, loop));
         var expected = new Execution(new Value.Integer(21), [entry, loop, loop, exit]);
         AssertEquivalent(expected, RunCfg(body, []));
+        AssertEquivalent(expected, RunScoped(body, []));
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(body);
         AssertEquivalent(expected, RunCfg(lowered, []));
+        AssertEquivalent(expected, RunScoped(lowered, []));
     }
 
     [Fact]
     public void UnsupportedOperationsAndBothExecutionBudgetsFailExplicitly()
     {
         var body = HandBody();
-        var cycle = body.MapRegionBody(block => block.Label != body.Entry ? block : block with
-        {
-            Body = Seq.Create(block.Body.Elements, Terms.Br(new(body.Entry, [])))
-        });
+        var cycleLabel = Label.Create("cycle");
+        var cycleRegion = ShaderRegionBody.Create(
+            cycleLabel,
+            [],
+            [],
+            Terms.Br(new(cycleLabel, [])),
+            null);
+        var cycle = new FunctionBody4(
+            new FunctionDeclaration("Cycle", [], new FunctionReturn(ShaderType.I32, []), []),
+            RegionTree<Label, ShaderRegionBody>.Loop(cycleLabel, [], cycleRegion, null, null));
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
-            () => RunCfg(cycle, [new Value.Integer(0)], 100)).Message);
+            () => RunCfg(cycle, [], 100)).Message);
+        Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
+            () => RunScoped(cycle, [], 100)).Message);
         var infinite = "i32 Probe(i32 x, )\n{\nwhile(true)\n{\n}\n}";
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
             () => new EmittedScalarProgram(body, infinite).Run([new Value.Integer(0)], 10)).Message);
