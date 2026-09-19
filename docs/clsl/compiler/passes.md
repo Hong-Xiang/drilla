@@ -82,8 +82,9 @@ exceptions are not reclassified as unsupported CIL.
 parse/collect the all-reference CIL module
   -> Pre stack analysis over each collected function
   -> labelled block partitioning using completed Pre facts
-  -> generic CFG construction (currently still a CIL CFG)
-  -> explicit stack-value / operation lowering
+  -> CIL-to-shader-stack instruction/type lowering
+  -> generic CFG construction over shader-stack blocks
+  -> stack-to-explicit-value lowering
   -> control-flow analysis and region construction
   -> existing operation/parameter lowering
   -> target emission

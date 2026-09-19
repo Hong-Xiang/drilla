@@ -15,20 +15,24 @@ using FlowControl = System.Reflection.Emit.FlowControl;
 
 namespace DualDrill.CLSL.Frontend;
 
-internal static class CilStagePrettyPrinter
+public static class CilStagePrettyPrinter
 {
-    public static void PrintValueControlFlow(
+    internal static void PrintValueControlFlow(
         CilValueControlFlowBody body,
+        IndentedTextWriter writer) =>
+        PrintValueControlFlow(body.Graph, body.DeclarationContext, writer);
+
+    public static void PrintValueControlFlow(
+        ControlFlowGraph<CilValueBasicBlock> graph,
+        ILocalDeclarationContext context,
         IndentedTextWriter writer)
     {
-        var graph = body.Graph;
-        var context = body.DeclarationContext;
         writer.WriteLine("flat-value-cfg");
         foreach (var label in graph.Labels())
             PrintValueBlock(graph[label], context, writer);
     }
 
-    public static Action<CilValueBasicBlock, BlockControlFacts, IndentedTextWriter, PrettyPrintOption>
+    internal static Action<CilValueBasicBlock, BlockControlFacts, IndentedTextWriter, PrettyPrintOption>
         CreateValueBlockControlFactsPrinter(ILocalDeclarationContext context) =>
         (block, facts, writer, _) =>
         {
@@ -45,7 +49,7 @@ internal static class CilStagePrettyPrinter
             PrintValueBlockBody(block, context, writer);
         };
 
-    public static void PrintRawLinearCode(
+    internal static void PrintRawLinearCode(
         LinearCode<CilInstructionInfo> code,
         IndentedTextWriter writer,
         PrettyPrintOption option)
@@ -58,7 +62,7 @@ internal static class CilStagePrettyPrinter
         }
     }
 
-    public static void PrintPreAnnotatedLinearCode(
+    internal static void PrintPreAnnotatedLinearCode(
         LinearCode<Annotated<CilInstructionInfo, PreStack>> code,
         IndentedTextWriter writer,
         PrettyPrintOption option)
@@ -68,7 +72,7 @@ internal static class CilStagePrettyPrinter
             instruction.PrettyPrint(writer, option);
     }
 
-    public static void PrintAnnotatedInstruction(
+    internal static void PrintAnnotatedInstruction(
         CilInstructionInfo instruction,
         PreStack pre,
         IndentedTextWriter writer,
@@ -80,14 +84,14 @@ internal static class CilStagePrettyPrinter
         writer.WriteLine();
     }
 
-    public static void PrintShaderStackControlFlow(
+    internal static void PrintShaderStackControlFlow(
         ShaderStackControlFlowBody body,
         IndentedTextWriter writer)
     {
         PrintShaderStackGraph(body.Graph, writer, PrettyPrintOption.Default);
     }
 
-    public static void PrintShaderStackBlockList(
+    internal static void PrintShaderStackBlockList(
         BlockList<ShaderStackBasicBlock> blocks,
         IndentedTextWriter writer,
         PrettyPrintOption option)
@@ -101,7 +105,7 @@ internal static class CilStagePrettyPrinter
             PrintShaderStackBlock(block, labelIds, writer);
     }
 
-    public static void PrintShaderStackGraph(
+    internal static void PrintShaderStackGraph(
         ControlFlowGraph<ShaderStackBasicBlock> graph,
         IndentedTextWriter writer,
         PrettyPrintOption option)
@@ -125,7 +129,7 @@ internal static class CilStagePrettyPrinter
         }
     }
 
-    public static void PrintShaderStackInstruction(
+    internal static void PrintShaderStackInstruction(
         ShaderStackInstruction instruction,
         ShaderStackTransition transition,
         IndentedTextWriter writer,
@@ -159,7 +163,7 @@ internal static class CilStagePrettyPrinter
         PrintTransition(transition, writer);
     }
 
-    public static void PrintShaderStackTerminator(
+    internal static void PrintShaderStackTerminator(
         ITerminator<Label, ShaderStackOperand> terminator,
         ShaderStackTransition transition,
         IndentedTextWriter writer,
@@ -256,7 +260,7 @@ internal static class CilStagePrettyPrinter
             labelIds is null ? $"^({label.Name})" : LabelName(label, labelIds);
     }
 
-    public static void PrintBlockList(
+    internal static void PrintBlockList(
         BlockList<CilInstructionBlock> blocks,
         IndentedTextWriter writer,
         PrettyPrintOption option)
