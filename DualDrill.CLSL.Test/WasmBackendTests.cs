@@ -59,6 +59,28 @@ public sealed class WasmBackendTests
         Assert.Equal(-3, choose.Execute(42, -3, 5));
 
         var sumBody = SumBody();
+        var sumEntry = LabelNamed(sumBody, "entry");
+        var sumHeader = LabelNamed(sumBody, "header");
+        var sumStep = LabelNamed(sumBody, "step");
+        var sumExit = LabelNamed(sumBody, "exit");
+        var sumRepeat = sumBody.Control.Resolve(sumStep, 0);
+        var sumForward = sumBody.Control.Resolve(sumHeader, 1);
+        Assert.Equal(ScopedContinuationKind.Repeat, sumRepeat.Kind);
+        Assert.Same(sumHeader, sumRepeat.Target);
+        Assert.Same(sumHeader, sumRepeat.Owner);
+        Assert.Equal(ScopedContinuationKind.Forward, sumForward.Kind);
+        Assert.Same(sumEntry, sumForward.Owner);
+        Assert.Same(sumExit, sumForward.Target);
+        AssertOracle(
+            sumBody,
+            [new ScalarControlFlowOracle.Value.Integer(0)],
+            0,
+            "entry -> header -> exit");
+        AssertOracle(
+            sumBody,
+            [new ScalarControlFlowOracle.Value.Integer(5)],
+            10,
+            "entry -> header -> step -> header -> step -> header -> step -> header -> step -> header -> step -> header -> exit");
         var sum = WasmProgram.Compile(sumBody, "wasm-sum");
         var sumResults = new[]
         {
@@ -90,7 +112,15 @@ public sealed class WasmBackendTests
     [Fact]
     public void SelfEdgeParallelCopyAndLocalStorageExecuteCorrectly()
     {
-        var swap = WasmProgram.Compile(SwapBody(), "wasm-swap");
+        var swapBody = SwapBody();
+        var swapLoop = LabelNamed(swapBody, "loop");
+        var swapRepeat = swapBody.Control.Resolve(swapLoop, 0);
+        Assert.Equal(ScopedContinuationKind.Repeat, swapRepeat.Kind);
+        Assert.Same(swapLoop, swapRepeat.Target);
+        Assert.Same(swapLoop, swapRepeat.Owner);
+        AssertOracle(swapBody, [], 21, "entry -> loop -> loop -> exit");
+
+        var swap = WasmProgram.Compile(swapBody, "wasm-swap");
         Assert.Equal(21, swap.Execute());
 
         var local = WasmProgram.Compile(LocalBody(), "wasm-local");
@@ -183,23 +213,8 @@ public sealed class WasmBackendTests
             CrossBlockUseBody(),
             "earlier result");
         AssertRejected(
-            WrongEdgeTypeBody(),
-            "edge argument");
-        AssertRejected(
-            WrongEdgeArityBody(),
-            "edge arguments");
-        AssertRejected(
             DuplicateDefinitionBody(),
             "duplicate value definition");
-        AssertRejected(
-            DuplicateBlockBody(),
-            "duplicate block definition");
-        AssertRejected(
-            UnreachableBlockBody(),
-            "unreachable");
-        AssertRejected(
-            EntryParameterBody(),
-            "entry block parameters");
         AssertRejected(
             NonFunctionStorageBody(),
             "non-function storage");
@@ -213,20 +228,8 @@ public sealed class WasmBackendTests
             MissingResultBody(),
             "invalid result presence");
         AssertRejected(
-            TreeLabelMismatchBody(),
-            "does not match");
-        AssertRejected(
-            DefaultBlockParametersBody(),
-            "block parameter sequence is default");
-        AssertRejected(
-            DefaultEdgeArgumentsBody(),
-            "edge arguments are default");
-        AssertRejected(
             DefaultRestOperandsBody(),
             "rest operands are default");
-        AssertRejected(
-            NullBlockParameterTypeBody(),
-            "type is missing");
         AssertRejected(
             NullReturnBody(),
             "return value is missing");
@@ -257,18 +260,41 @@ public sealed class WasmBackendTests
     }
 
     [Fact]
-    public void FunctionBodyConstructorRejectsUnknownTargetsBeforeLowering()
+    public void FunctionBodyConstructorRejectsStructurallyInvalidBodies()
     {
-        var entry = Label.Create("entry");
-        var missing = Label.Create("missing");
-        var block = Block(entry, [], [], Terms.Br(Jump(missing)));
-
-        var exception = Assert.Throws<KeyNotFoundException>(() =>
-            new FunctionBody4(
-                Declaration("missing-target", []),
-                RegionTree<Label, ShaderRegionBody>.Block(entry, [], block, null)));
-
-        Assert.Contains("not found", exception.Message);
+        AssertConstructionRejected(
+            WrongEdgeTypeBody,
+            "Function 'wrong-edge-type': transfer from 'Label(entry)', arm 0, to 'Label(exit)' " +
+            "has incorrect argument type at index 0: 'i32'; expected 'bool'.");
+        AssertConstructionRejected(
+            WrongEdgeArityBody,
+            "Function 'wrong-edge-arity': transfer from 'Label(entry)', arm 0, to 'Label(exit)' " +
+            "has incorrect argument count 0; expected 1.");
+        AssertConstructionRejected(
+            DuplicateBlockBody,
+            "Function 'duplicate-block': duplicate defined label 'Label(duplicate)'.");
+        AssertConstructionRejected(
+            UnreachableBlockBody,
+            "Function 'unreachable-block': unreachable definitions: 'Label(dead)'.");
+        AssertConstructionRejected(
+            EntryParameterBody,
+            "Function 'entry-parameter': entry region 'Label(entry)' must not declare parameters.");
+        AssertConstructionRejected(
+            TreeLabelMismatchBody,
+            "Function 'tree-label-mismatch': region label 'Label(tree)' does not match body label 'Label(body)'.");
+        AssertConstructionRejected(
+            DefaultBlockParametersBody,
+            "Function 'default-block-parameters': region 'Label(entry)' has a default parameter array.");
+        AssertConstructionRejected(
+            DefaultEdgeArgumentsBody,
+            "Function 'default-edge-arguments': transfer from 'Label(entry)', arm 0, to 'Label(exit)' " +
+            "has a default argument array.");
+        AssertConstructionRejected(
+            UnknownTargetBody,
+            "Function 'missing-target': transfer from 'Label(entry)', arm 0, targets unknown label 'Label(missing)'.");
+        AssertConstructionRejected(
+            NullBlockParameterTypeBody,
+            "Function 'null-block-parameter-type': region 'Label(exit)' parameter at index 0 type is missing.");
     }
 
     private static void AssertRejected(FunctionBody4 body, string message)
@@ -277,6 +303,32 @@ public sealed class WasmBackendTests
         Assert.Contains($"WASM function {body.Declaration.Name}", exception.Message);
         Assert.Contains(message, exception.Message);
     }
+
+    private static void AssertConstructionRejected(Func<FunctionBody4> factory, string message)
+    {
+        var exception = Assert.Throws<ArgumentException>(() => factory());
+        Assert.Equal(message, exception.Message);
+    }
+
+    private static void AssertOracle(
+        FunctionBody4 body,
+        ImmutableArray<ScalarControlFlowOracle.Value> arguments,
+        int expected,
+        string trace)
+    {
+        var cfg = ScalarControlFlowOracle.RunCfg(body, arguments, 1_000);
+        var scoped = ScopedContinuationOracle.RunScoped(body, arguments, 1_000);
+
+        Assert.Equal(new ScalarControlFlowOracle.Value.Integer(expected), cfg.Result);
+        Assert.Equal(cfg.Result, scoped.Result);
+        Assert.Equal(trace, string.Join(" -> ", cfg.Trace.Select(LabelName)));
+        Assert.Equal(trace, string.Join(" -> ", scoped.Trace.Select(LabelName)));
+    }
+
+    private static Label LabelNamed(FunctionBody4 body, string name) =>
+        body.Control.Labels.Single(label => label.Name == name);
+
+    private static string LabelName(Label label) => label.Name ?? "<unnamed>";
 
     private static FunctionBody4 AddBody()
     {
@@ -335,20 +387,27 @@ public sealed class WasmBackendTests
         var nextSum = Value(ShaderType.I32, "next.sum");
         var nextI = Value(ShaderType.I32, "next.i");
         var answer = Value(ShaderType.I32, "answer");
-        return Body("sum", [input],
-            Block(entry, [], [Load(n0, input.Value)],
-                Terms.Br(Jump(header, Int(0), Int(0), n0))),
-            Block(header, [sum, i, n], [
+        var entryBody = Block(entry, [], [Load(n0, input.Value)],
+            Terms.Br(Jump(header, Int(0), Int(0), n0)));
+        var headerBody = Block(header, [sum, i, n], [
                 Binary(NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>.Instance,
                     condition, i, n)
-            ], Terms.BrIf(condition, Jump(step, sum, i, n), Jump(exit, sum))),
-            Block(step, [stepSum, stepI, stepN], [
-                Binary(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
-                    nextSum, stepSum, stepI),
-                Binary(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
-                    nextI, stepI, Int(1))
-            ], Terms.Br(Jump(header, nextSum, nextI, stepN))),
-            Block(exit, [answer], [], Terms.ReturnExpr(answer)));
+            ], Terms.BrIf(condition, Jump(step, sum, i, n), Jump(exit, sum)));
+        var stepBody = Block(step, [stepSum, stepI, stepN], [
+            Binary(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                nextSum, stepSum, stepI),
+            Binary(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                nextI, stepI, Int(1))
+        ], Terms.Br(Jump(header, nextSum, nextI, stepN)));
+        var exitBody = Block(exit, [answer], [], Terms.ReturnExpr(answer));
+        return new FunctionBody4(
+            Declaration("sum", [input]),
+            RegionTree.Block(entry, [
+                RegionTree.Block(exit, [], exitBody, null),
+                RegionTree.Loop(header, [
+                    RegionTree.Block(step, [], stepBody, null)
+                ], headerBody, null, null)
+            ], entryBody, null));
     }
 
     private static FunctionBody4 SwapBody()
@@ -365,10 +424,9 @@ public sealed class WasmBackendTests
         var tens = Value(ShaderType.I32, "tens");
         var result = Value(ShaderType.I32, "result");
         var answer = Value(ShaderType.I32, "answer");
-        return Body("swap", [],
-            Block(entry, [], [],
-                Terms.Br(Jump(loop, Int(1), Int(2), Bool(true)))),
-            Block(loop, [a, b, again], [
+        var entryBody = Block(entry, [], [],
+            Terms.Br(Jump(loop, Int(1), Int(2), Bool(true))));
+        var loopBody = Block(loop, [a, b, again], [
                 Binary(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                     twice, a, a),
                 Binary(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
@@ -379,8 +437,14 @@ public sealed class WasmBackendTests
                     tens, eight, twice),
                 Binary(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                     result, tens, b)
-            ], Terms.BrIf(again, Jump(loop, b, a, Bool(false)), Jump(exit, result))),
-            Block(exit, [answer], [], Terms.ReturnExpr(answer)));
+            ], Terms.BrIf(again, Jump(loop, b, a, Bool(false)), Jump(exit, result)));
+        var exitBody = Block(exit, [answer], [], Terms.ReturnExpr(answer));
+        return new FunctionBody4(
+            Declaration("swap", []),
+            RegionTree.Block(entry, [
+                RegionTree.Block(exit, [], exitBody, null),
+                RegionTree.Loop(loop, [], loopBody, null, null)
+            ], entryBody, null));
     }
 
     private static FunctionBody4 LocalBody()
@@ -669,6 +733,16 @@ public sealed class WasmBackendTests
         return Body("null-block-parameter-type", [],
             Block(entry, [], [], Terms.Br(Jump(exit, Int(0)))),
             Block(exit, [bad], [], Terms.ReturnExpr(Int(0))));
+    }
+
+    private static FunctionBody4 UnknownTargetBody()
+    {
+        var entry = Label.Create("entry");
+        var missing = Label.Create("missing");
+        var block = Block(entry, [], [], Terms.Br(Jump(missing)));
+        return new FunctionBody4(
+            Declaration("missing-target", []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [], block, null));
     }
 
     private static FunctionBody4 NullReturnBody()

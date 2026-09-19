@@ -180,6 +180,91 @@ public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
             RunCfg(body, [new Value.Integer(2)]).Result);
     }
 
+    [Fact]
+    public void DeclarationBackedOraclesRejectMismatchedReturnTypes()
+    {
+        AssertReturnRejected(
+            GetMethod(nameof(ReturnInt)),
+            [new Value.Integer(7)],
+            new Value.Integer(7),
+            ShaderValue.Literal(new BoolLiteral(true)));
+        AssertReturnRejected(
+            GetMethod(nameof(ReturnBool)),
+            [new Value.Boolean(true)],
+            new Value.Boolean(true),
+            ShaderValue.Literal(new I32Literal(1)));
+        AssertReturnRejected(
+            GetMethod(nameof(ReturnUInt)),
+            [new Value.UnsignedInteger(7)],
+            new Value.UnsignedInteger(7),
+            ShaderValue.Literal(new I32Literal(7)));
+        AssertReturnRejected(
+            GetMethod(nameof(ReturnInt)),
+            [new Value.Integer(7)],
+            new Value.Integer(7),
+            ShaderValue.Literal(new U32Literal(7)));
+    }
+
+    private static void AssertReturnRejected(
+        MethodInfo method,
+        ImmutableArray<Value> arguments,
+        Value expected,
+        IShaderValue wrongReturn)
+    {
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var value = Body(stages.ValueControlFlow, method);
+        Assert.Equal(expected, RunValueCfg(value, arguments).Result);
+
+        var wrongValue = WithReturn(value, wrongReturn);
+        var module = new ShaderModuleDeclaration<CilValueControlFlowBody>(
+            [wrongValue.Declaration],
+            ImmutableDictionary<FunctionDeclaration, CilValueControlFlowBody>.Empty.Add(
+                wrongValue.Declaration,
+                wrongValue));
+        var facts = Body(CilBlockControlFactsPass.Run(module), method);
+        var region = Body(
+            CilRegionPass.Run(CilBlockControlFactsPass.Run(module)),
+            method);
+
+        AssertReturnMismatch(() => RunValueCfg(wrongValue, arguments));
+        AssertReturnMismatch(() => RunFactsCfg(facts, arguments));
+        AssertReturnMismatch(() => RunCfg(region, arguments));
+        AssertReturnMismatch(() => ScopedContinuationOracle.RunScoped(region, arguments));
+    }
+
+    private static void AssertReturnMismatch(Func<Execution> run) =>
+        Assert.Contains(
+            "return value does not match",
+            Assert.Throws<NotSupportedException>(run).Message);
+
+    private static CilValueControlFlowBody WithReturn(
+        CilValueControlFlowBody body,
+        IShaderValue wrongReturn)
+    {
+        var definitions = body.Graph.Labels().ToDictionary(
+            label => label,
+            label =>
+            {
+                var block = body.Graph[label];
+                ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator =
+                    block.Body.Last is Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>
+                        ? Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(wrongReturn)
+                        : block.Body.Last;
+                var rewritten = block with
+                {
+                    Body = Seq.Create(block.Body.Elements, terminator)
+                };
+                return new ControlFlowGraph<CilValueBasicBlock>.NodeDefinition(
+                    rewritten.Successor,
+                    rewritten);
+            });
+        return new CilValueControlFlowBody(
+            body.Source,
+            new ControlFlowGraph<CilValueBasicBlock>(
+                body.Graph.EntryLabel,
+                definitions));
+    }
+
     private void AssertPublicStages(
         MethodInfo method,
         ImmutableArray<Value> arguments,
@@ -313,6 +398,10 @@ public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
             sum += index;
         return sum;
     }
+
+    private static int ReturnInt(int value) => value;
+    private static bool ReturnBool(bool value) => value;
+    private static uint ReturnUInt(uint value) => value;
 
     private sealed class LocalPromotionShader : ISharpShader
     {

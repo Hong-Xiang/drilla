@@ -25,11 +25,12 @@ WASI, floats, unsigned arithmetic, and other operations outside this bounded
 slice. It does not inspect `RegionTree` layout metadata or route through Slang.
 Calls are not supported by this prototype.
 
-`FunctionBody4` construction traverses jump targets before the backend runs, so
-an unknown target can throw from that shared constructor and never reach
-`WasmLowering.Lower`. Inputs that do reach lowering receive contextual
-`WasmLoweringException` diagnostics for malformed payloads, values, and types.
-The public `WasmLowering.Lower(null)` boundary retains `ArgumentNullException`.
+`FunctionBody4` construction checks scoped structure, edge argument consistency,
+and block-parameter types before the backend runs. These boundary errors use
+contextual `ArgumentException` diagnostics. Inputs that do reach lowering receive
+contextual `WasmLoweringException` diagnostics for malformed payloads, values,
+and source-side types. The public `WasmLowering.Lower(null)` boundary retains
+`ArgumentNullException`.
 
 The checked-in `examples-H/wasm-{add,choose,sum}.{ir,wat,results}` files are
 captured from the constructor fixtures. The `.ir` files use the existing
