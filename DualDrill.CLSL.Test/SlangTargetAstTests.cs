@@ -12,12 +12,15 @@ using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 using Xunit.Abstractions;
+using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
 
 namespace DualDrill.CLSL.Test;
 
+[Collection(SlangProcessTestCollection.Name)]
 public sealed class SlangTargetAstTests(ITestOutputHelper output)
 {
     private static readonly ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,
@@ -42,6 +45,145 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var firstDump = target.PrettyPrint();
         Assert.Equal(firstDump, target.PrettyPrint());
         Capture("shared-tail", source.Region, target.PrettyPrint(), source.Slang);
+    }
+
+    [Fact]
+    public async Task DominatingEntryValueRemainsLiveThroughOrdinaryContinuation()
+    {
+        var entry = Label.Create("entry");
+        var exit = Label.Create("exit");
+        var value = ShaderValue.Intermediate(ShaderType.I32);
+        var result = ShaderValue.Intermediate(ShaderType.I32);
+        var declaration = Function("DominatingChain", ShaderType.I32);
+        var entryBody = ShaderRegionBody.Create(
+            entry,
+            [],
+            [Instruction.Factory.Literal(default, new LiteralOperation(), value, Int(1))],
+            Terms.Br(new(exit, [])),
+            exit);
+        var exitBody = ShaderRegionBody.Create(
+            exit,
+            [],
+            [
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    result,
+                    value,
+                    Int(2))
+            ],
+            Terms.ReturnExpr(result),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(entry, [RegionTree.Block(exit, [], exitBody, null)], entryBody, exit));
+
+        await AssertEmittedEquivalent(body, [], new Value.Integer(3));
+        var target = Lower(body);
+        var entryScope = Assert.Single(target.Body.Statements.OfType<SlangScope>());
+        Assert.Contains(entryScope.Body.Statements, statement => statement is SlangScope { OriginalLabel: var label }
+            && label == exit);
+    }
+
+    [Fact]
+    public async Task DominatingEntryValueRemainsLiveThroughDiamond()
+    {
+        var entry = Label.Create("entry");
+        var left = Label.Create("left");
+        var right = Label.Create("right");
+        var join = Label.Create("join");
+        var choose = new ParameterDeclaration("choose", ShaderType.Bool, []);
+        var condition = ShaderValue.Intermediate(ShaderType.Bool);
+        var value = ShaderValue.Intermediate(ShaderType.I32);
+        var result = ShaderValue.Intermediate(ShaderType.I32);
+        var declaration = new FunctionDeclaration(
+            "DominatingDiamond", [choose], new FunctionReturn(ShaderType.I32, []), []);
+        var entryBody = ShaderRegionBody.Create(
+            entry,
+            [],
+            [
+                Instruction.Factory.Load(default, new LoadOperation(), condition, choose.Value),
+                Instruction.Factory.Literal(default, new LiteralOperation(), value, Int(4))
+            ],
+            Terms.BrIf(condition, new(left, []), new(right, [])),
+            join);
+        var leftBody = ShaderRegionBody.Create(left, [], [], Terms.Br(new(join, [])), join);
+        var rightBody = ShaderRegionBody.Create(right, [], [], Terms.Br(new(join, [])), join);
+        var joinBody = ShaderRegionBody.Create(
+            join,
+            [],
+            [
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    result,
+                    value,
+                    Int(2))
+            ],
+            Terms.ReturnExpr(result),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(entry,
+            [
+                RegionTree.Block(left, [], leftBody, join),
+                RegionTree.Block(right, [], rightBody, join),
+                RegionTree.Block(join, [], joinBody, null)
+            ], entryBody, join));
+
+        await AssertEmittedEquivalent(body, [new Value.Boolean(true)], new Value.Integer(6));
+        await AssertEmittedEquivalent(body, [new Value.Boolean(false)], new Value.Integer(6));
+    }
+
+    [Fact]
+    public async Task LoopHeaderValueUsedAfterExitIsCaptured()
+    {
+        var entry = Label.Create("entry");
+        var loop = Label.Create("loop");
+        var exit = Label.Create("exit");
+        var value = ShaderValue.Intermediate(ShaderType.I32);
+        var result = ShaderValue.Intermediate(ShaderType.I32);
+        var declaration = Function("LoopValueExit", ShaderType.I32);
+        var entryBody = ShaderRegionBody.Create(entry, [], [], Terms.Br(new(loop, [])), loop);
+        var loopBody = ShaderRegionBody.Create(
+            loop,
+            [],
+            [Instruction.Factory.Literal(default, new LiteralOperation(), value, Int(1))],
+            Terms.BrIf(
+                ShaderValue.Literal(new BoolLiteral(false)),
+                new(loop, []),
+                new(exit, [])),
+            exit);
+        var exitBody = ShaderRegionBody.Create(
+            exit,
+            [],
+            [
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    result,
+                    value,
+                    Int(2))
+            ],
+            Terms.ReturnExpr(result),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(entry,
+            [
+                RegionTree.Loop(loop, [], loopBody, exit, exit),
+                RegionTree.Block(exit, [], exitBody, null)
+            ], entryBody, loop));
+
+        await AssertEmittedEquivalent(body, [], new Value.Integer(3));
+        var target = Lower(body);
+        var capture = Assert.Single(
+            target.Body.Statements.OfType<SlangDeclare>(),
+            statement => statement.Variable.Name.StartsWith("capture_", StringComparison.Ordinal));
+        Assert.Contains(
+            Statements(target.Body).OfType<SlangAssign>(),
+            assignment => assignment.Target is SlangVariablePlace { Variable: var variable }
+                && ReferenceEquals(variable, capture.Variable));
     }
 
     [Fact]
@@ -155,6 +297,170 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var error = Assert.Throws<NotSupportedException>(() => Lower(body));
 
         Assert.Contains("nonterminal target already has an executable AST placement", error.Message);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ClonedDirectEdgeContinuationExecutesOnce(bool chooseLeft)
+    {
+        var entry = Label.Create("entry");
+        var left = Label.Create("left");
+        var right = Label.Create("right");
+        var effect = Label.Create("effect");
+        var join = Label.Create("join");
+        var choose = new ParameterDeclaration("choose", ShaderType.Bool, []);
+        var condition = ShaderValue.Intermediate(ShaderType.Bool);
+        var counter = new VariableDeclaration(FunctionAddressSpace.Instance, "counter", ShaderType.I32, []);
+        var before = ShaderValue.Intermediate(ShaderType.I32);
+        var after = ShaderValue.Intermediate(ShaderType.I32);
+        var result = ShaderValue.Intermediate(ShaderType.I32);
+        var declaration = new FunctionDeclaration(
+            "DirectEdgeClone", [choose], new FunctionReturn(ShaderType.I32, []), []);
+        var entryBody = ShaderRegionBody.Create(
+            entry,
+            [],
+            [
+                Instruction.Factory.Store(default, new StoreOperation(), counter.Value, Int(0)),
+                Instruction.Factory.Load(default, new LoadOperation(), condition, choose.Value)
+            ],
+            Terms.BrIf(condition, new(left, []), new(right, [])),
+            join);
+        var leftBody = ShaderRegionBody.Create(left, [], [], Terms.Br(new(effect, [])), join);
+        var rightBody = ShaderRegionBody.Create(right, [], [], Terms.Br(new(effect, [])), join);
+        var effectBody = ShaderRegionBody.Create(
+            effect,
+            [],
+            [
+                Instruction.Factory.Load(default, new LoadOperation(), before, counter.Value),
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    after,
+                    before,
+                    Int(1)),
+                Instruction.Factory.Store(default, new StoreOperation(), counter.Value, after)
+            ],
+            Terms.Br(new(join, [])),
+            join);
+        var joinBody = ShaderRegionBody.Create(
+            join,
+            [],
+            [Instruction.Factory.Load(default, new LoadOperation(), result, counter.Value)],
+            Terms.ReturnExpr(result),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(entry,
+            [
+                RegionTree.Block(left, [], leftBody, join),
+                RegionTree.Block(right, [], rightBody, join),
+                RegionTree.Block(effect, [], effectBody, join),
+                RegionTree.Block(join, [], joinBody, null)
+            ], entryBody, join));
+
+        var execution = await AssertEmittedEquivalent(
+            body, [new Value.Boolean(chooseLeft)], new Value.Integer(1));
+
+        Assert.Equal(1, execution.Trace.Count(label => label == effect));
+        Assert.Equal(2, Statements(Lower(body).Body).OfType<SlangScope>()
+            .Count(scope => scope.OriginalLabel == effect));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ClonedLoopTransferContinuationExecutesOnce(bool chooseLeft)
+    {
+        var entry = Label.Create("entry");
+        var loop = Label.Create("loop");
+        var chooseBlock = Label.Create("choose");
+        var left = Label.Create("left");
+        var right = Label.Create("right");
+        var latch = Label.Create("latch");
+        var exit = Label.Create("exit");
+        var choose = new ParameterDeclaration("choose", ShaderType.Bool, []);
+        var selected = ShaderValue.Intermediate(ShaderType.Bool);
+        var counter = new VariableDeclaration(FunctionAddressSpace.Instance, "counter", ShaderType.I32, []);
+        var current = ShaderValue.Intermediate(ShaderType.I32);
+        var more = ShaderValue.Intermediate(ShaderType.Bool);
+        var before = ShaderValue.Intermediate(ShaderType.I32);
+        var after = ShaderValue.Intermediate(ShaderType.I32);
+        var result = ShaderValue.Intermediate(ShaderType.I32);
+        var declaration = new FunctionDeclaration(
+            "LoopTransferClone", [choose], new FunctionReturn(ShaderType.I32, []), []);
+        var entryBody = ShaderRegionBody.Create(
+            entry,
+            [],
+            [
+                Instruction.Factory.Store(default, new StoreOperation(), counter.Value, Int(0)),
+                Instruction.Factory.Load(default, new LoadOperation(), selected, choose.Value)
+            ],
+            Terms.Br(new(loop, [])),
+            loop);
+        var loopBody = ShaderRegionBody.Create(
+            loop,
+            [],
+            [
+                Instruction.Factory.Load(default, new LoadOperation(), current, counter.Value),
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Lt>.Instance,
+                    more,
+                    current,
+                    Int(1))
+            ],
+            Terms.BrIf(more, new(chooseBlock, []), new(exit, [])),
+            exit);
+        var chooseBody = ShaderRegionBody.Create(
+            chooseBlock,
+            [],
+            [],
+            Terms.BrIf(selected, new(left, []), new(right, [])),
+            loop);
+        var leftBody = ShaderRegionBody.Create(left, [], [], Terms.Br(new(latch, [])), loop);
+        var rightBody = ShaderRegionBody.Create(right, [], [], Terms.Br(new(latch, [])), loop);
+        var latchBody = ShaderRegionBody.Create(
+            latch,
+            [],
+            [
+                Instruction.Factory.Load(default, new LoadOperation(), before, counter.Value),
+                Instruction.Factory.Operation2(
+                    default,
+                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
+                    after,
+                    before,
+                    Int(1)),
+                Instruction.Factory.Store(default, new StoreOperation(), counter.Value, after)
+            ],
+            Terms.Br(new(loop, [])),
+            loop);
+        var exitBody = ShaderRegionBody.Create(
+            exit,
+            [],
+            [Instruction.Factory.Load(default, new LoadOperation(), result, counter.Value)],
+            Terms.ReturnExpr(result),
+            null);
+        var body = new FunctionBody4(
+            declaration,
+            RegionTree.Block(entry,
+            [
+                RegionTree.Loop(loop,
+                [
+                    RegionTree.Block(chooseBlock, [], chooseBody, loop),
+                    RegionTree.Block(left, [], leftBody, loop),
+                    RegionTree.Block(right, [], rightBody, loop),
+                    RegionTree.Block(latch, [], latchBody, loop)
+                ], loopBody, exit, exit),
+                RegionTree.Block(exit, [], exitBody, null)
+            ], entryBody, loop));
+
+        var execution = await AssertEmittedEquivalent(
+            body, [new Value.Boolean(chooseLeft)], new Value.Integer(1));
+
+        Assert.Equal(1, execution.Trace.Count(label => label == latch));
+        Assert.Equal(2, Statements(Lower(body).Body).OfType<SlangScope>()
+            .Count(scope => scope.OriginalLabel == latch));
     }
 
     [Fact]
@@ -426,13 +732,18 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
             var source = Emit(target);
+            var dump = target.PrettyPrint();
 
             Assert.Contains(" = true;", source);
             Assert.Contains(" = false;", source);
             Assert.Contains(" = 1.5;", source);
+            Assert.Contains("literal (true_b)", dump);
+            Assert.Contains("literal (false_b)", dump);
+            Assert.Contains("literal (1.5_f32)", dump);
             Assert.DoesNotContain("True", source);
             Assert.DoesNotContain("False", source);
             Assert.DoesNotContain("1,5", source);
+            Assert.DoesNotContain("1,5", dump);
         }
         finally
         {
@@ -467,6 +778,25 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             Assert.Throws<NotSupportedException>(() => Lower(zeroBody)).Message);
     }
 
+    [Fact]
+    public async Task RepresentativeControlFixturesCompileAndCanBeCaptured()
+    {
+        var fixtures = new (string Name, System.Reflection.MethodInfo Method)[]
+        {
+            ("ordinary-zero-loop", ((Func<int, int>)DevelopTestShaderModule.MinimumLoop).Method),
+            ("early-return", ((Func<int, int, int, int>)ScalarControlFlowFixtures.NestedEarlyReturn).Method),
+            ("nested-outer-transfer", ((Func<int, int, int>)ScalarControlFlowFixtures.NestedLoopControl).Method),
+            ("cyclic-swap", ((Func<int, int>)ScalarControlFlowFixtures.LoopCarriedSwap).Method)
+        };
+
+        foreach (var (name, method) in fixtures)
+        {
+            var fixture = Lower(method);
+            Capture(name, fixture.Region, fixture.Target.PrettyPrint(), fixture.Slang);
+            await new SlangService().ValidateAsync(fixture.Slang);
+        }
+    }
+
     private LoweredFixture Lower(System.Reflection.MethodInfo method)
     {
         var region = new RegionParameterToLocalVariablePass().VisitFunctionBody(
@@ -494,6 +824,24 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             ImmutableDictionary<FunctionDeclaration, SlangFunctionBody>.Empty.Add(body.Declaration, body));
 
     private static string Emit(SlangFunctionBody body) => new SlangEmitter(Module(body)).Emit();
+
+    private static async Task<Execution> AssertEmittedEquivalent(
+        FunctionBody4 body,
+        ImmutableArray<Value> arguments,
+        Value expected)
+    {
+        var source = Emit(Lower(body));
+        var cfg = RunCfg(body, arguments);
+        var emitted = new EmittedScalarProgram(body, source).Run(arguments);
+
+        Assert.Equal(expected, cfg.Result);
+        Assert.Equal(cfg.Result, emitted.Result);
+        Assert.True(cfg.Trace.SequenceEqual(emitted.Trace),
+            $"CFG trace: {string.Join(" -> ", cfg.Trace)}\n" +
+            $"Emitted trace: {string.Join(" -> ", emitted.Trace)}");
+        await new SlangService().ValidateAsync(source);
+        return emitted;
+    }
 
     private static FunctionDeclaration Function(string name, IShaderType returnType) =>
         new(name, [], new FunctionReturn(returnType, []), []);

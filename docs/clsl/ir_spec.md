@@ -258,6 +258,14 @@ are explicitly rejected. The pass preserves the current parameter pass's store
 order; it does not recover selected-edge ownership already erased there. It is
 not the complete Beyond Relooper algorithm or a general irreducible-CFG policy.
 
+Target scopes are lexical. Ordinary continuations remain inside the predecessor
+scope, while non-pointer instruction results referenced by another original
+label are copied immediately to typed function-local capture slots. The only
+repeated nonterminal exceptions are direct continuation bodies whose sole jump
+targets the already-scoped lexical continuation or the current loop transfer.
+Each selected site receives one copy; mutually exclusive source arms cannot
+execute both copies in one source execution.
+
 Original `Label` identity denotes original control-flow provenance. If a future
 pass introduces synthetic edge blocks, it must distinguish them from original
 blocks rather than treating every new lexical node as an original execution.

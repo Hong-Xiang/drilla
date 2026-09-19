@@ -207,6 +207,12 @@ breaks, and continues. Address-of-member and vector-component instructions
 become typed place aliases during lowering; they are not printer-side string
 substitutions.
 
+`SlangScope` is a real lexical scope. A block's ordinary continuation is nested
+inside that block scope so dominating immutable bindings remain visible.
+Non-pointer instruction results used from another original label are captured
+immediately into explicit function-local slots; this also carries the final
+iteration's loop value across the loop's lexical boundary.
+
 ### Value Lowering
 
 Block parameters, SSA phi operands, mutable locals, and typed stack results are

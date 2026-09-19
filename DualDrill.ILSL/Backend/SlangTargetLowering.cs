@@ -35,7 +35,10 @@ public sealed class SlangTargetLowering
         private readonly Dictionary<IShaderValue, SlangPlace> aliases =
             new(ReferenceEqualityComparer.Instance);
         private readonly HashSet<Label> active = [];
+        private readonly List<RegionTree<Label, ShaderRegionBody>> blockOrder = [];
         private readonly Dictionary<Label, RegionTree<Label, ShaderRegionBody>> blocks = [];
+        private readonly Dictionary<IShaderValue, VariableDeclaration> captures =
+            new(ReferenceEqualityComparer.Instance);
         private readonly Stack<LoopOwner> loopOwners = [];
         private readonly HashSet<Label> placedNonterminals = [];
         private readonly FunctionBody4 source;
@@ -47,16 +50,18 @@ public sealed class SlangTargetLowering
             {
                 if (!blocks.TryAdd(region.Label, region))
                     throw Error($"duplicate region definition '{region.Label.Name}'");
+                blockOrder.Add(region);
                 if (!region.Label.Equals(region.Body.Label))
                     throw Error(
                         $"region definition '{region.Label.Name}' contains body '{region.Body.Label.Name}'");
             });
             ValidateControl();
+            FindCrossLabelCaptures();
         }
 
         public SlangFunctionBody Lower()
         {
-            var declarations = source.LocalVariables
+            var declarations = source.LocalVariables.Concat(captures.Values)
                 .Select(variable => (SlangStatement)new SlangDeclare(variable))
                 .ToImmutableArray();
             var body = Expand(source.Entry, new NormalTransfer(source.Entry, [source.Entry]), null);
@@ -64,6 +69,46 @@ public sealed class SlangTargetLowering
                 source.Declaration,
                 new SlangBlock([.. declarations, .. body.Statements]));
         }
+
+        private void FindCrossLabelCaptures()
+        {
+            var definitions = new Dictionary<IShaderValue, Label>(ReferenceEqualityComparer.Instance);
+            foreach (var block in blockOrder)
+                foreach (var instruction in block.Body.Body.Elements)
+                    if (instruction.Result is { } result && !definitions.TryAdd(result, block.Label))
+                        throw Error($"value '{result}' has multiple instruction definitions");
+
+            foreach (var block in blockOrder)
+            {
+                foreach (var value in block.Body.Body.Elements.SelectMany(instruction => instruction.Operands)
+                             .Concat(TerminatorValues(block.Body.Body.Last)))
+                {
+                    if (!definitions.TryGetValue(value, out var definition) ||
+                        definition.Equals(block.Label) ||
+                        captures.ContainsKey(value) ||
+                        value.Type is IPtrType)
+                        continue;
+                    if (value.Type is UnitType)
+                        throw Error($"unit value '{value}' crosses original-label scope");
+                    captures.Add(
+                        value,
+                        new VariableDeclaration(
+                            FunctionAddressSpace.Instance,
+                            $"capture_{captures.Count}",
+                            value.Type,
+                            []));
+                }
+            }
+        }
+
+        private static IEnumerable<IShaderValue> TerminatorValues(
+            ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
+            terminator switch
+            {
+                Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned => [returned.Expr],
+                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch => [branch.Condition],
+                _ => []
+            };
 
         private void ValidateControl()
         {
@@ -118,13 +163,16 @@ public sealed class SlangTargetLowering
                 LowerInstruction(instruction, statements);
             var terminated = LowerTerminator(region.Body.Body.Last, region.Label, next);
             statements.AddRange(terminated.Statements);
-            var body = new Sequence(statements.ToImmutable(), terminated.CanFallThrough);
-            var result = new Sequence(
-                [(SlangStatement)new SlangScope(region.Label, new SlangBlock(body.Statements))],
-                body.CanFallThrough);
-            if (result.CanFallThrough && next is not null && !IsCurrentLoopTransfer(next))
-                result = result.Then(Expand(next, new NormalTransfer(next, [region.Label]), enclosingNext));
-            return result;
+            var canFallThrough = terminated.CanFallThrough;
+            if (canFallThrough && next is not null && !IsCurrentLoopTransfer(next))
+            {
+                var continuation = Expand(next, new NormalTransfer(next, [region.Label]), enclosingNext);
+                statements.AddRange(continuation.Statements);
+                canFallThrough = continuation.CanFallThrough;
+            }
+            return new Sequence(
+                [(SlangStatement)new SlangScope(region.Label, new SlangBlock(statements.ToImmutable()))],
+                canFallThrough);
         }
 
         private Sequence LowerLoop(
@@ -367,6 +415,10 @@ public sealed class SlangTargetLowering
                 if (lowered.Result.Type is IPtrType)
                     throw UnsupportedOperation(instruction, "pointer results must lower to typed places");
                 statements.Add(new SlangBind(lowered));
+                if (captures.TryGetValue(lowered.Result, out var capture))
+                    statements.Add(new SlangAssign(
+                        new SlangVariablePlace(capture),
+                        new SlangValueOperand(lowered.Result)));
             }
         }
 
@@ -398,6 +450,8 @@ public sealed class SlangTargetLowering
         private SlangOperand Operand(IShaderValue? value)
         {
             if (value is null) throw Error("instruction contains a missing operand");
+            if (captures.TryGetValue(value, out var capture))
+                return new SlangPlaceOperand(new SlangVariablePlace(capture));
             return value.Type is IPtrType
                 ? new SlangPlaceOperand(Place(value, "operand"))
                 : new SlangValueOperand(value);

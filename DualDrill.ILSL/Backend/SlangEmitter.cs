@@ -1,5 +1,4 @@
 using System.CodeDom.Compiler;
-using System.Globalization;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
@@ -279,25 +278,12 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
         private string GetValueName(IShaderValue value) =>
             value switch
             {
-                LiteralValue literal => RenderLiteral(literal.Value),
+                LiteralValue literal => SlangLiteralFormatter.Source(literal.Value),
                 FunctionDeclaration function => function.Name == "mix" ? "lerp" : function.Name,
                 VariablePointerValue variable =>
                     $"v_{GetValueId(variable)}_{variable.Declaration.Name}",
                 ParameterPointerValue parameter => parameter.Declaration.Name,
                 _ => $"v_{GetValueId(value)}"
-            };
-
-        private static string RenderLiteral(ILiteral literal) =>
-            literal switch
-            {
-                BoolLiteral value => value.Value ? "true" : "false",
-                I32Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
-                I64Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
-                U32Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
-                U64Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
-                F32Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
-                F64Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
-                _ => throw new NotSupportedException($"Unknown Slang literal {literal.GetType().Name}.")
             };
 
         private int GetValueId(IShaderValue value)

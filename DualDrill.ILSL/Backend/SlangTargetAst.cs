@@ -1,5 +1,6 @@
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Globalization;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
@@ -210,7 +211,7 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
     {
         if (value is LiteralValue literal)
         {
-            writer.Write(literal.Value.ValueString());
+            writer.Write(SlangLiteralFormatter.Dump(literal.Value));
             return;
         }
 
@@ -399,4 +400,35 @@ public sealed record SlangSwizzlePlace(
     IShaderType SwizzleType) : SlangPlace
 {
     public override IShaderType Type => SwizzleType;
+}
+
+internal static class SlangLiteralFormatter
+{
+    public static string Source(ILiteral literal) => Format(literal, string.Empty);
+
+    public static string Dump(ILiteral literal) => Format(literal, literal switch
+    {
+        BoolLiteral => "_b",
+        I32Literal => "_i32",
+        I64Literal => "_i64",
+        U32Literal => "_u32",
+        U64Literal => "_u64",
+        F32Literal => "_f32",
+        F64Literal => "_f64",
+        _ => throw new NotSupportedException($"Unknown Slang literal {literal.GetType().Name}.")
+    });
+
+    private static string Format(ILiteral literal, string suffix) =>
+        literal switch
+        {
+            BoolLiteral value => $"{(value.Value ? "true" : "false")}{suffix}",
+            I32Literal value => $"{value.Value.ToString(CultureInfo.InvariantCulture)}{suffix}",
+            I64Literal value => $"{value.Value.ToString(CultureInfo.InvariantCulture)}{suffix}",
+            U32Literal value => $"{value.Value.ToString(CultureInfo.InvariantCulture)}{suffix}",
+            U64Literal value => $"{value.Value.ToString(CultureInfo.InvariantCulture)}{suffix}",
+            F32Literal value => $"{value.Value.ToString(CultureInfo.InvariantCulture)}{suffix}",
+            F64Literal value => $"{value.Value.ToString(CultureInfo.InvariantCulture)}{suffix}",
+            _ => throw new NotSupportedException($"Unknown Slang literal {literal.GetType().Name}.")
+        };
+
 }
