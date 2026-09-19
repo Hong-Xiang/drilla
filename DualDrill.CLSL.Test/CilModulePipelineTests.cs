@@ -53,8 +53,10 @@ public sealed class CilModulePipelineTests
         var declarations = rawModule.Declarations.ToArray();
 
         var pre = CilPreStackPass.Run(rawModule);
-        var controlFlow = CilControlFlowPass.Run(pre);
-        var values = CilStackToValuePass.Run(controlFlow);
+        var labelled = CilBlockPartitionPass.Run(pre);
+        var shaderStack = CilToShaderStackPass.Run(labelled);
+        var shaderControlFlow = ShaderStackControlFlowPass.Run(shaderStack);
+        var values = ShaderStackToValuePass.Run(shaderControlFlow);
         var facts = CilBlockControlFactsPass.Run(values);
         _ = CilRegionPass.Run(facts);
 
@@ -210,13 +212,17 @@ public sealed class CilModulePipelineTests
         var method = GetMethod(nameof(Identity));
         var raw = CompilerTestPipeline.ParseRaw(method);
         var pre = CilPreStackPass.Run(raw);
-        var controlFlow = CilControlFlowPass.Run(pre);
-        var values = CilStackToValuePass.Run(controlFlow);
+        var labelled = CilBlockPartitionPass.Run(pre);
+        var shaderStack = CilToShaderStackPass.Run(labelled);
+        var shaderControlFlow = ShaderStackControlFlowPass.Run(shaderStack);
+        var values = ShaderStackToValuePass.Run(shaderControlFlow);
         var facts = CilBlockControlFactsPass.Run(values);
 
         Assert.Contains("linear-cil raw", Format(raw));
         Assert.Contains("linear-cil pre-annotated reachable", Format(pre));
-        Assert.Contains("reachable-cil-cfg", Format(controlFlow));
+        Assert.Contains("labelled-cil-block-list", Format(labelled));
+        Assert.Contains("labelled-shader-stack-block-list", Format(shaderStack));
+        Assert.Contains("shader-stack-cfg", Format(shaderControlFlow));
         Assert.Contains("flat-value-cfg", Format(values));
         Assert.Contains("control-facts-cfg", Format(facts));
         Assert.Contains(" facts={rpo=", Format(facts));
@@ -252,10 +258,12 @@ public sealed class CilModulePipelineTests
 
     private static void AssertLiteralStagePrinting(MethodInfo method, string[] expectedLiterals)
     {
-        var valueModule = CilStackToValuePass.Run(
-            CilControlFlowPass.Run(
-                CilPreStackPass.Run(
-                    CompilerTestPipeline.ParseRaw(method))));
+        var valueModule = ShaderStackToValuePass.Run(
+            ShaderStackControlFlowPass.Run(
+                CilToShaderStackPass.Run(
+                    CilBlockPartitionPass.Run(
+                        CilPreStackPass.Run(
+                            CompilerTestPipeline.ParseRaw(method))))));
         var valueBody = Assert.Single(valueModule.FunctionDefinitions.Values);
         var factsBody = Assert.Single(
             CilBlockControlFactsPass.Run(valueModule).FunctionDefinitions.Values);

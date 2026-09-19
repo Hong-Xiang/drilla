@@ -37,12 +37,15 @@ public sealed class CompilerStageDumpTests(ITestOutputHelper output)
     public void ChooseDumpsActualConfigurationSpecificLinearCilAndCfg()
     {
         var model = ParseModel(GetMethod(nameof(Choose)));
-        var blocks = CilControlFlowGraphBuilder.Partition(model.RawCode, model.PreAnnotatedCode);
+        var blocks = model.Blocks;
+        var shader = CompilerTestPipeline.ShaderStack(GetMethod(nameof(Choose)));
+        var shaderGraph = CompilerTestPipeline.ShaderControlFlow(GetMethod(nameof(Choose)));
         var configuration = GetType().Assembly
                                      .GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration;
         output.WriteLine(model.PreAnnotatedCode.PrettyPrint());
         output.WriteLine(blocks.PrettyPrint());
-        output.WriteLine(model.ControlFlow.PrettyPrint());
+        output.WriteLine(shader.PrettyPrint());
+        output.WriteLine(shaderGraph.PrettyPrint());
         Assert.Equal(blocks.PrettyPrint(), blocks.PrettyPrint());
 
         switch (configuration)
@@ -71,19 +74,6 @@ public sealed class CompilerStageDumpTests(ITestOutputHelper output)
                     "^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32]",
                     "    control: native ret"
                 ], Lines(blocks.PrettyPrint()));
-                Assert.Equal(
-                [
-                    "reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)",
-                    "^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[] predecessors=[]",
-                    "    control: native brtrue.s rel=+3 resolved=IL_0006 taken=^2(0x6) fallthrough=^1(0x3)",
-                    "^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0006 entry=[] predecessors=[^0(0x0)]",
-                    "    control: native br.s rel=+1 resolved=IL_0007 target=^3(0x7)",
-                    "^2(0x6) instructions=#4..#4 bytes=IL_0006..IL_0007 entry=[] predecessors=[^0(0x0)]",
-                    "    control: synthetic fallthrough target=^3(0x7)",
-                    "^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32] " +
-                    "predecessors=[^1(0x3), ^2(0x6)]",
-                    "    control: native ret"
-                ], Lines(model.ControlFlow.PrettyPrint()));
                 break;
             case "Release":
                 Assert.Equal(
@@ -107,20 +97,12 @@ public sealed class CompilerStageDumpTests(ITestOutputHelper output)
                     "^2(0x5) instructions=#4..#5 bytes=IL_0005..IL_0007 entry=[]",
                     "    control: native ret"
                 ], Lines(blocks.PrettyPrint()));
-                Assert.Equal(
-                [
-                    "reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)",
-                    "^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[] predecessors=[]",
-                    "    control: native brtrue.s rel=+2 resolved=IL_0005 taken=^2(0x5) fallthrough=^1(0x3)",
-                    "^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0005 entry=[] predecessors=[^0(0x0)]",
-                    "    control: native ret",
-                    "^2(0x5) instructions=#4..#5 bytes=IL_0005..IL_0007 entry=[] predecessors=[^0(0x0)]",
-                    "    control: native ret"
-                ], Lines(model.ControlFlow.PrettyPrint()));
                 break;
             default:
                 throw new InvalidOperationException($"Unsupported build configuration {configuration}.");
         }
+        Assert.Contains("labelled-shader-stack-block-list", shader.PrettyPrint());
+        Assert.Contains("shader-stack-cfg", shaderGraph.PrettyPrint());
     }
 
     [Fact]
@@ -128,7 +110,7 @@ public sealed class CompilerStageDumpTests(ITestOutputHelper output)
     {
         var method = GetMethod(nameof(Choose));
         var pre = Assert.Single(CilPreStackPass.Run(CompilerTestPipeline.ParseRaw(method)).FunctionDefinitions.Values);
-        var partition = CilControlFlowGraphBuilder.Partition(pre.Raw.Code, pre.Code);
+        var partition = CilBlockPartitioner.Partition(pre.Raw.Code, pre.Code);
         var returned = partition.Blocks.Last(block => block.Terminator is CilControlFlow.Return);
         var disconnected = new CilInstructionBlock(Label.Create("disconnected"), returned.Instructions, returned.Terminator);
         var reordered = new BlockList<CilInstructionBlock>(
@@ -164,9 +146,9 @@ public sealed class CompilerStageDumpTests(ITestOutputHelper output)
 
         Assert.EndsWith("pre=[]", liveLoad, StringComparison.Ordinal);
         Assert.True(model.PreAnnotatedCode.Instructions[1].Node.Index > 1);
-        Assert.Equal(2, model.ControlFlow.Count);
-        Assert.Equal(2, Lines(model.ControlFlow.PrettyPrint()).Count(line => line.StartsWith("^")));
-        var blocks = CilControlFlowGraphBuilder.Partition(model.RawCode, model.PreAnnotatedCode);
+        Assert.Equal(2, model.Blocks.Blocks.Length);
+        Assert.Equal(2, Lines(model.PrettyPrint()).Count(line => line.StartsWith("^")));
+        var blocks = CilBlockPartitioner.Partition(model.RawCode, model.PreAnnotatedCode);
         Assert.Equal(model.PreAnnotatedCode.Instructions, blocks.Blocks.SelectMany(block => block.Instructions));
         Assert.Equal(2, Lines(blocks.PrettyPrint()).Count(line => line.StartsWith("^")));
         Assert.Contains("instructions=#3..#4", blocks.PrettyPrint());
@@ -186,14 +168,21 @@ public sealed class CompilerStageDumpTests(ITestOutputHelper output)
     public void ConditionalCfgRetainsSameTargetArmsAndOnePredecessorNode()
     {
         var model = ParseModel(EmittedFixtures.SameTarget);
-        var dump = model.ControlFlow.PrettyPrint();
+        var dump = model.PrettyPrint();
+        var shaderGraph = CompilerTestPipeline.ShaderControlFlow(EmittedFixtures.SameTarget).Graph;
         var conditional = Assert.Single(
             Lines(dump),
             line => line.Contains("control: native brtrue.s", StringComparison.Ordinal));
+        var branch = Assert.IsType<ConditionalSuccessor>(
+            model[model.Blocks.EntryLabel].Terminator.ToSuccessor());
+        var shaderBranch = Assert.IsType<ConditionalSuccessor>(
+            shaderGraph.Successor(shaderGraph.EntryLabel));
 
         Assert.Contains("taken=^1(0x3) fallthrough=^1(0x3)", conditional);
         Assert.Contains("^1(0x3)", dump);
-        Assert.Contains("predecessors=[^0(0x0)]", dump);
+        Assert.Same(branch.TrueTarget, branch.FalseTarget);
+        Assert.Same(shaderBranch.TrueTarget, shaderBranch.FalseTarget);
+        Assert.Single(shaderGraph.Predecessor(shaderBranch.TrueTarget));
     }
 
     [Fact]
@@ -237,8 +226,8 @@ public sealed class CompilerStageDumpTests(ITestOutputHelper output)
     private static string[] Lines(string value) =>
         value.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
-    private static MethodBodyAnalysisModel ParseModel(MethodInfo method)
-        => CompilerTestPipeline.ControlFlow(method);
+    private static LabelledCilFunctionBody ParseModel(MethodInfo method)
+        => CompilerTestPipeline.Labelled(method);
 
     private static MethodInfo GetMethod(string name) =>
         typeof(CompilerStageDumpTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)

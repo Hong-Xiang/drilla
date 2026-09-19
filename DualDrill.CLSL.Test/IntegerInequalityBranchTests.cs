@@ -74,12 +74,9 @@ public sealed class IntegerInequalityBranchTests
             stages.Compiled.FunctionDefinitions.Values,
             value => ReferenceEquals(value.Declaration, declaration));
         var model = Assert.Single(
-            stages.ControlFlow.FunctionDefinitions.Values,
+            stages.Labelled.FunctionDefinitions.Values,
             value => value.Environment.Method == method);
-        var graph = model.ControlFlow;
-        var blocks = model.Labels.ToDictionary(
-            label => graph[label].ByteOffset,
-            label => graph[label]);
+        var blocks = model.Blocks.Blocks.ToDictionary(block => block.ByteOffset);
 
         Assert.True(model.Labels.ToHashSet().SetEquals(body.Labels));
 

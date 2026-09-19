@@ -80,29 +80,180 @@ internal static class CilStagePrettyPrinter
         writer.WriteLine();
     }
 
-    public static void PrintControlFlowGraph(
-        ControlFlowGraph<CilInstructionBlock> graph,
+    public static void PrintShaderStackControlFlow(
+        ShaderStackControlFlowBody body,
+        IndentedTextWriter writer)
+    {
+        PrintShaderStackGraph(body.Graph, writer, PrettyPrintOption.Default);
+    }
+
+    public static void PrintShaderStackBlockList(
+        BlockList<ShaderStackBasicBlock> blocks,
+        IndentedTextWriter writer,
+        PrettyPrintOption option)
+    {
+        var labelIds = blocks.Blocks.Select((block, index) => (block.Label, index))
+                             .ToDictionary(item => item.Label, item => item.index);
+        writer.WriteLine("labelled-shader-stack-block-list (stack order: bottom -> top)");
+        writer.Write("entry=");
+        writer.WriteLine(LabelName(blocks.EntryLabel, labelIds));
+        foreach (var block in blocks.Blocks)
+            PrintShaderStackBlock(block, labelIds, writer);
+    }
+
+    public static void PrintShaderStackGraph(
+        ControlFlowGraph<ShaderStackBasicBlock> graph,
         IndentedTextWriter writer,
         PrettyPrintOption option)
     {
         var labels = graph.Labels()
-                          .OrderBy(label => graph[label].InstructionIndex)
                           .ToImmutableArray();
         var labelIds = labels.Select((label, index) => (label, index))
                              .ToDictionary(item => item.label, item => item.index);
 
-        writer.WriteLine("reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)");
+        writer.WriteLine("shader-stack-cfg (stack order: bottom -> top)");
         foreach (var label in labels)
         {
             var block = graph[label];
-            PrintBlockHeader(block, labelIds, writer);
+            writer.Write(LabelName(label, labelIds));
             writer.Write(" predecessors=");
             writer.Write(LabelList(
-                graph.Predecessor(label).OrderBy(predecessor => graph[predecessor].InstructionIndex),
+                graph.Predecessor(label).OrderBy(predecessor => labelIds[predecessor]),
                 labelIds));
             writer.WriteLine();
-            PrintBlockControl(block, labelIds, writer);
+            PrintShaderStackBlockBody(block, labelIds, writer);
         }
+    }
+
+    public static void PrintShaderStackInstruction(
+        ShaderStackInstruction instruction,
+        ShaderStackTransition transition,
+        IndentedTextWriter writer,
+        PrettyPrintOption option)
+    {
+        PrintProvenance(transition.Provenance, writer);
+        writer.Write(" ");
+        switch (instruction)
+        {
+            case ShaderStackInstruction.Operation operation:
+                writer.Write(operation.Instruction.Operation.Name);
+                writer.Write("(");
+                writer.Write(string.Join(", ", operation.Instruction.Operands.Select(OperandName)));
+                writer.Write(")");
+                writer.Write(" pop=");
+                writer.Write(Invariant(operation.PopCount));
+                if (operation.Instruction.Result is { } result)
+                {
+                    writer.Write(" result=");
+                    writer.Write(ShaderTypeName(result));
+                }
+                break;
+            case ShaderStackInstruction.PushAlias alias:
+                writer.Write("push-alias ");
+                writer.Write(OperandName(alias.Value));
+                break;
+            case ShaderStackInstruction.Drop:
+                writer.Write("drop");
+                break;
+        }
+        PrintTransition(transition, writer);
+    }
+
+    public static void PrintShaderStackTerminator(
+        ITerminator<Label, ShaderStackOperand> terminator,
+        ShaderStackTransition transition,
+        IndentedTextWriter writer,
+        PrettyPrintOption option)
+    {
+        PrintProvenance(transition.Provenance, writer);
+        writer.Write(" ");
+        writer.Write(terminator.Evaluate(new ShaderStackTerminatorFormatter()));
+        PrintTransition(transition, writer);
+    }
+
+    private static void PrintShaderStackBlock(
+        ShaderStackBasicBlock block,
+        IReadOnlyDictionary<Label, int> labelIds,
+        IndentedTextWriter writer)
+    {
+        writer.Write(LabelName(block.Label, labelIds));
+        writer.Write(" entry=");
+        writer.Write(ShaderStack(block.EntryStack));
+        writer.WriteLine();
+        PrintShaderStackBlockBody(block, labelIds, writer);
+    }
+
+    private static void PrintShaderStackBlockBody(
+        ShaderStackBasicBlock block,
+        IReadOnlyDictionary<Label, int> labelIds,
+        IndentedTextWriter writer)
+    {
+        using (writer.IndentedScope())
+        {
+            foreach (var instruction in block.Body.Elements)
+                instruction.PrettyPrint(writer, PrettyPrintOption.Default);
+            var terminator = block.Body.Last;
+            PrintProvenance(terminator.Annotation.Provenance, writer);
+            writer.Write(" ");
+            writer.Write(terminator.Node.Evaluate(new ShaderStackTerminatorFormatter(labelIds)));
+            PrintTransition(terminator.Annotation, writer);
+        }
+    }
+
+    private static void PrintTransition(ShaderStackTransition transition, IndentedTextWriter writer)
+    {
+        writer.Write(" pre=");
+        writer.Write(ShaderStack(transition.Pre));
+        writer.Write(" post=");
+        writer.Write(ShaderStack(transition.Post));
+        writer.WriteLine();
+    }
+
+    private static void PrintProvenance(ShaderStackProvenance provenance, IndentedTextWriter writer)
+    {
+        writer.Write("#");
+        writer.Write(Invariant(provenance.OriginalIndex));
+        writer.Write(".");
+        writer.Write(Invariant(provenance.ExpansionOrdinal));
+        writer.Write(" ");
+        writer.Write(ByteRange(provenance.ByteStart, provenance.ByteEnd));
+        if (provenance.Synthetic)
+            writer.Write(" synthetic");
+    }
+
+    private static string OperandName(ShaderStackOperand operand) =>
+        operand switch
+        {
+            ShaderStackOperand.Depth depth =>
+                $"depth{Invariant(depth.Index)}:{ShaderTypeName(depth.Type)}",
+            ShaderStackOperand.Immediate { Value: LiteralValue literal } =>
+                literal.Value.ToString() ?? ShaderTypeName(literal.Type),
+            ShaderStackOperand.Immediate { Value: FunctionDeclaration function } =>
+                $"@fn({function.Name})",
+            ShaderStackOperand.Immediate { Value: ParameterPointerValue parameter } =>
+                $"&arg({parameter.Declaration.Name})",
+            ShaderStackOperand.Immediate { Value: VariablePointerValue variable } =>
+                $"&var({variable.Declaration.Name})",
+            ShaderStackOperand.Immediate { Value: StoragePointerValue storage } =>
+                $"&storage({storage.VariableDeclaration.Name})",
+            _ => $"<{ShaderTypeName(operand.Type)}>"
+        };
+
+    private static string ShaderStack(IEnumerable<IShaderType> stack) =>
+        "[" + string.Join(", ", stack.Select(ShaderTypeName)) + "]";
+
+    private sealed class ShaderStackTerminatorFormatter(
+        IReadOnlyDictionary<Label, int>? labelIds = null)
+        : ITerminatorSemantic<Label, ShaderStackOperand, string>
+    {
+        public string ReturnVoid() => "return";
+        public string ReturnExpr(ShaderStackOperand expr) => $"return {OperandName(expr)}";
+        public string Br(Label target) => $"br {Name(target)}";
+        public string BrIf(ShaderStackOperand condition, Label trueTarget, Label falseTarget) =>
+            $"br_if {OperandName(condition)} true={Name(trueTarget)} false={Name(falseTarget)}";
+
+        private string Name(Label label) =>
+            labelIds is null ? $"^({label.Name})" : LabelName(label, labelIds);
     }
 
     public static void PrintBlockList(
