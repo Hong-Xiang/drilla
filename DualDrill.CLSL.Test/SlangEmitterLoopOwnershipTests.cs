@@ -265,9 +265,9 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         var body = new FunctionBody4(declaration,
             RegionTree.Loop(outer,
             [
-                RegionTree.Loop(inner, [], innerBody, null, null),
+                RegionTree.Block(terminal, [], terminalBody, null),
                 RegionTree.Block(exit, [], exitBody, null),
-                RegionTree.Block(terminal, [], terminalBody, null)
+                RegionTree.Loop(inner, [], innerBody, null, null)
             ], outerBody, null, null));
 
         var error = Assert.Throws<NotSupportedException>(() => Emit(body));
@@ -304,7 +304,7 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         string slang)
     {
         output.WriteLine($"=== {name}: actual CIL ===");
-        output.WriteLine(facts.Source.Source.RawCode.PrettyPrint());
+        output.WriteLine(facts.Source.Source.Source.Source.RawCode.PrettyPrint());
         output.WriteLine($"=== {name}: actual control facts ===");
         output.WriteLine(facts.Graph.PrettyPrint());
         output.WriteLine($"=== {name}: actual Slang ===");

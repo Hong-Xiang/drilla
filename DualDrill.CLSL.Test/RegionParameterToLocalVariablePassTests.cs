@@ -10,10 +10,11 @@ using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
-public class RegionParameterToLocalVariablePassTests
+public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
 {
     private readonly ParameterDeclaration source = new("source", ShaderType.I32, []);
     private readonly IShaderValue condition = ShaderValue.Intermediate(ShaderType.Bool);
@@ -26,7 +27,7 @@ public class RegionParameterToLocalVariablePassTests
     [InlineData(2)]
     [InlineData(8)]
     [InlineData(32)]
-    public void AliasChainsResolveIndependentlyOfRegionOrder(int length)
+    public void AliasChainsResolveInLexicallyScopedOrder(int length)
     {
         var entry = Label.Create("entry");
         var labels = Enumerable.Range(0, length).Select(Label.FromIndex).ToArray();
@@ -36,14 +37,11 @@ public class RegionParameterToLocalVariablePassTests
             .ToArray();
         var first = Block(entry, [], Jump(labels[0], source.Value));
 
-        foreach (var order in new[] { blocks, [.. blocks.Reverse()] })
-        {
-            var result = Lower(CreateBody([first, .. order]));
-            var returned = Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(
-                result[labels[^1]].Body.Last);
-            Assert.Same(source.Value, returned.Expr);
-            AssertLowered(result);
-        }
+        var result = Lower(CreateBody([first, .. blocks.Reverse()]));
+        var returned = Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(
+            result[labels[^1]].Body.Last);
+        Assert.Same(source.Value, returned.Expr);
+        AssertLowered(result);
     }
 
     [Fact]
@@ -58,12 +56,12 @@ public class RegionParameterToLocalVariablePassTests
         var loaded = ShaderValue.Intermediate(ShaderType.I32);
         var result = Lower(CreateBody([
             Block(entry, [], Terminators.BrIf(condition, new(left, []), new(right, []))),
-            Block(left, [], Jump(join, local.Value)),
-            Block(right, [], Jump(join, local.Value)),
-            ShaderRegionBody.Create(join, [pointer], [
+            new BlockSpec(join, [pointer], [
                 Instruction.Factory.Load(default, new LoadOperation(), loaded, pointer),
                 Instruction.Factory.Store(default, new StoreOperation(), pointer, loaded)
-            ], Terminators.ReturnExpr(loaded), new ExitPostDominance.FunctionExit(false))
+            ], Terminators.ReturnExpr(loaded)),
+            Block(left, [], Jump(join, local.Value)),
+            Block(right, [], Jump(join, local.Value))
         ]));
 
         var instructions = result[join].Body.Elements.ToArray();
@@ -84,20 +82,19 @@ public class RegionParameterToLocalVariablePassTests
         var entry = Label.Create("entry");
         var labels = Enumerable.Range(0, length).Select(Label.FromIndex).ToArray();
         var pointers = labels.Select(_ => ShaderValue.Intermediate(source.Value.Type)).ToArray();
-        var blocks = Annotate(labels.Select((label, i) =>
-            ShaderRegionBody.Create(label, [pointers[i]], [
+        var blocks = labels.Select((label, i) =>
+            new BlockSpec(label, [pointers[i]], [
                 Instruction.Factory.Load(default, new LoadOperation(),
                     ShaderValue.Intermediate(ShaderType.I32), pointers[i])
-            ], Jump(labels[(i + 1) % length], pointers[i]),
-                ExitPostDominance.NoExitPath.Instance)).ToArray());
+            ], Jump(labels[(i + 1) % length], pointers[i]))).ToArray();
         var first = Block(entry, [], Jump(labels[0], source.Value));
-        var original = CreateBody([first, .. blocks]);
+        var annotated = Annotate([first, .. blocks]);
         var nested = RegionTree<Label, ShaderRegionBody>.Block(entry, [
             RegionTree<Label, ShaderRegionBody>.Loop(labels[0],
-                [.. blocks.Skip(1).Select(Region)], blocks[0], null, null)
-        ], first, null);
-
-        var result = Lower(new FunctionBody4(original.Declaration, nested));
+                [.. annotated.Skip(2).Reverse().Select(Region)], annotated[1], null, null)
+        ], annotated[0], null);
+        var declaration = new FunctionDeclaration("test", [source], new FunctionReturn(ShaderType.I32, []), []);
+        var result = Lower(new FunctionBody4(declaration, nested));
 
         AssertLowered(result);
         Assert.Empty(result.LocalVariables);
@@ -110,14 +107,25 @@ public class RegionParameterToLocalVariablePassTests
     [InlineData(2)]
     public void RootlessCyclesAreRejected(int length)
     {
+        var entry = Label.Create("entry");
         var labels = Enumerable.Range(0, length).Select(Label.FromIndex).ToArray();
         var pointers = labels.Select(_ => ShaderValue.Intermediate(source.Value.Type)).ToArray();
         var blocks = labels.Select((label, i) =>
             Block(label, [pointers[i]], Jump(labels[(i + 1) % length], pointers[i]))).ToArray();
+        var entryBody = Block(entry, [], Jump(labels[0], pointers[0]));
+        var annotated = Annotate([entryBody, .. blocks]);
+        var tree = RegionTree<Label, ShaderRegionBody>.Block(entry, [
+            RegionTree<Label, ShaderRegionBody>.Loop(labels[0],
+                [.. annotated.Skip(2).Reverse().Select(Region)], annotated[1], null, null)
+        ], annotated[0], null);
+        var body = new FunctionBody4(
+            new FunctionDeclaration("test", [source], new FunctionReturn(UnitType.Instance, []), []),
+            tree);
 
-        var error = Assert.Throws<NotSupportedException>(() => Lower(CreateBody(blocks)));
+        var error = Assert.Throws<NotSupportedException>(() => Lower(body));
 
         Assert.Contains("no stable address", error.Message);
+        output.WriteLine($"ACTUAL resolver rejection: {error.Message}");
     }
 
     [Fact]
@@ -129,13 +137,17 @@ public class RegionParameterToLocalVariablePassTests
         var back = Label.Create("back");
         var p = ShaderValue.Intermediate(source.Value.Type);
         var q = ShaderValue.Intermediate(source.Value.Type);
-        var body = CreateBody([
-            Block(entry, [], Terminators.BrIf(condition, new(loop, [source.Value]), new(back, [other.Value]))),
-            Block(loop, [p], Jump(back, p)),
-            Block(back, [q], Jump(loop, q))
-        ]);
-        body = new FunctionBody4(new FunctionDeclaration("test", [source, other],
-            body.Declaration.Return, []), body.Body);
+        var entryBody = Block(entry, [], Jump(loop, source.Value));
+        var loopBody = Block(loop, [p], Jump(back, other.Value));
+        var backBody = Block(back, [q], Jump(loop, q));
+        var blocks = Annotate([entryBody, loopBody, backBody]);
+        var body = new FunctionBody4(
+            new FunctionDeclaration("test", [source, other], new FunctionReturn(UnitType.Instance, []), []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [
+                RegionTree<Label, ShaderRegionBody>.Loop(loop, [
+                    Region(blocks[2])
+                ], blocks[1], null, null)
+            ], blocks[0], null));
 
         var error = Assert.Throws<NotSupportedException>(() => Lower(body));
 
@@ -150,22 +162,26 @@ public class RegionParameterToLocalVariablePassTests
         var orphan = Label.Create("orphan");
         var p = ShaderValue.Intermediate(source.Value.Type);
         var q = ShaderValue.Intermediate(source.Value.Type);
-        var body = CreateBodyFromAnnotated([
-            Block(entry, [], Jump(join, source.Value)) with
-            {
-                PostDominance = new ExitPostDominance.Block(join, false)
-            },
-            Block(join, [p], Terminators.ReturnExpr(p)) with
-            {
-                PostDominance = new ExitPostDominance.FunctionExit(false)
-            },
-            Block(orphan, [q], Terminators.BrIf(condition, new(orphan, [q]), new(join, [q]))) with
-            {
-                PostDominance = new ExitPostDominance.Block(join, true)
-            }
+        var blocks = Annotate([
+            Block(entry, [],
+                Terminators.BrIf(condition, new(join, [source.Value]), new(orphan, [q]))),
+            Block(join, [p], Terminators.ReturnExpr(p)),
+            Block(orphan, [q], Terminators.BrIf(condition, new(orphan, [q]), new(join, [q])))
         ]);
+        var body = new FunctionBody4(
+            new FunctionDeclaration("test", [source], new FunctionReturn(source.Value.Type, []), []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [
+                Region(blocks[1]),
+                RegionTree<Label, ShaderRegionBody>.Loop(orphan, [],
+                    blocks[2],
+                    null,
+                    null)
+            ], blocks[0], null));
 
-        Assert.Throws<NotSupportedException>(() => Lower(body));
+        var error = Assert.Throws<NotSupportedException>(() => Lower(body));
+
+        Assert.Contains("no stable address", error.Message);
+        output.WriteLine($"ACTUAL resolver rejection: {error.Message}");
     }
 
     [Fact]
@@ -189,12 +205,11 @@ public class RegionParameterToLocalVariablePassTests
     public void PointerWithoutIncomingEdgeIsRejectedEvenIfUnused()
     {
         var entry = Label.Create("entry");
-        var body = CreateBody([Block(entry, [ShaderValue.Intermediate(source.Value.Type)],
-            Terminators.ReturnVoid())]);
+        var error = Assert.Throws<ArgumentException>(() => CreateBody([
+            Block(entry, [ShaderValue.Intermediate(source.Value.Type)], Terminators.ReturnVoid())
+        ]));
 
-        var error = Assert.Throws<NotSupportedException>(() => Lower(body));
-
-        Assert.Contains("no incoming", error.Message);
+        Assert.Contains("entry region", error.Message);
     }
 
     [Theory]
@@ -204,12 +219,10 @@ public class RegionParameterToLocalVariablePassTests
     {
         var entry = Label.Create("entry");
         var target = Label.Create("target");
-        var body = CreateBody([
+        var error = Assert.Throws<ArgumentException>(() => CreateBody([
             Block(entry, [], Jump(target, [.. Enumerable.Repeat<IShaderValue>(source.Value, argumentCount)])),
             Block(target, [ShaderValue.Intermediate(source.Value.Type)], Terminators.ReturnVoid())
-        ]);
-
-        var error = Assert.Throws<InvalidOperationException>(() => Lower(body));
+        ]));
 
         Assert.Contains("argument count", error.Message);
     }
@@ -220,12 +233,10 @@ public class RegionParameterToLocalVariablePassTests
         var entry = Label.Create("entry");
         var target = Label.Create("target");
         var inputPointer = ShaderValue.Intermediate(ShaderType.I32.GetPtrType(InputAddressSpace.Instance));
-        var body = CreateBody([
+        var error = Assert.Throws<ArgumentException>(() => CreateBody([
             Block(entry, [], Jump(target, source.Value)),
             Block(target, [inputPointer], Terminators.ReturnVoid())
-        ]);
-
-        var error = Assert.Throws<InvalidOperationException>(() => Lower(body));
+        ]));
 
         Assert.Contains("argument type", error.Message);
     }
@@ -238,12 +249,10 @@ public class RegionParameterToLocalVariablePassTests
         var entry = Label.Create("entry");
         var target = Label.Create("target");
         var value = ShaderValue.Intermediate(ShaderType.I32);
-        var body = CreateBody([
+        Assert.Throws<ArgumentException>(() => CreateBody([
             Block(entry, [], Jump(target, [.. Enumerable.Repeat<IShaderValue>(value, argumentCount)])),
             Block(target, [ShaderValue.Intermediate(ShaderType.I32)], Terminators.ReturnVoid())
-        ]);
-
-        Assert.Throws<InvalidOperationException>(() => Lower(body));
+        ]));
     }
 
     [Fact]
@@ -251,12 +260,10 @@ public class RegionParameterToLocalVariablePassTests
     {
         var entry = Label.Create("entry");
         var target = Label.Create("target");
-        var body = CreateBody([
+        Assert.Throws<ArgumentException>(() => CreateBody([
             Block(entry, [], Jump(target, condition)),
             Block(target, [ShaderValue.Intermediate(ShaderType.I32)], Terminators.ReturnVoid())
-        ]);
-
-        Assert.Throws<InvalidOperationException>(() => Lower(body));
+        ]));
     }
 
     [Theory]
@@ -317,15 +324,19 @@ public class RegionParameterToLocalVariablePassTests
             new ParameterDeclaration("p", source.Value.Type, []),
             new ParameterDeclaration("q", source.Value.Type, [])
         ], new FunctionReturn(ShaderType.I32, []), []);
-        var body = CreateBody([
-            Block(entry, [], Jump(loop, source.Value, first, source.Value, second)),
-            ShaderRegionBody.Create(loop, [p, a, q, b], [
+        var entryBody = Block(entry, [], Jump(loop, source.Value, first, source.Value, second));
+        var exitBody = Block(exit, [], Terminators.ReturnExpr(callResult));
+        var loopBody = new BlockSpec(loop, [p, a, q, b], [
                 Instruction.Factory.Call(default, new CallOperation(Assert.IsType<FunctionType>(callee.Type)),
                     callResult, callee, [p, q])
-            ], Terminators.BrIf(condition, new(loop, [p, b, q, a]), new(exit, [])),
-                new ExitPostDominance.Block(exit, true)),
-            Block(exit, [], Terminators.ReturnExpr(callResult))
-        ]);
+            ], Terminators.BrIf(condition, new(loop, [p, b, q, a]), new(exit, [])));
+        var blocks = Annotate([entryBody, loopBody, exitBody]);
+        var body = new FunctionBody4(
+            new FunctionDeclaration("test", [source], new FunctionReturn(ShaderType.I32, []), []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [
+                Region(blocks[2]),
+                RegionTree<Label, ShaderRegionBody>.Loop(loop, [], blocks[1], null, null)
+            ], blocks[0], null));
 
         var result = Lower(body);
         AssertLowered(result);
@@ -384,11 +395,8 @@ public class RegionParameterToLocalVariablePassTests
         Assert.Same(value, Assert.Single(result[entry].Body.Elements).Operand1);
     }
 
-    private FunctionBody4 CreateBody(ShaderRegionBody[] blocks)
-    {
-        blocks = Annotate(blocks);
-        return CreateBodyFromAnnotated(blocks);
-    }
+    private FunctionBody4 CreateBody(BlockSpec[] blocks) =>
+        CreateBodyFromAnnotated(Annotate(blocks));
 
     private FunctionBody4 CreateBodyFromAnnotated(ShaderRegionBody[] blocks) =>
         new(new FunctionDeclaration("test", [source],
@@ -401,30 +409,33 @@ public class RegionParameterToLocalVariablePassTests
     private static RegionTree<Label, ShaderRegionBody> Region(ShaderRegionBody block) =>
         RegionTree<Label, ShaderRegionBody>.Block(block.Label, [], block, null);
 
-    private static ShaderRegionBody Block(Label label, ImmutableArray<IShaderValue> parameters,
-        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
-        ShaderRegionBody.Create(
-            label,
-            parameters,
-            [],
-            terminator,
-            new ExitPostDominance.FunctionExit(false));
+    private sealed record BlockSpec(
+        Label Label,
+        ImmutableArray<IShaderValue> Parameters,
+        ImmutableArray<Instruction<IShaderValue, IShaderValue>> Instructions,
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> Terminator);
 
-    private static ShaderRegionBody[] Annotate(IEnumerable<ShaderRegionBody> blocks)
+    private static BlockSpec Block(Label label, ImmutableArray<IShaderValue> parameters,
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
+        new(label, parameters, [], terminator);
+
+    private static ShaderRegionBody[] Annotate(IEnumerable<BlockSpec> blocks)
     {
         var source = blocks.ToArray();
-        var graph = new ControlFlowGraph<ShaderRegionBody>(
+        var graph = new ControlFlowGraph<BlockSpec>(
             source[0].Label,
             source.ToDictionary(
                 block => block.Label,
-                block => new ControlFlowGraph<ShaderRegionBody>.NodeDefinition(
-                    block.Successor,
+                block => new ControlFlowGraph<BlockSpec>.NodeDefinition(
+                    block.Terminator.ToSuccessor(),
                     block)));
         var tree = graph.ControlFlowAnalysis().PostDominatorTree;
-        return source.Select(block => block with
-        {
-            PostDominance = tree.ExitPostDominance(block.Label)
-        }).ToArray();
+        return source.Select(block => ShaderRegionBody.Create(
+            block.Label,
+            block.Parameters,
+            block.Instructions,
+            block.Terminator,
+            tree.ExitPostDominance(block.Label))).ToArray();
     }
 
     private static ITerminator<RegionJump<IShaderValue>, IShaderValue> Jump(Label target,

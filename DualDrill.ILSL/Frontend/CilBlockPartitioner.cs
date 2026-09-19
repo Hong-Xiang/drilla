@@ -9,9 +9,9 @@ using FlowControl = System.Reflection.Emit.FlowControl;
 
 namespace DualDrill.CLSL.Frontend;
 
-internal static class CilControlFlowGraphBuilder
+internal static class CilBlockPartitioner
 {
-    public static ControlFlowGraph<CilInstructionBlock> Build(
+    internal static BlockList<CilInstructionBlock> Partition(
         LinearCode<CilInstructionInfo> raw,
         LinearCode<Annotated<CilInstructionInfo, PreStack>> preAnnotated)
     {
@@ -19,7 +19,7 @@ internal static class CilControlFlowGraphBuilder
         var environment = raw.Environment;
         var byIndex = preAnnotated.Instructions.ToFrozenDictionary(instruction => instruction.Node.Index);
         var reachable = byIndex.Keys.ToFrozenSet();
-        var builder = new ControlFlowGraphBuilder(
+        var builder = new InstructionBlockPartitioner(
             raw.Count,
             index => Label.Create(environment.Offsets[index]));
 
@@ -70,13 +70,13 @@ internal static class CilControlFlowGraphBuilder
                     (FlowControl.Next or FlowControl.Call, TerminateSuccessor) =>
                         new CilControlFlow.EndOfCode(),
                     _ => throw new InvalidProgramException(
-                        $"CIL control and CFG topology disagree at IL_{last.ByteOffset:X4}.")
+                        $"CIL control and block boundaries disagree at IL_{last.ByteOffset:X4}.")
                 };
 
                 return new CilInstructionBlock(label, instructions, terminator);
             },
             static block => block.Terminator.ToSuccessor(),
-            CilStagePrettyPrinter.PrintControlFlowGraph);
+            CilStagePrettyPrinter.PrintBlockList);
     }
 
     private static void ValidateSourceAssociation(

@@ -22,6 +22,7 @@
 
     <ItemGroup>
         <PackageReference Update="DotNext.Unsafe" />
+        <InternalsVisibleTo Include="DualDrill.CLSL.Test" />
     </ItemGroup>
 
 </Project>

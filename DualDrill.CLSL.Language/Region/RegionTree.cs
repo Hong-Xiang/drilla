@@ -216,7 +216,12 @@ public static class RegionTree
                 : Block(label, [.. childRegions], body, null);
         }
 
-        return ToRegion(graph.EntryLabel);
+        var tree = ToRegion(graph.EntryLabel);
+        _ = ScopedControlIndex<Label>.Create(
+            tree,
+            (label, _) => graph.Successor(label).AllTargets().ToImmutableArray(),
+            "Region graph");
+        return tree;
     }
 }
 

@@ -5,9 +5,10 @@ using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation.Pointer;
 
-public sealed class AddressOfMemberOperation(MemberDeclaration Member)
+public sealed class AddressOfMemberOperation(MemberDeclaration member)
     : IAddressOfOperation
 {
+    public MemberDeclaration Member { get; } = member;
     public FunctionDeclaration Function => throw new NotImplementedException();
 
     public string Name => Member.Name;

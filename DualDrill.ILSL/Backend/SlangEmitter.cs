@@ -178,7 +178,7 @@ public class SlangEmitter
 
 
     string ILiteralSemantic<string>.Bool(bool value)
-        => value.ToString();
+        => value ? "true" : "false";
 
     string ILiteralSemantic<string>.I32(int value)
         => value.ToString();
@@ -217,8 +217,9 @@ public class SlangEmitter
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.Call(
         Instruction<string, string> ctx, CallOperation op, string result, string f, IReadOnlyList<string> arguments) =>
-        // TODO: handle void type
-        $"{result} = {f}({string.Join(',', arguments)});";
+        op.ResultType is UnitType
+            ? $"{f}({string.Join(',', arguments)});"
+            : $"{result} = {f}({string.Join(',', arguments)});";
 
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.Literal(
@@ -256,6 +257,7 @@ public class SlangEmitter
             IVectorSwizzleGetOperation o => $"{e}.{o.Pattern.Name}",
             IVectorComponentGetOperation o => $"{e}.{o.Component.Name}",
             IVectorFromScalarConstructOperation o => $"{op.ResultType.Name}({e})",
+            LogicalNotOperation => $"!{e}",
             UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
             VectorNumericUnaryOperation<N3, FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
             _ => $"{op.Name}({e})"
@@ -529,7 +531,7 @@ public class SlangEmitter
 
     private void VisitType(IShaderType type)
     {
-        Writer.Write(type.Name);
+        Writer.Write(type is UnitType ? "void" : type.Name);
     }
 
     private void OnBody(FunctionBody4 body)
