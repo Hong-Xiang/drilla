@@ -20,21 +20,27 @@ using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
 
 namespace DualDrill.CLSL.Test;
 
+[Collection(SlangProcessTestCollection.Name)]
 public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
 {
-    [Fact]
-    public void OrdinaryCilDiamondUsesPromotedPublicStages() =>
+    [Theory]
+    [InlineData(true, 36)]
+    [InlineData(false, 48)]
+    public void OrdinaryCilDiamondUsesPromotedPublicStages(bool choose, int expected) =>
         AssertPublicStages(
             GetMethod(nameof(LocalDiamond)),
-            [new Value.Boolean(true), new Value.Integer(11), new Value.Integer(29)],
-            new Value.Integer(36));
+            [new Value.Boolean(choose), new Value.Integer(11), new Value.Integer(29)],
+            new Value.Integer(expected));
 
-    [Fact]
-    public void OrdinaryCilLoopUsesPromotedPublicStages() =>
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(5, 10)]
+    public void OrdinaryCilLoopUsesPromotedPublicStages(int limit, int expected) =>
         AssertPublicStages(
             GetMethod(nameof(LocalLoop)),
-            [new Value.Integer(5)],
-            new Value.Integer(10));
+            [new Value.Integer(limit)],
+            new Value.Integer(expected));
 
     [Theory]
     [InlineData(EmittedFixtures.InitIntName, 0)]
@@ -76,6 +82,18 @@ public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
         Assert.NotEmpty(LocalMemory(lifted));
         Assert.NotEmpty(LocalMemory(promoted));
         Assert.Same(lifted.Graph, promoted.Graph);
+    }
+
+    [Fact]
+    public async Task PromotedBoolInitializationEmitsValidSlang()
+    {
+        var body = CompilerTestPipeline.CompileBody(EmittedFixtures.Method(EmittedFixtures.InitBoolName));
+        var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
+            new FunctionToOperationPass().VisitFunctionBody(body));
+        var source = ScalarControlFlowTests.Emit(lowered);
+        output.WriteLine(source);
+
+        await new SlangService().ValidateAsync(source);
     }
 
     [Fact]

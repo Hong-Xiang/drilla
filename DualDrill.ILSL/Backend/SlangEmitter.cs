@@ -177,7 +177,7 @@ public class SlangEmitter
 
 
     string ILiteralSemantic<string>.Bool(bool value)
-        => value.ToString();
+        => value ? "true" : "false";
 
     string ILiteralSemantic<string>.I32(int value)
         => value.ToString();
