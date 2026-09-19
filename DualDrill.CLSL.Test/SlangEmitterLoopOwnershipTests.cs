@@ -126,9 +126,9 @@ public sealed class SlangEmitterLoopOwnershipTests
     }
 
     private static string Emit(FunctionBody4 body) =>
-        new SlangEmitter(new ShaderModuleDeclaration<FunctionBody4>(
+        new SlangEmitter(new SlangTargetLowering().Lower(new ShaderModuleDeclaration<FunctionBody4>(
             [body.Declaration],
-            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
+            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body))))
         .Emit();
 
     private static void AssertLexicalUnwind(string source, int depth)

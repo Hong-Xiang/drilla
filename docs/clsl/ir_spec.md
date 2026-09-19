@@ -158,6 +158,8 @@ C# compiled by .NET
   -> `ShaderModuleDeclaration<FunctionBody4>`
   -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
   -> RegionParameterToLocalVariablePass       : FunctionBody4 -> FunctionBody4
+  -> SlangTargetLowering
+  -> `ShaderModuleDeclaration<SlangFunctionBody>`
   -> SlangEmitter
   -> Slang source
   -> slangc                                  : Slang source -> WGSL
@@ -168,9 +170,11 @@ follows all original-CIL references, including dead instruction positions, up to
 explicit shared-builtin, operation-attribute and mapped-vector/member boundaries.
 The later Pre pass still filters unreachable positions inside each collected
 function. `FunctionBody4` combines typed instructions and parameterized
-terminators with a `RegionTree` built by the final frontend pass. The emitter
-still performs lexical layout. There is not yet an independent scoped-region
-validator, complete structurization pass, or target AST stage.
+terminators with a `RegionTree` built by the final frontend pass.
+`SlangTargetLowering` validates the current argument-free input contract and
+performs the supported lexical layout before the syntax-only emitter runs.
+There is not yet an independent general scoped-region validator or complete
+structurization pass.
 
 `ExprValue`/`ExprTree` and the `AbstractSyntaxTree` directory do not constitute a
 complete AST function-body stage in this pipeline. Older design examples,
@@ -181,7 +185,8 @@ be presented as additional active compilation stages.
 
 These boundaries split reasoning and testing; they do not require unrelated
 IR implementations for each pass. The existing region binding tree is not a
-claim of complete scoped-control legality; target AST lowering remains planned.
+claim of complete scoped-control legality; the implemented target lowering
+accepts only its documented subset.
 
 | Stage | Required invariant | Current owner or implementation boundary |
 |---|---|---|
@@ -192,7 +197,7 @@ claim of complete scoped-control legality; target AST lowering remains planned.
 | BB-annotated value CFG | Original blocks, labels and ordered edges remain unchanged; local facts hold existing RPO, IDom, IPDom and loop-header results. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
 | Region binding tree | Consume published local facts and preserve descending-RPO dominator-child order without reanalysis. | `CilRegionPass` produces `FunctionBody4`; general structurization and scoped-join legality remain later work. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
-| Target AST | Control targets have a legal target-language realization; shared joins and value transfers have explicit lexical placement; effects retain their order and dynamic multiplicity. | Intended lowering. Current `SlangEmitter` combines these decisions with text emission. |
+| Target AST | Executable control has a target-language realization with explicit lexical placement; effects retain their order and dynamic multiplicity; address aliases are typed places. | `SlangTargetLowering` produces `ShaderModuleDeclaration<SlangFunctionBody>` for the currently supported Region subset. |
 
 The typed CFG is SSA-like, not a claim of whole-program SSA: explicit loads,
 stores, and mutable local storage coexist with intermediate values and block
@@ -243,13 +248,23 @@ For distinct targets, its current value stores are inserted before the branch,
 not represented as general edge-local actions. Removing the arguments does not
 prove that a general edge-value lowering has been implemented.
 
-During Slang emission, the current emitter supports a lexical loop with zero or
-one distinct non-terminating destination outside its existing region subtree. Direct
-terminal targets retain their actions and return in the selected arm. Multiple
-distinct normal destinations are explicitly rejected. This emission-time layout
-does not transform the input IR into a checked scoped-region representation.
-It is not the complete Beyond Relooper algorithm or a general irreducible-CFG
-policy.
+During Slang target lowering, the current implementation supports a lexical
+loop with zero or one distinct non-terminating destination outside its existing
+region subtree. Direct terminal targets retain their actions and return in the
+selected arm. Multiple distinct normal destinations, residual region
+parameters/arguments, missing labels, unowned expansion cycles, and repeated
+effectful nonterminal placements outside supported loop-transfer continuations
+are explicitly rejected. The pass preserves the current parameter pass's store
+order; it does not recover selected-edge ownership already erased there. It is
+not the complete Beyond Relooper algorithm or a general irreducible-CFG policy.
+
+Target scopes are lexical. Ordinary continuations remain inside the predecessor
+scope, while non-pointer instruction results referenced by another original
+label are copied immediately to typed function-local capture slots. The only
+repeated nonterminal exceptions are direct continuation bodies whose sole jump
+targets the already-scoped lexical continuation or the current loop transfer.
+Each selected site receives one copy; mutually exclusive source arms cannot
+execute both copies in one source execution.
 
 Original `Label` identity denotes original control-flow provenance. If a future
 pass introduces synthetic edge blocks, it must distinguish them from original
@@ -287,10 +302,10 @@ cases describe observable behavior for effectful callbacks.
 ## Subsequent Slices
 
 The next independently scoped steps are to make analysis availability and
-continuation absence unambiguous, establish checked region scope and shared-join
-ownership, and lower those owned references and values into a target AST.
-Expression tree packing and final source formatting need not be the same pass
-as control layout. Each step must preserve the existing semantic/trace corpus.
+continuation absence unambiguous and establish checked region scope,
+shared-join ownership, and selected-edge value transfers before target lowering.
+The existing Slang target AST deliberately does not claim those general
+contracts. Each step must preserve the existing semantic/trace corpus.
 
 See [pass contracts](compiler/passes.md) for per-stage test units and
 [functional IR design notes](functional_ir.md) for the original motivation.
