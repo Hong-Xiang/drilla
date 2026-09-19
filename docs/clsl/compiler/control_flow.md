@@ -40,6 +40,14 @@ header flag does not claim reducibility or natural-loop membership.
 
 ## Preservation and invalidation
 
+WGSL output rejects a module containing a reachable `NoExitPath` block with a
+function/block diagnostic. The pinned Slang backend can erase pure infinite loops,
+including a divergent arm beside a returning arm, so successful WGSL generation
+alone is not a semantic guarantee. IR and Slang output remain available for these
+graphs. Ordinary loops with a finite exit path remain supported; `MayDiverge`
+alone is not a rejection condition. Faithful WGSL nontermination support is a
+separate backend requirement, not a reason to weaken the analysis facts.
+
 Analysis preserves block payloads, successor objects, label identities, arm
 multiplicity, and successor order. Changing the entry, block set, successor
 destination/order, or arm multiplicity invalidates all published control facts.

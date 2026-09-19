@@ -126,34 +126,41 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void PublicWgslApiCapturesAllDivergingSlangcLimitation()
+    public void OrdinaryLoopExitCompilesThroughPublicWgslApi()
     {
-        var shader = new ExitPostDominanceRegressionShader();
+        var shader = new OrdinaryLoopShader();
         var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
 
-        output.WriteLine("=== C2 regressions including all-diverging: actual Slang ===");
+        output.WriteLine("=== ordinary loop exit: actual Slang ===");
         output.WriteLine(slang);
-        output.WriteLine("=== C2 regressions including all-diverging: actual public WGSL ===");
+        output.WriteLine("=== ordinary loop exit: actual public WGSL ===");
         output.WriteLine(wgsl);
         Assert.Contains("while(true)", slang);
         Assert.Contains("return ", slang);
         Assert.Contains("fn Ordinary", wgsl);
-        Assert.Contains("fn Mixed", wgsl);
-        Assert.Contains("fn AllDivergingEntry", wgsl);
-        var allDivergingStart = wgsl.IndexOf("fn AllDiverging_0", StringComparison.Ordinal);
-        Assert.True(allDivergingStart >= 0);
-        var allDivergingEnd = wgsl.IndexOf("\nstruct ", allDivergingStart, StringComparison.Ordinal);
-        Assert.True(allDivergingEnd > allDivergingStart);
-        var allDivergingWgsl = wgsl[allDivergingStart..allDivergingEnd];
-        var bodyStart = allDivergingWgsl.IndexOf('{');
-        var bodyEnd = allDivergingWgsl.LastIndexOf('}');
-        Assert.True(bodyStart >= 0 && bodyEnd > bodyStart);
-        Assert.True(string.IsNullOrWhiteSpace(allDivergingWgsl[(bodyStart + 1)..bodyEnd]));
-        Assert.DoesNotContain("return", allDivergingWgsl);
         Assert.Contains("return", wgsl);
-        output.WriteLine(
-            "LIMITATION: slangc accepted the valid all-diverging Slang function but emitted an empty WGSL body.");
+    }
+
+    [Fact]
+    public void PublicWgslRejectsNoExitPathsWhileIrAndSlangRemainAvailable()
+    {
+        ISharpShader[] shaders = [new MixedDivergenceShader(), new AllDivergingShader()];
+        foreach (var shader in shaders)
+        {
+            var ir = new CLSLCompiler(new(CLSLCompileTarget.IR)).Emit(shader);
+            var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
+            var error = Assert.Throws<NotSupportedException>(() =>
+                new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader));
+
+            Assert.Contains("no-exit-path", ir);
+            Assert.Contains("while(true)", slang);
+            Assert.Contains("block ", error.Message);
+            Assert.Contains("WGSL output does not support", error.Message);
+            Assert.Contains("no finite exit path", error.Message);
+            output.WriteLine($"=== {shader.GetType().Name}: actual public WGSL diagnostic ===");
+            output.WriteLine(error.Message);
+        }
     }
 
     [Fact]
@@ -442,17 +449,23 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
             shouldReturn = !shouldReturn;
     }
 
-    private sealed class ExitPostDominanceRegressionShader : ISharpShader
+    private sealed class OrdinaryLoopShader : ISharpShader
     {
         [Fragment]
         [return: Location(0)]
         public static int Ordinary([Location(0)] int count) => OrdinaryLoopExit(count);
+    }
 
+    private sealed class MixedDivergenceShader : ISharpShader
+    {
         [Fragment]
         [return: Location(0)]
         public static int Mixed([Location(0)] int value) =>
             MixedReturnDivergence(value > 0);
+    }
 
+    private sealed class AllDivergingShader : ISharpShader
+    {
         [Fragment]
         [return: Location(0)]
         public static int AllDivergingEntry([Location(0)] int value) =>

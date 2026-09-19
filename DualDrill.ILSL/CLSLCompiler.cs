@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Transform;
@@ -58,6 +59,13 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                 }
             case CLSLCompileTarget.WGSL:
                 {
+                    foreach (var (function, body) in module.FunctionDefinitions)
+                        foreach (var label in body.Labels)
+                            if (body[label].PostDominance is ExitPostDominance.NoExitPath)
+                                throw new NotSupportedException(
+                                    $"{function.Name}, block {label}: WGSL output does not support a block " +
+                                    "with no finite exit path; the Slang backend may erase nontermination.");
+
                     module = module.RunPass(new FunctionToOperationPass());
                     module = module.RunPass(new RegionParameterToLocalVariablePass());
                     var emitter = new SlangEmitter(module);
