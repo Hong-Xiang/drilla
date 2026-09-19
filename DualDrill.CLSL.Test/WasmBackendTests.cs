@@ -42,6 +42,10 @@ public sealed class WasmBackendTests
         Assert.Equal(int.MinValue, add.Execute(int.MaxValue, 1));
         Assert.Equal(int.MaxValue, add.Execute(int.MinValue, -1));
         Assert.Equal(0, add.Execute(-1, 1));
+        var edgeValues = new[] { int.MinValue, -1, 0, 1, int.MaxValue };
+        foreach (var left in edgeValues)
+            foreach (var right in edgeValues)
+                Assert.Equal(unchecked(left + right), add.Execute(left, right));
 
         var choose = WasmProgram.Compile(ChooseBody(), "wasm-choose");
         var chooseResults = new[]
@@ -101,19 +105,22 @@ public sealed class WasmBackendTests
     [Fact]
     public void SignedComparisonsAndBooleanConversionsAreExact()
     {
-        var cases = new (IBinaryOp Op, int Left, int Right, int Expected)[]
+        var cases = new (IBinaryOp Op, Func<int, int, bool> Expected)[]
         {
-            (BinaryRelational.Eq.Instance, -1, -1, 1),
-            (BinaryRelational.Ne.Instance, -1, 1, 1),
-            (BinaryRelational.Lt.Instance, int.MinValue, 0, 1),
-            (BinaryRelational.Le.Instance, 7, 7, 1),
-            (BinaryRelational.Gt.Instance, 0, -1, 1),
-            (BinaryRelational.Ge.Instance, -1, -1, 1)
+            (BinaryRelational.Eq.Instance, static (left, right) => left == right),
+            (BinaryRelational.Ne.Instance, static (left, right) => left != right),
+            (BinaryRelational.Lt.Instance, static (left, right) => left < right),
+            (BinaryRelational.Le.Instance, static (left, right) => left <= right),
+            (BinaryRelational.Gt.Instance, static (left, right) => left > right),
+            (BinaryRelational.Ge.Instance, static (left, right) => left >= right)
         };
-        foreach (var (op, left, right, expected) in cases)
+        var edgeValues = new[] { int.MinValue, -1, 0, 1, int.MaxValue };
+        foreach (var (op, expected) in cases)
         {
             var program = WasmProgram.Compile(ComparisonBody(op), $"wasm-{op.GetType().Name}");
-            Assert.Equal(expected, program.Execute(left, right));
+            foreach (var left in edgeValues)
+                foreach (var right in edgeValues)
+                    Assert.Equal(expected(left, right) ? 1 : 0, program.Execute(left, right));
         }
 
         var normalize = WasmProgram.Compile(NormalizeBody(), "wasm-normalize");
