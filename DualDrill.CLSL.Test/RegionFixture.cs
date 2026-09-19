@@ -25,7 +25,7 @@ internal static class RegionFixture
         ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
         new(label, parameters, [.. instructions], terminator);
 
-    internal static FunctionBody4 CreateFunctionBody(
+    internal static RegionFunctionBody CreateFunctionBody(
         FunctionDeclaration declaration,
         RegionTree<Label, BodySpec> region)
     {
@@ -43,7 +43,7 @@ internal static class RegionFixture
                     item.Value.Terminator.ToSuccessor(),
                     item.Value)));
         var postDominance = graph.ControlFlowAnalysis().PostDominatorTree;
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             declaration,
             region.Select(
                 static label => label,

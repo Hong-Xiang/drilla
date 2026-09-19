@@ -290,10 +290,10 @@ public static class CilBlockControlFactsPass
 
 public static class CilRegionPass
 {
-    public static ShaderModuleDeclaration<FunctionBody4> Run(
+    public static ShaderModuleDeclaration<RegionFunctionBody> Run(
         ShaderModuleDeclaration<CilValueControlFactsBody> module) =>
         module.MapBody(static (_, declaration, body) =>
-            new FunctionBody4(
+            new RegionFunctionBody(
                 declaration,
                 RegionTree.Create(
                     body.Graph,
@@ -307,7 +307,7 @@ public static class CilRegionPass
 
 public static class CilModuleCompiler
 {
-    public static ShaderModuleDeclaration<FunctionBody4> Compile(
+    public static ShaderModuleDeclaration<RegionFunctionBody> Compile(
         ShaderModuleDeclaration<RawCilFunctionBody> module) =>
         CilRegionPass.Run(
             CilBlockControlFactsPass.Run(

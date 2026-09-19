@@ -9,7 +9,7 @@ These files are generated and checked by `WasmBackendTests`:
   Its captured boundary inputs are `-1, 0, 1, 5, 10000`, producing
   `0, 0, 0, 10, 49995000`.
 
-Each `.ir` is actual `FunctionBody4.Dump()` output with only trailing whitespace
+Each `.ir` is actual `RegionFunctionBody.Dump()` output with only trailing whitespace
 removed by the test-local capture helper. Each `.wat` is actual
 `WatEmitter.Emit()` output, and each `.results` file records values obtained by
 assembling with pinned WABT 1.0.36, validating with `wasm-validate`, and running

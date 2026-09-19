@@ -299,21 +299,21 @@ public sealed class WasmBackendTests
             "Function 'null-block-parameter-type': region 'Label(exit)' parameter at index 0 type is missing.");
     }
 
-    private static void AssertRejected(FunctionBody4 body, string message)
+    private static void AssertRejected(RegionFunctionBody body, string message)
     {
         var exception = Assert.Throws<WasmLoweringException>(() => WasmLowering.Lower(body));
         Assert.Contains($"WASM function {body.Declaration.Name}", exception.Message);
         Assert.Contains(message, exception.Message);
     }
 
-    private static void AssertConstructionRejected(Func<FunctionBody4> factory, string message)
+    private static void AssertConstructionRejected(Func<RegionFunctionBody> factory, string message)
     {
         var exception = Assert.Throws<ArgumentException>(() => factory());
         Assert.Equal(message, exception.Message);
     }
 
     private static void AssertOracle(
-        FunctionBody4 body,
+        RegionFunctionBody body,
         ImmutableArray<ScalarControlFlowOracle.Value> arguments,
         int expected,
         string trace)
@@ -327,12 +327,12 @@ public sealed class WasmBackendTests
         Assert.Equal(trace, string.Join(" -> ", scoped.Trace.Select(LabelName)));
     }
 
-    private static Label LabelNamed(FunctionBody4 body, string name) =>
+    private static Label LabelNamed(RegionFunctionBody body, string name) =>
         body.Control.Labels.Single(label => label.Name == name);
 
     private static string LabelName(Label label) => label.Name ?? "<unnamed>";
 
-    private static FunctionBody4 AddBody()
+    private static RegionFunctionBody AddBody()
     {
         var entry = Label.Create("entry");
         var a = Parameter("a");
@@ -349,7 +349,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(result)));
     }
 
-    private static FunctionBody4 ChooseBody()
+    private static RegionFunctionBody ChooseBody()
     {
         var entry = Label.Create("entry");
         var join = Label.Create("join");
@@ -371,7 +371,7 @@ public sealed class WasmBackendTests
             Block(join, [selected], [], Terms.ReturnExpr(selected)));
     }
 
-    private static FunctionBody4 SumBody()
+    private static RegionFunctionBody SumBody()
     {
         var entry = Label.Create("entry");
         var header = Label.Create("header");
@@ -403,7 +403,7 @@ public sealed class WasmBackendTests
         ], Terms.Br(Jump(header, nextSum, nextI, stepN)));
         var exitBody = Block(exit, [answer], [], Terms.ReturnExpr(answer));
         var bodies = Annotate(entryBody, headerBody, stepBody, exitBody);
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration("sum", [input]),
             RegionTree.Block(entry, [
                 RegionTree.Block(exit, [], bodies[exit], null),
@@ -413,7 +413,7 @@ public sealed class WasmBackendTests
             ], bodies[entry], null));
     }
 
-    private static FunctionBody4 SwapBody()
+    private static RegionFunctionBody SwapBody()
     {
         var entry = Label.Create("entry");
         var loop = Label.Create("loop");
@@ -443,7 +443,7 @@ public sealed class WasmBackendTests
             ], Terms.BrIf(again, Jump(loop, b, a, Bool(false)), Jump(exit, result)));
         var exitBody = Block(exit, [answer], [], Terms.ReturnExpr(answer));
         var bodies = Annotate(entryBody, loopBody, exitBody);
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration("swap", []),
             RegionTree.Block(entry, [
                 RegionTree.Block(exit, [], bodies[exit], null),
@@ -451,7 +451,7 @@ public sealed class WasmBackendTests
             ], bodies[entry], null));
     }
 
-    private static FunctionBody4 LocalBody()
+    private static RegionFunctionBody LocalBody()
     {
         var entry = Label.Create("entry");
         var local = new VariableDeclaration(FunctionAddressSpace.Instance, "local", ShaderType.I32, []);
@@ -470,7 +470,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(reloaded)));
     }
 
-    private static FunctionBody4 LiteralAndBoolLocalBody()
+    private static RegionFunctionBody LiteralAndBoolLocalBody()
     {
         var entry = Label.Create("entry");
         var local = new VariableDeclaration(FunctionAddressSpace.Instance, "flag", ShaderType.Bool, []);
@@ -491,7 +491,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(result)));
     }
 
-    private static FunctionBody4 ComparisonBody(IBinaryOp op)
+    private static RegionFunctionBody ComparisonBody(IBinaryOp op)
     {
         var entry = Label.Create("entry");
         var leftParameter = Parameter("left");
@@ -519,7 +519,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(result)));
     }
 
-    private static FunctionBody4 NormalizeBody()
+    private static RegionFunctionBody NormalizeBody()
     {
         var entry = Label.Create("entry");
         var input = Parameter("input");
@@ -534,7 +534,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(result)));
     }
 
-    private static FunctionBody4 UnsupportedBinaryBody()
+    private static RegionFunctionBody UnsupportedBinaryBody()
     {
         var entry = Label.Create("entry");
         var result = Value(ShaderType.I32, "result");
@@ -545,7 +545,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(result)));
     }
 
-    private static FunctionBody4 UninitializedLocalBody()
+    private static RegionFunctionBody UninitializedLocalBody()
     {
         var entry = Label.Create("entry");
         var local = new VariableDeclaration(FunctionAddressSpace.Instance, "local", ShaderType.I32, []);
@@ -554,7 +554,7 @@ public sealed class WasmBackendTests
             Block(entry, [], [Load(loaded, local.Value)], Terms.ReturnExpr(loaded)));
     }
 
-    private static FunctionBody4 LocalInitializedOutsideEntryBody()
+    private static RegionFunctionBody LocalInitializedOutsideEntryBody()
     {
         var entry = Label.Create("entry");
         var initialize = Label.Create("initialize");
@@ -564,7 +564,7 @@ public sealed class WasmBackendTests
             Block(initialize, [], [Store(local.Value, Int(1))], Terms.ReturnExpr(Int(0))));
     }
 
-    private static FunctionBody4 CrossBlockUseBody()
+    private static RegionFunctionBody CrossBlockUseBody()
     {
         var entry = Label.Create("entry");
         var exit = Label.Create("exit");
@@ -576,7 +576,7 @@ public sealed class WasmBackendTests
             Block(exit, [], [], Terms.ReturnExpr(value)));
     }
 
-    private static FunctionBody4 WrongEdgeTypeBody()
+    private static RegionFunctionBody WrongEdgeTypeBody()
     {
         var entry = Label.Create("entry");
         var exit = Label.Create("exit");
@@ -589,7 +589,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(result)));
     }
 
-    private static FunctionBody4 WrongEdgeArityBody()
+    private static RegionFunctionBody WrongEdgeArityBody()
     {
         var entry = Label.Create("entry");
         var exit = Label.Create("exit");
@@ -599,7 +599,7 @@ public sealed class WasmBackendTests
             Block(exit, [parameter], [], Terms.ReturnExpr(parameter)));
     }
 
-    private static FunctionBody4 DuplicateDefinitionBody()
+    private static RegionFunctionBody DuplicateDefinitionBody()
     {
         var entry = Label.Create("entry");
         var value = Value(ShaderType.I32, "value");
@@ -610,14 +610,14 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(value)));
     }
 
-    private static FunctionBody4 DuplicateBlockBody()
+    private static RegionFunctionBody DuplicateBlockBody()
     {
         var entry = Label.Create("entry");
         var duplicate = Label.Create("duplicate");
         var entryBody = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
         var first = Block(duplicate, [], [], Terms.ReturnExpr(Int(1)));
         var second = Block(duplicate, [], [], Terms.ReturnExpr(Int(2)));
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration("duplicate-block", []),
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
                 RegionTree<Label, ShaderRegionBody>.Block(
@@ -633,13 +633,13 @@ public sealed class WasmBackendTests
             ], Materialize(entryBody, new ExitPostDominance.FunctionExit(false)), null));
     }
 
-    private static FunctionBody4 UnreachableBlockBody()
+    private static RegionFunctionBody UnreachableBlockBody()
     {
         var entry = Label.Create("entry");
         var dead = Label.Create("dead");
         var entryBody = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
         var deadBody = Block(dead, [], [], Terms.ReturnExpr(Int(1)));
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration("unreachable-block", []),
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
                 RegionTree<Label, ShaderRegionBody>.Block(
@@ -650,7 +650,7 @@ public sealed class WasmBackendTests
             ], Materialize(entryBody, new ExitPostDominance.FunctionExit(false)), null));
     }
 
-    private static FunctionBody4 EntryParameterBody()
+    private static RegionFunctionBody EntryParameterBody()
     {
         var entry = Label.Create("entry");
         var value = Value(ShaderType.I32, "value");
@@ -658,7 +658,7 @@ public sealed class WasmBackendTests
             Block(entry, [value], [], Terms.ReturnExpr(value)));
     }
 
-    private static FunctionBody4 NonFunctionStorageBody()
+    private static RegionFunctionBody NonFunctionStorageBody()
     {
         var entry = Label.Create("entry");
         var local = new VariableDeclaration(UniformAddressSpace.Instance, "uniform", ShaderType.I32, []);
@@ -670,7 +670,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(loaded)));
     }
 
-    private static FunctionBody4 SpoofedResultTypeBody()
+    private static RegionFunctionBody SpoofedResultTypeBody()
     {
         var entry = Label.Create("entry");
         var result = Value(ShaderType.Bool, "result");
@@ -683,7 +683,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(converted)));
     }
 
-    private static FunctionBody4 MalformedOperandBody()
+    private static RegionFunctionBody MalformedOperandBody()
     {
         var entry = Label.Create("entry");
         var result = Value(ShaderType.I32, "result");
@@ -693,7 +693,7 @@ public sealed class WasmBackendTests
             Block(entry, [], [malformed], Terms.ReturnExpr(result)));
     }
 
-    private static FunctionBody4 MissingResultBody()
+    private static RegionFunctionBody MissingResultBody()
     {
         var entry = Label.Create("entry");
         var parameter = Parameter("parameter");
@@ -703,12 +703,12 @@ public sealed class WasmBackendTests
             Block(entry, [], [missing], Terms.ReturnExpr(Int(0))));
     }
 
-    private static FunctionBody4 TreeLabelMismatchBody()
+    private static RegionFunctionBody TreeLabelMismatchBody()
     {
         var treeLabel = Label.Create("tree");
         var bodyLabel = Label.Create("body");
         var region = Block(bodyLabel, [], [], Terms.ReturnExpr(Int(0)));
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration("tree-label-mismatch", []),
             RegionTree<Label, ShaderRegionBody>.Block(
                 treeLabel,
@@ -717,7 +717,7 @@ public sealed class WasmBackendTests
                 null));
     }
 
-    private static FunctionBody4 DefaultBlockParametersBody()
+    private static RegionFunctionBody DefaultBlockParametersBody()
     {
         var entry = Label.Create("entry");
         var region = new ShaderRegionBody(
@@ -726,12 +726,12 @@ public sealed class WasmBackendTests
             Seq.Create<Instruction<IShaderValue, IShaderValue>,
                 ITerminator<RegionJump<IShaderValue>, IShaderValue>>([], Terms.ReturnExpr(Int(0))),
             new ExitPostDominance.FunctionExit(false));
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration("default-block-parameters", []),
             RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
     }
 
-    private static FunctionBody4 DefaultEdgeArgumentsBody()
+    private static RegionFunctionBody DefaultEdgeArgumentsBody()
     {
         var entry = Label.Create("entry");
         var exit = Label.Create("exit");
@@ -740,7 +740,7 @@ public sealed class WasmBackendTests
             Block(exit, [], [], Terms.ReturnExpr(Int(0))));
     }
 
-    private static FunctionBody4 DefaultRestOperandsBody()
+    private static RegionFunctionBody DefaultRestOperandsBody()
     {
         var entry = Label.Create("entry");
         var instruction = new Instruction<IShaderValue, IShaderValue>(
@@ -749,7 +749,7 @@ public sealed class WasmBackendTests
             Block(entry, [], [instruction], Terms.ReturnExpr(Int(0))));
     }
 
-    private static FunctionBody4 NullBlockParameterTypeBody()
+    private static RegionFunctionBody NullBlockParameterTypeBody()
     {
         var entry = Label.Create("entry");
         var exit = Label.Create("exit");
@@ -759,12 +759,12 @@ public sealed class WasmBackendTests
             Block(exit, [bad], [], Terms.ReturnExpr(Int(0))));
     }
 
-    private static FunctionBody4 UnknownTargetBody()
+    private static RegionFunctionBody UnknownTargetBody()
     {
         var entry = Label.Create("entry");
         var missing = Label.Create("missing");
         var block = Block(entry, [], [], Terms.Br(Jump(missing)));
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration("missing-target", []),
             RegionTree<Label, ShaderRegionBody>.Block(
                 entry,
@@ -773,14 +773,14 @@ public sealed class WasmBackendTests
                 null));
     }
 
-    private static FunctionBody4 NullReturnBody()
+    private static RegionFunctionBody NullReturnBody()
     {
         var entry = Label.Create("entry");
         return Body("null-return", [],
             Block(entry, [], [], Terms.ReturnExpr(null!)));
     }
 
-    private static FunctionBody4 NullLiteralPayloadBody()
+    private static RegionFunctionBody NullLiteralPayloadBody()
     {
         var entry = Label.Create("entry");
         var literal = new LiteralValue(null!);
@@ -788,7 +788,7 @@ public sealed class WasmBackendTests
             Block(entry, [], [], Terms.ReturnExpr(literal)));
     }
 
-    private static FunctionBody4 VoidBody()
+    private static RegionFunctionBody VoidBody()
     {
         var entry = Label.Create("entry");
         var region = Block(entry, [], [], Terms.ReturnVoid());
@@ -797,7 +797,7 @@ public sealed class WasmBackendTests
             region);
     }
 
-    private static FunctionBody4 CallBody()
+    private static RegionFunctionBody CallBody()
     {
         var entry = Label.Create("entry");
         var callee = Declaration("callee", []);
@@ -813,7 +813,7 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(result)));
     }
 
-    private static FunctionBody4 FloatSignatureBody()
+    private static RegionFunctionBody FloatSignatureBody()
     {
         var entry = Label.Create("entry");
         var region = Block(entry, [], [], Terms.ReturnExpr(ShaderValue.Literal(new F32Literal(0))));
@@ -822,7 +822,7 @@ public sealed class WasmBackendTests
             region);
     }
 
-    private static FunctionBody4 U32SignatureBody()
+    private static RegionFunctionBody U32SignatureBody()
     {
         var entry = Label.Create("entry");
         var parameter = Parameter("value", ShaderType.U32);
@@ -832,7 +832,7 @@ public sealed class WasmBackendTests
             region);
     }
 
-    private static FunctionBody4 ParameterAttributeBody()
+    private static RegionFunctionBody ParameterAttributeBody()
     {
         var entry = Label.Create("entry");
         var parameter = new ParameterDeclaration("value", ShaderType.I32, [new LocationAttribute(0)]);
@@ -846,7 +846,7 @@ public sealed class WasmBackendTests
             region);
     }
 
-    private static FunctionBody4 ReturnAttributeBody()
+    private static RegionFunctionBody ReturnAttributeBody()
     {
         var entry = Label.Create("entry");
         var region = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
@@ -859,7 +859,7 @@ public sealed class WasmBackendTests
             region);
     }
 
-    private static FunctionBody4 LocalAttributeBody()
+    private static RegionFunctionBody LocalAttributeBody()
     {
         var entry = Label.Create("entry");
         var local = new VariableDeclaration(
@@ -875,18 +875,18 @@ public sealed class WasmBackendTests
             ], Terms.ReturnExpr(loaded)));
     }
 
-    private static FunctionBody4 WithSignature(
-        FunctionBody4 source,
+    private static RegionFunctionBody WithSignature(
+        RegionFunctionBody source,
         IShaderType returnType,
         ImmutableArray<IShaderType> parameterTypes)
     {
         var parameters = parameterTypes.Select((type, index) => Parameter($"p{index}", type)).ToImmutableArray();
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             new FunctionDeclaration(source.Declaration.Name, parameters, new FunctionReturn(returnType, []), []),
             source.Body);
     }
 
-    private static FunctionBody4 WithAttributes(FunctionBody4 source) =>
+    private static RegionFunctionBody WithAttributes(RegionFunctionBody source) =>
         new(
             new FunctionDeclaration(
                 source.Declaration.Name,
@@ -895,7 +895,7 @@ public sealed class WasmBackendTests
                 [new VertexAttribute()]),
             source.Body);
 
-    private static void AssertGolden(string name, FunctionBody4 body, IEnumerable<string> results)
+    private static void AssertGolden(string name, RegionFunctionBody body, IEnumerable<string> results)
     {
         var directory = Path.Combine(RepositoryRoot(), "examples-H");
         var values = new Dictionary<string, string>
@@ -930,13 +930,13 @@ public sealed class WasmBackendTests
         throw new InvalidOperationException("Repository root was not found.");
     }
 
-    private static FunctionBody4 Body(
+    private static RegionFunctionBody Body(
         string name,
         ImmutableArray<ParameterDeclaration> parameters,
         params BlockSpec[] blocks) =>
         Body(Declaration(name, parameters), blocks);
 
-    private static FunctionBody4 Body(
+    private static RegionFunctionBody Body(
         FunctionDeclaration declaration,
         params BlockSpec[] blocks)
     {
@@ -945,7 +945,7 @@ public sealed class WasmBackendTests
         var children = blocks.Skip(1)
             .Select(block => RegionTree<Label, ShaderRegionBody>.Block(block.Label, [], bodies[block.Label], null))
             .ToArray();
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             declaration,
             RegionTree<Label, ShaderRegionBody>.Block(entry, children, bodies[entry], null));
     }
@@ -1045,7 +1045,7 @@ public sealed class WasmBackendTests
             this.wasmPath = wasmPath;
         }
 
-        internal static WasmProgram Compile(FunctionBody4 body, string name)
+        internal static WasmProgram Compile(RegionFunctionBody body, string name)
         {
             var directory = Path.Combine(AppContext.BaseDirectory, "wasm-execution");
             Directory.CreateDirectory(directory);

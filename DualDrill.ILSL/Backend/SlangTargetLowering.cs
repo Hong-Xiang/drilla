@@ -16,7 +16,7 @@ namespace DualDrill.CLSL.Backend;
 public sealed class SlangTargetLowering
 {
     public ShaderModuleDeclaration<SlangFunctionBody> Lower(
-        ShaderModuleDeclaration<FunctionBody4> module)
+        ShaderModuleDeclaration<RegionFunctionBody> module)
     {
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
@@ -42,10 +42,10 @@ public sealed class SlangTargetLowering
         private readonly Dictionary<IShaderValue, VariableDeclaration> parameterSlots =
             new(ReferenceEqualityComparer.Instance);
         private readonly Dictionary<Continuation, int> tokenIds = [];
-        private readonly FunctionBody4 source;
+        private readonly RegionFunctionBody source;
         private readonly VariableDeclaration? token;
 
-        internal FunctionLowerer(FunctionBody4 source)
+        internal FunctionLowerer(RegionFunctionBody source)
         {
             this.source = source;
             source.Body.Traverse(region =>

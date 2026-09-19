@@ -742,9 +742,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     public void MissingFunctionBodiesAreRejected()
     {
         var declaration = Function("MissingBody", ShaderType.Unit);
-        var module = new ShaderModuleDeclaration<FunctionBody4>(
+        var module = new ShaderModuleDeclaration<RegionFunctionBody>(
             [declaration],
-            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty);
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty);
 
         var error = Assert.Throws<NotSupportedException>(
             () => new SlangTargetLowering().Lower(module));
@@ -964,7 +964,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var sharedLabel = Label.Create("shared-label-object");
         var left = Function("Left", ShaderType.I32);
         var right = Function("Right", ShaderType.I32);
-        FunctionBody4 FunctionBody(FunctionDeclaration declaration, int value) =>
+        RegionFunctionBody FunctionBody(FunctionDeclaration declaration, int value) =>
             CreateFunctionBody(
                 declaration,
                 RegionTree.Block(
@@ -973,9 +973,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     Body(
                         sharedLabel, [], [], Terms.ReturnExpr(Int(value))),
                     null));
-        var source = new ShaderModuleDeclaration<FunctionBody4>(
+        var source = new ShaderModuleDeclaration<RegionFunctionBody>(
             [left, right],
-            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty
                 .Add(left, FunctionBody(left, 1))
                 .Add(right, FunctionBody(right, 2)));
 
@@ -1168,9 +1168,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                         [callerValue])
                 ],
                 Terms.ReturnExpr(callerValue)), null));
-        var module = new ShaderModuleDeclaration<FunctionBody4>(
+        var module = new ShaderModuleDeclaration<RegionFunctionBody>(
             [observe, caller],
-            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty
                 .Add(observe, observeBody)
                 .Add(caller, callerBody));
         var target = new SlangTargetLowering().Lower(module);
@@ -1292,13 +1292,13 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         return new LoweredFixture(region, target, module, slang);
     }
 
-    private static SlangFunctionBody Lower(FunctionBody4 body) =>
+    private static SlangFunctionBody Lower(RegionFunctionBody body) =>
         new SlangTargetLowering().Lower(Module(body)).GetBody(body.Declaration);
 
-    private static ShaderModuleDeclaration<FunctionBody4> Module(FunctionBody4 body) =>
+    private static ShaderModuleDeclaration<RegionFunctionBody> Module(RegionFunctionBody body) =>
         new(
             [body.Declaration],
-            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body));
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(body.Declaration, body));
 
     private static ShaderModuleDeclaration<SlangFunctionBody> Module(SlangFunctionBody body) =>
         new(
@@ -1308,7 +1308,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     private static string Emit(SlangFunctionBody body) => new SlangEmitter(Module(body)).Emit();
 
     private static async Task<Execution> AssertEmittedEquivalent(
-        FunctionBody4 body,
+        RegionFunctionBody body,
         ImmutableArray<Value> arguments,
         Value expected)
     {
@@ -1361,7 +1361,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
 
     private static void CaptureExecution(
         string name,
-        FunctionBody4 body,
+        RegionFunctionBody body,
         ImmutableArray<(ImmutableArray<Value> Arguments, Value Expected)> cases)
     {
         var target = Lower(body);
@@ -1388,7 +1388,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         CaptureText($"{name}.execution.txt", string.Join(Environment.NewLine + Environment.NewLine, lines));
     }
 
-    private static void Capture(string name, FunctionBody4 region, string ast, string slang)
+    private static void Capture(string name, RegionFunctionBody region, string ast, string slang)
     {
         var directory = Environment.GetEnvironmentVariable("DRILLA_E2_CAPTURE_DIR");
         if (string.IsNullOrWhiteSpace(directory)) return;
@@ -1416,7 +1416,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     }
 
     private sealed record LoweredFixture(
-        FunctionBody4 Region,
+        RegionFunctionBody Region,
         SlangFunctionBody Target,
         ShaderModuleDeclaration<SlangFunctionBody> Module,
         string Slang);

@@ -8,10 +8,10 @@ using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed class FunctionBody4
+public sealed class RegionFunctionBody
     : IFunctionBody, ILocalDeclarationContext
 {
-    public FunctionBody4(FunctionDeclaration declaration, RegionTree<Label, ShaderRegionBody> body)
+    public RegionFunctionBody(FunctionDeclaration declaration, RegionTree<Label, ShaderRegionBody> body)
     {
         Declaration = declaration;
         Body = body;
@@ -97,9 +97,9 @@ public sealed class FunctionBody4
 
     public IEnumerable<IShaderValue> UsedValues() => Body.Fold(new ValueUseAnalysis());
 
-    public FunctionBody4 MapValueUse(Func<IShaderValue, IShaderValue> mapValue)
+    public RegionFunctionBody MapValueUse(Func<IShaderValue, IShaderValue> mapValue)
     {
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration,
             Body.Select(
                 static l => l,
@@ -121,9 +121,9 @@ public sealed class FunctionBody4
         );
     }
 
-    public FunctionBody4 MapRegionBody(Func<ShaderRegionBody, ShaderRegionBody> mapRegionBody)
+    public RegionFunctionBody MapRegionBody(Func<ShaderRegionBody, ShaderRegionBody> mapRegionBody)
     {
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration,
             Body.Select(
                 static l => l,

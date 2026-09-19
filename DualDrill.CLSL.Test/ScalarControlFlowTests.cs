@@ -253,7 +253,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             _ => throw new ArgumentOutOfRangeException(nameof(fixture))
         };
 
-    internal static string Emit(FunctionBody4 body) => Emit(Lower(body));
+    internal static string Emit(RegionFunctionBody body) => Emit(Lower(body));
 
     internal static string Emit(SlangFunctionBody body) =>
         new SlangEmitter(new ShaderModuleDeclaration<SlangFunctionBody>(
@@ -261,10 +261,10 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             ImmutableDictionary<FunctionDeclaration, SlangFunctionBody>.Empty.Add(body.Declaration, body)))
         .Emit();
 
-    internal static SlangFunctionBody Lower(FunctionBody4 body) =>
-        new SlangTargetLowering().Lower(new ShaderModuleDeclaration<FunctionBody4>(
+    internal static SlangFunctionBody Lower(RegionFunctionBody body) =>
+        new SlangTargetLowering().Lower(new ShaderModuleDeclaration<RegionFunctionBody>(
             [body.Declaration],
-            ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(body.Declaration, body)))
         .GetBody(body.Declaration);
 
     [Fact]
@@ -325,7 +325,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             ITerminator<RegionJump<IShaderValue>, IShaderValue>>
         Terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
-    internal static FunctionBody4 HandBody()
+    internal static RegionFunctionBody HandBody()
     {
         var entry = Label.Create("entry");
         var tail = Label.Create("tail");

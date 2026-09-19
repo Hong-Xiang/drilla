@@ -67,7 +67,7 @@ internal static class ScalarControlFlowOracle
         private readonly Dictionary<IShaderValue, Value> memory;
         private readonly ImmutableArray<Label>.Builder trace = ImmutableArray.CreateBuilder<Label>();
 
-        internal Machine(FunctionBody4 body, ImmutableArray<Value> arguments, string kind, int stepLimit)
+        internal Machine(RegionFunctionBody body, ImmutableArray<Value> arguments, string kind, int stepLimit)
             : this(body.Declaration, arguments, [], false, kind, stepLimit)
         {
         }
@@ -328,7 +328,7 @@ internal static class ScalarControlFlowOracle
         };
     }
 
-    internal static Execution RunCfg(FunctionBody4 body, ImmutableArray<Value> arguments, int stepLimit = 10000)
+    internal static Execution RunCfg(RegionFunctionBody body, ImmutableArray<Value> arguments, int stepLimit = 10000)
     {
         var machine = new Machine(body, arguments, "CFG", stepLimit);
         var label = body.Entry;

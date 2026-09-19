@@ -9,7 +9,7 @@ namespace DualDrill.CLSL.Language.Transform;
 
 public sealed class StablePointerRegionParameterPass : IShaderModuleSimplePass
 {
-    public FunctionBody4 VisitFunctionBody(FunctionBody4 body)
+    public RegionFunctionBody VisitFunctionBody(RegionFunctionBody body)
     {
         var blocks = body.Body.Fold(new RegionBodiesSemantic()).ToImmutableDictionary(block => block.Label);
         var jumps = blocks.Values

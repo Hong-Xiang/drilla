@@ -96,7 +96,7 @@ public sealed class TerminalCilBlockTests
     }
 
     private static void AssertDebugValueFlow(
-        FunctionBody4 body,
+        RegionFunctionBody body,
         FunctionDeclaration declaration,
         IReadOnlyDictionary<int, CilInstructionBlock> blocks)
     {
@@ -117,7 +117,7 @@ public sealed class TerminalCilBlockTests
     }
 
     private static void AssertReleaseValueFlow(
-        FunctionBody4 body,
+        RegionFunctionBody body,
         FunctionDeclaration declaration,
         IReadOnlyDictionary<int, CilInstructionBlock> blocks)
     {
@@ -131,7 +131,7 @@ public sealed class TerminalCilBlockTests
     }
 
     private static void AssertArmJumpsTo(
-        FunctionBody4 body,
+        RegionFunctionBody body,
         Label arm,
         ParameterDeclaration parameter,
         Label terminal)
@@ -147,7 +147,7 @@ public sealed class TerminalCilBlockTests
     }
 
     private static void AssertArmReturns(
-        FunctionBody4 body,
+        RegionFunctionBody body,
         Label arm,
         ParameterDeclaration parameter)
     {

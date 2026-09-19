@@ -94,7 +94,7 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
                 [.. annotated.Skip(2).Reverse().Select(Region)], annotated[1], null, null)
         ], annotated[0], null);
         var declaration = new FunctionDeclaration("test", [source], new FunctionReturn(ShaderType.I32, []), []);
-        var result = Lower(new FunctionBody4(declaration, nested));
+        var result = Lower(new RegionFunctionBody(declaration, nested));
 
         AssertLowered(result);
         Assert.Empty(result.LocalVariables);
@@ -118,7 +118,7 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
             RegionTree<Label, ShaderRegionBody>.Loop(labels[0],
                 [.. annotated.Skip(2).Reverse().Select(Region)], annotated[1], null, null)
         ], annotated[0], null);
-        var body = new FunctionBody4(
+        var body = new RegionFunctionBody(
             new FunctionDeclaration("test", [source], new FunctionReturn(UnitType.Instance, []), []),
             tree);
 
@@ -141,7 +141,7 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
         var loopBody = Block(loop, [p], Jump(back, other.Value));
         var backBody = Block(back, [q], Jump(loop, q));
         var blocks = Annotate([entryBody, loopBody, backBody]);
-        var body = new FunctionBody4(
+        var body = new RegionFunctionBody(
             new FunctionDeclaration("test", [source, other], new FunctionReturn(UnitType.Instance, []), []),
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
                 RegionTree<Label, ShaderRegionBody>.Loop(loop, [
@@ -168,7 +168,7 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
             Block(join, [p], Terminators.ReturnExpr(p)),
             Block(orphan, [q], Terminators.BrIf(condition, new(orphan, [q]), new(join, [q])))
         ]);
-        var body = new FunctionBody4(
+        var body = new RegionFunctionBody(
             new FunctionDeclaration("test", [source], new FunctionReturn(source.Value.Type, []), []),
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
                 Region(blocks[1]),
@@ -304,7 +304,7 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
             .Target.Arguments);
     }
 
-    private static FunctionBody4 Lower(FunctionBody4 body) =>
+    private static RegionFunctionBody Lower(RegionFunctionBody body) =>
         new RegionParameterToLocalVariablePass().VisitFunctionBody(body);
 
     [Fact]
@@ -357,7 +357,7 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
                     callResult, callee, [p, q])
             ], Terminators.BrIf(condition, new(loop, [p, b, q, a]), new(exit, [])));
         var blocks = Annotate([entryBody, loopBody, exitBody]);
-        var body = new FunctionBody4(
+        var body = new RegionFunctionBody(
             new FunctionDeclaration("test", [source], new FunctionReturn(ShaderType.I32, []), []),
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
                 Region(blocks[2]),
@@ -421,10 +421,10 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
         Assert.Same(value, Assert.Single(result[entry].Body.Elements).Operand1);
     }
 
-    private FunctionBody4 CreateBody(BlockSpec[] blocks) =>
+    private RegionFunctionBody CreateBody(BlockSpec[] blocks) =>
         CreateBodyFromAnnotated(Annotate(blocks));
 
-    private FunctionBody4 CreateBodyFromAnnotated(ShaderRegionBody[] blocks) =>
+    private RegionFunctionBody CreateBodyFromAnnotated(ShaderRegionBody[] blocks) =>
         new(new FunctionDeclaration("test", [source],
                 new FunctionReturn(blocks.Select(b => b.Body.Last)
                     .OfType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>()
@@ -468,7 +468,7 @@ public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
         params IShaderValue[] arguments) =>
         Terminators.Br(new RegionJump<IShaderValue>(target, [.. arguments]));
 
-    private static void AssertLowered(FunctionBody4 body)
+    private static void AssertLowered(RegionFunctionBody body)
     {
         body.Body.Traverse((_, _, block) =>
         {

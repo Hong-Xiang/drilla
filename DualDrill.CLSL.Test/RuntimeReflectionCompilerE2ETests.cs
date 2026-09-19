@@ -28,9 +28,9 @@ public sealed class SlangProcessTestCollection
 [Collection(SlangProcessTestCollection.Name)]
 public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 {
-    void Dump(string title, ShaderModuleDeclaration<FunctionBody4> module)
+    void Dump(string title, ShaderModuleDeclaration<RegionFunctionBody> module)
     {
-        var formatter = new ShaderModuleFormatter<FunctionBody4>();
+        var formatter = new ShaderModuleFormatter<RegionFunctionBody>();
         Output.WriteLine($"=== {title} ===");
         module.Accept(formatter);
         Output.WriteLine(formatter.Dump());

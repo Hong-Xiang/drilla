@@ -25,7 +25,7 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
         public ImmutableArray<ShaderRegionBody> Single(ShaderRegionBody value) => [value];
     }
 
-    public FunctionBody4 VisitFunctionBody(FunctionBody4 body)
+    public RegionFunctionBody VisitFunctionBody(RegionFunctionBody body)
     {
         body = new StablePointerRegionParameterPass().VisitFunctionBody(body);
         var regionParameters = body.Body.Fold(new RegionBodiesSemantic())

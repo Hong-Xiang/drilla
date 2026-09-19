@@ -11,7 +11,7 @@ using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionBody4 Function)
+internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, RegionFunctionBody Function)
     : IRegionTreeFoldLazySemantic<Label, ShaderRegionBody, Unit, Unit>
     , ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>
 {
