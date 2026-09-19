@@ -77,6 +77,24 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
             }
         }
 
+        var grounded = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        var changed = true;
+        while (changed)
+        {
+            changed = false;
+            foreach (var value in visited)
+            {
+                if (grounded.Contains(value))
+                    continue;
+                if (!constraints.TryGetValue(value, out var constraint) ||
+                    constraint.Sources.Any(source =>
+                        source is ParameterPointerValue or VariablePointerValue || grounded.Contains(source)))
+                    changed |= grounded.Add(value);
+            }
+        }
+
+        if (visited.Any(value => constraints.ContainsKey(value) && !grounded.Contains(value)))
+            throw Unsupported("no stable address");
         return root ?? throw Unsupported("no stable address");
     }
 

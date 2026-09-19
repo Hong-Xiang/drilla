@@ -148,6 +148,13 @@ distinct transfers. Edge-specific target lowering is still owned by later
 lowering; `RegionParameterToLocalVariablePass` continues to reject differing
 tuples on two arms that share a target.
 
+The checked control index certifies lexical label visibility and transfer
+argument arity/types; it is not a full SSA verifier. Correct value
+definition/use dominance is an input precondition. Runtime values live in the
+dynamic machine state rather than the control-label environment, so defining a
+child continuation does not capture a dominating value before its parent body
+executes.
+
 ### Control Projection Is Lossy
 
 `ToSuccessor` projects a terminator to its control successors. It discards return

@@ -101,10 +101,11 @@ public sealed class ScopedControlIndex<TLabel> where TLabel : notnull
         }
 
         Collect(tree);
-
         var scopes = ImmutableDictionary.CreateBuilder<TLabel, ImmutableArray<ScopedContinuation<TLabel>>>();
-        var transfers = new Dictionary<(TLabel Source, int Arm), ScopedTransfer<TLabel>>();
         var edges = byLabel.Keys.ToDictionary(label => label, static _ => new List<TLabel>());
+        var transfersBySource = byLabel.Keys.ToDictionary(
+            label => label,
+            static _ => new List<ScopedTransfer<TLabel>>());
 
         void Check(RegionTree<TLabel, TBody> region, ImmutableArray<ScopedContinuation<TLabel>> outer)
         {
@@ -142,7 +143,7 @@ public sealed class ScopedControlIndex<TLabel> where TLabel : notnull
                     binding.Target,
                     binding.Owner,
                     binding.Kind);
-                transfers.Add((region.Label, arm), transfer);
+                transfersBySource[region.Label].Add(transfer);
                 edges[region.Label].Add(target);
             }
         }
@@ -169,10 +170,7 @@ public sealed class ScopedControlIndex<TLabel> where TLabel : notnull
         }
 
         var orderedTransfers = definitions
-            .SelectMany(region => transfers
-                .Where(item => EqualityComparer<TLabel>.Default.Equals(item.Key.Source, region.Label))
-                .OrderBy(item => item.Key.Arm)
-                .Select(item => item.Value))
+            .SelectMany(region => transfersBySource[region.Label])
             .ToImmutableArray();
         return new(
             [.. definitions.Select(region => region.Label)],

@@ -8,10 +8,11 @@ using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
-public class RegionParameterToLocalVariablePassTests
+public class RegionParameterToLocalVariablePassTests(ITestOutputHelper output)
 {
     private readonly ParameterDeclaration source = new("source", ShaderType.I32, []);
     private readonly IShaderValue condition = ShaderValue.Intermediate(ShaderType.Bool);
@@ -120,6 +121,7 @@ public class RegionParameterToLocalVariablePassTests
         var error = Assert.Throws<NotSupportedException>(() => Lower(body));
 
         Assert.Contains("no stable address", error.Message);
+        output.WriteLine($"ACTUAL resolver rejection: {error.Message}");
     }
 
     [Fact]
@@ -155,13 +157,22 @@ public class RegionParameterToLocalVariablePassTests
         var orphan = Label.Create("orphan");
         var p = ShaderValue.Intermediate(source.Value.Type);
         var q = ShaderValue.Intermediate(source.Value.Type);
-        var error = Assert.Throws<ArgumentException>(() => CreateBody([
-            Block(entry, [], Jump(join, source.Value)),
-            Block(join, [p], Terminators.ReturnExpr(p)),
-            Block(orphan, [q], Terminators.ReturnExpr(q))
-        ]));
+        var body = new FunctionBody4(
+            new FunctionDeclaration("test", [source], new FunctionReturn(source.Value.Type, []), []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [
+                Region(Block(join, [p], Terminators.ReturnExpr(p))),
+                RegionTree<Label, ShaderRegionBody>.Loop(orphan, [],
+                    Block(orphan, [q],
+                        Terminators.BrIf(condition, new(orphan, [q]), new(join, [q]))),
+                    null,
+                    null)
+            ], Block(entry, [],
+                Terminators.BrIf(condition, new(join, [source.Value]), new(orphan, [q]))), null));
 
-        Assert.Contains("unreachable definitions", error.Message);
+        var error = Assert.Throws<NotSupportedException>(() => Lower(body));
+
+        Assert.Contains("no stable address", error.Message);
+        output.WriteLine($"ACTUAL resolver rejection: {error.Message}");
     }
 
     [Fact]

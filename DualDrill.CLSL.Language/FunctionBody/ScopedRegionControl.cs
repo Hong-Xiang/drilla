@@ -20,10 +20,16 @@ internal static class ScopedRegionControl
             if (!ReferenceEquals(region.Label, region.Body.Label))
                 throw Invalid(
                     $"region label '{region.Label}' does not match body label '{region.Body.Label}'");
+            if (region.Body.Parameters.IsDefault)
+                throw Invalid($"region '{region.Label}' has a default parameter array");
             if (root && !region.Body.Parameters.IsEmpty)
                 throw Invalid($"entry region '{region.Label}' must not declare parameters");
             if (!bodies.TryAdd(region.Label, region.Body))
                 throw Invalid($"duplicate defined label '{region.Label}'");
+            foreach (var (arm, jump) in Jumps(region.Body).Index())
+                if (jump.Arguments.IsDefault)
+                    throw Invalid(
+                        $"transfer from '{region.Label}', arm {arm}, to '{jump.Label}' has a default argument array");
             foreach (var child in region.Bindings)
                 Collect(child, false);
         }
