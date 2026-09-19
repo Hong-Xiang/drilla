@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
@@ -392,6 +393,51 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         Assert.Contains("var v_0_answer : i32;", first);
         Assert.Contains("v_0_answer = 42;", first);
         Assert.Contains("return v_0_answer;", first);
+    }
+
+    [Fact]
+    public void LiteralSyntaxUsesLowercaseBooleansAndInvariantNumbers()
+    {
+        var declaration = Function("Literals", ShaderType.Unit);
+        var trueResult = ShaderValue.Intermediate(ShaderType.Bool);
+        var falseResult = ShaderValue.Intermediate(ShaderType.Bool);
+        var floatResult = ShaderValue.Intermediate(ShaderType.F32);
+        SlangBind Bind(IShaderValue result, ILiteral literal) =>
+            new(Instruction<SlangOperand, IShaderValue>.Create(
+                new LiteralOperation(),
+                result,
+                [new SlangValueOperand(ShaderValue.Literal(literal))]));
+        var trueBinding = Bind(trueResult, new BoolLiteral(true));
+        var target = new SlangFunctionBody(
+            declaration,
+            new SlangBlock(
+            [
+                trueBinding,
+                Bind(falseResult, new BoolLiteral(false)),
+                Bind(floatResult, new F32Literal(1.5f)),
+                new SlangReturnVoid()
+            ]));
+        var literal = Assert.IsType<LiteralValue>(
+            Assert.IsType<SlangValueOperand>(Assert.Single(trueBinding.Instruction.Operands)).Value);
+        Assert.True(Assert.IsType<BoolLiteral>(literal.Value).Value);
+
+        var originalCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
+            var source = Emit(target);
+
+            Assert.Contains(" = true;", source);
+            Assert.Contains(" = false;", source);
+            Assert.Contains(" = 1.5;", source);
+            Assert.DoesNotContain("True", source);
+            Assert.DoesNotContain("False", source);
+            Assert.DoesNotContain("1,5", source);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
     }
 
     [Fact]

@@ -290,7 +290,7 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
         private static string RenderLiteral(ILiteral literal) =>
             literal switch
             {
-                BoolLiteral value => value.Value.ToString(),
+                BoolLiteral value => value.Value ? "true" : "false",
                 I32Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
                 I64Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
                 U32Literal value => value.Value.ToString(CultureInfo.InvariantCulture),
