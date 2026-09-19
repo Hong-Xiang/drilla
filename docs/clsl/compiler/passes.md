@@ -81,8 +81,11 @@ exceptions are not reclassified as unsupported CIL.
 ```text
 parse/collect the all-reference CIL module
   -> Pre stack analysis over each collected function
-  -> reachable CFG construction using completed Pre facts
-  -> explicit stack-value / operation lowering
+  -> labelled block partitioning using completed Pre facts
+  -> CIL-to-shader-stack instruction/type lowering
+  -> generic CFG construction over shader-stack blocks
+  -> stack-to-explicit-value lowering
+  -> eligible private-local promotion
   -> control-flow analysis and region construction
   -> existing operation/parameter lowering
   -> target emission
@@ -120,12 +123,18 @@ This analysis-result reorganization is a separate control-facts pass after the
 parser/pass boundary. It reuses the existing algorithms and does not introduce a
 new structurization algorithm inside collection or region construction.
 
-The implemented `BlockControlFacts` fields have deliberately narrow meanings:
-`ReversePostOrderIndex` is the existing reachable DFS reverse-postorder number;
-`ImmediateDominator` and `ImmediatePostDominator` are stable original labels, or
-`null` when the existing computations produce no immediate relation; and
-`IsLoopHeader` is the existing dominance-backed predecessor test. These facts do
-not claim reducibility, forward merges, reconvergence, or general structurization.
+The implemented `BlockControlFacts` fields have deliberately narrow meanings.
+Analysis requires every definition to be entry-reachable.
+`ReversePostOrderIndex` is the existing DFS reverse-postorder number and
+`ImmediateDominator` is a stable original label, or `null` for the entry.
+`PostDominance` distinguishes a real `Block`, the analysis-only `FunctionExit`,
+and `NoExitPath`; every alternative also exposes structural `MayDiverge`.
+`IncomingArms` preserves every arm, ordered by source reverse-postorder then
+successor ordinal, including parallel arms to one target. An arm is a backedge
+exactly when its target dominates its source; forward means only “not a
+backedge,” not increasing reverse-postorder. `IsLoopHeader` is derived from the
+presence of an incoming backedge. These facts do not claim reducibility,
+natural-loop membership, reconvergence, or general structurization.
 
 ## Implemented Public Path
 
@@ -134,9 +143,12 @@ not claim reducibility, forward merges, reconvergence, or general structurizatio
 | `RuntimeReflectionParser` | Reflection roots -> `ShaderModuleDeclaration<RawCilFunctionBody>` | Collect declarations, immutable symbol metadata, and every referenced non-boundary original CIL body, including references at unreachable instruction positions. |
 | `CilMethodDecoder` | Method metadata -> `LinearCode<CilInstructionInfo>` | Preserve every instruction, original index/byte range, method body and immutable method environment without semantic lowering. |
 | `CilPreStackPass` | Raw CIL module -> `ShaderModuleDeclaration<PreCilFunctionBody>` | Reject unsupported EH, validate whole-source control, and propagate exact normalized stacks; successful per-function output contains only reachable original positions. |
-| `CilControlFlowPass` | Pre module -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>` | Construct only the reachable `ControlFlowGraph<CilInstructionBlock>`, retaining concrete native control and source annotations. |
-| `CilStackToValuePass` | CIL CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Validate concrete stacks and produce a flat `ControlFlowGraph<CilValueBasicBlock>` with values, ordered edge arguments and lowered terminators. |
-| `CilBlockControlFactsPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute the existing reverse-postorder, immediate-dominator, immediate-postdominator, and natural-loop-header results once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
+| `CilBlockPartitionPass` | Pre module -> `ShaderModuleDeclaration<LabelledCilFunctionBody>` | Partition the complete reachable Pre source into `BlockList<CilInstructionBlock>` while retaining original instruction and annotation identity. |
+| `CilToShaderStackPass` | Labelled CIL module -> `ShaderModuleDeclaration<ShaderStackFunctionBody>` | Lower each CIL instruction to explicit typed stack operations, aliases and drops with derived Pre/Post transitions and numeric provenance. |
+| `ShaderStackControlFlowPass` | Shader-stack block module -> `ShaderModuleDeclaration<ShaderStackControlFlowBody>` | Validate exact edge stack equality and construct the first frontend CFG through the generic factory. |
+| `ShaderStackToValuePass` | Shader-stack CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Mechanically read depths, pop/push the declared transition, preserve provenance in instruction payloads, and produce ordered block arguments. |
+| `CilLocalPromotionPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Promote definitely assigned, direct nonescaping function-local `i32` and `bool` loads/stores through the existing SSA transform, using the raw method's exact locals and `InitLocals` metadata. Escaped, unsupported and incompletely initialized locals remain in storage. |
+| `CilBlockControlFactsPass` | Promoted value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute reverse-postorder, immediate dominators, finite-exit postdominance with explicit function-exit/no-exit results, structural may-diverge, and ordered incoming-arm/backedge facts once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`; loop-header status is derived from incoming backedges. |
 | `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
 | `RegionParameterToLocalVariablePass` | `FunctionBody4` -> `FunctionBody4` | Resolve supported pointer aliases and remove region parameters under existing restrictions. |
@@ -151,21 +163,40 @@ optimization-level pipeline, or comprehensive inter-pass verifier here.
 ## Desired Logical Separation
 
 ```text
-linear stack instructions
-  -> complete linear source + sparse reachable-position Pre map
-  -> reachable CFG of typed stack instructions
-  -> typed CFG with block arguments
+raw CIL LinearCode
+  -> strict CIL Pre stack analysis -> typed CIL LinearCode
+  -> basic-block partitioning / stable label binding -> labelled CIL BlockList
+  -> CIL instruction/type lowering -> labelled shader stack BlockList
+  -> generic CFG construction -> shader stack CFG
+  -> stack-to-explicit-values -> shader value CFG with block arguments
+  -> direct scalar local promotion -> shader value CFG with appended block arguments
   -> scoped nested regions with shared joins and SSA-like values
   -> target-language AST
   -> source text
 ```
 
+Issue #114's frontend slices implement the block-list/CFG separation and early
+shader-stack lowering. `InstructionBlockPartitioner` binds labels and
+original ranges; immutable `BlockList<TBlock>` validates definitions and targets
+without graph indexes. `ControlFlowGraph.Create` consumes the stored list and an
+explicit pure control projection, including disconnected definitions and ordered
+duplicate arms; it has no CIL opcode or source-index semantics.
+
+There is no public CIL CFG. The generic CFG is constructed only after CIL has
+become shader-stack IR. Shader operands are typed stack depths or resolved
+literals/function/stable-address symbols; they never contain intermediate
+values. Every expansion and terminator records its own transition and source
+provenance. See the [actual diagnostics](linear-cil.md#read-only-stage-diagnostics).
+
 Shared instructions, terminators, sequences, labels, and region constructors
 serve multiple stages. Parsing, Pre analysis, reachable CFG construction, flat
-value lifting, BB-local control facts, and region construction now have distinct
-typed producer/consumer boundaries. A topology-changing pass must rerun
-`CilBlockControlFactsPass`; there is no incremental cache or invalidation manager.
-The emitter still performs work intended for region-to-AST lowering.
+value lifting, local promotion, BB-local control facts, and region construction now have distinct
+typed producer/consumer boundaries. Changing the entry, block set, successor
+destination/order, or arm multiplicity requires rerunning
+`CilBlockControlFactsPass`; a payload-only mapping may preserve facts only when
+topology and ordered arm identity are unchanged. There is no incremental cache
+or invalidation manager. The emitter still performs work intended for
+region-to-AST lowering.
 
 The agreed [linear CIL design](linear-cil.md) refines the frontend ordering:
 preserve native predicates and original offsets, analyze Pre stack types on
@@ -216,7 +247,8 @@ a supported constant storage address is not a mutable pointer-valued local.
 | Transformation | Minimal independent examples |
 |---|---|
 | Linear CIL -> Pre stack annotation | Jump versus physical adjacency, typed stack joins, loop propagation, and unreachable versus empty entry state. |
-| Linear CIL -> CFG | A separately labeled final instruction, explicit return, conditional branch, and ordinary fallthrough. |
+| Typed linear CIL -> labelled BlockList | Original ranges across gaps, stable labels before payload construction, final return/branch, invalid final conditional, and ordinary fallthrough that cannot skip a gap. |
+| BlockList -> generic CFG | Non-first entry, disconnected stored definitions, same-name distinct labels, payload/control identity, and ordered duplicate arms. |
 | Stack CFG -> typed CFG | Equal incoming stack shapes, mismatched shapes, ordered edge arguments, and normalized scalar call boundaries. |
 | CFG -> scoped regions | A diamond, loop header, shared join, nested continuation, and illegal cross-scope reference. |
 | Region -> AST | Shared effectful tail, early return, nested exit, and multiple references to one continuation. |

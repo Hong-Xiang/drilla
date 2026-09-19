@@ -32,6 +32,10 @@ public sealed class ControlFlowDFSTree
         }
 
         Visit(controlFlowGraph.EntryLabel);
+        if (visited.Count != controlFlowGraph.LabelCount)
+            throw new ArgumentException(
+                "Control-flow analysis requires every graph definition to be reachable from the entry.",
+                nameof(controlFlowGraph));
 
         LabelCount = visited.Count;
         var labels = new Label[LabelCount];
@@ -41,8 +45,6 @@ public sealed class ControlFlowDFSTree
         LabelChildren = children.ToFrozenDictionary(
             x => x.Key,
             x => x.Value.OrderBy(l => LabelIndices[l]).ToImmutableArray());
-        LabelLoopFlags =
-            Labels.ToFrozenDictionary(l => l, l => controlFlowGraph.GetPred(l).Any(p => GetIndex(p) >= GetIndex(l)));
     }
 
     public IControlFlowGraph ControlFlowGraph { get; }
@@ -51,11 +53,8 @@ public sealed class ControlFlowDFSTree
     public ImmutableArray<Label> Labels { get; }
     private FrozenDictionary<Label, int> LabelIndices { get; }
     private FrozenDictionary<Label, ImmutableArray<Label>> LabelChildren { get; }
-    private FrozenDictionary<Label, bool> LabelLoopFlags { get; }
 
     public int GetIndex(Label label) => LabelIndices[label];
-
-    public bool IsLoop(Label label) => LabelLoopFlags[label];
 
     public T Fold<T>(IFoldSemantic<T, T> semantic) => FoldLabel(semantic, ControlFlowGraph.EntryLabel);
 

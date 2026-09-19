@@ -1,4 +1,5 @@
 ﻿using System.CodeDom.Compiler;
+using System.Diagnostics;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
@@ -177,7 +178,7 @@ public class SlangEmitter
 
 
     string ILiteralSemantic<string>.Bool(bool value)
-        => value.ToString();
+        => value ? "true" : "false";
 
     string ILiteralSemantic<string>.I32(int value)
         => value.ToString();
@@ -216,8 +217,9 @@ public class SlangEmitter
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.Call(
         Instruction<string, string> ctx, CallOperation op, string result, string f, IReadOnlyList<string> arguments) =>
-        // TODO: handle void type
-        $"{result} = {f}({string.Join(',', arguments)});";
+        op.ResultType is UnitType
+            ? $"{f}({string.Join(',', arguments)});"
+            : $"{result} = {f}({string.Join(',', arguments)});";
 
 
     string IOperationSemantic<Instruction<string, string>, string, string, string>.Literal(
@@ -255,6 +257,7 @@ public class SlangEmitter
             IVectorSwizzleGetOperation o => $"{e}.{o.Pattern.Name}",
             IVectorComponentGetOperation o => $"{e}.{o.Component.Name}",
             IVectorFromScalarConstructOperation o => $"{op.ResultType.Name}({e})",
+            LogicalNotOperation => $"!{e}",
             UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
             VectorNumericUnaryOperation<N3, FloatType<N32>, UnaryArithmetic.Negate> => $"- {e}",
             _ => $"{op.Name}({e})"
@@ -288,12 +291,8 @@ public class SlangEmitter
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// block " + GetLabelName(label));
-            Writer.Write("// => ");
-            if (body.Last.ImmediatePostDominator is { } dl)
-                Writer.WriteLine(GetLabelName(dl));
-            else
-                Writer.WriteLine("exit");
-            var nextL = body.Last.ImmediatePostDominator;
+            WritePostDominance(body.Last.PostDominance);
+            var nextL = LayoutTarget(body.Last.PostDominance);
             NextBlock.Push(nextL);
             SourceBlocks.Push(label);
             OnShaderRegionBody(body.Last);
@@ -311,7 +310,7 @@ public class SlangEmitter
     Unit IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>.Loop(
         Label label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody> body, Label? next, Label? breakNext)
     {
-        var nextL = body.Last.ImmediatePostDominator;
+        var nextL = LayoutTarget(body.Last.PostDominance);
         HashSet<Label> regionLabels = [label, .. body.Elements.SelectMany(r => r.DefinedLabels())];
         var normalTransfer = FindNormalTransfer(label, regionLabels);
 
@@ -319,11 +318,7 @@ public class SlangEmitter
         using (Writer.IndentedScopeWithBracket())
         {
             Writer.WriteLine("// loop " + GetLabelName(label));
-            Writer.Write("// => ");
-            if (body.Last.ImmediatePostDominator is { } dl)
-                Writer.WriteLine(GetLabelName(dl));
-            else
-                Writer.WriteLine("exit");
+            WritePostDominance(body.Last.PostDominance);
             LoopOwners.Push(new(label, normalTransfer));
             NextBlock.Push(nextL);
             SourceBlocks.Push(label);
@@ -343,6 +338,38 @@ public class SlangEmitter
 
         return default;
     }
+
+    private void WritePostDominance(ExitPostDominance postDominance)
+    {
+        Writer.Write("// => ");
+        switch (postDominance)
+        {
+            case ExitPostDominance.Block block:
+                Writer.Write(GetLabelName(block.Target));
+                break;
+            case ExitPostDominance.FunctionExit:
+                Writer.Write("function-exit");
+                break;
+            case ExitPostDominance.NoExitPath:
+                Writer.Write("no-exit-path");
+                break;
+            default:
+                throw new UnreachableException(
+                    $"Unsupported exit-postdominance result {postDominance.GetType().FullName}.");
+        }
+
+        Writer.WriteLine(postDominance.MayDiverge ? " may-diverge" : " finite");
+    }
+
+    private static Label? LayoutTarget(ExitPostDominance postDominance) =>
+        postDominance switch
+        {
+            ExitPostDominance.Block block => block.Target,
+            ExitPostDominance.FunctionExit => null,
+            ExitPostDominance.NoExitPath => null,
+            _ => throw new UnreachableException(
+                $"Unsupported exit-postdominance result {postDominance.GetType().FullName}.")
+        };
 
 
     Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnVoid()
@@ -504,7 +531,7 @@ public class SlangEmitter
 
     private void VisitType(IShaderType type)
     {
-        Writer.Write(type.Name);
+        Writer.Write(type is UnitType ? "void" : type.Name);
     }
 
     private void OnBody(FunctionBody4 body)

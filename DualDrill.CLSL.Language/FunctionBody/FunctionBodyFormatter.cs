@@ -1,5 +1,7 @@
 ﻿using System.CodeDom.Compiler;
+using System.Diagnostics;
 using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Region;
@@ -168,6 +170,17 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
             Writer.WriteLine();
         }
 
+        Writer.WriteLine("scoped control:");
+        using (Writer.IndentedScope())
+        {
+            Function.Control.Dump(Writer, label =>
+            {
+                var name = label.Name is null ? string.Empty : $"({label.Name})";
+                return $"^{Model.LabelIndex(label)}{name}";
+            });
+        }
+        Writer.WriteLine();
+
         Function.Body.Fold(this);
     }
 
@@ -187,16 +200,23 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
     private void Dump(ShaderRegionBody body)
     {
         Writer.WriteLine();
-        Writer.Write("|=> ");
-        if (body.ImmediatePostDominator is null)
+        Writer.Write("|=> postdom ");
+        switch (body.PostDominance)
         {
-            Writer.WriteLine("exit");
+            case ExitPostDominance.Block block:
+                Dump(block.Target);
+                break;
+            case ExitPostDominance.FunctionExit:
+                Writer.Write("function-exit");
+                break;
+            case ExitPostDominance.NoExitPath:
+                Writer.Write("no-exit-path");
+                break;
+            default:
+                throw new UnreachableException(
+                    $"Unsupported exit-postdominance result {body.PostDominance.GetType().FullName}.");
         }
-        else
-        {
-            Dump(body.ImmediatePostDominator);
-            Writer.WriteLine();
-        }
+        Writer.WriteLine(body.PostDominance.MayDiverge ? " may-diverge" : " finite");
 
         foreach (var (i, p) in body.Parameters.Index())
         {

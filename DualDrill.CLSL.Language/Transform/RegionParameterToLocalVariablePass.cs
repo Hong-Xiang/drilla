@@ -16,32 +16,11 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
     private static FunctionBody4 EliminatePointerParameters(FunctionBody4 body)
     {
         var blocks = body.Body.Fold(new RegionBodiesSemantic()).ToImmutableDictionary(b => b.Label);
-        var jumps = blocks.Values.SelectMany(block =>
-            block.Body.Last.Evaluate(new JumpsSemantic()).Select(jump => (Source: block.Label, Jump: jump)))
+        var jumps = blocks.Values
+            .SelectMany(block => block.Body.Last.Evaluate(new JumpsSemantic()))
             .ToImmutableArray();
-        foreach (var (source, jump) in jumps)
-        {
-            if (!blocks.TryGetValue(jump.Label, out var target))
-                throw new InvalidOperationException(
-                    $"Function '{body.Declaration.Name}': jump from '{source.Name}' has unknown target '{jump.Label.Name}'.");
-            if (jump.Arguments.Length != target.Parameters.Length)
-                throw new InvalidOperationException(
-                    $"Function '{body.Declaration.Name}': jump to '{jump.Label.Name}' has incorrect argument count.");
-            foreach (var (parameter, argument) in target.Parameters.Zip(jump.Arguments))
-            {
-                var sameType = (parameter.Type, argument.Type) switch
-                {
-                    (IPtrType p, IPtrType a) => Equals(p.BaseType, a.BaseType)
-                        && Equals(p.AddressSpace, a.AddressSpace),
-                    _ => Equals(parameter.Type, argument.Type)
-                };
-                if (!sameType)
-                    throw new InvalidOperationException(
-                        $"Function '{body.Declaration.Name}': jump to '{jump.Label.Name}' has incorrect argument type.");
-            }
-        }
 
-        var incoming = jumps.ToLookup(edge => edge.Jump.Label, edge => edge.Jump);
+        var incoming = jumps.ToLookup(jump => jump.Label);
         var constraints = blocks.Values.SelectMany(block =>
                 block.Parameters.Select((parameter, index) => (Parameter: parameter,
                     Constraint: new PointerConstraint(block.Label, index,

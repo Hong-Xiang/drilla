@@ -1,129 +1,65 @@
 # Control Flow Analysis in CLSL
 
-> **Note**: This documentation is generated and maintained with the assistance of AI/LLM tools. While we strive for accuracy, please verify critical information and report any inconsistencies.
+## Input contract
 
-## Overview
+Control analysis accepts a finite, closed control-flow graph with one entry.
+Every defined block must be reachable from that entry. Generic
+`ControlFlowGraph<TBlock>` construction checks that successor labels are
+defined; the shared DFS analysis boundary separately rejects disconnected
+definitions with `ArgumentException`.
 
-CLSL employs sophisticated control flow analysis to transform unstructured C# IL code into structured shader code. This document details the implementation of control flow analysis, focusing on dominator trees and loop detection.
+Successor order is semantic. An unconditional successor has ordinal `0`; a
+conditional successor is ordered true (`0`) then false (`1`). Parallel arms to
+the same target remain distinct.
 
-## Control Flow Graph
+## Published block facts
 
-### Basic Block Structure
-```
-label:
-    instruction1
-    instruction2
-    terminator_instruction
-```
+`CilBlockControlFactsPass` publishes immutable `BlockControlFacts` on each
+reachable basic block:
 
-### Edge Types
-1. **Unconditional** - Direct flow from one block to another
-2. **Conditional** - Branching based on a condition
-3. **Return** - Function exit points
+- `ReversePostOrderIndex` is the existing DFS reverse-postorder number.
+- `ImmediateDominator` is the nearest strict dominator, or `null` for the entry.
+- `PostDominance` is a closed result: `Block` names the nearest real block on
+  every finite path to a real return, `FunctionExit` names the analysis-only
+  virtual exit, and `NoExitPath` means no real return is reachable. Every
+  alternative reports whether a directed cycle is reachable as `MayDiverge`;
+  `NoExitPath` always may diverge.
+- The old nullable `ImmediatePostDominator` projection is removed. Consumers
+  must match the closed result and may use `Block.Target` only when the result
+  is a real block.
+- `IncomingArms` is ordered by source reverse-postorder, then source successor
+  ordinal. Each `IncomingControlArm` records the original source label and
+  ordinal; the target is the block that owns the facts.
+- `IsLoopHeader` is derived: it is true exactly when at least one incoming arm
+  is a backedge.
 
-## Dominator Tree Analysis
+An arm from `S` to `T` is a backedge exactly when `T` dominates `S`. Every other
+arm is forward. “Forward” therefore means non-backedge, not increasing
+reverse-postorder. Irreducible cycles can contain only forward arms, and a loop
+header flag does not claim reducibility or natural-loop membership.
 
-The dominator tree is a core data structure that helps identify program structure:
+## Preservation and invalidation
 
-### Properties
-- A node D dominates node N if all paths from the entry to N must go through D
-- Immediate dominator of N is the closest dominator in the dominator tree
-- Forms a tree structure useful for identifying loops and control structures
+WGSL output rejects a module containing a reachable `NoExitPath` block with a
+function/block diagnostic. The pinned Slang backend can erase pure infinite loops,
+including a divergent arm beside a returning arm, so successful WGSL generation
+alone is not a semantic guarantee. IR and Slang output remain available for these
+graphs. Ordinary loops with a finite exit path remain supported; `MayDiverge`
+alone is not a rejection condition. Faithful WGSL nontermination support is a
+separate backend requirement, not a reason to weaken the analysis facts.
 
-### Example Structure:
-```
-       A          Dominator Tree:
-      / \               A
-     B   D           / | | \
-    / \ / \         B  D E  F
-   C   E  |         |
-    \ /   |         C
-     F <--*
-```
+Analysis preserves block payloads, successor objects, label identities, arm
+multiplicity, and successor order. Changing the entry, block set, successor
+destination/order, or arm multiplicity invalidates all published control facts.
+A payload-only mapping may retain them only when topology and ordered arm
+identity are unchanged. There is no incremental invalidation registry.
 
-### Implementation
-The implementation handles:
-- Single node cases
-- Self-loops
-- Complex control flow with multiple paths
-- Nested control structures
-
-## Loop Detection
-
-### Loop Structure
-```
-Header:
-    condition
-    branch Body/Exit
-Body:
-    ...code...
-    branch Header
-Exit:
-    ...continuation...
-```
-
-### Analysis Process
-1. Identify back edges in the CFG
-2. Find natural loops using dominators
-3. Build loop hierarchy
-4. Detect loop conditions and exits
-
-## Control Flow Structuring
-
-### Transformation Rules
-1. **If-Then-Else**
-   ```
-   if condition:
-       then_block
-   else:
-       else_block
-   endif
-   ```
-
-2. **Loops**
-   ```
-   loop:
-       break_if exit_condition
-       ...loop body...
-       continue
-   endloop
-   ```
-
-3. **Break/Continue**
-   - Map to appropriate WGSL constructs
-   - Handle multiple exit points
-   - Structure multi-level breaks
-
-## Special Cases
-
-### Early Returns
-- Transform to structured form
-- Maintain semantic equivalence
-- Handle nested returns
-
-### Switch Statements
-- Lower to if-else chains
-- Optimize common patterns
-- Handle fall-through cases
-
-### Exception Handling
-- Not supported in shaders
-- Must be eliminated during compilation
-- Convert to error codes where necessary
-
-## Validation
-
-### Structural Validation
-- Well-formed loop structures
-- Proper nesting
-- Valid entry/exit points
-
-### Semantic Validation
-- Control flow preservation
-- Value availability
-- Side effect ordering
+Finite-exit postdominance considers only finite directed walks to original
+zero-successor blocks. The virtual function exit is analysis-only and never
+creates an executable label or return. Absence of an exit path is a successful
+`NoExitPath` result; malformed input and unknown-label queries throw.
 
 See also:
+
 - [IR Specification](../ir_spec.md)
 - [Compiler Passes](./passes.md)
-- [WGSL Backend](../backends/wgsl.md)

@@ -178,7 +178,7 @@ public static class RegionTree
                     nameof(graph));
             seenRpoIndices[facts.ReversePostOrderIndex] = true;
 
-            if (facts.ImmediatePostDominator is { } postDominator &&
+            if (facts.PostDominance is ExitPostDominance.Block { Target: var postDominator } &&
                 !children.ContainsKey(postDominator))
                 throw new ArgumentException(
                     "A block control fact references an immediate postdominator outside the graph.",
@@ -216,7 +216,12 @@ public static class RegionTree
                 : Block(label, [.. childRegions], body, null);
         }
 
-        return ToRegion(graph.EntryLabel);
+        var tree = ToRegion(graph.EntryLabel);
+        _ = ScopedControlIndex<Label>.Create(
+            tree,
+            (label, _) => graph.Successor(label).AllTargets().ToImmutableArray(),
+            "Region graph");
+        return tree;
     }
 }
 
