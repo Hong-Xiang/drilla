@@ -144,9 +144,9 @@ the source activation never resumes. Returns exit from any nesting depth.
 `Forward` and `Repeat` ownership describe source-language scope only. They do not
 infer target `break`/`continue`, copy arguments, duplicate bodies, or use
 postdominators as continuation authority. Same-target conditional arms remain
-distinct transfers. `SlangTargetLowering` realizes their edge-specific parallel
-copies. The older generic `RegionParameterToLocalVariablePass` remains live for
-other callers and still rejects differing tuples on two arms that share a target.
+distinct transfers. Edge-specific target lowering is still owned by later
+lowering; `RegionParameterToLocalVariablePass` continues to reject differing
+tuples on two arms that share a target.
 
 The checked control index certifies lexical label visibility and transfer
 argument arity/types; it is not a full SSA verifier. Correct value
@@ -184,9 +184,15 @@ C# compiled by .NET
   -> `ShaderModuleDeclaration<RawCilFunctionBody>`
   -> CilPreStackPass
   -> `ShaderModuleDeclaration<PreCilFunctionBody>`
-  -> CilControlFlowPass
-  -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>`
-  -> CilStackToValuePass
+  -> CilBlockPartitionPass
+  -> `ShaderModuleDeclaration<LabelledCilFunctionBody>`
+  -> CilToShaderStackPass
+  -> `ShaderModuleDeclaration<ShaderStackFunctionBody>`
+  -> ShaderStackControlFlowPass
+  -> `ShaderModuleDeclaration<ShaderStackControlFlowBody>`
+  -> ShaderStackToValuePass
+  -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
+  -> CilLocalPromotionPass
   -> `ShaderModuleDeclaration<CilValueControlFlowBody>`
   -> CilBlockControlFactsPass
   -> `ShaderModuleDeclaration<CilValueControlFactsBody>`
@@ -194,10 +200,8 @@ C# compiled by .NET
   -> `ShaderModuleDeclaration<FunctionBody4>`
   -> FunctionToOperationPass                  : FunctionBody4 -> FunctionBody4
   -> StablePointerRegionParameterPass         : FunctionBody4 -> FunctionBody4
-  -> SlangTargetLowering
-  -> `ShaderModuleDeclaration<SlangFunctionBody>`
-  -> SlangEmitter
-  -> Slang source
+  -> SlangTargetLowering                      : FunctionBody4 -> SlangFunctionBody
+  -> SlangEmitter                             : SlangFunctionBody -> Slang source
   -> slangc                                  : Slang source -> WGSL
 ```
 
@@ -205,13 +209,10 @@ C# compiled by .NET
 follows all original-CIL references, including dead instruction positions, up to
 explicit shared-builtin, operation-attribute and mapped-vector/member boundaries.
 The later Pre pass still filters unreachable positions inside each collected
-function. `FunctionBody4` combines typed instructions and parameterized
-terminators with a `RegionTree` and checked scoped-control index built by the
-final frontend pass.
-`SlangTargetLowering` consumes checked scoped transfers plus retained ordinary
-region parameters and ordered arguments, then performs lexical layout before
-the syntax-only emitter runs.
-There is not yet a complete general structurization pass.
+function. `FunctionBody4` combines typed instructions and parameterized terminators with a
+`RegionTree` built by the final frontend pass and a checked scoped-control index.
+`SlangTargetLowering` consumes that checked representation and produces the
+separate typed `SlangFunctionBody`; the emitter only formats it.
 
 The `AbstractSyntaxTree` directory does not constitute a complete AST
 function-body stage in this pipeline. Older design examples and
@@ -223,18 +224,23 @@ stages.
 These boundaries split reasoning and testing; they do not require unrelated
 IR implementations for each pass. The checked region boundary establishes the
 lexical control contract above, not full SSA validity or target realizability;
-the implemented target lowering accepts only its documented subset.
+the target AST records the concrete realization without changing those source
+facts.
 
 | Stage | Required invariant | Current owner or implementation boundary |
 |---|---|---|
 | Raw CIL module | All declarations and supported metadata references reachable from the roots through original CIL are present; each non-boundary method body is losslessly decoded once. | `RuntimeReflectionParser` produces `ShaderModuleDeclaration<RawCilFunctionBody>` with frozen symbol views. |
 | Linear Pre facts | Reachable entries have exact normalized stack types; absence from the completed value means unreachable. | `CilPreStackPass` produces `ShaderModuleDeclaration<PreCilFunctionBody>`; full original source remains separate. |
-| CFG of CIL blocks | Reachable instruction ranges are partitioned correctly; explicit terminators and legitimate fallthrough edges are preserved, without dead predecessors. | `CilControlFlowPass` produces `ShaderModuleDeclaration<MethodBodyAnalysisModel>`. |
-| Typed CFG with block arguments | Each block has one terminator; edge arity/types agree with destination parameters; values are available on the selected path. | `CilStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. Validation is partial, not a complete verifier. |
-| BB-annotated value CFG | Original blocks, labels and ordered edges remain unchanged; local facts hold existing RPO, IDom, IPDom and loop-header results. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
+| Labelled block list | Nonempty immutable storage; unique payload-owned label identities; entry and all projected control targets are defined. No reachability requirement or graph indexes. | `BlockList<TBlock>` with existing `ILabeledEntity`; `InstructionBlockPartitioner` preserves original CIL ranges and binds labels before payload construction. |
+| Labelled CIL blocks | Reachable instruction ranges exactly partition completed Pre; explicit terminators, labels and legitimate fallthrough edges retain source identity. | `CilBlockPartitionPass` produces `ShaderModuleDeclaration<LabelledCilFunctionBody>`. |
+| Labelled shader stack blocks | Every operation and terminator has checked typed Pre/Post, explicit pop behavior and numeric source provenance. | `CilToShaderStackPass` produces `ShaderModuleDeclaration<ShaderStackFunctionBody>`. |
+| Shader stack CFG | Every edge has exact source-exit/destination-entry stack equality; graph construction interprets only projected control. | `ShaderStackControlFlowPass` produces `ShaderModuleDeclaration<ShaderStackControlFlowBody>`. |
+| Typed CFG with block arguments | Mechanical stack elimination preserves operations, provenance, labels, arm order and bottom-to-top edge arguments. | `ShaderStackToValuePass` produces a flat `ControlFlowGraph<CilValueBasicBlock>`. |
+| Promoted typed CFG | Direct nonescaping function-local `i32` and `bool` storage is replaced by values and appended block parameters when definitions reach all uses; exact raw `InitLocals` metadata supplies only typed zero/false entry definitions. Escaped, unsupported and incompletely initialized locals remain memory operations. | `CilLocalPromotionPass` maps the value module to the same body type before control facts. |
+| BB-annotated value CFG | Promoted blocks, labels and ordered edges remain unchanged; local facts hold RPO, IDom, ordered incoming arms and typed finite-exit `PostDominance` (`Block`, `FunctionExit` or `NoExitPath`) with structural `MayDiverge`. Loop-header status is derived from dominance-backed incoming arms, not target placement. | `CilBlockControlFactsPass` publishes `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>` after `CilLocalPromotionPass`. |
 | Region binding tree | Consume published local facts, preserve descending-RPO dominator-child order without reanalysis, and check lexical control plus edge arguments. | `CilRegionPass` produces `FunctionBody4`; `FunctionBody4.Control` exposes the checked scoped-continuation index. |
 | Operation/value lowering | The transformation preserves control identities and effects while establishing its declared operation or parameter postcondition. | Existing same-type passes; their current restrictions are described below. |
-| Target AST | Executable control has a target-language realization with explicit lexical placement; effects retain their order and dynamic multiplicity; address aliases are typed places. | `SlangTargetLowering` produces `ShaderModuleDeclaration<SlangFunctionBody>` for the currently supported Region subset. |
+| Target AST | Control targets have a legal target-language realization; shared joins and value transfers have explicit lexical placement; effects retain their order and dynamic multiplicity. | `SlangTargetLowering` produces `SlangFunctionBody`; `SlangEmitter` only formats it. |
 
 The typed CFG is SSA-like, not a claim of whole-program SSA: explicit loads,
 stores, and mutable local storage coexist with intermediate values and block
@@ -245,9 +251,13 @@ implemented Pre-before-CFG ordering and exact supported type/merge rules. It
 retains full source plus a sparse completed Pre map rather than propagating an
 unreachable-state variant downstream. Native CIL predicates and concrete
 terminator payload remain behind narrow generic control views; `TE` is not split
-merely to expose data unused by topology analysis. Instruction-changing lowering
-follows stable CFG label construction. Value lifting, checked scoped regions and
-the Slang target AST lowering are implemented.
+merely to expose data unused by topology analysis. Instruction-changing lowering follows stable block-list label binding. Issue
+#114's foundation separates partitioning from `ControlFlowGraph.Create`, which
+preserves all stored block definitions and their concrete payloads. The former
+public CIL CFG and `MethodBodyAnalysisModel` are removed. CIL-to-shader-stack
+instruction/type lowering happens **before** generic CFG construction, followed
+by CIL-independent stack-to-explicit-values conversion, local promotion,
+checked scoped regions, pointer-only alias resolution, and target AST lowering.
 
 Structurization and block-parameter elimination are distinct transformations.
 Keeping parameters through a scoped region stage is valid. Eliminating them
@@ -279,35 +289,22 @@ fixing the generic absence representation is a separate step.
 
 ## Current Lowering Limits
 
-`StablePointerRegionParameterPass` is the public Slang/WGSL preparation pass. It
-resolves the existing supported stable pointer aliases while retaining every
-ordinary region parameter and ordered jump argument. The older
-`RegionParameterToLocalVariablePass` composes the same pointer pass before its
-legacy all-parameter lowering, including its same-target/different-tuples
-restriction.
+`StablePointerRegionParameterPass` resolves supported stable pointer aliases but
+retains ordinary block parameters and arm arguments. `SlangTargetLowering`
+snapshots a selected arm's arguments before any destination-slot writes, uses
+typed captures for cross-label SSA values, and consumes `FunctionBody4.Control`
+to realize `Forward` and `Repeat` transfers. `SlangDoOnce` and `SlangLoop` are
+distinct target nodes; provenance cannot change execution semantics.
 
-`SlangTargetLowering` uses only `FunctionBody4.Control.Resolve(source, arm)` for
-control ownership. Each original region has one AST provenance site. Selected
-transfers first snapshot all arguments into immutable values, then assign target
-parameter slots, set a scoped continuation token, and unwind through synthetic
-`SlangDoOnce` carriers. Forward gates and real `SlangLoop` nodes consume exact
-target/owner/kind continuations; returns remain direct. Multiple distinct exits,
-same-target/different-tuples, cyclic parameter copies, outer repeats and
-entry-owned forward exits are supported without IPDom/`Next`/`BreakNext`
-inference, body cloning, or a function-wide program-counter dispatcher.
+The legacy `RegionParameterToLocalVariablePass` remains available to non-target
+callers and composes the same pointer policy before ordinary parameter erasure.
+The target path does not use that erasure. The implementation is not the
+complete Beyond Relooper algorithm or a general irreducible-CFG policy.
 
-Target scopes are lexical. Non-pointer instruction results or block parameters
-used by another original label are copied immediately to typed function-local
-capture slots; same-label values remain immutable bindings. Stable pointer
-aliases stay typed places. The checked control boundary is not a full SSA
-dominance proof, so valid definition/use dominance remains an input precondition.
-Synthetic one-shot nesting and unwind work are linear in lexical depth. The pass
-does not implement irreducible control, node splitting, GPU reconvergence, or a
-general Beyond Relooper policy.
-
-`SlangDoOnce` and `SlangLoop` are distinct target statements. The syntax-only
-emitter prints them as `do { ... } while(false)` and `while(true)` respectively;
-an optional original-label provenance marker never selects control semantics.
+WGSL emission checks the original `FunctionBody4` for `NoExitPath` before
+`FunctionToOperationPass`, pointer lowering, or target lowering. IR and Slang
+remain available, while ordinary finite-exit loops carrying `MayDiverge` remain
+supported by WGSL.
 
 Original `Label` identity denotes original control-flow provenance. If a future
 pass introduces synthetic edge blocks, it must distinguish them from original
@@ -344,11 +341,10 @@ cases describe observable behavior for effectful callbacks.
 
 ## Subsequent Slices
 
-The next independently scoped steps are to make analysis availability and
-continuation absence unambiguous and lower the checked scoped references and
-values into a target AST.
-Expression tree packing and final source formatting need not be the same pass
-as control layout. Each step must preserve the existing semantic/trace corpus.
+Further structurization work may widen the accepted reducible-CFG subset, but
+must preserve the checked scoped-control, selected-edge copy, and typed target
+AST boundaries. Expression packing and source formatting remain separate from
+control layout.
 
 See [pass contracts](compiler/passes.md) for per-stage test units and
 [functional IR design notes](functional_ir.md) for the original motivation.

@@ -115,7 +115,7 @@ public sealed class FunctionBody4
                             j => j.Select(mapValue),
                             mapValue)
                     ),
-                    body.ImmediatePostDominator
+                    body.PostDominance
                 )
             )
         );

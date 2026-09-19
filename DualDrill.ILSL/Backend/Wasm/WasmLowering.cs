@@ -293,8 +293,6 @@ public static class WasmLowering
                 Reject($"{Describe(label)}: instruction operation is missing.");
             if (instruction.RestOperands.IsDefault)
                 Reject($"{Describe(label)}: instruction rest operands are default.");
-            if (instruction.Payload is not null)
-                Reject($"{Describe(label)}: instruction payloads are not supported.");
             var valid = instruction.OperandCount switch
             {
                 0 => instruction.Operand0 is null && instruction.Operand1 is null && instruction.RestOperands.IsEmpty,

@@ -5,6 +5,8 @@ using System.Globalization;
 using System.Reflection;
 using DualDrill.CLSL.Backend.Wasm;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
@@ -400,14 +402,15 @@ public sealed class WasmBackendTests
                 nextI, stepI, Int(1))
         ], Terms.Br(Jump(header, nextSum, nextI, stepN)));
         var exitBody = Block(exit, [answer], [], Terms.ReturnExpr(answer));
+        var bodies = Annotate(entryBody, headerBody, stepBody, exitBody);
         return new FunctionBody4(
             Declaration("sum", [input]),
             RegionTree.Block(entry, [
-                RegionTree.Block(exit, [], exitBody, null),
+                RegionTree.Block(exit, [], bodies[exit], null),
                 RegionTree.Loop(header, [
-                    RegionTree.Block(step, [], stepBody, null)
-                ], headerBody, null, null)
-            ], entryBody, null));
+                    RegionTree.Block(step, [], bodies[step], null)
+                ], bodies[header], null, null)
+            ], bodies[entry], null));
     }
 
     private static FunctionBody4 SwapBody()
@@ -439,12 +442,13 @@ public sealed class WasmBackendTests
                     result, tens, b)
             ], Terms.BrIf(again, Jump(loop, b, a, Bool(false)), Jump(exit, result)));
         var exitBody = Block(exit, [answer], [], Terms.ReturnExpr(answer));
+        var bodies = Annotate(entryBody, loopBody, exitBody);
         return new FunctionBody4(
             Declaration("swap", []),
             RegionTree.Block(entry, [
-                RegionTree.Block(exit, [], exitBody, null),
-                RegionTree.Loop(loop, [], loopBody, null, null)
-            ], entryBody, null));
+                RegionTree.Block(exit, [], bodies[exit], null),
+                RegionTree.Loop(loop, [], bodies[loop], null, null)
+            ], bodies[entry], null));
     }
 
     private static FunctionBody4 LocalBody()
@@ -616,18 +620,34 @@ public sealed class WasmBackendTests
         return new FunctionBody4(
             Declaration("duplicate-block", []),
             RegionTree<Label, ShaderRegionBody>.Block(entry, [
-                RegionTree<Label, ShaderRegionBody>.Block(duplicate, [], first, null),
-                RegionTree<Label, ShaderRegionBody>.Block(duplicate, [], second, null)
-            ], entryBody, null));
+                RegionTree<Label, ShaderRegionBody>.Block(
+                    duplicate,
+                    [],
+                    Materialize(first, new ExitPostDominance.FunctionExit(false)),
+                    null),
+                RegionTree<Label, ShaderRegionBody>.Block(
+                    duplicate,
+                    [],
+                    Materialize(second, new ExitPostDominance.FunctionExit(false)),
+                    null)
+            ], Materialize(entryBody, new ExitPostDominance.FunctionExit(false)), null));
     }
 
     private static FunctionBody4 UnreachableBlockBody()
     {
         var entry = Label.Create("entry");
         var dead = Label.Create("dead");
-        return Body("unreachable-block", [],
-            Block(entry, [], [], Terms.ReturnExpr(Int(0))),
-            Block(dead, [], [], Terms.ReturnExpr(Int(1))));
+        var entryBody = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
+        var deadBody = Block(dead, [], [], Terms.ReturnExpr(Int(1)));
+        return new FunctionBody4(
+            Declaration("unreachable-block", []),
+            RegionTree<Label, ShaderRegionBody>.Block(entry, [
+                RegionTree<Label, ShaderRegionBody>.Block(
+                    dead,
+                    [],
+                    Materialize(deadBody, new ExitPostDominance.FunctionExit(false)),
+                    null)
+            ], Materialize(entryBody, new ExitPostDominance.FunctionExit(false)), null));
     }
 
     private static FunctionBody4 EntryParameterBody()
@@ -690,7 +710,11 @@ public sealed class WasmBackendTests
         var region = Block(bodyLabel, [], [], Terms.ReturnExpr(Int(0)));
         return new FunctionBody4(
             Declaration("tree-label-mismatch", []),
-            RegionTree<Label, ShaderRegionBody>.Block(treeLabel, [], region, null));
+            RegionTree<Label, ShaderRegionBody>.Block(
+                treeLabel,
+                [],
+                Materialize(region, new ExitPostDominance.FunctionExit(false)),
+                null));
     }
 
     private static FunctionBody4 DefaultBlockParametersBody()
@@ -701,7 +725,7 @@ public sealed class WasmBackendTests
             default,
             Seq.Create<Instruction<IShaderValue, IShaderValue>,
                 ITerminator<RegionJump<IShaderValue>, IShaderValue>>([], Terms.ReturnExpr(Int(0))),
-            null);
+            new ExitPostDominance.FunctionExit(false));
         return new FunctionBody4(
             Declaration("default-block-parameters", []),
             RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
@@ -742,7 +766,11 @@ public sealed class WasmBackendTests
         var block = Block(entry, [], [], Terms.Br(Jump(missing)));
         return new FunctionBody4(
             Declaration("missing-target", []),
-            RegionTree<Label, ShaderRegionBody>.Block(entry, [], block, null));
+            RegionTree<Label, ShaderRegionBody>.Block(
+                entry,
+                [],
+                Materialize(block, ExitPostDominance.NoExitPath.Instance),
+                null));
     }
 
     private static FunctionBody4 NullReturnBody()
@@ -764,9 +792,9 @@ public sealed class WasmBackendTests
     {
         var entry = Label.Create("entry");
         var region = Block(entry, [], [], Terms.ReturnVoid());
-        return new FunctionBody4(
+        return Body(
             new FunctionDeclaration("void", [], new FunctionReturn(ShaderType.Unit, []), []),
-            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+            region);
     }
 
     private static FunctionBody4 CallBody()
@@ -789,9 +817,9 @@ public sealed class WasmBackendTests
     {
         var entry = Label.Create("entry");
         var region = Block(entry, [], [], Terms.ReturnExpr(ShaderValue.Literal(new F32Literal(0))));
-        return new FunctionBody4(
+        return Body(
             new FunctionDeclaration("float", [], new FunctionReturn(ShaderType.F32, []), []),
-            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+            region);
     }
 
     private static FunctionBody4 U32SignatureBody()
@@ -799,9 +827,9 @@ public sealed class WasmBackendTests
         var entry = Label.Create("entry");
         var parameter = Parameter("value", ShaderType.U32);
         var region = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
-        return new FunctionBody4(
+        return Body(
             new FunctionDeclaration("u32", [parameter], new FunctionReturn(ShaderType.I32, []), []),
-            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+            region);
     }
 
     private static FunctionBody4 ParameterAttributeBody()
@@ -809,22 +837,26 @@ public sealed class WasmBackendTests
         var entry = Label.Create("entry");
         var parameter = new ParameterDeclaration("value", ShaderType.I32, [new LocationAttribute(0)]);
         var region = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
-        return new FunctionBody4(
-            new FunctionDeclaration("parameter-attribute", [parameter], new FunctionReturn(ShaderType.I32, []), []),
-            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+        return Body(
+            new FunctionDeclaration(
+                "parameter-attribute",
+                [parameter],
+                new FunctionReturn(ShaderType.I32, []),
+                []),
+            region);
     }
 
     private static FunctionBody4 ReturnAttributeBody()
     {
         var entry = Label.Create("entry");
         var region = Block(entry, [], [], Terms.ReturnExpr(Int(0)));
-        return new FunctionBody4(
+        return Body(
             new FunctionDeclaration(
                 "return-attribute",
                 [],
                 new FunctionReturn(ShaderType.I32, [new LocationAttribute(0)]),
                 []),
-            RegionTree<Label, ShaderRegionBody>.Block(entry, [], region, null));
+            region);
     }
 
     private static FunctionBody4 LocalAttributeBody()
@@ -901,15 +933,21 @@ public sealed class WasmBackendTests
     private static FunctionBody4 Body(
         string name,
         ImmutableArray<ParameterDeclaration> parameters,
-        params ShaderRegionBody[] blocks)
+        params BlockSpec[] blocks) =>
+        Body(Declaration(name, parameters), blocks);
+
+    private static FunctionBody4 Body(
+        FunctionDeclaration declaration,
+        params BlockSpec[] blocks)
     {
-        var entry = blocks[0];
+        var bodies = Annotate(blocks);
+        var entry = blocks[0].Label;
         var children = blocks.Skip(1)
-            .Select(block => RegionTree<Label, ShaderRegionBody>.Block(block.Label, [], block, null))
+            .Select(block => RegionTree<Label, ShaderRegionBody>.Block(block.Label, [], bodies[block.Label], null))
             .ToArray();
         return new FunctionBody4(
-            Declaration(name, parameters),
-            RegionTree<Label, ShaderRegionBody>.Block(entry.Label, children, entry, null));
+            declaration,
+            RegionTree<Label, ShaderRegionBody>.Block(entry, children, bodies[entry], null));
     }
 
     private static FunctionDeclaration Declaration(
@@ -917,12 +955,43 @@ public sealed class WasmBackendTests
         ImmutableArray<ParameterDeclaration> parameters) =>
         new(name, parameters, new FunctionReturn(ShaderType.I32, []), []);
 
-    private static ShaderRegionBody Block(
+    private sealed record BlockSpec(
+        Label Label,
+        ImmutableArray<IShaderValue> Parameters,
+        ImmutableArray<Instruction<IShaderValue, IShaderValue>> Instructions,
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> Terminator);
+
+    private static BlockSpec Block(
         Label label,
         ImmutableArray<IShaderValue> parameters,
         IEnumerable<Instruction<IShaderValue, IShaderValue>> instructions,
         ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
-        ShaderRegionBody.Create(label, parameters, instructions, terminator, null);
+        new(label, parameters, [.. instructions], terminator);
+
+    private static Dictionary<Label, ShaderRegionBody> Annotate(params BlockSpec[] blocks)
+    {
+        var graph = new ControlFlowGraph<BlockSpec>(
+            blocks[0].Label,
+            blocks.ToDictionary(
+                block => block.Label,
+                block => new ControlFlowGraph<BlockSpec>.NodeDefinition(
+                    block.Terminator.ToSuccessor(),
+                    block)));
+        var postDominance = graph.ControlFlowAnalysis().PostDominatorTree;
+        return blocks.ToDictionary(
+            block => block.Label,
+            block => Materialize(block, postDominance.ExitPostDominance(block.Label)));
+    }
+
+    private static ShaderRegionBody Materialize(
+        BlockSpec block,
+        ExitPostDominance postDominance) =>
+        ShaderRegionBody.Create(
+            block.Label,
+            block.Parameters,
+            block.Instructions,
+            block.Terminator,
+            postDominance);
 
     private static ParameterDeclaration Parameter(string name, IShaderType? type = null) =>
         new(name, type ?? ShaderType.I32, []);

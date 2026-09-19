@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using System.Globalization;
 using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
@@ -56,13 +58,12 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var value = ShaderValue.Intermediate(ShaderType.I32);
         var result = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = Function("DominatingChain", ShaderType.I32);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [Instruction.Factory.Literal(default, new LiteralOperation(), value, Int(1))],
-            Terms.Br(new(exit, [])),
-            exit);
-        var exitBody = ShaderRegionBody.Create(
+            Terms.Br(new(exit, [])));
+        var exitBody = Body(
             exit,
             [],
             [
@@ -73,9 +74,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     value,
                     Int(2))
             ],
-            Terms.ReturnExpr(result),
-            null);
-        var body = new FunctionBody4(
+            Terms.ReturnExpr(result));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(entry, [RegionTree.Block(exit, [], exitBody, null)], entryBody, exit));
 
@@ -102,18 +102,17 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var result = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = new FunctionDeclaration(
             "DominatingDiamond", [choose], new FunctionReturn(ShaderType.I32, []), []);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [
                 Instruction.Factory.Load(default, new LoadOperation(), condition, choose.Value),
                 Instruction.Factory.Literal(default, new LiteralOperation(), value, Int(4))
             ],
-            Terms.BrIf(condition, new(left, []), new(right, [])),
-            join);
-        var leftBody = ShaderRegionBody.Create(left, [], [], Terms.Br(new(join, [])), join);
-        var rightBody = ShaderRegionBody.Create(right, [], [], Terms.Br(new(join, [])), join);
-        var joinBody = ShaderRegionBody.Create(
+            Terms.BrIf(condition, new(left, []), new(right, [])));
+        var leftBody = Body(left, [], [], Terms.Br(new(join, [])));
+        var rightBody = Body(right, [], [], Terms.Br(new(join, [])));
+        var joinBody = Body(
             join,
             [],
             [
@@ -124,9 +123,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     value,
                     Int(2))
             ],
-            Terms.ReturnExpr(result),
-            null);
-        var body = new FunctionBody4(
+            Terms.ReturnExpr(result));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(entry,
             [
@@ -148,17 +146,16 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var value = ShaderValue.Intermediate(ShaderType.I32);
         var result = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = Function("LoopValueExit", ShaderType.I32);
-        var entryBody = ShaderRegionBody.Create(entry, [], [], Terms.Br(new(loop, [])), loop);
-        var loopBody = ShaderRegionBody.Create(
+        var entryBody = Body(entry, [], [], Terms.Br(new(loop, [])));
+        var loopBody = Body(
             loop,
             [],
             [Instruction.Factory.Literal(default, new LiteralOperation(), value, Int(1))],
             Terms.BrIf(
                 ShaderValue.Literal(new BoolLiteral(false)),
                 new(loop, []),
-                new(exit, [])),
-            exit);
-        var exitBody = ShaderRegionBody.Create(
+                new(exit, [])));
+        var exitBody = Body(
             exit,
             [],
             [
@@ -169,9 +166,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     value,
                     Int(2))
             ],
-            Terms.ReturnExpr(result),
-            null);
-        var body = new FunctionBody4(
+            Terms.ReturnExpr(result));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(entry,
             [
@@ -197,9 +193,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var declaration = Function("Ordered", ShaderType.Unit);
         var variable = new VariableDeclaration(FunctionAddressSpace.Instance, "r", ShaderType.I32, []);
         var loaded = ShaderValue.Intermediate(ShaderType.I32);
-        var body = new FunctionBody4(
+        var body = CreateFunctionBody(
             declaration,
-            RegionTree.Block(entry, [], ShaderRegionBody.Create(
+            RegionTree.Block(entry, [], Body(
                 entry,
                 [],
                 [
@@ -207,8 +203,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     Instruction.Factory.Load(default, new LoadOperation(), loaded, variable.Value),
                     Instruction.Factory.Nop(default, NopOperation.Instance)
                 ],
-                Terms.ReturnVoid(),
-                null), null));
+                Terms.ReturnVoid()), null));
 
         var target = Lower(body);
 
@@ -242,19 +237,17 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var terminal = Label.Create("terminal");
         var condition = ShaderValue.Literal(new BoolLiteral(true));
         var declaration = Function("TerminalClone", ShaderType.I32);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [],
-            Terms.BrIf(condition, new(terminal, []), new(terminal, [])),
-            null);
-        var terminalBody = ShaderRegionBody.Create(
+            Terms.BrIf(condition, new(terminal, []), new(terminal, [])));
+        var terminalBody = Body(
             terminal,
             [],
             [],
-            Terms.ReturnExpr(Int(7)),
-            null);
-        var body = new FunctionBody4(
+            Terms.ReturnExpr(Int(7)));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(entry, [RegionTree.Block(terminal, [], terminalBody, null)], entryBody, null));
 
@@ -277,20 +270,18 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var terminal = Label.Create("terminal");
         var condition = ShaderValue.Literal(new BoolLiteral(true));
         var declaration = Function("RepeatedNonterminal", ShaderType.Unit);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [],
-            Terms.BrIf(condition, new(shared, []), new(shared, [])),
-            null);
-        var sharedBody = ShaderRegionBody.Create(
+            Terms.BrIf(condition, new(shared, []), new(shared, [])));
+        var sharedBody = Body(
             shared,
             [],
             [Instruction.Factory.Nop(default, NopOperation.Instance)],
-            Terms.Br(new(terminal, [])),
-            null);
-        var terminalBody = ShaderRegionBody.Create(terminal, [], [], Terms.ReturnVoid(), null);
-        var body = new FunctionBody4(
+            Terms.Br(new(terminal, [])));
+        var terminalBody = Body(terminal, [], [], Terms.ReturnVoid());
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(entry,
             [
@@ -324,18 +315,17 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var result = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = new FunctionDeclaration(
             "DirectEdgeClone", [choose], new FunctionReturn(ShaderType.I32, []), []);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [
                 Instruction.Factory.Store(default, new StoreOperation(), counter.Value, Int(0)),
                 Instruction.Factory.Load(default, new LoadOperation(), condition, choose.Value)
             ],
-            Terms.BrIf(condition, new(left, []), new(right, [])),
-            join);
-        var leftBody = ShaderRegionBody.Create(left, [], [], Terms.Br(new(effect, [])), join);
-        var rightBody = ShaderRegionBody.Create(right, [], [], Terms.Br(new(effect, [])), join);
-        var effectBody = ShaderRegionBody.Create(
+            Terms.BrIf(condition, new(left, []), new(right, [])));
+        var leftBody = Body(left, [], [], Terms.Br(new(effect, [])));
+        var rightBody = Body(right, [], [], Terms.Br(new(effect, [])));
+        var effectBody = Body(
             effect,
             [],
             [
@@ -348,15 +338,13 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     Int(1)),
                 Instruction.Factory.Store(default, new StoreOperation(), counter.Value, after)
             ],
-            Terms.Br(new(join, [])),
-            join);
-        var joinBody = ShaderRegionBody.Create(
+            Terms.Br(new(join, [])));
+        var joinBody = Body(
             join,
             [],
             [Instruction.Factory.Load(default, new LoadOperation(), result, counter.Value)],
-            Terms.ReturnExpr(result),
-            null);
-        var body = new FunctionBody4(
+            Terms.ReturnExpr(result));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(entry,
             [
@@ -396,16 +384,15 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var result = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = new FunctionDeclaration(
             "LoopTransferClone", [choose], new FunctionReturn(ShaderType.I32, []), []);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [
                 Instruction.Factory.Store(default, new StoreOperation(), counter.Value, Int(0)),
                 Instruction.Factory.Load(default, new LoadOperation(), selected, choose.Value)
             ],
-            Terms.Br(new(loop, [])),
-            loop);
-        var loopBody = ShaderRegionBody.Create(
+            Terms.Br(new(loop, [])));
+        var loopBody = Body(
             loop,
             [],
             [
@@ -417,17 +404,15 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     current,
                     Int(1))
             ],
-            Terms.BrIf(more, new(chooseBlock, []), new(exit, [])),
-            exit);
-        var chooseBody = ShaderRegionBody.Create(
+            Terms.BrIf(more, new(chooseBlock, []), new(exit, [])));
+        var chooseBody = Body(
             chooseBlock,
             [],
             [],
-            Terms.BrIf(selected, new(left, []), new(right, [])),
-            loop);
-        var leftBody = ShaderRegionBody.Create(left, [], [], Terms.Br(new(latch, [])), loop);
-        var rightBody = ShaderRegionBody.Create(right, [], [], Terms.Br(new(latch, [])), loop);
-        var latchBody = ShaderRegionBody.Create(
+            Terms.BrIf(selected, new(left, []), new(right, [])));
+        var leftBody = Body(left, [], [], Terms.Br(new(latch, [])));
+        var rightBody = Body(right, [], [], Terms.Br(new(latch, [])));
+        var latchBody = Body(
             latch,
             [],
             [
@@ -440,15 +425,13 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     Int(1)),
                 Instruction.Factory.Store(default, new StoreOperation(), counter.Value, after)
             ],
-            Terms.Br(new(loop, [])),
-            loop);
-        var exitBody = ShaderRegionBody.Create(
+            Terms.Br(new(loop, [])));
+        var exitBody = Body(
             exit,
             [],
             [Instruction.Factory.Load(default, new LoadOperation(), result, counter.Value)],
-            Terms.ReturnExpr(result),
-            null);
-        var body = new FunctionBody4(
+            Terms.ReturnExpr(result));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(entry,
             [
@@ -477,11 +460,11 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var target = Label.Create("target");
         var parameter = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = Function("ResidualParameter", ShaderType.I32);
-        var entryBody = ShaderRegionBody.Create(
-            entry, [], [], Terms.Br(new(target, [Int(7)])), target);
-        var targetBody = ShaderRegionBody.Create(
-            target, [parameter], [], Terms.ReturnExpr(parameter), null);
-        var body = new FunctionBody4(
+        var entryBody = Body(
+            entry, [], [], Terms.Br(new(target, [Int(7)])));
+        var targetBody = Body(
+            target, [parameter], [], Terms.ReturnExpr(parameter));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(
                 entry,
@@ -507,14 +490,13 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var parameter = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = new FunctionDeclaration(
             "SelectedArgument", [choose], new FunctionReturn(ShaderType.I32, []), []);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [Instruction.Factory.Load(default, new LoadOperation(), condition, choose.Value)],
-            Terms.BrIf(condition, new(exit, [Int(10)]), new(exit, [Int(20)])),
-            exit);
-        var exitBody = ShaderRegionBody.Create(exit, [parameter], [], Terms.ReturnExpr(parameter), null);
-        var body = new FunctionBody4(
+            Terms.BrIf(condition, new(exit, [Int(10)]), new(exit, [Int(20)])));
+        var exitBody = Body(exit, [parameter], [], Terms.ReturnExpr(parameter));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(entry, [RegionTree.Block(exit, [], exitBody, null)], entryBody, exit));
 
@@ -562,28 +544,25 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             [repeatInput],
             new FunctionReturn(ShaderType.I32, []),
             []);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [
                 Instruction.Factory.Store(default, new StoreOperation(), counter.Value, Int(0)),
                 Instruction.Factory.Load(default, new LoadOperation(), repeatValue, repeatInput.Value)
             ],
-            Terms.Br(new(outer, [repeatValue])),
-            outer);
-        var doneBody = ShaderRegionBody.Create(
+            Terms.Br(new(outer, [repeatValue])));
+        var doneBody = Body(
             done,
             [answer],
             [],
-            Terms.ReturnExpr(answer),
-            null);
-        var outerBody = ShaderRegionBody.Create(
+            Terms.ReturnExpr(answer));
+        var outerBody = Body(
             outer,
             [outerRepeat],
             [],
-            Terms.Br(new(inner, [outerRepeat])),
-            inner);
-        var innerBody = ShaderRegionBody.Create(
+            Terms.Br(new(inner, [outerRepeat])));
+        var innerBody = Body(
             inner,
             [innerRepeat],
             [
@@ -599,9 +578,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             Terms.BrIf(
                 innerRepeat,
                 new(outer, [ShaderValue.Literal(new BoolLiteral(false))]),
-                new(done, [after])),
-            done);
-        var body = new FunctionBody4(
+                new(done, [after])));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(
                 entry,
@@ -654,28 +632,25 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             [choose],
             new FunctionReturn(ShaderType.I32, []),
             []);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [
                 Instruction.Factory.Store(default, new StoreOperation(), counter.Value, Int(0)),
                 Instruction.Factory.Load(default, new LoadOperation(), condition, choose.Value)
             ],
-            Terms.Br(new(loop, [])),
-            loop);
-        var firstExitBody = ShaderRegionBody.Create(
+            Terms.Br(new(loop, [])));
+        var firstExitBody = Body(
             firstExit,
             [firstAnswer],
             [],
-            Terms.ReturnExpr(firstAnswer),
-            null);
-        var secondExitBody = ShaderRegionBody.Create(
+            Terms.ReturnExpr(firstAnswer));
+        var secondExitBody = Body(
             secondExit,
             [secondAnswer],
             [],
-            Terms.ReturnExpr(secondAnswer),
-            null);
-        var loopBody = ShaderRegionBody.Create(
+            Terms.ReturnExpr(secondAnswer));
+        var loopBody = Body(
             loop,
             [],
             [
@@ -697,9 +672,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             Terms.BrIf(
                 condition,
                 new(firstExit, [after]),
-                new(secondExit, [alternate])),
-            null);
-        var body = new FunctionBody4(
+                new(secondExit, [alternate])));
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(
                 entry,
@@ -729,10 +703,10 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var unreachable = Label.Create("unreachable");
         var missing = Label.Create("missing");
         var declaration = Function("MissingLabel", ShaderType.Unit);
-        var entryBody = ShaderRegionBody.Create(entry, [], [], Terms.ReturnVoid(), null);
-        var unreachableBody = ShaderRegionBody.Create(
-            unreachable, [], [], Terms.Br(new(missing, [])), null);
-        var error = Assert.Throws<ArgumentException>(() => new FunctionBody4(
+        var entryBody = Body(entry, [], [], Terms.ReturnVoid());
+        var unreachableBody = Body(
+            unreachable, [], [], Terms.Br(new(missing, [])));
+        var error = Assert.Throws<ArgumentException>(() => CreateFunctionBody(
             declaration,
             RegionTree.Block(
                 entry,
@@ -740,7 +714,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                 entryBody,
                 null)));
 
-        Assert.Contains("unknown label", error.Message);
+        Assert.Contains("successor", error.Message);
+        Assert.Contains("not exists", error.Message);
     }
 
     [Fact]
@@ -749,9 +724,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var left = Label.Create("left");
         var right = Label.Create("right");
         var declaration = Function("Cycle", ShaderType.Unit);
-        var leftBody = ShaderRegionBody.Create(left, [], [], Terms.Br(new(right, [])), null);
-        var rightBody = ShaderRegionBody.Create(right, [], [], Terms.Br(new(left, [])), null);
-        var error = Assert.Throws<ArgumentException>(() => new FunctionBody4(
+        var leftBody = Body(left, [], [], Terms.Br(new(right, [])));
+        var rightBody = Body(right, [], [], Terms.Br(new(left, [])));
+        var error = Assert.Throws<ArgumentException>(() => CreateFunctionBody(
             declaration,
             RegionTree.Block(
                 left,
@@ -784,9 +759,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var declaration = Function("Projection", ShaderType.Unit);
         var vector = new VariableDeclaration(FunctionAddressSpace.Instance, "value", vectorType, []);
         var component = ShaderValue.Intermediate(ShaderType.F32.GetPtrType());
-        var body = new FunctionBody4(
+        var body = CreateFunctionBody(
             declaration,
-            RegionTree.Block(entry, [], ShaderRegionBody.Create(
+            RegionTree.Block(entry, [], Body(
                 entry,
                 [],
                 [
@@ -801,8 +776,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                         component,
                         ShaderValue.Literal(new F32Literal(2.5f)))
                 ],
-                Terms.ReturnVoid(),
-                null), null));
+                Terms.ReturnVoid()), null));
 
         var target = Lower(body);
         var assignment = Assert.Single(
@@ -833,9 +807,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             []);
         var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType());
         var declaration = Function("MemberProjection", ShaderType.Unit);
-        var body = new FunctionBody4(
+        var body = CreateFunctionBody(
             declaration,
-            RegionTree.Block(entry, [], ShaderRegionBody.Create(
+            RegionTree.Block(entry, [], Body(
                 entry,
                 [],
                 [
@@ -850,8 +824,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                         address,
                         ShaderValue.Literal(new F32Literal(1.5f)))
                 ],
-                Terms.ReturnVoid(),
-                null), null));
+                Terms.ReturnVoid()), null));
 
         var target = Lower(body);
         var place = Assert.IsType<SlangMemberPlace>(
@@ -875,7 +848,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             []);
         var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType());
         var declaration = Function("CrossLabelProjection", ShaderType.Unit);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [
@@ -885,9 +858,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     address,
                     vector.Value)
             ],
-            Terms.Br(new(exit, [])),
-            exit);
-        var exitBody = ShaderRegionBody.Create(
+            Terms.Br(new(exit, [])));
+        var exitBody = Body(
             exit,
             [],
             [
@@ -897,9 +869,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     address,
                     ShaderValue.Literal(new F32Literal(2.5f)))
             ],
-            Terms.ReturnVoid(),
-            null);
-        var body = new FunctionBody4(
+            Terms.ReturnVoid());
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(
                 entry,
@@ -935,13 +906,12 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             []);
         var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType());
         var declaration = Function("LoopExitProjection", ShaderType.Unit);
-        var entryBody = ShaderRegionBody.Create(
+        var entryBody = Body(
             entry,
             [],
             [],
-            Terms.Br(new(loop, [])),
-            loop);
-        var loopBody = ShaderRegionBody.Create(
+            Terms.Br(new(loop, [])));
+        var loopBody = Body(
             loop,
             [],
             [
@@ -954,9 +924,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             Terms.BrIf(
                 ShaderValue.Literal(new BoolLiteral(false)),
                 new(loop, []),
-                new(exit, [])),
-            exit);
-        var exitBody = ShaderRegionBody.Create(
+                new(exit, [])));
+        var exitBody = Body(
             exit,
             [],
             [
@@ -966,9 +935,8 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                     address,
                     ShaderValue.Literal(new F32Literal(3.5f)))
             ],
-            Terms.ReturnVoid(),
-            null);
-        var body = new FunctionBody4(
+            Terms.ReturnVoid());
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Block(
                 entry,
@@ -995,20 +963,20 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var sharedLabel = Label.Create("shared-label-object");
         var left = Function("Left", ShaderType.I32);
         var right = Function("Right", ShaderType.I32);
-        FunctionBody4 Body(FunctionDeclaration declaration, int value) =>
-            new(
+        FunctionBody4 FunctionBody(FunctionDeclaration declaration, int value) =>
+            CreateFunctionBody(
                 declaration,
                 RegionTree.Block(
                     sharedLabel,
                     [],
-                    ShaderRegionBody.Create(
-                        sharedLabel, [], [], Terms.ReturnExpr(Int(value)), null),
+                    Body(
+                        sharedLabel, [], [], Terms.ReturnExpr(Int(value))),
                     null));
         var source = new ShaderModuleDeclaration<FunctionBody4>(
             [left, right],
             ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty
-                .Add(left, Body(left, 1))
-                .Add(right, Body(right, 2)));
+                .Add(left, FunctionBody(left, 1))
+                .Add(right, FunctionBody(right, 2)));
 
         var target = new SlangTargetLowering().Lower(source);
 
@@ -1146,9 +1114,9 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var negated = ShaderValue.Intermediate(ShaderType.Bool);
         var notDeclaration = new FunctionDeclaration(
             "Negate", [input], new FunctionReturn(ShaderType.Bool, []), []);
-        var notBody = new FunctionBody4(
+        var notBody = CreateFunctionBody(
             notDeclaration,
-            RegionTree.Block(notEntry, [], ShaderRegionBody.Create(
+            RegionTree.Block(notEntry, [], Body(
                 notEntry,
                 [],
                 [
@@ -1159,8 +1127,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                         negated,
                         loaded)
                 ],
-                Terms.ReturnExpr(negated),
-                null), null));
+                Terms.ReturnExpr(negated)), null));
         var notSource = Emit(Lower(notBody));
 
         Assert.Contains(" = !v_", notSource);
@@ -1177,13 +1144,13 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             "CallObserve", [callerInput], new FunctionReturn(ShaderType.I32, []), []);
         var callerValue = ShaderValue.Intermediate(ShaderType.I32);
         var unitResult = ShaderValue.Intermediate(ShaderType.Unit);
-        var observeBody = new FunctionBody4(
+        var observeBody = CreateFunctionBody(
             observe,
-            RegionTree.Block(observeEntry, [], ShaderRegionBody.Create(
-                observeEntry, [], [], Terms.ReturnVoid(), null), null));
-        var callerBody = new FunctionBody4(
+            RegionTree.Block(observeEntry, [], Body(
+                observeEntry, [], [], Terms.ReturnVoid()), null));
+        var callerBody = CreateFunctionBody(
             caller,
-            RegionTree.Block(callerEntry, [], ShaderRegionBody.Create(
+            RegionTree.Block(callerEntry, [], Body(
                 callerEntry,
                 [],
                 [
@@ -1199,8 +1166,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                         observe,
                         [callerValue])
                 ],
-                Terms.ReturnExpr(callerValue),
-                null), null));
+                Terms.ReturnExpr(callerValue)), null));
         var module = new ShaderModuleDeclaration<FunctionBody4>(
             [observe, caller],
             ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty
@@ -1228,20 +1194,20 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         var accessResult = ShaderValue.Intermediate(ShaderType.I32.GetPtrType());
         var access = Instruction<IShaderValue, IShaderValue>.Create(
             new AccessChainOperation(), accessResult, [local.Value, Int(0)]);
-        var accessBody = new FunctionBody4(
+        var accessBody = CreateFunctionBody(
             declaration,
-            RegionTree.Block(entry, [], ShaderRegionBody.Create(
-                entry, [], [access], Terms.ReturnVoid(), null), null));
+            RegionTree.Block(entry, [], Body(
+                entry, [], [access], Terms.ReturnVoid()), null));
         Assert.Contains("access chains are not supported",
             Assert.Throws<NotSupportedException>(() => Lower(accessBody)).Message);
 
         var zeroResult = ShaderValue.Intermediate(ShaderType.I32);
         var zero = Instruction.Factory.ZeroConstructorOperation(
             default, new ZeroConstructorOperation(ShaderType.I32), zeroResult);
-        var zeroBody = new FunctionBody4(
+        var zeroBody = CreateFunctionBody(
             declaration,
-            RegionTree.Block(entry, [], ShaderRegionBody.Create(
-                entry, [], [zero], Terms.ReturnVoid(), null), null));
+            RegionTree.Block(entry, [], Body(
+                entry, [], [zero], Terms.ReturnVoid()), null));
         Assert.Contains("zero construction of i32",
             Assert.Throws<NotSupportedException>(() => Lower(zeroBody)).Message);
     }
@@ -1289,12 +1255,12 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     {
         var loop = Label.Create("loop");
         var declaration = Function("Forever", ShaderType.I32);
-        var body = new FunctionBody4(
+        var body = CreateFunctionBody(
             declaration,
             RegionTree.Loop(
                 loop,
                 [],
-                ShaderRegionBody.Create(loop, [], [], Terms.Br(new(loop, [])), null),
+                Body(loop, [], [], Terms.Br(new(loop, []))),
                 null,
                 null));
         var target = Lower(body);
@@ -1367,6 +1333,49 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         new(name, [], new FunctionReturn(returnType, []), []);
 
     private static IShaderValue Int(int value) => ShaderValue.Literal(new I32Literal(value));
+
+    private sealed record BodySpec(
+        Label Label,
+        ImmutableArray<IShaderValue> Parameters,
+        ImmutableArray<Instruction<IShaderValue, IShaderValue>> Instructions,
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> Terminator);
+
+    private static BodySpec Body(
+        Label label,
+        ImmutableArray<IShaderValue> parameters,
+        IEnumerable<Instruction<IShaderValue, IShaderValue>> instructions,
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
+        new(label, parameters, [.. instructions], terminator);
+
+    private static FunctionBody4 CreateFunctionBody(
+        FunctionDeclaration declaration,
+        RegionTree<Label, BodySpec> region)
+    {
+        var blocks = new Dictionary<Label, BodySpec>();
+        region.Traverse((_, label, body) =>
+        {
+            blocks.Add(label, body);
+            return false;
+        });
+        var graph = new ControlFlowGraph<BodySpec>(
+            region.Label,
+            blocks.ToDictionary(
+                item => item.Key,
+                item => new ControlFlowGraph<BodySpec>.NodeDefinition(
+                    item.Value.Terminator.ToSuccessor(),
+                    item.Value)));
+        var postDominance = graph.ControlFlowAnalysis().PostDominatorTree;
+        return new FunctionBody4(
+            declaration,
+            region.Select(
+                static label => label,
+                body => ShaderRegionBody.Create(
+                    body.Label,
+                    body.Parameters,
+                    body.Instructions,
+                    body.Terminator,
+                    postDominance.ExitPostDominance(body.Label))));
+    }
 
     private static IEnumerable<SlangStatement> Statements(SlangBlock block)
     {
