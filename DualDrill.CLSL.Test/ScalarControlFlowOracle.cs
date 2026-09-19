@@ -61,7 +61,7 @@ internal static class ScalarControlFlowOracle
     {
         private readonly string context;
         private readonly Budget budget;
-        private readonly Func<Value, Value> normalizeResult;
+        private readonly IShaderType? declaredReturnType;
         private readonly Dictionary<IShaderValue, Value> values =
             new(ReferenceEqualityComparer.Instance);
         private readonly Dictionary<IShaderValue, Value> memory;
@@ -87,7 +87,7 @@ internal static class ScalarControlFlowOracle
                 throw new InvalidOperationException($"{context}: incorrect argument count.");
 
             budget = new Budget(context, stepLimit);
-            normalizeResult = result => Convert(result, declaration.ReturnType);
+            declaredReturnType = declaration.ReturnType;
             memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
             foreach (var (parameter, argument) in declaration.Parameters.Zip(arguments))
                 Write(memory, parameter.Value, argument, parameter.Type);
@@ -99,13 +99,13 @@ internal static class ScalarControlFlowOracle
         private Machine(
             string context,
             Dictionary<IShaderValue, Value> memory,
-            Func<Value, Value> normalizeResult,
+            IShaderType? declaredReturnType,
             int stepLimit)
         {
             this.context = context;
             budget = new Budget(context, stepLimit);
             this.memory = memory;
-            this.normalizeResult = normalizeResult;
+            this.declaredReturnType = declaredReturnType;
         }
 
         internal static Machine ForFlatCfg(
@@ -117,7 +117,7 @@ internal static class ScalarControlFlowOracle
             if (initLocals)
                 foreach (var local in locals)
                     memory.Add(local.Value, Zero(local.Type, "Flat CFG"));
-            return new Machine("Flat CFG", memory, result => result, stepLimit);
+            return new Machine("Flat CFG", memory, null, stepLimit);
         }
 
         internal static Machine ForValueCfg(
@@ -224,8 +224,16 @@ internal static class ScalarControlFlowOracle
                 Write(values, parameter, argument, parameter.Type);
         }
 
-        internal Execution Complete(Value result) =>
-            new(normalizeResult(result), trace.ToImmutable());
+        internal Execution Complete(Value result)
+        {
+            if (declaredReturnType is not null && !HasType(result, declaredReturnType))
+            {
+                var label = trace.Count == 0 ? "<no block>" : trace[trace.Count - 1].ToString();
+                throw new NotSupportedException(
+                    $"{context}, {label}: return value does not match {declaredReturnType.Name}.");
+            }
+            return new Execution(result, trace.ToImmutable());
+        }
 
         private Value Read(IShaderValue? value) => value switch
         {
