@@ -1,0 +1,22 @@
+%0 : ptr<i32, Function> = $0(condition)
+%1 : ptr<i32, Function> = $1(whenTrue)
+%2 : ptr<i32, Function> = $2(whenFalse)
+block ^0(entry):
+    block ^1(join):
+
+        |=> exit
+        %3 : i32 = region $0
+
+        return %3 : i32
+
+
+    |=> exit
+
+    %4 : i32 = load  (%0 : ptr<i32, Function>)
+    %5 : bool = conv.i32.bool  (%4 : i32)
+    %6 : i32 = load  (%1 : ptr<i32, Function>)
+    %7 : i32 = load  (%2 : ptr<i32, Function>)
+    br_if %5 : bool
+        ^1(join)(%6 : i32)
+    else
+        ^1(join)(%7 : i32)
