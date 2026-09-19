@@ -137,8 +137,13 @@ internal static class ScalarControlFlowOracle
     internal static Execution RunValueCfg(
         CilValueControlFlowBody body,
         ImmutableArray<Value> arguments,
-        int stepLimit = 10000) =>
-        Run(
+        int stepLimit = 10000)
+    {
+        var raw = body.Source.Source.Source.Raw;
+        var methodBody = raw.Code.Environment.Body
+                         ?? throw new InvalidOperationException(
+                             $"Value CFG {raw.Code.Environment.Method} has no MethodBody metadata.");
+        return Run(
             body.Declaration,
             body.Graph.EntryLabel,
             label => body.Graph[label].Parameters,
@@ -146,7 +151,29 @@ internal static class ScalarControlFlowOracle
             label => body.Graph[label].Body.Last,
             arguments,
             stepLimit,
-            "value CFG");
+            "value CFG",
+            raw.DeclarationContext.LocalVariables,
+            methodBody.InitLocals);
+    }
+
+    internal static Execution RunFactsCfg(
+        CilValueControlFactsBody body,
+        ImmutableArray<Value> arguments,
+        int stepLimit = 10000) =>
+        Run(
+            body.Declaration,
+            body.Graph.EntryLabel,
+            label => body.Graph[label].Node.Parameters,
+            label => body.Graph[label].Node.Body.Elements,
+            label => body.Graph[label].Node.Body.Last,
+            arguments,
+            stepLimit,
+            "control-facts CFG",
+            body.DeclarationContext.LocalVariables,
+            body.Source.Source.Source.Source.Raw.Code.Environment.Body?.InitLocals
+            ?? throw new InvalidOperationException(
+                $"Control-facts CFG {body.Source.Source.Source.Source.Raw.Code.Environment.Method} " +
+                "has no MethodBody metadata."));
 
     private static Execution Run(
         FunctionDeclaration declaration,
@@ -156,7 +183,9 @@ internal static class ScalarControlFlowOracle
         Func<Label, ITerminator<RegionJump<IShaderValue>, IShaderValue>> terminatorAt,
         ImmutableArray<Value> arguments,
         int stepLimit,
-        string stage)
+        string stage,
+        ImmutableArray<VariableDeclaration> locals = default,
+        bool initLocals = false)
     {
         var context = $"{stage} {declaration.Name}";
         if (!IsScalar(declaration.ReturnType) || declaration.Parameters.Any(p => !IsScalar(p.Type)))
@@ -170,6 +199,9 @@ internal static class ScalarControlFlowOracle
                 throw new NotSupportedException($"{context}: expected {parameter.Type.Name}, got {argument}.");
             memory.Add(parameter.Value, argument);
         }
+        if (initLocals)
+            foreach (var local in locals)
+                memory.Add(local.Value, Zero(local.Type, context));
 
         return Execute(
             context,
@@ -191,13 +223,7 @@ internal static class ScalarControlFlowOracle
         var memory = new Dictionary<IShaderValue, Value>(ReferenceEqualityComparer.Instance);
         if (initLocals)
             foreach (var local in locals)
-                memory.Add(local.Value, local.Type switch
-                {
-                    IntType<DualDrill.Common.Nat.N32> => new Value.Integer(0),
-                    BoolType => new Value.Boolean(false),
-                    _ => throw new NotSupportedException(
-                        $"Flat CFG: unsupported initialized local type {local.Type.Name}.")
-                });
+                memory.Add(local.Value, Zero(local.Type, "Flat CFG"));
 
         return Execute(
             "Flat CFG",
@@ -211,6 +237,17 @@ internal static class ScalarControlFlowOracle
             null,
             stepLimit);
     }
+
+    private static Value Zero(IShaderType type, string context) => type switch
+    {
+        IntType<DualDrill.Common.Nat.N32> => new Value.Integer(0),
+        UIntType<DualDrill.Common.Nat.N32> => new Value.UnsignedInteger(0),
+        FloatType<DualDrill.Common.Nat.N32> => new Value.Float32(0),
+        FloatType<DualDrill.Common.Nat.N64> => new Value.Float64(0),
+        BoolType => new Value.Boolean(false),
+        _ => throw new NotSupportedException(
+            $"{context}: unsupported initialized local type {type.Name}.")
+    };
 
     private static Execution Execute(
         string context,

@@ -223,7 +223,7 @@ public sealed class AnnotatedStageValueTests
     public void ControlFactsStagePreservesTheFlatValueGraphByIdentity()
     {
         var stages = CompilerTestPipeline.CompileStages(GetMethod(nameof(Choose)));
-        var value = Assert.Single(stages.ValueControlFlow.FunctionDefinitions.Values);
+        var value = Assert.Single(stages.PromotedValueControlFlow.FunctionDefinitions.Values);
         var facts = Assert.Single(stages.ControlFacts.FunctionDefinitions.Values);
 
         Assert.Same(value, facts.Source);

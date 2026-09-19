@@ -140,6 +140,7 @@ not claim reducibility, forward merges, reconvergence, or general structurizatio
 | `CilToShaderStackPass` | Labelled CIL module -> `ShaderModuleDeclaration<ShaderStackFunctionBody>` | Lower each CIL instruction to explicit typed stack operations, aliases and drops with derived Pre/Post transitions and numeric provenance. |
 | `ShaderStackControlFlowPass` | Shader-stack block module -> `ShaderModuleDeclaration<ShaderStackControlFlowBody>` | Validate exact edge stack equality and construct the first frontend CFG through the generic factory. |
 | `ShaderStackToValuePass` | Shader-stack CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Mechanically read depths, pop/push the declared transition, preserve provenance in instruction payloads, and produce ordered block arguments. |
+| `CilLocalPromotionPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Promote definitely assigned, direct nonescaping function-local `i32` and `bool` loads/stores through the existing SSA transform, using the raw method's exact locals and `InitLocals` metadata. Escaped, unsupported and incompletely initialized locals remain in storage. |
 | `CilBlockControlFactsPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute the existing reverse-postorder, immediate-dominator, immediate-postdominator, and natural-loop-header results once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
 | `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
 | `FunctionToOperationPass` | `FunctionBody4` -> `FunctionBody4` | Lower recognized operation/constructor calls; preserve other instructions and control references. |
@@ -161,6 +162,7 @@ raw CIL LinearCode
   -> CIL instruction/type lowering -> labelled shader stack BlockList
   -> generic CFG construction -> shader stack CFG
   -> stack-to-explicit-values -> shader value CFG with block arguments
+  -> direct scalar local promotion -> shader value CFG with appended block arguments
   -> scoped nested regions with shared joins and SSA-like values
   -> target-language AST
   -> source text
@@ -181,8 +183,8 @@ provenance. See the [actual diagnostics](linear-cil.md#read-only-stage-diagnosti
 
 Shared instructions, terminators, sequences, labels, and region constructors
 serve multiple stages. Parsing, Pre analysis, reachable CFG construction, flat
-value lifting, BB-local control facts, and region construction now have distinct
-typed producer/consumer boundaries. A topology-changing pass must rerun
+value lifting, local promotion, BB-local control facts, and region construction now have distinct
+typed producer/consumer boundaries. A topology-changing pass must run before or rerun
 `CilBlockControlFactsPass`; there is no incremental cache or invalidation manager.
 The emitter still performs work intended for region-to-AST lowering.
 
