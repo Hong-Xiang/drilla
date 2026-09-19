@@ -15,11 +15,43 @@ to require basic-block construction before stack-type analysis, or to split the
 condition/return generic parameters of `ITerminatorSemantic`.
 
 The current implementation decodes and retains the complete linear source,
-computes reachable pre-instruction stack types, constructs the reachable
-basic-block CFG, and lifts it to a flat value CFG. A dedicated pass publishes
+computes reachable pre-instruction stack types, partitions a labelled block list,
+constructs the reachable basic-block CFG, and lifts it to a flat value CFG. A dedicated pass publishes
 existing control-flow results as BB-local annotations; region organization
 consumes those annotations without reanalysis. Target AST separation remains
 later work.
+
+### Issue #114: Foundation and Remaining Dependencies
+
+This first foundation slice separates instruction-position partitioning from
+generic graph construction. The **implemented interim path** is:
+
+```text
+Raw CIL LinearCode -> strict Pre -> Typed CIL LinearCode
+  -> InstructionBlockPartitioner -> BlockList<CilInstructionBlock>
+  -> ControlFlowGraph.Create(blocks, controlProjection)
+  -> existing CIL CFG / MethodBodyAnalysisModel
+  -> existing stack-to-value lowering -> value CFG -> control facts / regions
+```
+
+The **accepted remaining path**, not yet implemented by this slice, is:
+
+```text
+Typed CIL LinearCode
+  -> labelled CIL BlockList
+  -> CIL instruction/type lowering -> labelled shader stack BlockList
+  -> generic CFG construction -> shader stack CFG
+  -> stack-to-explicit-values -> shader value CFG
+  -> existing control facts / regions
+```
+
+The dependent semantic slice must use existing `IShaderType`, preserve normalized
+stack joins (including bool/i32), and derive new stack annotations for one-to-many
+instruction expansions. It must then migrate the actual consumers and remove the
+public CIL CFG / `MethodBodyAnalysisModel` boundary. This foundation deliberately
+keeps that boundary unchanged, not renamed or presented as the final architecture.
+Instruction normalization is not stack elimination. No new semantic support or
+other issue's region, local-promotion, or target-AST work is included here.
 
 ### Implemented Frontend Boundary
 
@@ -36,14 +68,33 @@ projection exposes that native branch/fallthrough order, including two equal
 arms. For `brfalse`, the existing lowering visitor still reverses those arms when
 it materializes a Boolean `ITerminator.BrIf`; the control projection itself does
 not reinterpret the native predicate. The concrete object is not replaced.
-`ControlFlowGraphBuilder` derives the graph successor from the created payload's
-projection. Its reachable build path partitions only original positions present
-in the completed Pre map, so unreachable instructions remain in the linear
-source without becoming graph nodes or predecessors.
+`InstructionBlockPartitioner` partitions only original positions present in the
+completed Pre map, so unreachable instructions remain in the linear source
+without becoming block definitions or predecessors. A gap starts a new block,
+but ordinary fallthrough cannot skip a gap; every explicit arm from a reachable
+instruction must target a reachable original position.
 
-The `ControlFlowGraphBuilder.Build` source API now requires a three-parameter
-node factory `(label, range, successor)` plus the payload's read-only
-`ISuccessor` projection. `CilInstructionBlock` changed from a public positional
+`BlockList<TBlock>` is a thin immutable ordered `ImmutableArray<TBlock>` plus an
+explicit `EntryLabel`. Payloads implement the existing `ILabeledEntity` and own
+their labels and concrete control. Construction validates initialized, nonempty
+storage, unique label identities, entry membership, and membership of every
+projected control target. Equal label names do not imply equal labels. Generic
+lists may contain disconnected definitions and need not store the entry first;
+the CIL model separately enforces complete reachable-source coverage.
+
+`InstructionBlockPartitioner.Build` / `BuildReachable` accept a block factory
+`(label, range, successor)`, a pure payload-to-`ISuccessor` projection, and a fixed
+`BlockList<TBlock>` printer. All labels are bound before payload construction;
+factories must retain those labels. Original ranges are not compacted. The
+partitioner remains mutable pass-local scratch; published lists do not change.
+`ControlFlowGraph.Create(blocks, projection, optionalGraphPrinter)` then indexes
+**all stored definitions**, not the reachable RPO returned by `CFG.Labels()`.
+It retains the exact payload objects and ordered successor arms, including
+duplicates. No predecessor, RPO, dominance, completion cache, or parallel
+successor collection is stored in `BlockList`; projections derive from immutable
+payloads and are not retained there.
+
+`CilInstructionBlock` changed from a public positional
 record struct with public construction, deconstruction, and `with` support to an
 internally constructed sealed record obtained from `CilControlFlowGraphBuilder`.
 Its index/range properties and the model indexer remain computed accessors, not
@@ -138,6 +189,7 @@ reachable unsupported semantics; this is the intentional all-reference policy.
 ```text
 LinearCode<CilInstruction>
   -> original linear code + completed reachable-position Pre map
+  -> labelled BlockList<TypedStackBlock>
   -> reachable CFG<TypedStackBlock>
   -> CFG<ValueBlock>
   -> scoped nested region SSA-like representation
@@ -172,12 +224,55 @@ linear printing intentionally contains only reachable annotated positions; use
 the separate raw value to print dead source. Printing never starts analysis or
 lowering.
 
-For example, the Debug CIL for a small conditional includes:
+For example, these are the actual Debug outputs for
+`int Choose(bool choose, int left, int right) => choose ? left : right`, asserted
+by `CompilerStageDumpTests.ChooseDumpsActualConfigurationSpecificLinearCilAndCfg`.
+Before partitioning:
 
 ```text
+linear-cil pre-annotated reachable (byte ranges are half-open; stack order: bottom -> top)
+#0 IL_0000..IL_0001 ldarg.0 pre=[]
 #1 IL_0001..IL_0003 brtrue.s rel=+3 resolved=IL_0006 pre=[i32]
+#2 IL_0003..IL_0004 ldarg.2 pre=[]
+#3 IL_0004..IL_0006 br.s rel=+1 resolved=IL_0007 pre=[i32]
+#4 IL_0006..IL_0007 ldarg.1 pre=[]
+#5 IL_0007..IL_0008 ret pre=[i32]
+```
+
+After partitioning, `CilControlFlowGraphBuilder.Partition(raw, pre).PrettyPrint()`
+(an internal compiler/test boundary) produces:
+
+```text
+labelled-cil-block-list (storage order; byte ranges are half-open; stack order: bottom -> top)
+entry=^0(0x0)
+^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[]
+    control: native brtrue.s rel=+3 resolved=IL_0006 taken=^2(0x6) fallthrough=^1(0x3)
+^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0006 entry=[]
+    control: native br.s rel=+1 resolved=IL_0007 target=^3(0x7)
+^2(0x6) instructions=#4..#4 bytes=IL_0006..IL_0007 entry=[]
+    control: synthetic fallthrough target=^3(0x7)
+^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32]
+    control: native ret
+```
+
+List printing uses storage order and assigns diagnostic IDs in that order. It
+does not construct a CFG or run graph algorithms. The same test checks the
+different optimized Release shape (two returning arms, without the separate
+fallthrough/return blocks). `BlockListPrintsStorageOrderIncludingDisconnectedDefinitionsAndNonFirstEntry`
+also exercises reordered storage, a non-first entry, and disconnected payloads.
+
+The existing CFG output remains unchanged after generic graph construction:
+
+```text
+reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)
 ^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[] predecessors=[]
     control: native brtrue.s rel=+3 resolved=IL_0006 taken=^2(0x6) fallthrough=^1(0x3)
+^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0006 entry=[] predecessors=[^0(0x0)]
+    control: native br.s rel=+1 resolved=IL_0007 target=^3(0x7)
+^2(0x6) instructions=#4..#4 bytes=IL_0006..IL_0007 entry=[] predecessors=[^0(0x0)]
+    control: synthetic fallthrough target=^3(0x7)
+^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32] predecessors=[^1(0x3), ^2(0x6)]
+    control: native ret
 ```
 
 Byte ranges are half-open and stack entries are printed bottom to top. `rel` is
@@ -192,6 +287,9 @@ shims:
 
 | Removed API | Replacement |
 |---|---|
+| `ControlFlowGraphBuilder` and its combined CFG-building `Build` / `BuildReachable` | `InstructionBlockPartitioner.Build` / `BuildReachable` -> `BlockList<TBlock>`, then `ControlFlowGraph.Create(blocks, projection, graphPrinter)` |
+| A partitioner factory returning an unlabelled payload | A payload implementing existing `ILabeledEntity`, retaining the supplied label |
+| The old partitioner CFG printer callback | A fixed `Action<BlockList<TBlock>, IndentedTextWriter, PrettyPrintOption>`; CFG printing is selected separately at graph construction |
 | `new MethodBodyAnalysisModel(method)` | `CilMethodDecoder.Decode(method)` |
 | `model.Instructions` / `model.PreStackTypes` | `model.RawCode` / `model.PreAnnotatedCode` |
 | `RuntimeReflectionParser.ParseMethod(...) -> FunctionDeclaration` | `ParseMethod(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
@@ -360,7 +458,7 @@ instruction and its Pre state determine its supported transfer result. A
 completed Post annotation would also be a valid representation, but does not
 directly provide the merged entry state needed at a target block.
 
-## Lossless Annotated-Linear to CFG Boundary
+## Lossless Annotated-Linear to Block-List to CFG Boundary
 
 Decode the linear source and run Pre analysis before materializing the BB CFG.
 The concrete signatures enforce this order:
@@ -370,9 +468,15 @@ CilMethodDecoder.Decode
   -> LinearCode<CilInstructionInfo>
 CilPreStackAnalyzer.Analyze
   -> LinearCode<Annotated<CilInstructionInfo, PreStack>>
-CilControlFlowGraphBuilder.Build
+CilControlFlowGraphBuilder.Partition
+  -> BlockList<CilInstructionBlock>
+ControlFlowGraph.Create
   -> ControlFlowGraph<CilInstructionBlock>
 ```
+
+`CilControlFlowGraphBuilder.Build` composes those final two operations on the
+actual current path. It retains the raw/Pre source-association checks;
+`MethodBodyAnalysisModel` retains its additional source/coverage checks.
 
 Partition at the entry, branch targets, and appropriate control boundaries, and
 construct downstream blocks only for reachable positions from the completed Pre

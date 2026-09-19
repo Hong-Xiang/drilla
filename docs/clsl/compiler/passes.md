@@ -81,7 +81,8 @@ exceptions are not reclassified as unsupported CIL.
 ```text
 parse/collect the all-reference CIL module
   -> Pre stack analysis over each collected function
-  -> reachable CFG construction using completed Pre facts
+  -> labelled block partitioning using completed Pre facts
+  -> generic CFG construction (currently still a CIL CFG)
   -> explicit stack-value / operation lowering
   -> control-flow analysis and region construction
   -> existing operation/parameter lowering
@@ -134,7 +135,7 @@ not claim reducibility, forward merges, reconvergence, or general structurizatio
 | `RuntimeReflectionParser` | Reflection roots -> `ShaderModuleDeclaration<RawCilFunctionBody>` | Collect declarations, immutable symbol metadata, and every referenced non-boundary original CIL body, including references at unreachable instruction positions. |
 | `CilMethodDecoder` | Method metadata -> `LinearCode<CilInstructionInfo>` | Preserve every instruction, original index/byte range, method body and immutable method environment without semantic lowering. |
 | `CilPreStackPass` | Raw CIL module -> `ShaderModuleDeclaration<PreCilFunctionBody>` | Reject unsupported EH, validate whole-source control, and propagate exact normalized stacks; successful per-function output contains only reachable original positions. |
-| `CilControlFlowPass` | Pre module -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>` | Construct only the reachable `ControlFlowGraph<CilInstructionBlock>`, retaining concrete native control and source annotations. |
+| `CilControlFlowPass` | Pre module -> `ShaderModuleDeclaration<MethodBodyAnalysisModel>` | Partition a `BlockList<CilInstructionBlock>`, then construct the existing reachable CIL CFG through the generic factory, retaining concrete native control and source annotations. |
 | `CilStackToValuePass` | CIL CFG module -> `ShaderModuleDeclaration<CilValueControlFlowBody>` | Validate concrete stacks and produce a flat `ControlFlowGraph<CilValueBasicBlock>` with values, ordered edge arguments and lowered terminators. |
 | `CilBlockControlFactsPass` | Flat value CFG module -> `ShaderModuleDeclaration<CilValueControlFactsBody>` | Compute the existing reverse-postorder, immediate-dominator, immediate-postdominator, and natural-loop-header results once, publishing them as `ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>>`. |
 | `CilRegionPass` | BB-annotated value CFG module -> `ShaderModuleDeclaration<FunctionBody4>` | Consume local control facts as authoritative input, derive a temporary immediate-dominator child index, preserve descending-RPO region-child order, and construct the existing region tree without rerunning control-flow analysis. |
@@ -151,14 +152,30 @@ optimization-level pipeline, or comprehensive inter-pass verifier here.
 ## Desired Logical Separation
 
 ```text
-linear stack instructions
-  -> complete linear source + sparse reachable-position Pre map
-  -> reachable CFG of typed stack instructions
-  -> typed CFG with block arguments
+raw CIL LinearCode
+  -> strict CIL Pre stack analysis -> typed CIL LinearCode
+  -> basic-block partitioning / stable label binding -> labelled CIL BlockList
+  -> CIL instruction/type lowering -> labelled shader stack BlockList
+  -> generic CFG construction -> shader stack CFG
+  -> stack-to-explicit-values -> shader value CFG with block arguments
   -> scoped nested regions with shared joins and SSA-like values
   -> target-language AST
   -> source text
 ```
+
+Issue #114's first foundation slice implements the block-list/CFG separation,
+not early shader stack lowering. `InstructionBlockPartitioner` binds labels and
+original ranges; immutable `BlockList<TBlock>` validates definitions and targets
+without graph indexes. `ControlFlowGraph.Create` consumes the stored list and an
+explicit pure control projection, including disconnected definitions and ordered
+duplicate arms; it has no CIL opcode or source-index semantics.
+
+The interim public `MethodBodyAnalysisModel` / CIL CFG remains unchanged. Removing
+it depends on the subsequent CIL-to-shader stack instruction/type lowering and
+consumer migration. That slice must use existing `IShaderType`, preserve exact
+normalized stack joins, and annotate each instruction in one-to-many expansions
+correctly. No new public CIL CFG alias or additional module-stage wrapper is
+introduced by this foundation. See the [actual before/after diagnostics](linear-cil.md#read-only-stage-diagnostics).
 
 Shared instructions, terminators, sequences, labels, and region constructors
 serve multiple stages. Parsing, Pre analysis, reachable CFG construction, flat
@@ -216,7 +233,8 @@ a supported constant storage address is not a mutable pointer-valued local.
 | Transformation | Minimal independent examples |
 |---|---|
 | Linear CIL -> Pre stack annotation | Jump versus physical adjacency, typed stack joins, loop propagation, and unreachable versus empty entry state. |
-| Linear CIL -> CFG | A separately labeled final instruction, explicit return, conditional branch, and ordinary fallthrough. |
+| Typed linear CIL -> labelled BlockList | Original ranges across gaps, stable labels before payload construction, final return/branch, invalid final conditional, and ordinary fallthrough that cannot skip a gap. |
+| BlockList -> generic CFG | Non-first entry, disconnected stored definitions, same-name distinct labels, payload/control identity, and ordered duplicate arms. |
 | Stack CFG -> typed CFG | Equal incoming stack shapes, mismatched shapes, ordered edge arguments, and normalized scalar call boundaries. |
 | CFG -> scoped regions | A diamond, loop header, shared join, nested continuation, and illegal cross-scope reference. |
 | Region -> AST | Shared effectful tail, early return, nested exit, and multiple references to one continuation. |

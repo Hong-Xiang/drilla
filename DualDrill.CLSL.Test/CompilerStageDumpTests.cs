@@ -12,10 +12,11 @@ using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.CodeTextWriter;
 using Label = DualDrill.CLSL.Language.Symbol.Label;
+using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.Test;
 
-public sealed class CompilerStageDumpTests
+public sealed class CompilerStageDumpTests(ITestOutputHelper output)
 {
     [Fact]
     public void RawPrettyPrintWorksWithoutConstructingCompletedStages()
@@ -36,8 +37,13 @@ public sealed class CompilerStageDumpTests
     public void ChooseDumpsActualConfigurationSpecificLinearCilAndCfg()
     {
         var model = ParseModel(GetMethod(nameof(Choose)));
+        var blocks = CilControlFlowGraphBuilder.Partition(model.RawCode, model.PreAnnotatedCode);
         var configuration = GetType().Assembly
                                      .GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration;
+        output.WriteLine(model.PreAnnotatedCode.PrettyPrint());
+        output.WriteLine(blocks.PrettyPrint());
+        output.WriteLine(model.ControlFlow.PrettyPrint());
+        Assert.Equal(blocks.PrettyPrint(), blocks.PrettyPrint());
 
         switch (configuration)
         {
@@ -52,6 +58,19 @@ public sealed class CompilerStageDumpTests
                     "#4 IL_0006..IL_0007 ldarg.1 pre=[]",
                     "#5 IL_0007..IL_0008 ret pre=[i32]"
                 ], Lines(model.PreAnnotatedCode.PrettyPrint()));
+                Assert.Equal(
+                [
+                    "labelled-cil-block-list (storage order; byte ranges are half-open; stack order: bottom -> top)",
+                    "entry=^0(0x0)",
+                    "^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[]",
+                    "    control: native brtrue.s rel=+3 resolved=IL_0006 taken=^2(0x6) fallthrough=^1(0x3)",
+                    "^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0006 entry=[]",
+                    "    control: native br.s rel=+1 resolved=IL_0007 target=^3(0x7)",
+                    "^2(0x6) instructions=#4..#4 bytes=IL_0006..IL_0007 entry=[]",
+                    "    control: synthetic fallthrough target=^3(0x7)",
+                    "^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32]",
+                    "    control: native ret"
+                ], Lines(blocks.PrettyPrint()));
                 Assert.Equal(
                 [
                     "reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)",
@@ -79,6 +98,17 @@ public sealed class CompilerStageDumpTests
                 ], Lines(model.PreAnnotatedCode.PrettyPrint()));
                 Assert.Equal(
                 [
+                    "labelled-cil-block-list (storage order; byte ranges are half-open; stack order: bottom -> top)",
+                    "entry=^0(0x0)",
+                    "^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[]",
+                    "    control: native brtrue.s rel=+2 resolved=IL_0005 taken=^2(0x5) fallthrough=^1(0x3)",
+                    "^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0005 entry=[]",
+                    "    control: native ret",
+                    "^2(0x5) instructions=#4..#5 bytes=IL_0005..IL_0007 entry=[]",
+                    "    control: native ret"
+                ], Lines(blocks.PrettyPrint()));
+                Assert.Equal(
+                [
                     "reachable-cil-cfg (byte ranges are half-open; stack order: bottom -> top)",
                     "^0(0x0) instructions=#0..#1 bytes=IL_0000..IL_0003 entry=[] predecessors=[]",
                     "    control: native brtrue.s rel=+2 resolved=IL_0005 taken=^2(0x5) fallthrough=^1(0x3)",
@@ -91,6 +121,33 @@ public sealed class CompilerStageDumpTests
             default:
                 throw new InvalidOperationException($"Unsupported build configuration {configuration}.");
         }
+    }
+
+    [Fact]
+    public void BlockListPrintsStorageOrderIncludingDisconnectedDefinitionsAndNonFirstEntry()
+    {
+        var method = GetMethod(nameof(Choose));
+        var pre = Assert.Single(CilPreStackPass.Run(CompilerTestPipeline.ParseRaw(method)).FunctionDefinitions.Values);
+        var partition = CilControlFlowGraphBuilder.Partition(pre.Raw.Code, pre.Code);
+        var returned = partition.Blocks.Last(block => block.Terminator is CilControlFlow.Return);
+        var disconnected = new CilInstructionBlock(Label.Create("disconnected"), returned.Instructions, returned.Terminator);
+        var reordered = new BlockList<CilInstructionBlock>(
+            partition.EntryLabel,
+            [disconnected, .. partition.Blocks.Reverse()],
+            static block => block.Terminator.ToSuccessor(),
+            CilStagePrettyPrinter.PrintBlockList);
+
+        var printed = reordered.PrettyPrint();
+        var headers = Lines(printed).Where(line => line.StartsWith("^")).ToArray();
+
+        Assert.Equal(reordered.Blocks.Length, headers.Length);
+        Assert.Contains($"entry=^{partition.Blocks.Length}(0x0)", printed);
+        foreach (var (index, block) in reordered.Blocks.Index())
+            Assert.StartsWith($"^{index}({block.Label.Name}) instructions=#{block.InstructionIndex}..", headers[index]);
+        Assert.Equal(printed, reordered.PrettyPrint());
+        Assert.DoesNotContain("predecessors", printed);
+        Assert.DoesNotContain("rpo", printed);
+        Assert.DoesNotContain("cfg", printed);
     }
 
     [Fact]
@@ -109,6 +166,10 @@ public sealed class CompilerStageDumpTests
         Assert.True(model.PreAnnotatedCode.Instructions[1].Node.Index > 1);
         Assert.Equal(2, model.ControlFlow.Count);
         Assert.Equal(2, Lines(model.ControlFlow.PrettyPrint()).Count(line => line.StartsWith("^")));
+        var blocks = CilControlFlowGraphBuilder.Partition(model.RawCode, model.PreAnnotatedCode);
+        Assert.Equal(model.PreAnnotatedCode.Instructions, blocks.Blocks.SelectMany(block => block.Instructions));
+        Assert.Equal(2, Lines(blocks.PrettyPrint()).Count(line => line.StartsWith("^")));
+        Assert.Contains("instructions=#3..#4", blocks.PrettyPrint());
     }
 
     [Fact]

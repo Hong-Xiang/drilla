@@ -13,7 +13,7 @@ using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Frontend;
 
-public sealed record CilInstructionBlock
+public sealed record CilInstructionBlock : ILabeledEntity
 {
     internal CilInstructionBlock(
         Label label,
