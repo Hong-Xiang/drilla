@@ -549,6 +549,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
         Assert.Contains("@fragment", wgsl);
         Assert.Contains("fn ScalarFragment", wgsl);
+        Capture("public-scalar.wgsl", wgsl);
     }
 
     [Fact]
@@ -556,6 +557,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     {
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(new ScalarBooleanCallShader());
         Assert.Contains("fn BooleanFragment", wgsl);
+        Capture("public-boolean.wgsl", wgsl);
     }
 
     private static void Capture(string name, string content)
