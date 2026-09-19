@@ -1,3 +1,4 @@
+using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
@@ -19,6 +20,16 @@ public sealed class PromoteLocalsPassTests
     private static readonly ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,
             ITerminator<RegionJump<IShaderValue>, IShaderValue>>
         Terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
+
+    public static IEnumerable<object[]> CounterLimits =>
+        Enumerable.Range(0, 33)
+                  .Prepend(-1)
+                  .Prepend(-32)
+                  .Select(limit => new object[]
+                  {
+                      limit,
+                      limit <= 0 ? 0 : limit * (limit - 1) / 2
+                  });
 
     [Theory]
     [InlineData(false, false, 30)]
@@ -55,11 +66,8 @@ public sealed class PromoteLocalsPassTests
     }
 
     [Theory]
-    [InlineData(0, 0)]
-    [InlineData(1, 0)]
-    [InlineData(4, 6)]
-    [InlineData(7, 21)]
-    public void CounterAccumulatorLoopMatchesZeroAndMultipleIterations(int limit, int expected)
+    [MemberData(nameof(CounterLimits))]
+    public void CounterAccumulatorLoopMatchesGeneratedArithmeticProgression(int limit, int expected)
     {
         var counter = Local("counter");
         var sum = Local("sum");
@@ -93,6 +101,11 @@ public sealed class PromoteLocalsPassTests
         AssertEquivalent(graph, promoted, [counter, sum], false, expected);
         Assert.Equal(2, promoted[header].Parameters.Length);
         Assert.All(promoted[header].Parameters, parameter => Assert.True(parameter.Type.Equals(ShaderType.I32)));
+        Assert.Equal(2, Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(
+            promoted[entry].Body.Last).Target.Arguments.Length);
+        Assert.Equal(2, Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(
+            promoted[body].Body.Last).Target.Arguments.Length);
+        Assert.Same(promoted, PromoteLocalsPass.Run(promoted, [counter, sum], false));
     }
 
     [Theory]
@@ -145,24 +158,31 @@ public sealed class PromoteLocalsPassTests
         var entry = Label.Create("entry");
         var exit = Label.Create("exit");
         var observedAddress = Value(escapedLocal.Value.Type, "observed-address");
-        var loaded = Value(ShaderType.I32, "loaded");
+        var promotedValue = Value(ShaderType.I32, "promoted-value");
+        var escapedValue = Value(ShaderType.I32, "escaped-value");
+        var result = Value(ShaderType.I32, "result");
         var graph = Graph(
             Block(entry, [], [
                 Store(promotedLocal, Int(7)),
                 Store(escapedLocal, Int(9))
             ], Terms.Br(Jump(exit, escapedLocal.Value))),
             Block(exit, [observedAddress], [
-                Load(promotedLocal, loaded)
-            ], Terms.ReturnExpr(loaded)));
+                Load(promotedLocal, promotedValue),
+                Load(observedAddress, escapedValue),
+                Add(result, promotedValue, escapedValue)
+            ], Terms.ReturnExpr(result)));
 
         var promoted = PromoteLocalsPass.Run(graph, [promotedLocal, escapedLocal], false);
 
-        AssertEquivalent(graph, promoted, [promotedLocal, escapedLocal], false, 7);
+        AssertEquivalent(graph, promoted, [promotedLocal, escapedLocal], false, 16);
         Assert.DoesNotContain(promoted.Labels().SelectMany(label => promoted[label].Body.Elements),
             instruction => ReferenceEquals(instruction.Operand0, promotedLocal.Value));
         Assert.Contains(promoted[entry].Body.Elements,
             instruction => instruction.Operation is StoreOperation &&
                            ReferenceEquals(instruction.Operand0, escapedLocal.Value));
+        Assert.Contains(promoted[exit].Body.Elements,
+            instruction => instruction.Operation is LoadOperation &&
+                           ReferenceEquals(instruction.Operand0, observedAddress));
         var jump = Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(
             promoted[entry].Body.Last).Target;
         Assert.Same(escapedLocal.Value, Assert.Single(jump.Arguments));
@@ -182,8 +202,11 @@ public sealed class PromoteLocalsPassTests
         var promoted = PromoteLocalsPass.Run(graph, [local], true);
 
         var expected = boolean ? (Value)new Value.Boolean(false) : new Value.Integer(0);
-        Assert.Equal(expected, RunCfg(graph, [local], true).Result);
-        Assert.Equal(expected, RunCfg(promoted, [local], true).Result);
+        var before = RunCfg(graph, [local], true);
+        var after = RunCfg(promoted, [local], true);
+        Assert.Equal(expected, before.Result);
+        Assert.Equal(before.Result, after.Result);
+        Assert.True(before.Trace.SequenceEqual(after.Trace));
         var returned = Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(
             promoted[entry].Body.Last).Expr;
         var literal = Assert.IsType<LiteralValue>(returned);
@@ -226,6 +249,24 @@ public sealed class PromoteLocalsPassTests
                 Terms.BrIf(Bool(true), Jump(body), Jump(exit))),
             Block(body, [], [Store(local, Int(1))], Terms.Br(Jump(header, Bool(false)))),
             Block(exit, [], [], Terms.ReturnExpr(loaded)));
+
+        Assert.Same(graph, PromoteLocalsPass.Run(graph, [local], false));
+    }
+
+    [Fact]
+    public void ZeroIterationLoopWithOnlyBodyDefinitionRemainsStorage()
+    {
+        var local = Local("value");
+        var entry = Label.Create("entry");
+        var header = Label.Create("header");
+        var body = Label.Create("body");
+        var exit = Label.Create("exit");
+        var loaded = Value(ShaderType.I32, "loaded");
+        var graph = Graph(
+            Block(entry, [], [], Terms.Br(Jump(header))),
+            Block(header, [], [], Terms.BrIf(Bool(false), Jump(body), Jump(exit))),
+            Block(body, [], [Store(local, Int(1))], Terms.Br(Jump(header))),
+            Block(exit, [], [Load(local, loaded)], Terms.ReturnExpr(loaded)));
 
         Assert.Same(graph, PromoteLocalsPass.Run(graph, [local], false));
     }
@@ -342,6 +383,56 @@ public sealed class PromoteLocalsPassTests
     }
 
     [Fact]
+    public void DeadMergeDoesNotCreateUnusedPhiParameter()
+    {
+        var local = Local("value");
+        var entry = Label.Create("entry");
+        var left = Label.Create("left");
+        var right = Label.Create("right");
+        var join = Label.Create("join");
+        var graph = Graph(
+            Block(entry, [], [], Terms.BrIf(Bool(true), Jump(left), Jump(right))),
+            Block(left, [], [Store(local, Int(1))], Terms.Br(Jump(join))),
+            Block(right, [], [Store(local, Int(2))], Terms.Br(Jump(join))),
+            Block(join, [], [], Terms.ReturnExpr(Int(0))));
+
+        var promoted = PromoteLocalsPass.Run(graph, [local], false);
+
+        AssertEquivalent(graph, promoted, [local], false, 0);
+        Assert.Empty(promoted[join].Parameters);
+        Assert.DoesNotContain(promoted.Labels().SelectMany(label => promoted[label].Body.Elements),
+            instruction => instruction.Operation is LoadOperation or StoreOperation);
+        Assert.Same(promoted, PromoteLocalsPass.Run(promoted, [local], false));
+    }
+
+    [Fact]
+    public void ChainedLoadSubstitutionsIgnoreReversedDefinitionMapOrder()
+    {
+        var source = Local("source");
+        var target = Local("target");
+        var entry = Label.Create("entry");
+        var copy = Label.Create("copy");
+        var use = Label.Create("use");
+        var firstLoad = Value(ShaderType.I32, "first-load");
+        var secondLoad = Value(ShaderType.I32, "second-load");
+        var entryBlock = Block(entry, [], [Store(source, Int(5))], Terms.Br(Jump(copy)));
+        var copyBlock = Block(copy, [], [
+            Load(source, firstLoad),
+            Store(target, firstLoad)
+        ], Terms.Br(Jump(use)));
+        var useBlock = Block(use, [], [Load(target, secondLoad)], Terms.ReturnExpr(secondLoad));
+        var graph = GraphWithEntry(entry, useBlock, copyBlock, entryBlock);
+
+        var promoted = PromoteLocalsPass.Run(graph, [source, target], false);
+
+        AssertEquivalent(graph, promoted, [source, target], false, 5);
+        var returned = Assert.IsType<Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>>(
+            promoted[use].Body.Last).Expr;
+        Assert.Equal(new I32Literal(5), Assert.IsType<I32Literal>(
+            Assert.IsType<LiteralValue>(returned).Value));
+    }
+
+    [Fact]
     public void RetainedInstructionIdentityPayloadOrderTypesAndIdempotenceArePreserved()
     {
         var local = Local("value");
@@ -416,6 +507,25 @@ public sealed class PromoteLocalsPassTests
     }
 
     [Fact]
+    public void MalformedMemoryPointeeTypeMismatchesAreRejected()
+    {
+        var local = Local("value");
+        var entry = Label.Create("entry");
+        var wrongLoadResult = Value(ShaderType.F32, "wrong-load-result");
+        var malformedLoad = Load(local, wrongLoadResult);
+        var malformedStore = Store(local, ShaderValue.Literal(new F32Literal(1)));
+
+        Assert.Throws<ArgumentException>(() => PromoteLocalsPass.Run(
+            Graph(Block(entry, [], [malformedLoad], Terms.ReturnExpr(wrongLoadResult))),
+            [local],
+            false));
+        Assert.Throws<ArgumentException>(() => PromoteLocalsPass.Run(
+            Graph(Block(entry, [], [malformedStore], Terms.ReturnExpr(Int(0)))),
+            [local],
+            false));
+    }
+
+    [Fact]
     public void MalformedEdgesAndDuplicateLocalsAreRejected()
     {
         var local = Local("value");
@@ -472,6 +582,30 @@ public sealed class PromoteLocalsPassTests
         Assert.Throws<ArgumentException>(() => PromoteLocalsPass.Run(parameterizedEntry, [], false));
     }
 
+    [Fact]
+    public void ValueControlFlowFormatterHasDeterministicCompactOutput()
+    {
+        var local = Local("value");
+        var entry = Label.Create("entry");
+        var loaded = Value(ShaderType.I32, "loaded");
+        var graph = Graph(Block(entry, [], [
+            Store(local, Int(5)),
+            Load(local, loaded)
+        ], Terms.ReturnExpr(loaded)));
+        var context = new FormatterContext([local], [entry], [loaded]);
+        var expected = string.Join(Environment.NewLine, [
+            "flat-value-cfg",
+            "^0:entry parameters=[]",
+            "    store(&var(value), 5_i32)",
+            "    %0(loaded) = load(&var(value))",
+            "    control: return %0(loaded)",
+            ""
+        ]);
+
+        Assert.Equal(expected, Print(graph, context));
+        Assert.Equal(expected, Print(graph, context));
+    }
+
     private static void AssertEquivalent(
         ControlFlowGraph<CilValueBasicBlock> original,
         ControlFlowGraph<CilValueBasicBlock> promoted,
@@ -493,6 +627,25 @@ public sealed class PromoteLocalsPassTests
             blocks.ToDictionary(
                 block => block.Label,
                 block => new ControlFlowGraph<CilValueBasicBlock>.NodeDefinition(block.Successor, block)));
+
+    private static ControlFlowGraph<CilValueBasicBlock> GraphWithEntry(
+        Label entry,
+        params CilValueBasicBlock[] blocks) =>
+        new(
+            entry,
+            blocks.ToDictionary(
+                block => block.Label,
+                block => new ControlFlowGraph<CilValueBasicBlock>.NodeDefinition(block.Successor, block)));
+
+    private static string Print(
+        ControlFlowGraph<CilValueBasicBlock> graph,
+        ILocalDeclarationContext context)
+    {
+        using var text = new StringWriter();
+        using var writer = new IndentedTextWriter(text);
+        CilStagePrettyPrinter.PrintValueControlFlow(graph, context, writer);
+        return text.ToString();
+    }
 
     private static CilValueBasicBlock Block(
         Label label,
@@ -519,7 +672,12 @@ public sealed class PromoteLocalsPassTests
     private static Instruction<IShaderValue, IShaderValue> Load(
         VariableDeclaration local,
         IShaderValue result) =>
-        Instruction.Factory.Load(default, new LoadOperation(), result, local.Value);
+        Load(local.Value, result);
+
+    private static Instruction<IShaderValue, IShaderValue> Load(
+        IShaderValue pointer,
+        IShaderValue result) =>
+        Instruction.Factory.Load(default, new LoadOperation(), result, pointer);
 
     private static Instruction<IShaderValue, IShaderValue> Store(
         VariableDeclaration local,
@@ -558,4 +716,27 @@ public sealed class PromoteLocalsPassTests
             result,
             left,
             right);
+
+    private sealed class FormatterContext(
+        ImmutableArray<VariableDeclaration> localVariables,
+        ImmutableArray<Label> labels,
+        ImmutableArray<IShaderValue> values) : ILocalDeclarationContext
+    {
+        private readonly Dictionary<Label, int> labelIndices =
+            labels.Index().ToDictionary(item => item.Item, item => item.Index);
+        private readonly Dictionary<IShaderValue, int> valueIndices = CreateValueIndices(values);
+
+        public ImmutableArray<VariableDeclaration> LocalVariables => localVariables;
+        public ImmutableArray<Label> Labels => labels;
+        public int LabelIndex(Label label) => labelIndices[label];
+        public int ValueIndex(IShaderValue value) => valueIndices[value];
+
+        private static Dictionary<IShaderValue, int> CreateValueIndices(ImmutableArray<IShaderValue> values)
+        {
+            var result = new Dictionary<IShaderValue, int>(ReferenceEqualityComparer.Instance);
+            foreach (var (index, value) in values.Index())
+                result.Add(value, index);
+            return result;
+        }
+    }
 }
