@@ -13,6 +13,7 @@ using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
 using Xunit.Abstractions;
+using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
 
 namespace DualDrill.CLSL.Test;
 
@@ -89,21 +90,70 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void SupportedLoopExitAndMixedDivergenceCompileThroughPublicWgslApi()
+    public void MixedReturnAndDivergencePreservesReturnTraceAndDivergingBudgets()
+    {
+        var method = ((Func<bool, int>)MixedReturnDivergence).Method;
+        var original = CompilerTestPipeline.CompileBody(method);
+        var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
+            new FunctionToOperationPass().VisitFunctionBody(original));
+        var source = Emit(lowered);
+        var returning = ImmutableArray.Create<Value>(new Value.Boolean(true));
+        var originalResult = RunCfg(original, returning);
+        var loweredResult = RunCfg(lowered, returning);
+        var emittedResult = new EmittedScalarProgram(lowered, source).Run(returning);
+
+        Assert.Equal(new Value.Integer(7), originalResult.Result);
+        Assert.True(originalResult.Trace.SequenceEqual(loweredResult.Trace));
+        Assert.True(originalResult.Trace.SequenceEqual(emittedResult.Trace));
+        Assert.Equal(originalResult.Result, loweredResult.Result);
+        Assert.Equal(originalResult.Result, emittedResult.Result);
+
+        var diverging = ImmutableArray.Create<Value>(new Value.Boolean(false));
+        var originalFailure = Assert.Throws<InvalidOperationException>(
+            () => RunCfg(original, diverging, 100));
+        var loweredFailure = Assert.Throws<InvalidOperationException>(
+            () => RunCfg(lowered, diverging, 100));
+        var emittedFailure = Assert.Throws<InvalidOperationException>(
+            () => new EmittedScalarProgram(lowered, source).Run(diverging, 100));
+        Assert.Contains("step budget", originalFailure.Message);
+        Assert.Contains("step budget", loweredFailure.Message);
+        Assert.Contains("step budget", emittedFailure.Message);
+
+        output.WriteLine($"return trace: {string.Join(" -> ", originalResult.Trace)}");
+        output.WriteLine(originalFailure.Message);
+        output.WriteLine(loweredFailure.Message);
+        output.WriteLine(emittedFailure.Message);
+    }
+
+    [Fact]
+    public void PublicWgslApiCapturesAllDivergingSlangcLimitation()
     {
         var shader = new ExitPostDominanceRegressionShader();
         var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
 
+        output.WriteLine("=== C2 regressions including all-diverging: actual Slang ===");
+        output.WriteLine(slang);
+        output.WriteLine("=== C2 regressions including all-diverging: actual public WGSL ===");
+        output.WriteLine(wgsl);
         Assert.Contains("while(true)", slang);
         Assert.Contains("return ", slang);
         Assert.Contains("fn Ordinary", wgsl);
         Assert.Contains("fn Mixed", wgsl);
+        Assert.Contains("fn AllDivergingEntry", wgsl);
+        var allDivergingStart = wgsl.IndexOf("fn AllDiverging_0", StringComparison.Ordinal);
+        Assert.True(allDivergingStart >= 0);
+        var allDivergingEnd = wgsl.IndexOf("\nstruct ", allDivergingStart, StringComparison.Ordinal);
+        Assert.True(allDivergingEnd > allDivergingStart);
+        var allDivergingWgsl = wgsl[allDivergingStart..allDivergingEnd];
+        var bodyStart = allDivergingWgsl.IndexOf('{');
+        var bodyEnd = allDivergingWgsl.LastIndexOf('}');
+        Assert.True(bodyStart >= 0 && bodyEnd > bodyStart);
+        Assert.True(string.IsNullOrWhiteSpace(allDivergingWgsl[(bodyStart + 1)..bodyEnd]));
+        Assert.DoesNotContain("return", allDivergingWgsl);
         Assert.Contains("return", wgsl);
-        output.WriteLine("=== supported C2 regressions: actual Slang ===");
-        output.WriteLine(slang);
-        output.WriteLine("=== supported C2 regressions: actual WGSL ===");
-        output.WriteLine(wgsl);
+        output.WriteLine(
+            "LIMITATION: slangc accepted the valid all-diverging Slang function but emitted an empty WGSL body.");
     }
 
     [Fact]
@@ -402,6 +452,11 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         [return: Location(0)]
         public static int Mixed([Location(0)] int value) =>
             MixedReturnDivergence(value > 0);
+
+        [Fragment]
+        [return: Location(0)]
+        public static int AllDivergingEntry([Location(0)] int value) =>
+            AllDiverging(value > 0);
     }
 
     private readonly record struct TextScope(int Start, int End);

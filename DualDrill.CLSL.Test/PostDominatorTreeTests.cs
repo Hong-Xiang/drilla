@@ -20,6 +20,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var r = Label.Create("r");
         var j = Label.Create("j");
         AssertFacts(
+            nameof(DiamondHasSharedFiniteExitPostDominator),
             Graph(
                 e,
                 (e, new ConditionalSuccessor(l, r)),
@@ -41,6 +42,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var j = Label.Create("j");
         var t = Label.Create("t");
         AssertFacts(
+            nameof(SharedTailHasNearestRealPostDominators),
             Graph(
                 e,
                 (e, new ConditionalSuccessor(l, r)),
@@ -60,8 +62,166 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
     {
         var e = Label.Create("e");
         AssertFacts(
+            nameof(SelfLoopHasNoExitPath),
             Graph(e, (e, new UnconditionalSuccessor(e))),
             (e, NoExitPath()));
+    }
+
+    [Fact]
+    public void LegacySingleTerminalEndsAtFunctionExit()
+    {
+        var e = Label.Create("e");
+        AssertFacts(
+            nameof(LegacySingleTerminalEndsAtFunctionExit),
+            Graph(e, (e, new TerminateSuccessor())),
+            (e, FunctionExit(false)));
+    }
+
+    [Fact]
+    public void LegacySelfLoopWithExitHasFiniteExitPostDominatorAndMayDiverge()
+    {
+        var a = Label.Create("a");
+        var b = Label.Create("b");
+        AssertFacts(
+            nameof(LegacySelfLoopWithExitHasFiniteExitPostDominatorAndMayDiverge),
+            Graph(
+                a,
+                (a, new ConditionalSuccessor(a, b)),
+                (b, new TerminateSuccessor())),
+            (a, Block(b, true)),
+            (b, FunctionExit(false)));
+    }
+
+    [Fact]
+    public void LegacyMinimumLoopRetainsExactFiveNodeTopology()
+    {
+        var e = Label.Create("e");
+        var l = Label.Create("l");
+        var c = Label.Create("c");
+        var b = Label.Create("b");
+        var t = Label.Create("t");
+        AssertFacts(
+            nameof(LegacyMinimumLoopRetainsExactFiveNodeTopology),
+            Graph(
+                e,
+                (e, new UnconditionalSuccessor(l)),
+                (l, new ConditionalSuccessor(c, b)),
+                (c, new UnconditionalSuccessor(l)),
+                (b, new UnconditionalSuccessor(t)),
+                (t, new TerminateSuccessor())),
+            (e, Block(l, true)),
+            (l, Block(b, true)),
+            (c, Block(l, true)),
+            (b, Block(t, false)),
+            (t, FunctionExit(false)));
+    }
+
+    [Fact]
+    public void LegacyMergedLoopBreakRetainsExactFiveNodeTopology()
+    {
+        var e = Label.Create("e");
+        var l = Label.Create("l");
+        var c = Label.Create("c");
+        var b = Label.Create("b");
+        var t = Label.Create("t");
+        AssertFacts(
+            nameof(LegacyMergedLoopBreakRetainsExactFiveNodeTopology),
+            Graph(
+                e,
+                (e, new ConditionalSuccessor(l, t)),
+                (l, new ConditionalSuccessor(c, b)),
+                (c, new UnconditionalSuccessor(l)),
+                (b, new UnconditionalSuccessor(t)),
+                (t, new TerminateSuccessor())),
+            (e, Block(t, true)),
+            (l, Block(b, true)),
+            (c, Block(l, true)),
+            (b, Block(t, false)),
+            (t, FunctionExit(false)));
+    }
+
+    [Fact]
+    public void LegacyNestedLoopRetainsExactSevenNodeTopology()
+    {
+        var e = Label.Create("e");
+        var l1 = Label.Create("l1");
+        var b2 = Label.Create("b2");
+        var l2 = Label.Create("l2");
+        var b4 = Label.Create("b4");
+        var b5 = Label.Create("b5");
+        var b6 = Label.Create("b6");
+        AssertFacts(
+            nameof(LegacyNestedLoopRetainsExactSevenNodeTopology),
+            Graph(
+                e,
+                (e, new UnconditionalSuccessor(l1)),
+                (l1, new ConditionalSuccessor(b2, b6)),
+                (b2, new UnconditionalSuccessor(l2)),
+                (l2, new ConditionalSuccessor(b4, b5)),
+                (b4, new UnconditionalSuccessor(l2)),
+                (b5, new UnconditionalSuccessor(l1)),
+                (b6, new TerminateSuccessor())),
+            (e, Block(l1, true)),
+            (l1, Block(b6, true)),
+            (b2, Block(l2, true)),
+            (l2, Block(b5, true)),
+            (b4, Block(l2, true)),
+            (b5, Block(l1, true)),
+            (b6, FunctionExit(false)));
+    }
+
+    [Fact]
+    public void LegacyComplexControlFlowRetainsExactSixNodeTopology()
+    {
+        var a = Label.Create("a");
+        var b = Label.Create("b");
+        var c = Label.Create("c");
+        var d = Label.Create("d");
+        var e = Label.Create("e");
+        var f = Label.Create("f");
+        AssertFacts(
+            nameof(LegacyComplexControlFlowRetainsExactSixNodeTopology),
+            Graph(
+                a,
+                (a, new ConditionalSuccessor(d, b)),
+                (b, new ConditionalSuccessor(e, c)),
+                (c, new UnconditionalSuccessor(f)),
+                (d, new ConditionalSuccessor(f, e)),
+                (e, new UnconditionalSuccessor(f)),
+                (f, new TerminateSuccessor())),
+            (a, Block(f, false)),
+            (b, Block(f, false)),
+            (c, Block(f, false)),
+            (d, Block(f, false)),
+            (e, Block(f, false)),
+            (f, FunctionExit(false)));
+    }
+
+    [Fact]
+    public void LegacyComplexControlFlowChainRetainsExactSixNodeTopology()
+    {
+        var a = Label.Create("a");
+        var b = Label.Create("b");
+        var c = Label.Create("c");
+        var d = Label.Create("d");
+        var e = Label.Create("e");
+        var f = Label.Create("f");
+        AssertFacts(
+            nameof(LegacyComplexControlFlowChainRetainsExactSixNodeTopology),
+            Graph(
+                a,
+                (a, new ConditionalSuccessor(d, b)),
+                (b, new UnconditionalSuccessor(c)),
+                (c, new UnconditionalSuccessor(f)),
+                (d, new ConditionalSuccessor(f, e)),
+                (e, new UnconditionalSuccessor(f)),
+                (f, new TerminateSuccessor())),
+            (a, Block(f, false)),
+            (b, Block(c, false)),
+            (c, Block(f, false)),
+            (d, Block(f, false)),
+            (e, Block(f, false)),
+            (f, FunctionExit(false)));
     }
 
     [Fact]
@@ -73,6 +233,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var l = Label.Create("l");
         var x = Label.Create("x");
         AssertFacts(
+            nameof(NestedLoopsRetainFiniteExitChainAndMayDiverge),
             Graph(
                 o,
                 (o, new ConditionalSuccessor(i, x)),
@@ -96,6 +257,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var r = Label.Create("r");
         var l = Label.Create("l");
         AssertFacts(
+            nameof(EarlyReturnAndLoopExitMeetAtFunctionExit),
             Graph(
                 h,
                 (h, new ConditionalSuccessor(b, x)),
@@ -117,6 +279,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var l = Label.Create("l");
         var r = Label.Create("r");
         AssertFacts(
+            nameof(MultipleReturnsMeetAtFunctionExit),
             Graph(
                 e,
                 (e, new ConditionalSuccessor(l, r)),
@@ -133,6 +296,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var a = Label.Create("a");
         var b = Label.Create("b");
         AssertFacts(
+            nameof(TwoNodeLoopHasNoExitPath),
             Graph(
                 a,
                 (a, new UnconditionalSuccessor(b)),
@@ -147,6 +311,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var e = Label.Create("e");
         var j = Label.Create("j");
         AssertFacts(
+            nameof(ParallelArmsDoNotCreateFalseDivergence),
             Graph(
                 e,
                 (e, new ConditionalSuccessor(j, j)),
@@ -162,6 +327,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var r = Label.Create("r");
         var s = Label.Create("s");
         AssertFacts(
+            nameof(MixedReturnAndDivergenceUsesOnlyFiniteExitPathsForPostDominance),
             Graph(
                 e,
                 (e, new ConditionalSuccessor(r, s)),
@@ -179,6 +345,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var a = Label.Create("a");
         var b = Label.Create("b");
         AssertFacts(
+            nameof(IrreducibleCycleHasNoExitPath),
             Graph(
                 e,
                 (e, new ConditionalSuccessor(a, b)),
@@ -196,6 +363,7 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
         var l = Label.Create("l");
         var j = Label.Create("j");
         AssertFacts(
+            nameof(DivergingBranchCanStillShareARealFiniteExitTail),
             Graph(
                 e,
                 (e, new ConditionalSuccessor(l, j)),
@@ -425,11 +593,34 @@ public sealed class PostDominatorTreeTests(ITestOutputHelper output)
             _ => throw new InvalidOperationException()
         };
 
-    private static void AssertFacts(
+    private void AssertFacts(
+        string name,
         ControlFlowGraph<Unit> graph,
         params (Label Label, Expected Expected)[] expectations)
     {
         var tree = graph.ControlFlowAnalysis().PostDominatorTree;
+        var labels = graph.Labels().ToImmutableArray();
+        var ids = labels.Select((label, index) => (label, index))
+                        .ToDictionary(item => item.label, item => item.index);
+        output.WriteLine($"=== {name}: original CFG ===");
+        output.WriteLine(graph.PrettyPrint());
+        output.WriteLine($"=== {name}: C2 finite-exit postdominance ===");
+        foreach (var label in labels)
+        {
+            var postDominance = tree.ExitPostDominance(label);
+            var target = postDominance switch
+            {
+                ExitPostDominance.Block block => LabelName(block.Target, ids),
+                ExitPostDominance.FunctionExit => "function-exit",
+                ExitPostDominance.NoExitPath => "no-exit-path",
+                _ => throw new InvalidOperationException(
+                    $"Unsupported exit-postdominance result {postDominance.GetType().FullName}.")
+            };
+            output.WriteLine(
+                $"{LabelName(label, ids)} -> {target}" +
+                (postDominance.MayDiverge ? " may-diverge" : " finite"));
+        }
+
         Assert.Equal(graph.Count, expectations.Length);
         foreach (var (label, expected) in expectations)
         {

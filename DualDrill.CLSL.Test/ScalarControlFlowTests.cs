@@ -388,11 +388,16 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     public void UnsupportedOperationsAndBothExecutionBudgetsFailExplicitly()
     {
         var body = HandBody();
-        var cycle = body.MapRegionBody(block => block.Label != body.Entry ? block : block with
+        var entry = body[body.Entry];
+        var cycleBody = entry with
         {
-            Body = Seq.Create(block.Body.Elements, Terms.Br(new(body.Entry, []))),
+            Body = Seq.Create(entry.Body.Elements, Terms.Br(new(body.Entry, []))),
             PostDominance = ExitPostDominance.NoExitPath.Instance
-        });
+        };
+        var cycle = new FunctionBody4(
+            body.Declaration,
+            RegionTree<Label, ShaderRegionBody>.Block(body.Entry, [], cycleBody, null));
+        Assert.Single(cycle.Labels);
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
             () => RunCfg(cycle, [new Value.Integer(0)], 100)).Message);
         var infinite = "i32 Probe(i32 x, )\n{\nwhile(true)\n{\n}\n}";

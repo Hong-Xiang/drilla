@@ -1,4 +1,5 @@
 ﻿using System.CodeDom.Compiler;
+using System.Diagnostics;
 using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
@@ -200,6 +201,9 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, FunctionB
             case ExitPostDominance.NoExitPath:
                 Writer.Write("no-exit-path");
                 break;
+            default:
+                throw new UnreachableException(
+                    $"Unsupported exit-postdominance result {body.PostDominance.GetType().FullName}.");
         }
         Writer.WriteLine(body.PostDominance.MayDiverge ? " may-diverge" : " finite");
 

@@ -1,4 +1,5 @@
 ﻿using System.CodeDom.Compiler;
+using System.Diagnostics;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
@@ -289,9 +290,7 @@ public class SlangEmitter
         {
             Writer.WriteLine("// block " + GetLabelName(label));
             WritePostDominance(body.Last.PostDominance);
-            var nextL = body.Last.PostDominance is ExitPostDominance.Block block
-                ? block.Target
-                : null;
+            var nextL = LayoutTarget(body.Last.PostDominance);
             NextBlock.Push(nextL);
             SourceBlocks.Push(label);
             OnShaderRegionBody(body.Last);
@@ -309,9 +308,7 @@ public class SlangEmitter
     Unit IRegionDefinitionSemantic<Label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody>, Unit>.Loop(
         Label label, Seq<RegionTree<Label, ShaderRegionBody>, ShaderRegionBody> body, Label? next, Label? breakNext)
     {
-        var nextL = body.Last.PostDominance is ExitPostDominance.Block block
-            ? block.Target
-            : null;
+        var nextL = LayoutTarget(body.Last.PostDominance);
         HashSet<Label> regionLabels = [label, .. body.Elements.SelectMany(r => r.DefinedLabels())];
         var normalTransfer = FindNormalTransfer(label, regionLabels);
 
@@ -354,10 +351,23 @@ public class SlangEmitter
             case ExitPostDominance.NoExitPath:
                 Writer.Write("no-exit-path");
                 break;
+            default:
+                throw new UnreachableException(
+                    $"Unsupported exit-postdominance result {postDominance.GetType().FullName}.");
         }
 
         Writer.WriteLine(postDominance.MayDiverge ? " may-diverge" : " finite");
     }
+
+    private static Label? LayoutTarget(ExitPostDominance postDominance) =>
+        postDominance switch
+        {
+            ExitPostDominance.Block block => block.Target,
+            ExitPostDominance.FunctionExit => null,
+            ExitPostDominance.NoExitPath => null,
+            _ => throw new UnreachableException(
+                $"Unsupported exit-postdominance result {postDominance.GetType().FullName}.")
+        };
 
 
     Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnVoid()

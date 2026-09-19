@@ -1,5 +1,6 @@
 ﻿using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using DualDrill.CLSL.Language;
@@ -74,6 +75,9 @@ internal static class CilStagePrettyPrinter
             case ExitPostDominance.NoExitPath:
                 writer.Write("no-exit-path");
                 break;
+            default:
+                throw new UnreachableException(
+                    $"Unsupported exit-postdominance result {postDominance.GetType().FullName}.");
         }
 
         writer.Write(postDominance.MayDiverge ? "(may-diverge)" : "(finite)");
