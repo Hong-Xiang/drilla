@@ -74,15 +74,27 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
         var body = Function(
             RegionTree.Block(entry, [
                 RegionTree.Block(done, [], Body(done,
-                    Terms.ReturnExpr(ShaderValue.Literal(new I32Literal(0)))), null),
+                    Terms.ReturnExpr(ShaderValue.Literal(new I32Literal(0))),
+                    new ExitPostDominance.FunctionExit(false)), null),
                 RegionTree.Loop(outer, [
-                    RegionTree.Block(afterInner, [], Body(afterInner, Terms.Br(new(done, []))), null),
+                    RegionTree.Block(afterInner, [], Body(
+                        afterInner,
+                        Terms.Br(new(done, [])),
+                        new ExitPostDominance.Block(done, false)), null),
                     RegionTree.Loop(inner, [], Body(inner,
                         Terms.BrIf(repeat,
                             new(outer, [ShaderValue.Literal(new BoolLiteral(false))]),
-                            new(afterInner, []))), null, null)
-                ], Body(outer, Terms.Br(new(inner, [])), [repeat]), null, null)
-            ], Body(entry, Terms.Br(new(outer, [ShaderValue.Literal(new BoolLiteral(true))]))), null),
+                            new(afterInner, [])),
+                        new ExitPostDominance.Block(afterInner, true)), null, null)
+                ], Body(
+                    outer,
+                    Terms.Br(new(inner, [])),
+                    new ExitPostDominance.Block(inner, true),
+                    [repeat]), null, null)
+            ], Body(
+                entry,
+                Terms.Br(new(outer, [ShaderValue.Literal(new BoolLiteral(true))])),
+                new ExitPostDominance.Block(outer, true)), null),
             ShaderType.I32);
 
         var outerRepeat = body.Control.Resolve(inner, 0);
@@ -131,20 +143,29 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
         var body = new FunctionBody4(
             new FunctionDeclaration("DominatingValue", [choose], new FunctionReturn(ShaderType.I32, []), []),
             RegionTree.Block(entry, [
-                RegionTree.Block(join, [], Body(join, Terms.ReturnExpr(result), [result]), null),
-                RegionTree.Block(left, [], Body(left, Terms.Br(new(join, [value]))), null),
+                RegionTree.Block(join, [], Body(
+                    join,
+                    Terms.ReturnExpr(result),
+                    new ExitPostDominance.FunctionExit(false),
+                    [result]), null),
+                RegionTree.Block(left, [], Body(
+                    left,
+                    Terms.Br(new(join, [value])),
+                    new ExitPostDominance.Block(join, false)), null),
                 RegionTree.Block(right, [], ShaderRegionBody.Create(right, [], [
                     Instruction.Factory.Operation2(default,
                         NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                         incremented,
                         value,
                         ShaderValue.Literal(new I32Literal(1)))
-                ], Terms.Br(new(join, [incremented])), null), null)
+                ], Terms.Br(new(join, [incremented])),
+                    new ExitPostDominance.Block(join, false)), null)
             ], ShaderRegionBody.Create(entry, [], [
                 Instruction.Factory.Load(default, new LoadOperation(), condition, choose.Value),
                 Instruction.Factory.Literal(default, new LiteralOperation(), value,
                     ShaderValue.Literal(new I32Literal(42)))
-            ], Terms.BrIf(condition, new(left, []), new(right, [])), null), null));
+            ], Terms.BrIf(condition, new(left, []), new(right, [])),
+                new ExitPostDominance.Block(join, false)), null));
         var arguments = ImmutableArray.Create<Value>(new Value.Boolean(chooseLeft));
 
         var cfg = RunCfg(body, arguments);
@@ -174,37 +195,78 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
         var parameter = ShaderValue.Intermediate(ShaderType.I32);
 
         Rejects("not visible", RegionTree.Block(entry, [
-            RegionTree.Block(first, [], Body(first, Terms.Br(new(second, []))), null),
-            RegionTree.Block(second, [], Body(second, Terms.ReturnVoid()), null)
-        ], Body(entry, Terms.Br(new(first, []))), null));
+            RegionTree.Block(first, [], Body(
+                first,
+                Terms.Br(new(second, [])),
+                new ExitPostDominance.Block(second, false)), null),
+            RegionTree.Block(second, [], Body(
+                second,
+                Terms.ReturnVoid(),
+                new ExitPostDominance.FunctionExit(false)), null)
+        ], Body(entry, Terms.Br(new(first, [])), new ExitPostDominance.Block(first, false)), null));
 
         Rejects("not visible", RegionTree.Block(entry, [
             RegionTree.Block(first, [
-                RegionTree.Block(privateLabel, [], Body(privateLabel, Terms.ReturnVoid()), null)
-            ], Body(first, Terms.Br(new(privateLabel, []))), null),
-            RegionTree.Block(second, [], Body(second, Terms.Br(new(privateLabel, []))), null)
-        ], Body(entry, Terms.Br(new(second, []))), null));
+                RegionTree.Block(privateLabel, [], Body(
+                    privateLabel,
+                    Terms.ReturnVoid(),
+                    new ExitPostDominance.FunctionExit(false)), null)
+            ], Body(
+                first,
+                Terms.Br(new(privateLabel, [])),
+                new ExitPostDominance.Block(privateLabel, false)), null),
+            RegionTree.Block(second, [], Body(
+                second,
+                Terms.Br(new(privateLabel, [])),
+                new ExitPostDominance.Block(privateLabel, false)), null)
+        ], Body(entry, Terms.Br(new(second, [])), new ExitPostDominance.Block(second, false)), null));
 
         Rejects("block self-reference",
-            RegionTree.Block(entry, [], Body(entry, Terms.Br(new(entry, []))), null));
+            RegionTree.Block(entry, [], Body(
+                entry,
+                Terms.Br(new(entry, [])),
+                ExitPostDominance.NoExitPath.Instance), null));
         Rejects("unknown label",
-            RegionTree.Block(entry, [], Body(entry, Terms.Br(new(unknown, []))), null));
+            RegionTree.Block(entry, [], Body(
+                entry,
+                Terms.Br(new(unknown, [])),
+                ExitPostDominance.NoExitPath.Instance), null));
         Rejects("duplicate defined label", RegionTree.Block(entry, [
-            RegionTree.Block(entry, [], Body(entry, Terms.ReturnVoid()), null)
-        ], Body(entry, Terms.ReturnVoid()), null));
+            RegionTree.Block(entry, [], Body(
+                entry,
+                Terms.ReturnVoid(),
+                new ExitPostDominance.FunctionExit(false)), null)
+        ], Body(entry, Terms.ReturnVoid(), new ExitPostDominance.FunctionExit(false)), null));
         Rejects("does not match body label",
-            RegionTree.Block(entry, [], Body(first, Terms.ReturnVoid()), null));
+            RegionTree.Block(entry, [], Body(
+                first,
+                Terms.ReturnVoid(),
+                new ExitPostDominance.FunctionExit(false)), null));
         Rejects("incorrect argument count", RegionTree.Block(entry, [
-            RegionTree.Block(first, [], Body(first, Terms.ReturnVoid(), [parameter]), null)
-        ], Body(entry, Terms.Br(new(first, []))), null));
+            RegionTree.Block(first, [], Body(
+                first,
+                Terms.ReturnVoid(),
+                new ExitPostDominance.FunctionExit(false),
+                [parameter]), null)
+        ], Body(entry, Terms.Br(new(first, [])), new ExitPostDominance.Block(first, false)), null));
         Rejects("incorrect argument type", RegionTree.Block(entry, [
-            RegionTree.Block(first, [], Body(first, Terms.ReturnVoid(), [parameter]), null)
-        ], Body(entry, Terms.Br(new(first, [ShaderValue.Literal(new BoolLiteral(true))]))), null));
+            RegionTree.Block(first, [], Body(
+                first,
+                Terms.ReturnVoid(),
+                new ExitPostDominance.FunctionExit(false),
+                [parameter]), null)
+        ], Body(
+            entry,
+            Terms.Br(new(first, [ShaderValue.Literal(new BoolLiteral(true))])),
+            new ExitPostDominance.Block(first, false)), null));
         Rejects("entry region", RegionTree.Block(entry, [],
-            Body(entry, Terms.ReturnVoid(), [parameter]), null));
+            Body(entry, Terms.ReturnVoid(), new ExitPostDominance.FunctionExit(false), [parameter]), null));
         Rejects("unreachable definitions", RegionTree.Block(entry, [
-            RegionTree.Block(first, [], Body(first, Terms.ReturnVoid()), null)
-        ], Body(entry, Terms.ReturnVoid()), null));
+            RegionTree.Block(first, [], Body(
+                first,
+                Terms.ReturnVoid(),
+                new ExitPostDominance.FunctionExit(false)), null)
+        ], Body(entry, Terms.ReturnVoid(), new ExitPostDominance.FunctionExit(false)), null));
     }
 
     [Fact]
@@ -215,7 +277,12 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
         Rejects(
             "Function 'Scoped': region 'Label(entry)' has a default parameter array",
             RegionTree.Block(entry, [],
-                ShaderRegionBody.Create(entry, default, [], Terms.ReturnVoid(), null), null));
+                ShaderRegionBody.Create(
+                    entry,
+                    default,
+                    [],
+                    Terms.ReturnVoid(),
+                    new ExitPostDominance.FunctionExit(false)), null));
     }
 
     [Fact]
@@ -228,8 +295,13 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
             "Function 'Scoped': region 'Label(child)' has a default parameter array",
             RegionTree.Block(entry, [
                 RegionTree.Block(child, [],
-                    ShaderRegionBody.Create(child, default, [], Terms.ReturnVoid(), null), null)
-            ], Body(entry, Terms.Br(new(child, []))), null));
+                    ShaderRegionBody.Create(
+                        child,
+                        default,
+                        [],
+                        Terms.ReturnVoid(),
+                        new ExitPostDominance.FunctionExit(false)), null)
+            ], Body(entry, Terms.Br(new(child, [])), new ExitPostDominance.Block(child, false)), null));
     }
 
     [Fact]
@@ -242,8 +314,14 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
             "Function 'Scoped': transfer from 'Label(entry)', arm 0, to 'Label(child)' " +
             "has a default argument array",
             RegionTree.Block(entry, [
-                RegionTree.Block(child, [], Body(child, Terms.ReturnVoid()), null)
-            ], Body(entry, Terms.Br(new RegionJump<IShaderValue>(child, default))), null));
+                RegionTree.Block(child, [], Body(
+                    child,
+                    Terms.ReturnVoid(),
+                    new ExitPostDominance.FunctionExit(false)), null)
+            ], Body(
+                entry,
+                Terms.Br(new RegionJump<IShaderValue>(child, default)),
+                new ExitPostDominance.Block(child, false)), null));
     }
 
     [Fact]
@@ -257,8 +335,15 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
             "Function 'Scoped': region 'Label(exit)' parameter at index 0 type is missing",
             RegionTree.Block(entry, [
                 RegionTree.Block(exit, [],
-                    Body(exit, Terms.ReturnVoid(), [parameter]), null)
-            ], Body(entry, Terms.Br(new(exit, [ShaderValue.Literal(new I32Literal(0))]))), null));
+                    Body(
+                        exit,
+                        Terms.ReturnVoid(),
+                        new ExitPostDominance.FunctionExit(false),
+                        [parameter]), null)
+            ], Body(
+                entry,
+                Terms.Br(new(exit, [ShaderValue.Literal(new I32Literal(0))])),
+                new ExitPostDominance.Block(exit, false)), null));
     }
 
     [Fact]
@@ -266,7 +351,10 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
     {
         var loop = Label.Create("loop");
         var body = Function(
-            RegionTree.Loop(loop, [], Body(loop, Terms.Br(new(loop, []))), null, null),
+            RegionTree.Loop(loop, [], Body(
+                loop,
+                Terms.Br(new(loop, [])),
+                ExitPostDominance.NoExitPath.Instance), null, null),
             ShaderType.I32);
 
         var transfer = body.Control.Resolve(loop, 0);
@@ -288,8 +376,15 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
         var body = new FunctionBody4(
             new FunctionDeclaration("Pointers", [source], new FunctionReturn(UnitType.Instance, []), []),
             RegionTree.Block(entry, [
-                RegionTree.Block(target, [], Body(target, Terms.ReturnVoid(), [parameter]), null)
-            ], Body(entry, Terms.Br(new(target, [source.Value]))), null));
+                RegionTree.Block(target, [], Body(
+                    target,
+                    Terms.ReturnVoid(),
+                    new ExitPostDominance.FunctionExit(false),
+                    [parameter]), null)
+            ], Body(
+                entry,
+                Terms.Br(new(target, [source.Value])),
+                new ExitPostDominance.Block(target, false)), null));
 
         Assert.Same(target, body.Control.Resolve(entry, 0).Target);
     }
@@ -402,8 +497,14 @@ public sealed class ScopedRegionControlTests(ITestOutputHelper output)
     private static ShaderRegionBody Body(
         Label label,
         ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
+        ExitPostDominance postDominance,
         ImmutableArray<IShaderValue> parameters = default) =>
-        ShaderRegionBody.Create(label, parameters.IsDefault ? [] : parameters, [], terminator, null);
+        ShaderRegionBody.Create(
+            label,
+            parameters.IsDefault ? [] : parameters,
+            [],
+            terminator,
+            postDominance);
 
     private static ISuccessor Successor(int[] targets, Label[] labels) =>
         targets.Length switch

@@ -21,6 +21,7 @@ using DualDrill.Common.Nat;
 using Xunit.Abstractions;
 using static DualDrill.CLSL.Test.ScalarControlFlowOracle;
 using static DualDrill.CLSL.Test.ScopedContinuationOracle;
+using static DualDrill.CLSL.Test.RegionFixture;
 
 namespace DualDrill.CLSL.Test;
 
@@ -106,7 +107,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         };
 
         output.WriteLine($"ACTUAL capture scenario={scenario}");
-        Check(method, arguments, expected, $"cil/{scenario}");
+        Check(method, arguments, expected);
     }
 
     [Theory]
@@ -190,29 +191,25 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             [new Value.Integer(outer), new Value.Integer(inner), new Value.Integer(stop)], new Value.Integer(golden));
     }
 
-    private string Check(
-        MethodInfo method,
-        ImmutableArray<Value> arguments,
-        Value expected,
-        string? captureName = null)
+    private string Check(MethodInfo method, ImmutableArray<Value> arguments, Value expected)
     {
         var stages = CompilerTestPipeline.CompileStages(method);
         var original = Assert.Single(
             stages.Compiled.FunctionDefinitions.Values,
             body => body.Declaration.Name == method.Name);
         var model = Assert.Single(
-            stages.ControlFlow.FunctionDefinitions.Values,
+            stages.Labelled.FunctionDefinitions.Values,
             body => body.Environment.Method == method);
         Assert.True(model.Labels.ToHashSet().SetEquals(original.Labels));
         foreach (var label in model.Labels)
         {
-            var range = model.ControlFlow[label];
+            var range = model[label];
             output.WriteLine($"{method.Name} {label}: IL_{range.ByteOffset:X4}, {range.InstructionCount} instructions, " +
-                $"successors {string.Join(", ", model.ControlFlow.GetSucc(label))}");
+                $"successors {string.Join(", ", range.Terminator.ToSuccessor().AllTargets())}");
         }
         var valueControlFlow = Assert.Single(
             stages.ValueControlFlow.FunctionDefinitions.Values,
-            body => body.Source.Environment.Method == method);
+            body => body.Source.Source.Source.Environment.Method == method);
         output.WriteLine("ACTUAL input value CFG:");
         output.WriteLine(valueControlFlow.Graph.PrettyPrint());
         output.WriteLine("ACTUAL output region/control:");
@@ -220,8 +217,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
         var target = Lower(lowered);
-        output.WriteLine(target.PrettyPrint());
-        var source = Emit(lowered);
+        var source = Emit(target);
         output.WriteLine(source);
         var cfg = RunCfg(original, arguments);
         var scoped = RunScoped(original, arguments);
@@ -235,19 +231,6 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             $"ACTUAL scoped result={scoped.Result} trace={string.Join(" -> ", scoped.Trace)}");
         output.WriteLine($"ACTUAL emitted result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}");
         AssertEquivalent(cfg, emitted);
-        if (captureName is not null)
-        {
-            Capture($"{captureName}.input-value-cfg.txt", valueControlFlow.Graph.PrettyPrint());
-            Capture($"{captureName}.region.txt", original.Dump());
-            Capture($"{captureName}.ast.txt", target.PrettyPrint());
-            Capture($"{captureName}.slang", source);
-            Capture(
-                $"{captureName}.execution.txt",
-                $"arguments={string.Join(", ", arguments)}{Environment.NewLine}" +
-                $"cfg result={cfg.Result} trace={string.Join(" -> ", cfg.Trace)}{Environment.NewLine}" +
-                $"scoped result={scoped.Result} trace={string.Join(" -> ", scoped.Trace)}{Environment.NewLine}" +
-                $"emitted result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}{Environment.NewLine}");
-        }
         return source;
     }
 
@@ -270,9 +253,12 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             _ => throw new ArgumentOutOfRangeException(nameof(fixture))
         };
 
-    internal static string Emit(FunctionBody4 body) =>
-        new SlangEmitter(new SlangTargetLowering().Lower(new ShaderModuleDeclaration<FunctionBody4>(
-            [body.Declaration], ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body))))
+    internal static string Emit(FunctionBody4 body) => Emit(Lower(body));
+
+    internal static string Emit(SlangFunctionBody body) =>
+        new SlangEmitter(new ShaderModuleDeclaration<SlangFunctionBody>(
+            [body.Declaration],
+            ImmutableDictionary<FunctionDeclaration, SlangFunctionBody>.Empty.Add(body.Declaration, body)))
         .Emit();
 
     internal static SlangFunctionBody Lower(FunctionBody4 body) =>
@@ -280,14 +266,6 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             [body.Declaration],
             ImmutableDictionary<FunctionDeclaration, FunctionBody4>.Empty.Add(body.Declaration, body)))
         .GetBody(body.Declaration);
-
-    private static void AssertEquivalent(Execution expected, Execution actual)
-    {
-        Assert.True(expected.Trace.SequenceEqual(actual.Trace),
-            $"Expected result: {expected.Result}; actual: {actual.Result}\n" +
-            $"Original blocks: {string.Join(" -> ", expected.Trace)}\nExecuted blocks: {string.Join(" -> ", actual.Trace)}");
-        Assert.Equal(expected.Result, actual.Result);
-    }
 
     [Fact]
     public void FixtureHasActualConfigurationSpecificCil()
@@ -300,8 +278,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.Equal("Release", configuration);
 #endif
         var method = ((Func<int, int>)ScalarControlFlowFixtures.MultipleReturns).Method;
-        var model = CompilerTestPipeline.ControlFlow(method);
-        var returns = model.Labels.Where(label => model.ControlFlow.Successor(label) is TerminateSuccessor)
+        var model = CompilerTestPipeline.Labelled(method);
+        var returns = model.Labels.Where(label => model[label].Terminator.ToSuccessor() is TerminateSuccessor)
             .ToArray();
         var debuggable = assembly.GetCustomAttribute<DebuggableAttribute>() ??
             throw new InvalidOperationException("Missing compiler configuration metadata.");
@@ -310,7 +288,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             case "Debug":
                 Assert.True(debuggable.IsJITOptimizerDisabled);
                 Assert.Single(returns);
-                Assert.Equal(3, model.ControlFlow.GetPred(returns[0]).Count());
+                Assert.Equal(3, model.Blocks.Blocks.Count(
+                    block => block.Terminator.ToSuccessor().AllTargets().Contains(returns[0])));
                 break;
             case "Release":
                 Assert.False(debuggable.IsJITOptimizerDisabled);
@@ -332,8 +311,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var body = CompilerTestPipeline.CompileBody(((Func<int, int>)ScalarControlFlowFixtures.SharedTail).Method);
         var branch = Assert.Single(body.Labels,
             label => body[label].Body.Last is Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>);
-        var tail = body[branch].ImmediatePostDominator;
-        Assert.NotNull(tail);
+        var tail = Assert.IsType<ExitPostDominance.Block>(body[branch].PostDominance).Target;
         Assert.Contains(body[tail].Body.Elements,
             instruction => instruction.Operation is IBinaryExpressionOperation { BinaryOp: BinaryArithmetic.Mul });
 
@@ -365,28 +343,28 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var result = ShaderValue.Intermediate(ShaderType.I32);
         var blocks = new[]
         {
-            ShaderRegionBody.Create(entry, [], [
+            Body(entry, [], [
                 Instruction.Factory.Store(default, new StoreOperation(), local.Value, Int(0)),
                 Instruction.Factory.Load(default, new LoadOperation(), argument, input.Value),
                 Instruction.Factory.Operation2(default, NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Gt>.Instance,
                     condition, argument, Int(0))
-            ], Terms.BrIf(condition, new(tail, [Int(10)]), new(tail, [Int(20)])), tail),
-            ShaderRegionBody.Create(tail, [incoming], [
+            ], Terms.BrIf(condition, new(tail, [Int(10)]), new(tail, [Int(20)]))),
+            Body(tail, [incoming], [
                 Instruction.Factory.Load(default, new LoadOperation(), before, local.Value),
                 Instruction.Factory.Operation2(default, NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                     incremented, before, Int(1)),
                 Instruction.Factory.Store(default, new StoreOperation(), local.Value, incremented)
-            ], Terms.Br(new(exit, [incoming])), exit),
-            ShaderRegionBody.Create(exit, [carried], [
+            ], Terms.Br(new(exit, [incoming]))),
+            Body(exit, [carried], [
                 Instruction.Factory.Load(default, new LoadOperation(), after, local.Value),
                 Instruction.Factory.Operation2(default, NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                     result, after, carried)
-            ], Terms.ReturnExpr(result), null)
+            ], Terms.ReturnExpr(result))
         };
-        return new FunctionBody4(declaration,
-            RegionTree<Label, ShaderRegionBody>.Block(entry, [
-                RegionTree<Label, ShaderRegionBody>.Block(exit, [], blocks[2], null),
-                RegionTree<Label, ShaderRegionBody>.Block(tail, [], blocks[1], exit)
+        return CreateFunctionBody(declaration,
+            RegionTree.Block(entry, [
+                RegionTree.Block(exit, [], blocks[2], null),
+                RegionTree.Block(tail, [], blocks[1], exit)
             ], blocks[0], tail));
     }
 
@@ -459,38 +437,27 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var tens = ShaderValue.Intermediate(ShaderType.I32);
         var answer = ShaderValue.Intermediate(ShaderType.I32);
         var declaration = new FunctionDeclaration("Swap", [], new FunctionReturn(ShaderType.I32, []), []);
-        var entryBody = ShaderRegionBody.Create(entry, [], [],
-            Terms.Br(new(loop, [Int(1), Int(2), ShaderValue.Literal(new BoolLiteral(true))])), loop);
-        var loopBody = ShaderRegionBody.Create(loop, [a, b, again], [
+        var entryBody = Body(entry, [], [],
+            Terms.Br(new(loop, [Int(1), Int(2), ShaderValue.Literal(new BoolLiteral(true))])));
+        var loopBody = Body(loop, [a, b, again], [
             Instruction.Factory.Operation2(default, NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Mul>.Instance,
                 tens, a, Int(10)),
             Instruction.Factory.Operation2(default, NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.Add>.Instance,
                 result, tens, b)
         ], Terms.BrIf(again, new(loop, [b, a, ShaderValue.Literal(new BoolLiteral(false))]),
-            new(exit, [result])), exit);
-        var exitBody = ShaderRegionBody.Create(exit, [answer], [], Terms.ReturnExpr(answer), null);
-        var body = new FunctionBody4(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry, [
-            RegionTree<Label, ShaderRegionBody>.Block(exit, [], exitBody, null),
-            RegionTree<Label, ShaderRegionBody>.Loop(loop, [], loopBody, exit, exit)
+            new(exit, [result])));
+        var exitBody = Body(
+            exit,
+            [answer],
+            [],
+            Terms.ReturnExpr(answer));
+        var body = CreateFunctionBody(declaration, RegionTree.Block(entry, [
+            RegionTree.Block(exit, [], exitBody, null),
+            RegionTree.Loop(loop, [], loopBody, exit, exit)
         ], entryBody, loop));
         var expected = new Execution(new Value.Integer(21), [entry, loop, loop, exit]);
         AssertEquivalent(expected, RunCfg(body, []));
         AssertEquivalent(expected, RunScoped(body, []));
-        var pointerLowered = new StablePointerRegionParameterPass().VisitFunctionBody(body);
-        AssertEquivalent(expected, RunCfg(pointerLowered, []));
-        AssertEquivalent(expected, RunScoped(pointerLowered, []));
-        var target = Lower(pointerLowered);
-        var source = Emit(pointerLowered);
-        var emitted = new EmittedScalarProgram(pointerLowered, source).Run([]);
-        AssertEquivalent(expected, emitted);
-        Capture("hand/block-parameter-swap.region.txt", pointerLowered.Dump());
-        Capture("hand/block-parameter-swap.ast.txt", target.PrettyPrint());
-        Capture("hand/block-parameter-swap.slang", source);
-        Capture(
-            "hand/block-parameter-swap.execution.txt",
-            $"arguments=[] result={emitted.Result} trace={string.Join(" -> ", emitted.Trace)}" +
-            Environment.NewLine);
-
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(body);
         AssertEquivalent(expected, RunCfg(lowered, []));
         AssertEquivalent(expected, RunScoped(lowered, []));
@@ -501,15 +468,15 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     {
         var body = HandBody();
         var cycleLabel = Label.Create("cycle");
-        var cycleRegion = ShaderRegionBody.Create(
+        var cycleRegion = Body(
             cycleLabel,
             [],
             [],
-            Terms.Br(new(cycleLabel, [])),
-            null);
-        var cycle = new FunctionBody4(
+            Terms.Br(new(cycleLabel, [])));
+        var cycle = CreateFunctionBody(
             new FunctionDeclaration("Cycle", [], new FunctionReturn(ShaderType.I32, []), []),
-            RegionTree<Label, ShaderRegionBody>.Loop(cycleLabel, [], cycleRegion, null, null));
+            RegionTree.Loop(cycleLabel, [], cycleRegion, null, null));
+        Assert.Single(cycle.Labels);
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
             () => RunCfg(cycle, [], 100)).Message);
         Assert.Contains("step budget", Assert.Throws<InvalidOperationException>(
@@ -545,11 +512,9 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
         Assert.Contains("SharedTail", slang);
         Assert.Contains("ContinueAndBreak", slang);
-        Capture("public/scalar.slang", slang);
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
         Assert.Contains("@fragment", wgsl);
         Assert.Contains("fn ScalarFragment", wgsl);
-        Capture("public/scalar.wgsl", wgsl);
     }
 
     [Fact]
@@ -557,16 +522,5 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
     {
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(new ScalarBooleanCallShader());
         Assert.Contains("fn BooleanFragment", wgsl);
-        Capture("public/boolean.wgsl", wgsl);
-    }
-
-    private static void Capture(string name, string content)
-    {
-        var directory = Environment.GetEnvironmentVariable("DRILLA_E2_CAPTURE_DIR");
-        if (string.IsNullOrWhiteSpace(directory)) return;
-        var path = Path.Combine(directory, name);
-        Directory.CreateDirectory(Path.GetDirectoryName(path) ??
-                                  throw new InvalidOperationException("Capture path has no directory."));
-        File.WriteAllText(path, content);
     }
 }

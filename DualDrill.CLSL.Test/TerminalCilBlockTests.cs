@@ -30,12 +30,9 @@ public sealed class TerminalCilBlockTests
             stages.Compiled.FunctionDefinitions.Values,
             body => ReferenceEquals(body.Declaration, declaration));
         var model = Assert.Single(
-            stages.ControlFlow.FunctionDefinitions.Values,
+            stages.Labelled.FunctionDefinitions.Values,
             body => body.Environment.Method == method);
-        var graph = model.ControlFlow;
-        var blocks = model.Labels.ToDictionary(
-            label => graph[label].ByteOffset,
-            label => graph[label]);
+        var blocks = model.Blocks.Blocks.ToDictionary(block => block.ByteOffset);
 
         Assert.True(model.Labels.ToHashSet().SetEquals(parsed.Labels));
 
@@ -51,7 +48,7 @@ public sealed class TerminalCilBlockTests
                     (7, 5, 1, 1));
                 Assert.Equal(blocks[7].Label,
                     Assert.IsType<UnconditionalSuccessor>(
-                        graph.Successor(blocks[6].Label)).Target);
+                        blocks[6].Terminator.ToSuccessor()).Target);
                 AssertTerminalRet(model, blocks[7]);
                 AssertDebugValueFlow(parsed, declaration, blocks);
                 break;
@@ -87,10 +84,10 @@ public sealed class TerminalCilBlockTests
     }
 
     private static void AssertTerminalRet(
-        MethodBodyAnalysisModel model,
+        LabelledCilFunctionBody model,
         CilInstructionBlock block)
     {
-        Assert.IsType<TerminateSuccessor>(model.ControlFlow.Successor(block.Label));
+        Assert.IsType<TerminateSuccessor>(block.Terminator.ToSuccessor());
         var control = Assert.IsType<CilControlFlow.Return>(block.Terminator);
         var last = block.Instructions[^1].Node;
         Assert.Equal(OpCodes.Ret, last.Instruction.OpCode);
