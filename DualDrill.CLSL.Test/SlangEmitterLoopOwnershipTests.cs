@@ -119,9 +119,7 @@ public sealed class SlangEmitterLoopOwnershipTests
 
     private static string Emit(MethodInfo method)
     {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        var body = parser.MethodBodies[declaration];
+        var body = CompilerTestPipeline.CompileBody(method);
         body = new FunctionToOperationPass().VisitFunctionBody(body);
         body = new RegionParameterToLocalVariablePass().VisitFunctionBody(body);
         return Emit(body);

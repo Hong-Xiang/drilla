@@ -21,5 +21,4 @@ public interface ISymbolTableView
     IEnumerable<StructureDeclaration> StructureDeclarations { get; }
     IEnumerable<VariableDeclaration> VariableDeclarations { get; }
     IEnumerable<FunctionDeclaration> FunctionDeclarations { get; }
-    MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration);
 }

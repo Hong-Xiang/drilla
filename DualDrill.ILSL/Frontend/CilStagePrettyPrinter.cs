@@ -3,8 +3,10 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.CodeTextWriter;
@@ -14,6 +16,42 @@ namespace DualDrill.CLSL.Frontend;
 
 internal static class CilStagePrettyPrinter
 {
+    public static void PrintValueControlFlow(
+        CilValueControlFlowBody body,
+        IndentedTextWriter writer)
+    {
+        var graph = body.Graph;
+        var context = body.DeclarationContext;
+        writer.WriteLine("flat-value-cfg");
+        foreach (var label in graph.Labels())
+        {
+            var block = graph[label];
+            label.Dump(context, writer);
+            writer.Write(" parameters=[");
+            WriteValues(block.Parameters, context, writer);
+            writer.WriteLine("]");
+            using (writer.IndentedScope())
+            {
+                foreach (var instruction in block.Body.Elements)
+                {
+                    if (instruction.Result is { } result)
+                    {
+                        result.Dump(context, writer);
+                        writer.Write(" = ");
+                    }
+
+                    writer.Write(instruction.Operation.Name);
+                    writer.Write("(");
+                    WriteValues(instruction.Operands, context, writer);
+                    writer.WriteLine(")");
+                }
+
+                writer.Write("control: ");
+                writer.WriteLine(block.Body.Last.Evaluate(new ValueTerminatorFormatter(context)));
+            }
+        }
+    }
+
     public static void PrintRawLinearCode(
         LinearCode<CilInstructionInfo> code,
         IndentedTextWriter writer,
@@ -47,41 +85,6 @@ internal static class CilStagePrettyPrinter
         writer.Write(" pre=");
         writer.Write(Stack(pre.Types));
         writer.WriteLine();
-    }
-
-    public static void PrintAnalyzedControlFlow(
-        ControlFlowGraph<CilInstructionBlock> graph,
-        ControlFlowAnalysis analysis,
-        IndentedTextWriter writer,
-        PrettyPrintOption option)
-    {
-        graph.PrettyPrint(writer, option);
-        var labels = graph.Labels()
-                          .OrderBy(label => graph[label].InstructionIndex)
-                          .ToImmutableArray();
-        var labelIds = labels.Select((label, index) => (label, index))
-                             .ToDictionary(item => item.label, item => item.index);
-
-        writer.WriteLine("control-flow-analysis");
-        using (writer.IndentedScope())
-        {
-            writer.Write("reverse-postorder=");
-            writer.WriteLine(LabelList(analysis.Labels, labelIds));
-            writer.Write("immediate-dominators=");
-            writer.WriteLine(AnalysisRelation(
-                labels,
-                label => analysis.DominatorTree.ImmediateDominator(label),
-                "<entry>",
-                labelIds));
-            writer.Write("immediate-postdominators=");
-            writer.WriteLine(AnalysisRelation(
-                labels,
-                analysis.PostDominatorTree.ImmediatePostDominator,
-                "<none>",
-                labelIds));
-            writer.Write("loops=");
-            writer.WriteLine(LabelList(labels.Where(analysis.IsLoop), labelIds));
-        }
     }
 
     public static void PrintControlFlowGraph(
@@ -213,6 +216,7 @@ internal static class CilStagePrettyPrinter
             double value => "operand=" + value.ToString("R", CultureInfo.InvariantCulture),
             char value => "operand=" + Quote(value.ToString()),
             string value => "operand=" + Quote(value),
+            byte[] value => "signature=0x" + Convert.ToHexString(value),
             ParameterInfo parameter =>
                 $"arg={Invariant(parameter.Position)}:{parameter.Name ?? "<unnamed>"} " +
                 $"type={TypeName(parameter.ParameterType)}",
@@ -281,17 +285,6 @@ internal static class CilStagePrettyPrinter
         IReadOnlyDictionary<Label, int> labelIds) =>
         "[" + string.Join(", ", labels.Select(label => LabelName(label, labelIds))) + "]";
 
-    private static string AnalysisRelation(
-        IEnumerable<Label> labels,
-        Func<Label, Label?> relation,
-        string missing,
-        IReadOnlyDictionary<Label, int> labelIds) =>
-        "[" + string.Join(
-            ", ",
-            labels.Select(label =>
-                LabelName(label, labelIds) + ":" +
-                (relation(label) is { } related ? LabelName(related, labelIds) : missing))) + "]";
-
     private static string LabelName(Label label, IReadOnlyDictionary<Label, int> labelIds) =>
         "^" + Invariant(labelIds[label]) + "(" + (label.Name ?? "<unnamed>") + ")";
 
@@ -338,4 +331,87 @@ internal static class CilStagePrettyPrinter
         new(
             $"Unsupported CIL diagnostic operand {operand?.GetType().FullName ?? "<null>"} " +
             $"at {ByteOffset(instruction.ByteOffset)} ({OpCodeName(instruction)}).");
+
+    private static void WriteValues(
+        IEnumerable<IShaderValue> values,
+        ILocalDeclarationContext context,
+        IndentedTextWriter writer)
+    {
+        var separator = "";
+        foreach (var value in values)
+        {
+            writer.Write(separator);
+            WriteValue(value, context, writer);
+            separator = ", ";
+        }
+    }
+
+    private static void WriteValue(
+        IShaderValue value,
+        ILocalDeclarationContext context,
+        IndentedTextWriter writer)
+    {
+        switch (value)
+        {
+            case IntermediateValue:
+            case LiteralValue:
+                value.Dump(context, writer);
+                return;
+            case ParameterPointerValue parameter:
+                writer.Write("&arg(");
+                writer.Write(parameter.Declaration.Name);
+                writer.Write(")");
+                return;
+            case VariablePointerValue variable:
+                writer.Write("&var(");
+                writer.Write(variable.Declaration.Name);
+                writer.Write(")");
+                return;
+            case StoragePointerValue storage:
+                writer.Write("&storage(");
+                writer.Write(storage.VariableDeclaration.Name);
+                writer.Write(")");
+                return;
+            case FunctionDeclaration function:
+                writer.Write("@fn(");
+                writer.Write(function.Name);
+                writer.Write(")");
+                return;
+            default:
+                writer.Write("<");
+                writer.Write(value.Type.Name);
+                writer.Write(">");
+                return;
+        }
+    }
+
+    private sealed class ValueTerminatorFormatter(ILocalDeclarationContext context)
+        : ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, string>
+    {
+        public string ReturnVoid() => "return";
+
+        public string ReturnExpr(IShaderValue expr) => $"return {Value(expr)}";
+
+        public string Br(RegionJump<IShaderValue> target) =>
+            $"br {Jump(target)}";
+
+        public string BrIf(
+            IShaderValue condition,
+            RegionJump<IShaderValue> trueTarget,
+            RegionJump<IShaderValue> falseTarget) =>
+            $"br_if {Value(condition)} true={Jump(trueTarget)} false={Jump(falseTarget)}";
+
+        private string Jump(RegionJump<IShaderValue> jump) =>
+            $"{Label(jump.Label)}({string.Join(", ", jump.Arguments.Select(Value))})";
+
+        private string Label(Label label) => $"^{context.LabelIndex(label)}({label.Name})";
+
+        private string Value(IShaderValue value)
+        {
+            using var text = new StringWriter(CultureInfo.InvariantCulture);
+            using var valueWriter = new IndentedTextWriter(text);
+            WriteValue(value, context, valueWriter);
+            return text.ToString();
+        }
+    }
 }

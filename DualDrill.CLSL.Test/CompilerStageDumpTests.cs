@@ -63,14 +63,7 @@ public sealed class CompilerStageDumpTests
                     "    control: synthetic fallthrough target=^3(0x7)",
                     "^3(0x7) instructions=#5..#5 bytes=IL_0007..IL_0008 entry=[i32] " +
                     "predecessors=[^1(0x3), ^2(0x6)]",
-                    "    control: native ret",
-                    "control-flow-analysis",
-                    "    reverse-postorder=[^0(0x0), ^1(0x3), ^2(0x6), ^3(0x7)]",
-                    "    immediate-dominators=[^0(0x0):<entry>, ^1(0x3):^0(0x0), " +
-                    "^2(0x6):^0(0x0), ^3(0x7):^0(0x0)]",
-                    "    immediate-postdominators=[^0(0x0):^3(0x7), ^1(0x3):^3(0x7), " +
-                    "^2(0x6):^3(0x7), ^3(0x7):<none>]",
-                    "    loops=[]"
+                    "    control: native ret"
                 ], Lines(model.ControlFlow.PrettyPrint()));
                 break;
             case "Release":
@@ -92,12 +85,7 @@ public sealed class CompilerStageDumpTests
                     "^1(0x3) instructions=#2..#3 bytes=IL_0003..IL_0005 entry=[] predecessors=[^0(0x0)]",
                     "    control: native ret",
                     "^2(0x5) instructions=#4..#5 bytes=IL_0005..IL_0007 entry=[] predecessors=[^0(0x0)]",
-                    "    control: native ret",
-                    "control-flow-analysis",
-                    "    reverse-postorder=[^0(0x0), ^1(0x3), ^2(0x5)]",
-                    "    immediate-dominators=[^0(0x0):<entry>, ^1(0x3):^0(0x0), ^2(0x5):^0(0x0)]",
-                    "    immediate-postdominators=[^0(0x0):<none>, ^1(0x3):<none>, ^2(0x5):<none>]",
-                    "    loops=[]"
+                    "    control: native ret"
                 ], Lines(model.ControlFlow.PrettyPrint()));
                 break;
             default:
@@ -119,7 +107,7 @@ public sealed class CompilerStageDumpTests
 
         Assert.EndsWith("pre=[]", liveLoad, StringComparison.Ordinal);
         Assert.True(model.PreAnnotatedCode.Instructions[1].Node.Index > 1);
-        Assert.Equal(2, model.ControlFlow.Node.Count);
+        Assert.Equal(2, model.ControlFlow.Count);
         Assert.Equal(2, Lines(model.ControlFlow.PrettyPrint()).Count(line => line.StartsWith("^")));
     }
 
@@ -189,11 +177,7 @@ public sealed class CompilerStageDumpTests
         value.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
     private static MethodBodyAnalysisModel ParseModel(MethodInfo method)
-    {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        return parser.Context.GetFunctionDefinition(declaration);
-    }
+        => CompilerTestPipeline.ControlFlow(method);
 
     private static MethodInfo GetMethod(string name) =>
         typeof(CompilerStageDumpTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)

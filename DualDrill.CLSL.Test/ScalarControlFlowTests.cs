@@ -148,16 +148,19 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
 
     private string Check(MethodInfo method, ImmutableArray<Value> arguments, Value expected)
     {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        var original = parser.MethodBodies[declaration];
-        var model = parser.Context.GetFunctionDefinition(declaration);
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var original = Assert.Single(
+            stages.Compiled.FunctionDefinitions.Values,
+            body => body.Declaration.Name == method.Name);
+        var model = Assert.Single(
+            stages.ControlFlow.FunctionDefinitions.Values,
+            body => body.Environment.Method == method);
         Assert.True(model.Labels.ToHashSet().SetEquals(original.Labels));
         foreach (var label in model.Labels)
         {
-            var range = model.ControlFlow.Node[label];
+            var range = model.ControlFlow[label];
             output.WriteLine($"{method.Name} {label}: IL_{range.ByteOffset:X4}, {range.InstructionCount} instructions, " +
-                $"successors {string.Join(", ", model.ControlFlow.Node.GetSucc(label))}");
+                $"successors {string.Join(", ", model.ControlFlow.GetSucc(label))}");
         }
         var lowered = new RegionParameterToLocalVariablePass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
@@ -196,10 +199,8 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.Equal("Release", configuration);
 #endif
         var method = ((Func<int, int>)ScalarControlFlowFixtures.MultipleReturns).Method;
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        var model = parser.Context.GetFunctionDefinition(declaration);
-        var returns = model.Labels.Where(label => model.ControlFlow.Node.Successor(label) is TerminateSuccessor)
+        var model = CompilerTestPipeline.ControlFlow(method);
+        var returns = model.Labels.Where(label => model.ControlFlow.Successor(label) is TerminateSuccessor)
             .ToArray();
         var debuggable = assembly.GetCustomAttribute<DebuggableAttribute>() ??
             throw new InvalidOperationException("Missing compiler configuration metadata.");
@@ -208,7 +209,7 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
             case "Debug":
                 Assert.True(debuggable.IsJITOptimizerDisabled);
                 Assert.Single(returns);
-                Assert.Equal(3, model.ControlFlow.Node.GetPred(returns[0]).Count());
+                Assert.Equal(3, model.ControlFlow.GetPred(returns[0]).Count());
                 break;
             case "Release":
                 Assert.False(debuggable.IsJITOptimizerDisabled);
@@ -220,17 +221,14 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         output.WriteLine($"{configuration}: {model.CodeByteSize} CIL bytes, {model.Labels.Length} blocks, " +
             $"{returns.Length} terminal return blocks.");
 
-        parser = new RuntimeReflectionParser();
-        var edge = parser.ParseMethod(((Func<int, int>)ScalarControlFlowFixtures.EdgeValue).Method);
-        Assert.Contains(parser.MethodBodies[edge].Labels, label => !parser.MethodBodies[edge][label].Parameters.IsEmpty);
+        var edge = CompilerTestPipeline.CompileBody(((Func<int, int>)ScalarControlFlowFixtures.EdgeValue).Method);
+        Assert.Contains(edge.Labels, label => !edge[label].Parameters.IsEmpty);
     }
 
     [Fact]
     public void SharedTailAndNestedLoopFixturesHaveTheRequiredTopology()
     {
-        var parser = new RuntimeReflectionParser();
-        var shared = parser.ParseMethod(((Func<int, int>)ScalarControlFlowFixtures.SharedTail).Method);
-        var body = parser.MethodBodies[shared];
+        var body = CompilerTestPipeline.CompileBody(((Func<int, int>)ScalarControlFlowFixtures.SharedTail).Method);
         var branch = Assert.Single(body.Labels,
             label => body[label].Body.Last is Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>);
         var tail = body[branch].ImmediatePostDominator;
@@ -238,12 +236,10 @@ public sealed class ScalarControlFlowTests(ITestOutputHelper output)
         Assert.Contains(body[tail].Body.Elements,
             instruction => instruction.Operation is IBinaryExpressionOperation { BinaryOp: BinaryArithmetic.Mul });
 
-        var nestedParser = new RuntimeReflectionParser();
-        var nestedDeclaration =
-            nestedParser.ParseMethod(((Func<int, int, int, int, int>)DevelopTestShaderModule.NestedLoop).Method);
-        var nested = nestedParser.Context.GetFunctionDefinition(nestedDeclaration);
-        var analysis = nested.ControlFlow.Annotation;
-        Assert.Equal(2, nested.Labels.Count(analysis.IsLoop));
+        var nestedMethod = ((Func<int, int, int, int, int>)DevelopTestShaderModule.NestedLoop).Method;
+        var nested = CompilerTestPipeline.ValueControlFlow(nestedMethod);
+        var analysis = nested.Graph.ControlFlowAnalysis();
+        Assert.Equal(2, nested.Graph.Labels().Count(analysis.IsLoop));
     }
 
     private static readonly ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,

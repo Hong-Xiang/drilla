@@ -16,7 +16,7 @@ public sealed class LinearCilControlFlowTests
     public void LinearInstructionsRemainOrderedThroughConcreteBlocks()
     {
         var model = CreateModel(nameof(CountDown));
-        var graph = model.ControlFlow.Node;
+        var graph = model.ControlFlow;
         var blocks = model.Labels.Select(label => graph[label]).OrderBy(block => block.InstructionIndex);
         var blockedInstructions = blocks.SelectMany(block => block.Instructions).Select(item => item.Node).ToArray();
 
@@ -36,7 +36,7 @@ public sealed class LinearCilControlFlowTests
     public void ConcreteControlPreservesForwardBackwardAndFallthroughTopology()
     {
         var model = CreateModel(nameof(CountDown));
-        var graph = model.ControlFlow.Node;
+        var graph = model.ControlFlow;
         var blocks = model.Labels.Select(label => graph[label]).ToArray();
 
         Assert.Contains(blocks,
@@ -57,17 +57,21 @@ public sealed class LinearCilControlFlowTests
     public void NativeProjectionAndLoweredBooleanKeepDistinctArmMeanings()
     {
         var method = GetMethod(nameof(Choose));
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        var model = parser.Context.GetFunctionDefinition(declaration);
-        var graph = model.ControlFlow.Node;
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var model = Assert.Single(
+            stages.ControlFlow.FunctionDefinitions.Values,
+            body => body.Environment.Method == method);
+        var graph = model.ControlFlow;
         var control = model.Labels.Select(label => graph[label].Terminator)
                            .OfType<CilControlFlow.ConditionalBranch>()
                            .Single();
         var successor = Assert.IsType<ConditionalSuccessor>(control.ToSuccessor());
         var block = model.Labels.Single(label => ReferenceEquals(graph[label].Terminator, control));
+        var valueBody = Assert.Single(
+            stages.ValueControlFlow.FunctionDefinitions.Values,
+            body => body.Source.Environment.Method == method);
         var lowered = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
-            parser.MethodBodies[declaration][block].Body.Last);
+            valueBody.Graph[block].Body.Last);
 
         Assert.Equal(control.BranchTarget, successor.TrueTarget);
         Assert.Equal(control.FallThroughTarget, successor.FalseTarget);
@@ -94,8 +98,10 @@ public sealed class LinearCilControlFlowTests
     public void ExceptionHandlingAndItsControlOpcodesAreRejected()
     {
         var method = GetMethod(nameof(TryFinally));
-        var exception = Assert.Throws<NotSupportedException>(() => CilMethodDecoder.Decode(method));
-        var instructions = Decode(method);
+        var raw = CilMethodDecoder.Decode(method);
+        var instructions = raw.Instructions;
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            CilPreStackPass.Run(CompilerTestPipeline.ParseRaw(method)));
         var leave = Assert.Single(instructions,
             instruction => instruction.Instruction.OpCode.ToILOpCode() is ILOpCode.Leave or ILOpCode.Leave_s);
         var endFinally = Assert.Single(instructions,
@@ -110,7 +116,7 @@ public sealed class LinearCilControlFlowTests
     public void ConditionalProjectionPreservesParallelArmsAndConcretePayload()
     {
         var model = CreateModel(nameof(Choose));
-        var modelGraph = model.ControlFlow.Node;
+        var modelGraph = model.ControlFlow;
         var originalBlock = model.Labels.Select(label => modelGraph[label])
                                  .Single(block => block.Terminator is CilControlFlow.ConditionalBranch);
         var original = Assert.IsType<CilControlFlow.ConditionalBranch>(originalBlock.Terminator);
@@ -130,7 +136,6 @@ public sealed class LinearCilControlFlowTests
         Assert.Single(projectedGraph.Predecessor(original.BranchTarget));
         Assert.Same(sameTarget, projectedGraph[original.BranchTarget]);
 
-        Assert.Same(modelGraph, model.ControlFlow.Annotation.ControlFlowGraph);
         Assert.Same(originalBlock, modelGraph[originalBlock.Label]);
         Assert.Same(original.Instruction.Instruction,
             Assert.IsType<CilControlFlow.ConditionalBranch>(
@@ -138,11 +143,7 @@ public sealed class LinearCilControlFlowTests
     }
 
     private static MethodBodyAnalysisModel CreateModel(string name)
-    {
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(GetMethod(name));
-        return parser.Context.GetFunctionDefinition(declaration);
-    }
+        => CompilerTestPipeline.ControlFlow(GetMethod(name));
 
     private static MethodInfo GetMethod(string name)
     {

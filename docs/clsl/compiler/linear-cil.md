@@ -2,16 +2,22 @@
 
 ## Status and Scope
 
-This is the agreed next frontend design for issue #96, following the shared
+**Implemented collection contract:** [parse a complete all-reference CIL module](passes.md#implemented-boundary-parse-a-complete-cil-module).
+The parser recursively collects all original-CIL method/type/field references,
+including unreachable instruction positions, up to explicit builtin/intrinsic
+boundaries and ends at raw CIL IR. Pre and later transformations are explicit
+typed passes. This changes module membership, not the later per-function
+reachable-instruction analysis.
+
+This is the implemented frontend design for issue #96, following the shared
 constructs in [the IR contract](../ir_spec.md). It supersedes the earlier proposal
 to require basic-block construction before stack-type analysis, or to split the
 condition/return generic parameters of `ITerminatorSemantic`.
 
-The pipeline below is the target contract. The current implementation now
-decodes and retains the complete linear source, computes reachable
-pre-instruction stack types, and only then constructs the reachable basic-block
-CFG consumed by the runtime-reflection parser. Value lifting remains combined
-with parsing; later region and AST stages remain separate work.
+The current implementation decodes and retains the complete linear source,
+computes reachable pre-instruction stack types, constructs the reachable
+basic-block CFG, lifts it to a flat value CFG, then runs existing control-flow
+analysis and region organization. Target AST separation remains later work.
 
 ### Implemented Frontend Boundary
 
@@ -42,8 +48,9 @@ Its index/range properties and the model indexer remain computed accessors, not
 compatibility constructors. Repository callers migrated together; there is no
 compatibility overload or alias.
 
-Branch operands and resolved targets are checked at this boundary. Methods with
-exception handling clauses are rejected before CFG construction, and concrete
+Branch operands and resolved targets are checked by the Pre/CFG boundary.
+Raw parsing preserves methods with exception handling clauses; `CilPreStackPass`
+rejects them before propagation and CFG construction. Concrete
 native controls accept only supported opcode families (`ret`, `br`/`br.s`, and
 the supported conditional branches). Unsupported `switch`, exception flow, and
 reaching the end of CIL without an explicit return fail explicitly.
@@ -51,37 +58,52 @@ reaching the end of CIL without an explicit return fail explicitly.
 `CilPreStackAnalyzer` is a worklist over original instruction indexes. It uses
 `CilInstructionInfo.Evaluate` for the existing opcode dispatch, resolves branch
 targets without constructing a CFG, and produces
-`ImmutableDictionary<int, ImmutableStack<CilStackType>>`. The live parser creates
-all basic-block input values from those completed Pre facts and validates its
-concrete value stack before every source instruction and at every outgoing edge.
-Reachable called-method discovery uses the same Pre key set; dead calls are not
-declared or compiled merely because their bytes remain available for diagnostics.
+`LinearCode<Annotated<CilInstructionInfo, PreStack>>`. `CilStackToValuePass`
+creates all basic-block input values from those completed
+Pre facts and validates its concrete value stack before every source instruction
+and at every outgoing edge. Method discovery is independent: the raw collector
+walks every original instruction operand, so dead calls and their recursive
+reference closure are included in module membership.
 
 `CilMethodEnvironment` owns the immutable signature, locals, source offsets, and
 offset lookup shared by both linear values. `CilPreStackAnalyzer` returns
 `LinearCode<Annotated<CilInstructionInfo, PreStack>>` only after successful
 analysis. `CilControlFlowGraphBuilder` consumes that completed value and the raw
-source. `MethodBodyAnalysisModel` is now only a complete immutable aggregate
-stored by the symbol table; it has no nullable completion fields or `Analyze`
-operation. Reachable blocks carry the exact annotated instruction slice, and no
-default empty value represents pending analysis. Its public constructor checks
+source. `MethodBodyAnalysisModel` is the immutable reachable-CIL-CFG stage produced by
+`CilControlFlowPass`; it is not a parser cache. Reachable blocks carry the exact
+annotated instruction slice, and no default empty value represents pending
+analysis. Its public constructor checks
 that execution begins at original instruction index zero, every graph key is its
 block's exact label, every stored successor equals
 the concrete terminator projection including ordered arms, all definitions are
 entry-reachable, and the blocks exactly partition the completed annotated source.
 
-`RuntimeReflectionParser` distinguishes declarations involved in active
-recursive compilation from fully completed method definitions. Recursive calls
-may use an in-progress declaration, but a method enters the completed set only
-after analysis, reachable-callee compilation, and value lowering all succeed.
-Once an ordinary method enters the body-compilation boundary, any failure in
-model construction, analysis, reachable-callee compilation, or value lowering
-poisons that parser instance, clears its produced method bodies, and causes later
-method/body/module compilation attempts to fail explicitly. Root declaration
-and module-metadata parsing occur before this boundary. After a body-compilation
-failure the context is diagnostic-only; retry requires a new parser with a fresh
-compilation context rather than attempting rollback through partially registered
-symbols.
+`RuntimeReflectionParser` declares a method before scanning its body, so repeated
+and mutually recursive references terminate. It freezes the complete shared
+symbol snapshot only after closure collection finishes, then publishes
+`RawCilFunctionBody` values with immutable per-method local/argument views.
+All type-bearing roots use the same recursive collector, including locals,
+module-variable types, static declaring types, base types and inherited layout
+fields. Function-pointer signatures recursively contribute return and parameter
+types before stopping at a non-layout boundary; runtime `calli` support is not
+implied. Type visitation is recorded before member traversal to terminate
+reference cycles. Unsupported recursive value layouts fail contextually.
+Collection does not execute methods, intrinsic stubs, constructors, or static
+initializers. A decode or metadata-resolution failure publishes no module.
+Failures in later passes do not invalidate or mutate an already returned raw
+module.
+
+Shader module variables are field-backed. An attributed property is rejected
+during metadata collection because the current CIL frontend has no property
+getter/backing-field variable ABI. The parser does not publish a property
+declaration that later symbol lookup cannot consume.
+
+Frozen symbol views snapshot mutable `CompilationContext` parents recursively.
+Later parent mutation cannot change lookup results in a previously returned raw
+module. Every public collection operation, including direct type/field/parameter
+parsing and module variable/entry discovery, uses the same fail-closed lifecycle.
+Failure poisons that parser before a cached placeholder or partial module can be
+returned; recursive helpers remain inside the active operation.
 
 The implemented `CilStackType` domain is:
 
@@ -99,15 +121,17 @@ storage rules.
 
 Reachable semantics are limited to the operations already implemented by the
 runtime-reflection value visitor. Reachable unsupported instructions fail with
-method and source context. Syntactic control validation still covers the whole
-source, so malformed branch targets and unsupported native controls such as
-`switch` are rejected even when dead. Exception flow, `initobj`, indirect
+method and source context in the responsible later pass. Syntactic control
+validation still covers the whole source, so malformed branch targets and
+unsupported native controls such as `switch` are rejected even when dead.
+Exception flow, `initobj`, indirect
 loads/stores, `ldnull`, `dup`, and unsupported unary operations remain
 unsupported. `initobj` is rejected at shared instruction dispatch because the
 value frontend does not yet emit its required zero-initialization store;
-ordinary `pop` remains supported. Dead non-control instructions do not prevent
-compilation of the reachable method. Independent CFG-value lifting and later
-region/AST work remain subsequent steps.
+ordinary `pop` remains supported. Dead non-control instructions in one collected
+function remain absent from that function's Pre/CFG. A separately collected dead
+callee is nevertheless compiled by the module pipeline and may fail on its own
+reachable unsupported semantics; this is the intentional all-reference policy.
 
 ```text
 LinearCode<CilInstruction>
@@ -131,11 +155,13 @@ representation:
 LinearCode<CilInstructionInfo> raw = CilMethodDecoder.Decode(method);
 Console.Write(raw.PrettyPrint());
 
-var parser = new RuntimeReflectionParser();
-var declaration = parser.ParseMethod(method);
-var completed = parser.Context.GetFunctionDefinition(declaration);
-Console.Write(completed.PreAnnotatedCode.PrettyPrint());
-Console.Write(completed.ControlFlow.PrettyPrint());
+var rawModule = new RuntimeReflectionParser().ParseMethod(method);
+var preModule = CilPreStackPass.Run(rawModule);
+var cfgModule = CilControlFlowPass.Run(preModule);
+var valueModule = CilStackToValuePass.Run(cfgModule);
+Console.Write(preModule.FunctionDefinitions.Values.Single().Code.PrettyPrint());
+Console.Write(cfgModule.FunctionDefinitions.Values.Single().ControlFlow.PrettyPrint());
+Console.Write(valueModule.FunctionDefinitions.Values.Single().Dump());
 ```
 
 The interface operation also accepts an `IndentedTextWriter` and
@@ -159,31 +185,34 @@ The raw view remains the authoritative complete-source diagnostic.
 
 ### Breaking API migration
 
-The three aggregate dump methods and the raw `MethodBodyAnalysisModel`
-constructor were removed without compatibility shims:
+Parsing and compilation are now separate public operations without compatibility
+shims:
 
 | Removed API | Replacement |
 |---|---|
 | `new MethodBodyAnalysisModel(method)` | `CilMethodDecoder.Decode(method)` |
 | `model.Instructions` / `model.PreStackTypes` | `model.RawCode` / `model.PreAnnotatedCode` |
-| `model.ControlFlowGraph` | `model.ControlFlow.Node` |
+| `RuntimeReflectionParser.ParseMethod(...) -> FunctionDeclaration` | `ParseMethod(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
+| `RuntimeReflectionParser.ParseShaderModule(...) -> ShaderModuleDeclaration<FunctionBody4>` | `ParseShaderModule(...) -> ShaderModuleDeclaration<RawCilFunctionBody>` |
+| `CLSLCompiler.Parse(...) -> ShaderModuleDeclaration<FunctionBody4>` | `Parse(...)` for raw CIL; `Compile(...)` for `FunctionBody4` |
+| `parser.MethodBodies` / `ParseMethodBody3` | `CilPreStackPass` -> `CilControlFlowPass` -> `CilStackToValuePass` -> `CilRegionPass` |
+| `model.ControlFlowGraph` | `model.ControlFlow` |
 | `MethodBodyAnalysisModel.CilInstructionBlock` | `CilInstructionBlock` in `DualDrill.CLSL.Frontend` |
 | `block.Instructions[i]` as a bare CIL instruction | `block.Instructions[i].Node`, with `.Annotation` holding its `PreStack` |
 | `DumpRawLinearCil()` | `RawCode.PrettyPrint()` |
 | `DumpAnalyzedLinearCil()` | `PreAnnotatedCode.PrettyPrint()` |
 | `DumpReachableControlFlowGraph()` | `ControlFlow.PrettyPrint()` |
 
-`ISymbolTable.AddFunctionDefinition` now requires a complete immutable model.
-Clients that predeclare a reflection method add its `FunctionDeclaration` and
-let `RuntimeReflectionParser.ParseMethod(MethodBase)` build and register all
-stages atomically.
+`ISymbolTable` no longer stores compiled body caches. Clients that predeclare a
+reflection method add its `FunctionDeclaration`; parsing freezes a symbol view
+into the raw module, and later passes consume only that returned module.
 
 Every `Annotated<TNode, TAnnotation>` carries a readonly typed printer chosen by
 its producer and implements `IPrintable` directly. Equality and hashing compare
 only `Node` and `Annotation`; presentation is not analysis identity. Instruction
-annotations print the instruction and its entry stack together. The graph
-annotation prints the typed CFG followed by reverse-postorder, immediate-dominator,
-immediate-postdominator, and loop facts from its bound `ControlFlowAnalysis`.
+annotations print the instruction and its entry stack together. The reachable CIL CFG and flat value CFG each have their own fixed readable
+format. `ControlFlowAnalysis` is computed after flat value lifting and consumed
+directly by `CilRegionPass`.
 Type-changing annotation maps must supply a printer for the output types; the
 identity and composition laws concern mapped `Node` and `Annotation` data, not
 reuse of an incompatible presentation function.
@@ -359,10 +388,11 @@ original terminating instruction, through the BB body/terminator representation.
 Unreachable instructions remain available in the original linear source but do
 not require fabricated entry types or emitted blocks.
 
-Instruction and callee discovery used for compilation must consistently consume
-the reachable view; retaining the full source for diagnostics must not cause a
-dead call to be lowered through a separate path. Existing method-level rejection
-of unsupported exception handling remains in force.
+Instruction lowering consumes the reachable per-function view. Module collection
+instead consumes all original instruction operands, so dead calls contribute
+declarations and recursively collected bodies without fabricating reachable CFG
+nodes. Existing method-level rejection of unsupported exception handling occurs
+in `CilPreStackPass`.
 
 Use `CFG<TBasicBlock>` to preserve the concrete payload type. CFG and graph
 analysis need only a read-only control capability. They must not convert the

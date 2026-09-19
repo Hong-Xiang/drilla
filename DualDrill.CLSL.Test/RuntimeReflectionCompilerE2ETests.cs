@@ -30,7 +30,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 {
     void Dump(string title, ShaderModuleDeclaration<FunctionBody4> module)
     {
-        var formatter = new ShaderModuleFormatter();
+        var formatter = new ShaderModuleFormatter<FunctionBody4>();
         Output.WriteLine($"=== {title} ===");
         module.Accept(formatter);
         Output.WriteLine(formatter.Dump());
@@ -58,7 +58,8 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         var sep = $"\n{new string('-', 10)}\n";
         var context = CompilationContext.Create();
         var parser = new RuntimeReflectionParser(context);
-        var module = parser.ParseShaderModule(shader);
+        var rawModule = parser.ParseShaderModule(shader);
+        var module = CilModuleCompiler.Compile(rawModule);
         Dump("IR", module);
         //module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
         module = module.RunPass(new FunctionToOperationPass());
@@ -269,16 +270,20 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
             "Select",
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Multiple-return helper method was not found");
-        var parser = new RuntimeReflectionParser();
-        var declaration = parser.ParseMethod(method);
-        var actualMethodBody = parser.Context.GetFunctionDefinition(declaration);
-        var controlFlowGraph = actualMethodBody.ControlFlow.Node;
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var actualMethodBody = Assert.Single(
+            stages.ControlFlow.FunctionDefinitions.Values,
+            body => body.Environment.Method == method);
+        var controlFlowGraph = actualMethodBody.ControlFlow;
         var labels = controlFlowGraph.Labels().ToArray();
         var conditional = Assert.Single(
             labels,
             label => controlFlowGraph.GetSucc(label).Count() == 2);
         var branchTargets = controlFlowGraph.GetSucc(conditional).ToArray();
-        var postDominators = actualMethodBody.ControlFlow.Annotation.PostDominatorTree;
+        var valueBody = Assert.Single(
+            stages.ValueControlFlow.FunctionDefinitions.Values,
+            body => body.Source.Environment.Method == method);
+        var postDominators = valueBody.Graph.ControlFlowAnalysis().PostDominatorTree;
 
         switch (configuration)
         {
