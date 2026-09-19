@@ -5,7 +5,7 @@ using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.Analysis;
 
-public record struct IncomingControlArm(
+public readonly record struct IncomingControlArm(
     Label Source,
     int SuccessorIndex,
     bool IsBackedge);
