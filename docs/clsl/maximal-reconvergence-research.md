@@ -7,6 +7,10 @@ This document accompanies the baseline and pointer-lowering repairs in PR #79.
 It does not introduce control-flow restructuring, new shader attributes, subgroup
 operations, a Vulkan execution path, or a Slang upgrade.
 
+The later [proposed reconvergence contract](./reconvergence-contract.md) fixes
+bounded executable examples and the initial checked-shape policy without changing
+production compiler behavior.
+
 The assumed input is compiled .NET CIL, not the original C# AST. The goal is to
 define useful, explicit GPU execution semantics for that input, not to reconstruct
 every source-level syntactic intention. Optional source annotations may be
