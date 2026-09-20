@@ -12,7 +12,7 @@ public sealed partial record class GPUTextureView<TBackend>(GPUHandle<TBackend, 
 {
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 

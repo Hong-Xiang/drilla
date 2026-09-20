@@ -74,7 +74,7 @@ public sealed record class GPUHandlesCodeGen(ModuleDeclaration Module)
         EmitMethodDefinitions(sb, decl);
         sb.AppendLine("    public void Dispose()");
         sb.AppendLine("    {");
-        sb.AppendLine("        TBackend.Instance.DisposeHandle(Handle);");
+        sb.AppendLine("        Handle.Release(TBackend.Instance.DisposeHandle);");
         sb.AppendLine("    }");
         sb.AppendLine("}");
     }

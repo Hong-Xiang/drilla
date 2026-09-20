@@ -82,7 +82,7 @@ public sealed partial record class GPUCommandEncoder<TBackend>(GPUHandle<TBacken
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 

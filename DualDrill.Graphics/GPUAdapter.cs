@@ -22,7 +22,7 @@ public sealed partial record class GPUAdapter<TBackend>(GPUHandle<TBackend, GPUA
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 
