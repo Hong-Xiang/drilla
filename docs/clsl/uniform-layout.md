@@ -94,7 +94,9 @@ var group1Buffers = reflection.GetBindGroupLayoutDescriptorBuffer(module, 1);
 `GetUniformBindings` returns each uniform's exact name, group, binding,
 `GPUBufferBindingType.Uniform` kind, OR-combined stage visibility,
 dynamic-offset flag, total layout, and member offsets/sizes/natural/effective
-alignments.
+alignments. It first applies the shared module metadata validator, so missing or
+negative coordinates, duplicate binding pairs, and address-space mismatches
+fail with the same diagnostics as compilation.
 
 Both descriptor methods require an explicit nonnegative group. An absent group
 returns an empty descriptor. Their entries are projections of
