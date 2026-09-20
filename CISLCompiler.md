@@ -98,10 +98,12 @@ currently admits matching f32 scalar/vector `dpdx`, `dpdy`, and `fwidth`; f16/f6
 that deliberately narrow profile bound. Coarse/fine forms are separately rejected because
 the pinned Slang-to-WGSL route does not support them. Derivative operands may vary.
 
-The mapped Slang names are `ddx`, `ddy`, and `fwidth`. A module declaration with the mapped
-name of a derivative actually used by the module is rejected to prevent ordinary user calls
-from capturing the target builtin spelling. This is a narrow collision check, not general
-symbol renaming; a user helper named `dpdx` remains an ordinary helper.
+The mapped Slang names are `ddx`, `ddy`, and `fwidth`. The Slang target-lowering module
+boundary rejects a module declaration with the mapped name of a derivative actually used by
+the module, including callers that invoke target lowering directly without a cooperation
+profile. This prevents ordinary user calls from capturing the target builtin spelling. It is
+a narrow collision check, not general symbol renaming; a user helper named `dpdx` remains an
+ordinary helper.
 
 Admission publishes immutable `CLSLCooperationFacts` containing the entry declaration,
 original block identities, original sensitive sites, and call-site-to-callee inheritance.
