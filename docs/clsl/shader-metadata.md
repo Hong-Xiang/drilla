@@ -14,6 +14,12 @@ nonnegative, and each `(group, binding)` pair must be unique across the module.
 Reusing a binding number in a different group is valid. Dynamic offsets are
 buffer-only; texture and sampler bindings reject them.
 
+A module resource declaration's `Type` is the direct resource type. Pointer-
+wrapped resource declaration types reject at any depth before ordinary/resource
+classification. This check does not inspect `VariableDeclaration.Value.Type`:
+valid resource values are naturally pointers in the IR. Ordinary scalar pointer
+globals remain outside this resource rule.
+
 The runtime-reflection frontend counts the raw CLR attributes before converting
 them to `ImmutableHashSet<IShaderAttribute>`. This ordering is required because
 identical attributes can be emitted with `Reflection.Emit` even when normal C#

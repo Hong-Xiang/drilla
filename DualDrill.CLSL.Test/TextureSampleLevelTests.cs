@@ -482,6 +482,117 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void PointerWrappedResourceModuleDeclarationsRejectAtEverySharedBoundary()
+    {
+        var resourceTypes = new[]
+        {
+            SamplerStateType.Instance.GetPtrType(HandleAddressSpace.Instance),
+            SamplerStateType.Instance.GetPtrType(HandleAddressSpace.Instance)
+                .GetPtrType(GenericAddressSpace.Instance),
+            SampledTexture2DF32Type.Instance.GetPtrType(HandleAddressSpace.Instance),
+            SampledTexture2DF32Type.Instance.GetPtrType(HandleAddressSpace.Instance)
+                .GetPtrType(GenericAddressSpace.Instance),
+            ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
+            ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance)
+                .GetPtrType(GenericAddressSpace.Instance),
+            ReadWriteStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
+            ReadWriteStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance)
+                .GetPtrType(GenericAddressSpace.Instance)
+        };
+
+        foreach (var (index, type) in resourceTypes.Index())
+        {
+            var resource = new VariableDeclaration(
+                GenericAddressSpace.Instance,
+                $"Wrapped{index}",
+                type,
+                []);
+            AssertWrappedResourceRejected(EmptyModule(resource), resource.Name);
+        }
+    }
+
+    [Fact]
+    public void ResourceMetadataCannotDisguisePointerWrappedDeclaredTypes()
+    {
+        var disguised = new[]
+        {
+            new VariableDeclaration(
+                UniformAddressSpace.Instance,
+                "WrappedTexture",
+                SampledTexture2DF32Type.Instance.GetPtrType(HandleAddressSpace.Instance),
+                [new UniformAttribute(), new GroupAttribute(0), new BindingAttribute(2)]),
+            new VariableDeclaration(
+                UniformAddressSpace.Instance,
+                "WrappedSampler",
+                SamplerStateType.Instance.GetPtrType(HandleAddressSpace.Instance),
+                [new UniformAttribute(), new GroupAttribute(0), new BindingAttribute(3)]),
+            new VariableDeclaration(
+                UniformAddressSpace.Instance,
+                "WrappedReadOnly",
+                ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
+                [new UniformAttribute(), new GroupAttribute(1), new BindingAttribute(0)]),
+            new VariableDeclaration(
+                UniformAddressSpace.Instance,
+                "WrappedWritable",
+                ReadWriteStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
+                [new UniformAttribute(), new GroupAttribute(1), new BindingAttribute(1)])
+        };
+
+        foreach (var resource in disguised)
+            AssertWrappedResourceRejected(EmptyModule(resource), resource.Name);
+    }
+
+    [Fact]
+    public void DirectResourcesAndOrdinaryScalarPointersRemainValid()
+    {
+        var resources = new VariableDeclaration[]
+        {
+            new(
+                HandleAddressSpace.Instance,
+                "Color",
+                SampledTexture2DF32Type.Instance,
+                [new GroupAttribute(0), new BindingAttribute(2)]),
+            new(
+                HandleAddressSpace.Instance,
+                "Linear",
+                SamplerStateType.Instance,
+                [new GroupAttribute(0), new BindingAttribute(3)]),
+            new(
+                StorageAddressSpace.Instance,
+                "Input",
+                ReadOnlyStructuredBufferType.Instance,
+                [new GroupAttribute(1), new BindingAttribute(0)]),
+            new(
+                StorageAddressSpace.Instance,
+                "Output",
+                ReadWriteStructuredBufferType.Instance,
+                [new GroupAttribute(1), new BindingAttribute(1)])
+        };
+        var resourceModule = Module(resources);
+        var reflection = new ShaderModuleReflection();
+
+        Assert.Single(reflection.GetTextureBindings(resourceModule));
+        Assert.Single(reflection.GetSamplerBindings(resourceModule));
+        Assert.Equal(2, reflection.GetStorageBufferBindings(resourceModule).Length);
+        Assert.Equal(2, reflection.GetBindGroupLayoutDescriptor(resourceModule, 0).Entries.Length);
+        Assert.Equal(2, reflection.GetBindGroupLayoutDescriptorBuffer(resourceModule, 1).Entries.Length);
+        Assert.Equal(4, new SlangTargetLowering().Lower(resourceModule).Declarations.Length);
+
+        var scalarPointer = new VariableDeclaration(
+            GenericAddressSpace.Instance,
+            "ScalarPointer",
+            ShaderType.F32.GetPtrType(GenericAddressSpace.Instance),
+            []);
+        var scalarModule = EmptyModule(scalarPointer);
+        Assert.Empty(reflection.GetTextureBindings(scalarModule));
+        Assert.Empty(reflection.GetSamplerBindings(scalarModule));
+        Assert.Empty(reflection.GetStorageBufferBindings(scalarModule));
+        Assert.Empty(reflection.GetBindGroupLayoutDescriptor(scalarModule, 0).Entries.ToArray());
+        Assert.Empty(reflection.GetBindGroupLayoutDescriptorBuffer(scalarModule, 0).Entries.ToArray());
+        Assert.Single(new SlangTargetLowering().Lower(scalarModule).Declarations);
+    }
+
+    [Fact]
     public void SampleCallNormalizationRequiresCanonicalCalleeAndPhysicalShape()
     {
         var operation = TextureSampleLevelOperation.Instance;
@@ -735,9 +846,40 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
     }
 
     private static ShaderModuleDeclaration<RegionFunctionBody> EmptyModule(VariableDeclaration resource) =>
+        Module([resource]);
+
+    private static ShaderModuleDeclaration<RegionFunctionBody> Module(
+        IEnumerable<VariableDeclaration> resources) =>
         new(
-            [resource],
+            [.. resources],
             ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty);
+
+    private static void AssertWrappedResourceRejected(
+        ShaderModuleDeclaration<RegionFunctionBody> module,
+        string name)
+    {
+        var reflection = new ShaderModuleReflection();
+        var attempts = new Func<object?>[]
+        {
+            () => reflection.GetUniformBindings(module),
+            () => reflection.GetStorageBufferBindings(module),
+            () => reflection.GetTextureBindings(module),
+            () => reflection.GetSamplerBindings(module),
+            () => reflection.GetBindGroupLayoutDescriptor(module, 0),
+            () => reflection.GetBindGroupLayoutDescriptorBuffer(module, 0),
+            () => new SlangTargetLowering().Lower(module)
+        };
+
+        Assert.All(attempts, attempt =>
+        {
+            var exception = Assert.Throws<NotSupportedException>(() => attempt());
+            Assert.Equal(
+                $"Shader module metadata validation rejected module variable '{name}': " +
+                "resource types cannot be pointer-wrapped module declarations; " +
+                "declare the resource type directly.",
+                exception.Message);
+        });
+    }
 
     private static void AssertOperationMismatch(Instruction<IShaderValue, IShaderValue> call)
     {

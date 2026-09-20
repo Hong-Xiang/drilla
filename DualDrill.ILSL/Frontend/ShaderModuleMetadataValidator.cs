@@ -170,10 +170,13 @@ internal static class ShaderModuleMetadataValidator
     {
         var resources = new List<ResourceBinding>();
         foreach (var variable in module.Declarations.OfType<VariableDeclaration>())
+        {
+            RejectPointerWrappedResourceDeclaration(variable);
             if (IsResourceDeclaration(variable))
                 resources.Add(ValidateResource(variable));
             else
                 ValidateOrdinaryModuleVariable(variable);
+        }
 
         var duplicate = resources
             .GroupBy(resource => (resource.Group, resource.Binding))
@@ -255,6 +258,16 @@ internal static class ShaderModuleMetadataValidator
             throw Invalid(
                 $"module variable '{variable.Name}'",
                 $"attribute(s) {AttributeNames(variable.Attributes)} are not valid on an ordinary module variable.");
+    }
+
+    private static void RejectPointerWrappedResourceDeclaration(VariableDeclaration variable)
+    {
+        if (!IsResourceType(variable.Type) &&
+            IsResourceTypeOrPointer(variable.Type))
+            throw Invalid(
+                $"module variable '{variable.Name}'",
+                "resource types cannot be pointer-wrapped module declarations; " +
+                "declare the resource type directly.");
     }
 
     public static void ValidateInterfaceAttributes(
