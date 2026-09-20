@@ -133,6 +133,6 @@ public sealed partial record class GPURenderPassEncoder<TBackend>(GPUHandle<TBac
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }

@@ -27,7 +27,7 @@ public sealed partial record class GPUInstance<TBackend>(GPUHandle<TBackend, GPU
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 
