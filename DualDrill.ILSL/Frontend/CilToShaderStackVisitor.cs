@@ -477,6 +477,20 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
     {
         switch (operation)
         {
+            case StructuredBufferLengthOperation length:
+                if (!TopType().Equals(length.BufferPointerType))
+                    throw Invalid($"{length.Name} operation stack: {TopType().Name}.");
+                Emit(length, ShaderType.U32, [Depth(0)], 1);
+                NormalizeTop(ShaderType.U32);
+                return;
+            case StructuredBufferLoadOperation load:
+                if (stack.Count < 2 || !TypeAtDepth(1).Equals(load.BufferPointerType))
+                    throw Invalid($"{load.Name} requires an exact storage-buffer receiver.");
+                ConvertTopForDeclaration(ShaderType.U32);
+                if (!TypeAtDepth(0).Equals(ShaderType.U32))
+                    throw Invalid($"{load.Name} index must be u32.");
+                Emit(load, ShaderType.F32, [Depth(1), Depth(0)], 2);
+                return;
             case IBinaryExpressionOperation binary:
                 var (left, right) = TopBinaryTypes();
                 if (!left.Equals(binary.LeftType) || !right.Equals(binary.RightType))

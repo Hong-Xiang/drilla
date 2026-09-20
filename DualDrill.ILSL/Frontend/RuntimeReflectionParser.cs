@@ -99,6 +99,15 @@ public sealed class RuntimeReflectionParser
         if (Context[type] is { } found)
             return found;
 
+        if (SharedBuiltinSymbolTable.IsStructuredBufferFamily(type))
+            throw new NotSupportedException(
+                $"Shader resource type validation rejected '{type}': " +
+                "only StructuredBuffer<float> is supported.");
+        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(type))
+            throw new NotSupportedException(
+                $"Shader resource type validation rejected '{type}': " +
+                "structured buffers cannot be embedded in another CLR type.");
+
         if (!type.IsValueType)
         {
             ShaderModuleMetadataValidator.ValidateTypeAttributes(
@@ -129,6 +138,9 @@ public sealed class RuntimeReflectionParser
         if (Context[symbol] is { } found)
             return found;
 
+        RejectStructuredBufferPlacement(
+            parameter.ParameterType,
+            $"parameter '{parameter.Member.DeclaringType?.FullName}.{parameter.Member.Name}.{parameter.Name}'");
         var declaration = new ParameterDeclaration(
             parameter.Name ?? throw new NotSupportedException("Cannot parse a parameter without a name."),
             ParseTypeCore(parameter.ParameterType),
@@ -143,17 +155,29 @@ public sealed class RuntimeReflectionParser
         if (Context[symbol] is { } found)
             return found;
 
+        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(field.FieldType) &&
+            !SharedBuiltinSymbolTable.IsStructuredBufferFamily(field.FieldType))
+            throw new NotSupportedException(
+                $"Shader resource validation rejected field '{field.DeclaringType?.FullName}.{field.Name}': " +
+                "structured buffers must be declared directly, not inside another CLR type.");
+        if (SharedBuiltinSymbolTable.IsStructuredBufferFamily(field.FieldType) && !field.IsStatic)
+            throw new NotSupportedException(
+                $"Shader resource validation rejected field '{field.DeclaringType?.FullName}.{field.Name}': " +
+                "structured buffers must be static shader-module fields.");
+
         var attributes = GetShaderAttributes(field);
         RejectAttributedBackingField(field, attributes);
+        var type = ParseTypeCore(field.FieldType);
         var addressSpace = ShaderModuleMetadataValidator.ValidateResourceAttributes(
             $"field '{field.DeclaringType?.FullName}.{field.Name}'",
-            attributes);
+            attributes,
+            type);
         if (attributes.OfType<UniformAttribute>().Any())
             ValidateUniformClrStructure(field);
         var declaration = new VariableDeclaration(
             addressSpace,
             field.Name,
-            ParseTypeCore(field.FieldType),
+            type,
             attributes.ToImmutableHashSet());
         Context.AddVariable(symbol, declaration);
         return declaration;
@@ -180,6 +204,9 @@ public sealed class RuntimeReflectionParser
 
     private MemberDeclaration ParseFieldCore(FieldInfo field)
     {
+        RejectStructuredBufferPlacement(
+            field.FieldType,
+            $"structure member field '{field.DeclaringType?.FullName}.{field.Name}'");
         if (field.DeclaringType is { } declaringType)
             CollectTypeReferences(declaringType);
         CollectTypeReferences(field.FieldType);
@@ -239,6 +266,10 @@ public sealed class RuntimeReflectionParser
         try
         {
             var rawCode = CilMethodDecoder.Decode(method);
+            foreach (var referencedMethod in rawCode.Instructions
+                         .Select(instruction => instruction.Instruction.Operand)
+                         .OfType<MethodInfo>())
+                ValidateReferencedPropertyAccessor(referencedMethod);
             var locals = rawCode.Environment.LocalVariables.Select(ParseLocalVariable).ToImmutableArray();
             collectedMethods.Add(method, new CollectedMethod(declaration, rawCode, locals));
 
@@ -347,7 +378,8 @@ public sealed class RuntimeReflectionParser
         if (field.IsStatic)
         {
             var attributes = GetShaderAttributes(field);
-            if (attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
+            if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(field.FieldType) ||
+                attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
                 _ = ParseStaticFieldCore(field);
             else
                 ShaderModuleMetadataValidator.ValidateOrdinaryModuleField(
@@ -519,6 +551,10 @@ public sealed class RuntimeReflectionParser
 
     private FunctionReturn ParseMethodReturn(MethodBase method)
     {
+        if (method is MethodInfo resourceMethod)
+            RejectStructuredBufferPlacement(
+                resourceMethod.ReturnType,
+                $"return of method '{method.DeclaringType?.FullName}.{method.Name}'");
         var returnType = method switch
         {
             MethodInfo methodInfo => ParseTypeCore(methodInfo.ReturnType),
@@ -566,10 +602,11 @@ public sealed class RuntimeReflectionParser
         foreach (var field in moduleType.GetFields(VariableBindingFlags))
         {
             var attributes = GetShaderAttributes(field);
-            if (attributes.Length == 0)
+            var containsStructuredBuffer = SharedBuiltinSymbolTable.ContainsStructuredBuffer(field.FieldType);
+            if (attributes.Length == 0 && !containsStructuredBuffer)
                 continue;
             RejectAttributedBackingField(field, attributes);
-            if (attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
+            if (containsStructuredBuffer || attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
                 variables.Add(ParseModuleVariableDeclaration(field));
             else
                 ShaderModuleMetadataValidator.ValidateOrdinaryModuleField(
@@ -590,21 +627,34 @@ public sealed class RuntimeReflectionParser
         FieldInfo field,
         IReadOnlyCollection<IShaderAttribute> attributes)
     {
-        if (attributes.Count > 0 &&
-            field.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false) &&
-            field.Name.EndsWith("k__BackingField", StringComparison.Ordinal))
+        if (!field.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false) ||
+            !field.Name.EndsWith("k__BackingField", StringComparison.Ordinal))
+            return;
+
+        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(field.FieldType))
+            throw new NotSupportedException(
+                "Shader resource validation rejected " +
+                $"compiler-generated backing field '{field.DeclaringType?.FullName}.{field.Name}': " +
+                "structured buffers must be declared as fields, not properties.");
+
+        if (attributes.Count > 0)
             throw new NotSupportedException(
                 "Shader module metadata validation rejected " +
                 $"compiler-generated backing field '{field.DeclaringType?.FullName}.{field.Name}': " +
                 "shader metadata on property backing fields is not supported; annotate a field declaration instead.");
     }
 
-    private VariableDeclaration ParseLocalVariable(LocalVariableInfo info) =>
-        new(
+    private VariableDeclaration ParseLocalVariable(LocalVariableInfo info)
+    {
+        RejectStructuredBufferPlacement(
+            info.LocalType,
+            $"local variable #{info.LocalIndex}");
+        return new(
             FunctionAddressSpace.Instance,
             $"loc_{info.LocalIndex}",
             ParseTypeCore(info.LocalType),
             []);
+    }
 
     private bool IsMethodBoundary(MethodBase method)
     {
@@ -635,12 +685,37 @@ public sealed class RuntimeReflectionParser
     private static ImmutableArray<IShaderAttribute> GetValidatedPropertyAttributes(PropertyInfo property)
     {
         var attributes = GetShaderAttributes(property);
+        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(property.PropertyType))
+            throw new NotSupportedException(
+                "Shader resource validation rejected " +
+                $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
+                "structured buffers must be static shader-module fields.");
         if (attributes.Length > 0)
             throw new NotSupportedException(
                 "Shader module metadata validation rejected " +
                 $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
                 "shader metadata on module properties is not supported; use an attributed field.");
         return attributes;
+    }
+
+    private static void ValidateReferencedPropertyAccessor(MethodInfo method)
+    {
+        if (!method.IsSpecialName || method.DeclaringType is null)
+            return;
+
+        var property = method.DeclaringType
+            .GetProperties(VariableBindingFlags | BindingFlags.DeclaredOnly)
+            .FirstOrDefault(candidate => candidate.GetMethod == method || candidate.SetMethod == method);
+        if (property is not null)
+            _ = GetValidatedPropertyAttributes(property);
+    }
+
+    private static void RejectStructuredBufferPlacement(Type type, string declaration)
+    {
+        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(type))
+            throw new NotSupportedException(
+                $"Shader resource validation rejected {declaration}: " +
+                "structured buffers are valid only as static shader-module fields.");
     }
 
     private static void ValidateMappedIntrinsicSignature(
@@ -652,13 +727,23 @@ public sealed class RuntimeReflectionParser
             $"method '{name}'",
             attributes);
         foreach (var parameter in method.GetParameters())
+        {
+            RejectStructuredBufferPlacement(
+                parameter.ParameterType,
+                $"parameter of mapped intrinsic '{name}.{parameter.Name}'");
             ShaderModuleMetadataValidator.ValidateMappedIntrinsicInterfaceAttributes(
                 $"parameter of mapped intrinsic '{name}.{parameter.Name}'",
                 GetShaderAttributes(parameter));
+        }
         if (method is MethodInfo methodInfo)
+        {
+            RejectStructuredBufferPlacement(
+                methodInfo.ReturnType,
+                $"return of mapped intrinsic '{name}'");
             ShaderModuleMetadataValidator.ValidateMappedIntrinsicInterfaceAttributes(
                 $"return of mapped intrinsic '{name}'",
                 GetShaderAttributes(methodInfo.ReturnParameter));
+        }
     }
 
     private void EnsureUsable()

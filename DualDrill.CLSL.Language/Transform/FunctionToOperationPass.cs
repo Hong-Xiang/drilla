@@ -48,7 +48,11 @@ public sealed class FunctionToOperationPass
 
     private IEnumerable<Instruction<IShaderValue, IShaderValue>> TransformInstruction(
         Instruction<IShaderValue, IShaderValue> inst) =>
-        inst.Evaluate(new InstructionTransformSemantic());
+        inst.Operation is CallOperation &&
+        inst.OperandCount > 0 &&
+        inst[0] is FunctionDeclaration
+            ? inst.Evaluate(new InstructionTransformSemantic())
+            : [inst];
 
     private sealed record class InstructionTransformSemantic
         : IOperationSemantic<Instruction<IShaderValue, IShaderValue>, IShaderValue, IShaderValue,
@@ -75,17 +79,48 @@ public sealed class FunctionToOperationPass
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Call(Instruction<IShaderValue, IShaderValue> ctx,
             CallOperation op, IShaderValue result, IShaderValue fv, IReadOnlyList<IShaderValue> arguments)
         {
-            var f = (FunctionDeclaration)fv;
+            if (fv is not FunctionDeclaration f)
+                return [ctx];
+
             if (f.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } opAttr)
                 switch (opAttr.Operation)
                 {
+                    case StructuredBufferLengthOperation length:
+                        {
+                            if (!IsExactResourceFunction(op, f, length) ||
+                                arguments is not [var buffer] ||
+                                !buffer.Type.Equals(length.BufferPointerType) ||
+                                !result.Type.Equals(ShaderType.U32))
+                                throw new OperationFunctionNotMatchException(f, length);
+                            return
+                            [
+                                WithPayload(
+                                    InstF.StructuredBufferLength(default, length, result, buffer),
+                                    ctx)
+                            ];
+                        }
+                    case StructuredBufferLoadOperation load:
+                        {
+                            if (!IsExactResourceFunction(op, f, load) ||
+                                arguments is not [var buffer, var index] ||
+                                !buffer.Type.Equals(load.BufferPointerType) ||
+                                !index.Type.Equals(ShaderType.U32) ||
+                                !result.Type.Equals(ShaderType.F32))
+                                throw new OperationFunctionNotMatchException(f, load);
+                            return
+                            [
+                                WithPayload(
+                                    InstF.StructuredBufferLoad(default, load, result, buffer, index),
+                                    ctx)
+                            ];
+                        }
                     case IBinaryExpressionOperation be:
                         {
                             var r = arguments[1];
                             var l = arguments[0];
                             if (!l.Type.Equals(be.LeftType) || !r.Type.Equals(be.RightType))
                                 throw new OperationFunctionNotMatchException(f, be);
-                            return [InstF.Operation2(default, be, result, l, r)];
+                            return [WithPayload(InstF.Operation2(default, be, result, l, r), ctx)];
                         }
                     case IBinaryStatementOperation bs:
                         {
@@ -107,14 +142,14 @@ public sealed class FunctionToOperationPass
                             {
                                 return
                                 [
-                                    InstF.VectorComponentSet(default, vcs, l, r)
+                                    WithPayload(InstF.VectorComponentSet(default, vcs, l, r), ctx)
                                 ];
                             }
 
                             if (bs is IVectorSwizzleSetOperation vss)
                                 return
                                 [
-                                    InstF.VectorSwizzleSet(default, vss, l, r)
+                                    WithPayload(InstF.VectorSwizzleSet(default, vss, l, r), ctx)
                                 ];
 
                             throw new NotSupportedException($"binary statement {bs.Name}");
@@ -137,7 +172,7 @@ public sealed class FunctionToOperationPass
 
                             return
                             [
-                                InstF.Operation1(default, ue, result, s)
+                                WithPayload(InstF.Operation1(default, ue, result, s), ctx)
                             ];
                         }
                 }
@@ -145,7 +180,7 @@ public sealed class FunctionToOperationPass
             if (f.Attributes.OfType<ZeroConstructorMethodAttribute>().Any() && f.ReturnType is IVecType vt)
             {
                 return [
-                    InstF.ZeroConstructorOperation(default, new ZeroConstructorOperation(vt), result)
+                    WithPayload(InstF.ZeroConstructorOperation(default, new ZeroConstructorOperation(vt), result), ctx)
                 ];
             }
 
@@ -155,12 +190,27 @@ public sealed class FunctionToOperationPass
                     f.Parameters.Select(p => p.Type));
                 return
                 [
-                    InstF.VectorCompositeConstruction(default, op_, result, arguments)
+                    WithPayload(InstF.VectorCompositeConstruction(default, op_, result, arguments), ctx)
                 ];
             }
 
             return [ctx];
         }
+
+        private static bool IsExactResourceFunction(
+            CallOperation call,
+            FunctionDeclaration actual,
+            IOperation operation) =>
+            ReferenceEquals(actual, operation.Function) &&
+            actual.Type is FunctionType declared &&
+            operation.Function.Type is FunctionType expected &&
+            declared.Equals(expected) &&
+            call.CalleeType.Equals(declared);
+
+        private static Instruction<IShaderValue, IShaderValue> WithPayload(
+            Instruction<IShaderValue, IShaderValue> replacement,
+            Instruction<IShaderValue, IShaderValue> original) =>
+            replacement with { Payload = original.Payload };
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Literal(
             Instruction<IShaderValue, IShaderValue> ctx, LiteralOperation op, IShaderValue result, IShaderValue value) =>
@@ -180,6 +230,21 @@ public sealed class FunctionToOperationPass
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Operation2(
             Instruction<IShaderValue, IShaderValue> ctx, IBinaryExpressionOperation op, IShaderValue result,
             IShaderValue l, IShaderValue r) => [ctx];
+
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> StructuredBufferLength(
+            Instruction<IShaderValue, IShaderValue> ctx,
+            StructuredBufferLengthOperation op,
+            IShaderValue result,
+            IShaderValue buffer) =>
+            [ctx];
+
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> StructuredBufferLoad(
+            Instruction<IShaderValue, IShaderValue> ctx,
+            StructuredBufferLoadOperation op,
+            IShaderValue result,
+            IShaderValue buffer,
+            IShaderValue index) =>
+            [ctx];
 
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Store(Instruction<IShaderValue, IShaderValue> ctx,

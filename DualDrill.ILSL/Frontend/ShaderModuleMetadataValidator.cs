@@ -19,11 +19,20 @@ internal static class ShaderModuleMetadataValidator
 
     public static IAddressSpace ValidateResourceAttributes(
         string declaration,
-        IReadOnlyCollection<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes,
+        IShaderType type)
     {
         var addressSpaces = attributes.OfType<IAddressSpaceAttribute>().ToArray();
         var groups = attributes.OfType<GroupAttribute>().ToArray();
         var bindings = attributes.OfType<BindingAttribute>().ToArray();
+        if (type is ReadOnlyStructuredBufferType)
+            return ValidateReadOnlyStorageAttributes(
+                declaration,
+                attributes,
+                addressSpaces,
+                groups,
+                bindings);
+
         if (addressSpaces.Length != 1 || groups.Length != 1 || bindings.Length != 1)
             throw Invalid(
                 declaration,
@@ -54,6 +63,41 @@ internal static class ShaderModuleMetadataValidator
         return addressSpaces[0].AddressSpace;
     }
 
+    private static IAddressSpace ValidateReadOnlyStorageAttributes(
+        string declaration,
+        IReadOnlyCollection<IShaderAttribute> attributes,
+        IReadOnlyCollection<IAddressSpaceAttribute> addressSpaces,
+        IReadOnlyCollection<GroupAttribute> groups,
+        IReadOnlyCollection<BindingAttribute> bindings)
+    {
+        if (addressSpaces.Count != 0 || groups.Count != 1 || bindings.Count != 1)
+            throw Invalid(
+                declaration,
+                "a read-only storage buffer requires no address-space attribute and exactly one [Group] and " +
+                $"[Binding] attribute (found {addressSpaces.Count}, {groups.Count}, and {bindings.Count}).");
+
+        var unsupported = attributes
+            .Where(attribute => attribute is not GroupAttribute and
+                                not BindingAttribute &&
+                                !IsUniformVisibility(attribute))
+            .Select(AttributeName)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (unsupported.Length > 0)
+            throw Invalid(
+                declaration,
+                $"read-only storage buffer attribute(s) {string.Join(", ", unsupported)} are not supported.");
+
+        var group = groups.Single();
+        var binding = bindings.Single();
+        if (group.Binding < 0)
+            throw Invalid(declaration, $"group must be nonnegative; found {group.Binding}.");
+        if (binding.Binding < 0)
+            throw Invalid(declaration, $"binding must be nonnegative; found {binding.Binding}.");
+
+        return StorageAddressSpace.Instance;
+    }
+
     public static void Validate(IShaderModuleDeclaration module)
     {
         var resources = new List<ResourceBinding>();
@@ -79,7 +123,13 @@ internal static class ShaderModuleMetadataValidator
         {
             ValidateFunctionAttributes(function);
             foreach (var parameter in function.Parameters)
+            {
+                RejectResourceValueType(
+                    $"parameter '{function.Name}.{parameter.Name}'",
+                    parameter.Type);
                 ValidateInterfaceAttributes($"parameter '{function.Name}.{parameter.Name}'", parameter.Attributes);
+            }
+            RejectResourceValueType($"return of function '{function.Name}'", function.Return.Type);
             ValidateInterfaceAttributes($"return of function '{function.Name}'", function.Return.Attributes);
             ValidateComputeFunction(function);
         }
@@ -87,10 +137,14 @@ internal static class ShaderModuleMetadataValidator
         foreach (var structure in module.Declarations.OfType<StructureDeclaration>())
         {
             ValidateTypeAttributes($"structure '{structure.Name}'", structure.Attributes);
-            foreach (var member in structure.Members.Where(member => member.Attributes.Count > 0))
-                throw Invalid(
-                    $"structure member '{structure.Name}.{member.Name}'",
-                    $"attribute(s) {AttributeNames(member.Attributes)} are not supported.");
+            foreach (var member in structure.Members)
+            {
+                RejectResourceValueType($"structure member '{structure.Name}.{member.Name}'", member.Type);
+                if (member.Attributes.Count > 0)
+                    throw Invalid(
+                        $"structure member '{structure.Name}.{member.Name}'",
+                        $"attribute(s) {AttributeNames(member.Attributes)} are not supported.");
+            }
         }
     }
 
@@ -166,8 +220,15 @@ internal static class ShaderModuleMetadataValidator
                 $"mapped intrinsic cannot preserve interface attribute(s) {AttributeNames(attributes)}.");
     }
 
+    internal static bool IsResourceType(IShaderType type) => type is ReadOnlyStructuredBufferType;
+
+    internal static bool IsResourceTypeOrPointer(IShaderType type) =>
+        IsResourceType(type) ||
+        type is IPtrType pointer && IsResourceTypeOrPointer(pointer.BaseType);
+
     private static bool IsResourceDeclaration(VariableDeclaration declaration) =>
-        declaration.AddressSpace is UniformAddressSpace ||
+        declaration.AddressSpace is UniformAddressSpace or StorageAddressSpace ||
+        IsResourceType(declaration.Type) ||
         declaration.Attributes.Any(IsResourceMetadata);
 
     private static bool IsUniformVisibility(IShaderAttribute attribute) =>
@@ -177,7 +238,8 @@ internal static class ShaderModuleMetadataValidator
     {
         var addressSpace = ValidateResourceAttributes(
             $"resource '{declaration.Name}'",
-            declaration.Attributes);
+            declaration.Attributes,
+            declaration.Type);
         if (!Equals(declaration.AddressSpace, addressSpace))
             throw Invalid(
                 $"resource '{declaration.Name}'",
@@ -188,6 +250,14 @@ internal static class ShaderModuleMetadataValidator
             declaration.Name,
             declaration.Attributes.OfType<GroupAttribute>().Single().Binding,
             declaration.Attributes.OfType<BindingAttribute>().Single().Binding);
+    }
+
+    private static void RejectResourceValueType(string declaration, IShaderType type)
+    {
+        if (IsResourceTypeOrPointer(type))
+            throw Invalid(
+                declaration,
+                "structured buffers are valid only as static shader-module fields.");
     }
 
     public static void ValidateFunctionAttributes(
