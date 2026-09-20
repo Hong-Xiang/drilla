@@ -301,11 +301,10 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
 
     public Unit VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>
     {
-        IUnaryExpressionOperation operation = TopType() switch
-        {
-            FloatType<N32> => UnaryNumericArithmeticExpressionOperation<FloatType<N32>, TOp>.Instance,
-            _ => throw new NotImplementedException()
-        };
+        var type = TopType();
+        if (type is not (IntType<N32> or IntType<N64> or FloatType<N32> or FloatType<N64>))
+            throw Invalid($"Unary arithmetic {TOp.Instance.Name} requires i32, i64, f32, or f64.");
+        var operation = ((INumericType)type).UnaryArithmeticOperation<TOp>();
         Emit(operation, operation.ResultType, [Depth(0)], 1);
         NormalizeTop(operation.ResultType);
         return default;

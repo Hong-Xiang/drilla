@@ -70,7 +70,8 @@ internal sealed class EmittedScalarProgram
         if (start < 0 || lines.Count(line => line == signature) != 1)
             throw new NotSupportedException($"Expected exactly one scalar function signature: {signature}");
         foreach (var prefix in lines[..start])
-            if (prefix is not ("typealias f32 = float;" or "typealias u32 = uint;" or "typealias i32 = int;"
+            if (prefix is not ("typealias f64 = double;" or "typealias f32 = float;"
+                or "typealias i64 = int64_t;" or "typealias u32 = uint;" or "typealias i32 = int;"
                 or "typealias vec4<t> = vector<t, 4>;" or "typealias vec3<t> = vector<t, 3>;"
                 or "typealias vec2<t> = vector<t, 2>;" or "[shader(\"vertex\")]" or "[shader(\"fragment\")]"))
                 throw new NotSupportedException($"Unsupported emitted prefix: {prefix}");
@@ -182,13 +183,13 @@ internal sealed class EmittedScalarProgram
                 var value = Expression(returned.Groups[1].Value);
                 return state => new Flow.Return(value(state));
             }
-            if (Regex.Match(line, @"^var (\w+) : (i32|bool);$") is { Success: true } variable)
+            if (Regex.Match(line, @"^var (\w+) : (i32|i64|f32|f64|bool);$") is { Success: true } variable)
                 return state =>
                 {
                     state.Declare(variable.Groups[1].Value, new Slot(Type(variable.Groups[2].Value), false, null));
                     return new Flow.Next();
                 };
-            if (Regex.Match(line, @"^let (\w+) : (i32|bool) = (.+);$") is { Success: true } local)
+            if (Regex.Match(line, @"^let (\w+) : (i32|i64|f32|f64|bool) = (.+);$") is { Success: true } local)
             {
                 var value = Expression(local.Groups[3].Value);
                 return state =>
@@ -226,6 +227,9 @@ internal sealed class EmittedScalarProgram
     private static IShaderType Type(string type) => type switch
     {
         "i32" => ShaderType.I32,
+        "i64" => ShaderType.I64,
+        "f32" => ShaderType.F32,
+        "f64" => ShaderType.F64,
         "bool" => ShaderType.Bool,
         _ => throw new NotSupportedException($"Unsupported emitted scalar type {type}")
     };
@@ -242,11 +246,24 @@ internal sealed class EmittedScalarProgram
 
     private static Func<State, Value> Expression(string text)
     {
-        if (Regex.Match(text, @"^(i32|bool)\(([^()]+)\)$") is { Success: true } conversion)
+        if (Regex.Match(text, @"^(i32|i64|f32|f64|bool)\(([^()]+)\)$") is { Success: true } conversion)
         {
             var atom = Atom(conversion.Groups[2].Value);
             var type = Type(conversion.Groups[1].Value);
             return state => Convert(atom(state), type);
+        }
+        if (Regex.Match(text, @"^- (\w+)$") is { Success: true } unary)
+        {
+            var operand = Atom(unary.Groups[1].Value);
+            return state => operand(state) switch
+            {
+                Value.Integer value => new Value.Integer(unchecked(-value.Data)),
+                Value.LongInteger value => new Value.LongInteger(unchecked(-value.Data)),
+                Value.Float32 value => new Value.Float32(-value.Data),
+                Value.Float64 value => new Value.Float64(-value.Data),
+                var value => throw new NotSupportedException(
+                    $"Unsupported emitted scalar unary negation for {value}.")
+            };
         }
         var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 1) return Atom(text);

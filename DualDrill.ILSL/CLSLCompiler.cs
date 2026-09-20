@@ -5,7 +5,10 @@ using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Transform;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL;
 
@@ -61,10 +64,21 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                 {
                     foreach (var (function, body) in module.FunctionDefinitions)
                         foreach (var label in body.Labels)
+                        {
                             if (body[label].PostDominance is ExitPostDominance.NoExitPath)
                                 throw new NotSupportedException(
                                     $"{function.Name}, block {label}: WGSL output does not support a block " +
                                     "with no finite exit path; the Slang backend may erase nontermination.");
+                            if (body[label].Body.Elements.Any(instruction =>
+                                    instruction.Operation is
+                                        UnaryNumericArithmeticExpressionOperation<
+                                            IntType<N64>, UnaryArithmetic.Negate> or
+                                        UnaryNumericArithmeticExpressionOperation<
+                                            FloatType<N64>, UnaryArithmetic.Negate>))
+                                throw new NotSupportedException(
+                                    $"{function.Name}, block {label}: WGSL output does not support native " +
+                                    "i64 or f64 negation; values are not truncated or demoted.");
+                        }
 
                     module = module.RunPass(new FunctionToOperationPass());
                     module = module.RunPass(new StablePointerRegionParameterPass());

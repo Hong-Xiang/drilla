@@ -19,6 +19,7 @@ internal static class ScalarControlFlowOracle
     {
         private Value() { }
         internal sealed record Integer(int Data) : Value;
+        internal sealed record LongInteger(long Data) : Value;
         internal sealed record UnsignedInteger(uint Data) : Value;
         internal sealed record Float32(float Data) : Value;
         internal sealed record Float64(double Data) : Value;
@@ -26,6 +27,9 @@ internal static class ScalarControlFlowOracle
         internal sealed record Address(IShaderValue Storage) : Value;
 
         internal int Int => this is Integer i ? i.Data : throw new NotSupportedException($"Expected i32, got {this}");
+        internal long Long => this is LongInteger i
+            ? i.Data
+            : throw new NotSupportedException($"Expected i64, got {this}");
         internal uint UInt => this is UnsignedInteger i
             ? i.Data
             : throw new NotSupportedException($"Expected u32, got {this}");
@@ -182,6 +186,12 @@ internal static class ScalarControlFlowOracle
                     case LogicalNotOperation:
                         result = new Value.Boolean(!Read(instruction.Operand0).Bool);
                         break;
+                    case IUnaryExpressionOperation unary:
+                        var operand = Read(instruction.Operand0);
+                        if (!HasType(operand, unary.SourceType))
+                            throw new NotSupportedException($"{context}, {label}: invalid unary operand type.");
+                        result = Unary(unary, operand);
+                        break;
                     default:
                         throw new NotSupportedException(
                             $"{context}, {label}: unsupported operation {instruction.Operation.Name}.");
@@ -247,6 +257,7 @@ internal static class ScalarControlFlowOracle
         private Value Read(IShaderValue? value) => value switch
         {
             LiteralValue { Value: I32Literal i } => new Value.Integer(i.Value),
+            LiteralValue { Value: I64Literal i } => new Value.LongInteger(i.Value),
             LiteralValue { Value: U32Literal i } => new Value.UnsignedInteger(i.Value),
             LiteralValue { Value: F32Literal f } => new Value.Float32(f.Value),
             LiteralValue { Value: F64Literal f } => new Value.Float64(f.Value),
@@ -279,6 +290,7 @@ internal static class ScalarControlFlowOracle
     internal static bool HasType(Value value, IShaderType type) => value switch
     {
         Value.Integer => type.Equals(ShaderType.I32),
+        Value.LongInteger => type.Equals(ShaderType.I64),
         Value.UnsignedInteger => type.Equals(ShaderType.U32),
         Value.Float32 => type.Equals(ShaderType.F32),
         Value.Float64 => type.Equals(ShaderType.F64),
@@ -338,6 +350,25 @@ internal static class ScalarControlFlowOracle
             _ => throw new NotSupportedException($"Unsupported scalar binary operation {op} for {left}, {right}.")
         };
     }
+
+    internal static Value Unary(IUnaryExpressionOperation operation, Value operand) =>
+        (operation, operand) switch
+        {
+            (UnaryNumericArithmeticExpressionOperation<IntType<DualDrill.Common.Nat.N32>,
+                UnaryArithmetic.Negate>, Value.Integer value) =>
+                new Value.Integer(unchecked(-value.Data)),
+            (UnaryNumericArithmeticExpressionOperation<IntType<DualDrill.Common.Nat.N64>,
+                UnaryArithmetic.Negate>, Value.LongInteger value) =>
+                new Value.LongInteger(unchecked(-value.Data)),
+            (UnaryNumericArithmeticExpressionOperation<FloatType<DualDrill.Common.Nat.N32>,
+                UnaryArithmetic.Negate>, Value.Float32 value) =>
+                new Value.Float32(-value.Data),
+            (UnaryNumericArithmeticExpressionOperation<FloatType<DualDrill.Common.Nat.N64>,
+                UnaryArithmetic.Negate>, Value.Float64 value) =>
+                new Value.Float64(-value.Data),
+            _ => throw new NotSupportedException(
+                $"Unsupported scalar unary operation {operation.Name} for {operand}.")
+        };
 
     internal static Execution RunCfg(RegionFunctionBody body, ImmutableArray<Value> arguments, int stepLimit = 10000)
     {
@@ -456,6 +487,7 @@ internal static class ScalarControlFlowOracle
     private static Value Zero(IShaderType type, string context) => type switch
     {
         IntType<DualDrill.Common.Nat.N32> => new Value.Integer(0),
+        IntType<DualDrill.Common.Nat.N64> => new Value.LongInteger(0),
         UIntType<DualDrill.Common.Nat.N32> => new Value.UnsignedInteger(0),
         FloatType<DualDrill.Common.Nat.N32> => new Value.Float32(0),
         FloatType<DualDrill.Common.Nat.N64> => new Value.Float64(0),
@@ -474,6 +506,7 @@ internal static class ScalarControlFlowOracle
 
     private static bool IsScalar(IShaderType type) =>
         type.Equals(ShaderType.I32) ||
+        type.Equals(ShaderType.I64) ||
         type.Equals(ShaderType.U32) ||
         type.Equals(ShaderType.F32) ||
         type.Equals(ShaderType.F64) ||
