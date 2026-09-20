@@ -2,6 +2,12 @@
 
 CLSL supports a deliberately narrow compute-signature profile:
 
+> **Integration status:** method-level `Compute` and `WorkgroupSize` cardinality
+> is checked from raw reflection metadata in this slice. Final acceptance still
+> requires parent reconciliation with R1's raw parameter/return metadata
+> collector; this older base does not independently prove identical interface
+> attribute multiplicity.
+
 ```csharp
 [Compute, WorkgroupSize(64, 1, 1)]
 public static void Run()

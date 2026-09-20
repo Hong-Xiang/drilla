@@ -19,7 +19,8 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 
         output.WriteLine(exception.Message);
         Assert.Equal(
-            "Shader module metadata validation rejected function 'cs': " +
+            "Shader module metadata validation rejected method " +
+            $"'{typeof(MissingWorkgroupComputeShader).FullName}.cs': " +
             "a compute entry requires exactly one [WorkgroupSize] attribute; found 0.",
             exception.Message);
     }

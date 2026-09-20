@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.Json;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.Declaration;
@@ -220,8 +222,78 @@ public sealed class ComputeEntryContractTests
         Assert.Same(function, Assert.Single(compiled.Declarations.OfType<FunctionDeclaration>()));
     }
 
+    [Fact]
+    public void RawDuplicateComputeAttributesAreRejectedByModuleParsing()
+    {
+        var (shaderType, method) = CreateRawComputeShader(computeCount: 2, workgroupSizeCount: 1);
+        Assert.Equal(2, method.GetCustomAttributes<ComputeAttribute>(inherit: false).Count());
+        var shader = (ISharpShader)(Activator.CreateInstance(shaderType)
+            ?? throw new InvalidOperationException($"Could not create {shaderType}."));
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseShaderModule(shader));
+
+        Assert.Equal(
+            $"Shader module metadata validation rejected method '{shaderType.FullName}.Run': " +
+            "a compute entry requires exactly one shader stage attribute; found 2.",
+            exception.Message);
+    }
+
+    [Fact]
+    public void RawDuplicateWorkgroupSizeAttributesAreRejectedByDirectMethodParsing()
+    {
+        var (shaderType, method) = CreateRawComputeShader(computeCount: 1, workgroupSizeCount: 2);
+        Assert.Equal(2, method.GetCustomAttributes<WorkgroupSizeAttribute>(inherit: false).Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Equal(
+            $"Shader module metadata validation rejected method '{shaderType.FullName}.Run': " +
+            "a compute entry requires exactly one [WorkgroupSize] attribute; found 2.",
+            exception.Message);
+    }
+
     private static string Emit(CLSLCompileTarget target, ISharpShader shader) =>
         new CLSLCompiler(new(target)).Emit(shader);
+
+    private static (Type ShaderType, MethodInfo Method) CreateRawComputeShader(
+        int computeCount,
+        int workgroupSizeCount)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName($"ComputeEntryRawMetadata_{Guid.NewGuid():N}"),
+            AssemblyBuilderAccess.Run);
+        var module = assembly.DefineDynamicModule("ComputeEntryRawMetadata");
+        var type = module.DefineType(
+            "RawComputeShader",
+            TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.Sealed);
+        type.AddInterfaceImplementation(typeof(ISharpShader));
+        type.DefineDefaultConstructor(MethodAttributes.Public);
+        var method = type.DefineMethod(
+            "Run",
+            MethodAttributes.Public | MethodAttributes.Static,
+            typeof(void),
+            Type.EmptyTypes);
+        var computeConstructor = typeof(ComputeAttribute).GetConstructor(Type.EmptyTypes)
+            ?? throw new InvalidOperationException("ComputeAttribute constructor was not found.");
+        var workgroupSizeConstructor = typeof(WorkgroupSizeAttribute).GetConstructor(
+            [typeof(int), typeof(int), typeof(int)])
+            ?? throw new InvalidOperationException("WorkgroupSizeAttribute constructor was not found.");
+
+        for (var index = 0; index < computeCount; index++)
+            method.SetCustomAttribute(new CustomAttributeBuilder(computeConstructor, []));
+        for (var index = 0; index < workgroupSizeCount; index++)
+            method.SetCustomAttribute(new CustomAttributeBuilder(workgroupSizeConstructor, [64, 1, 1]));
+        method.GetILGenerator().Emit(OpCodes.Ret);
+
+        var shaderType = type.CreateType()
+            ?? throw new InvalidOperationException("Dynamic compute shader type was not created.");
+        return (
+            shaderType,
+            shaderType.GetMethod("Run")
+            ?? throw new InvalidOperationException("Dynamic compute entry was not created."));
+    }
 
     private sealed class ZeroInputComputeShader : ISharpShader
     {

@@ -189,7 +189,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateReflectedComputeMetadata(MethodInfo method)
     {
-        var attributes = method.GetCustomAttributes().OfType<IShaderAttribute>().ToImmutableHashSet();
+        var attributes = method.GetCustomAttributes().OfType<IShaderAttribute>().ToArray();
         var stages = attributes.OfType<IShaderStageAttribute>().ToArray();
         var workgroupSizes = attributes.OfType<WorkgroupSizeAttribute>().ToArray();
         var globalInvocationIds = method.GetParameters()
@@ -198,13 +198,11 @@ internal static class ShaderModuleMetadataValidator
         var globalInvocationIdReturn = method.ReturnParameter
             .GetCustomAttributes<BuiltinAttribute>()
             .Any(attribute => attribute.Slot is BuiltinBinding.global_invocation_id);
-        var hasComputeStage = stages.Any(stage => stage is ComputeAttribute);
         var declaration = $"method '{method.DeclaringType?.FullName}.{method.Name}'";
+        var hasComputeStage = ValidateComputeStageAndWorkgroup(declaration, stages, workgroupSizes);
 
         if (!hasComputeStage)
         {
-            if (workgroupSizes.Length > 0)
-                throw Invalid(declaration, "[WorkgroupSize] is valid only on a [Compute] entry point.");
             if (globalInvocationIds > 0 || globalInvocationIdReturn)
                 throw Invalid(
                     declaration,
@@ -226,35 +224,17 @@ internal static class ShaderModuleMetadataValidator
         var globalInvocationIdReturn = function.Return.Attributes
             .OfType<BuiltinAttribute>()
             .Any(attribute => attribute.Slot is BuiltinBinding.global_invocation_id);
-        var hasComputeStage = stages.Any(stage => stage is ComputeAttribute);
         var declaration = $"function '{function.Name}'";
+        var hasComputeStage = ValidateComputeStageAndWorkgroup(declaration, stages, workgroupSizes);
 
         if (!hasComputeStage)
         {
-            if (workgroupSizes.Length > 0)
-                throw Invalid(declaration, "[WorkgroupSize] is valid only on a [Compute] entry point.");
             if (globalInvocationIds > 0 || globalInvocationIdReturn)
                 throw Invalid(
                     declaration,
                     "[Builtin(global_invocation_id)] is valid only on a [Compute] entry input.");
             return;
         }
-
-        if (stages.Length != 1)
-            throw Invalid(
-                declaration,
-                $"a compute entry requires exactly one shader stage attribute; found {stages.Length}.");
-        if (workgroupSizes.Length != 1)
-            throw Invalid(
-                declaration,
-                $"a compute entry requires exactly one [WorkgroupSize] attribute; found {workgroupSizes.Length}.");
-
-        var workgroupSize = workgroupSizes[0];
-        if (workgroupSize.X <= 0 || workgroupSize.Y <= 0 || workgroupSize.Z <= 0)
-            throw Invalid(
-                declaration,
-                "workgroup dimensions must be positive Int32 values; " +
-                $"found ({workgroupSize.X}, {workgroupSize.Y}, {workgroupSize.Z}).");
 
         if (function.Return.Type is not UnitType)
             throw Invalid(
@@ -295,6 +275,37 @@ internal static class ShaderModuleMetadataValidator
             throw Invalid(
                 $"parameter '{function.Name}.{parameter.Name}'",
                 $"global_invocation_id must have type {globalInvocationIdType.Name}; found {parameter.Type.Name}.");
+    }
+
+    private static bool ValidateComputeStageAndWorkgroup(
+        string declaration,
+        IReadOnlyCollection<IShaderStageAttribute> stages,
+        IReadOnlyList<WorkgroupSizeAttribute> workgroupSizes)
+    {
+        var computeCount = stages.Count(stage => stage is ComputeAttribute);
+        if (computeCount == 0)
+        {
+            if (workgroupSizes.Count > 0)
+                throw Invalid(declaration, "[WorkgroupSize] is valid only on a [Compute] entry point.");
+            return false;
+        }
+
+        if (stages.Count != 1)
+            throw Invalid(
+                declaration,
+                $"a compute entry requires exactly one shader stage attribute; found {stages.Count}.");
+        if (workgroupSizes.Count != 1)
+            throw Invalid(
+                declaration,
+                $"a compute entry requires exactly one [WorkgroupSize] attribute; found {workgroupSizes.Count}.");
+
+        var workgroupSize = workgroupSizes[0];
+        if (workgroupSize.X <= 0 || workgroupSize.Y <= 0 || workgroupSize.Z <= 0)
+            throw Invalid(
+                declaration,
+                "workgroup dimensions must be positive Int32 values; " +
+                $"found ({workgroupSize.X}, {workgroupSize.Y}, {workgroupSize.Z}).");
+        return true;
     }
 
     private static string AttributeNames(IEnumerable<IShaderAttribute> attributes) =>
