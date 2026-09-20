@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "GstSharp.Net": {
+        "type": "Direct",
+        "requested": "[1.28.13, )",
+        "resolved": "1.28.13",
+        "contentHash": "I5VeR8lw6ArPDN+v6/ppCd/51JscamGmcuVJiEr4a+O1ELJri37eLTXboFFOROAeKU5BZxT2+wBrlg8tu7R5Hw=="
+      },
+      "GstSharp.Net.App": {
+        "type": "Direct",
+        "requested": "[1.28.13, )",
+        "resolved": "1.28.13",
+        "contentHash": "otcdWMsrFNVFJ02FdkZK5Qu0d8IFYo/foCHqp3QWC3dhLI5u7Og+R/cIBfG049gFl625TxyuNJSWPkSFhFsy/w==",
+        "dependencies": {
+          "GstSharp.Net": "1.28.13",
+          "GstSharp.Net.Base": "1.28.13"
+        }
+      },
+      "GstSharp.Net.Sdp": {
+        "type": "Direct",
+        "requested": "[1.28.13, )",
+        "resolved": "1.28.13",
+        "contentHash": "tTJ6LR6aH/x3j0Gh/dVRQkCHpH2uYo7agnplUbiX5frIbMMhsr7ClErtektHJOtisxHz8vlMjdadk9tzKh6G1Q==",
+        "dependencies": {
+          "GstSharp.Net": "1.28.13"
+        }
+      },
+      "GstSharp.Net.WebRTC": {
+        "type": "Direct",
+        "requested": "[1.28.13, )",
+        "resolved": "1.28.13",
+        "contentHash": "oxJkSqu72b/dTjc51T8VNX3MCxLYDYQogr3x32MgXEdKVakZfov69nlzQx6uaWh1uoDm+CguxsrwONV+uq1OQA==",
+        "dependencies": {
+          "GstSharp.Net": "1.28.13",
+          "GstSharp.Net.Sdp": "1.28.13"
+        }
+      },
+      "GstSharp.Net.Base": {
+        "type": "Transitive",
+        "resolved": "1.28.13",
+        "contentHash": "ynP2UMKy9UQK7YL33B6DurbWQskBRA7d08Xf+ZUcO4yTHikvF4VbLp8AaF/pbGYZUFIccIXoFyRaBTd4Qvxysg==",
+        "dependencies": {
+          "GstSharp.Net": "1.28.13"
+        }
+      }
+    }
+  }
+}
