@@ -5,6 +5,7 @@ using System.Text;
 using DualDrill.ApiGen;
 using DualDrill.ApiGen.CodeGen;
 using DualDrill.ApiGen.DrillLang.Declaration;
+using DualDrill.ApiGen.DrillLang.Types;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
 using WebGPU;
@@ -66,6 +67,24 @@ public sealed class ModernWgpuMigrationTests
     }
 
     [Fact]
+    public void Classifies_only_discrete_and_integrated_adapters_as_hardware()
+    {
+        Assert.True(WebGPUNETBackend.IsHardwareAdapter(WGPUAdapterType.DiscreteGPU));
+        Assert.True(WebGPUNETBackend.IsHardwareAdapter(WGPUAdapterType.IntegratedGPU));
+        Assert.False(WebGPUNETBackend.IsHardwareAdapter(WGPUAdapterType.CPU));
+        Assert.False(WebGPUNETBackend.IsHardwareAdapter(WGPUAdapterType.Unknown));
+    }
+
+    [Fact]
+    public void Native_status_errors_are_not_silently_accepted()
+    {
+        WebGPUNETBackend.ThrowIfNativeFailed(WGPUStatus.Success, "success");
+        var error = Assert.ThrowsAny<GraphicsApiException>(
+            () => WebGPUNETBackend.ThrowIfNativeFailed(WGPUStatus.Error, "present"));
+        Assert.Contains("present failed", error.Message);
+    }
+
+    [Fact]
     public void Generator_discovers_Alimer_handles_and_emits_semantic_enum_mapping()
     {
         var nativeModule = AlimerWebGPUApi.Create();
@@ -103,6 +122,28 @@ public sealed class ModernWgpuMigrationTests
             output,
             new EnumDeclaration("GPUIndexFormat", [], false));
         Assert.Contains("WGPUIndexFormat.Undefined", output.ToString());
+
+        using var samplerOutput = new StringWriter();
+        new GPUStructCodeGen(nativeModule).EmitStruct(
+            samplerOutput,
+            new StructDeclaration(
+                "GPUSamplerDescriptor",
+                [
+                    new PropertyDeclaration(
+                        "AddressModeU",
+                        new OpaqueTypeReference("GPUAddressMode")),
+                    new PropertyDeclaration(
+                        "LodMaxClamp",
+                        new FloatTypeReference(BitWidth._32)),
+                    new PropertyDeclaration(
+                        "MaxAnisotropy",
+                        new IntegerTypeReference(BitWidth._16, false)),
+                ]));
+        Assert.Contains(
+            "AddressModeU { get; set; } = GPUAddressMode.ClampToEdge;",
+            samplerOutput.ToString());
+        Assert.Contains("LodMaxClamp { get; set; } = 32;", samplerOutput.ToString());
+        Assert.Contains("MaxAnisotropy { get; set; } = 1;", samplerOutput.ToString());
     }
 
     [Fact]
@@ -154,6 +195,33 @@ public sealed class ModernWgpuMigrationTests
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => WaitWithPollingAsync(context.Device, map));
         }
+    }
+
+    [Fact]
+    public async Task Queue_work_cancellation_is_prompt_but_native_callback_still_drains()
+    {
+        using var context = await NativeContext.CreateAsync();
+        using var preCancelled = new CancellationTokenSource();
+        preCancelled.Cancel();
+
+        var preCancelledTask = context.Device.Queue
+            .OnSubmittedWorkDoneAsync(preCancelled.Token)
+            .AsTask();
+        Assert.True(preCancelledTask.IsCompleted);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => preCancelledTask);
+
+        using var cancellation = new CancellationTokenSource();
+        var cancelledTask = context.Device.Queue
+            .OnSubmittedWorkDoneAsync(cancellation.Token)
+            .AsTask();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => cancelledTask.WaitAsync(CallbackTimeout));
+
+        context.Device.Poll();
+        await WaitWithPollingAsync(
+            context.Device,
+            context.Device.Queue.OnSubmittedWorkDoneAsync(CancellationToken.None).AsTask());
     }
 
     [Fact]
@@ -277,7 +345,6 @@ public sealed class ModernWgpuMigrationTests
                 {
                     Binding = 0,
                     Buffer = uniform,
-                    Size = 16,
                 },
             },
         });
@@ -319,6 +386,139 @@ public sealed class ModernWgpuMigrationTests
         Assert.Equal([0, 0, 255, 255], red);
         Assert.Equal([0, 255, 0, 255], green);
         Assert.NotEqual(red, green);
+    }
+
+    [Fact]
+    public async Task Default_and_explicit_sampler_descriptors_are_valid()
+    {
+        var descriptor = new GPUSamplerDescriptor();
+        Assert.Equal(GPUAddressMode.ClampToEdge, descriptor.AddressModeU);
+        Assert.Equal(GPUAddressMode.ClampToEdge, descriptor.AddressModeV);
+        Assert.Equal(GPUAddressMode.ClampToEdge, descriptor.AddressModeW);
+        Assert.Equal(GPUFilterMode.Nearest, descriptor.MagFilter);
+        Assert.Equal(GPUFilterMode.Nearest, descriptor.MinFilter);
+        Assert.Equal(GPUMipmapFilterMode.Nearest, descriptor.MipmapFilter);
+        Assert.Equal(0, descriptor.LodMinClamp);
+        Assert.Equal(32, descriptor.LodMaxClamp);
+        Assert.Equal(1, descriptor.MaxAnisotropy);
+        Assert.Equal(0, default(GPUSamplerDescriptor).MaxAnisotropy);
+
+        using var context = await NativeContext.CreateAsync();
+        var defaultSampler = context.Device.CreateSampler(descriptor);
+        using var defaultSamplerLifetime = (IDisposable)defaultSampler;
+        var explicitSampler = context.Device.CreateSampler(new()
+        {
+            AddressModeU = GPUAddressMode.Repeat,
+            AddressModeV = GPUAddressMode.MirrorRepeat,
+            AddressModeW = GPUAddressMode.ClampToEdge,
+            MagFilter = GPUFilterMode.Linear,
+            MinFilter = GPUFilterMode.Linear,
+            MipmapFilter = GPUMipmapFilterMode.Linear,
+            LodMinClamp = 0,
+            LodMaxClamp = 0,
+            MaxAnisotropy = 1,
+        });
+        using var explicitSamplerLifetime = (IDisposable)explicitSampler;
+    }
+
+    [Fact]
+    public async Task Omitted_single_image_copy_strides_use_native_undefined_sentinels()
+    {
+        using var context = await NativeContext.CreateAsync();
+        using var texture = context.Device.CreateTexture(new()
+        {
+            Size = new()
+            {
+                Width = 1,
+                Height = 1,
+                DepthOrArrayLayers = 1,
+            },
+            Format = GPUTextureFormat.BGRA8Unorm,
+            Usage = GPUTextureUsage.CopyDst | GPUTextureUsage.CopySrc,
+        });
+        using var readback = context.Device.CreateBuffer(new()
+        {
+            Size = 4,
+            Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.MapRead,
+        });
+        using var upload = context.Device.CreateBuffer(new()
+        {
+            Size = 4,
+            Usage = GPUBufferUsage.CopySrc | GPUBufferUsage.CopyDst,
+        });
+        var extent = new GPUExtent3D
+        {
+            Width = 1,
+            Height = 1,
+            DepthOrArrayLayers = 1,
+        };
+
+        byte[] queueWrite = [17, 34, 51, 255];
+        context.Device.Queue.WriteTexture(
+            new() { Texture = texture },
+            queueWrite,
+            new(),
+            extent);
+        Assert.Equal(
+            queueWrite,
+            await ReadTexturePixelAsync(context.Device, texture, readback, extent));
+
+        byte[] bufferCopy = [68, 85, 102, 255];
+        context.Device.Queue.WriteBuffer(upload, 0, bufferCopy);
+        using (var encoder = context.Device.CreateCommandEncoder(new()))
+        {
+            Assert.IsType<GPUCommandEncoder<WebGPUNETBackend>>(encoder).CopyBufferToTexture(
+                new()
+                {
+                    Buffer = upload,
+                    Layout = new(),
+                },
+                new() { Texture = texture },
+                extent);
+            using var commands = encoder.Finish(new());
+            context.Device.Queue.Submit([commands]);
+        }
+
+        Assert.Equal(
+            bufferCopy,
+            await ReadTexturePixelAsync(context.Device, texture, readback, extent));
+    }
+
+    private static async Task<byte[]> ReadTexturePixelAsync(
+        IGPUDevice device,
+        IGPUTexture texture,
+        IGPUBuffer readback,
+        GPUExtent3D extent)
+    {
+        using (var encoder = device.CreateCommandEncoder(new()))
+        {
+            encoder.CopyTextureToBuffer(
+                new() { Texture = texture },
+                new()
+                {
+                    Buffer = readback,
+                    Layout = new(),
+                },
+                extent);
+            using var commands = encoder.Finish(new());
+            device.Queue.Submit([commands]);
+        }
+
+        await WaitWithPollingAsync(
+            device,
+            readback.MapAsync(
+                GPUMapMode.Read,
+                0,
+                4,
+                CancellationToken.None).AsTask());
+        try
+        {
+            return readback.GetMappedRange(0, 4).ToArray();
+        }
+        finally
+        {
+            readback.Unmap();
+        }
     }
 
     private static async Task<byte[]> RenderFrameAsync(

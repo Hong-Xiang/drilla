@@ -41,6 +41,14 @@ completes the managed task only after the terminal native callback. If success
 wins first, later token cancellation does not unmap the range; the caller owns
 the normal `Unmap` in a `finally` block. The wgpu-native 27
 `wgpuBufferGetMapState` export is an unimplemented panic stub and is not used.
+Queue-work cancellation is different: the managed wait cancels promptly, while
+the native callback state remains rooted until a later explicit poll delivers
+the terminal callback.
+
+`new GPUSamplerDescriptor()` supplies the WebGPU defaults, including
+clamp-to-edge addressing, nearest filtering, LOD range 0–32, and anisotropy 1.
+As with all C# structs, `default(GPUSamplerDescriptor)` bypasses those
+initializers and is not a valid sampler descriptor.
 
 Naga 27 still rejects the current canonical CLSL raymarch output because of its
 return-inside-loop validation bug. That shader remains explicitly unsupported
