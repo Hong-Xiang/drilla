@@ -134,6 +134,7 @@ public sealed class CLSLCompiler : ICLSLCompiler
 
     private PreparedCompilation Prepare(ShaderModuleDeclaration<RawCilFunctionBody> raw)
     {
+        ShaderModuleMetadataValidator.Validate(raw);
         ValidateModule(raw, static body => body.Declaration, "raw");
         var original = CilModuleCompiler.Compile(raw);
         ValidateModule(original, static body => body.Declaration, "Region");

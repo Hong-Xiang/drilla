@@ -44,7 +44,7 @@ public class ShaderReflectionTest
         };
 
         IShaderModuleReflection reflection = new ShaderModuleReflection();
-        var layout = reflection.GetBindGroupLayoutDescriptor(module);
+        var layout = reflection.GetBindGroupLayoutDescriptor(module, 0);
         var expected = new GPUBindGroupLayoutDescriptor()
         {
             Entries = new GPUBindGroupLayoutEntry[]
@@ -57,7 +57,7 @@ public class ShaderReflectionTest
                     {
                         Type = GPUBufferBindingType.Uniform,
                         HasDynamicOffset = false,
-                        MinBindingSize = 0
+                        MinBindingSize = 8
                     }
                 }
             }
