@@ -20,7 +20,6 @@
 		<PackageReference Include="CommunityToolkit.HighPerformance" />
 		<PackageReference Include="Alimer.Bindings.WebGPU" />
 		<PackageReference Include="Alimer.WebGPU.Native" />
-		<PackageReference Include="SixLabors.ImageSharp" />
 		<PackageReference Include="System.Reactive" />
 		<PackageReference Include="Varena" />
 	</ItemGroup>
