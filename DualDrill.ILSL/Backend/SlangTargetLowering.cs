@@ -9,6 +9,7 @@ using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Reflection;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Backend;
@@ -18,6 +19,7 @@ public sealed class SlangTargetLowering
     public ShaderModuleDeclaration<SlangFunctionBody> Lower(
         ShaderModuleDeclaration<RegionFunctionBody> module)
     {
+        WgslUniformLayoutValidator.Validate(module);
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
             definition => new FunctionLowerer(definition.Value).Lower());

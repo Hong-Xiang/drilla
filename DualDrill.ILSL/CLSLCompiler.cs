@@ -8,7 +8,6 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
-using DualDrill.CLSL.Reflection;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL;
@@ -53,8 +52,6 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
     public string Emit(ISharpShader shader)
     {
         var module = Compile(shader);
-        if (Option.Target is CLSLCompileTarget.SLang or CLSLCompileTarget.WGSL)
-            WgslUniformLayoutValidator.Validate(module);
         switch (Option.Target)
         {
             case CLSLCompileTarget.IR:
