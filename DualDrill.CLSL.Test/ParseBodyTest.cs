@@ -17,18 +17,22 @@ namespace DualDrill.CLSL.Test;
 
 public class ParseBodyTest(ITestOutputHelper Output)
 {
-    FunctionBody4 ParseMethod(FunctionDeclaration f, MethodBase m)
+    RegionFunctionBody ParseMethod(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
-        context.AddFunctionDefinition(Symbol.Function(m), f);
+        context.AddFunctionDeclaration(Symbol.Function(m), f);
         var parameters = m.GetParameters();
         foreach (var (ip, p) in f.Parameters.Index())
         {
             context.AddParameter(Symbol.Parameter(parameters[ip]), p);
         }
 
-        var parser = new RuntimeReflectionParser(context);
-        var result = parser.ParseMethodBody3(f);
+        var rawModule = CompilerTestPipeline.ParseRaw(m, context);
+        var raw = CompilerTestPipeline.RawBody(rawModule, m);
+        Assert.Same(f, raw.Declaration);
+        var result = Assert.Single(
+            CilModuleCompiler.Compile(rawModule).FunctionDefinitions.Values,
+            body => ReferenceEquals(body.Declaration, f));
         Output.WriteLine(result.Dump());
         return result;
     }
@@ -253,9 +257,12 @@ public class ParseBodyTest(ITestOutputHelper Output)
         var fCall = new FunctionDeclaration(nameof(BasicMethodInvocationParseShouldWork), [],
             new FunctionReturn(ShaderType.I32, []), []);
         var method = MethodHelper.GetMethod(DevelopTestShaderModule.MethodInvocation);
-        context.AddFunctionDefinition(Symbol.Function(method), fCall);
-        var parser = new RuntimeReflectionParser(context);
-        var result = parser.ParseMethodBody3(fCall);
+        context.AddFunctionDeclaration(Symbol.Function(method), fCall);
+        var rawModule = CompilerTestPipeline.ParseRaw(method, context);
+        Assert.Same(fCall, CompilerTestPipeline.RawBody(rawModule, method).Declaration);
+        var result = Assert.Single(
+            CilModuleCompiler.Compile(rawModule).FunctionDefinitions.Values,
+            body => ReferenceEquals(body.Declaration, fCall));
         Output.WriteLine(result.Dump());
         //DumpNew(result);
         //var entry = result[result.Entry];
@@ -328,10 +335,14 @@ public class ParseBodyTest(ITestOutputHelper Output)
                     result.Successor(falseArm).Should().BeOfType<UnconditionalSuccessor>()
                         .Which.Target.Should().Be(sharedReturn);
                     result.Successor(sharedReturn).Should().BeOfType<TerminateSuccessor>();
-                    result[result.Entry].ImmediatePostDominator.Should().Be(sharedReturn);
-                    result[trueArm].ImmediatePostDominator.Should().Be(sharedReturn);
-                    result[falseArm].ImmediatePostDominator.Should().Be(sharedReturn);
-                    result[sharedReturn].ImmediatePostDominator.Should().BeNull();
+                    result[result.Entry].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.Block>().Which.Target.Should().BeSameAs(sharedReturn);
+                    result[trueArm].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.Block>().Which.Target.Should().BeSameAs(sharedReturn);
+                    result[falseArm].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.Block>().Which.Target.Should().BeSameAs(sharedReturn);
+                    result[sharedReturn].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.FunctionExit>();
                     break;
                 }
             case "Release":
@@ -347,9 +358,12 @@ public class ParseBodyTest(ITestOutputHelper Output)
                     });
                     result.Successor(trueReturn).Should().BeOfType<TerminateSuccessor>();
                     result.Successor(falseReturn).Should().BeOfType<TerminateSuccessor>();
-                    result[result.Entry].ImmediatePostDominator.Should().BeNull();
-                    result[trueReturn].ImmediatePostDominator.Should().BeNull();
-                    result[falseReturn].ImmediatePostDominator.Should().BeNull();
+                    result[result.Entry].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.FunctionExit>();
+                    result[trueReturn].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.FunctionExit>();
+                    result[falseReturn].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.FunctionExit>();
                     break;
                 }
             default:
@@ -974,9 +988,12 @@ public class ParseBodyTest(ITestOutputHelper Output)
 
         var method =
             MethodHelper.GetMethod<vec3f32, vec3f32>(DevelopTestShaderModule.NestedExpressionWithFunctionCall);
-        context.AddFunctionDefinition(Symbol.Function(method), f);
-        var parser = new RuntimeReflectionParser(context);
-        var result = parser.ParseMethodBody3(f);
+        context.AddFunctionDeclaration(Symbol.Function(method), f);
+        var rawModule = CompilerTestPipeline.ParseRaw(method, context);
+        Assert.Same(f, CompilerTestPipeline.RawBody(rawModule, method).Declaration);
+        var result = Assert.Single(
+            CilModuleCompiler.Compile(rawModule).FunctionDefinitions.Values,
+            body => ReferenceEquals(body.Declaration, f));
         Output.WriteLine(result.Dump());
     }
 

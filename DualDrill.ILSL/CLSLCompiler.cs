@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
-using DualDrill.CLSL.Backend;
+﻿using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
@@ -13,7 +11,9 @@ namespace DualDrill.CLSL;
 
 public interface ICLSLCompiler
 {
-    public ShaderModuleDeclaration<FunctionBody4> Parse(ISharpShader shader);
+    public ShaderModuleDeclaration<RawCilFunctionBody> Parse(ISharpShader shader);
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ISharpShader shader);
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module);
     public string Emit(ISharpShader shader);
 }
 
@@ -34,42 +34,56 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
 {
     private readonly SlangService _slangService = new();
 
-    public ShaderModuleDeclaration<FunctionBody4> Parse(ISharpShader shader)
+    public ShaderModuleDeclaration<RawCilFunctionBody> Parse(ISharpShader shader)
     {
         var context = CompilationContext.Create();
         var parser = new RuntimeReflectionParser(context);
         return parser.ParseShaderModule(shader);
     }
 
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ISharpShader shader) => Compile(Parse(shader));
+
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module) =>
+        CilModuleCompiler.Compile(module);
+
     public string Emit(ISharpShader shader)
     {
-        var module = Parse(shader);
+        var module = Compile(shader);
         switch (Option.Target)
         {
             case CLSLCompileTarget.IR:
-            {
-                var formatter = new ShaderModuleFormatter();
-                module.Accept(formatter);
-                return formatter.Dump();
-            }
+                {
+                    var formatter = new ShaderModuleFormatter<RegionFunctionBody>();
+                    module.Accept(formatter);
+                    return formatter.Dump();
+                }
             case CLSLCompileTarget.WGSL:
-            {
-                module = module.RunPass(new FunctionToOperationPass());
-                module = module.RunPass(new RegionParameterToLocalVariablePass());
-                var emitter = new SlangEmitter(module);
-                var slangCode = emitter.Emit();
-                // Compile Slang to WGSL using slangc
-                var wgslCode = _slangService.CompileToWgslAsync(slangCode).GetAwaiter().GetResult();
-                return wgslCode;
-            }
+                {
+                    foreach (var (function, body) in module.FunctionDefinitions)
+                        foreach (var label in body.Labels)
+                            if (body[label].PostDominance is ExitPostDominance.NoExitPath)
+                                throw new NotSupportedException(
+                                    $"{function.Name}, block {label}: WGSL output does not support a block " +
+                                    "with no finite exit path; the Slang backend may erase nontermination.");
+
+                    module = module.RunPass(new FunctionToOperationPass());
+                    module = module.RunPass(new StablePointerRegionParameterPass());
+                    var target = new SlangTargetLowering().Lower(module);
+                    var emitter = new SlangEmitter(target);
+                    var slangCode = emitter.Emit();
+                    // Compile Slang to WGSL using slangc
+                    var wgslCode = _slangService.CompileToWgslAsync(slangCode).GetAwaiter().GetResult();
+                    return wgslCode;
+                }
             case CLSLCompileTarget.SLang:
-            {
-                module = module.RunPass(new FunctionToOperationPass());
-                module = module.RunPass(new RegionParameterToLocalVariablePass());
-                var emitter = new SlangEmitter(module);
-                var code = emitter.Emit();
-                return code;
-            }
+                {
+                    module = module.RunPass(new FunctionToOperationPass());
+                    module = module.RunPass(new StablePointerRegionParameterPass());
+                    var target = new SlangTargetLowering().Lower(module);
+                    var emitter = new SlangEmitter(target);
+                    var code = emitter.Emit();
+                    return code;
+                }
             default:
                 throw new NotSupportedException();
         }

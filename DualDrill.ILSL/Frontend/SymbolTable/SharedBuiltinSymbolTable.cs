@@ -25,9 +25,6 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
 
     public static SharedBuiltinSymbolTable Instance { get; } = new();
 
-    public MethodBodyAnalysisModel GetFunctionDefinition(FunctionDeclaration declaration) =>
-        throw new NotSupportedException("All runtime methods have not definitions");
-
     // all entities in shared builtin context can only be directly refrenced
     // declarations is not allowed
     public VariableDeclaration? this[IVariableSymbol symbol] => null;
@@ -54,7 +51,12 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
     {
         var result = new Dictionary<Type, IShaderType>
         {
+            [typeof(void)] = UnitType.Instance,
             [typeof(bool)] = BoolType.Instance,
+            [typeof(sbyte)] = IntType<N8>.Instance,
+            [typeof(byte)] = UIntType<N8>.Instance,
+            [typeof(short)] = IntType<N16>.Instance,
+            [typeof(ushort)] = UIntType<N16>.Instance,
             [typeof(int)] = ShaderType.I32,
             [typeof(uint)] = ShaderType.U32,
             [typeof(long)] = ShaderType.I64,

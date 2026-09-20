@@ -28,9 +28,9 @@ public sealed class SlangProcessTestCollection
 [Collection(SlangProcessTestCollection.Name)]
 public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 {
-    void Dump(string title, ShaderModuleDeclaration<FunctionBody4> module)
+    void Dump(string title, ShaderModuleDeclaration<RegionFunctionBody> module)
     {
-        var formatter = new ShaderModuleFormatter();
+        var formatter = new ShaderModuleFormatter<RegionFunctionBody>();
         Output.WriteLine($"=== {title} ===");
         module.Accept(formatter);
         Output.WriteLine(formatter.Dump());
@@ -58,16 +58,21 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
         var sep = $"\n{new string('-', 10)}\n";
         var context = CompilationContext.Create();
         var parser = new RuntimeReflectionParser(context);
-        var module = parser.ParseShaderModule(shader);
+        var rawModule = parser.ParseShaderModule(shader);
+        var module = CilModuleCompiler.Compile(rawModule);
         Dump("IR", module);
         //module = module.RunPass(new ParameterWithSemanticBindingToModuleVariablePass());
         module = module.RunPass(new FunctionToOperationPass());
-        module = module.RunPass(new RegionParameterToLocalVariablePass());
+        module = module.RunPass(new StablePointerRegionParameterPass());
 
         //Dump($"After {nameof(ParameterWithSemanticBindingToModuleVariablePass)} IR", module);
         Dump("IR after passes", module);
 
-        var emitter = new SlangEmitter(module);
+        var target = new SlangTargetLowering().Lower(module);
+        Output.WriteLine("=== Slang target AST ===");
+        foreach (var body in target.FunctionDefinitions.Values)
+            Output.WriteLine(body.PrettyPrint());
+        var emitter = new SlangEmitter(target);
 
         var code = emitter.Emit();
         Output.WriteLine("=== SLang ===");
@@ -269,14 +274,19 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
             "Select",
             BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Multiple-return helper method was not found");
-        var actualMethodBody = new MethodBodyAnalysisModel(method);
-        var controlFlowGraph = actualMethodBody.ControlFlowGraph;
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var actualMethodBody = Assert.Single(
+            stages.ShaderControlFlow.FunctionDefinitions.Values,
+            body => body.Source.Source.Environment.Method == method);
+        var controlFlowGraph = actualMethodBody.Graph;
         var labels = controlFlowGraph.Labels().ToArray();
         var conditional = Assert.Single(
             labels,
             label => controlFlowGraph.GetSucc(label).Count() == 2);
         var branchTargets = controlFlowGraph.GetSucc(conditional).ToArray();
-        var postDominators = controlFlowGraph.ControlFlowAnalysis().PostDominatorTree;
+        var factsBody = Assert.Single(
+            stages.ControlFacts.FunctionDefinitions.Values,
+            body => body.Source.Source.Source.Source.Environment.Method == method);
 
         switch (configuration)
         {
@@ -296,10 +306,17 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
                                 sharedReturn,
                                 Assert.IsType<UnconditionalSuccessor>(
                                     controlFlowGraph.Successor(target)).Target);
-                            Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(target));
+                            Assert.Same(
+                                sharedReturn,
+                                Assert.IsType<ExitPostDominance.Block>(
+                                    factsBody.Graph[target].Annotation.PostDominance).Target);
                         });
-                    Assert.Equal(sharedReturn, postDominators.ImmediatePostDominator(conditional));
-                    Assert.Null(postDominators.ImmediatePostDominator(sharedReturn));
+                    Assert.Same(
+                        sharedReturn,
+                        Assert.IsType<ExitPostDominance.Block>(
+                            factsBody.Graph[conditional].Annotation.PostDominance).Target);
+                    Assert.IsType<ExitPostDominance.FunctionExit>(
+                        factsBody.Graph[sharedReturn].Annotation.PostDominance);
                     break;
                 }
             case "Release":
@@ -311,10 +328,12 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 
                     Assert.Equal(2, terminalReturns.Length);
                     Assert.Equal(2, branchTargets.Intersect(terminalReturns).Count());
-                    Assert.Null(postDominators.ImmediatePostDominator(conditional));
+                    Assert.IsType<ExitPostDominance.FunctionExit>(
+                        factsBody.Graph[conditional].Annotation.PostDominance);
                     Assert.All(
                         terminalReturns,
-                        terminal => Assert.Null(postDominators.ImmediatePostDominator(terminal)));
+                        terminal => Assert.IsType<ExitPostDominance.FunctionExit>(
+                            factsBody.Graph[terminal].Annotation.PostDominance));
                     break;
                 }
             default:
