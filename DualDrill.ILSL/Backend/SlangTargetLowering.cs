@@ -18,6 +18,7 @@ public sealed class SlangTargetLowering
     public ShaderModuleDeclaration<SlangFunctionBody> Lower(
         ShaderModuleDeclaration<RegionFunctionBody> module)
     {
+        PortableDerivativeTarget.ValidateModuleBindings(module);
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
             definition => new FunctionLowerer(definition.Value).Lower());

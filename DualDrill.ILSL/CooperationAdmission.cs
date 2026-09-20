@@ -133,31 +133,29 @@ internal static class CooperationAdmission
                 $"{incomplete.Reason}, stage '{StageDescription(owners[incomplete.Function])}'" +
                 $"{Provenance(incomplete.Payload)}.");
 
-        var derivativeTargets = effects.Summaries
+        foreach (var site in effects.Summaries
             .SelectMany(item => item.Value.RequirementSites.Where(site =>
                 ReferenceEquals(site.Function, item.Key) &&
-                (site.Requirements & OperationRequirement.DerivativeQuad) != 0))
-            .Select(site => (
-                Site: site,
-                Target: CheckDerivative(
-                    normalized,
-                    site,
-                    StageDescription(owners[site.Function]))))
-            .ToImmutableArray();
-        foreach (var (site, mappedTarget) in derivativeTargets)
+                (site.Requirements & OperationRequirement.DerivativeQuad) != 0)))
+            CheckDerivative(
+                normalized,
+                site,
+                StageDescription(owners[site.Function]));
+        if (PortableDerivativeTarget.FindUsedNameCollision(normalized) is { } collision)
         {
-            var collision = normalized.Declarations
-                .OfType<FunctionDeclaration>()
-                .FirstOrDefault(function =>
-                    string.Equals(function.Name, mappedTarget.Name, StringComparison.Ordinal));
-            if (collision is not null)
-                throw Error(
-                    CLSLCooperationProfile.PortableWgsl,
-                    StageDescription(owners[site.Function]),
-                    site,
-                    OperationRequirement.DerivativeQuad,
-                    $"mapped target spelling '{mappedTarget.Name}' collides with module declaration " +
-                    $"'{collision.Name}'");
+            var site = effects[collision.Function].RequirementSites.First(requirement =>
+                ReferenceEquals(requirement.Function, collision.Function) &&
+                ReferenceEquals(requirement.Label, collision.Label) &&
+                requirement.InstructionOrdinal == collision.InstructionOrdinal &&
+                ReferenceEquals(requirement.Operation, collision.Operation) &&
+                (requirement.Requirements & OperationRequirement.DerivativeQuad) != 0);
+            throw Error(
+                CLSLCooperationProfile.PortableWgsl,
+                StageDescription(owners[site.Function]),
+                site,
+                OperationRequirement.DerivativeQuad,
+                $"mapped target spelling '{collision.Target.Name}' collides with module declaration " +
+                $"'{collision.ModuleDeclaration.Name}'");
         }
 
         foreach (var item in effects.Summaries.OrderBy(static item => item.Key.Name, StringComparer.Ordinal))
@@ -327,7 +325,7 @@ internal static class CooperationAdmission
         return result.ToImmutable();
     }
 
-    private static FunctionDeclaration CheckDerivative(
+    private static void CheckDerivative(
         ShaderModuleDeclaration<RegionFunctionBody> module,
         OperationRequirementSite site,
         string stage)
@@ -336,7 +334,7 @@ internal static class CooperationAdmission
         if (instruction.Operation is not CallOperation ||
             instruction.OperandCount == 0 ||
             instruction[0] is not FunctionDeclaration declaration ||
-            !PortableDerivativeTarget.TryLower(declaration, out var target))
+            !PortableDerivativeTarget.TryLower(declaration, out _))
             throw Error(
                 CLSLCooperationProfile.PortableWgsl,
                 stage,
@@ -351,7 +349,6 @@ internal static class CooperationAdmission
             $"PortableWgsl admission rejected function '{site.Function.Name}', block '{site.Label.Name}', " +
             $"operation '{instruction.Operation.Name}', requirement '{OperationRequirement.DerivativeQuad}', " +
             $"stage '{stage}'{Provenance(instruction.Payload)}");
-        return target;
     }
 
     private static void CheckOrdinaryCall(

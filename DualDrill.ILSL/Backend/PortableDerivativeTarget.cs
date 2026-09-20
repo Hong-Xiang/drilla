@@ -1,12 +1,24 @@
 using System.Collections.Frozen;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Backend;
 
 internal static class PortableDerivativeTarget
 {
+    internal sealed record NameCollision(
+        FunctionDeclaration Function,
+        Label Label,
+        int InstructionOrdinal,
+        IOperation Operation,
+        FunctionDeclaration Source,
+        FunctionDeclaration Target,
+        FunctionDeclaration ModuleDeclaration);
+
     private static readonly FrozenSet<FunctionDeclaration> Derivatives =
         ShaderFunction.Instance.Functions
             .Where(static function =>
@@ -27,6 +39,59 @@ internal static class PortableDerivativeTarget
         FunctionDeclaration function,
         out FunctionDeclaration target) =>
         Supported.TryGetValue(function, out target!);
+
+    internal static NameCollision? FindUsedNameCollision(
+        ShaderModuleDeclaration<RegionFunctionBody> module)
+    {
+        foreach (var (function, body) in module.FunctionDefinitions)
+        {
+            NameCollision? collision = null;
+            body.Body.Traverse((_, label, block) =>
+            {
+                foreach (var (instruction, ordinal) in block.Body.Elements.Select(
+                             static (instruction, ordinal) => (instruction, ordinal)))
+                {
+                    if (instruction.Operation is not CallOperation ||
+                        instruction.OperandCount == 0 ||
+                        instruction[0] is not FunctionDeclaration source ||
+                        !TryLower(source, out var target))
+                        continue;
+                    var declaration = module.Declarations
+                        .OfType<FunctionDeclaration>()
+                        .FirstOrDefault(candidate =>
+                            string.Equals(candidate.Name, target.Name, StringComparison.Ordinal));
+                    if (declaration is null)
+                        continue;
+                    collision = new(
+                        function,
+                        label,
+                        ordinal,
+                        instruction.Operation,
+                        source,
+                        target,
+                        declaration);
+                    return true;
+                }
+                return false;
+            });
+            if (collision is not null)
+                return collision;
+        }
+        return null;
+    }
+
+    internal static void ValidateModuleBindings(
+        ShaderModuleDeclaration<RegionFunctionBody> module)
+    {
+        if (FindUsedNameCollision(module) is not { } collision)
+            return;
+        throw new NotSupportedException(
+            $"Slang target lowering cannot map registered derivative '{collision.Source.Name}' to " +
+            $"'{collision.Target.Name}' in function '{collision.Function.Name}', block " +
+            $"'{collision.Label.Name}', instruction {collision.InstructionOrdinal}, operation " +
+            $"'{collision.Operation.Name}': mapped target spelling " +
+            $"collides with module declaration '{collision.ModuleDeclaration.Name}'.");
+    }
 
     internal static string UnsupportedReason(FunctionDeclaration function)
     {

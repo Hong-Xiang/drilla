@@ -421,6 +421,43 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         Assert.Contains("DerivativeQuad", error.Message);
     }
 
+    [Theory]
+    [InlineData(typeof(DdxCollisionShader), "ddx")]
+    [InlineData(typeof(DdyCollisionShader), "ddy")]
+    [InlineData(typeof(FwidthCollisionShader), "fwidth")]
+    public void DirectTargetLoweringRejectsUsedDerivativeTargetNameCollision(
+        Type shaderType,
+        string targetName)
+    {
+        var shader = (ISharpShader)(Activator.CreateInstance(shaderType)
+            ?? throw new InvalidOperationException($"Could not create {shaderType}."));
+
+        var error = Assert.Throws<NotSupportedException>(() => DirectTarget(shader));
+
+        output.WriteLine(error.Message);
+        Assert.Contains("Slang target lowering cannot map registered derivative", error.Message);
+        Assert.Contains($"'{targetName}'", error.Message);
+        Assert.Contains($"module declaration '{targetName}'", error.Message);
+    }
+
+    [Fact]
+    public async Task DirectTargetLoweringPreservesNoncollidingBuiltinsAndOrdinaryHelpers()
+    {
+        var derivativeSlang = new SlangEmitter(DirectTarget(new DirectDerivativeShader())).Emit();
+        var derivativeWgsl = await new SlangService().CompileToWgslAsync(derivativeSlang);
+        var helperSlang = new SlangEmitter(DirectTarget(new SourceDpdxHelperShader())).Emit();
+        var helperWgsl = await new SlangService().CompileToWgslAsync(helperSlang);
+        var unusedTargetNameSlang = new SlangEmitter(DirectTarget(new UnusedDdxHelperShader())).Emit();
+        var unusedTargetNameWgsl = await new SlangService().CompileToWgslAsync(unusedTargetNameSlang);
+
+        Assert.Contains("ddx(", derivativeSlang);
+        Assert.Contains("dpdx(", derivativeWgsl);
+        Assert.Contains("dpdx(", helperSlang);
+        Assert.Contains("fn dpdx_", helperWgsl);
+        Assert.Contains("ddx(", unusedTargetNameSlang);
+        Assert.Contains("fn ddx_", unusedTargetNameWgsl);
+    }
+
     [Fact]
     public void SameSourceNameDpdxHelperRemainsOrdinary()
     {
@@ -885,6 +922,15 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         ShaderModuleDeclaration<SlangFunctionBody> Target,
         CLSLCooperationFacts Facts,
         FunctionDeclaration Function);
+
+    private static ShaderModuleDeclaration<SlangFunctionBody> DirectTarget(ISharpShader shader)
+    {
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var normalized = CilModuleCompiler.Compile(raw)
+            .RunPass(new FunctionToOperationPass())
+            .RunPass(new StablePointerRegionParameterPass());
+        return new SlangTargetLowering().Lower(normalized);
+    }
 
     private static ShaderModuleDeclaration<RegionFunctionBody> ManualModule(
         string name,
@@ -1510,6 +1556,16 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
         [ShaderMethod]
         private static float dpdx(float value) => value + 42.0f;
+    }
+
+    private sealed class UnusedDdxHelperShader : ISharpShader
+    {
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment([Location(0)] float varying) => ddx(varying);
+
+        [ShaderMethod]
+        private static float ddx(float value) => value + 42.0f;
     }
 
     private sealed class ProviderOperation(OperationRequirement requirements)
