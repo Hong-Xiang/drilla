@@ -1,10 +1,10 @@
 # Proposed typed C# resource slices
 
-**DESIGN ONLY. None of the new resource wrappers, operations, workgroup/layout
-attributes or reflection records below exists as an approved CLSL API.**
-These are independently authored input/output contracts for the
-[inventory roadmap](./shader-feature-inventory.md), not captured compiler output.
-Target snippets describe intended semantics, not exact future formatting.
+**RESOURCE DESIGN.** The compute entry-point subset (`WorkgroupSize` and
+`global_invocation_id:vec3u32`) is implemented. Resource wrappers, resource
+operations, layout and reflection records below remain proposed contracts for
+the [inventory roadmap](./shader-feature-inventory.md). Resource target snippets
+describe intended semantics, not captured compiler output.
 
 ## Thin API and type rules
 
@@ -39,7 +39,8 @@ objects are not allocated by executing CLR field initializers.
 
 ## 1. Structured-buffer compute
 
-**PROPOSED C#** (wrappers/length intrinsic/workgroup attribute are new):
+**PROPOSED RESOURCE C#** (the wrappers and length/index operations remain new;
+the compute signature attributes are implemented):
 
 ```csharp
 sealed class DoubleValues : ISharpShader

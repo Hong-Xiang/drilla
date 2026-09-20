@@ -1,8 +1,11 @@
 using System.Collections.Immutable;
+using System.Reflection;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -78,6 +81,7 @@ internal static class ShaderModuleMetadataValidator
             foreach (var parameter in function.Parameters)
                 ValidateInterfaceAttributes($"parameter '{function.Name}.{parameter.Name}'", parameter.Attributes);
             ValidateInterfaceAttributes($"return of function '{function.Name}'", function.Return.Attributes);
+            ValidateComputeFunction(function);
         }
 
         foreach (var structure in module.Declarations.OfType<StructureDeclaration>())
@@ -170,6 +174,7 @@ internal static class ShaderModuleMetadataValidator
     {
         var unsupported = attributes
             .Where(attribute => attribute is not IShaderStageAttribute and
+                                not WorkgroupSizeAttribute and
                                 not IShaderMetadataAttribute and
                                 not IShaderOperationMethodAttribute)
             .ToArray();
@@ -181,6 +186,116 @@ internal static class ShaderModuleMetadataValidator
 
     private static void ValidateFunctionAttributes(FunctionDeclaration function) =>
         ValidateFunctionAttributes($"function '{function.Name}'", function.Attributes);
+
+    public static void ValidateReflectedComputeMetadata(MethodInfo method)
+    {
+        var attributes = method.GetCustomAttributes().OfType<IShaderAttribute>().ToImmutableHashSet();
+        var stages = attributes.OfType<IShaderStageAttribute>().ToArray();
+        var workgroupSizes = attributes.OfType<WorkgroupSizeAttribute>().ToArray();
+        var globalInvocationIds = method.GetParameters()
+            .SelectMany(parameter => parameter.GetCustomAttributes<BuiltinAttribute>())
+            .Count(attribute => attribute.Slot is BuiltinBinding.global_invocation_id);
+        var globalInvocationIdReturn = method.ReturnParameter
+            .GetCustomAttributes<BuiltinAttribute>()
+            .Any(attribute => attribute.Slot is BuiltinBinding.global_invocation_id);
+        var hasComputeStage = stages.Any(stage => stage is ComputeAttribute);
+        var declaration = $"method '{method.DeclaringType?.FullName}.{method.Name}'";
+
+        if (!hasComputeStage)
+        {
+            if (workgroupSizes.Length > 0)
+                throw Invalid(declaration, "[WorkgroupSize] is valid only on a [Compute] entry point.");
+            if (globalInvocationIds > 0 || globalInvocationIdReturn)
+                throw Invalid(
+                    declaration,
+                    "[Builtin(global_invocation_id)] is valid only on a [Compute] entry input.");
+            return;
+        }
+
+        if (!method.IsStatic)
+            throw Invalid(declaration, "a compute entry point must be static.");
+    }
+
+    private static void ValidateComputeFunction(FunctionDeclaration function)
+    {
+        var stages = function.Attributes.OfType<IShaderStageAttribute>().ToArray();
+        var workgroupSizes = function.Attributes.OfType<WorkgroupSizeAttribute>().ToArray();
+        var globalInvocationIds = function.Parameters
+            .SelectMany(parameter => parameter.Attributes.OfType<BuiltinAttribute>())
+            .Count(attribute => attribute.Slot is BuiltinBinding.global_invocation_id);
+        var globalInvocationIdReturn = function.Return.Attributes
+            .OfType<BuiltinAttribute>()
+            .Any(attribute => attribute.Slot is BuiltinBinding.global_invocation_id);
+        var hasComputeStage = stages.Any(stage => stage is ComputeAttribute);
+        var declaration = $"function '{function.Name}'";
+
+        if (!hasComputeStage)
+        {
+            if (workgroupSizes.Length > 0)
+                throw Invalid(declaration, "[WorkgroupSize] is valid only on a [Compute] entry point.");
+            if (globalInvocationIds > 0 || globalInvocationIdReturn)
+                throw Invalid(
+                    declaration,
+                    "[Builtin(global_invocation_id)] is valid only on a [Compute] entry input.");
+            return;
+        }
+
+        if (stages.Length != 1)
+            throw Invalid(
+                declaration,
+                $"a compute entry requires exactly one shader stage attribute; found {stages.Length}.");
+        if (workgroupSizes.Length != 1)
+            throw Invalid(
+                declaration,
+                $"a compute entry requires exactly one [WorkgroupSize] attribute; found {workgroupSizes.Length}.");
+
+        var workgroupSize = workgroupSizes[0];
+        if (workgroupSize.X <= 0 || workgroupSize.Y <= 0 || workgroupSize.Z <= 0)
+            throw Invalid(
+                declaration,
+                "workgroup dimensions must be positive Int32 values; " +
+                $"found ({workgroupSize.X}, {workgroupSize.Y}, {workgroupSize.Z}).");
+
+        if (function.Return.Type is not UnitType)
+            throw Invalid(
+                declaration,
+                $"a compute entry must return void; found {function.Return.Type.Name}.");
+        if (function.Return.Attributes.Count > 0)
+            throw Invalid(
+                declaration,
+                $"a compute entry return must not have interface attributes; found " +
+                $"{AttributeNames(function.Return.Attributes)}.");
+
+        if (globalInvocationIdReturn)
+            throw Invalid(
+                declaration,
+                "[Builtin(global_invocation_id)] is valid only on a compute input parameter.");
+        if (globalInvocationIds > 1)
+            throw Invalid(
+                declaration,
+                $"a compute entry accepts at most one global_invocation_id input; found {globalInvocationIds}.");
+        if (function.Parameters.Length > 1)
+            throw Invalid(
+                declaration,
+                $"the supported compute signature accepts zero or one input; found {function.Parameters.Length}.");
+        if (function.Parameters.Length == 0)
+            return;
+
+        var parameter = function.Parameters[0];
+        var builtin = parameter.Attributes.OfType<BuiltinAttribute>().SingleOrDefault();
+        if (parameter.Attributes.Count != 1 ||
+            builtin is null ||
+            builtin.Slot is not BuiltinBinding.global_invocation_id)
+            throw Invalid(
+                $"parameter '{function.Name}.{parameter.Name}'",
+                "the only supported compute input is [Builtin(global_invocation_id)] vec3u32.");
+
+        var globalInvocationIdType = VecType<N3, UIntType<N32>>.Instance;
+        if (!parameter.Type.Equals(globalInvocationIdType))
+            throw Invalid(
+                $"parameter '{function.Name}.{parameter.Name}'",
+                $"global_invocation_id must have type {globalInvocationIdType.Name}; found {parameter.Type.Name}.");
+    }
 
     private static string AttributeNames(IEnumerable<IShaderAttribute> attributes) =>
         string.Join(

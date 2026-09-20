@@ -8,8 +8,16 @@ current CLSL behavior and [future API proposals](./shader-feature-proposals.md).
 
 ## Current CLSL probes
 
+The compute-entry gap recorded below is now closed by
+`ComputeEntryContractTests`: the supported profile is a static void compute
+entry with positive Int32 workgroup dimensions and zero or one
+`global_invocation_id:vec3u32` input. Tests cover typed metadata, IR, Slang,
+WGSL and raw Slang reflection. No resource execution, dispatch or GPU readback
+is claimed.
+
 The [new test file](../../DualDrill.CLSL.Test/ShaderFeatureCharacterizationTests.cs)
-contains five gap characterizations. The selected command in the
+retains the remaining gap characterizations and now checks missing compute
+workgroup metadata at the shared validation boundary. The selected command in the
 [inventory](./shader-feature-inventory.md#runnable-evidence) runs them together
 with three existing public compiler positives: minimum triangle, uniform
 struct and boolean helper calls. Actual Debug and Release output each included:
@@ -29,7 +37,7 @@ no dependency manifest was changed.
 
 | Actual input | Actual stopping/output boundary | Meaning |
 |---|---|---|
-| `[Compute] public static void cs() { }` | Public Slang compile reaches emitter, then exact `NotSupportedException` below | Stage discovery works; compute emission does not |
+| `[Compute] public static void cs() { }` | Shared metadata validation rejects the missing `[WorkgroupSize]` before CIL lowering | Compute entries require explicit positive workgroup dimensions |
 | Vertex `vec4f32 vs([Builtin(instance_index)] uint index)` returning a constant vector | Public Slang compile reaches builtin emission, then exact rejection | Enum declaration does not imply builtin support |
 | `static int ReadElement(int[] values, int index) => values[index]` | `int[]` maps to `OpaqueType`; real CIL `ldelem.i4` fails Pre analysis with `ValidationException`, inner `NotImplementedException` | No usable array/index path |
 | `texture.Sample(sampler, uv)` using legacy `ITexture2D<Vector4>`/`ISampler` | Both resource types map to `OpaqueType`; metadata collection fails at `callvirt`, before shader operations | Legacy interface is not a shader intrinsic |
@@ -38,7 +46,7 @@ no dependency manifest was changed.
 **ACTUAL DIAGNOSTICS**, identical for Debug and Release:
 
 ```text
-Slang attribute DualDrill.CLSL.Language.ShaderAttribute.ComputeAttribute is not supported.
+Shader module metadata validation rejected function 'cs': a compute entry requires exactly one [WorkgroupSize] attribute; found 0.
 Unsupported Slang builtin binding instance_index.
 reachable instruction semantics are not supported at IL_0002 (ldelem.i4). @ ReadElement
 Failed to collect metadata operand at IL_0003 (callvirt) in System.Numerics.Vector4 Sample(DualDrill.CLSL.ITexture2D`1[System.Numerics.Vector4], DualDrill.CLSL.ISampler, System.Numerics.Vector2).

@@ -333,6 +333,12 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 case FragmentAttribute:
                     writer.WriteLine("[shader(\"fragment\")]");
                     break;
+                case ComputeAttribute:
+                    writer.WriteLine("[shader(\"compute\")]");
+                    break;
+                case WorkgroupSizeAttribute size:
+                    writer.WriteLine($"[numthreads({size.X}, {size.Y}, {size.Z})]");
+                    break;
                 case VertexAttribute:
                     writer.WriteLine("[shader(\"vertex\")]");
                     break;
@@ -342,6 +348,7 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                     {
                         BuiltinBinding.position => "SV_POSITION",
                         BuiltinBinding.vertex_index => "SV_VertexId",
+                        BuiltinBinding.global_invocation_id => "SV_DispatchThreadID",
                         _ => throw new NotSupportedException(
                             $"Unsupported Slang builtin binding {builtin.Slot}.")
                     });

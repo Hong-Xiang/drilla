@@ -48,6 +48,10 @@ public sealed class RuntimeReflectionParser
                 _ = variable;
 
             RejectAttributedModuleProperties(moduleType);
+            foreach (var method in moduleType.GetMethods(
+                         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                         BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                ShaderModuleMetadataValidator.ValidateReflectedComputeMetadata(method);
             var entryMethods = moduleType
                                .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
                                            BindingFlags.Instance)
