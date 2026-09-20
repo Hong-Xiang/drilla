@@ -27,6 +27,10 @@ irreducible/side-entry input; there is no node splitting, full-function program
 counter, fabricated return, GPU reconvergence guarantee, or general Beyond
 Relooper implementation.
 
+See the [bounded control-flow corpus](./control-flow-corpus.md) for executable
+topology/depth coverage, input/output examples, upstream provenance and explicit
+limits on the evidence.
+
 ## GPU Reconvergence Research
 
 See [Maximal Reconvergence for a CIL-First Shader Compiler](./maximal-reconvergence-research.md)
