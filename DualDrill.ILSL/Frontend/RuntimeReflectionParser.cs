@@ -144,6 +144,8 @@ public sealed class RuntimeReflectionParser
         var addressSpace = ShaderModuleMetadataValidator.ValidateResourceAttributes(
             $"field '{field.DeclaringType?.FullName}.{field.Name}'",
             attributes);
+        if (attributes.OfType<UniformAttribute>().Any())
+            ValidateUniformClrStructure(field);
         var declaration = new VariableDeclaration(
             addressSpace,
             field.Name,
@@ -151,6 +153,25 @@ public sealed class RuntimeReflectionParser
             attributes.ToImmutableHashSet());
         Context.AddVariable(symbol, declaration);
         return declaration;
+    }
+
+    private void ValidateUniformClrStructure(FieldInfo field)
+    {
+        var type = field.FieldType;
+        if (SharedBuiltinSymbolTable.Instance.RuntimeTypes.ContainsKey(type) || !type.IsValueType)
+            return;
+
+        if (type.IsExplicitLayout)
+            throw new NotSupportedException(
+                $"Uniform field {field.DeclaringType}.{field.Name} uses explicitly laid out structure " +
+                $"{type}; CLR explicit layout is not supported by the WGSL uniform layout profile.");
+
+        var property = type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                           .FirstOrDefault();
+        if (property is not null)
+            throw new NotSupportedException(
+                $"Uniform field {field.DeclaringType}.{field.Name} uses property-bearing structure {type}; " +
+                $"property '{property.Name}' is not supported by the WGSL uniform layout profile.");
     }
 
     private MemberDeclaration ParseFieldCore(FieldInfo field)

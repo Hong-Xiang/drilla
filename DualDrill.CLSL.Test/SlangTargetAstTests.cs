@@ -11,6 +11,7 @@ using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
@@ -750,6 +751,44 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             () => new SlangTargetLowering().Lower(module));
 
         Assert.Contains("requires bodies for functions: MissingBody", error.Message);
+    }
+
+    [Fact]
+    public void UniformLayoutIsValidatedAtDirectTargetLoweringBoundary()
+    {
+        var uniform = new VariableDeclaration(
+            UniformAddressSpace.Instance,
+            "Flag",
+            ShaderType.Bool,
+            [new UniformAttribute(), new GroupAttribute(0), new BindingAttribute(0)]);
+        var module = new ShaderModuleDeclaration<RegionFunctionBody>(
+            [uniform],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty);
+
+        var error = Assert.Throws<NotSupportedException>(
+            () => new SlangTargetLowering().Lower(module));
+
+        Assert.Equal(
+            "Uniform 'Flag' with shader type 'bool' is outside the WGSL uniform layout profile: " +
+            "only f32, i32, u32, and their 2-, 3-, or 4-component vectors are supported.",
+            error.Message);
+    }
+
+    [Fact]
+    public void DirectTargetLoweringAllowsNonuniformBool()
+    {
+        var input = new VariableDeclaration(
+            InputAddressSpace.Instance,
+            "Flag",
+            ShaderType.Bool,
+            []);
+        var module = new ShaderModuleDeclaration<RegionFunctionBody>(
+            [input],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty);
+
+        var target = new SlangTargetLowering().Lower(module);
+
+        Assert.Same(input, Assert.Single(target.Declarations));
     }
 
     [Fact]
