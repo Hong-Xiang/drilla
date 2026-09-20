@@ -542,12 +542,8 @@ public sealed class SlangTargetLowering
         }
 
         private static bool IsStructuredBufferValue(IShaderValue? value) =>
-            value?.Type switch
-            {
-                ReadOnlyStructuredBufferType => true,
-                IPtrType { BaseType: ReadOnlyStructuredBufferType } => true,
-                _ => false
-            };
+            value is not null &&
+            ShaderModuleMetadataValidator.IsResourceTypeOrPointer(value.Type);
 
         private void DefineAlias(
             Instruction<IShaderValue, IShaderValue> instruction,

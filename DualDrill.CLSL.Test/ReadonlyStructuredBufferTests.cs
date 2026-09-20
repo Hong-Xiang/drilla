@@ -429,7 +429,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var index = ShaderValue.Intermediate(ShaderType.U32);
         var result = ShaderValue.Intermediate(ShaderType.F32);
         var call = Instruction<IShaderValue, IShaderValue>.Create(
-            new CallOperation((FunctionType)operation.Function.Type),
+            new CallOperation(new FunctionType([operation.BufferPointerType, ShaderType.U32], ShaderType.F32)),
             result,
             [operation.Function, receiver, index],
             payload);
@@ -460,6 +460,8 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var u32 = ShaderValue.Intermediate(ShaderType.U32);
         var i32 = ShaderValue.Intermediate(ShaderType.I32);
         var resource = ShaderValue.Intermediate(ReadOnlyStructuredBufferType.Instance);
+        var indirectResource = ShaderValue.Intermediate(
+            operation.BufferPointerType.GetPtrType(FunctionAddressSpace.Instance));
 
         var malformed = new[]
         {
@@ -481,7 +483,11 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
             Instruction<IShaderValue, IShaderValue>.Create(
                 new StoreOperation(),
                 null,
-                [storageReceiver, resource])
+                [storageReceiver, resource]),
+            Instruction<IShaderValue, IShaderValue>.Create(
+                new LoadOperation(),
+                storageReceiver,
+                [indirectResource])
         };
 
         Assert.All(malformed, instruction =>
@@ -520,6 +526,154 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var addressException = Assert.Throws<NotSupportedException>(() =>
             new SlangTargetLowering().Lower(wrongAddressModule));
         Assert.Contains("does not match attribute address space Storage", addressException.Message);
+    }
+
+    [Fact]
+    public void DirectIrRejectsIndirectResourceSignatureAndLocalTypes()
+    {
+        var resourcePointer = ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance);
+        var indirect = resourcePointer.GetPtrType(FunctionAddressSpace.Instance);
+        var doublyIndirect = indirect.GetPtrType(FunctionAddressSpace.Instance);
+
+        var parameterModule = SignatureModule(
+            [new ParameterDeclaration("value", indirect, [])],
+            UnitType.Instance);
+        Assert.Throws<NotSupportedException>(() =>
+            new ShaderModuleReflection().GetStorageBufferBindings(parameterModule));
+        Assert.Throws<NotSupportedException>(() =>
+            new SlangTargetLowering().Lower(parameterModule));
+
+        var returnModule = SignatureModule([], doublyIndirect);
+        Assert.Throws<NotSupportedException>(() =>
+            new ShaderModuleReflection().GetStorageBufferBindings(returnModule));
+        Assert.Throws<NotSupportedException>(() =>
+            new SlangTargetLowering().Lower(returnModule));
+
+        var localModule = SignatureModule(
+            [],
+            UnitType.Instance,
+            [new VariableDeclaration(FunctionAddressSpace.Instance, "copy", doublyIndirect, [])]);
+        Assert.Throws<NotSupportedException>(() =>
+            new SlangTargetLowering().Lower(localModule));
+
+        var structure = new StructureDeclaration
+        {
+            Name = "Payload",
+            Attributes = [],
+            Members = [new MemberDeclaration("Buffer", doublyIndirect, [])]
+        };
+        var memberModule = new ShaderModuleDeclaration<RegionFunctionBody>(
+            [structure],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty);
+        Assert.Throws<NotSupportedException>(() =>
+            new ShaderModuleReflection().GetStorageBufferBindings(memberModule));
+    }
+
+    [Fact]
+    public void DirectIrPreservesOrdinaryIndirectPointerTypes()
+    {
+        var ordinary = ShaderType.F32.GetPtrType(StorageAddressSpace.Instance)
+            .GetPtrType(FunctionAddressSpace.Instance);
+        var module = SignatureModule(
+            [new ParameterDeclaration("value", ordinary, [])],
+            UnitType.Instance);
+
+        Assert.Empty(new ShaderModuleReflection().GetStorageBufferBindings(module));
+        Assert.NotNull(new SlangTargetLowering().Lower(module));
+    }
+
+    [Fact]
+    public unsafe void ClrFunctionPointersContainingResourcesAreRejected()
+    {
+        foreach (var method in new[]
+                 {
+                     Method(nameof(ResourceFunctionPointerParameter)),
+                     Method(nameof(ResourceFunctionPointerReturn))
+                 })
+        {
+            Assert.True(method.GetParameters().Single().ParameterType.IsFunctionPointer);
+            var exception = Assert.Throws<NotSupportedException>(() =>
+                new RuntimeReflectionParser().ParseMethod(method));
+            Assert.Contains("structured buffers are valid only as static shader-module fields", exception.Message);
+        }
+
+        var fieldException = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseShaderModule(new HiddenFunctionPointerShader()));
+        Assert.Contains("Hidden", fieldException.Message);
+        Assert.Contains("structured buffers must be declared directly", fieldException.Message);
+    }
+
+    [Fact]
+    public unsafe void NonResourceFunctionPointerBehaviorIsPreserved()
+    {
+        var method = Method(nameof(OrdinaryFunctionPointerParameter));
+        Assert.True(method.GetParameters().Single().ParameterType.IsFunctionPointer);
+
+        Assert.NotNull(new RuntimeReflectionParser().ParseMethod(method));
+    }
+
+    [Fact]
+    public void ResourceNormalizerRejectsProxyDeclarationsAndWrongCallTypes()
+    {
+        var length = StructuredBufferLengthOperation.Instance;
+        var load = StructuredBufferLoadOperation.Instance;
+        var receiver = ShaderValue.Intermediate(length.BufferPointerType);
+        var index = ShaderValue.Intermediate(ShaderType.U32);
+        var u32 = ShaderValue.Intermediate(ShaderType.U32);
+        var f32 = ShaderValue.Intermediate(ShaderType.F32);
+        var malformed = new[]
+        {
+            ResourceCall(
+                TaggedProxy(length, [], ShaderType.U32),
+                new FunctionType([], ShaderType.U32),
+                u32,
+                [receiver]),
+            ResourceCall(
+                TaggedProxy(
+                    length,
+                    [new ParameterDeclaration("buffer", length.BufferPointerType, [])],
+                    ShaderType.F32),
+                new FunctionType([length.BufferPointerType], ShaderType.F32),
+                u32,
+                [receiver]),
+            ResourceCall(
+                length.Function,
+                new FunctionType([], ShaderType.U32),
+                u32,
+                [receiver]),
+            ResourceCall(
+                TaggedProxy(
+                    load,
+                    [new ParameterDeclaration("buffer", load.BufferPointerType, [])],
+                    ShaderType.F32),
+                new FunctionType([load.BufferPointerType], ShaderType.F32),
+                f32,
+                [receiver, index]),
+            ResourceCall(
+                TaggedProxy(
+                    load,
+                    [
+                        new ParameterDeclaration("buffer", load.BufferPointerType, []),
+                        new ParameterDeclaration("index", ShaderType.U32, [])
+                    ],
+                    ShaderType.U32),
+                new FunctionType([load.BufferPointerType, ShaderType.U32], ShaderType.U32),
+                f32,
+                [receiver, index]),
+            ResourceCall(
+                load.Function,
+                new FunctionType([load.BufferPointerType], ShaderType.F32),
+                f32,
+                [receiver, index])
+        };
+
+        Assert.All(malformed, call =>
+        {
+            var exception = Record.Exception(() =>
+                OperationModule(call).RunPass(new FunctionToOperationPass()));
+            Assert.NotNull(exception);
+            Assert.Equal("OperationFunctionNotMatchException", exception.GetType().Name);
+        });
     }
 
     private static MethodInfo Method(string name) =>
@@ -620,6 +774,61 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
             ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(function, body));
     }
 
+    private static ShaderModuleDeclaration<RegionFunctionBody> SignatureModule(
+        ImmutableArray<ParameterDeclaration> parameters,
+        IShaderType returnType,
+        ImmutableArray<VariableDeclaration> locals = default)
+    {
+        if (locals.IsDefault)
+            locals = [];
+        var function = new FunctionDeclaration(
+            "Entry",
+            parameters,
+            new FunctionReturn(returnType, []),
+            []);
+        var label = DualDrill.CLSL.Language.Symbol.Label.Create("entry");
+        var terminator = returnType is UnitType
+            ? Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>()
+            : Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(
+                ShaderValue.Intermediate(returnType));
+        var instructions = locals.Select(local =>
+            Instruction<IShaderValue, IShaderValue>.Create(
+                new LoadOperation(),
+                ShaderValue.Intermediate(local.Type),
+                [local.Value]));
+        var body = RegionFixture.CreateFunctionBody(
+            function,
+            RegionTree.Block(
+                label,
+                [],
+                RegionFixture.Body(label, [], instructions, terminator),
+                null));
+        return new ShaderModuleDeclaration<RegionFunctionBody>(
+            [function],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(function, body));
+    }
+
+    private static FunctionDeclaration TaggedProxy(
+        IOperation operation,
+        ImmutableArray<ParameterDeclaration> parameters,
+        IShaderType returnType) =>
+        new(
+            "BadProxy",
+            parameters,
+            new FunctionReturn(returnType, []),
+            [operation.GetOperationMethodAttribute()]);
+
+    private static Instruction<IShaderValue, IShaderValue> ResourceCall(
+        FunctionDeclaration function,
+        FunctionType callType,
+        IShaderValue result,
+        ImmutableArray<IShaderValue> arguments) =>
+        Instruction<IShaderValue, IShaderValue>.Create(
+            new CallOperation(callType),
+            result,
+            [function, .. arguments],
+            "resource-call-origin");
+
     private static uint ResourceParameter(StructuredBuffer<float> buffer) => buffer.Length;
     private static uint ResourceRefParameter(ref StructuredBuffer<float> buffer) => buffer.Length;
     private static uint ResourceInParameter(in StructuredBuffer<float> buffer) => buffer.Length;
@@ -633,6 +842,20 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
 
     [OperationMethod<StructuredBufferLoadOperation>]
     private static float ResourceIntrinsicImpostor(StructuredBuffer<float> buffer, uint index) => 1.0f;
+
+    private static unsafe void ResourceFunctionPointerParameter(
+        delegate*<StructuredBuffer<float>, void> value)
+    {
+    }
+
+    private static unsafe void ResourceFunctionPointerReturn(
+        delegate*<StructuredBuffer<float>> value)
+    {
+    }
+
+    private static unsafe void OrdinaryFunctionPointerParameter(delegate*<int, void> value)
+    {
+    }
 
     private sealed class ReadOnlyBufferShader : ISharpShader
     {
@@ -906,6 +1129,17 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
     {
         [Group(0), Binding(0)]
         private static StructuredBuffer<float> Input = BufferInitializerProbe.Create();
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Shade() => 0.0f;
+    }
+
+    private sealed unsafe class HiddenFunctionPointerShader : ISharpShader
+    {
+#pragma warning disable CS0169
+        private static delegate*<StructuredBuffer<float>, void> Hidden;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]

@@ -224,7 +224,7 @@ internal static class ShaderModuleMetadataValidator
 
     internal static bool IsResourceTypeOrPointer(IShaderType type) =>
         IsResourceType(type) ||
-        type is IPtrType pointer && IsResourceType(pointer.BaseType);
+        type is IPtrType pointer && IsResourceTypeOrPointer(pointer.BaseType);
 
     private static bool IsResourceDeclaration(VariableDeclaration declaration) =>
         declaration.AddressSpace is UniformAddressSpace or StorageAddressSpace ||

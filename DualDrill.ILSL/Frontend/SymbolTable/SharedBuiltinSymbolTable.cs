@@ -164,6 +164,9 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
 
     internal static bool ContainsStructuredBuffer(Type type) =>
         IsStructuredBufferFamily(type) ||
+        type.IsFunctionPointer &&
+        (ContainsStructuredBuffer(type.GetFunctionPointerReturnType()) ||
+         type.GetFunctionPointerParameterTypes().Any(ContainsStructuredBuffer)) ||
         type.HasElementType && type.GetElementType() is { } element && ContainsStructuredBuffer(element) ||
         type.IsGenericType && type.GetGenericArguments().Any(ContainsStructuredBuffer);
 }

@@ -87,7 +87,8 @@ public sealed class FunctionToOperationPass
                 {
                     case StructuredBufferLengthOperation length:
                         {
-                            if (arguments is not [var buffer] ||
+                            if (!IsExactResourceFunction(op, f, length) ||
+                                arguments is not [var buffer] ||
                                 !buffer.Type.Equals(length.BufferPointerType) ||
                                 !result.Type.Equals(ShaderType.U32))
                                 throw new OperationFunctionNotMatchException(f, length);
@@ -100,7 +101,8 @@ public sealed class FunctionToOperationPass
                         }
                     case StructuredBufferLoadOperation load:
                         {
-                            if (arguments is not [var buffer, var index] ||
+                            if (!IsExactResourceFunction(op, f, load) ||
+                                arguments is not [var buffer, var index] ||
                                 !buffer.Type.Equals(load.BufferPointerType) ||
                                 !index.Type.Equals(ShaderType.U32) ||
                                 !result.Type.Equals(ShaderType.F32))
@@ -194,6 +196,16 @@ public sealed class FunctionToOperationPass
 
             return [ctx];
         }
+
+        private static bool IsExactResourceFunction(
+            CallOperation call,
+            FunctionDeclaration actual,
+            IOperation operation) =>
+            ReferenceEquals(actual, operation.Function) &&
+            actual.Type is FunctionType declared &&
+            operation.Function.Type is FunctionType expected &&
+            declared.Equals(expected) &&
+            call.CalleeType.Equals(declared);
 
         private static Instruction<IShaderValue, IShaderValue> WithPayload(
             Instruction<IShaderValue, IShaderValue> replacement,
