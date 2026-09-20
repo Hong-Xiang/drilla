@@ -202,14 +202,19 @@ public sealed class CilPreStackAnalysisTests
     }
 
     [Fact]
-    public void DeadSwitchStillFailsWholeSourceControlValidation()
+    public void ValidDeadSwitchPassesWholeSourceControlValidationAndIsOmitted()
     {
-        var module = CompilerTestPipeline.ParseRaw(Fixtures.DeadSwitch);
-        var exception = Assert.Throws<NotSupportedException>(() => CilPreStackPass.Run(module));
+        var model = CompilerTestPipeline.Labelled(Fixtures.DeadSwitch);
+        var rawSwitch = Assert.Single(
+            model.RawCode.Instructions,
+            instruction => instruction.Instruction.OpCode == OpCodes.Switch);
 
-        Assert.Contains("Switch", exception.Message);
-        Assert.Contains("IL_", exception.Message);
-        Assert.Contains(Fixtures.DeadSwitch.Name, exception.Message);
+        Assert.DoesNotContain(
+            model.PreAnnotatedCode.Instructions,
+            instruction => instruction.Node.Index == rawSwitch.Index);
+        Assert.DoesNotContain(
+            model.Blocks.Blocks.SelectMany(block => block.Instructions),
+            instruction => instruction.Node.Index == rawSwitch.Index);
     }
 
     [Fact]

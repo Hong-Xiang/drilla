@@ -35,6 +35,12 @@ internal static class CilBlockPartitioner
                 case FlowControl.Cond_Branch when CilControlFlow.IsConditionalBranch(opCode):
                     builder.AddBrIf(instruction.Index, environment.ResolveBranchTarget(instruction));
                     break;
+                case FlowControl.Cond_Branch when CilControlFlow.IsSwitch(opCode):
+                    builder.AddSwitch(
+                        instruction.Index,
+                        environment.ResolveSwitchTargets(instruction),
+                        environment.ResolveSwitchDefault(raw, instruction));
+                    break;
                 case FlowControl.Return when CilControlFlow.IsReturn(opCode):
                     builder.AddReturn(instruction.Index);
                     break;
@@ -63,6 +69,9 @@ internal static class CilBlockPartitioner
                     (FlowControl.Cond_Branch,
                         ConditionalSuccessor { TrueTarget: var branchTarget, FalseTarget: var fallThroughTarget }) =>
                         new CilControlFlow.ConditionalBranch(last, branchTarget, fallThroughTarget),
+                    (FlowControl.Cond_Branch,
+                        SwitchSuccessor { CaseTargets: var caseTargets, DefaultTarget: var defaultTarget }) =>
+                        new CilControlFlow.Switch(last, caseTargets, defaultTarget),
                     (FlowControl.Return, TerminateSuccessor) =>
                         new CilControlFlow.Return(last),
                     (FlowControl.Next or FlowControl.Call, UnconditionalSuccessor { Target: var target }) =>
