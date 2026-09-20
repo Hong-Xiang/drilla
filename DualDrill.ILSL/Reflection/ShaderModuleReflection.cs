@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
@@ -12,8 +13,13 @@ namespace DualDrill.CLSL.Reflection;
 
 public interface IShaderModuleReflection
 {
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(IShaderModuleDeclaration module);
-    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(IShaderModuleDeclaration module);
+    public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module);
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
+        IShaderModuleDeclaration module,
+        int group);
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(
+        IShaderModuleDeclaration module,
+        int group);
 
     public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout> GetVertexBufferLayoutBuilder<TGPULayout,
         THostLayout>();
@@ -236,58 +242,90 @@ public sealed class
 
 public sealed class ShaderModuleReflection : IShaderModuleReflection
 {
-    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(IShaderModuleDeclaration module)
+    public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module)
     {
-        var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntry>();
-        foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
-            //var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            //var type = assemblies.Where(a => a.FullName.Contains("DualDrill.Engine")).First().GetTypes().FirstOrDefault(e => e.Name == decl.Type.Name);
-            gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntry
-            {
-                Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
-                Visibility = decl.Attributes.OfType<IShaderStageAttribute>().Count() != 0
-                    ? decl.Attributes.OfType<IShaderStageAttribute>().First().Stage
-                    : GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute,
-                Buffer = new GPUBufferBindingLayout
-                {
-                    Type = GPUBufferBindingType.Uniform,
-                    HasDynamicOffset = decl.Attributes.OfType<BindingAttribute>().First().HasDynamicOffset,
-                    MinBindingSize = 0
-                }
-            });
-        var gpuBindGroupDescriptor = new GPUBindGroupLayoutDescriptor
-        {
-            Entries = gpuBindGroupLayoutEntries.ToArray()
-        };
-
-        return gpuBindGroupDescriptor;
+        ShaderModuleMetadataValidator.Validate(module);
+        return
+        [
+            .. module.Declarations
+                     .OfType<VariableDeclaration>()
+                     .Where(declaration => declaration.Attributes.OfType<UniformAttribute>().Any())
+                     .Select(CreateUniformBinding)
+                     .OrderBy(binding => binding.Group)
+                     .ThenBy(binding => binding.Binding)
+                     .ThenBy(binding => binding.Name, StringComparer.Ordinal)
+        ];
     }
 
-    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(IShaderModuleDeclaration module)
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
+        IShaderModuleDeclaration module,
+        int group)
     {
-        var gpuBindGroupLayoutEntries = new List<GPUBindGroupLayoutEntryBuffer>();
-        foreach (var decl in module.Declarations.OfType<VariableDeclaration>())
-            //var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            //var type = assemblies.Where(a => a.FullName.Contains("DualDrill.Engine")).First().GetTypes().FirstOrDefault(e => e.Name == decl.Type.Name);
-            gpuBindGroupLayoutEntries.Add(new GPUBindGroupLayoutEntryBuffer
-            {
-                Binding = decl.Attributes.OfType<BindingAttribute>().First().Binding,
-                Visibility = decl.Attributes.OfType<IShaderStageAttribute>().Count() != 0
-                    ? decl.Attributes.OfType<IShaderStageAttribute>().First().Stage
-                    : GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute,
-                Buffer = new GPUBufferBindingLayout
-                {
-                    Type = GPUBufferBindingType.Uniform,
-                    HasDynamicOffset = decl.Attributes.OfType<BindingAttribute>().First().HasDynamicOffset,
-                    MinBindingSize = 0
-                }
-            });
-        var gpuBindGroupDescriptor = new GPUBindGroupLayoutDescriptorBuffer
+        ValidateGroup(group);
+        return new GPUBindGroupLayoutDescriptor
         {
-            Entries = gpuBindGroupLayoutEntries.ToArray()
+            Entries = GetUniformBindings(module)
+                     .Where(uniform => uniform.Group == group)
+                     .Select(uniform => new GPUBindGroupLayoutEntry
+                     {
+                         Binding = uniform.Binding,
+                         Visibility = uniform.Visibility,
+                         Buffer = CreateBufferLayout(uniform)
+                     })
+                     .ToArray()
+        };
+    }
+
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(
+        IShaderModuleDeclaration module,
+        int group)
+    {
+        ValidateGroup(group);
+        return new GPUBindGroupLayoutDescriptorBuffer
+        {
+            Entries = GetUniformBindings(module)
+                     .Where(uniform => uniform.Group == group)
+                     .Select(uniform => new GPUBindGroupLayoutEntryBuffer
+                     {
+                         Binding = uniform.Binding,
+                         Visibility = uniform.Visibility,
+                         Buffer = CreateBufferLayout(uniform)
+                     })
+                     .ToArray()
+        };
+    }
+
+    private static ShaderUniformBinding CreateUniformBinding(VariableDeclaration declaration)
+    {
+        var group = declaration.Attributes.OfType<GroupAttribute>().Single().Binding;
+        var binding = declaration.Attributes.OfType<BindingAttribute>().Single();
+        var visibility = declaration.Attributes
+                                    .OfType<IShaderStageAttribute>()
+                                    .Aggregate(GPUShaderStage.None, (stages, stage) => stages | stage.Stage);
+        if (visibility == GPUShaderStage.None)
+            visibility = GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute;
+
+        return new ShaderUniformBinding(
+            declaration.Name,
+            group,
+            binding.Binding,
+            visibility,
+            binding.HasDynamicOffset,
+            WgslUniformLayoutCalculator.Calculate(declaration));
+    }
+
+    private static GPUBufferBindingLayout CreateBufferLayout(ShaderUniformBinding uniform) =>
+        new()
+        {
+            Type = uniform.Kind,
+            HasDynamicOffset = uniform.HasDynamicOffset,
+            MinBindingSize = uniform.Layout.Size
         };
 
-        return gpuBindGroupDescriptor;
+    private static void ValidateGroup(int group)
+    {
+        if (group < 0)
+            throw new ArgumentOutOfRangeException(nameof(group), group, "Bind group must be nonnegative.");
     }
 
     public IVertexBufferLayoutMappingBuilder<TGPULayout, THostLayout>

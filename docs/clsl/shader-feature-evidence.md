@@ -6,6 +6,10 @@ this documentation/evidence slice. No production compiler files were changed.
 The [inventory](./shader-feature-inventory.md) distinguishes source inspection,
 current CLSL behavior and [future API proposals](./shader-feature-proposals.md).
 
+> **Historical snapshot.** The captures below remain attributed to the stated
+> baseline. For current compute-signature support, see
+> [Compute entry points](./compute-entry.md).
+
 ## Current CLSL probes
 
 The [new test file](../../DualDrill.CLSL.Test/ShaderFeatureCharacterizationTests.cs)

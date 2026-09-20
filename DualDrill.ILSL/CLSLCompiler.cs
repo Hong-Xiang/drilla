@@ -46,8 +46,11 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
 
     public ShaderModuleDeclaration<RegionFunctionBody> Compile(ISharpShader shader) => Compile(Parse(shader));
 
-    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module) =>
-        CilModuleCompiler.Compile(module);
+    public ShaderModuleDeclaration<RegionFunctionBody> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module)
+    {
+        ShaderModuleMetadataValidator.Validate(module);
+        return CilModuleCompiler.Compile(module);
+    }
 
     public string Emit(ISharpShader shader)
     {

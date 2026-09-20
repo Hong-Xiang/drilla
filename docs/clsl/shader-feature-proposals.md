@@ -1,5 +1,9 @@
 # Proposed typed C# resource slices
 
+> **Historical proposal snapshot.** The compute-signature subset is now
+> implemented; see [Compute entry points](./compute-entry.md). The resource
+> wrappers and operations in this document remain proposals.
+
 **DESIGN ONLY. None of the new resource wrappers, operations, workgroup/layout
 attributes or reflection records below exists as an approved CLSL API.**
 These are independently authored input/output contracts for the
