@@ -37,6 +37,8 @@ The [shared IR and stage contract](./ir_spec.md) and
 [implemented pass pipeline](./compiler/passes.md) distinguish current behavior
 from design exploration. A nested region IR is not the target-language AST,
 and a same-IR transformation is not by itself a missing stage boundary.
+The [proposed GPU reconvergence contract](./reconvergence-contract.md) is a
+model-only follow-up, not a production guarantee.
 
 ### Frontend
 

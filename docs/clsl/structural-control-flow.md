@@ -33,3 +33,7 @@ See [Maximal Reconvergence for a CIL-First Shader Compiler](./maximal-reconverge
 for the 2026-09-14 research snapshot: normative semantics, CIL-specific design
 choices, Slang and target support, proposed implementation slices, and validation
 requirements. This is research for follow-up work, not an implemented guarantee.
+
+The follow-up [proposed reconvergence contract](./reconvergence-contract.md)
+adds executable four-lane specification vectors. It remains model-only and does
+not make the current Region tree or target lowering a GPU reconvergence proof.
