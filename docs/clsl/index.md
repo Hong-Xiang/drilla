@@ -11,6 +11,10 @@ guarantee. See the [shared IR contract](./ir_spec.md) for current boundaries.
 
 This page also retains historical design exploration. Capabilities described in
 that exploration are goals, not additional implemented compiler stages.
+Use the [shader feature inventory](./shader-feature-inventory.md) for current
+resource/type/annotation evidence and the
+[typed resource proposals](./shader-feature-proposals.md) for unimplemented API
+examples and layout/binding decisions.
 
 ## Key Features
 
