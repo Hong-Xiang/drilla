@@ -32,7 +32,14 @@ an instance.
 The public `DualDrill.Graphics` API remains provider-neutral. Legacy native
 extension fields use local `GPU*` enum types, while the backend maps public
 enums to Alimer enums by semantic member name and rejects unknown values or
-flag bits.
+flag bits. `GPUAdapterInfo` reports typed backend and adapter classifications;
+callers do not need to infer hardware from vendor or device strings.
+
+Buffer mapping retains the explicit `IGPUDevice.Poll()` contract. Cancellation
+claims only a still-pending map, asks native wgpu to abort it with `Unmap`, and
+completes the managed task only after the terminal native callback. If success
+wins first, later token cancellation does not unmap the range; the caller owns
+the normal `Unmap` in a `finally` block.
 
 Naga 27 still rejects the current canonical CLSL raymarch output because of its
 return-inside-loop validation bug. That shader remains explicitly unsupported

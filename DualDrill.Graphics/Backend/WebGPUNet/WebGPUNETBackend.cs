@@ -152,10 +152,91 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         public bool Completed { get; set; }
     }
 
-    private sealed class MapState
+    private sealed class MapState(
+        WGPUBuffer buffer,
+        CancellationToken cancellation)
     {
-        public TaskCompletionSource<(WGPUMapAsyncStatus Status, string Message)> Completion { get; } =
+        private const int Pending = 0;
+        private const int CancellationRequested = 1;
+        private const int Completed = 2;
+        private readonly object _gate = new();
+        private int _phase;
+
+        public TaskCompletionSource Completion { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public void RequestCancellation()
+        {
+            lock (_gate)
+            {
+                if (_phase != Pending)
+                {
+                    return;
+                }
+
+                _phase = CancellationRequested;
+                wgpuBufferUnmap(buffer);
+            }
+        }
+
+        public void Complete(WGPUMapAsyncStatus status, WGPUStringView message)
+        {
+            lock (_gate)
+            {
+                if (_phase == Completed)
+                {
+                    return;
+                }
+
+                if (_phase == CancellationRequested)
+                {
+                    _phase = Completed;
+                    Completion.TrySetCanceled(cancellation);
+                }
+                else if (status == WGPUMapAsyncStatus.Success)
+                {
+                    _phase = Completed;
+                    Completion.TrySetResult();
+                }
+                else
+                {
+                    try
+                    {
+                        var text = message.ToString();
+                        _phase = Completed;
+                        Completion.TrySetException(new GraphicsApiException<Backend>(
+                            $"Map buffer failed {status}: {text}"));
+                    }
+                    catch (Exception error)
+                    {
+                        _phase = Completed;
+                        Completion.TrySetException(error);
+                    }
+                }
+            }
+        }
+
+        public void CompleteException(Exception error)
+        {
+            lock (_gate)
+            {
+                if (_phase == Completed)
+                {
+                    return;
+                }
+
+                var cancellationWon = _phase == CancellationRequested;
+                _phase = Completed;
+                if (cancellationWon)
+                {
+                    Completion.TrySetCanceled(cancellation);
+                }
+                else
+                {
+                    Completion.TrySetException(error);
+                }
+            }
+        }
     }
 
     private sealed class QueueWorkState
@@ -488,11 +569,11 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         try
         {
             state = (MapState?)GCHandle.FromIntPtr((nint)userdata1).Target;
-            state?.Completion.TrySetResult((status, message.ToString()));
+            state?.Complete(status, message);
         }
         catch (Exception error)
         {
-            state?.Completion.TrySetException(error);
+            state?.CompleteException(error);
         }
     }
 
@@ -1306,7 +1387,8 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     async ValueTask IBackend<Backend>.MapAsync(GPUBuffer<Backend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
     {
-        var state = new MapState();
+        cancellation.ThrowIfCancellationRequested();
+        var state = new MapState(ToNative(handle.Handle), cancellation);
         var stateHandle = GCHandle.Alloc(state);
         try
         {
@@ -1327,18 +1409,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             }
 
             using var cancellationRegistration = cancellation.Register(
-                static state => wgpuBufferUnmap((WGPUBuffer)(nint)state!),
-                handle.Handle.Pointer);
-            var result = await state.Completion.Task.ConfigureAwait(false);
-            if (cancellation.IsCancellationRequested)
-            {
-                throw new OperationCanceledException(cancellation);
-            }
-            if (result.Status != WGPUMapAsyncStatus.Success)
-            {
-                throw new GraphicsApiException<Backend>(
-                    $"Map buffer failed {result.Status}: {result.Message}");
-            }
+                static state => ((MapState)state!).RequestCancellation(),
+                state);
+            await state.Completion.Task.ConfigureAwait(false);
         }
         finally
         {
@@ -1800,7 +1873,11 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
                 info.vendor.ToString(),
                 info.architecture.ToString(),
                 info.device.ToString(),
-                info.description.ToString()));
+                info.description.ToString())
+            {
+                BackendType = MapEnumByName<WGPUBackendType, GPUBackendType>(info.backendType),
+                AdapterType = MapEnumByName<WGPUAdapterType, GPUAdapterType>(info.adapterType),
+            });
         }
         finally
         {

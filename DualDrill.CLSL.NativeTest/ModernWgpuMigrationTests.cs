@@ -111,21 +111,10 @@ public sealed class ModernWgpuMigrationTests
         using var context = await NativeContext.CreateAsync();
         var info = await context.Adapter.RequestAdapterInfoAsync(CancellationToken.None);
 
+        Assert.Equal(GPUBackendType.Vulkan, info.BackendType);
+        Assert.Equal(GPUAdapterType.DiscreteGPU, info.AdapterType);
         Assert.Contains("NVIDIA", info.Vendor, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("A800", info.Device, StringComparison.OrdinalIgnoreCase);
-
-        var concrete = Assert.IsType<GPUAdapter<WebGPUNETBackend>>(context.Adapter);
-        var status = wgpuAdapterGetInfo(new WGPUAdapter(concrete.Handle.Pointer), out var nativeInfo);
-        Assert.Equal(WGPUStatus.Success, status);
-        try
-        {
-            Assert.Equal(WGPUBackendType.Vulkan, nativeInfo.backendType);
-            Assert.Equal(WGPUAdapterType.DiscreteGPU, nativeInfo.adapterType);
-        }
-        finally
-        {
-            wgpuAdapterInfoFreeMembers(nativeInfo);
-        }
     }
 
     [Fact]
@@ -152,6 +141,30 @@ public sealed class ModernWgpuMigrationTests
             Size = 4,
             Usage = GPUBufferUsage.MapRead | GPUBufferUsage.CopyDst,
         });
+        for (var iteration = 0; iteration < 16; iteration++)
+        {
+            using var cancellation = new CancellationTokenSource();
+            var map = buffer.MapAsync(
+                GPUMapMode.Read,
+                0,
+                4,
+                cancellation.Token).AsTask();
+            cancellation.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => WaitWithPollingAsync(context.Device, map));
+        }
+    }
+
+    [Fact]
+    public async Task Successful_map_wins_before_late_cancellation()
+    {
+        using var context = await NativeContext.CreateAsync();
+        using var buffer = context.Device.CreateBuffer(new()
+        {
+            Size = 4,
+            Usage = GPUBufferUsage.MapRead | GPUBufferUsage.CopyDst,
+        });
         using var cancellation = new CancellationTokenSource();
 
         var map = buffer.MapAsync(
@@ -159,10 +172,17 @@ public sealed class ModernWgpuMigrationTests
             0,
             4,
             cancellation.Token).AsTask();
-        cancellation.Cancel();
+        await WaitWithPollingAsync(context.Device, map);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => WaitWithPollingAsync(context.Device, map));
+        cancellation.Cancel();
+        try
+        {
+            Assert.Equal(4, buffer.GetMappedRange(0, 4).Length);
+        }
+        finally
+        {
+            buffer.Unmap();
+        }
     }
 
     [Fact]
