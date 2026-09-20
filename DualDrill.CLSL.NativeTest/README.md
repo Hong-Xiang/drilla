@@ -24,8 +24,26 @@ NIXPKGS_ALLOW_UNFREE=1 nix develop --command \
 
 The wrapper installs no ICD and forces no software fallback.
 
-The bundled Evergine/wgpu-native pair remains unchanged. Its older Naga validator
-does not accept all current WGSL emitted by Slang, so the browser demos are not
-all supported by this native baseline. Browser WebGPU uses a separate
-implementation. Native-provider migration and automated raymarching comparisons
-are deferred; they are not prerequisites for using the compiler server.
+The production backend uses the matched `Alimer.Bindings.WebGPU 1.6.0` and
+`Alimer.WebGPU.Native 1.0.4` packages. The native package reports
+wgpu-native `27.0.4.0`; the tests reject a different loaded ABI before creating
+an instance.
+
+The public `DualDrill.Graphics` API remains provider-neutral. Legacy native
+extension fields use local `GPU*` enum types, while the backend maps public
+enums to Alimer enums by semantic member name and rejects unknown values or
+flag bits. `GPUAdapterInfo` reports typed backend and adapter classifications;
+callers do not need to infer hardware from vendor or device strings.
+
+Buffer mapping retains the explicit `IGPUDevice.Poll()` contract. Cancellation
+claims only a still-pending map, asks native wgpu to abort it with `Unmap`, and
+completes the managed task only after the terminal native callback. If success
+wins first, later token cancellation does not unmap the range; the caller owns
+the normal `Unmap` in a `finally` block. The wgpu-native 27
+`wgpuBufferGetMapState` export is an unimplemented panic stub and is not used.
+
+Naga 27 still rejects the current canonical CLSL raymarch output because of its
+return-inside-loop validation bug. That shader remains explicitly unsupported
+by the native backend. The corrected reference shader and ordinary rendering
+shaders are accepted; changing compiler output or shader text is outside this
+migration.

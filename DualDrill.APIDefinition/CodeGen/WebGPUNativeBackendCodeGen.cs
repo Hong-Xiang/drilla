@@ -8,7 +8,22 @@ public sealed record class WebGPUNativeBackendCodeGen(
     ModuleDeclaration Module
 )
 {
-    static readonly Type NativeMethodType = typeof(Evergine.Bindings.WebGPU.WebGPUNative);
+    static readonly Type NativeMethodType = typeof(WebGPU.WebGPU);
+    static readonly IReadOnlyDictionary<string, string> NativeZeroSentinels =
+        new Dictionary<string, string>
+        {
+            ["GPUBufferBindingType"] = "BindingNotUsed",
+            ["GPUCompareFunction"] = "Undefined",
+            ["GPUIndexFormat"] = "Undefined",
+            ["GPULoadOp"] = "Undefined",
+            ["GPUPowerPreference"] = "Undefined",
+            ["GPUSamplerBindingType"] = "BindingNotUsed",
+            ["GPUStorageTextureAccess"] = "BindingNotUsed",
+            ["GPUStoreOp"] = "Undefined",
+            ["GPUTextureFormat"] = "Undefined",
+            ["GPUTextureSampleType"] = "BindingNotUsed",
+            ["GPUTextureViewDimension"] = "Undefined",
+        };
 
     public void EmitHandleToNative(StringBuilder sb, HandleDeclaration handle)
     {
@@ -20,7 +35,27 @@ public sealed record class WebGPUNativeBackendCodeGen(
     public void EmitEnumToNative(StringBuilder sb, EnumDeclaration handle)
     {
         sb.AppendLine($"    W{handle.Name} ToNative({handle.Name} value)");
-        sb.AppendLine($"        => (W{handle.Name})(value);");
+        if (handle.Name == "GPUDeviceLostReason")
+        {
+            sb.AppendLine("        => value switch");
+            sb.AppendLine("        {");
+            sb.AppendLine("            GPUDeviceLostReason.Undefined => WGPUDeviceLostReason.Unknown,");
+            sb.AppendLine("            GPUDeviceLostReason.Destroyed => WGPUDeviceLostReason.Destroyed,");
+            sb.AppendLine("            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null),");
+            sb.AppendLine("        };");
+            sb.AppendLine();
+            return;
+        }
+        if (NativeZeroSentinels.TryGetValue(handle.Name, out var sentinel))
+        {
+            sb.AppendLine("        => (int)value == 0");
+            sb.AppendLine($"            ? W{handle.Name}.{sentinel}");
+            sb.AppendLine($"            : MapEnumByName<{handle.Name}, W{handle.Name}>(value);");
+        }
+        else
+        {
+            sb.AppendLine($"        => MapEnumByName<{handle.Name}, W{handle.Name}>(value);");
+        }
         sb.AppendLine();
     }
 
@@ -29,6 +64,14 @@ public sealed record class WebGPUNativeBackendCodeGen(
         sb.AppendLine($"    void IGPUHandleDisposer<Backend, {handle.Name}<Backend>>.DisposeHandle(GPUHandle<Backend, {handle.Name}<Backend>> handle)");
         sb.AppendLine("    {");
         sb.AppendLine($"        wgpu{handle.Name[3..]}Release(ToNative(handle));");
+        if (handle.Name == "GPUDevice")
+        {
+            sb.AppendLine("        if (handle.Data is DeviceState state)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            wgpuInstanceProcessEvents(state.Instance.Instance);");
+            sb.AppendLine("            state.Dispose();");
+            sb.AppendLine("        }");
+        }
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -49,32 +92,36 @@ public sealed record class WebGPUNativeBackendCodeGen(
             IntegerTypeReference { BitWidth: BitWidth._32, Signed: true } => tn == typeof(int),
             IntegerTypeReference { BitWidth: BitWidth._64, Signed: false } => tn == typeof(ulong),
             IntegerTypeReference { BitWidth: BitWidth._64, Signed: true } => tn == typeof(long),
-            StringTypeReference => tn == typeof(char*),
+            StringTypeReference => tn == typeof(string),
             _ => false
         };
     }
 
     public void EmitMethod(StringBuilder sb, HandleDeclaration handle, MethodDeclaration method)
     {
-        var m = NativeMethodType.GetMethod($"wgpu{handle.Name[3..]}{method.Name}", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-        var matched = true;
-        if (m is not null)
-        {
-            var ps = m.GetParameters();
-            matched = matched
-                       && ps.Length == (method.Parameters.Length + 1)
-                       && ps[0].ParameterType.Name == "W" + handle.Name;
-
-
-            if (matched)
+        var m = NativeMethodType
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(candidate => candidate.Name == $"wgpu{handle.Name[3..]}{method.Name}")
+            .FirstOrDefault(candidate =>
             {
+                var ps = candidate.GetParameters();
+                if (ps.Length != method.Parameters.Length + 1
+                    || ps[0].ParameterType.Name != "W" + handle.Name)
+                {
+                    return false;
+                }
+
                 for (var i = 0; i < method.Parameters.Length; i++)
                 {
-                    matched = matched && ParameterTypeMatch(ps[i + 1].ParameterType, method.Parameters[i].Type);
+                    if (!ParameterTypeMatch(ps[i + 1].ParameterType, method.Parameters[i].Type))
+                    {
+                        return false;
+                    }
                 }
-            }
-        }
-        if (!matched)
+
+                return true;
+            });
+        if (m is null)
         {
             return;
         }
@@ -109,48 +156,22 @@ public sealed record class WebGPUNativeBackendCodeGen(
         sb.AppendLine(")");
         sb.AppendLine("{");
 
-        var interopStringSuffix = "_native_string";
-        var pinNativeStringSuffix = "_native_pined_string";
+        sb.Append(m.Name);
+        sb.Append('(');
+        sb.Append("ToNative(handle.Handle)");
         foreach (var p in method.Parameters)
         {
-            if (p.Type is StringTypeReference)
+            sb.Append(", ");
+            if (p.Type is OpaqueTypeReference { Name: var n } && IsHandle(n))
             {
-                sb.AppendLine($"var {p.Name + interopStringSuffix} = InteropUtf8String.Create({p.Name});");
-                sb.AppendLine($"using var {p.Name + pinNativeStringSuffix} = {p.Name + interopStringSuffix}.Pin();");
-
+                sb.Append($"ToNative({p.Name}.Handle)");
+            }
+            else
+            {
+                sb.Append(p.Name);
             }
         }
-
-        if (m is not null && matched)
-        {
-            sb.Append(m.Name);
-            sb.Append('(');
-            sb.Append("ToNative(handle.Handle)");
-            foreach (var p in method.Parameters)
-            {
-                sb.Append(", ");
-                if (p.Type is StringTypeReference)
-                {
-                    sb.Append("(char*)");
-                    sb.Append(p.Name + pinNativeStringSuffix);
-                    sb.Append(".Pointer");
-                }
-                else if (p.Type is OpaqueTypeReference { Name: var n } && IsHandle(n))
-                {
-                    sb.Append($"ToNative({p.Name}.Handle)");
-                }
-                else
-                {
-                    sb.Append(p.Name);
-                }
-            }
-            sb.AppendLine(");");
-        }
-        //else
-        //{
-        //    sb.AppendLine(m?.ToString());
-        //    sb.AppendLine(matched.ToString());
-        //}
+        sb.AppendLine(");");
         sb.AppendLine("}");
         sb.AppendLine();
 

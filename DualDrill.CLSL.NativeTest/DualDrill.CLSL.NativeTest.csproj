@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DualDrill.APIDefinition\DualDrill.ApiGen.csproj" />
     <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
     <ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
   </ItemGroup>
@@ -22,11 +23,5 @@
              Link="ShaderModule\MinimumHelloTriangleShaderModule.cs" />
     <Using Include="Xunit" />
   </ItemGroup>
-
-  <Target Name="PreserveNativeWgpuRuntimeLayout" AfterTargets="CopyFilesToOutputDirectory">
-    <MakeDir Directories="$(TargetDir)runtimes/linux-x64/native" />
-    <Copy SourceFiles="$(TargetDir)libwgpu_native.so"
-          DestinationFolder="$(TargetDir)runtimes/linux-x64/native" />
-  </Target>
 
 </Project>

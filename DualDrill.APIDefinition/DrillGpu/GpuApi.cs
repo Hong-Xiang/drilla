@@ -1,7 +1,6 @@
 ﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.DrillLang.Types;
 using DualDrill.ApiGen.WebIDL;
-using System.Diagnostics;
 
 namespace DualDrill.ApiGen.DrillGpu;
 
@@ -9,24 +8,25 @@ public static class GPUApi
 {
     public static void Validate(
         ModuleDeclaration drillGpuApi,
-        ModuleDeclaration evergineApi
+        ModuleDeclaration nativeApi
     )
     {
-        Debug.Assert(evergineApi.Handles.Count == drillGpuApi.Handles.Count, "Handle count should be same for two apis");
-        Debug.Assert(drillGpuApi.Handles.Count == 22, $"GPU API should provide 22 handles, got {drillGpuApi.Handles.Count}");
+        foreach (var handle in drillGpuApi.Handles)
+        {
+            var nativeName = "W" + handle.Name;
+            if (!nativeApi.Handles.Any(candidate =>
+                string.Equals(candidate.Name, nativeName, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException(
+                    $"Native WebGPU provider does not expose {nativeName}.");
+            }
+        }
 
         foreach (var eDecl in drillGpuApi.Enums)
         {
-            var evergineEnumName = EvergineWebGPUApi.GetEnumTypeName(eDecl.Name);
-            var evergineEnumDecl = evergineApi.Enums.Single(e_ => string.Equals(e_.Name, evergineEnumName, StringComparison.OrdinalIgnoreCase));
-
-            if (evergineEnumDecl.Values.Any(m => m.Name.Contains("Undefined")) && evergineEnumName != "WGPUDeviceLostReason")
+            foreach (var value in eDecl.Values)
             {
-                Debug.Assert(eDecl.Values.Length == evergineEnumDecl.Values.Length - 2);
-            }
-            else
-            {
-                Debug.Assert(eDecl.Values.Length == evergineEnumDecl.Values.Length - 1);
+                _ = AlimerWebGPUApi.GetNativeEnumMemberName(eDecl.Name, value.Name, nativeApi);
             }
         }
     }
@@ -40,7 +40,7 @@ public static class GPUApi
         return new WebIDLSpec([.. otherDecls, mergedGPUDeviceDecl]);
     }
 
-    private static ModuleDeclaration AdHocFix(this ModuleDeclaration module, ModuleDeclaration evergineModule)
+    private static ModuleDeclaration AdHocFix(this ModuleDeclaration module)
     {
         var result = module with
         {
@@ -62,13 +62,18 @@ public static class GPUApi
             })]
         };
 
-        // attach evergine values
+        // Preserve the checked-in public enum values independently of native ABI values.
         result = result with
         {
             Enums = [..result.Enums.Select(e => {
-                var evergineType = EvergineWebGPUApi.GetEnumType(e.Name);
+                var managedName = AlimerWebGPUApi.GetManagedEnumTypeName(e.Name);
+                var managedType = typeof(DualDrill.Graphics.GPUBackendType).Assembly
+                    .GetType($"DualDrill.Graphics.{managedName}")
+                    ?? throw new InvalidOperationException($"Missing managed enum {managedName}.");
                 var values = e.Values.Select(v => v with {
-                    Value = new ((int) Enum.Parse(evergineType, EvergineWebGPUApi.GetEnumMemberName( e.Name, v.Name, evergineModule )))
+                    Value = new(Convert.ToInt32(Enum.Parse(managedType, AlimerWebGPUApi.GetManagedEnumMemberName(
+                        e.Name,
+                        v.Name))))
                 });
                 return e with {
                     Values = [..values] };
@@ -127,19 +132,19 @@ public static class GPUApi
 
     public static ModuleDeclaration ParseWebGPUWebIDLSpecToModuleDeclaration(
         WebIDLSpec idlSpec,
-        ModuleDeclaration evergineModule)
+        ModuleDeclaration nativeModule)
     {
         // WebGPU specific transform,
         // used to map WebGPU's WebIDL types to DrillLang types
         //         map type names, enum names, etc.
-        var transform = new WebGPUIdlToDrillGpuNameTransform([.. evergineModule.Handles.Select(h => h.Name)]);
+        var transform = new WebGPUIdlToDrillGpuNameTransform([.. nativeModule.Handles.Select(h => h.Name)]);
 
         //idlSpec = idlSpec.WebGPUSpecAdHocFix();
         var module = idlSpec.ToModuleDeclaration();
         module = module.Transform(transform);
         module = module.RefineOpaqueType(WebGPUWebIDLOpaqueTypeRefinement);
-        module = module.AdHocFix(evergineModule);
-        Validate(module, evergineModule);
+        module = module.AdHocFix();
+        Validate(module, nativeModule);
         return module;
     }
 
