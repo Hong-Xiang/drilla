@@ -7,12 +7,15 @@ For compiler development on Linux without WebView2, use the
 offers Triangle, Uniform, animated Mandelbrot, and animated Raymarching shaders
 compiled from C# through Slang to WGSL.
 
+The isolated [.NET CPU-to-WebRTC proof of concept](DualDrill.Media.Server/README.md)
+streams managed BGRA frames through GStreamer to a local browser.
+
 ## develop
 
 requirements:
 
 - [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
-- [dotnet 9.0](https://dotnet.microsoft.com/en-us/download)
+- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download)
 - [slangc](https://github.com/shader-slang/slang) on `PATH` (the Nix package
   is `shader-slang`; the unrelated `slang` package does not provide it), or
   installed through the Vulkan SDK
@@ -25,7 +28,7 @@ On x86-64 Linux, enter the pinned compiler development shell from the repository
 nix develop
 ```
 
-The shell supplies .NET SDK/runtime 9, Slang (`slangc`), LLVM 16 native
+The shell supplies .NET SDK/runtime 10, Slang (`slangc`), LLVM 16 native
 libraries for LLVMSharp, the Vulkan loader needed by native WebGPU bindings,
 Node.js, and pnpm. It preserves the host Vulkan ICD/driver environment and
 any inherited `LD_LIBRARY_PATH`; it does not install or select Vulkan tools,
