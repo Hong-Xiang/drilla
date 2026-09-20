@@ -26,20 +26,26 @@ public readonly record struct GPUHandle<TBackend, TResource>
     {
         ArgumentNullException.ThrowIfNull(release);
 
-        if (ownership?.TryRelease() is true)
+        if (ownership is null)
         {
+            return;
+        }
+
+        lock (ownership)
+        {
+            if (ownership.IsReleased)
+            {
+                return;
+            }
+
+            ownership.IsReleased = true;
             release(this);
         }
     }
 
     private sealed class Ownership
     {
-        private int released;
-
-        public bool TryRelease()
-        {
-            return Interlocked.Exchange(ref released, 1) == 0;
-        }
+        public bool IsReleased { get; set; }
     }
 }
 

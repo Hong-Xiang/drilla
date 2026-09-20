@@ -44,32 +44,49 @@ public sealed class GPUDeviceDisposalTests
         using var nativeDevice = Assert.IsType<GPUDevice<WebGpuBackend>>(
             await adapter.RequestDeviceAsync(new(), CancellationToken.None));
         using var queueEntered = new ManualResetEventSlim();
-        using var contenderCompleted = new ManualResetEventSlim();
-        var queue = new BlockingQueue(queueEntered, contenderCompleted);
+        using var allowQueueExit = new ManualResetEventSlim();
+        using var aliasStarted = new ManualResetEventSlim();
+        using var aliasCompleted = new ManualResetEventSlim();
+        var queue = new BlockingQueue(queueEntered, allowQueueExit);
         var device = nativeDevice with { Queue = queue };
         var alias = device with { };
-        var contender = Task.Run(() =>
+        var aliasDisposal = Task.Run(() =>
         {
             Assert.True(queueEntered.Wait(SynchronizationTimeout));
+            aliasStarted.Set();
             try
             {
                 alias.Dispose();
             }
             finally
             {
-                contenderCompleted.Set();
+                aliasCompleted.Set();
+            }
+        });
+        var coordinator = Task.Run(() =>
+        {
+            Assert.True(aliasStarted.Wait(SynchronizationTimeout));
+            try
+            {
+                Assert.False(aliasCompleted.Wait(TimeSpan.FromMilliseconds(100)));
+            }
+            finally
+            {
+                allowQueueExit.Set();
             }
         });
 
         device.Dispose();
-        await contender.WaitAsync(SynchronizationTimeout);
+        await coordinator.WaitAsync(SynchronizationTimeout);
+        await aliasDisposal.WaitAsync(SynchronizationTimeout);
 
         Assert.Equal(1, queue.DisposeCalls);
+        Assert.True(aliasCompleted.IsSet);
     }
 
     private sealed class BlockingQueue(
         ManualResetEventSlim entered,
-        ManualResetEventSlim contenderCompleted) : IGPUQueue
+        ManualResetEventSlim allowExit) : IGPUQueue
     {
         private int disposeCalls;
 
@@ -80,7 +97,7 @@ public sealed class GPUDeviceDisposalTests
             if (Interlocked.Increment(ref disposeCalls) == 1)
             {
                 entered.Set();
-                Assert.True(contenderCompleted.Wait(SynchronizationTimeout));
+                Assert.True(allowExit.Wait(SynchronizationTimeout));
             }
         }
 
