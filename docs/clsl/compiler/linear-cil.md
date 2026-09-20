@@ -19,8 +19,8 @@ computes reachable pre-instruction stack types, partitions a labelled CIL block
 list, lowers it to typed shader-stack blocks, constructs the shader-stack CFG,
 and mechanically lifts it to a flat value CFG. A dedicated pass publishes
 existing control-flow results as BB-local annotations; region organization
-consumes those annotations without reanalysis. Target AST separation remains
-later work.
+consumes those annotations without reanalysis. `SlangTargetLowering` performs
+target layout after checked regions; text emission is syntax-only.
 
 ### Issue #114: Implemented frontend path
 
@@ -51,8 +51,8 @@ Region, target-AST and wider call support remain separate.
 `LinearCode<CilInstructionInfo>` view: one `CilInstructionInfo` per original instruction, with its
 index, byte range, and original Lokad instruction object. Each
 `CilInstructionBlock` retains its exact non-empty instruction slice and a
-`CilControlFlow` value distinguishing native return, branch, and conditional
-branch from synthesized fallthrough and end-of-code.
+`CilControlFlow` value distinguishing native return, branch, conditional branch,
+and switch from synthesized fallthrough and end-of-code.
 
 Native controls retain the original final instruction. A conditional retains
 its native branch target and physical fallthrough target. Its `ToSuccessor`
@@ -96,9 +96,9 @@ compatibility overload or alias.
 Branch operands and resolved targets are checked by the Pre/CFG boundary.
 Raw parsing preserves methods with exception handling clauses; `CilPreStackPass`
 rejects them before propagation and CFG construction. Concrete
-native controls accept only supported opcode families (`ret`, `br`/`br.s`, and
-the supported conditional branches). Unsupported `switch`, exception flow, and
-reaching the end of CIL without an explicit return fail explicitly.
+native controls accept only supported opcode families (`ret`, `br`/`br.s`,
+the supported conditional branches, and `switch`). Exception flow and reaching
+the end of CIL without an explicit return fail explicitly.
 
 `CilPreStackAnalyzer` is a worklist over original instruction indexes. It uses
 `CilInstructionInfo.Evaluate` for the existing opcode dispatch, resolves branch
@@ -164,8 +164,9 @@ storage rules.
 Reachable semantics are limited to the operations already implemented by the
 runtime-reflection value visitor. Reachable unsupported instructions fail with
 method and source context in the responsible later pass. Syntactic control
-validation still covers the whole source, so malformed branch targets and
-unsupported native controls such as `switch` are rejected even when dead.
+validation still covers the whole source, so malformed branch/switch targets
+and unsupported native controls are rejected even when dead. A valid dead
+switch remains in raw CIL but is omitted from completed Pre and block definitions.
 Exception flow, `initobj`, indirect
 loads/stores, `ldnull`, `dup`, and unsupported unary operations remain
 unsupported. `initobj` is rejected at shared instruction dispatch because the
@@ -188,6 +189,50 @@ LinearCode<CilInstruction>
 Names in this diagram describe roles, not a requirement to create a new CLR type
 for every logical stage. Existing constructor algebras and same-type passes
 remain valid.
+
+### Implemented Native Switch
+
+CIL `switch` consumes one canonical `Int32` selector; normalized Shader Stack
+requires `depth0:i32`. For a retained stack prefix `S`, the transition is
+`S ++ [i32] -> S`. Table entry `i` selects case `i`; negative or out-of-range
+selectors take the physical fallthrough/default. Displacements are relative to
+the end of the whole switch instruction and must resolve, with checked
+arithmetic, to actual instruction boundaries. A physical default must exist,
+including for an empty table.
+
+`CilControlFlow.Switch` retains the original instruction and ordered labels.
+The generic `Terminator.D.Switch<TTarget, TValue>` retains an immutable
+`CaseTargets` array and a separate `DefaultTarget` through value CFG, promotion,
+facts and checked regions. Successor traversal enumerates cases `0..N-1`,
+then default arm `N`, without deduplicating labels. Thus `[A,A,B]` with default
+`A` has four arms; incoming arms at `A` are `0,1,3`, even though its predecessor
+set contains the source only once. Empty tables still consume the selector and
+retain default arm `0`.
+
+This is actual formatter output from
+`CilSwitchTests.SwitchAcceptanceStagesAndHandIrAreCaptured` for its same-target
+hand-IR fixture (not a proposed source syntax):
+
+```text
+switch %2 : i32
+    case 0 -> ^1(join)(10_i32)
+    case 1 -> ^1(join)(20_i32)
+    default -> ^1(join)(99_i32)
+```
+
+Selectors `int.MinValue,-1,0,1,2,int.MaxValue` yield `99,99,10,20,99,99`.
+All paths have original-label trace `entry -> join`, but their selected argument
+tuples differ. Stack lifting preserves retained values in bottom-to-top order;
+target lowering captures only the selected tuple before assigning parameters.
+
+The public Slang/WGSL path lowers switch to nested typed `SlangIf` nodes only in
+`SlangTargetLowering`, reusing the selector value and checked `Forward`/`Repeat`
+transfers. The producer executes once; shared IR is not rewritten into binary
+control. WASM's bounded profile, the inactive SPIR-V backend and eager
+`RegionParameterToLocalVariablePass` reject switch explicitly. This scalar
+execution contract does not guarantee GPU participation or reconvergence.
+See the [switch API migration](../ir_spec.md#multiway-switch-api-migration)
+for semantic-interface and factory changes.
 
 ## Read-Only Stage Diagnostics
 
@@ -345,6 +390,9 @@ the concrete CIL representation, not in opcode-specific CFG algorithms.
 | `brfalse` | Zero/null | One |
 | `beq` | Equal | Two |
 | `bne.un` | Unequal, or unordered for applicable floating operands | Two |
+| `switch` | Zero-based table entry, otherwise physical default | One canonical `Int32` |
+
+Unlike the binary forms, switch has an ordered case table plus a distinct default.
 
 Preserve the opcode's signed/unsigned/unordered semantics until the actual
 operand types are known. In particular, `.un` does not make every integer
@@ -405,8 +453,9 @@ Merge(existingPre, incomingStack)           -> merged state or diagnostic
 Start the normal method entry with an empty evaluation stack. Ordinary
 instructions propagate to the next position; unconditional branches propagate
 only to their target; conditional branches propagate the post-consumption state
-to both ordered arms; returns check the method's return requirements and have no
-ordinary intraprocedural successor.
+to both ordered arms; switch propagates it to every ordered case and default;
+returns check the method's return requirements and have no ordinary
+intraprocedural successor.
 
 Reprocess affected positions when an incoming state changes. This is not a
 single physical-order scan: a jump target's predecessor need not be the
@@ -414,7 +463,7 @@ instruction immediately before it in the array. The analysis needs control
 relations but does not require materializing a basic-block CFG or computing
 dominators first.
 
-Consider both conditional arms regardless of observed values or whether a
+Consider every conditional/switch arm regardless of observed values or whether a
 particular CPU execution took them. This is entry reachability, not constant
 propagation or general dead-code optimization. Unsupported reachable operations,
 stack conflicts, malformed targets, and incomplete/failed analysis must not be
@@ -507,7 +556,7 @@ Successors and predecessor indexes must agree with the BB terminator.
 The terminator is the semantic source of control information; any stored
 successor view is derived, not independently edited.
 
-Keep ordered conditional arms, including two arms with the same target.
+Keep ordered conditional and switch arms, including arms with the same target.
 Deduplicated predecessor-node sets are sufficient for some dominance operations,
 but are not a substitute for edge/arm identity in merge or value analysis.
 

@@ -306,6 +306,9 @@ public static class RegionDefinitionExtension
         public string Conditional(Unit context, Label trueTarget, Label falseTarget) =>
             $"br_if -> {LabelName(trueTarget)} {LabelName(falseTarget)}";
 
+        public string Switch(Unit context, IReadOnlyList<Label> caseTargets, Label defaultTarget) =>
+            $"switch -> [{string.Join(", ", caseTargets.Select(LabelName))}] default {LabelName(defaultTarget)}";
+
         public string Terminate(Unit context) => "return";
 
         public string Unconditional(Unit context, Label target) => $"br -> {LabelName(target)}";

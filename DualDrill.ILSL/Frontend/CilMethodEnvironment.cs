@@ -57,6 +57,11 @@ public sealed class CilMethodEnvironment
                         $"Conditional branch at IL_{instruction.ByteOffset:X4} has no fallthrough instruction in {Method}.");
                 yield return instruction.Index + 1;
                 yield break;
+            case FlowControl.Cond_Branch when CilControlFlow.IsSwitch(opCode):
+                foreach (var target in ResolveSwitchTargets(instruction))
+                    yield return target;
+                yield return ResolveSwitchDefault(source, instruction);
+                yield break;
             case FlowControl.Return when CilControlFlow.IsReturn(opCode):
                 yield break;
             case FlowControl.Next:
@@ -101,6 +106,46 @@ public sealed class CilMethodEnvironment
         return targetIndex;
     }
 
+    internal ImmutableArray<int> ResolveSwitchTargets(CilInstructionInfo instruction)
+    {
+        if (instruction.Instruction.Operand is not int[] displacements)
+            throw new InvalidProgramException(
+                $"Malformed switch table at IL_{instruction.ByteOffset:X4} in {Method}: expected int[] operand.");
+
+        var targets = ImmutableArray.CreateBuilder<int>(displacements.Length);
+        foreach (var (ordinal, displacement) in displacements.Index())
+        {
+            int target;
+            try
+            {
+                target = checked(instruction.NextByteOffset + displacement);
+            }
+            catch (OverflowException exception)
+            {
+                throw new InvalidProgramException(
+                    $"Switch target overflows at IL_{instruction.ByteOffset:X4}, case {ordinal}, in {Method}.",
+                    exception);
+            }
+
+            if (!OffsetsToIndex.TryGetValue(target, out var targetIndex) || targetIndex >= InstructionCount)
+                throw new InvalidProgramException(
+                    $"Switch target IL_{target:X4} from IL_{instruction.ByteOffset:X4}, case {ordinal}, in {Method} " +
+                    "is not an instruction boundary.");
+            targets.Add(targetIndex);
+        }
+        return targets.ToImmutable();
+    }
+
+    internal int ResolveSwitchDefault(
+        LinearCode<CilInstructionInfo> source,
+        CilInstructionInfo instruction)
+    {
+        if (instruction.Index + 1 >= source.Count)
+            throw new InvalidProgramException(
+                $"Switch at IL_{instruction.ByteOffset:X4} has no fallthrough/default instruction in {Method}.");
+        return instruction.Index + 1;
+    }
+
     private void ValidateControlBoundary(
         LinearCode<CilInstructionInfo> source,
         CilInstructionInfo instruction)
@@ -116,6 +161,10 @@ public sealed class CilMethodEnvironment
                 if (instruction.Index + 1 >= source.Count)
                     throw new InvalidProgramException(
                         $"Conditional branch at IL_{instruction.ByteOffset:X4} has no fallthrough instruction in {Method}.");
+                return;
+            case FlowControl.Cond_Branch when CilControlFlow.IsSwitch(opCode):
+                _ = ResolveSwitchTargets(instruction);
+                _ = ResolveSwitchDefault(source, instruction);
                 return;
             case FlowControl.Return when CilControlFlow.IsReturn(opCode):
             case FlowControl.Next:

@@ -97,6 +97,12 @@ public sealed class StablePointerRegionParameterPass : IShaderModuleSimplePass
             RegionJump<IShaderValue> falseTarget) =>
             [trueTarget, falseTarget];
 
+        public ImmutableArray<RegionJump<IShaderValue>> Switch(
+            IShaderValue selector,
+            IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+            RegionJump<IShaderValue> defaultTarget) =>
+            [.. caseTargets, defaultTarget];
+
         public ImmutableArray<RegionJump<IShaderValue>> ReturnExpr(IShaderValue expr) => [];
         public ImmutableArray<RegionJump<IShaderValue>> ReturnVoid() => [];
     }

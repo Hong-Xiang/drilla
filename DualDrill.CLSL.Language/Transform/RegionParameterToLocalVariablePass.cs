@@ -96,6 +96,13 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
             return [.. Br(trueTarget), .. Br(falseTarget)];
         }
 
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Switch(
+            IShaderValue selector,
+            IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+            RegionJump<IShaderValue> defaultTarget) =>
+            throw new NotSupportedException(
+                "Switch region arguments require selected-edge stores; eager region-parameter lowering cannot emit them safely.");
+
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReturnExpr(IShaderValue expr) => [];
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReturnVoid() => [];
