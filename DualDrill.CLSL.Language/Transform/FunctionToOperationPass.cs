@@ -47,12 +47,44 @@ public sealed class FunctionToOperationPass
     public IDeclaration? VisitVariable(VariableDeclaration decl) => decl;
 
     private IEnumerable<Instruction<IShaderValue, IShaderValue>> TransformInstruction(
-        Instruction<IShaderValue, IShaderValue> inst) =>
-        inst.Operation is CallOperation &&
-        inst.OperandCount > 0 &&
-        inst[0] is FunctionDeclaration
-            ? inst.Evaluate(new InstructionTransformSemantic())
-            : [inst];
+        Instruction<IShaderValue, IShaderValue> inst)
+    {
+        if (inst.Operation is not CallOperation ||
+            inst.OperandCount == 0 ||
+            inst.Operand0 is not FunctionDeclaration function)
+            return [inst];
+
+        var operation = function.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault()?.Operation;
+        if (operation is not null && IsResourceOperation(operation))
+        {
+            var expectedOperands = operation.Function.Parameters.Length + 1;
+            var expectsResult = operation is not ReadWriteStructuredBufferStoreOperation;
+            if (!HasPhysicalOperandShape(inst, expectedOperands) ||
+                expectsResult != (inst.Result is not null))
+                throw new OperationFunctionNotMatchException(function, operation);
+        }
+
+        return inst.Evaluate(new InstructionTransformSemantic());
+    }
+
+    private static bool IsResourceOperation(IOperation operation) =>
+        operation is StructuredBufferLengthOperation or
+            StructuredBufferLoadOperation or
+            ReadWriteStructuredBufferLengthOperation or
+            ReadWriteStructuredBufferLoadOperation or
+            ReadWriteStructuredBufferStoreOperation;
+
+    private static bool HasPhysicalOperandShape(
+        Instruction<IShaderValue, IShaderValue> instruction,
+        int expectedCount) =>
+        instruction.OperandCount == expectedCount &&
+        instruction.Operand0 is not null &&
+        (expectedCount == 1
+            ? instruction.Operand1 is null
+            : instruction.Operand1 is not null) &&
+        !instruction.RestOperands.IsDefault &&
+        instruction.RestOperands.Length == Math.Max(0, expectedCount - 2) &&
+        instruction.RestOperands.All(static operand => operand is not null);
 
     private sealed record class InstructionTransformSemantic
         : IOperationSemantic<Instruction<IShaderValue, IShaderValue>, IShaderValue, IShaderValue,

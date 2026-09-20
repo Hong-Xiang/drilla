@@ -568,6 +568,54 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void TargetStoreRejectsMissingExtraAndUninitializedRestOperands()
+    {
+        var operation = ReadWriteStructuredBufferStoreOperation.Instance;
+        var receiver = ShaderValue.Intermediate(operation.BufferPointerType);
+        var index = ShaderValue.Intermediate(ShaderType.U32);
+        var value = ShaderValue.Intermediate(ShaderType.F32);
+        var valid = Instruction<IShaderValue, IShaderValue>.Create(
+            operation,
+            null,
+            [receiver, index, value]);
+        var malformed = new[]
+        {
+            valid with { RestOperands = [] },
+            valid with { RestOperands = [index, value, value] },
+            valid with { RestOperands = default }
+        };
+
+        Assert.All(malformed, instruction =>
+        {
+            var exception = Assert.Throws<NotSupportedException>(() =>
+                new SlangTargetLowering().Lower(OperationModule(instruction)));
+            Assert.Contains("invalid read-write storage-buffer store signature", exception.Message);
+        });
+    }
+
+    [Fact]
+    public void ResourceCallNormalizationRejectsMalformedPhysicalOperandStorage()
+    {
+        var operation = ReadWriteStructuredBufferStoreOperation.Instance;
+        var receiver = ShaderValue.Intermediate(operation.BufferPointerType);
+        var index = ShaderValue.Intermediate(ShaderType.U32);
+        var value = ShaderValue.Intermediate(ShaderType.F32);
+        var valid = Instruction<IShaderValue, IShaderValue>.Create(
+            new CallOperation((FunctionType)operation.Function.Type),
+            null,
+            [operation.Function, receiver, index, value]);
+        var malformed = new[]
+        {
+            valid with { RestOperands = [index] },
+            valid with { RestOperands = [index, value, value] },
+            valid with { RestOperands = [index, null!] },
+            valid with { RestOperands = default }
+        };
+
+        Assert.All(malformed, AssertOperationMismatch);
+    }
+
+    [Fact]
     public void SourceOraclesRemainExplicitlyNonGpuExpectations()
     {
         float[] input = [1.0f, 3.0f, 5.0f];

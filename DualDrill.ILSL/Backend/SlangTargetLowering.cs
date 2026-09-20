@@ -542,8 +542,8 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             StructuredBufferLengthOperation operation)
         {
-            if (instruction.OperandCount != 1 ||
-                instruction.Operand0?.Type is not IPtrType ||
+            if (!HasPhysicalOperandShape(instruction, 1) ||
+                instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
                 instruction.Result is null ||
                 !instruction.Result.Type.Equals(ShaderType.U32))
@@ -554,11 +554,10 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             StructuredBufferLoadOperation operation)
         {
-            if (instruction.OperandCount != 2 ||
-                instruction.Operand0?.Type is not IPtrType ||
+            if (!HasPhysicalOperandShape(instruction, 2) ||
+                instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
-                instruction.Operand1 is null ||
-                !instruction.Operand1.Type.Equals(ShaderType.U32) ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
                 instruction.Result is null ||
                 !instruction.Result.Type.Equals(ShaderType.F32))
                 throw UnsupportedOperation(instruction, "invalid read-only storage-buffer load signature");
@@ -568,8 +567,8 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             ReadWriteStructuredBufferLengthOperation operation)
         {
-            if (instruction.OperandCount != 1 ||
-                instruction.Operand0?.Type is not IPtrType ||
+            if (!HasPhysicalOperandShape(instruction, 1) ||
+                instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
                 instruction.Result is null ||
                 !instruction.Result.Type.Equals(ShaderType.U32))
@@ -580,11 +579,10 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             ReadWriteStructuredBufferLoadOperation operation)
         {
-            if (instruction.OperandCount != 2 ||
-                instruction.Operand0?.Type is not IPtrType ||
+            if (!HasPhysicalOperandShape(instruction, 2) ||
+                instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
-                instruction.Operand1 is null ||
-                !instruction.Operand1.Type.Equals(ShaderType.U32) ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
                 instruction.Result is null ||
                 !instruction.Result.Type.Equals(ShaderType.F32))
                 throw UnsupportedOperation(instruction, "invalid read-write storage-buffer load signature");
@@ -594,15 +592,26 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             ReadWriteStructuredBufferStoreOperation operation)
         {
-            if (instruction.OperandCount != 3 ||
-                instruction.Operand0?.Type is not IPtrType ||
+            if (!HasPhysicalOperandShape(instruction, 3) ||
+                instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
-                instruction.Operand1 is null ||
-                !instruction.Operand1.Type.Equals(ShaderType.U32) ||
-                instruction[2]?.Type.Equals(ShaderType.F32) is not true ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
+                !instruction.RestOperands[0].Type.Equals(ShaderType.F32) ||
                 instruction.Result is not null)
                 throw UnsupportedOperation(instruction, "invalid read-write storage-buffer store signature");
         }
+
+        private static bool HasPhysicalOperandShape(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            int expectedCount) =>
+            instruction.OperandCount == expectedCount &&
+            instruction.Operand0 is not null &&
+            (expectedCount == 1
+                ? instruction.Operand1 is null
+                : instruction.Operand1 is not null) &&
+            !instruction.RestOperands.IsDefault &&
+            instruction.RestOperands.Length == Math.Max(0, expectedCount - 2) &&
+            instruction.RestOperands.All(static operand => operand is not null);
 
         private static bool IsStructuredBufferValue(IShaderValue? value) =>
             value is not null &&
