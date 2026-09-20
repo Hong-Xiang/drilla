@@ -90,13 +90,23 @@ var compiler = new CLSLCompiler(new(
 var wgsl = compiler.Emit(shader);
 ```
 
-The admitted subset is an unambiguous fragment entry and its finite, acyclic call closure,
-where every function is a chain of unconditional `Forward` block transfers ending in one
-return. Conditional/switch control, loops, continues, recursive or incomplete summaries,
-unowned cooperative helpers, and vertex/compute derivative use fail explicitly. This profile
-currently admits matching f32 scalar/vector `dpdx`, `dpdy`, and `fwidth`; f16/f64 are outside
-that deliberately narrow profile bound. Coarse/fine forms are separately rejected because
-the pinned Slang-to-WGSL route does not support them. Derivative operands may vary.
+The admitted subset is an unambiguous fragment entry and its finite, acyclic call closure.
+Functions may use unconditional or conditional `Forward` transfers and uniform early returns,
+but every conditional decision in the closure must be proved uniform. Literals and known,
+deterministic pure typed operations preserve uniform operands. Helper-return summaries are
+context-independent: every returned value and internal decision must be uniform, so a helper
+returning a literal can prove control while an identity helper remains varying even when called
+with a literal. Entry/helper parameters, memory loads, derivative results, provider `None`, and
+pointer identity do not prove uniformity. Surviving non-function storage roots must be
+module-declared members of the immutable original source-use whitelist; that verified subset is
+available as external input, while erased roots are not retained and loaded values remain
+varying. Exact incoming source arms determine block-parameter facts. Switches (including uniform switches),
+loops/repeats, continues, recursive or incomplete
+summaries, unowned cooperative helpers, and vertex/compute derivative use fail explicitly.
+
+This profile currently admits matching f32 scalar/vector `dpdx`, `dpdy`, and `fwidth`; f16/f64
+are outside that deliberately narrow profile bound. Coarse/fine forms are separately rejected
+because the pinned Slang-to-WGSL route does not support them. Derivative operands may vary.
 
 The mapped Slang names are `ddx`, `ddy`, and `fwidth`. The Slang target-lowering module
 boundary rejects a module declaration with the mapped name of a derivative actually used by
@@ -106,11 +116,21 @@ a narrow collision check, not general symbol renaming; a user helper named `dpdx
 ordinary helper.
 
 Admission publishes immutable `CLSLCooperationFacts` containing the entry declaration,
-original block identities, original sensitive sites, and call-site-to-callee inheritance.
-Pointer and Slang-target correspondence is checked against those same facts before emission;
-the emitter remains syntax-only. `MaximalReconvergence` is reserved and rejected by the
-compiler constructor. Migrate derivative shaders by selecting `PortableWgsl` and keeping the
-entire cooperative call closure within the bound above.
+original block identities, proof-relevant value definitions and exact incoming arm bindings,
+the complete original `(source, arm, target, owner, kind, arguments)` transfer table, original
+sensitive/helper-call instructions, uniform conditionals/returns, and call-site-to-callee
+inheritance. Pointer correspondence anchors those facts to the analyzed source snapshot;
+pointer-parameter erasure is the only transfer-tuple change admitted there. Slang lowering
+publishes internal condition, transfer snapshot/slot/token, gate, definition, and capture
+origins. An independent structural verifier checks the actual target AST, including distinct
+generated carriers, exact callee/operand/source-scope lineage, bijective source
+returns/calls/effects and target breaks, and reaching control definitions on every live token
+path. It also derives the exact bounded activation template from the source Region bindings
+and checked `Forward` escapes, then matches raw scopes, suffix carriers, gated/ungated
+continuations, sibling order, and terminal exits structurally. The emitter remains syntax-only.
+`MaximalReconvergence` is reserved and rejected by the compiler constructor. Migrate
+derivative shaders by selecting `PortableWgsl` and keeping the entire cooperative call closure
+within the bound above.
 
 ### Public scalar local promotion
 
