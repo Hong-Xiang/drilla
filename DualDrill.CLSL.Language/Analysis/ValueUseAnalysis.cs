@@ -83,7 +83,7 @@ internal class ValueUseAnalysis
 
 public static class ValueUseAnalysisExtension
 {
-    public static IEnumerable<IShaderValue> GetUsedValues(this FunctionBody4 body) =>
+    public static IEnumerable<IShaderValue> GetUsedValues(this RegionFunctionBody body) =>
         ((IEnumerable<IShaderValue>)
         [
             ..body.Body.Fold(new ValueUseAnalysis())

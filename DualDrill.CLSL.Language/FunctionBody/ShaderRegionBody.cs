@@ -12,7 +12,7 @@ public sealed record class ShaderRegionBody(
     Label Label,
     ImmutableArray<IShaderValue> Parameters,
     Seq<Instruction<IShaderValue, IShaderValue>, ITerminator<RegionJump<IShaderValue>, IShaderValue>> Body,
-    Label? ImmediatePostDominator
+    ExitPostDominance PostDominance
 )
 {
     public void Dump(ILocalDeclarationContext context, IndentedTextWriter writer)
@@ -34,9 +34,9 @@ public sealed record class ShaderRegionBody(
         ImmutableArray<IShaderValue> parameters,
         IEnumerable<Instruction<IShaderValue, IShaderValue>> statements,
         ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
-        Label? immediatePostDominator
+        ExitPostDominance postDominance
     ) =>
-        new(label, parameters, Seq.Create([.. statements], terminator), immediatePostDominator);
+        new(label, parameters, Seq.Create([.. statements], terminator), postDominance);
 
     public ShaderRegionBody MapInstruction(
         Func<Instruction<IShaderValue, IShaderValue>, IEnumerable<Instruction<IShaderValue, IShaderValue>>> f) =>
@@ -44,7 +44,7 @@ public sealed record class ShaderRegionBody(
             Label,
             Parameters,
             Seq.Create(Body.Elements.SelectMany(f), Body.Last),
-            ImmediatePostDominator
+            PostDominance
         );
 }
 

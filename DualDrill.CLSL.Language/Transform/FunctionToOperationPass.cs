@@ -25,9 +25,9 @@ public sealed class FunctionToOperationPass
 {
     public IDeclaration? VisitFunction(FunctionDeclaration decl) => decl;
 
-    public FunctionBody4 VisitFunctionBody(FunctionBody4 body)
+    public RegionFunctionBody VisitFunctionBody(RegionFunctionBody body)
     {
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             body.Declaration,
             body.Body.Select(
                 l => l,

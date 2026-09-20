@@ -17,7 +17,7 @@ namespace DualDrill.CLSL.Test;
 
 public class ParseBodyTest(ITestOutputHelper Output)
 {
-    FunctionBody4 ParseMethod(FunctionDeclaration f, MethodBase m)
+    RegionFunctionBody ParseMethod(FunctionDeclaration f, MethodBase m)
     {
         var context = CompilationContext.Create();
         context.AddFunctionDeclaration(Symbol.Function(m), f);
@@ -335,10 +335,14 @@ public class ParseBodyTest(ITestOutputHelper Output)
                     result.Successor(falseArm).Should().BeOfType<UnconditionalSuccessor>()
                         .Which.Target.Should().Be(sharedReturn);
                     result.Successor(sharedReturn).Should().BeOfType<TerminateSuccessor>();
-                    result[result.Entry].ImmediatePostDominator.Should().Be(sharedReturn);
-                    result[trueArm].ImmediatePostDominator.Should().Be(sharedReturn);
-                    result[falseArm].ImmediatePostDominator.Should().Be(sharedReturn);
-                    result[sharedReturn].ImmediatePostDominator.Should().BeNull();
+                    result[result.Entry].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.Block>().Which.Target.Should().BeSameAs(sharedReturn);
+                    result[trueArm].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.Block>().Which.Target.Should().BeSameAs(sharedReturn);
+                    result[falseArm].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.Block>().Which.Target.Should().BeSameAs(sharedReturn);
+                    result[sharedReturn].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.FunctionExit>();
                     break;
                 }
             case "Release":
@@ -354,9 +358,12 @@ public class ParseBodyTest(ITestOutputHelper Output)
                     });
                     result.Successor(trueReturn).Should().BeOfType<TerminateSuccessor>();
                     result.Successor(falseReturn).Should().BeOfType<TerminateSuccessor>();
-                    result[result.Entry].ImmediatePostDominator.Should().BeNull();
-                    result[trueReturn].ImmediatePostDominator.Should().BeNull();
-                    result[falseReturn].ImmediatePostDominator.Should().BeNull();
+                    result[result.Entry].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.FunctionExit>();
+                    result[trueReturn].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.FunctionExit>();
+                    result[falseReturn].PostDominance.Should()
+                        .BeOfType<ExitPostDominance.FunctionExit>();
                     break;
                 }
             default:
