@@ -3,6 +3,8 @@
 CLSL supports a bounded WGSL-via-Slang uniform layout profile. Validation runs
 in `SlangTargetLowering.Lower`, before a Slang target AST is produced, whether
 lowering is reached through `CLSLCompiler.Emit` or called directly.
+Resource identity and annotation rules are defined in
+[Shader metadata validation](./shader-metadata.md).
 
 ## Authoring
 

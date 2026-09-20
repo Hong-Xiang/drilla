@@ -1,10 +1,14 @@
+using System.Collections.Immutable;
+using System.Numerics;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Reflection;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Graphics;
 using DualDrill.Mathematics;
-using System.Numerics;
 using static DualDrill.Mathematics.DMath;
 
 namespace DualDrill.CLSL.Test;
@@ -121,6 +125,27 @@ public sealed class UniformLayoutTests
             () => reflection.GetBindGroupLayoutDescriptorBuffer(module, -1));
     }
 
+    [Fact]
+    public void TypedReflectionUsesSharedModuleMetadataValidation()
+    {
+        var uniform = new VariableDeclaration(
+            UniformAddressSpace.Instance,
+            "Data",
+            ShaderType.F32,
+            [new UniformAttribute(), new BindingAttribute(2)]);
+        var module = new ShaderModuleDeclaration<RegionFunctionBody>(
+            [uniform],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty);
+
+        var exception = Assert.Throws<NotSupportedException>(
+            () => new ShaderModuleReflection().GetUniformBindings(module));
+
+        Assert.Equal(
+            "Shader module metadata validation rejected resource 'Data': a resource requires exactly one " +
+            "address-space, [Group], and [Binding] attribute (found 1, 0, and 1).",
+            exception.Message);
+    }
+
     public static TheoryData<string, ISharpShader> UnsupportedUniforms =>
         new()
         {
@@ -139,42 +164,52 @@ public sealed class UniformLayoutTests
             { "nested", new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.NestedOuter>() },
             { "empty", new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.Empty>() },
             { "property", new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.Property>() },
-            { "member align", new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.MemberAlign>() },
-            { "structure align", new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.StructureAlign>() },
-            { "explicit layout", new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.Explicit>() },
-            { "variable align", new UnsupportedUniformShaders.VariableAlign() }
+            { "explicit layout", new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.Explicit>() }
         };
 
     [Theory]
     [MemberData(nameof(UnsupportedUniforms))]
-    public void PublicEmissionRejectsUnsupportedUniformsBeforeTargetText(string profile, ISharpShader shader)
+    public void PublicEmissionRejectsUnsupportedUniformsBeforeTargetText(string _, ISharpShader shader)
     {
         var exception = Assert.Throws<NotSupportedException>(
             () => new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader));
 
-        var metadataDiagnostic = profile switch
-        {
-            "member align" =>
-                $"Shader module metadata validation rejected field " +
-                $"'{typeof(UnsupportedUniformShaders.MemberAlign).FullName}.Field': " +
-                "attribute(s) [Align] are not valid on an ordinary module field.",
-            "structure align" =>
-                "Shader module metadata validation rejected structure 'StructureAlign': " +
-                "attribute(s) [Align] are not supported.",
-            "variable align" =>
-                $"Shader module metadata validation rejected field " +
-                $"'{typeof(UnsupportedUniformShaders.VariableAlign).FullName}.Value': " +
-                "resource attribute(s) [Align] are not supported.",
-            _ => null
-        };
-        if (metadataDiagnostic is not null)
-        {
-            Assert.Equal(metadataDiagnostic, exception.Message);
-            return;
-        }
-
         Assert.Contains("Uniform", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("WGSL uniform layout profile", exception.Message);
+    }
+
+    public static TheoryData<ISharpShader, string> UnsupportedAlignmentMetadata =>
+        new()
+        {
+            {
+                new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.MemberAlign>(),
+                $"Shader module metadata validation rejected field " +
+                $"'{typeof(UnsupportedUniformShaders.MemberAlign).FullName}.Field': " +
+                "attribute(s) [Align] are not valid on an ordinary module field."
+            },
+            {
+                new UnsupportedUniformShaders.Shader<UnsupportedUniformShaders.StructureAlign>(),
+                "Shader module metadata validation rejected structure 'StructureAlign': " +
+                "attribute(s) [Align] are not supported."
+            },
+            {
+                new UnsupportedUniformShaders.VariableAlign(),
+                $"Shader module metadata validation rejected field " +
+                $"'{typeof(UnsupportedUniformShaders.VariableAlign).FullName}.Value': " +
+                "resource attribute(s) [Align] are not supported."
+            }
+        };
+
+    [Theory]
+    [MemberData(nameof(UnsupportedAlignmentMetadata))]
+    public void PublicEmissionRejectsAlignmentMetadataAtMetadataBoundary(
+        ISharpShader shader,
+        string expected)
+    {
+        var exception = Assert.Throws<NotSupportedException>(
+            () => new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader));
+
+        Assert.Equal(expected, exception.Message);
     }
 
     [Fact]

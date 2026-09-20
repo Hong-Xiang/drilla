@@ -16,6 +16,11 @@ resource/type/annotation evidence and the
 [typed resource proposals](./shader-feature-proposals.md) for unimplemented API
 examples and layout/binding decisions.
 
+Current production contracts:
+
+- [Shader metadata validation](./shader-metadata.md)
+- [Uniform buffer layout and reflection](./uniform-layout.md)
+
 ## Key Features
 
 1. **Native C# Shader Authoring**

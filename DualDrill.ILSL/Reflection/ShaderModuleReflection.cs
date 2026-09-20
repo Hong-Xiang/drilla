@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
@@ -241,16 +242,20 @@ public sealed class
 
 public sealed class ShaderModuleReflection : IShaderModuleReflection
 {
-    public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module) =>
-    [
-        .. module.Declarations
-                 .OfType<VariableDeclaration>()
-                 .Where(declaration => declaration.Attributes.OfType<UniformAttribute>().Any())
-                 .Select(CreateUniformBinding)
-                 .OrderBy(binding => binding.Group)
-                 .ThenBy(binding => binding.Binding)
-                 .ThenBy(binding => binding.Name, StringComparer.Ordinal)
-    ];
+    public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module)
+    {
+        ShaderModuleMetadataValidator.Validate(module);
+        return
+        [
+            .. module.Declarations
+                     .OfType<VariableDeclaration>()
+                     .Where(declaration => declaration.Attributes.OfType<UniformAttribute>().Any())
+                     .Select(CreateUniformBinding)
+                     .OrderBy(binding => binding.Group)
+                     .ThenBy(binding => binding.Binding)
+                     .ThenBy(binding => binding.Name, StringComparer.Ordinal)
+        ];
+    }
 
     public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
         IShaderModuleDeclaration module,
@@ -292,8 +297,8 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
 
     private static ShaderUniformBinding CreateUniformBinding(VariableDeclaration declaration)
     {
-        var group = GetRequiredAttribute<GroupAttribute>(declaration).Binding;
-        var binding = GetRequiredAttribute<BindingAttribute>(declaration);
+        var group = declaration.Attributes.OfType<GroupAttribute>().Single().Binding;
+        var binding = declaration.Attributes.OfType<BindingAttribute>().Single();
         var visibility = declaration.Attributes
                                     .OfType<IShaderStageAttribute>()
                                     .Aggregate(GPUShaderStage.None, (stages, stage) => stages | stage.Stage);
@@ -307,20 +312,6 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
             visibility,
             binding.HasDynamicOffset,
             WgslUniformLayoutCalculator.Calculate(declaration));
-    }
-
-    private static TAttribute GetRequiredAttribute<TAttribute>(VariableDeclaration declaration)
-        where TAttribute : class, IShaderAttribute
-    {
-        var attributes = declaration.Attributes.OfType<TAttribute>().ToArray();
-        return attributes.Length switch
-        {
-            1 => attributes[0],
-            0 => throw new InvalidOperationException(
-                $"Uniform '{declaration.Name}' requires one {typeof(TAttribute).Name}."),
-            _ => throw new InvalidOperationException(
-                $"Uniform '{declaration.Name}' has multiple {typeof(TAttribute).Name} values.")
-        };
     }
 
     private static GPUBufferBindingLayout CreateBufferLayout(ShaderUniformBinding uniform) =>
