@@ -7,7 +7,7 @@ execution models. Ordinary C# fixtures separately exercise actual Debug/Release
 CIL and the public `CLSLCompiler.Parse/Compile/Emit` boundary.
 
 Implementation: `DualDrill.CLSL.Test/ControlFlowCorpus{,Tests}.cs`.
-The only existing helper extension is a typed raw-graph entry point in
+The existing helper extensions are typed raw-graph and annotated-facts entry points in
 `ScalarControlFlowOracle`; its interpreter is reused.
 
 ## Quantified coverage
@@ -26,7 +26,9 @@ The only existing helper extension is a typed raw-graph entry point in
 | Irreducible rejection | `IrreducibleTwoEntryAndSideEntryCyclesAreRejectedStructurally` | Two-entry 3-node cycle and 5-node side-entry graph rejected by lexical scope checking |
 | Ordinary C# public path | `OrdinarySharpShaderUsesPublicParseCompileAndEmitBoundaries` | `OrdinaryControl(0)=17`, `(3)=21`; value/facts/region/scoped/emitted-model traces agree; native Slang and public WGSL products |
 | No-exit / mixed return-divergence | `DivergenceCorpusSeparatesSlangAndWgslCapabilities` | Mixed returning input -> 7; no-exit IR/Slang emission; explicit WGSL restriction; nonreturning inputs exhaust a 100-step model budget |
-| Baseline switch boundary | `DenseSwitchHasSwitchCilAndRetainsPublicFrontendRejection` | Dense ordinary C# switch really contains CIL `switch` in both builds; frontend rejection, not a structurizer failure |
+| Native dense switch | `DenseSwitchRunsThroughSharedStagesAndPublicTargets` | 12 inputs; real CIL switch in both builds, ordered shared-IR arms 0..8 preserved; CPU/value/facts/region/scoped/emitted-model agreement and public IR/Slang/WGSL |
+| Same-target multiway values | `SameTargetSwitchPreservesThreeOrderedArmsAndTuples` | Six inputs; cases 0/1/default -> 11/29/41 at one join; incoming arms 0/1/2 remain distinct |
+| Multiway loop repeats and exits | `LoopDispatchSwitchPreservesRepeatAndExitArmIdentity` | Four-node raw CFG, nine input pairs; dispatch arms 0/1 repeat with different parallel tuples, case 2/default arms 2/3 exit to one label with different values |
 | Native target syntax | `RepresentativeGeneratedAndHandSourcesPassNativeSlangValidation` | Crossing-forward and multiple-latch/exit sources passed to existing `SlangService.ValidateAsync` |
 
 The larger generator uses unsigned 32-bit arithmetic:
@@ -46,6 +48,16 @@ iterations, shared tails, nested continue/break/early return and loop state.
 `CfgEdgeArgumentsAreParallelCopiesAndLegitimateRevisitsRemainInTrace` and
 `UnsupportedOperationsAndBothExecutionBudgetsFailExplicitly` retain negative
 controls, strict types and budget/unsupported-operation failures.
+Accepted `CilSwitchTests` additionally supplies empty tables, retained CIL
+stack values, nested conditions/continue/break/early return, malformed target
+and selector-type controls. Those tests are retained, not duplicated or weakened.
+
+The switch extension is bounded to two new hand topologies and 12 native dense
+inputs: it does not extend the forward graph enumerator to arbitrary multiway
+graphs. Dense inputs 0..7 return 11/13/17/19/23/29/31/37; signed extrema, -1
+and 8 return 41. Same-target inputs are signed extrema, -1, 0, 1 and 2.
+The loop matrix covers zero iterations, one/four parallel swaps, three
+increments, an explicit case exit and default exits at -1, 3 and both extrema.
 
 ## What is compared
 
@@ -55,6 +67,10 @@ The typed raw CFG runs **before** facts and region construction. Subsequent
 flat-region, scoped-continuation, normalized-region and emitted-source-model
 executions must match results and traces. Hand cases additionally have fixed
 numeric goldens and topology assertions.
+Both hand switch matrices also compare the annotated-facts CFG directly.
+Their entire raw-input matrices execute before region construction. They retain
+an explicit `Terminator.D.Switch` in checked shared regions; only target
+lowering chooses binary target syntax.
 
 The CFG and scoped models share scalar `Machine` operations; the source model
 also shares scalar arithmetic helpers. They are independent **control-transfer
@@ -81,10 +97,10 @@ Use the pinned Nix environment, in each real configuration:
 ```sh
 nix develop --builders '' --command dotnet test \
   DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj --no-restore -c Debug \
-  --filter 'FullyQualifiedName~ControlFlowCorpusTests|FullyQualifiedName~ScalarControlFlowTests'
+  --filter 'FullyQualifiedName~ControlFlowCorpusTests|FullyQualifiedName~ScalarControlFlowTests|FullyQualifiedName~CilSwitchTests'
 nix develop --builders '' --command dotnet test \
   DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj --no-restore -c Release \
-  --filter 'FullyQualifiedName~ControlFlowCorpusTests|FullyQualifiedName~ScalarControlFlowTests'
+  --filter 'FullyQualifiedName~ControlFlowCorpusTests|FullyQualifiedName~ScalarControlFlowTests|FullyQualifiedName~CilSwitchTests'
 ```
 
 Restore that project only if this fails for missing assets. For auditable
@@ -173,13 +189,46 @@ normalized result=Integer { Data = 11 } trace=0 -> 1
 emitted result=Integer { Data = 11 } trace=0 -> 1
 ```
 
+### Captured explicit-multiway extension
+
+After normal merge of accepted dependency
+`e8ef765fe4ba4aea894b4e677058f7b018f08608` (tree
+`20ea6b4d67e16508b4ca4736e15d8719b6259d0e`), the same-target switch has
+this actual value-CFG control and computed incoming arms:
+
+```text
+control: switch %0 cases=[^1(switch-same-join)(11_i32), ^1(switch-same-join)(29_i32)] default=^1(switch-same-join)(41_i32)
+incoming=[^0:switch-same-entry[0]:forward,^0:switch-same-entry[1]:forward,^0:switch-same-entry[2]:forward]
+```
+
+All six inputs have the fixed original trace `entry -> join`, but case 0,
+case 1 and default supply distinct results 11, 29 and 41.
+
+The switch-loop state begins `(count,1,3)`. Its dispatch selects a parallel swap,
+an increment, an unchanged exit tuple, or a swapped default-exit tuple.
+Node identities are `0=entry`, `1=header`, `2=dispatch`, `3=exit`.
+Actual results agree in raw/facts/region/scoped/normalized/emitted models:
+
+| `(selector,count)` | Result | Fixed trace |
+|---|---|---|
+| `(int.MinValue,0)` | 13 | `0 -> 1 -> 3` |
+| `(0,1)` | 31 | `0 -> 1 -> 2 -> 1 -> 3` |
+| `(0,4)` | 13 | `0 -> 1 -> 2 -> 1 -> 2 -> 1 -> 2 -> 1 -> 2 -> 1 -> 3` |
+| `(1,3)` | 43 | `0 -> 1 -> 2 -> 1 -> 2 -> 1 -> 2 -> 1 -> 3` |
+| `(2,3)` | 13 | `0 -> 1 -> 2 -> 3` |
+| `(-1,3)`, `(3,3)`, `(int.MinValue,3)`, `(int.MaxValue,3)` | 31 | `0 -> 1 -> 2 -> 3` |
+
+Incoming assertions filter by dispatch source: other entry/header edges also
+have arm indices 0/1. Checked control resolves dispatch arms 0/1 as `Repeat`
+and 2/3 as `Forward`, without collapsing equal labels or argument tuples.
+
 ## Counterexample and capability ledger
 
 | Observation | Classification | Status / next boundary |
 |---|---|---|
 | No unexpected wrong value/trace or reducible rejection in the specified bounded runs | Correct accepted scalar-model behavior | Finite evidence only; no general completeness claim |
 | Two-entry / side-entry rejection | Intended out-of-contract rejection | No node-splitting repair implemented |
-| Dense switch CIL rejected before structurization | Unsupported frontend | #155 / #158 owns explicit shared-IR multiway control; replace rejection expectation and rerun only after its accepted API is integrated |
+| Dense switch and two raw multiway topologies accepted | Correct accepted scalar-model behavior | Accepted #158 shared API; ordered cases and default retained; bounded inputs above |
 | Reachable `NoExitPath` rejected for WGSL | Target capability restriction | IR/Slang emission remains a separate observation |
 | Nonreturning model inputs exhaust budget | Oracle budget / unresolved execution | Neither successful equivalence nor a divergence theorem |
 
@@ -187,6 +236,11 @@ No genuine compiler counterexample required shrinking in these runs. Earlier
 personal-review findings corrected **the tests and evidence** (empty facts
 captures, an outside-loop branch mislabelled as two exits, disconnected C#
 goldens); those were not production compiler fixes.
+The reviewed historical baseline
+`5117316098b5f1124fed8423ecbd39cd58c90840` and its original captures remain
+unchanged: switch was frontend-unsupported at that head. The refreshed corpus
+replaces only that obsolete rejection with acceptance after the approved
+dependency merge; it does not retroactively relabel historical evidence.
 
 ## Beyond Relooper comparison and limits
 
@@ -206,6 +260,6 @@ and resource bounds. Testing depth 32 is not an unbounded recursion guarantee.
 The official Beyond Relooper arbitrary-CFG pipeline separately repairs
 irreducibility by node splitting; this compiler currently rejects it instead.
 
-Switch remains explicit multiway control in the shared-IR workstream.
+Switch remains explicit multiway control in shared IR.
 No corpus result here promises GPU reconvergence, barrier participation,
 derivative legality or subgroup behavior.

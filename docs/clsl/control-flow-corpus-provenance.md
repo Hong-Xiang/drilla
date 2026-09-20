@@ -39,12 +39,17 @@ Haskell/Cmm programs and differential action-trace interpreters, alongside an
 inductive semantic argument. Passing this finite scalar corpus is not a
 substitute for that general argument.
 
-## Multiway ideas reserved for the accepted switch API
+## Multiway ideas exercised through the accepted switch API
 
 WABT [brtable.txt](https://github.com/WebAssembly/wabt/blob/c1499564506fbd9b15e785f56d16e651b54cc7c2/test/interp/brtable.txt)
 and [br-table-loop.txt](https://github.com/WebAssembly/wabt/blob/c1499564506fbd9b15e785f56d16e651b54cc7c2/test/typecheck/br-table-loop.txt)
 combine defaults, loop-header targets and enclosing exits.
 Slang [nested-switch-continue-in-loop.slang](https://github.com/shader-slang/slang/blob/282587ac1c04ad8cbd6592e6e12142a35b2687e8/tests/bugs/nested-switch-continue-in-loop.slang)
 separates switch exits from a containing-loop continue.
-These are follow-up inputs for #155 / #158, not accepted multiway coverage in
-the baseline corpus. Their licenses are the same project licenses above.
+`hand-switch-same-target` and `hand-switch-loop-dispatch` independently exercise
+distinct default tuples, duplicate case targets and switch arms selecting a
+loop repeat or exit through the accepted #158 API. The accepted `CilSwitchTests`
+also covers C# switch-loop continue/break and nested conditions. This is bounded
+topology inspiration, not wholesale upstream equivalence or GPU reconvergence.
+Their licenses are the same project licenses above. The preserved historical
+`5117316098b5f1124fed8423ecbd39cd58c90840` baseline predates this acceptance.

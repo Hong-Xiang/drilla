@@ -149,6 +149,182 @@ public sealed class ControlFlowCorpusTests(ITestOutputHelper output)
         capture.Write($"execution-{choose}.txt", FormatPipeline(compiled, arguments));
     }
 
+    [Fact]
+    public async Task SameTargetSwitchPreservesThreeOrderedArmsAndTuples()
+    {
+        var raw = SameTargetSwitch();
+        var cases = new (int Input, int Result)[]
+        {
+            (int.MinValue, 41),
+            (-1, 41),
+            (0, 11),
+            (1, 29),
+            (2, 41),
+            (int.MaxValue, 41)
+        };
+        var capture = new Capture(raw.Id);
+        capture.Write("input.txt", raw.Input);
+        var rawExecutions = cases.Select(@case =>
+        {
+            var arguments = ImmutableArray.Create<Value>(new Value.Integer(@case.Input));
+            var execution = RunRaw(raw, arguments);
+            Assert.Equal(new Value.Integer(@case.Result), execution.Result);
+            Assert.Equal(
+                ["switch-same-entry", "switch-same-join"],
+                execution.Trace.Select(label => label.Name));
+            return (Arguments: arguments, Execution: execution);
+        }).ToImmutableArray();
+        capture.Write(
+            "raw-execution.txt",
+            string.Join(
+                Environment.NewLine,
+                rawExecutions.Select(item => FormatFlat(item.Arguments, item.Execution, raw.Identity))));
+
+        var rawSwitch = Assert.IsType<Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>>(
+            raw.Graph[raw.Graph.EntryLabel].Body.Last);
+        Assert.Equal(2, rawSwitch.CaseTargets.Length);
+        var compiled = Compile(raw, capture);
+        var join = compiled.Facts.Labels().Single(label => label.Name == "switch-same-join");
+        var incoming = compiled.Facts[join].Annotation.IncomingArms
+            .Where(arm => ReferenceEquals(arm.Source, raw.Graph.EntryLabel))
+            .OrderBy(arm => arm.SuccessorIndex)
+            .ToArray();
+        Assert.Equal([0, 1, 2], incoming.Select(arm => arm.SuccessorIndex));
+        Assert.All(incoming, arm => Assert.False(arm.IsBackedge));
+        var regionSwitch = Assert.IsType<Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>>(
+            compiled.Region[raw.Graph.EntryLabel].Body.Last);
+        Assert.Equal(2, regionSwitch.CaseTargets.Length);
+        for (var arm = 0; arm <= 2; arm++)
+        {
+            var transfer = compiled.Region.Control.Resolve(raw.Graph.EntryLabel, arm);
+            Assert.Same(join, transfer.Target);
+            Assert.Equal(ScopedContinuationKind.Forward, transfer.Kind);
+        }
+
+        var executions = new List<string>();
+        foreach (var item in rawExecutions)
+        {
+            var facts = RunFactsCfg(
+                compiled.Facts,
+                raw.Declaration,
+                item.Arguments,
+                raw.Locals,
+                raw.InitLocals);
+            AssertEquivalent(item.Execution, facts);
+            AssertPipeline(compiled, item.Arguments, item.Execution);
+            executions.Add(FormatPipeline(compiled, item.Arguments));
+        }
+        capture.Write("execution.txt", string.Join(Environment.NewLine, executions));
+        await ValidateNative(capture, "native-slang-validation.txt", compiled.Source);
+    }
+
+    [Fact]
+    public async Task LoopDispatchSwitchPreservesRepeatAndExitArmIdentity()
+    {
+        var raw = LoopDispatchSwitch();
+        var cases = new (int Selector, int Count, int Result, string[] Trace)[]
+        {
+            (int.MinValue, 0, 13, ["switch-loop-entry", "switch-loop-header", "switch-loop-exit"]),
+            (0, 1, 31, [
+                "switch-loop-entry", "switch-loop-header", "switch-loop-dispatch",
+                "switch-loop-header", "switch-loop-exit"
+            ]),
+            (0, 4, 13, [
+                "switch-loop-entry",
+                "switch-loop-header", "switch-loop-dispatch",
+                "switch-loop-header", "switch-loop-dispatch",
+                "switch-loop-header", "switch-loop-dispatch",
+                "switch-loop-header", "switch-loop-dispatch",
+                "switch-loop-header", "switch-loop-exit"
+            ]),
+            (1, 3, 43, [
+                "switch-loop-entry",
+                "switch-loop-header", "switch-loop-dispatch",
+                "switch-loop-header", "switch-loop-dispatch",
+                "switch-loop-header", "switch-loop-dispatch",
+                "switch-loop-header", "switch-loop-exit"
+            ]),
+            (2, 3, 13, [
+                "switch-loop-entry", "switch-loop-header", "switch-loop-dispatch", "switch-loop-exit"
+            ]),
+            (-1, 3, 31, [
+                "switch-loop-entry", "switch-loop-header", "switch-loop-dispatch", "switch-loop-exit"
+            ]),
+            (3, 3, 31, [
+                "switch-loop-entry", "switch-loop-header", "switch-loop-dispatch", "switch-loop-exit"
+            ]),
+            (int.MinValue, 3, 31, [
+                "switch-loop-entry", "switch-loop-header", "switch-loop-dispatch", "switch-loop-exit"
+            ]),
+            (int.MaxValue, 3, 31, [
+                "switch-loop-entry", "switch-loop-header", "switch-loop-dispatch", "switch-loop-exit"
+            ])
+        };
+        var capture = new Capture(raw.Id);
+        capture.Write("input.txt", raw.Input);
+        var rawExecutions = cases.Select(@case =>
+        {
+            var arguments = ImmutableArray.Create<Value>(
+                new Value.Integer(@case.Selector),
+                new Value.Integer(@case.Count));
+            var execution = RunRaw(raw, arguments);
+            Assert.Equal(new Value.Integer(@case.Result), execution.Result);
+            Assert.Equal(@case.Trace, execution.Trace.Select(label => label.Name));
+            return (Arguments: arguments, Execution: execution);
+        }).ToImmutableArray();
+        capture.Write(
+            "raw-execution.txt",
+            string.Join(
+                Environment.NewLine,
+                rawExecutions.Select(item => FormatFlat(item.Arguments, item.Execution, raw.Identity))));
+
+        var dispatch = raw.Graph.Labels().Single(label => label.Name == "switch-loop-dispatch");
+        var rawSwitch = Assert.IsType<Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>>(
+            raw.Graph[dispatch].Body.Last);
+        Assert.Equal(3, rawSwitch.CaseTargets.Length);
+        var compiled = Compile(raw, capture);
+        Assert.Equal(3, Assert.IsType<Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>>(
+            compiled.Region[dispatch].Body.Last).CaseTargets.Length);
+        var header = compiled.Facts.Labels().Single(label => label.Name == "switch-loop-header");
+        var exit = compiled.Facts.Labels().Single(label => label.Name == "switch-loop-exit");
+        var repeatArms = compiled.Facts[header].Annotation.IncomingArms
+            .Where(arm => ReferenceEquals(arm.Source, dispatch))
+            .OrderBy(arm => arm.SuccessorIndex)
+            .ToArray();
+        Assert.Equal([0, 1], repeatArms.Select(arm => arm.SuccessorIndex));
+        Assert.All(repeatArms, arm => Assert.True(arm.IsBackedge));
+        var exitArms = compiled.Facts[exit].Annotation.IncomingArms
+            .Where(arm => ReferenceEquals(arm.Source, dispatch))
+            .OrderBy(arm => arm.SuccessorIndex)
+            .ToArray();
+        Assert.Equal([2, 3], exitArms.Select(arm => arm.SuccessorIndex));
+        Assert.All(exitArms, arm => Assert.False(arm.IsBackedge));
+        for (var arm = 0; arm <= 3; arm++)
+        {
+            var transfer = compiled.Region.Control.Resolve(dispatch, arm);
+            Assert.Equal(
+                arm < 2 ? ScopedContinuationKind.Repeat : ScopedContinuationKind.Forward,
+                transfer.Kind);
+            Assert.Same(arm < 2 ? header : exit, transfer.Target);
+        }
+
+        var executions = new List<string>();
+        foreach (var item in rawExecutions)
+        {
+            var facts = RunFactsCfg(
+                compiled.Facts,
+                raw.Declaration,
+                item.Arguments,
+                raw.Locals,
+                raw.InitLocals);
+            AssertEquivalent(item.Execution, facts);
+            AssertPipeline(compiled, item.Arguments, item.Execution);
+            executions.Add(FormatPipeline(compiled, item.Arguments));
+        }
+        capture.Write("execution.txt", string.Join(Environment.NewLine, executions));
+        await ValidateNative(capture, "native-slang-validation.txt", compiled.Source);
+    }
+
     [Theory]
     [InlineData(0, 13)]
     [InlineData(1, 31)]
@@ -347,27 +523,149 @@ public sealed class ControlFlowCorpusTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void DenseSwitchHasSwitchCilAndRetainsPublicFrontendRejection()
+    public async Task DenseSwitchRunsThroughSharedStagesAndPublicTargets()
     {
         var shader = new CorpusDenseSwitchShader();
-        var compiler = new CLSLCompiler(new(CLSLCompileTarget.SLang));
-        var parsed = compiler.Parse(shader);
         var method = ((Func<int, int>)CorpusDenseSwitchShader.DenseSwitch).Method;
-        var raw = CompilerTestPipeline.RawBody(parsed, method);
+        var expected = new (int Input, int Result)[]
+        {
+            (int.MinValue, 41),
+            (-1, 41),
+            (0, 11),
+            (1, 13),
+            (2, 17),
+            (3, 19),
+            (4, 23),
+            (5, 29),
+            (6, 31),
+            (7, 37),
+            (8, 41),
+            (int.MaxValue, 41)
+        };
+        var capture = new Capture("cil/dense-switch-acceptance");
+        var rawModule = CompilerTestPipeline.ParseRaw(method);
+        var raw = Assert.Single(rawModule.FunctionDefinitions.Values);
+        capture.Write("00-raw-cil.txt", raw.Code.PrettyPrint());
         Assert.Contains(
             raw.Code.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Switch);
-        var capture = new Capture("cil/dense-switch-rejection");
-        capture.Write("cil.txt", raw.Code.PrettyPrint());
+        var preModule = CilPreStackPass.Run(rawModule);
+        capture.Write("00a-pre-cil.txt", Assert.Single(preModule.FunctionDefinitions.Values).PrettyPrint());
+        var labelledModule = CilBlockPartitionPass.Run(preModule);
+        var labelled = Assert.Single(labelledModule.FunctionDefinitions.Values);
+        var switchBlock = Assert.Single(
+            labelled.Blocks.Blocks,
+            block => block.Terminator is CilControlFlow.Switch);
+        var cilSwitch = Assert.IsType<CilControlFlow.Switch>(switchBlock.Terminator);
+        Assert.Equal(8, cilSwitch.CaseTargets.Length);
+        capture.Write("01-labelled-cil.txt", labelled.PrettyPrint());
+        var shaderStackModule = CilToShaderStackPass.Run(labelledModule);
+        var shaderStack = Assert.Single(shaderStackModule.FunctionDefinitions.Values);
+        var shaderSwitch = Assert.IsType<Terminator.D.Switch<Label, ShaderStackOperand>>(
+            shaderStack.Blocks.Blocks.Single(
+                block => ReferenceEquals(block.Label, switchBlock.Label)).Body.Last.Node);
+        Assert.Equal(8, shaderSwitch.CaseTargets.Length);
+        capture.Write("02-shader-stack.txt", shaderStack.PrettyPrint());
+        var shaderControlModule = ShaderStackControlFlowPass.Run(shaderStackModule);
+        capture.Write(
+            "02a-shader-control-flow.txt",
+            Assert.Single(shaderControlModule.FunctionDefinitions.Values).PrettyPrint());
+        var valueModule = ShaderStackToValuePass.Run(shaderControlModule);
+        var value = Assert.Single(valueModule.FunctionDefinitions.Values);
+        var valueSwitch = Assert.IsType<Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>>(
+            value.Graph[switchBlock.Label].Body.Last);
+        Assert.Equal(8, valueSwitch.CaseTargets.Length);
+        capture.Write("03-value-cfg.txt", value.PrettyPrint());
+        var promotedModule = CilLocalPromotionPass.Run(valueModule);
+        var promoted = Assert.Single(promotedModule.FunctionDefinitions.Values);
+        var promotedSwitch = Assert.IsType<Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>>(
+            promoted.Graph[switchBlock.Label].Body.Last);
+        Assert.Equal(8, promotedSwitch.CaseTargets.Length);
+        capture.Write("04-promoted-value-cfg.txt", promoted.PrettyPrint());
+        var factsModule = CilBlockControlFactsPass.Run(promotedModule);
+        var facts = Assert.Single(factsModule.FunctionDefinitions.Values);
+        var factsSwitch = Assert.IsType<Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>>(
+            facts.Graph[switchBlock.Label].Node.Body.Last);
+        Assert.Equal(8, factsSwitch.CaseTargets.Length);
+        capture.Write("05-control-facts.txt", facts.PrettyPrint());
+        var regionModule = CilRegionPass.Run(factsModule);
+        var region = Assert.Single(regionModule.FunctionDefinitions.Values);
+        var regionSwitch = Assert.IsType<Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>>(
+            region[switchBlock.Label].Body.Last);
+        Assert.Equal(8, regionSwitch.CaseTargets.Length);
+        for (var arm = 0; arm <= regionSwitch.CaseTargets.Length; arm++)
+        {
+            var cilTarget = arm < cilSwitch.CaseTargets.Length
+                ? cilSwitch.CaseTargets[arm]
+                : cilSwitch.DefaultTarget;
+            var shaderTarget = arm < shaderSwitch.CaseTargets.Length
+                ? shaderSwitch.CaseTargets[arm]
+                : shaderSwitch.DefaultTarget;
+            var valueTarget = arm < valueSwitch.CaseTargets.Length
+                ? valueSwitch.CaseTargets[arm].Label
+                : valueSwitch.DefaultTarget.Label;
+            var promotedTarget = arm < promotedSwitch.CaseTargets.Length
+                ? promotedSwitch.CaseTargets[arm].Label
+                : promotedSwitch.DefaultTarget.Label;
+            var factsTarget = arm < factsSwitch.CaseTargets.Length
+                ? factsSwitch.CaseTargets[arm].Label
+                : factsSwitch.DefaultTarget.Label;
+            var regionTarget = arm < regionSwitch.CaseTargets.Length
+                ? regionSwitch.CaseTargets[arm].Label
+                : regionSwitch.DefaultTarget.Label;
+            Assert.Same(cilTarget, shaderTarget);
+            Assert.Same(cilTarget, valueTarget);
+            Assert.Same(cilTarget, promotedTarget);
+            Assert.Same(cilTarget, factsTarget);
+            Assert.Same(cilTarget, regionTarget);
+            Assert.Same(cilTarget, region.Control.Resolve(switchBlock.Label, arm).Target);
+        }
+        capture.Write("06-region.txt", region.Dump());
+        var normalized = new StablePointerRegionParameterPass().VisitFunctionBody(
+            new FunctionToOperationPass().VisitFunctionBody(region));
+        var targetBody = ScalarControlFlowTests.Lower(normalized);
+        var scalarSource = ScalarControlFlowTests.Emit(targetBody);
+        capture.Write("07-normalized-region.txt", normalized.Dump());
+        capture.Write("08-target-ast.txt", targetBody.PrettyPrint());
+        capture.Write("09-scalar-target.slang", scalarSource);
 
-        var compileError = Assert.Throws<NotSupportedException>(() => compiler.Compile(parsed));
-        capture.Write("compile-diagnostic.txt", compileError.ToString());
-        Assert.Contains("CIL control Switch", compileError.Message);
-        Assert.Contains("is not supported", compileError.Message);
+        var executions = new List<string>();
+        foreach (var (input, result) in expected)
+        {
+            Assert.Equal(result, CorpusDenseSwitchShader.DenseSwitch(input));
+            var arguments = ImmutableArray.Create<Value>(new Value.Integer(input));
+            var valueExecution = RunValueCfg(value, arguments);
+            var factsExecution = RunFactsCfg(facts, arguments);
+            var regionExecution = RunCfg(region, arguments);
+            var scopedExecution = ScopedContinuationOracle.RunScoped(region, arguments);
+            var emittedExecution = new EmittedScalarProgram(normalized, scalarSource).Run(arguments);
+            Assert.Equal(new Value.Integer(result), valueExecution.Result);
+            AssertEquivalent(valueExecution, factsExecution);
+            AssertEquivalent(valueExecution, regionExecution);
+            AssertEquivalent(valueExecution, scopedExecution);
+            AssertEquivalent(valueExecution, emittedExecution);
+            executions.Add(
+                $"input={input} expected={result}{Environment.NewLine}" +
+                $"value result={valueExecution.Result} trace={string.Join(" -> ", valueExecution.Trace)}{Environment.NewLine}" +
+                $"facts result={factsExecution.Result} trace={string.Join(" -> ", factsExecution.Trace)}{Environment.NewLine}" +
+                $"region result={regionExecution.Result} trace={string.Join(" -> ", regionExecution.Trace)}{Environment.NewLine}" +
+                $"scoped result={scopedExecution.Result} trace={string.Join(" -> ", scopedExecution.Trace)}{Environment.NewLine}" +
+                $"emitted result={emittedExecution.Result} trace={string.Join(" -> ", emittedExecution.Trace)}");
+        }
+        capture.Write("10-execution.txt", string.Join(Environment.NewLine + Environment.NewLine, executions));
 
-        var emitError = Assert.Throws<NotSupportedException>(() => compiler.Emit(shader));
-        capture.Write("emit-diagnostic.txt", emitError.ToString());
-        Assert.Equal(compileError.Message, emitError.Message);
+        var ir = new CLSLCompiler(new(CLSLCompileTarget.IR)).Emit(shader);
+        var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
+        var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
+        Assert.Contains("switch ", ir);
+        Assert.Contains("case 0 -> ", ir);
+        Assert.Contains("default -> ", ir);
+        Assert.Contains("DenseSwitch", slang);
+        Assert.Contains("fn Fragment", wgsl);
+        capture.Write("11-public.ir", ir);
+        capture.Write("12-public.slang", slang);
+        capture.Write("13-public.wgsl", wgsl);
+        await ValidateNative(capture, "14-public-slang-validation.txt", slang);
     }
 
     [Fact]
@@ -599,6 +897,13 @@ public sealed class ControlFlowCorpusTests(ITestOutputHelper output)
         int stepLimit = StepLimit)
     {
         var raw = RunRaw(compiled.Raw, arguments, stepLimit);
+        var facts = RunFactsCfg(
+            compiled.Facts,
+            compiled.Raw.Declaration,
+            arguments,
+            compiled.Raw.Locals,
+            compiled.Raw.InitLocals,
+            stepLimit);
         var region = RunCfg(compiled.Region, arguments, stepLimit);
         var scoped = ScopedContinuationOracle.RunScoped(compiled.Region, arguments, stepLimit);
         var normalized = RunCfg(compiled.Normalized, arguments, stepLimit);
@@ -608,6 +913,7 @@ public sealed class ControlFlowCorpusTests(ITestOutputHelper output)
             string.Join(" -> ", execution.Trace.Select(label => compiled.Raw.Identity[label]));
         return $"arguments=[{string.Join(", ", arguments)}]{Environment.NewLine}" +
                $"{Format("raw", raw)}{Environment.NewLine}" +
+               $"{Format("facts", facts)}{Environment.NewLine}" +
                $"{Format("region", region)}{Environment.NewLine}" +
                $"{Format("scoped", scoped)}{Environment.NewLine}" +
                $"{Format("normalized", normalized)}{Environment.NewLine}" +

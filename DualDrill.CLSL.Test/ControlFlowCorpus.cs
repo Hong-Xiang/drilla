@@ -287,6 +287,84 @@ internal static class ControlFlowCorpus
         return Case("hand-same-target", declaration, [.. blocks], entry);
     }
 
+    internal static RawCase SameTargetSwitch()
+    {
+        var entry = Label.Create("switch-same-entry");
+        var join = Label.Create("switch-same-join");
+        var input = new ParameterDeclaration("selector", ShaderType.I32, []);
+        var selector = ShaderValue.Intermediate(ShaderType.I32);
+        var result = ShaderValue.Intermediate(ShaderType.I32);
+        var declaration = Function("SameTargetSwitch", [input]);
+        var blocks = new[]
+        {
+            Block(entry, [], [
+                Instruction.Factory.Load(default, new LoadOperation(), selector, input.Value)
+            ], Terms.Switch(
+                selector,
+                [new(join, [Int(11)]), new(join, [Int(29)])],
+                new(join, [Int(41)]))),
+            Block(join, [result], [], Terms.ReturnExpr(result))
+        };
+        return Case("hand-switch-same-target", declaration, [.. blocks], entry);
+    }
+
+    internal static RawCase LoopDispatchSwitch()
+    {
+        var entry = Label.Create("switch-loop-entry");
+        var header = Label.Create("switch-loop-header");
+        var dispatch = Label.Create("switch-loop-dispatch");
+        var exit = Label.Create("switch-loop-exit");
+        var selectorInput = new ParameterDeclaration("selector", ShaderType.I32, []);
+        var countInput = new ParameterDeclaration("count", ShaderType.I32, []);
+        var selector = ShaderValue.Intermediate(ShaderType.I32);
+        var count = ShaderValue.Intermediate(ShaderType.I32);
+        var n = ShaderValue.Intermediate(ShaderType.I32);
+        var a = ShaderValue.Intermediate(ShaderType.I32);
+        var b = ShaderValue.Intermediate(ShaderType.I32);
+        var carriedSelector = ShaderValue.Intermediate(ShaderType.I32);
+        var active = ShaderValue.Intermediate(ShaderType.Bool);
+        var dispatchN = ShaderValue.Intermediate(ShaderType.I32);
+        var dispatchA = ShaderValue.Intermediate(ShaderType.I32);
+        var dispatchB = ShaderValue.Intermediate(ShaderType.I32);
+        var dispatchSelector = ShaderValue.Intermediate(ShaderType.I32);
+        var decremented = ShaderValue.Intermediate(ShaderType.I32);
+        var incrementedA = ShaderValue.Intermediate(ShaderType.I32);
+        var outA = ShaderValue.Intermediate(ShaderType.I32);
+        var outB = ShaderValue.Intermediate(ShaderType.I32);
+        var tens = ShaderValue.Intermediate(ShaderType.I32);
+        var result = ShaderValue.Intermediate(ShaderType.I32);
+        var declaration = Function("LoopDispatchSwitch", [selectorInput, countInput]);
+        var blocks = new[]
+        {
+            Block(entry, [], [
+                Instruction.Factory.Load(default, new LoadOperation(), selector, selectorInput.Value),
+                Instruction.Factory.Load(default, new LoadOperation(), count, countInput.Value)
+            ], Terms.Br(new(header, [count, Int(1), Int(3), selector]))),
+            Block(header, [n, a, b, carriedSelector], [
+                GreaterThan(active, n, Int(0))
+            ], Terms.BrIf(
+                active,
+                new(dispatch, [n, a, b, carriedSelector]),
+                new(exit, [a, b]))),
+            Block(dispatch, [dispatchN, dispatchA, dispatchB, dispatchSelector], [
+                Subtract(decremented, dispatchN, Int(1)),
+                Add(incrementedA, dispatchA, Int(1))
+            ], Terms.Switch(
+                dispatchSelector,
+                [
+                    new(header, [decremented, dispatchB, dispatchA, dispatchSelector]),
+                    new(header, [decremented, incrementedA, dispatchB, dispatchSelector]),
+                    new(exit, [dispatchA, dispatchB])
+                ],
+                new(exit, [dispatchB, dispatchA]))),
+            Block(exit, [outA, outB], [
+                Multiply(tens, outA, Int(10)),
+                Add(result, tens, outB)
+            ], Terms.ReturnExpr(result))
+        };
+        return Case("hand-switch-loop-dispatch", declaration, [.. blocks], entry);
+    }
+
     internal static RawCase ParallelSwap()
     {
         var entry = Label.Create("swap-entry");
@@ -839,6 +917,11 @@ internal static class ControlFlowCorpus
             RegionJump<IShaderValue> trueTarget,
             RegionJump<IShaderValue> falseTarget) =>
             [condition, .. trueTarget.Arguments, .. falseTarget.Arguments];
+        public ImmutableArray<IShaderValue> Switch(
+            IShaderValue selector,
+            IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+            RegionJump<IShaderValue> defaultTarget) =>
+            [selector, .. caseTargets.SelectMany(target => target.Arguments), .. defaultTarget.Arguments];
     }
 
     private sealed class StableRandom(uint state)
