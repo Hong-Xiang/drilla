@@ -371,6 +371,11 @@ public sealed class RuntimeReflectionParser
             type.IsGenericParameter)
             return;
 
+        foreach (var property in type.GetProperties(
+                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                     BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            _ = GetValidatedPropertyAttributes(property);
+
         if (type.BaseType is { } baseType)
             CollectTypeReferences(baseType);
 
@@ -513,12 +518,7 @@ public sealed class RuntimeReflectionParser
 
     private MemberDeclaration ParseProperty(PropertyInfo property)
     {
-        var attributes = GetShaderAttributes(property);
-        if (attributes.Length > 0)
-            throw new NotSupportedException(
-                "Shader module metadata validation rejected " +
-                $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
-                "shader metadata on module properties is not supported; use an attributed field.");
+        var attributes = GetValidatedPropertyAttributes(property);
         return new MemberDeclaration(
             property.Name,
             ParseTypeCore(property.PropertyType),
@@ -556,14 +556,7 @@ public sealed class RuntimeReflectionParser
     private static void RejectAttributedModuleProperties(Type moduleType)
     {
         foreach (var property in moduleType.GetProperties(VariableBindingFlags))
-        {
-            var attributes = GetShaderAttributes(property);
-            if (attributes.Length > 0)
-                throw new NotSupportedException(
-                    "Shader module metadata validation rejected " +
-                    $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
-                    "shader metadata on module properties is not supported; use an attributed field.");
-        }
+            _ = GetValidatedPropertyAttributes(property);
     }
 
     private static void RejectAttributedBackingField(
@@ -611,6 +604,17 @@ public sealed class RuntimeReflectionParser
 
     private static ImmutableArray<IShaderAttribute> GetShaderAttributes(ICustomAttributeProvider provider) =>
         [.. provider.GetCustomAttributes(inherit: true).OfType<IShaderAttribute>()];
+
+    private static ImmutableArray<IShaderAttribute> GetValidatedPropertyAttributes(PropertyInfo property)
+    {
+        var attributes = GetShaderAttributes(property);
+        if (attributes.Length > 0)
+            throw new NotSupportedException(
+                "Shader module metadata validation rejected " +
+                $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
+                "shader metadata on module properties is not supported; use an attributed field.");
+        return attributes;
+    }
 
     private static void ValidateMappedIntrinsicSignature(
         MethodBase method,

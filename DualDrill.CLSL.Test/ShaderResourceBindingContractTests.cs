@@ -19,6 +19,52 @@ namespace DualDrill.CLSL.Test;
 public sealed class ShaderResourceBindingContractTests
 {
     [Fact]
+    public void ReferencedAttributedStaticPropertyIsRejectedFromRootShader()
+    {
+        var property = typeof(ReferencedPropertyOwner).GetProperty(
+            nameof(ReferencedPropertyOwner.Data),
+            BindingFlags.Public | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Referenced property was not found.");
+        Assert.Equal(3, property.GetCustomAttributes().OfType<IShaderAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            Parse(new ReferencedPropertyShader()));
+
+        Assert.Equal(ReferencedPropertyDiagnostic(property), Innermost(exception).Message);
+    }
+
+    [Fact]
+    public void DirectAccessorParsingRejectsReferencedAttributedStaticProperty()
+    {
+        var property = typeof(ReferencedPropertyOwner).GetProperty(
+            nameof(ReferencedPropertyOwner.Data),
+            BindingFlags.Public | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Referenced property was not found.");
+        Assert.Equal(3, property.GetCustomAttributes().OfType<IShaderAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(
+                property.GetMethod
+                ?? throw new InvalidOperationException("Referenced property getter was not found.")));
+
+        Assert.Equal(ReferencedPropertyDiagnostic(property), Innermost(exception).Message);
+    }
+
+    [Fact]
+    public void UnannotatedReferencedStaticPropertyRemainsSupported()
+    {
+        var module = Parse(new UnannotatedReferencedPropertyShader());
+        var getter = typeof(UnannotatedReferencedPropertyOwner).GetProperty(
+            nameof(UnannotatedReferencedPropertyOwner.Data),
+            BindingFlags.Public | BindingFlags.Static)?.GetMethod
+            ?? throw new InvalidOperationException("Unannotated property getter was not found.");
+
+        Assert.Equal(2, module.FunctionDefinitions.Count);
+        Assert.Empty(module.Declarations.OfType<VariableDeclaration>());
+        Assert.Single(new RuntimeReflectionParser().ParseMethod(getter).FunctionDefinitions);
+    }
+
+    [Fact]
     public void MappedIntrinsicRejectsDuplicateParameterLocationFromClrMetadata()
     {
         var method = EmitMappedIntrinsic(IntrinsicMetadata.DuplicateParameterLocation);
@@ -468,6 +514,18 @@ public sealed class ShaderResourceBindingContractTests
         (ISharpShader)(Activator.CreateInstance(type)
             ?? throw new InvalidOperationException($"Could not create {type}."));
 
+    private static string ReferencedPropertyDiagnostic(PropertyInfo property) =>
+        "Shader module metadata validation rejected " +
+        $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
+        "shader metadata on module properties is not supported; use an attributed field.";
+
+    private static Exception Innermost(Exception exception)
+    {
+        while (exception.InnerException is { } inner)
+            exception = inner;
+        return exception;
+    }
+
     private static ResourceFixture EmitResourceFixture(DuplicateResourceAttribute duplicate)
     {
         var assembly = AssemblyBuilder.DefineDynamicAssembly(
@@ -866,6 +924,29 @@ public sealed class ShaderResourceBindingContractTests
 
         [Vertex]
         public static int Entry() => 1;
+    }
+
+    private static class ReferencedPropertyOwner
+    {
+        [Uniform, Group(0), Binding(0)]
+        public static float Data => 0;
+    }
+
+    private readonly struct ReferencedPropertyShader : ISharpShader
+    {
+        [Vertex]
+        public static float Entry() => ReferencedPropertyOwner.Data;
+    }
+
+    private static class UnannotatedReferencedPropertyOwner
+    {
+        public static float Data => 0;
+    }
+
+    private readonly struct UnannotatedReferencedPropertyShader : ISharpShader
+    {
+        [Vertex]
+        public static float Entry() => UnannotatedReferencedPropertyOwner.Data;
     }
 
     [AttributeUsage(AttributeTargets.Struct)]
