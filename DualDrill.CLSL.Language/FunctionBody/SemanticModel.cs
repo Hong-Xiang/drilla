@@ -105,6 +105,18 @@ public sealed class SemanticModel
         return default;
     }
 
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Switch(
+        IShaderValue selector,
+        IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+        RegionJump<IShaderValue> defaultTarget)
+    {
+        ValueUse(selector, null);
+        foreach (var target in caseTargets)
+            LabelUse(target.Label, VisitingTerminator.Peek());
+        LabelUse(defaultTarget.Label, VisitingTerminator.Peek());
+        return default;
+    }
+
     public RegionTree<Label, ShaderRegionBody> RegionTree(Label label) => RegionTreeDefinitions[label];
 
 

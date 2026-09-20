@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Reflection.Metadata;
 using DualDrill.CLSL.Language.ControlFlow;
 using Lokad.ILPack.IL;
@@ -57,6 +58,29 @@ public abstract record CilControlFlow
         public override ISuccessor ToSuccessor() => Successor.Conditional(BranchTarget, FallThroughTarget);
     }
 
+    public sealed record Switch : CilControlFlow
+    {
+        public Switch(
+            CilInstructionInfo instruction,
+            ImmutableArray<Label> caseTargets,
+            Label defaultTarget)
+        {
+            RequireSupportedOpCode(instruction, IsSwitch, "switch");
+            if (caseTargets.IsDefault)
+                throw new ArgumentException("Switch case targets must be initialized.", nameof(caseTargets));
+            Instruction = instruction;
+            CaseTargets = caseTargets;
+            DefaultTarget = defaultTarget;
+        }
+
+        public CilInstructionInfo Instruction { get; }
+        public ImmutableArray<Label> CaseTargets { get; }
+        public Label DefaultTarget { get; }
+
+        public override ISuccessor ToSuccessor() =>
+            Successor.Switch(CaseTargets, DefaultTarget);
+    }
+
     public sealed record FallThrough(Label Target) : CilControlFlow
     {
         public override ISuccessor ToSuccessor() => Successor.Unconditional(Target);
@@ -71,6 +95,8 @@ public abstract record CilControlFlow
 
     internal static bool IsUnconditionalBranch(ILOpCode opCode) =>
         opCode is ILOpCode.Br or ILOpCode.Br_s;
+
+    internal static bool IsSwitch(ILOpCode opCode) => opCode is ILOpCode.Switch;
 
     internal static bool IsConditionalBranch(ILOpCode opCode) =>
         opCode is

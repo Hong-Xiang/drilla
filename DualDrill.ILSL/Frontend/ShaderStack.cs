@@ -270,6 +270,18 @@ internal static class ShaderStackValidation
                 throw new ArgumentException("Conditional branch must consume a bool from stack depth zero.");
             return stack.RemoveAt(stack.Length - 1);
         }
+
+        public ImmutableArray<IShaderType> Switch(
+            ShaderStackOperand selector,
+            IReadOnlyList<Label> caseTargets,
+            Label defaultTarget)
+        {
+            ValidateOperand(selector, stack);
+            if (selector is not ShaderStackOperand.Depth { Index: 0 } ||
+                !selector.Type.Equals(ShaderType.I32))
+                throw new ArgumentException("Switch must consume an i32 selector from stack depth zero.");
+            return stack.RemoveAt(stack.Length - 1);
+        }
     }
 }
 

@@ -200,6 +200,9 @@ public static class WasmLowering
                     ValidateEdge(block.Label, branch.TrueTarget, available);
                     ValidateEdge(block.Label, branch.FalseTarget, available);
                     break;
+                case Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>:
+                    Reject($"{Describe(block.Label)}: switch terminators are outside the bounded scalar profile.");
+                    break;
                 case Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>:
                     Reject($"{Describe(block.Label)}: void returns are not supported.");
                     break;
@@ -450,6 +453,9 @@ public static class WasmLowering
                     LowerTransfer(branch.FalseTarget, 2, whenFalse);
                     instructions.Add(new WasmInstruction.If(whenTrue.ToImmutable(), whenFalse.ToImmutable()));
                     break;
+                case Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>:
+                    Reject($"{Describe(block.Label)}: switch terminators are outside the bounded scalar profile.");
+                    break;
                 default:
                     throw new UnreachableException(
                         $"{context}, block {Describe(block.Label)}: unsupported terminator escaped validation.");
@@ -577,6 +583,9 @@ public static class WasmLowering
                 Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => [branch.Target],
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                     [branch.TrueTarget, branch.FalseTarget],
+                Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> =>
+                    Reject<IEnumerable<RegionJump<IShaderValue>>>(
+                        $"{Describe(block.Label)}: switch terminators are outside the bounded scalar profile."),
                 Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
                 _ => Reject<IEnumerable<RegionJump<IShaderValue>>>(
                     $"{Describe(block.Label)}: unsupported terminator {block.Body.Last.GetType().Name}.")

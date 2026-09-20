@@ -519,6 +519,8 @@ public static class PromoteLocalsPass
             Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => [branch.Target],
             Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                 [branch.TrueTarget, branch.FalseTarget],
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch =>
+                [.. branch.CaseTargets, branch.DefaultTarget],
             Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> => [],
             Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
             _ => throw new ArgumentException("The control-flow graph has an unknown terminator.", nameof(terminator))
@@ -531,6 +533,12 @@ public static class PromoteLocalsPass
             Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => branch.Target.Arguments,
             Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                 [branch.Condition, .. branch.TrueTarget.Arguments, .. branch.FalseTarget.Arguments],
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch =>
+                [
+                    branch.Selector,
+                    .. branch.CaseTargets.SelectMany(target => target.Arguments),
+                    .. branch.DefaultTarget.Arguments
+                ],
             Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned => [returned.Expr],
             Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
             _ => throw new ArgumentException("The control-flow graph has an unknown terminator.", nameof(terminator))

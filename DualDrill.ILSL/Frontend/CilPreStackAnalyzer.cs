@@ -251,7 +251,11 @@ internal static class CilPreStackAnalyzer
             return Stack;
         }
 
-        public ImmutableStack<CilStackType> VisitSwitch(CilInstructionInfo inst) => Unsupported("switch");
+        public ImmutableStack<CilStackType> VisitSwitch(CilInstructionInfo inst)
+        {
+            Require(CilStackType.Int32.Instance, Pop(), "switch selector");
+            return Stack;
+        }
 
         public ImmutableStack<CilStackType> VisitBinaryArithmetic<TOp>(
             CilInstructionInfo inst,

@@ -252,6 +252,22 @@ public static class ShaderStackToValuePass
                 new RegionJump<IShaderValue>(trueTarget, arguments),
                 new RegionJump<IShaderValue>(falseTarget, arguments));
         }
+
+        public ITerminator<RegionJump<IShaderValue>, IShaderValue> Switch(
+            ShaderStackOperand selector,
+            IReadOnlyList<Label> caseTargets,
+            Label defaultTarget)
+        {
+            var value = Resolve(selector, stack);
+            if (!value.Type.Equals(ShaderType.I32))
+                throw new ArgumentException($"Switch selector must be i32, got {value.Type.Name}.");
+            stack.RemoveAt(stack.Count - 1);
+            var arguments = stack.ToImmutableArray();
+            return Terminator.B.Switch(
+                value,
+                [.. caseTargets.Select(target => new RegionJump<IShaderValue>(target, arguments))],
+                new RegionJump<IShaderValue>(defaultTarget, arguments));
+        }
     }
 }
 
