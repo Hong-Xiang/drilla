@@ -174,6 +174,12 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<RegionFunctionBody> Mod
         return default;
     }
 
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Switch(
+        IShaderValue selector,
+        IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+        RegionJump<IShaderValue> defaultTarget) =>
+        throw new NotSupportedException("SPIR-V switch lowering is not supported.");
+
     private int NextId()
     {
         var result = IdCount;

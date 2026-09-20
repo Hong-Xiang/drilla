@@ -100,7 +100,7 @@ accidentally repeating, skipping, or moving its effects.
 |---|---|---|
 | `Seq<TElement, TLast>` | A recursive sequence with a distinct final element; a basic block can use instructions followed by one terminator. | Valid instruction semantics or validity of a default-constructed wrapper. |
 | `Instruction<TOperand, TResult>` | An operation with explicit operand and result representations. | Operand/type compatibility merely from the generic parameters. |
-| `ITerminator<TTarget, TValue>` | Return, unconditional branch, or two ordered conditional arms. | Target binding, availability of values, or legal lexical scope. |
+| `ITerminator<TTarget, TValue>` | Return, unconditional branch, two ordered conditional arms, or an ordered switch table plus distinct default. | Target binding, availability of values, or legal lexical scope. |
 | `RegionJump<TValue>` | One concrete `Label` plus an immutable, ordered argument payload. | Destination membership, parameter arity/types, or permission to enter a region. |
 | `RegionTree<TLabel, TBody>` | Nested block/loop bindings and a body, with reusable mapping and folding. | A target AST, execution order, or proof that every reference is structurally legal. |
 | `ShaderModuleDeclaration<TBody>` | Shared declarations with a chosen function-body representation. | A mandatory different body type for every transformation. |
@@ -143,7 +143,7 @@ the source activation never resumes. Returns exit from any nesting depth.
 
 `Forward` and `Repeat` ownership describe source-language scope only. They do not
 infer target `break`/`continue`, copy arguments, duplicate bodies, or use
-postdominators as continuation authority. Same-target conditional arms remain
+postdominators as continuation authority. Same-target conditional and switch arms remain
 distinct transfers. Edge-specific target lowering is still owned by later
 lowering; `RegionParameterToLocalVariablePass` continues to reject differing
 tuples on two arms that share a target.
@@ -165,10 +165,13 @@ descendants fail explicitly; there is no node splitting or dispatcher fallback.
 ### Control Projection Is Lossy
 
 `ToSuccessor` projects a terminator to its control successors. It discards return
-values, branch conditions, and jump arguments. It preserves
-termination/unconditional/conditional control shape, target identity, true/false
-ordering, and two conditional arms even when they refer to the same label.
+values, branch conditions, switch selectors, and jump arguments. It preserves
+termination/unconditional/conditional/switch control shape, target identity,
+true/false ordering, and switch cases `0..N-1` followed by default arm `N`.
+All arms remain distinct even when they refer to the same label.
 Both value-return and void-return terminators project to termination.
+`SwitchSuccessor` equality and hashing use the ordered target sequence and
+default, not immutable-array storage identity.
 
 It is suitable for graph analysis, not for reconstructing edge-value semantics.
 Neither this projection nor a set of successor labels may silently equate
@@ -298,6 +301,7 @@ distinct target nodes; provenance cannot change execution semantics.
 
 The legacy `RegionParameterToLocalVariablePass` remains available to non-target
 callers and composes the same pointer policy before ordinary parameter erasure.
+It rejects switch because eager stores cannot preserve selected-edge tuples.
 The target path does not use that erasure. The implementation is not the
 complete Beyond Relooper algorithm or a general irreducible-CFG policy.
 
@@ -338,6 +342,37 @@ compared extensionally: immutable-array storage identity is not semantic
 equality of jump arguments.
 Identity and composition concern pure mappers; the separate order and exception
 cases describe observable behavior for effectful callbacks.
+
+## Multiway Switch API Migration
+
+Switch extends the existing algebras without changing their generic arity.
+Source implementers must add these members; binary consumers must rebuild:
+
+```csharp
+// ITerminatorSemantic<TT, TE, TO>
+TO Switch(TE selector, IReadOnlyList<TT> caseTargets, TT defaultTarget);
+
+// ISuccessorSemantic<TX, TI, TO>
+TO Switch(TX context, IReadOnlyList<TI> caseTargets, TI defaultTarget);
+```
+
+Both methods receive cases in ordinal order and a separate default, not a
+combined or deduplicated target set. In value IR, each target is its own
+`RegionJump<IShaderValue>` with an edge-specific argument tuple. Consumers must
+handle the multiway case or reject it explicitly at their capability boundary;
+do not silently treat it as a binary branch or execute all arms' copies.
+
+Replace the old unimplemented `Successor.Switch()` factory with
+`Successor.Switch(ImmutableArray<Label> caseTargets, Label defaultTarget)`.
+Construct value-bearing terminators with
+`Terminator.B.Switch<TT, TE>(selector, caseTargets, defaultTarget)` or
+`Terminator.Factory<TT, TE>().Switch(selector, caseTargets, defaultTarget)`.
+The concrete `Terminator.D.Switch<TT, TE>` has get-only `Selector`,
+`CaseTargets` and `DefaultTarget` properties. Its case array must be initialized;
+an empty array is valid. `Select` maps the selector once, then cases in order,
+then default once. There is no compatibility overload or shim.
+
+See [native switch semantics and an actual arm/tuple example](compiler/linear-cil.md#implemented-native-switch).
 
 ## Subsequent Slices
 

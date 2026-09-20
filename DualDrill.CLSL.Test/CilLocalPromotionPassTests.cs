@@ -395,6 +395,12 @@ public sealed class CilLocalPromotionPassTests(ITestOutputHelper output)
             RegionJump<IShaderValue> trueTarget,
             RegionJump<IShaderValue> falseTarget) =>
             [condition, .. trueTarget.Arguments, .. falseTarget.Arguments];
+
+        public IEnumerable<IShaderValue> Switch(
+            IShaderValue selector,
+            IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+            RegionJump<IShaderValue> defaultTarget) =>
+            [selector, .. caseTargets.SelectMany(target => target.Arguments), .. defaultTarget.Arguments];
     }
 
     private static int LocalDiamond(bool choose, int left, int right)

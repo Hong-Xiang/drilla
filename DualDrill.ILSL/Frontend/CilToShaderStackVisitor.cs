@@ -258,7 +258,14 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         return default;
     }
 
-    public Unit VisitSwitch(CilInstructionInfo inst) => throw new NotImplementedException();
+    public Unit VisitSwitch(CilInstructionInfo inst)
+    {
+        if (!TopType().Equals(ShaderType.I32))
+            throw Invalid($"Switch expects i32, got {TopType().Name}.");
+        var control = RequireNativeControl<CilControlFlow.Switch>(inst);
+        SetTerminator(TerminatorFactory.Switch(Depth(0), control.CaseTargets, control.DefaultTarget));
+        return default;
+    }
 
     public Unit VisitBinaryLogical<TOp>(CilInstructionInfo inst) where TOp : BinaryLogical.IOp<TOp>
     {
@@ -638,6 +645,7 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
                 CilControlFlow.Return value => value.Instruction,
                 CilControlFlow.Branch value => value.Instruction,
                 CilControlFlow.ConditionalBranch value => value.Instruction,
+                CilControlFlow.Switch value => value.Instruction,
                 _ => throw new InvalidOperationException($"{typeof(TControl).Name} is not native CIL control.")
             };
             if (source.Equals(instruction) && ReferenceEquals(source.Instruction, instruction.Instruction))
@@ -665,5 +673,11 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
             Label trueTarget,
             Label falseTarget) =>
             Language.Terminator.B.BrIf(condition, trueTarget, falseTarget);
+
+        public static ITerminator<Label, ShaderStackOperand> Switch(
+            ShaderStackOperand selector,
+            ImmutableArray<Label> caseTargets,
+            Label defaultTarget) =>
+            Language.Terminator.B.Switch(selector, caseTargets, defaultTarget);
     }
 }

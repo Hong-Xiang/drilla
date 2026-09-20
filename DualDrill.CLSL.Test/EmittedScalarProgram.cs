@@ -276,6 +276,7 @@ internal sealed class EmittedScalarProgram
             "+" => BinaryArithmetic.Add.Instance,
             "-" => BinaryArithmetic.Sub.Instance,
             "*" => BinaryArithmetic.Mul.Instance,
+            "&" => BinaryArithmetic.BitwiseAnd.Instance,
             "==" => BinaryRelational.Eq.Instance,
             "!=" => BinaryRelational.Ne.Instance,
             "<" => BinaryRelational.Lt.Instance,

@@ -36,6 +36,12 @@ internal class ValueUseAnalysis
         RegionJump<IShaderValue> falseTarget) =>
         [condition, .. trueTarget.Arguments, .. falseTarget.Arguments];
 
+    public IEnumerable<IShaderValue> Switch(
+        IShaderValue selector,
+        IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+        RegionJump<IShaderValue> defaultTarget) =>
+        [selector, .. caseTargets.SelectMany(target => target.Arguments), .. defaultTarget.Arguments];
+
     public IEnumerable<IShaderValue> ReturnExpr(IShaderValue expr) => [expr];
 
     public IEnumerable<IShaderValue> ReturnVoid() => [];

@@ -230,6 +230,8 @@ public sealed class SlangTargetLowering
                     LowerTransfer(sourceLabel, 0, branch.Target),
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                     LowerConditional(sourceLabel, branch),
+                Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    LowerSwitch(sourceLabel, branch),
                 _ => throw Error($"unsupported terminator in block '{sourceLabel.Name}'")
             };
 
@@ -247,6 +249,36 @@ public sealed class SlangTargetLowering
                         new SlangBlock(whenFalse.Statements))
                 ],
                 whenTrue.Escapes.Union(whenFalse.Escapes));
+        }
+
+        private Lowered LowerSwitch(
+            Label sourceLabel,
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch)
+        {
+            if (!branch.Selector.Type.Equals(ShaderType.I32))
+                throw Error(
+                    $"switch selector in block '{sourceLabel.Name}' must be i32, got {branch.Selector.Type.Name}");
+
+            var lowered = LowerTransfer(sourceLabel, branch.CaseTargets.Length, branch.DefaultTarget);
+            for (var index = branch.CaseTargets.Length - 1; index >= 0; index--)
+            {
+                var selected = LowerTransfer(sourceLabel, index, branch.CaseTargets[index]);
+                var comparison = ShaderValue.Intermediate(ShaderType.Bool);
+                var statements = ImmutableArray.CreateBuilder<SlangStatement>();
+                statements.Add(new SlangBind(
+                    Instruction<SlangOperand, IShaderValue>.Create(
+                        NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>.Instance,
+                        comparison,
+                        [Operand(branch.Selector), new SlangValueOperand(Int(index))])));
+                statements.Add(new SlangIf(
+                    new SlangValueOperand(comparison),
+                    new SlangBlock(selected.Statements),
+                    new SlangBlock(lowered.Statements)));
+                lowered = new Lowered(
+                    statements.ToImmutable(),
+                    selected.Escapes.Union(lowered.Escapes));
+            }
+            return lowered;
         }
 
         private Lowered LowerTransfer(
@@ -354,7 +386,15 @@ public sealed class SlangTargetLowering
                     branch.Target.Arguments,
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                     [branch.Condition, .. branch.TrueTarget.Arguments, .. branch.FalseTarget.Arguments],
-                _ => []
+                Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    [
+                        branch.Selector,
+                        .. branch.CaseTargets.SelectMany(target => target.Arguments),
+                        .. branch.DefaultTarget.Arguments
+                    ],
+                Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
+                _ => throw new NotSupportedException(
+                    $"Cross-label capture discovery does not support terminator {terminator.GetType().Name}.")
             };
 
         private void LowerInstruction(

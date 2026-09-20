@@ -11,6 +11,10 @@ guarantee. See the [shared IR contract](./ir_spec.md) for current boundaries.
 
 This page also retains historical design exploration. Capabilities described in
 that exploration are goals, not additional implemented compiler stages.
+Use the [shader feature inventory](./shader-feature-inventory.md) for current
+resource/type/annotation evidence and the
+[typed resource proposals](./shader-feature-proposals.md) for unimplemented API
+examples and layout/binding decisions.
 
 ## Key Features
 
@@ -37,6 +41,8 @@ The [shared IR and stage contract](./ir_spec.md) and
 [implemented pass pipeline](./compiler/passes.md) distinguish current behavior
 from design exploration. A nested region IR is not the target-language AST,
 and a same-IR transformation is not by itself a missing stage boundary.
+The [proposed GPU reconvergence contract](./reconvergence-contract.md) is a
+model-only follow-up, not a production guarantee.
 
 ### Frontend
 
