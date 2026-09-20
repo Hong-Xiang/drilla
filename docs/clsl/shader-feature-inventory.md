@@ -5,6 +5,10 @@ Snapshot: 2026-09-20, source baseline
 The accompanying [API examples](./shader-feature-proposals.md) are proposals,
 not implemented interfaces. This slice changes documentation and tests only.
 
+> **Historical snapshot.** This inventory remains attributed to the source
+> baseline above. See [Compute entry points](./compute-entry.md) for the current
+> implemented compute-signature profile.
+
 **Current useful compiler subset:** vertex/fragment scalar/vector signatures,
 read-only uniform struct fields, ordinary direct helper calls, and a selection
 of scalar/vector arithmetic and math. This is not a complete shader language.
@@ -59,9 +63,9 @@ References name exact files; line ranges identify the baseline evidence.
 | D3D register class/space | M: no explicit portable mapping policy | M: no distinct mapping contract | U: upstream Slang has mappings; no public CLSL D3D path | U: must not equate `t0`, `s0`, `b0`, `u0` with one Vulkan binding |
 | Vertex/fragment scalar/vector interfaces | C: stage roots; parameter builtin/location collected [R:47-56,532-539][parser] | C/P: semantic input pointers; no stage/type/duplicate validator | C: narrow fixtures; P: location mapping is stage-insensitive [S:323-356][emitter] | C: E `MinimumTriangleShaderShouldWork`, uniform fixture |
 | Builtin position / vertex index | C: typed enum attributes | C: signatures pass current pipeline | C: `SV_POSITION`, `SV_VertexId` -> WGSL builtins | C: E minimum triangle |
-| Instance/sample/front-face/depth and compute builtins | C: `global_invocation_id:vec3u32` is the optional compute input; other enum names remain declarations only [BI:3-20][builtins] | C: compute stage/type/duplicate validation; M/P: other builtins | C: `SV_DispatchThreadID` -> WGSL global ID; other unsupported builtins still reject | `ComputeEntryContractTests`; `instance_index` rejection remains characterized |
+| Instance/sample/front-face/depth and compute builtins | D: enum names exist [BI:3-20][builtins] | P: metadata collected without legality checks | M: all but position/vertex_index reject [S:336-344][emitter] | T: `instance_index` exact emitter rejection |
 | Struct entry interfaces, locations/interpolation | P: members retain attributes [R:469-481][parser]; M: interpolation surface | P: plain member access works, not an interface ABI | M/P: member annotations silently erased [S:74-79][emitter] | T: retained attributes but no `SV_POSITION`/`TEXCOORD0` in emitted struct; not valid target acceptance |
-| Compute entry/workgroup size | C: method-only `[WorkgroupSize(x,y,z)]`; zero or one global-ID input | C: static void compute profile, positive Int32 dimensions, exact metadata validation before CIL | C: `[shader("compute")]`, `[numthreads]` -> WGSL compute/workgroup attributes | `ComputeEntryContractTests`: C# IR/Slang/WGSL plus Slang reflection and direct-IR negatives |
+| Compute entry/workgroup size | D/P: `[Compute]` is collected; M: workgroup-size attribute | M: no workgroup-size validation/IR contract | M: `ComputeAttribute` rejected in emitter | T: empty compute entry reaches emitter and rejects |
 | Function/uniform/input/output address spaces | P: typed spaces exist; locals/uniforms/semantic inputs use some of them | P: intrinsic pointer matching ignores address-space differences [F:94-100,125-131][function-pass] | P: uniform has distinct emission; stage I/O uses semantics | No claim of enforced memory access modes |
 | Workgroup/private storage, invocation/workgroup/subgroup IDs | M: no authoring surface for private/workgroup storage; ID names D only | M: no storage model, scope or memory-order contract | M: no usable target path | Missing, not inferred from WebGPU host enums |
 | bool/i32/u32/f32 | C: builtin runtime mappings [B:52-79][symbols] | C/P: typed arithmetic/comparison/conversion; not all CIL ops | C: selected scalar tests and public bool-call tests | No claim that bool is legal in host-shareable WGSL buffers |
@@ -135,7 +139,7 @@ target legalization before the syntax-only emitter.
 |---|---|---|---|
 | P0: reject incomplete bindings and lost interface annotations | Existing declarations; #115 target boundary | Duplicate `(0,0)`, one missing coordinate and annotated struct member give stable diagnostics; existing uniform/triangle still compile | Diagnostic policy for currently accepted-but-ignored input |
 | P0: uniform layout/reflection contract | Existing uniform path; reuse #111 address/local distinctions | [Uniform proposal](./shader-feature-proposals.md#3-uniform-layout-and-reflection): 32 bytes, offsets 0/16/20/24, binding `(1,2)`; reject bool/nested arrays outside profile | Canonical layout vs target-specific layout; host serialization; reflection API shape |
-| Implemented: compute signature and builtin validation | Typed frontend and Slang lowering | `[Compute, WorkgroupSize(64,1,1)]` with zero or one `global_invocation_id:vec3<u32>` input -> Slang/WGSL; wrong stage/type/nonpositive size rejects | Device workgroup limits remain a host admission obligation |
+| P1: compute signature and builtin validation | #114 typed frontend; #115 lowering | `[Compute, WorkgroupSize(64,1,1)]`, `global_invocation_id:vec3<u32>` -> Slang/WGSL compute entry; wrong stage/type/zero size rejects | Attribute spelling, target/device limit boundary |
 | P1: scalar structured-buffer declaration/index/load/store | Compute slice and approved binding/layout contracts | [Buffer proposal](./shader-feature-proposals.md#1-structured-buffer-compute): `[1,3,5] -> [2,6,10]`, lengths/bounds and readonly-store negative cases | Resource wrappers, access types, length/index width, out-of-bounds semantics |
 | P1: sampled 2D f32 texture + ordinary sampler with explicit LOD | Typed resource collection/bindings and #115 | [Texture proposal](./shader-feature-proposals.md#2-texture-and-sampler-fragment): sample-level typed op -> `.SampleLevel`/`textureSampleLevel`; reject wrong dimension/sampler | Filtering/sample-type and binding ABI; explicit capability failures |
 | P2: implicit LOD/derivatives and interface struct semantics | Texture slice; #113/#117 control facts/scopes; #154 participation specification | Unconditional fragment sample; vertex sample and unproven derivative-uniform control produce stated outcomes | Enforcement versus diagnostic policy; no assumed GPU reconvergence |

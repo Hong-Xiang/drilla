@@ -180,6 +180,46 @@ public sealed class ComputeEntryContractTests
             exception.Message);
     }
 
+    [Fact]
+    public void ParseMethodRejectsInstanceComputeEntryAtReflectionBoundary()
+    {
+        var method = typeof(InstanceComputeShader).GetMethod(nameof(InstanceComputeShader.Run))
+            ?? throw new InvalidOperationException("Compute entry method was not found.");
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Contains(nameof(InstanceComputeShader), exception.Message);
+        Assert.Contains("a compute entry point must be static", exception.Message);
+    }
+
+    [Fact]
+    public void InheritedInstanceComputeEntryIsRejectedAtReflectionBoundary()
+    {
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseShaderModule(new InheritedInstanceComputeShader()));
+
+        Assert.Contains(nameof(InheritedComputeBase), exception.Message);
+        Assert.Contains("a compute entry point must be static", exception.Message);
+    }
+
+    [Fact]
+    public void DirectIrComputeEntryRemainsAFreeFunction()
+    {
+        var function = new FunctionDeclaration(
+            "Run",
+            [],
+            new FunctionReturn(UnitType.Instance, []),
+            [new ComputeAttribute(), new WorkgroupSizeAttribute(64, 1, 1)]);
+        var module = new ShaderModuleDeclaration<RawCilFunctionBody>(
+            [function],
+            ImmutableDictionary<FunctionDeclaration, RawCilFunctionBody>.Empty);
+
+        var compiled = new CLSLCompiler(new(CLSLCompileTarget.IR)).Compile(module);
+
+        Assert.Same(function, Assert.Single(compiled.Declarations.OfType<FunctionDeclaration>()));
+    }
+
     private static string Emit(CLSLCompileTarget target, ISharpShader shader) =>
         new CLSLCompiler(new(target)).Emit(shader);
 
@@ -248,6 +288,16 @@ public sealed class ComputeEntryContractTests
         {
         }
     }
+
+    private class InheritedComputeBase
+    {
+        [Compute, WorkgroupSize(1, 1, 1)]
+        public void Run()
+        {
+        }
+    }
+
+    private sealed class InheritedInstanceComputeShader : InheritedComputeBase, ISharpShader;
 
     private sealed class NonVoidComputeShader : ISharpShader
     {
