@@ -39,7 +39,8 @@ Buffer mapping retains the explicit `IGPUDevice.Poll()` contract. Cancellation
 claims only a still-pending map, asks native wgpu to abort it with `Unmap`, and
 completes the managed task only after the terminal native callback. If success
 wins first, later token cancellation does not unmap the range; the caller owns
-the normal `Unmap` in a `finally` block.
+the normal `Unmap` in a `finally` block. The wgpu-native 27
+`wgpuBufferGetMapState` export is an unimplemented panic stub and is not used.
 
 Naga 27 still rejects the current canonical CLSL raymarch output because of its
 return-inside-loop validation bug. That shader remains explicitly unsupported
