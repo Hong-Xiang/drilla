@@ -128,22 +128,71 @@ public sealed class UniformLayoutTests
     [Fact]
     public void TypedReflectionUsesSharedModuleMetadataValidation()
     {
-        var uniform = new VariableDeclaration(
-            UniformAddressSpace.Instance,
-            "Data",
-            ShaderType.F32,
-            [new UniformAttribute(), new BindingAttribute(2)]);
-        var module = new ShaderModuleDeclaration<RegionFunctionBody>(
-            [uniform],
-            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty);
-
-        var exception = Assert.Throws<NotSupportedException>(
-            () => new ShaderModuleReflection().GetUniformBindings(module));
-
         Assert.Equal(
             "Shader module metadata validation rejected resource 'Data': a resource requires exactly one " +
             "address-space, [Group], and [Binding] attribute (found 1, 0, and 1).",
-            exception.Message);
+            Assert.Throws<NotSupportedException>(() =>
+                new ShaderModuleReflection().GetUniformBindings(Module(
+                    Uniform("Data", UniformAddressSpace.Instance, new UniformAttribute(), new BindingAttribute(2)))))
+                .Message);
+        Assert.Equal(
+            "Shader module metadata validation rejected resource 'NegativeGroup': " +
+            "group must be nonnegative; found -1.",
+            Assert.Throws<NotSupportedException>(() =>
+                new ShaderModuleReflection().GetUniformBindings(Module(
+                    Uniform(
+                        "NegativeGroup",
+                        UniformAddressSpace.Instance,
+                        new UniformAttribute(),
+                        new GroupAttribute(-1),
+                        new BindingAttribute(2)))))
+                .Message);
+        Assert.Equal(
+            "Shader module metadata validation rejected resource 'NegativeBinding': " +
+            "binding must be nonnegative; found -1.",
+            Assert.Throws<NotSupportedException>(() =>
+                new ShaderModuleReflection().GetUniformBindings(Module(
+                    Uniform(
+                        "NegativeBinding",
+                        UniformAddressSpace.Instance,
+                        new UniformAttribute(),
+                        new GroupAttribute(1),
+                        new BindingAttribute(-1)))))
+                .Message);
+        Assert.Equal(
+            "Shader module metadata validation rejected module: resource binding (1, 2) is duplicated by " +
+            "'First' and 'Second'.",
+            Assert.Throws<NotSupportedException>(() =>
+                new ShaderModuleReflection().GetBindGroupLayoutDescriptor(
+                    Module(
+                        Uniform(
+                            "First",
+                            UniformAddressSpace.Instance,
+                            new UniformAttribute(),
+                            new GroupAttribute(1),
+                            new BindingAttribute(2)),
+                        Uniform(
+                            "Second",
+                            UniformAddressSpace.Instance,
+                            new UniformAttribute(),
+                            new GroupAttribute(1),
+                            new BindingAttribute(2))),
+                    1))
+                .Message);
+        Assert.Equal(
+            "Shader module metadata validation rejected resource 'Mismatch': declared address space Function " +
+            "does not match attribute address space Uniform.",
+            Assert.Throws<NotSupportedException>(() =>
+                new ShaderModuleReflection().GetBindGroupLayoutDescriptorBuffer(
+                    Module(
+                        Uniform(
+                            "Mismatch",
+                            FunctionAddressSpace.Instance,
+                            new UniformAttribute(),
+                            new GroupAttribute(1),
+                            new BindingAttribute(2))),
+                    1))
+                .Message);
     }
 
     public static TheoryData<string, ISharpShader> UnsupportedUniforms =>
@@ -223,6 +272,16 @@ public sealed class UniformLayoutTests
     }
 
     private static int initializerCalls;
+
+    private static VariableDeclaration Uniform(
+        string name,
+        IAddressSpace addressSpace,
+        params IShaderAttribute[] attributes) =>
+        new(addressSpace, name, ShaderType.F32, attributes.ToImmutableHashSet());
+
+    private static ShaderModuleDeclaration<RegionFunctionBody> Module(
+        params VariableDeclaration[] variables) =>
+        new([.. variables], ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty);
 
     private static float TrackInitializer()
     {
