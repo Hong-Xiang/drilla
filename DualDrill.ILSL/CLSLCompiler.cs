@@ -2,6 +2,7 @@
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -27,15 +28,43 @@ public enum CLSLCompileTarget
     SLang
 }
 
+public enum CLSLCooperationProfile
+{
+    Scalar,
+    PortableWgsl,
+    MaximalReconvergence
+}
+
 public sealed record class CLSLCompileOption(
-    CLSLCompileTarget Target
+    CLSLCompileTarget Target,
+    CLSLCooperationProfile Cooperation = CLSLCooperationProfile.Scalar
 )
 {
 }
 
-public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
+public sealed class CLSLCompiler : ICLSLCompiler
 {
     private readonly SlangService _slangService = new();
+    private readonly CLSLCompileOption option;
+
+    public CLSLCompiler(CLSLCompileOption option)
+    {
+        ArgumentNullException.ThrowIfNull(option);
+        if (!Enum.IsDefined(option.Target))
+            throw new ArgumentOutOfRangeException(
+                nameof(option),
+                option.Target,
+                "Unknown CLSL compile target.");
+        if (!Enum.IsDefined(option.Cooperation))
+            throw new ArgumentOutOfRangeException(
+                nameof(option),
+                option.Cooperation,
+                "Unknown CLSL cooperation profile.");
+        if (option.Cooperation is CLSLCooperationProfile.MaximalReconvergence)
+            throw new NotSupportedException(
+                "CLSL cooperation profile MaximalReconvergence is not implemented.");
+        this.option = option;
+    }
 
     public ShaderModuleDeclaration<RawCilFunctionBody> Parse(ISharpShader shader)
     {
@@ -47,22 +76,22 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
     public ShaderModuleDeclaration<RegionFunctionBody> Compile(ISharpShader shader) => Compile(Parse(shader));
 
     public ShaderModuleDeclaration<RegionFunctionBody> Compile(ShaderModuleDeclaration<RawCilFunctionBody> module) =>
-        CilModuleCompiler.Compile(module);
+        Prepare(module).Original;
 
     public string Emit(ISharpShader shader)
     {
-        var module = Compile(shader);
-        switch (Option.Target)
+        var prepared = Prepare(Parse(shader));
+        switch (option.Target)
         {
             case CLSLCompileTarget.IR:
                 {
                     var formatter = new ShaderModuleFormatter<RegionFunctionBody>();
-                    module.Accept(formatter);
+                    prepared.Original.Accept(formatter);
                     return formatter.Dump();
                 }
             case CLSLCompileTarget.WGSL:
                 {
-                    foreach (var (function, body) in module.FunctionDefinitions)
+                    foreach (var (function, body) in prepared.Original.FunctionDefinitions)
                         foreach (var label in body.Labels)
                         {
                             if (body[label].PostDominance is ExitPostDominance.NoExitPath)
@@ -80,9 +109,7 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                                     "i64 or f64 negation; values are not truncated or demoted.");
                         }
 
-                    module = module.RunPass(new FunctionToOperationPass());
-                    module = module.RunPass(new StablePointerRegionParameterPass());
-                    var target = new SlangTargetLowering().Lower(module);
+                    var target = Target(prepared);
                     var emitter = new SlangEmitter(target);
                     var slangCode = emitter.Emit();
                     // Compile Slang to WGSL using slangc
@@ -91,9 +118,7 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                 }
             case CLSLCompileTarget.SLang:
                 {
-                    module = module.RunPass(new FunctionToOperationPass());
-                    module = module.RunPass(new StablePointerRegionParameterPass());
-                    var target = new SlangTargetLowering().Lower(module);
+                    var target = Target(prepared);
                     var emitter = new SlangEmitter(target);
                     var code = emitter.Emit();
                     return code;
@@ -102,4 +127,48 @@ public sealed class CLSLCompiler(CLSLCompileOption Option) : ICLSLCompiler
                 throw new NotSupportedException();
         }
     }
+
+    private static ShaderModuleDeclaration<SlangFunctionBody> Target(PreparedCompilation prepared) =>
+        prepared.CheckedTarget ?? new SlangTargetLowering().Lower(
+            prepared.Normalized.RunPass(new StablePointerRegionParameterPass()));
+
+    private PreparedCompilation Prepare(ShaderModuleDeclaration<RawCilFunctionBody> raw)
+    {
+        ValidateModule(raw, static body => body.Declaration, "raw");
+        var original = CilModuleCompiler.Compile(raw);
+        ValidateModule(original, static body => body.Declaration, "Region");
+        var normalized = original.RunPass(new FunctionToOperationPass());
+        var cooperation = CooperationAdmission.Prepare(normalized, option.Cooperation);
+        return new PreparedCompilation(original, normalized, cooperation.Target);
+    }
+
+    private static void ValidateModule<TBody>(
+        ShaderModuleDeclaration<TBody> module,
+        Func<TBody, FunctionDeclaration> bodyDeclaration,
+        string stage)
+        where TBody : IFunctionBody
+    {
+        ArgumentNullException.ThrowIfNull(module);
+        var declared = module.Declarations.OfType<FunctionDeclaration>().ToHashSet<FunctionDeclaration>(
+            ReferenceEqualityComparer.Instance);
+        foreach (var (function, body) in module.FunctionDefinitions)
+        {
+            if (!declared.Contains(function))
+                throw new NotSupportedException(
+                    $"{stage} module defines function '{function.Name}' without its original declaration.");
+            if (!ReferenceEquals(function, bodyDeclaration(body)))
+                throw new NotSupportedException(
+                    $"{stage} module body/declaration mismatch for function '{function.Name}'.");
+        }
+        var missing = declared.Where(function => !module.FunctionDefinitions.ContainsKey(function)).ToArray();
+        if (missing.Length > 0)
+            throw new NotSupportedException(
+                $"{stage} module declares functions without bodies: " +
+                string.Join(", ", missing.Select(static function => function.Name)) + ".");
+    }
+
+    private sealed record PreparedCompilation(
+        ShaderModuleDeclaration<RegionFunctionBody> Original,
+        ShaderModuleDeclaration<RegionFunctionBody> Normalized,
+        ShaderModuleDeclaration<SlangFunctionBody>? CheckedTarget);
 }

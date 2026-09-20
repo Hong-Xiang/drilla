@@ -6,6 +6,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.CodeTextWriter;
@@ -18,9 +19,18 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
     private readonly ImmutableDictionary<IShaderValue, int> valueIndices;
 
     public SlangFunctionBody(FunctionDeclaration declaration, SlangBlock body)
+        : this(declaration, body, SlangLoweringOrigins.Empty)
+    {
+    }
+
+    internal SlangFunctionBody(
+        FunctionDeclaration declaration,
+        SlangBlock body,
+        SlangLoweringOrigins origins)
     {
         Declaration = declaration;
         Body = body;
+        Origins = origins;
         LocalVariables = [.. Statements(body).OfType<SlangDeclare>().Select(statement => statement.Variable)];
         Labels = [.. Statements(body)
             .Select(statement => statement switch
@@ -43,6 +53,7 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
 
     public FunctionDeclaration Declaration { get; }
     public SlangBlock Body { get; }
+    internal SlangLoweringOrigins Origins { get; }
     public ILocalDeclarationContext DeclarationContext => this;
     public ImmutableArray<VariableDeclaration> LocalVariables { get; }
     public ImmutableArray<Label> Labels { get; }
@@ -300,6 +311,99 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
             SlangSwizzlePlace swizzle => Values(swizzle.Target),
             _ => []
         };
+}
+
+internal sealed record SlangContinuationOrigin(
+    Label Target,
+    Label Owner,
+    ScopedContinuationKind Kind);
+
+internal sealed record SlangParameterOrigin(
+    Label Label,
+    IShaderValue Parameter,
+    VariableDeclaration Slot,
+    SlangBind Definition,
+    SlangAssign? Capture);
+
+internal sealed record SlangDefinitionOrigin(
+    Label Label,
+    int InstructionOrdinal,
+    Instruction<IShaderValue, IShaderValue> Source,
+    SlangBind Definition,
+    SlangAssign? Capture);
+
+internal sealed record SlangInstructionOrigin(
+    Label Label,
+    int InstructionOrdinal,
+    Instruction<IShaderValue, IShaderValue> Source,
+    SlangStatement Target);
+
+internal sealed record SlangTransferArgumentOrigin(
+    int Position,
+    IShaderValue Argument,
+    IShaderValue Snapshot,
+    SlangBind Definition,
+    IShaderValue Parameter,
+    VariableDeclaration Slot,
+    SlangAssign Assignment);
+
+internal sealed record SlangTransferOrigin(
+    Label Source,
+    int Arm,
+    RegionJump<IShaderValue> Jump,
+    SlangContinuationOrigin Continuation,
+    int TokenId,
+    ImmutableArray<SlangTransferArgumentOrigin> Arguments,
+    SlangAssign TokenAssignment,
+    SlangBreak Break);
+
+internal sealed record SlangConditionalOrigin(
+    Label Source,
+    IShaderValue Condition,
+    SlangIf Conditional);
+
+internal sealed record SlangGateOrigin(
+    SlangContinuationOrigin Continuation,
+    int TokenId,
+    SlangBind Comparison,
+    SlangIf Conditional);
+
+internal sealed record SlangReturnOrigin(
+    Label Label,
+    IShaderValue? Value,
+    SlangStatement Return);
+
+internal sealed record SlangCarrierBreakOrigin(
+    Label Owner,
+    Label NextBinding,
+    SlangDoOnce Carrier,
+    SlangBreak Break);
+
+internal sealed record SlangLoweringOrigins(
+    VariableDeclaration? ControlToken,
+    ImmutableDictionary<IShaderValue, VariableDeclaration> ParameterSlots,
+    ImmutableDictionary<IShaderValue, VariableDeclaration> Captures,
+    ImmutableArray<SlangParameterOrigin> Parameters,
+    ImmutableArray<SlangDefinitionOrigin> Definitions,
+    ImmutableArray<SlangInstructionOrigin> Instructions,
+    ImmutableArray<SlangTransferOrigin> Transfers,
+    ImmutableArray<SlangConditionalOrigin> Conditionals,
+    ImmutableArray<SlangGateOrigin> Gates,
+    ImmutableArray<SlangReturnOrigin> Returns,
+    ImmutableArray<SlangCarrierBreakOrigin> CarrierBreaks)
+{
+    internal static SlangLoweringOrigins Empty { get; } = new(
+        null,
+        ImmutableDictionary<IShaderValue, VariableDeclaration>.Empty,
+        ImmutableDictionary<IShaderValue, VariableDeclaration>.Empty,
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        []);
 }
 
 public sealed record SlangBlock(ImmutableArray<SlangStatement> Statements)

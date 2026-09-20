@@ -104,7 +104,7 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
                            line.EndsWith("Uv;", StringComparison.Ordinal))
             .ToArray();
 
-        Assert.Equal(["vec4<f32>Position;", "vec2<f32>Uv;"], memberLines);
+        Assert.Equal(["vec4<f32> Position;", "vec2<f32> Uv;"], memberLines);
         Assert.DoesNotContain("SV_POSITION", slang);
         Assert.DoesNotContain("TEXCOORD0", slang);
     }
