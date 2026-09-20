@@ -74,6 +74,7 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
         public Unit VisitMember(MemberDeclaration declaration)
         {
             VisitType(declaration.Type);
+            writer.Write(' ');
             writer.Write(declaration.Name);
             writer.WriteLine(';');
             return default;
