@@ -2,10 +2,16 @@ using System.Collections.Immutable;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
+using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Frontend;
+using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Instruction;
+using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
@@ -213,11 +219,23 @@ public sealed class ComputeEntryContractTests
             [],
             new FunctionReturn(UnitType.Instance, []),
             [new ComputeAttribute(), new WorkgroupSizeAttribute(64, 1, 1)]);
-        var module = new ShaderModuleDeclaration<RawCilFunctionBody>(
+        var label = DualDrill.CLSL.Language.Symbol.Label.Create("entry");
+        var body = RegionFixture.CreateFunctionBody(
+            function,
+            RegionTree.Block(
+                label,
+                [],
+                RegionFixture.Body(
+                    label,
+                    [],
+                    [],
+                    Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>()),
+                null));
+        var module = new ShaderModuleDeclaration<RegionFunctionBody>(
             [function],
-            ImmutableDictionary<FunctionDeclaration, RawCilFunctionBody>.Empty);
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(function, body));
 
-        var compiled = new CLSLCompiler(new(CLSLCompileTarget.IR)).Compile(module);
+        var compiled = new SlangTargetLowering().Lower(module);
 
         Assert.Same(function, Assert.Single(compiled.Declarations.OfType<FunctionDeclaration>()));
     }
