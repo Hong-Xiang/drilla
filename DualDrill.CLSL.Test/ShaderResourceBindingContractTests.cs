@@ -185,6 +185,18 @@ public sealed class ShaderResourceBindingContractTests
     }
 
     [Fact]
+    public void ReferencedClassTypeMetadataIsRejectedBeforeOpaqueTypeMapping()
+    {
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            Parse(new AnnotatedReferencePayloadShader()));
+
+        Assert.Equal(
+            $"Shader module metadata validation rejected reference type '{typeof(AnnotatedReferencePayload).FullName}': " +
+            "attribute(s) [Align] are not supported.",
+            exception.Message);
+    }
+
+    [Fact]
     public void DirectIrStructureTypeMetadataIsRejected()
     {
         var structure = new StructureDeclaration
@@ -457,6 +469,15 @@ public sealed class ShaderResourceBindingContractTests
     {
         [Vertex]
         public static float Entry(AnnotatedPayload value) => value.Value;
+    }
+
+    [Align(16)]
+    private sealed class AnnotatedReferencePayload;
+
+    private readonly struct AnnotatedReferencePayloadShader : ISharpShader
+    {
+        [Vertex]
+        public static int Entry(AnnotatedReferencePayload value) => 1;
     }
 
     private readonly struct FieldTargetedPropertyShader : ISharpShader

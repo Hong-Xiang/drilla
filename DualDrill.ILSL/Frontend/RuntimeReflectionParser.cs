@@ -98,6 +98,9 @@ public sealed class RuntimeReflectionParser
 
         if (!type.IsValueType)
         {
+            ShaderModuleMetadataValidator.ValidateTypeAttributes(
+                $"reference type '{type.FullName}'",
+                [.. type.GetCustomAttributes().OfType<IShaderAttribute>()]);
             var opaque = new OpaqueType(type);
             Context.AddType(type, opaque);
             return opaque;
