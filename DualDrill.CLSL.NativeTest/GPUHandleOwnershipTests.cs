@@ -6,6 +6,21 @@ namespace DualDrill.CLSL.NativeTest;
 public sealed class GPUHandleOwnershipTests
 {
     [Fact]
+    public void Pointer_and_data_are_constructor_only_and_deconstructable()
+    {
+        var data = new object();
+        var handle = new GPUHandle<WebGpuBackend, GPUBuffer<WebGpuBackend>>(42, data);
+        var (pointer, deconstructedData) = handle;
+
+        Assert.False(typeof(GPUHandle<WebGpuBackend, GPUBuffer<WebGpuBackend>>)
+            .GetProperty(nameof(handle.Pointer))!.CanWrite);
+        Assert.False(typeof(GPUHandle<WebGpuBackend, GPUBuffer<WebGpuBackend>>)
+            .GetProperty(nameof(handle.Data))!.CanWrite);
+        Assert.Equal(42, pointer);
+        Assert.Same(data, deconstructedData);
+    }
+
+    [Fact]
     public void Record_aliases_release_one_ownership_token_once()
     {
         var resource = new GPUBuffer<WebGpuBackend>(new(1)) { Length = 1 };
@@ -37,11 +52,14 @@ public sealed class GPUHandleOwnershipTests
     [Fact]
     public void Null_handles_do_not_release()
     {
+        var defaultHandle = default(GPUHandle<WebGpuBackend, GPUBuffer<WebGpuBackend>>);
         var releases = 0;
 
-        default(GPUHandle<WebGpuBackend, GPUBuffer<WebGpuBackend>>).Release(_ => releases++);
+        defaultHandle.Release(_ => releases++);
         new GPUHandle<WebGpuBackend, GPUBuffer<WebGpuBackend>>(0).Release(_ => releases++);
 
+        Assert.Equal(0, defaultHandle.Pointer);
+        Assert.Null(defaultHandle.Data);
         Assert.Equal(0, releases);
     }
 

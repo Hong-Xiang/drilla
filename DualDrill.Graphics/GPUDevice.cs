@@ -122,14 +122,17 @@ public sealed partial record class GPUDevice<TBackend>(GPUHandle<TBackend, GPUDe
 
     public void Dispose()
     {
-        try
+        Handle.Release(handle =>
         {
-            Queue.Dispose();
-        }
-        finally
-        {
-            Handle.Release(TBackend.Instance.DisposeHandle);
-        }
+            try
+            {
+                Queue.Dispose();
+            }
+            finally
+            {
+                TBackend.Instance.DisposeHandle(handle);
+            }
+        });
     }
 
     public void Poll()
