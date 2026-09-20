@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Reflection;
+using System.Reflection.Emit;
 using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.Declaration;
@@ -13,6 +15,71 @@ namespace DualDrill.CLSL.Test;
 
 public sealed class ShaderResourceBindingContractTests
 {
+    [Fact]
+    public void RootModuleRejectsIdenticalGroupAttributesFromClrMetadata()
+    {
+        var fixture = EmitResourceFixture(DuplicateResourceAttribute.Group);
+        Assert.Equal(2, fixture.Field.GetCustomAttributes<GroupAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            Parse((ISharpShader)(Activator.CreateInstance(fixture.Type)
+                ?? throw new InvalidOperationException("Could not create emitted shader."))));
+
+        Assert.Contains("found 1, 2, and 1", exception.Message);
+    }
+
+    [Fact]
+    public void DirectStaticFieldParsingRejectsIdenticalBindingAttributesFromClrMetadata()
+    {
+        var fixture = EmitResourceFixture(DuplicateResourceAttribute.Binding);
+        Assert.Equal(2, fixture.Field.GetCustomAttributes<BindingAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseStaticField(fixture.Field));
+
+        Assert.Contains("found 1, 1, and 2", exception.Message);
+    }
+
+    [Fact]
+    public void ReferencedResourceRejectsIdenticalUniformAttributesFromClrMetadata()
+    {
+        var fixture = EmitResourceFixture(DuplicateResourceAttribute.Uniform);
+        Assert.Equal(2, fixture.Field.GetCustomAttributes<UniformAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(fixture.Read));
+
+        Assert.Contains("Failed to collect metadata operand", exception.Message);
+        Assert.Contains("found 2, 1, and 1", exception.InnerException?.Message);
+    }
+
+    [Fact]
+    public void DirectParameterParsingRejectsIdenticalBuiltinAttributesFromClrMetadata()
+    {
+        var method = EmitInterfaceMethod(DuplicateInterfaceAttribute.Builtin);
+        var parameter = Assert.Single(method.GetParameters());
+        Assert.Equal(2, parameter.GetCustomAttributes<BuiltinAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseParameter(parameter));
+
+        Assert.Contains("exactly one interface attribute is allowed", exception.Message);
+        Assert.Contains("found [Builtin], [Builtin]", exception.Message);
+    }
+
+    [Fact]
+    public void MethodParsingRejectsIdenticalReturnLocationAttributesFromClrMetadata()
+    {
+        var method = EmitInterfaceMethod(DuplicateInterfaceAttribute.ReturnLocation);
+        Assert.Equal(2, method.ReturnParameter.GetCustomAttributes<LocationAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Contains("exactly one interface attribute is allowed", exception.Message);
+        Assert.Contains("found [Location], [Location]", exception.Message);
+    }
+
     [Fact]
     public void CompleteDistinctBindingPairsArePreserved()
     {
@@ -316,6 +383,129 @@ public sealed class ShaderResourceBindingContractTests
         (ISharpShader)(Activator.CreateInstance(type)
             ?? throw new InvalidOperationException($"Could not create {type}."));
 
+    private static ResourceFixture EmitResourceFixture(DuplicateResourceAttribute duplicate)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName($"DuplicateResourceMetadata_{duplicate}_{Guid.NewGuid():N}"),
+            AssemblyBuilderAccess.Run);
+        var module = assembly.DefineDynamicModule("Fixture");
+        var type = module.DefineType(
+            $"Duplicate{duplicate}Shader",
+            TypeAttributes.Public | TypeAttributes.Sealed);
+        type.AddInterfaceImplementation(typeof(ISharpShader));
+        type.DefineDefaultConstructor(MethodAttributes.Public);
+        var field = type.DefineField("Data", typeof(float), FieldAttributes.Public | FieldAttributes.Static);
+
+        field.SetCustomAttribute(ParameterlessAttribute<UniformAttribute>());
+        field.SetCustomAttribute(IntAttribute<GroupAttribute>(0));
+        field.SetCustomAttribute(BindingAttribute(0));
+        switch (duplicate)
+        {
+            case DuplicateResourceAttribute.Uniform:
+                field.SetCustomAttribute(ParameterlessAttribute<UniformAttribute>());
+                break;
+            case DuplicateResourceAttribute.Group:
+                field.SetCustomAttribute(IntAttribute<GroupAttribute>(0));
+                break;
+            case DuplicateResourceAttribute.Binding:
+                field.SetCustomAttribute(BindingAttribute(0));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(duplicate));
+        }
+
+        var read = type.DefineMethod(
+            "Read",
+            MethodAttributes.Public | MethodAttributes.Static,
+            typeof(float),
+            Type.EmptyTypes);
+        read.SetCustomAttribute(ParameterlessAttribute<VertexAttribute>());
+        var il = read.GetILGenerator();
+        il.Emit(OpCodes.Ldsfld, field);
+        il.Emit(OpCodes.Ret);
+
+        var created = type.CreateTypeInfo()?.AsType()
+            ?? throw new InvalidOperationException("Could not create emitted resource fixture.");
+        return new ResourceFixture(
+            created,
+            created.GetField("Data")
+            ?? throw new InvalidOperationException("Emitted resource field was not found."),
+            created.GetMethod("Read")
+            ?? throw new InvalidOperationException("Emitted resource reader was not found."));
+    }
+
+    private static MethodInfo EmitInterfaceMethod(DuplicateInterfaceAttribute duplicate)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName($"DuplicateInterfaceMetadata_{duplicate}_{Guid.NewGuid():N}"),
+            AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("Fixture").DefineType(
+            $"Duplicate{duplicate}Method",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+        var method = duplicate switch
+        {
+            DuplicateInterfaceAttribute.Builtin => type.DefineMethod(
+                "Identity",
+                MethodAttributes.Public | MethodAttributes.Static,
+                typeof(uint),
+                [typeof(uint)]),
+            DuplicateInterfaceAttribute.ReturnLocation => type.DefineMethod(
+                "Value",
+                MethodAttributes.Public | MethodAttributes.Static,
+                typeof(float),
+                Type.EmptyTypes),
+            _ => throw new ArgumentOutOfRangeException(nameof(duplicate))
+        };
+
+        var il = method.GetILGenerator();
+        if (duplicate is DuplicateInterfaceAttribute.Builtin)
+        {
+            var parameter = method.DefineParameter(1, ParameterAttributes.None, "value");
+            parameter.SetCustomAttribute(BuiltinAttribute(BuiltinBinding.vertex_index));
+            parameter.SetCustomAttribute(BuiltinAttribute(BuiltinBinding.vertex_index));
+            il.Emit(OpCodes.Ldarg_0);
+        }
+        else
+        {
+            var result = method.DefineParameter(0, ParameterAttributes.Retval, null);
+            result.SetCustomAttribute(IntAttribute<LocationAttribute>(0));
+            result.SetCustomAttribute(IntAttribute<LocationAttribute>(0));
+            il.Emit(OpCodes.Ldc_R4, 0f);
+        }
+
+        il.Emit(OpCodes.Ret);
+        var created = type.CreateTypeInfo()?.AsType()
+            ?? throw new InvalidOperationException("Could not create emitted interface fixture.");
+        return created.GetMethod(method.Name)
+            ?? throw new InvalidOperationException("Emitted interface method was not found.");
+    }
+
+    private static CustomAttributeBuilder ParameterlessAttribute<TAttribute>()
+        where TAttribute : Attribute =>
+        new(
+            typeof(TAttribute).GetConstructor(Type.EmptyTypes)
+            ?? throw new InvalidOperationException($"{typeof(TAttribute)} has no parameterless constructor."),
+            []);
+
+    private static CustomAttributeBuilder IntAttribute<TAttribute>(int value)
+        where TAttribute : Attribute =>
+        new(
+            typeof(TAttribute).GetConstructor([typeof(int)])
+            ?? throw new InvalidOperationException($"{typeof(TAttribute)} has no Int32 constructor."),
+            [value]);
+
+    private static CustomAttributeBuilder BindingAttribute(int value) =>
+        new(
+            typeof(BindingAttribute).GetConstructor([typeof(int), typeof(bool)])
+            ?? throw new InvalidOperationException($"{typeof(BindingAttribute)} constructor was not found."),
+            [value, false]);
+
+    private static CustomAttributeBuilder BuiltinAttribute(BuiltinBinding value) =>
+        new(
+            typeof(BuiltinAttribute).GetConstructor([typeof(BuiltinBinding)])
+            ?? throw new InvalidOperationException($"{typeof(BuiltinAttribute)} constructor was not found."),
+            [value]);
+
     [NonShaderMetadata]
     private readonly struct ValidBindingsShader : ISharpShader
     {
@@ -491,4 +681,19 @@ public sealed class ShaderResourceBindingContractTests
 
     [AttributeUsage(AttributeTargets.Struct)]
     private sealed class NonShaderMetadataAttribute : Attribute;
+
+    private sealed record ResourceFixture(Type Type, FieldInfo Field, MethodInfo Read);
+
+    private enum DuplicateResourceAttribute
+    {
+        Uniform,
+        Group,
+        Binding
+    }
+
+    private enum DuplicateInterfaceAttribute
+    {
+        Builtin,
+        ReturnLocation
+    }
 }

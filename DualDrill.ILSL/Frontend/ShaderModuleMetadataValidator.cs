@@ -16,7 +16,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static IAddressSpace ValidateResourceAttributes(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         var addressSpaces = attributes.OfType<IAddressSpaceAttribute>().ToArray();
         var groups = attributes.OfType<GroupAttribute>().ToArray();
@@ -92,7 +92,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateTypeAttributes(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         if (attributes.Count > 0)
             throw Invalid(
@@ -102,7 +102,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateOrdinaryModuleField(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         if (attributes.Count > 0)
             throw Invalid(
@@ -120,7 +120,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateInterfaceAttributes(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         var unsupported = attributes
             .Where(attribute => attribute is not BuiltinAttribute and not LocationAttribute)
@@ -166,7 +166,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateFunctionAttributes(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         var unsupported = attributes
             .Where(attribute => attribute is not IShaderStageAttribute and
