@@ -27,7 +27,8 @@ public sealed record EntryUniformQuadParticipation(
     FunctionDeclaration Entry,
     ImmutableDictionary<FunctionDeclaration, ImmutableArray<Label>> OriginalBlocks,
     ImmutableArray<OperationRequirementSite> OriginalSensitiveSites,
-    ImmutableArray<CooperationCallSite> CallInheritance);
+    ImmutableArray<CooperationCallSite> CallInheritance,
+    ImmutableDictionary<FunctionDeclaration, CooperationFunctionUniformityFacts> Uniformity);
 
 public sealed record CLSLCooperationFacts(
     ImmutableArray<EntryUniformQuadParticipation> EntryUniformQuadParticipations)
@@ -210,21 +211,44 @@ internal static class CooperationAdmission
             }
 
             var closure = Closure(entry.Function, calls);
-            var blocks = ImmutableDictionary.CreateBuilder<FunctionDeclaration, ImmutableArray<Label>>();
             foreach (var function in closure)
             {
                 foreach (var call in calls[function])
                     CheckOrdinaryCall(normalized, entry.Function, call);
-                blocks.Add(function, CheckStraightLine(normalized.FunctionDefinitions[function], entry.Function));
+                CheckNumericBuiltinCalls(normalized.FunctionDefinitions[function], entry.Function);
+            }
+            var uniformity = CooperationUniformity.Analyze(
+                normalized,
+                effects,
+                closure,
+                calls,
+                entry.Function);
+            foreach (var builtin in uniformity.UniformBuiltinCalls)
+            {
+                var targetName = builtin.Builtin.Name == "mix" ? "lerp" : builtin.Builtin.Name;
+                var collision = normalized.Declarations
+                    .OfType<FunctionDeclaration>()
+                    .FirstOrDefault(function =>
+                        string.Equals(function.Name, targetName, StringComparison.Ordinal));
+                if (collision is not null)
+                    throw new NotSupportedException(
+                        $"PortableWgsl entry '{entry.Function.Name}', function '{builtin.Function.Name}', " +
+                        $"block '{builtin.Label.Name}', operation 'call': numeric builtin " +
+                        $"'{builtin.Builtin.Name}' supporting a uniformity proof maps to target spelling " +
+                        $"'{targetName}', which collides with module declaration '{collision.Name}'.");
             }
 
             participation.Add(new EntryUniformQuadParticipation(
                 entry.Function,
-                blocks.ToImmutable(),
+                ImmutableDictionary.CreateRange(
+                    ReferenceEqualityComparer.Instance,
+                    uniformity.Functions.Select(static item =>
+                        KeyValuePair.Create(item.Key, item.Value.OriginalBlocks))),
                 summary.RequirementSites
                     .Where(static site => (site.Requirements & SensitiveRequirements) != 0)
                     .ToImmutableArray(),
-                closure.SelectMany(function => calls[function]).ToImmutableArray()));
+                closure.SelectMany(function => calls[function]).ToImmutableArray(),
+                uniformity.Functions));
         }
 
         var facts = new CLSLCooperationFacts(participation.ToImmutable());
@@ -303,59 +327,6 @@ internal static class CooperationAdmission
         return result.ToImmutable();
     }
 
-    private static ImmutableArray<Label> CheckStraightLine(
-        RegionFunctionBody body,
-        FunctionDeclaration entry)
-    {
-        var regions = new Dictionary<Label, RegionTree<Label, ShaderRegionBody>>();
-        body.Body.Traverse(region =>
-        {
-            if (region.Definition.Kind is RegionKind.Loop)
-                throw ShapeError(entry, body.Declaration, region.Label, "RegionKind.Loop is not admitted");
-            regions.Add(region.Label, region);
-        });
-
-        var visited = new HashSet<Label>();
-        var ordered = ImmutableArray.CreateBuilder<Label>();
-        var current = body.Entry;
-        while (true)
-        {
-            if (!visited.Add(current))
-                throw ShapeError(entry, body.Declaration, current, "control revisits a block");
-            ordered.Add(current);
-            var terminator = body[current].Body.Last;
-            switch (terminator)
-            {
-                case Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>:
-                case Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>:
-                    if (visited.Count != regions.Count)
-                        throw ShapeError(
-                            entry,
-                            body.Declaration,
-                            current,
-                            "return leaves original blocks unvisited");
-                    return ordered.ToImmutable();
-                case Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch:
-                    var transfer = body.Control.Resolve(current, 0);
-                    if (transfer.Kind is not ScopedContinuationKind.Forward ||
-                        !ReferenceEquals(transfer.Target, branch.Target.Label))
-                        throw ShapeError(
-                            entry,
-                            body.Declaration,
-                            current,
-                            "unconditional edge is not the checked Forward transfer");
-                    current = transfer.Target;
-                    break;
-                case Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>:
-                    throw ShapeError(entry, body.Declaration, current, "conditional control is not admitted");
-                case Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue>:
-                    throw ShapeError(entry, body.Declaration, current, "switch control is not admitted");
-                default:
-                    throw ShapeError(entry, body.Declaration, current, "unsupported terminator");
-            }
-        }
-    }
-
     private static FunctionDeclaration CheckDerivative(
         ShaderModuleDeclaration<RegionFunctionBody> module,
         OperationRequirementSite site,
@@ -394,6 +365,26 @@ internal static class CooperationAdmission
             site.Callee,
             $"PortableWgsl entry '{entry.Name}', function '{site.Caller.Name}', block " +
             $"'{site.Label.Name}', operation '{instruction.Operation.Name}'{Provenance(instruction.Payload)}");
+    }
+
+    private static void CheckNumericBuiltinCalls(
+        RegionFunctionBody body,
+        FunctionDeclaration entry)
+    {
+        body.Body.Traverse((_, label, block) =>
+        {
+            foreach (var (ordinal, instruction) in block.Body.Elements.Index())
+                if (instruction.Operation is CallOperation &&
+                    instruction.OperandCount > 0 &&
+                    instruction[0] is FunctionDeclaration callee &&
+                    ShaderFunction.Instance.Functions.Contains(callee))
+                    CheckCall(
+                        instruction,
+                        callee,
+                        $"PortableWgsl entry '{entry.Name}', function '{body.Declaration.Name}', block " +
+                        $"'{label.Name}', numeric builtin instruction {ordinal}{Provenance(instruction.Payload)}");
+            return false;
+        });
     }
 
     private static void CheckCall(
@@ -455,9 +446,11 @@ internal static class CooperationAdmission
             foreach (var (function, labels) in participation.OriginalBlocks)
             {
                 var pointerBody = pointer.FunctionDefinitions[function];
-                if (!labels.SequenceEqual(pointerBody.Labels))
+                if (labels.Length != pointerBody.Labels.Length ||
+                    !labels.ToHashSet(ReferenceEqualityComparer.Instance)
+                        .SetEquals(pointerBody.Labels))
                     throw new NotSupportedException(
-                        $"PortableWgsl pointer lowering changed original block identity/order in " +
+                        $"PortableWgsl pointer lowering changed original block identity in " +
                         $"function '{function.Name}' for entry '{participation.Entry.Name}'.");
                 foreach (var site in RelevantSites(participation, function))
                 {
@@ -475,55 +468,11 @@ internal static class CooperationAdmission
             }
     }
 
-    private static void CheckTargetCorrespondence(
+    internal static void CheckTargetCorrespondence(
         ShaderModuleDeclaration<RegionFunctionBody> pointer,
         ShaderModuleDeclaration<SlangFunctionBody> target,
-        CLSLCooperationFacts facts)
-    {
-        foreach (var participation in facts.EntryUniformQuadParticipations)
-            foreach (var (function, labels) in participation.OriginalBlocks)
-            {
-                var targetBody = target.FunctionDefinitions[function];
-                var statements = Statements(targetBody.Body).ToImmutableArray();
-                if (statements.Any(static statement =>
-                        statement is SlangIf or SlangLoop or SlangContinue))
-                    throw new NotSupportedException(
-                        $"PortableWgsl target correspondence for entry '{participation.Entry.Name}', " +
-                        $"function '{function.Name}' produced conditional/loop/continue target control.");
-                foreach (var label in labels)
-                    if (statements.Count(statement =>
-                            statement is SlangScope { OriginalLabel: var found } &&
-                            ReferenceEquals(found, label)) != 1)
-                        throw new NotSupportedException(
-                            $"PortableWgsl target correspondence for entry '{participation.Entry.Name}', " +
-                            $"function '{function.Name}' did not preserve label '{label.Name}' exactly once.");
-
-                var targetInstructions = statements.Select(static statement =>
-                        (Instruction<SlangOperand, IShaderValue>?)(statement switch
-                        {
-                            SlangBind binding => binding.Instruction,
-                            SlangEffect effect => effect.Instruction,
-                            _ => null
-                        }))
-                    .OfType<Instruction<SlangOperand, IShaderValue>>()
-                    .ToImmutableArray();
-                foreach (var site in RelevantSites(participation, function))
-                {
-                    var sourceInstruction = InstructionAt(
-                        pointer.FunctionDefinitions[function],
-                        site.Label,
-                        site.InstructionOrdinal);
-                    if (targetInstructions.Count(instruction =>
-                            ReferenceEquals(instruction.Operation, sourceInstruction.Operation) &&
-                            ReferenceEquals(instruction.Result, sourceInstruction.Result) &&
-                            ReferenceEquals(instruction.Payload, sourceInstruction.Payload)) != 1)
-                        throw new NotSupportedException(
-                            $"PortableWgsl target correspondence did not preserve exactly one placement of " +
-                            $"function '{function.Name}', block '{site.Label.Name}', operation " +
-                            $"'{sourceInstruction.Operation.Name}'{Provenance(sourceInstruction.Payload)}.");
-                }
-            }
-    }
+        CLSLCooperationFacts facts) =>
+        CooperationTargetVerifier.Verify(pointer, target, facts);
 
     private static IEnumerable<(Label Label, int InstructionOrdinal)> RelevantSites(
         EntryUniformQuadParticipation participation,
@@ -548,30 +497,6 @@ internal static class CooperationAdmission
         ReferenceEquals(before.Operation, after.Operation) &&
         ReferenceEquals(before.Result, after.Result) &&
         ReferenceEquals(before.Payload, after.Payload);
-
-    private static IEnumerable<SlangStatement> Statements(SlangBlock block)
-    {
-        foreach (var statement in block.Statements)
-        {
-            yield return statement;
-            switch (statement)
-            {
-                case SlangScope scope:
-                    foreach (var nested in Statements(scope.Body)) yield return nested;
-                    break;
-                case SlangIf conditional:
-                    foreach (var nested in Statements(conditional.WhenTrue)) yield return nested;
-                    foreach (var nested in Statements(conditional.WhenFalse)) yield return nested;
-                    break;
-                case SlangDoOnce once:
-                    foreach (var nested in Statements(once.Body)) yield return nested;
-                    break;
-                case SlangLoop loop:
-                    foreach (var nested in Statements(loop.Body)) yield return nested;
-                    break;
-            }
-        }
-    }
 
     private static NotSupportedException ShapeError(
         FunctionDeclaration entry,
