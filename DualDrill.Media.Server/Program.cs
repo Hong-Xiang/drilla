@@ -6,13 +6,17 @@ using Gst.WebRTC;
 
 if (args is ["--self-test"])
 {
-    return CpuFrames.RunSelfTest();
+    return CpuFrames.RunSelfTest() == 0 ? WebRtcSession.RunSignalSelfTest() : 1;
 }
 
 GstSharpOptions nativeOptions = new();
 GstApp.Initialize(nativeOptions);
 GstSdp.Initialize(nativeOptions);
 GstWebRTC.Initialize(nativeOptions);
+if (args is ["--native-self-test"])
+{
+    return NativeFrameCheck.Run();
+}
 WebRtcSession.EnsureNativeElements();
 
 var builder = WebApplication.CreateBuilder(args);

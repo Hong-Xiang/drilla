@@ -10,27 +10,53 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       dotnetPkgs = import dotnet-nixpkgs { inherit system; };
+      gst = dotnetPkgs.gst_all_1;
+      mediaPlugins = [
+        gst.gstreamer.out
+        gst.gst-plugins-base
+        gst.gst-plugins-good
+        gst.gst-plugins-bad
+        dotnetPkgs.libnice.out
+      ];
       llvm = pkgs.llvmPackages_16.llvm;
       vulkanLoader = pkgs.vulkan-loader;
     in
     {
-      devShells.${system}.default = pkgs.mkShell {
-        packages = with pkgs; [
-          dotnetPkgs.dotnet-sdk_10
-          llvm
-          nodejs_22
-          pnpm
-          shader-slang
-        ];
+      devShells.${system} = {
+        default = pkgs.mkShell {
+          packages = with pkgs; [
+            dotnetPkgs.dotnet-sdk_10
+            llvm
+            nodejs_22
+            pnpm
+            shader-slang
+          ];
 
-        shellHook = ''
-          export LD_LIBRARY_PATH="${
-            pkgs.lib.makeLibraryPath [
-              llvm
-              vulkanLoader
-            ]
-          }''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-        '';
+          shellHook = ''
+            export LD_LIBRARY_PATH="${
+              pkgs.lib.makeLibraryPath [
+                llvm
+                vulkanLoader
+              ]
+            }''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          '';
+        };
+
+        media = dotnetPkgs.mkShell {
+          packages = [
+            dotnetPkgs.dotnet-sdk_10
+            gst.gstreamer
+            dotnetPkgs.chromium
+          ]
+          ++ mediaPlugins;
+
+          shellHook = ''
+            export GST_PLUGIN_SYSTEM_PATH_1_0="${dotnetPkgs.lib.makeSearchPath "lib/gstreamer-1.0" mediaPlugins}"
+            export LD_LIBRARY_PATH="${
+              dotnetPkgs.lib.makeLibraryPath ([ dotnetPkgs.glib ] ++ mediaPlugins)
+            }''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          '';
+        };
       };
 
       formatter.${system} = pkgs.nixfmt-rfc-style;

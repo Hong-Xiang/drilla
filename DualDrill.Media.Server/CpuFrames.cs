@@ -91,16 +91,35 @@ internal static class CpuFrames
     }
 }
 
-internal sealed class CpuBgraInput(AppSrc source)
+internal sealed class CpuBgraInput
 {
-    internal FlowReturn Push(ReadOnlySpan<byte> pixels, ulong frameNumber)
+    private readonly AppSrc source;
+
+    internal CpuBgraInput(AppSrc source)
+    {
+        this.source = source;
+        using Caps caps = Caps.FromString(
+            $"video/x-raw,format=BGRA,width={CpuFrames.Width},height={CpuFrames.Height}," +
+            $"framerate={CpuFrames.FramesPerSecond}/1")
+            ?? throw new InvalidOperationException("Could not parse the raw BGRA caps.");
+        source.SetCaps(caps);
+        source.SetLive(true);
+        source.Format = Format.Time;
+        source.SetProperty("do-timestamp", true);
+        source.MinLatency = 0;
+        source.Block = false;
+        source.EmitSignals = true;
+        source.MaxBuffers = 2;
+        source.LeakyType = AppLeakyType.Downstream;
+    }
+
+    internal FlowReturn Push(ReadOnlySpan<byte> pixels)
     {
         CpuFrames.Validate(pixels);
 
         using Gst.Buffer buffer = Gst.Buffer.NewAllocate(null, CpuFrames.FrameBytes, null)
             ?? throw new InvalidOperationException("GStreamer could not allocate a CPU frame buffer.");
 
-        buffer.SetPts(ClockTime.FromNanoseconds(frameNumber * CpuFrames.FrameDurationNanoseconds));
         buffer.SetDuration(ClockTime.FromNanoseconds(CpuFrames.FrameDurationNanoseconds));
 
         using (Gst.Buffer.MapScope map = buffer.Map(MapFlags.Write))

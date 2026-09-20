@@ -195,21 +195,11 @@ internal sealed class WebRtcSession : IAsyncDisposable
         Element payloader = Make<Element>("rtpvp8pay", "payloader");
         _webrtc = Make<Element>("webrtcbin", "peer");
 
-        using Caps rawCaps = Caps.FromString(
-            $"video/x-raw,format=BGRA,width={CpuFrames.Width},height={CpuFrames.Height}," +
-            $"framerate={CpuFrames.FramesPerSecond}/1")
-            ?? throw new InvalidOperationException("Could not parse the raw BGRA caps.");
         using Caps rtpCaps = Caps.FromString(
             "application/x-rtp,media=video,encoding-name=VP8,payload=96,clock-rate=90000")
             ?? throw new InvalidOperationException("Could not parse the VP8 RTP caps.");
 
-        _source.SetCaps(rawCaps);
-        _source.SetLive(true);
-        _source.Format = Format.Time;
-        _source.Block = false;
-        _source.EmitSignals = true;
-        _source.MaxBuffers = 2;
-        _source.LeakyType = AppLeakyType.Downstream;
+        _input = new CpuBgraInput(_source);
 
         encoder.SetProperty("deadline", 1L);
         encoder.SetProperty("cpu-used", 8);
@@ -223,7 +213,6 @@ internal sealed class WebRtcSession : IAsyncDisposable
             throw new InvalidOperationException("Could not assemble the appsrc-to-webrtcbin pipeline.");
         }
 
-        _input = new CpuBgraInput(_source);
         _pixels = new byte[CpuFrames.FrameBytes];
         _bus = pipeline.GetBus();
 
@@ -262,7 +251,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
                 }
 
                 CpuFrames.Fill(_pixels!, frameNumber);
-                FlowReturn result = _input!.Push(_pixels, frameNumber);
+                FlowReturn result = _input!.Push(_pixels);
 
                 if (cancellationToken.IsCancellationRequested &&
                     result == FlowReturn.Flushing)
@@ -330,14 +319,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
     private void QueueLocalCandidate(object?[] arguments)
     {
-        if (arguments is not [uint mLineIndex, string candidate] ||
-            string.IsNullOrWhiteSpace(candidate) ||
-            Encoding.UTF8.GetByteCount(candidate) > MaxCandidateBytes)
-        {
-            Fail("webrtcbin emitted an invalid ICE candidate.");
-            return;
-        }
-
+        var (mLineIndex, candidate) = ParseNativeCandidate(arguments);
         TryQueue(JsonSerializer.Serialize(new
         {
             type = "ice",
@@ -515,7 +497,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
             throw new SignalException("\"sdpMLineIndex\" must be an unsigned integer.");
         }
 
-        string candidate = RequiredString(root, "candidate", MaxCandidateBytes);
+        string candidate = ParseCandidate(root.GetProperty("candidate"));
 
         lock (_remoteCandidateLock)
         {
@@ -788,6 +770,37 @@ internal sealed class WebRtcSession : IAsyncDisposable
         }
 
         return value;
+    }
+
+    private static (uint Index, string Candidate) ParseNativeCandidate(object?[] arguments) =>
+        arguments switch
+        {
+            [uint index, string candidate] => (index, ValidateCandidate(candidate)),
+            [uint index, null] => (index, string.Empty),
+            _ => throw new SignalException("webrtcbin emitted an invalid ICE candidate."),
+        };
+
+    private static string ParseCandidate(JsonElement value) =>
+        value.ValueKind == JsonValueKind.String && value.GetString() is { } candidate
+            ? ValidateCandidate(candidate)
+            : throw new SignalException("\"candidate\" must be a string.");
+
+    private static string ValidateCandidate(string candidate) =>
+        Encoding.UTF8.GetByteCount(candidate) <= MaxCandidateBytes
+            ? candidate
+            : throw new SignalException($"An ICE candidate exceeded {MaxCandidateBytes} UTF-8 bytes.");
+
+    internal static int RunSignalSelfTest()
+    {
+        using var document = JsonDocument.Parse("""{"candidate":""}""");
+        if (ParseNativeCandidate([0u, ""]) != (0u, "")
+            || ParseNativeCandidate([0u, null]) != (0u, "")
+            || ParseCandidate(document.RootElement.GetProperty("candidate")) != "")
+        {
+            throw new InvalidOperationException("ICE end-of-candidates parsing failed.");
+        }
+        Console.WriteLine("Native and browser ICE end-of-candidates parsing passed.");
+        return 0;
     }
 
     private static void RequireProperties(JsonElement root, params string[] expected)
