@@ -503,6 +503,9 @@ public sealed class SlangTargetLowering
         private SlangOperand Operand(IShaderValue? value)
         {
             if (value is null) throw Error("instruction contains a missing operand");
+            if (value is FunctionDeclaration function &&
+                PortableDerivativeTarget.TryLower(function, out var target))
+                return new SlangValueOperand(target);
             if (captures.TryGetValue(value, out var capture))
                 return new SlangPlaceOperand(new SlangVariablePlace(capture));
             return value.Type is IPtrType
