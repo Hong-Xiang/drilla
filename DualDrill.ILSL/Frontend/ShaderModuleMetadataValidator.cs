@@ -19,7 +19,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static IAddressSpace ValidateResourceAttributes(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         var addressSpaces = attributes.OfType<IAddressSpaceAttribute>().ToArray();
         var groups = attributes.OfType<GroupAttribute>().ToArray();
@@ -96,7 +96,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateTypeAttributes(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         if (attributes.Count > 0)
             throw Invalid(
@@ -106,7 +106,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateOrdinaryModuleField(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         if (attributes.Count > 0)
             throw Invalid(
@@ -124,7 +124,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateInterfaceAttributes(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         var unsupported = attributes
             .Where(attribute => attribute is not BuiltinAttribute and not LocationAttribute)
@@ -142,6 +142,28 @@ internal static class ShaderModuleMetadataValidator
 
         if (attributes.OfType<LocationAttribute>().SingleOrDefault() is { Binding: < 0 } location)
             throw Invalid(declaration, $"location must be nonnegative; found {location.Binding}.");
+    }
+
+    public static void ValidateMappedIntrinsicFunctionAttributes(
+        string declaration,
+        IReadOnlyCollection<IShaderAttribute> attributes)
+    {
+        var stages = attributes.OfType<IShaderStageAttribute>().Cast<IShaderAttribute>().ToArray();
+        if (stages.Length > 0)
+            throw Invalid(
+                declaration,
+                $"mapped intrinsic cannot preserve entry-stage attribute(s) {AttributeNames(stages)}.");
+    }
+
+    public static void ValidateMappedIntrinsicInterfaceAttributes(
+        string declaration,
+        IReadOnlyCollection<IShaderAttribute> attributes)
+    {
+        ValidateInterfaceAttributes(declaration, attributes);
+        if (attributes.Count > 0)
+            throw Invalid(
+                declaration,
+                $"mapped intrinsic cannot preserve interface attribute(s) {AttributeNames(attributes)}.");
     }
 
     private static bool IsResourceDeclaration(VariableDeclaration declaration) =>
@@ -170,7 +192,7 @@ internal static class ShaderModuleMetadataValidator
 
     public static void ValidateFunctionAttributes(
         string declaration,
-        ImmutableHashSet<IShaderAttribute> attributes)
+        IReadOnlyCollection<IShaderAttribute> attributes)
     {
         var unsupported = attributes
             .Where(attribute => attribute is not IShaderStageAttribute and

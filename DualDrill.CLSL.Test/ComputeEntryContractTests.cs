@@ -254,12 +254,53 @@ public sealed class ComputeEntryContractTests
             exception.Message);
     }
 
+    [Fact]
+    public void RawDuplicateGlobalInvocationIdAttributesAreRejectedInComputeModule()
+    {
+        var (shaderType, method) = CreateRawComputeShader(
+            computeCount: 1,
+            workgroupSizeCount: 1,
+            duplicateParameterBuiltin: true);
+        var parameter = Assert.Single(method.GetParameters());
+        Assert.Equal(2, parameter.GetCustomAttributes<BuiltinAttribute>(inherit: false).Count());
+        var shader = (ISharpShader)(Activator.CreateInstance(shaderType)
+            ?? throw new InvalidOperationException($"Could not create {shaderType}."));
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseShaderModule(shader));
+
+        Assert.Equal(
+            $"Shader module metadata validation rejected parameter '{shaderType.FullName}.Run.id': " +
+            "exactly one interface attribute is allowed; found [Builtin], [Builtin].",
+            exception.Message);
+    }
+
+    [Fact]
+    public void RawDuplicateReturnLocationsAreRejectedInDirectComputeMethodParsing()
+    {
+        var (shaderType, method) = CreateRawComputeShader(
+            computeCount: 1,
+            workgroupSizeCount: 1,
+            duplicateReturnLocation: true);
+        Assert.Equal(2, method.ReturnParameter.GetCustomAttributes<LocationAttribute>(inherit: false).Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Equal(
+            $"Shader module metadata validation rejected return of method '{shaderType.FullName}.Run': " +
+            "exactly one interface attribute is allowed; found [Location], [Location].",
+            exception.Message);
+    }
+
     private static string Emit(CLSLCompileTarget target, ISharpShader shader) =>
         new CLSLCompiler(new(target)).Emit(shader);
 
     private static (Type ShaderType, MethodInfo Method) CreateRawComputeShader(
         int computeCount,
-        int workgroupSizeCount)
+        int workgroupSizeCount,
+        bool duplicateParameterBuiltin = false,
+        bool duplicateReturnLocation = false)
     {
         var assembly = AssemblyBuilder.DefineDynamicAssembly(
             new AssemblyName($"ComputeEntryRawMetadata_{Guid.NewGuid():N}"),
@@ -274,17 +315,35 @@ public sealed class ComputeEntryContractTests
             "Run",
             MethodAttributes.Public | MethodAttributes.Static,
             typeof(void),
-            Type.EmptyTypes);
+            duplicateParameterBuiltin ? [typeof(vec3u32)] : Type.EmptyTypes);
         var computeConstructor = typeof(ComputeAttribute).GetConstructor(Type.EmptyTypes)
             ?? throw new InvalidOperationException("ComputeAttribute constructor was not found.");
         var workgroupSizeConstructor = typeof(WorkgroupSizeAttribute).GetConstructor(
             [typeof(int), typeof(int), typeof(int)])
             ?? throw new InvalidOperationException("WorkgroupSizeAttribute constructor was not found.");
+        var builtinConstructor = typeof(BuiltinAttribute).GetConstructor([typeof(BuiltinBinding)])
+            ?? throw new InvalidOperationException("BuiltinAttribute constructor was not found.");
+        var locationConstructor = typeof(LocationAttribute).GetConstructor([typeof(int)])
+            ?? throw new InvalidOperationException("LocationAttribute constructor was not found.");
 
         for (var index = 0; index < computeCount; index++)
             method.SetCustomAttribute(new CustomAttributeBuilder(computeConstructor, []));
         for (var index = 0; index < workgroupSizeCount; index++)
             method.SetCustomAttribute(new CustomAttributeBuilder(workgroupSizeConstructor, [64, 1, 1]));
+        if (duplicateParameterBuiltin)
+        {
+            var parameter = method.DefineParameter(1, ParameterAttributes.None, "id");
+            parameter.SetCustomAttribute(
+                new CustomAttributeBuilder(builtinConstructor, [BuiltinBinding.global_invocation_id]));
+            parameter.SetCustomAttribute(
+                new CustomAttributeBuilder(builtinConstructor, [BuiltinBinding.global_invocation_id]));
+        }
+        if (duplicateReturnLocation)
+        {
+            var result = method.DefineParameter(0, ParameterAttributes.Retval, null);
+            result.SetCustomAttribute(new CustomAttributeBuilder(locationConstructor, [0]));
+            result.SetCustomAttribute(new CustomAttributeBuilder(locationConstructor, [0]));
+        }
         method.GetILGenerator().Emit(OpCodes.Ret);
 
         var shaderType = type.CreateType()

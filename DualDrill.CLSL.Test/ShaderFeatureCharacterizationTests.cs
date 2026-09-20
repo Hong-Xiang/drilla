@@ -90,8 +90,8 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 
         output.WriteLine(exception.Message);
         Assert.Equal(
-            "Shader module metadata validation rejected structure member 'VertexOut.Position': " +
-            "attribute(s) [Builtin] are not supported.",
+            $"Shader module metadata validation rejected field '{typeof(VertexOut).FullName}.Position': " +
+            "attribute(s) [Builtin] are not valid on an ordinary module field.",
             exception.Message);
     }
 
@@ -103,8 +103,8 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 
         output.WriteLine(exception.Message);
         Assert.Equal(
-            "Shader module metadata validation rejected structure member 'LocationOnly.Uv': " +
-            "attribute(s) [Location] are not supported.",
+            $"Shader module metadata validation rejected field '{typeof(LocationOnly).FullName}.Uv': " +
+            "attribute(s) [Location] are not valid on an ordinary module field.",
             exception.Message);
     }
 
@@ -116,8 +116,8 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 
         output.WriteLine(exception.Message);
         Assert.Equal(
-            "Shader module metadata validation rejected structure member 'ExplicitlyAligned.Value': " +
-            "attribute(s) [Align] are not supported.",
+            $"Shader module metadata validation rejected field '{typeof(ExplicitlyAligned).FullName}.Value': " +
+            "attribute(s) [Align] are not valid on an ordinary module field.",
             exception.Message);
     }
 
