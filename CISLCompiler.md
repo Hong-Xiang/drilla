@@ -75,6 +75,43 @@ The generic `RegionParameterToLocalVariablePass` remains for non-target callers.
 the same stable-pointer pass before erasing ordinary parameters into local loads/stores; its
 legacy same-target/different-value restriction does not apply to the public target path.
 
+### Portable cooperation profile
+
+`CLSLCompileOption` defaults to `CLSLCooperationProfile.Scalar`. This preserves ordinary
+scalar compilation, but it is not a safety opt-out: any known derivative-quad, subgroup, or
+workgroup-barrier requirement is rejected through every public compile and emit route.
+
+Choose `PortableWgsl` to admit the currently proved cooperative subset:
+
+```csharp
+var compiler = new CLSLCompiler(new(
+    CLSLCompileTarget.WGSL,
+    CLSLCooperationProfile.PortableWgsl));
+var wgsl = compiler.Emit(shader);
+```
+
+The admitted subset is an unambiguous fragment entry and its finite, acyclic call closure,
+where every function is a chain of unconditional `Forward` block transfers ending in one
+return. Conditional/switch control, loops, continues, recursive or incomplete summaries,
+unowned cooperative helpers, and vertex/compute derivative use fail explicitly. This profile
+currently admits matching f32 scalar/vector `dpdx`, `dpdy`, and `fwidth`; f16/f64 are outside
+that deliberately narrow profile bound. Coarse/fine forms are separately rejected because
+the pinned Slang-to-WGSL route does not support them. Derivative operands may vary.
+
+The mapped Slang names are `ddx`, `ddy`, and `fwidth`. The Slang target-lowering module
+boundary rejects a module declaration with the mapped name of a derivative actually used by
+the module, including callers that invoke target lowering directly without a cooperation
+profile. This prevents ordinary user calls from capturing the target builtin spelling. It is
+a narrow collision check, not general symbol renaming; a user helper named `dpdx` remains an
+ordinary helper.
+
+Admission publishes immutable `CLSLCooperationFacts` containing the entry declaration,
+original block identities, original sensitive sites, and call-site-to-callee inheritance.
+Pointer and Slang-target correspondence is checked against those same facts before emission;
+the emitter remains syntax-only. `MaximalReconvergence` is reserved and rejected by the
+compiler constructor. Migrate derivative shaders by selecting `PortableWgsl` and keeping the
+entire cooperative call closure within the bound above.
+
 ### Public scalar local promotion
 
 `PromoteLocalsPass.Run` operates on the flat `ControlFlowGraph<CilValueBasicBlock>` after

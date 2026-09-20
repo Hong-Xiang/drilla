@@ -18,6 +18,7 @@ public sealed class SlangTargetLowering
     public ShaderModuleDeclaration<SlangFunctionBody> Lower(
         ShaderModuleDeclaration<RegionFunctionBody> module)
     {
+        PortableDerivativeTarget.ValidateModuleBindings(module);
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
             definition => new FunctionLowerer(definition.Value).Lower());
@@ -503,6 +504,9 @@ public sealed class SlangTargetLowering
         private SlangOperand Operand(IShaderValue? value)
         {
             if (value is null) throw Error("instruction contains a missing operand");
+            if (value is FunctionDeclaration function &&
+                PortableDerivativeTarget.TryLower(function, out var target))
+                return new SlangValueOperand(target);
             if (captures.TryGetValue(value, out var capture))
                 return new SlangPlaceOperand(new SlangVariablePlace(capture));
             return value.Type is IPtrType
