@@ -784,6 +784,56 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void TargetVerifierRequiresSourceDerivedDimensionsCapture()
+    {
+        var prepared = PrepareTarget(DimensionsCaptureModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var origin = Assert.Single(body.Origins.Dimensions);
+        var capture = Assert.IsType<SlangAssign>(origin.Capture);
+        var carrier = Assert.IsType<SlangVariablePlace>(capture.Target).Variable;
+        var load = Assert.Single(body.Origins.Definitions, candidate =>
+            candidate.Source.Operation is StructuredBufferLoadOperation);
+        var changedLoad = new SlangBind(
+            load.Definition.Instruction with
+            {
+                Operand1 = new SlangValueOperand(origin.Dimensions.Count)
+            });
+        var changed = Rewrite(body, statement =>
+            ReferenceEquals(statement, capture) ||
+            statement is SlangDeclare declaration && ReferenceEquals(declaration.Variable, carrier)
+                ? null
+                : ReferenceEquals(statement, load.Definition)
+                    ? changedLoad
+                    : statement);
+        changed = new SlangFunctionBody(
+            changed.Declaration,
+            changed.Body,
+            changed.Origins with
+            {
+                Captures = changed.Origins.Captures.Remove(origin.Dimensions.Count),
+                Dimensions =
+                [
+                    origin with
+                    {
+                        Dimensions = changed.Origins.Dimensions.Single().Dimensions,
+                        Capture = null
+                    }
+                ]
+            });
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, changed));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        Assert.Contains("source value crosses source-label scope without its required capture", error.Message);
+    }
+
+    [Fact]
     public void StaleUniformFactsCannotCertifyChangedPointerProducer()
     {
         var module = PhiConditionalModule();

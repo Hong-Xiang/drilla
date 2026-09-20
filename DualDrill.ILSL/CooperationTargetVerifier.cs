@@ -54,6 +54,7 @@ internal static class CooperationTargetVerifier
                 throw Error(context, $"did not preserve label '{label.Name}' exactly once");
 
         var origins = target.Origins;
+        var requiredCaptures = RequiredCaptures(source, context);
         VerifyOriginalTransfers(
             participation.Uniformity[source.Declaration],
             source,
@@ -64,7 +65,7 @@ internal static class CooperationTargetVerifier
             moduleStorage,
             context);
         VerifyActivationTemplate(source, target, origins, context);
-        VerifyCarrierPartition(source, origins, tree, context);
+        VerifyCarrierPartition(source, origins, tree, requiredCaptures, context);
         VerifyReturns(
             participation.Uniformity[source.Declaration],
             source,
@@ -72,13 +73,14 @@ internal static class CooperationTargetVerifier
             tree,
             context);
         VerifyBreaks(origins, tree, context);
-        VerifyOriginTables(source, origins, tree, context);
+        VerifyOriginTables(source, origins, tree, requiredCaptures, context);
         VerifyControlledVariables(origins, tree, context);
         VerifyDefinitions(
             participation.Uniformity[source.Declaration],
             source,
             origins,
             tree,
+            requiredCaptures,
             context);
         VerifyConditionals(
             participation.Uniformity[source.Declaration],
@@ -89,7 +91,7 @@ internal static class CooperationTargetVerifier
         VerifyTransfers(source, origins, tree, context);
         VerifyGates(origins, tree, context);
         VerifyTerminalTemplates(source, origins, tree, context);
-        VerifyRelevantSites(participation, source, origins, tree, context);
+        VerifyRelevantSites(participation, source, origins, tree, requiredCaptures, context);
         VerifyClosedWorld(origins, tree, context);
         VerifyControlDataflow(
             activeStorage,
@@ -374,6 +376,7 @@ internal static class CooperationTargetVerifier
         RegionFunctionBody source,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         foreach (var fact in facts.UniformValues)
@@ -387,7 +390,12 @@ internal static class CooperationTargetVerifier
                     context,
                     "uniform block parameter origin");
                 RequirePresent(tree, parameterOrigin.Definition, context);
-                VerifyParameterOrigin(parameterOrigin, origins, tree, context);
+                VerifyParameterOrigin(
+                    parameterOrigin,
+                    origins,
+                    tree,
+                    requiredCaptures,
+                    context);
                 continue;
             }
 
@@ -430,6 +438,7 @@ internal static class CooperationTargetVerifier
                 origin.Capture,
                 origins,
                 tree,
+                requiredCaptures,
                 context);
         }
 
@@ -458,6 +467,7 @@ internal static class CooperationTargetVerifier
         RegionFunctionBody source,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         var parameters = new Dictionary<IShaderValue, Label>(ReferenceEqualityComparer.Instance);
@@ -475,7 +485,7 @@ internal static class CooperationTargetVerifier
                 throw Error(context, "block-parameter origin does not match its source definition");
             RequirePresent(tree, origin.Definition, context);
             RequireSourceScope(tree, origin.Definition, origin.Label, context);
-            VerifyParameterOrigin(origin, origins, tree, context);
+            VerifyParameterOrigin(origin, origins, tree, requiredCaptures, context);
         }
         if (origins.Parameters.Select(static origin => origin.Parameter)
                 .Distinct(ReferenceEqualityComparer.Instance).Count() != origins.Parameters.Length)
@@ -505,6 +515,7 @@ internal static class CooperationTargetVerifier
                 origin.Capture,
                 origins,
                 tree,
+                requiredCaptures,
                 context);
         }
 
@@ -532,6 +543,7 @@ internal static class CooperationTargetVerifier
                 carrierValues,
                 origins,
                 tree,
+                requiredCaptures,
                 context);
         }
 
@@ -641,6 +653,7 @@ internal static class CooperationTargetVerifier
         IReadOnlySet<IShaderValue> carrierValues,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         var dimensions = origin.Dimensions;
@@ -671,6 +684,7 @@ internal static class CooperationTargetVerifier
             origin.Capture,
             origins,
             tree,
+            requiredCaptures,
             context);
 
         sourceBody.Body.Traverse((_, label, block) =>
@@ -812,6 +826,63 @@ internal static class CooperationTargetVerifier
         return result;
     }
 
+    private static HashSet<IShaderValue> RequiredCaptures(
+        RegionFunctionBody source,
+        string context)
+    {
+        var definitions = new Dictionary<IShaderValue, Label>(ReferenceEqualityComparer.Instance);
+        source.Body.Traverse(region =>
+        {
+            foreach (var parameter in region.Body.Parameters)
+                if (!definitions.TryAdd(parameter, region.Label))
+                    throw Error(context, $"source value '{parameter}' has multiple definitions");
+            foreach (var instruction in region.Body.Body.Elements)
+                if (instruction.Result is { } result &&
+                    !definitions.TryAdd(result, region.Label))
+                    throw Error(context, $"source value '{result}' has multiple definitions");
+        });
+
+        var required = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        source.Body.Traverse(region =>
+        {
+            foreach (var value in region.Body.Body.Elements
+                         .SelectMany(static instruction => instruction.Operands)
+                         .Concat(TerminatorValues(region.Body.Body.Last)))
+            {
+                if (!definitions.TryGetValue(value, out var definition) ||
+                    definition.Equals(region.Label) ||
+                    value.Type is IPtrType)
+                    continue;
+                if (value.Type is UnitType)
+                    throw Error(context, $"unit value '{value}' crosses original-label scope");
+                required.Add(value);
+            }
+        });
+        return required;
+    }
+
+    private static IEnumerable<IShaderValue> TerminatorValues(
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
+        terminator switch
+        {
+            Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
+                [returned.Expr],
+            Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch =>
+                branch.Target.Arguments,
+            Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
+                [branch.Condition, .. branch.TrueTarget.Arguments, .. branch.FalseTarget.Arguments],
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch =>
+                [
+                    branch.Selector,
+                    .. branch.CaseTargets.SelectMany(static target => target.Arguments),
+                    .. branch.DefaultTarget.Arguments
+                ],
+            Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
+            _ => throw Error(
+                nameof(RequiredCaptures),
+                $"unsupported terminator '{terminator.GetType().Name}'")
+        };
+
     private static HashSet<IShaderValue> SourceValues(
         RegionFunctionBody source,
         IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> definitions)
@@ -927,6 +998,7 @@ internal static class CooperationTargetVerifier
         RegionFunctionBody source,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         var parameterBuilder = ImmutableHashSet.CreateBuilder<IShaderValue>(
@@ -939,6 +1011,11 @@ internal static class CooperationTargetVerifier
         if (origins.ParameterSlots.Count != parameters.Count ||
             !origins.ParameterSlots.Keys.ToHashSet(ReferenceEqualityComparer.Instance).SetEquals(parameters))
             throw Error(context, "parameter-slot map does not match original block parameters");
+        var captureKeys = origins.Captures.Keys.ToHashSet(ReferenceEqualityComparer.Instance);
+        if (requiredCaptures.Any(value => !captureKeys.Contains(value)))
+            throw Error(context, "source value crosses source-label scope without its required capture");
+        if (captureKeys.Any(value => !requiredCaptures.Contains(value)))
+            throw Error(context, "target capture map contains a value without a source cross-label use");
 
         var slots = origins.ParameterSlots.Values.ToArray();
         var captures = origins.Captures.Values.ToArray();
@@ -969,6 +1046,7 @@ internal static class CooperationTargetVerifier
         SlangParameterOrigin origin,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         var instruction = origin.Definition.Instruction;
@@ -990,6 +1068,7 @@ internal static class CooperationTargetVerifier
             origin.Capture,
             origins,
             tree,
+            requiredCaptures,
             context);
     }
 
@@ -999,14 +1078,20 @@ internal static class CooperationTargetVerifier
         SlangAssign? assignment,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
+        var required = requiredCaptures.Contains(value);
         if (!origins.Captures.TryGetValue(value, out var capture))
         {
+            if (required)
+                throw Error(context, "source value crosses source-label scope without its required capture");
             if (assignment is not null)
                 throw Error(context, "definition has an unexpected capture assignment");
             return;
         }
+        if (!required)
+            throw Error(context, "definition has a capture without a source cross-label use");
         if (assignment is null)
             throw Error(context, "captured uniform definition is missing its capture assignment");
         RequirePresent(tree, assignment, context);
@@ -1376,6 +1461,7 @@ internal static class CooperationTargetVerifier
         RegionFunctionBody source,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         var addressDefinitions = SourceDefinitions(source);
@@ -1415,6 +1501,7 @@ internal static class CooperationTargetVerifier
                     carrierValues,
                     origins,
                     tree,
+                    requiredCaptures,
                     context);
                 continue;
             }
