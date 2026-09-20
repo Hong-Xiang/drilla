@@ -167,8 +167,15 @@ method and source context in the responsible later pass. Syntactic control
 validation still covers the whole source, so malformed branch/switch targets
 and unsupported native controls are rejected even when dead. A valid dead
 switch remains in raw CIL but is omitted from completed Pre and block definitions.
+Native CIL `neg` preserves exact canonical i32, i64, f32 and f64 stack types.
+Integer negation is unchecked two's-complement arithmetic; floating negation is
+native sign inversion, including signed zero and infinities. Other unary
+operations remain unsupported. C# uint negation first promotes to i64; it is not
+an unsigned `neg` variant. Its i32-to-u64 widening conversion is not yet supported
+by Slang target lowering and is rejected before target AST construction,
+independently of canonical `neg`. The emitter only spells the accepted target AST.
 Exception flow, `initobj`, indirect
-loads/stores, `ldnull`, `dup`, and unsupported unary operations remain
+loads/stores, `ldnull`, and `dup` remain
 unsupported. `initobj` is rejected at shared instruction dispatch because the
 value frontend does not yet emit its required zero-initialization store;
 ordinary `pop` remains supported. Dead non-control instructions in one collected

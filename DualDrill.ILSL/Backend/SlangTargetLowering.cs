@@ -418,6 +418,9 @@ public sealed class SlangTargetLowering
                     throw UnsupportedOperation(instruction, "unsupported address projection");
                 case AccessChainOperation:
                     throw UnsupportedOperation(instruction, "access chains are not supported");
+                case ScalarConversionOperation<IntType<N32>, UIntType<N64>>:
+                    throw UnsupportedOperation(
+                        instruction, "i32-to-u64 conversion; unsigned widening is not implemented");
                 case StoreOperation:
                     statements.Add(new SlangAssign(
                         Place(instruction.Operand0, instruction.Operation.Name),

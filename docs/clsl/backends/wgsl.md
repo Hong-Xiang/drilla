@@ -16,8 +16,13 @@ The WGSL (WebGPU Shading Language) backend is the primary code generation target
    i32    -> i32
    u32    -> u32
    f32    -> f32
-   f64    -> f32 (with precision warning)
+   i64    -> unsupported
+   f64    -> unsupported
    ```
+
+   The compiler does not truncate or demote wide scalar negation. Public WGSL
+   emission rejects reachable native i64/f64 negation before invoking Slang.
+   The Slang source target retains exact `int64_t`/`double` aliases.
 
 2. **Vector Types**
    ```wgsl

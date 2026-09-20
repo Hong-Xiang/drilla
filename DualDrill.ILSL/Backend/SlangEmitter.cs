@@ -233,7 +233,10 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 IVectorFromScalarConstructOperation construction when operands.Length == 1 =>
                     $"{construction.ResultType.Name}({Operand(0)})",
                 LogicalNotOperation when operands.Length == 1 => $"!{Operand(0)}",
-                UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate>
+                UnaryNumericArithmeticExpressionOperation<IntType<N32>, UnaryArithmetic.Negate> or
+                UnaryNumericArithmeticExpressionOperation<IntType<N64>, UnaryArithmetic.Negate> or
+                UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate> or
+                UnaryNumericArithmeticExpressionOperation<FloatType<N64>, UnaryArithmetic.Negate>
                     when operands.Length == 1 => $"- {Operand(0)}",
                 VectorNumericUnaryOperation<N3, FloatType<N32>, UnaryArithmetic.Negate>
                     when operands.Length == 1 => $"- {Operand(0)}",
@@ -371,7 +374,9 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
 
         private void DumpTypeAliases()
         {
+            TypeAlias("f64", "double");
             TypeAlias("f32", "float");
+            TypeAlias("i64", "int64_t");
             TypeAlias("u32", "uint");
             TypeAlias("i32", "int");
             TypeAlias("vec4<t>", "vector<t, 4>");
