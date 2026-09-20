@@ -91,6 +91,42 @@ internal sealed class UniformLayoutProfileShaderModule : ISharpShader
         vec4(PackedStruct.Vector, PackedStruct.Scalar);
 }
 
+internal sealed class UniformEffectiveAlignmentShaderModule : ISharpShader
+{
+    public struct Vec2ThenScalars
+    {
+        public vec2f32 Position;
+        public float Time;
+        public float Tail;
+    }
+
+    public struct ScalarPositions
+    {
+        public float First;
+        public float Second;
+        public float Third;
+        public float Fourth;
+        public float Fifth;
+    }
+
+    [Group(3)]
+    [Binding(0)]
+    [Uniform]
+    private static readonly Vec2ThenScalars Packed;
+
+    [Group(3)]
+    [Binding(1)]
+    [Uniform]
+    private static readonly ScalarPositions Scalars;
+
+    [Fragment]
+    [return: Location(0)]
+    public static vec4f32 Shade() =>
+        vec4(Packed.Position, Packed.Time, Packed.Tail)
+        + vec4(Scalars.First, Scalars.Second, Scalars.Third, Scalars.Fourth)
+        + vec4(Scalars.Fifth);
+}
+
 internal static class UnsupportedUniformShaders
 {
     internal struct NestedInner

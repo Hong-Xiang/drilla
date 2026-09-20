@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Numerics;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
@@ -85,10 +86,7 @@ internal static class WgslUniformLayoutCalculator
                 member.Type,
                 $"{uniformName}.{member.Name}");
             offset = RoundUp(offset, naturalAlignment);
-            // Slang starts each 16-byte uniform register with an explicit stronger alignment.
-            var effectiveAlignment = offset % StructureAlignment == 0
-                ? Math.Max(StructureAlignment, naturalAlignment)
-                : naturalAlignment;
+            var effectiveAlignment = GetEffectiveAlignment(offset, naturalAlignment);
             members.Add(new ShaderBufferMemberLayout(
                 member.Name,
                 offset,
@@ -141,6 +139,14 @@ internal static class WgslUniformLayoutCalculator
 
     private static uint RoundUp(uint value, uint alignment) =>
         checked((value + alignment - 1) / alignment * alignment);
+
+    private static uint GetEffectiveAlignment(uint offset, uint naturalAlignment)
+    {
+        var offsetAlignment = offset == 0
+            ? StructureAlignment
+            : 1u << BitOperations.TrailingZeroCount(offset);
+        return Math.Max(naturalAlignment, Math.Min(StructureAlignment, offsetAlignment));
+    }
 
     private static NotSupportedException Unsupported(
         string uniformName,

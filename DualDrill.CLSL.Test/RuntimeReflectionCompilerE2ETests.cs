@@ -301,6 +301,45 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     }
 
     [Fact]
+    public async Task UniformEffectiveAlignmentMatchesEveryBoundedOffsetClass()
+    {
+        var compilation = await CompileUniformLayout(
+            new ShaderModule.UniformEffectiveAlignmentShaderModule(),
+            "r176-effective-align");
+        using var reflectionJson = compilation.Reflection;
+
+        AssertUniformReflectionMatchesTarget(compilation.Uniforms, reflectionJson.RootElement);
+
+        var packed = Assert.Single(compilation.Uniforms, uniform => uniform.Name == "Packed");
+        Assert.Equal(
+            new[]
+            {
+                new ShaderBufferMemberLayout("Position", 0, 8, 16, 8),
+                new ShaderBufferMemberLayout("Time", 8, 4, 8, 4),
+                new ShaderBufferMemberLayout("Tail", 12, 4, 4, 4)
+            },
+            packed.Layout.Members.ToArray());
+
+        var scalars = Assert.Single(compilation.Uniforms, uniform => uniform.Name == "Scalars");
+        Assert.Equal(
+            new[]
+            {
+                new ShaderBufferMemberLayout("First", 0, 4, 16, 4),
+                new ShaderBufferMemberLayout("Second", 4, 4, 4, 4),
+                new ShaderBufferMemberLayout("Third", 8, 4, 8, 4),
+                new ShaderBufferMemberLayout("Fourth", 12, 4, 4, 4),
+                new ShaderBufferMemberLayout("Fifth", 16, 4, 16, 4)
+            },
+            scalars.Layout.Members.ToArray());
+
+        Assert.Matches(@"@align\(16\)\s+\w*Position\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(8\)\s+\w*Time\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(4\)\s+\w*Tail\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(8\)\s+\w*Third\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(16\)\s+\w*Fifth\w*\s*:", compilation.Wgsl);
+    }
+
+    [Fact]
     public void MultipleReturnHelperUsesConfigurationSpecificCilTopology()
     {
         var configuration = typeof(RuntimeReflectionCompilerE2ETests).Assembly

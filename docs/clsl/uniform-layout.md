@@ -52,9 +52,10 @@ Direct scalar and vector uniforms retain their own alignment and size:
 | rank-4 vector | 16 | 16 |
 
 A structure has alignment 16 and its final size is padded to a multiple of 16.
-Slang starts members at a new 16-byte uniform register with an effective
-alignment of 16; otherwise the effective alignment is the member's natural
-alignment.
+For each member, Slang strengthens the effective alignment to the largest
+power of two, capped at 16, that divides the member offset. The natural
+alignment remains the lower bound. Thus offsets 0, 4, 8, 12, and 16 have
+effective alignment ceilings 16, 4, 8, 4, and 16 respectively.
 
 For `Params` above:
 
