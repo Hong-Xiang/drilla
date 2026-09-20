@@ -1,12 +1,12 @@
-﻿using DualDrill.Common.Interop;
-using Evergine.Bindings.WebGPU;
+﻿using WebGPU;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 namespace DualDrill.Graphics.Backend;
-using static Evergine.Bindings.WebGPU.WebGPUNative;
+
+using static WebGPU.WebGPU;
 using Backend = DualDrill.Graphics.Backend.WebGPUNETBackend;
-using Native = Evergine.Bindings.WebGPU;
+using Native = WebGPU;
 
 internal readonly record struct WebGPUNETHandle<THandle, TResource>(
     THandle Handle
@@ -16,76 +16,98 @@ internal readonly record struct WebGPUNETHandle<THandle, TResource>(
 
 public sealed partial class WebGPUNETBackend : IBackend<Backend>
 {
-    private static readonly ConcurrentDictionary<nint, DeviceErrorState> s_deviceErrorStates = new();
-    private static int s_nextDeviceErrorStateId;
-
-    private readonly ConcurrentDictionary<nint, nint> _deviceErrorStateIds = new();
+    private const uint ExpectedNativeVersion = 0x1B000400;
+    private static int s_nativeVersionChecked;
 
     public static Backend Instance { get; } = new();
+
+    private sealed unsafe class NativeUtf8String : IDisposable
+    {
+        private byte* _data;
+
+        private NativeUtf8String(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                View = WGPUStringView.Empty;
+                return;
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(value);
+            _data = (byte*)NativeMemory.Alloc((nuint)bytes.Length);
+            bytes.CopyTo(new Span<byte>(_data, bytes.Length));
+            View = new WGPUStringView(_data, bytes.Length);
+        }
+
+        public WGPUStringView View { get; }
+
+        public static NativeUtf8String Create(string? value) => new(value);
+
+        public void Dispose()
+        {
+            NativeMemory.Free(_data);
+            _data = null;
+        }
+    }
 
     private unsafe T* Alloc<T>(int count = 1) where T : unmanaged
     {
         return (T*)NativeMemory.AllocZeroed((nuint)count, (nuint)(sizeof(T)));
     }
 
-    public unsafe GPUInstance<Backend> CreateGPUInstance()
+    private sealed class InstanceState(WGPUInstance instance)
     {
-        Native.WGPUInstanceDescriptor descriptor = new();
-        var nativeInstance = wgpuCreateInstance(&descriptor);
-        return new GPUInstance<Backend>(new(nativeInstance.Handle));
+        public WGPUInstance Instance { get; } = instance;
     }
 
-    unsafe ValueTask<GPUAdapter<Backend>> IBackend<Backend>.RequestAdapterAsync(GPUInstance<Backend> instance, GPURequestAdapterOptions options, CancellationToken cancellationToken)
+    private sealed class AdapterState(InstanceState instance)
     {
-        var tcs = new TaskCompletionSource<GPUAdapter<Backend>?>(cancellationToken);
-        // TODO: static method implementation (passing tcs using user GCHandle/data pointer) for better performance
-        Native.WGPURequestAdapterOptions options_ = new();
-        unsafe void OnAdapterRequestEnded(WGPURequestAdapterStatus status, WGPUAdapter candidateAdapter, char* message, void* pUserData)
-        {
-            if (status == WGPURequestAdapterStatus.Success)
-            {
-                tcs.SetResult(new(new(candidateAdapter.Handle)));
-
-                // TODO: update AdapterProperties and AdapterLimits
-
-                //WGPUAdapterProperties properties;
-                //wgpuAdapterGetProperties(candidateAdapter, &properties);
-
-                //WGPUSupportedLimits limits;
-                //wgpuAdapterGetLimits(candidateAdapter, &limits);
-
-                //AdapterProperties = properties;
-                //AdapterLimits = limits;
-            }
-            else
-            {
-                tcs.SetException(new GraphicsApiException<Backend>($"Could not get WebGPU adapter: {Marshal.PtrToStringUTF8((nint)message)}"));
-            }
-        }
-        wgpuInstanceRequestAdapter(ToNative(instance.Handle),
-                                        &options_,
-                                        OnAdapterRequestEnded, null);
-        return new(tcs.Task);
+        public InstanceState Instance { get; } = instance;
     }
 
-    sealed class DeviceUncapturedError(
-        WGPUErrorType ErrorType,
-        string Message
-    ) : GraphicsApiException<Backend>(
-        $"Device Error {Enum.GetName(ErrorType)}, Message: {Message}"
-    )
-    {
-    }
-
-    sealed class DeviceErrorState
+    private sealed class DeviceState(InstanceState instance) : IDisposable
     {
         private readonly GraphicsApiException<Backend> _callbackFailure =
             new("Native WebGPU error callback failed before its diagnostic could be decoded.");
+        private GCHandle _callbackHandle;
         private int _callbackFailed;
 
+        public InstanceState Instance { get; } = instance;
+        public WGPUDevice Device { get; set; }
         public ConcurrentQueue<GraphicsApiException<Backend>> Errors { get; } = new();
+        public object ValidationGate { get; } = new();
 
-        public void MarkCallbackFailure() => Interlocked.Exchange(ref _callbackFailed, 1);
+        public unsafe void* RegisterCallbacks()
+        {
+            _callbackHandle = GCHandle.Alloc(this);
+            return (void*)GCHandle.ToIntPtr(_callbackHandle);
+        }
+
+        public void Enqueue(WGPUErrorType type, WGPUStringView message)
+        {
+            try
+            {
+                Errors.Enqueue(new GraphicsApiException<Backend>(
+                    $"Device Error {type}, Message: {message}"));
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _callbackFailed, 1);
+            }
+        }
+
+        public void EnqueueDeviceLost(WGPUDeviceLostReason reason, WGPUStringView message)
+        {
+            try
+            {
+                Errors.Enqueue(new GraphicsApiException<Backend>(
+                    $"Device lost {reason}, Message: {message}"));
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _callbackFailed, 1);
+            }
+        }
 
         public GraphicsApiException<Backend>? TakeError()
         {
@@ -93,90 +115,551 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             {
                 return error;
             }
+
             return Interlocked.Exchange(ref _callbackFailed, 0) == 0 ? null : _callbackFailure;
         }
+
+        public void Dispose()
+        {
+            if (_callbackHandle.IsAllocated)
+            {
+                _callbackHandle.Free();
+            }
+        }
     }
 
-    private unsafe void RegisterDeviceErrorCallback(WGPUDevice device)
+    private sealed class AdapterRequestState
     {
-        var state = new DeviceErrorState();
-        nint stateId;
-        do
-        {
-            stateId = Interlocked.Increment(ref s_nextDeviceErrorStateId);
-        }
-        while (stateId == 0 || !s_deviceErrorStates.TryAdd(stateId, state));
+        public WGPURequestAdapterStatus Status { get; set; } = WGPURequestAdapterStatus.Unknown;
+        public WGPUAdapter Adapter { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public bool Completed { get; set; }
+    }
 
-        var deviceHandle = (nint)device.Handle;
-        if (_deviceErrorStateIds.TryGetValue(deviceHandle, out var previousStateId))
-        {
-            s_deviceErrorStates.TryRemove(previousStateId, out _);
-        }
-        _deviceErrorStateIds[deviceHandle] = stateId;
+    private sealed class DeviceRequestState
+    {
+        public WGPURequestDeviceStatus Status { get; set; } = WGPURequestDeviceStatus.Unknown;
+        public WGPUDevice Device { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public bool Completed { get; set; }
+    }
 
-        wgpuDeviceSetUncapturedErrorCallback(device, static (errorType, message, data) =>
+    private sealed class ErrorScopeState
+    {
+        public WGPUPopErrorScopeStatus Status { get; set; }
+        public WGPUErrorType ErrorType { get; set; } = WGPUErrorType.Unknown;
+        public string Message { get; set; } = string.Empty;
+        public bool Completed { get; set; }
+    }
+
+    private sealed class MapState
+    {
+        public TaskCompletionSource<(WGPUMapAsyncStatus Status, string Message)> Completion { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private sealed class QueueWorkState
+    {
+        public TaskCompletionSource<WGPUQueueWorkDoneStatus> Completion { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private static InstanceState StateOf(GPUInstance<Backend> instance)
+        => (InstanceState)(instance.Handle.Data
+            ?? throw new GraphicsApiException<Backend>("GPU instance has no native state."));
+
+    private static InstanceState StateOf(GPUAdapter<Backend> adapter)
+        => ((AdapterState)(adapter.Handle.Data
+            ?? throw new GraphicsApiException<Backend>("GPU adapter has no native state."))).Instance;
+
+    private static DeviceState StateOf(GPUDevice<Backend> device)
+        => (DeviceState)(device.Handle.Data
+            ?? throw new GraphicsApiException<Backend>("GPU device has no native state."));
+
+    private static DeviceState StateOf(GPUBuffer<Backend> buffer)
+        => (DeviceState)(buffer.Handle.Data
+            ?? throw new GraphicsApiException<Backend>("GPU buffer has no native state."));
+
+    private static DeviceState StateOf(GPUQueue<Backend> queue)
+        => (DeviceState)(queue.Handle.Data
+            ?? throw new GraphicsApiException<Backend>("GPU queue has no native state."));
+
+    private static void EnsureNativeVersion()
+    {
+        if (Volatile.Read(ref s_nativeVersionChecked) != 0)
         {
-            DeviceErrorState? callbackState = null;
+            return;
+        }
+
+        var actual = wgpuGetVersion();
+        if (actual != ExpectedNativeVersion)
+        {
+            throw new GraphicsApiException<Backend>(
+                $"Expected wgpu-native 27.0.4.0 (0x{ExpectedNativeVersion:X8}), loaded 0x{actual:X8}.");
+        }
+
+        Volatile.Write(ref s_nativeVersionChecked, 1);
+    }
+
+    internal static TNative MapEnumByName<TManaged, TNative>(TManaged value)
+        where TManaged : struct, Enum
+        where TNative : struct, Enum
+    {
+        var managedType = typeof(TManaged);
+        if (managedType.GetCustomAttributes(typeof(FlagsAttribute), false).Length == 0)
+        {
+            if (!Enum.IsDefined(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, $"Unknown {managedType.Name} value.");
+            }
+        }
+        else
+        {
+            ulong knownBits = 0;
+            foreach (var member in Enum.GetValues<TManaged>())
+            {
+                knownBits |= Convert.ToUInt64(member);
+            }
+
+            var actualBits = Convert.ToUInt64(value);
+            if ((actualBits & ~knownBits) != 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    value,
+                    $"Unknown {managedType.Name} flag bits 0x{actualBits & ~knownBits:X}.");
+            }
+        }
+
+        var name = value.ToString();
+        if (!Enum.TryParse<TNative>(name, false, out var native))
+        {
+            throw new NotSupportedException(
+                $"{managedType.Name}.{name} has no semantic {typeof(TNative).Name} mapping.");
+        }
+
+        return native;
+    }
+
+    private static WGPUBackendType ToNative(GPUBackendType value)
+        => MapEnumByName<GPUBackendType, WGPUBackendType>(value);
+
+    private static WGPUOptionalBool ToNativeOptional(bool value)
+        => value ? WGPUOptionalBool.True : WGPUOptionalBool.False;
+
+    public unsafe GPUInstance<Backend> CreateGPUInstance()
+    {
+        EnsureNativeVersion();
+        WGPUInstanceDescriptor descriptor = new();
+        var nativeInstance = wgpuCreateInstance(&descriptor);
+        if (nativeInstance.IsNull)
+        {
+            throw new GraphicsApiException<Backend>("wgpuCreateInstance returned a null instance.");
+        }
+
+        var state = new InstanceState(nativeInstance);
+        return new GPUInstance<Backend>(new(nativeInstance.Handle, state));
+    }
+
+    unsafe ValueTask<GPUAdapter<Backend>> IBackend<Backend>.RequestAdapterAsync(
+        GPUInstance<Backend> instance,
+        GPURequestAdapterOptions options,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var instanceState = StateOf(instance);
+        var request = new AdapterRequestState();
+        var requestHandle = GCHandle.Alloc(request);
+        try
+        {
+            WGPURequestAdapterOptions nativeOptions = new()
+            {
+                featureLevel = WGPUFeatureLevel.Core,
+                powerPreference = ToNative(options.PowerPreference),
+                forceFallbackAdapter = options.ForceFallbackAdapter,
+                backendType = ToNative(options.BackendType),
+                compatibleSurface = options.CompatibleSurface switch
+                {
+                    null => WGPUSurface.Null,
+                    GPUSurface<Backend> surface => ToNative(surface.Handle),
+                    _ => throw new NotSupportedException(
+                        "Only native WebGPU surfaces can constrain adapter selection."),
+                },
+            };
+            WGPURequestAdapterCallbackInfo callback = new()
+            {
+                mode = WGPUCallbackMode.AllowSpontaneous,
+                callback = &AdapterRequested,
+                userdata1 = (void*)GCHandle.ToIntPtr(requestHandle),
+            };
+            _ = wgpuInstanceRequestAdapter(instanceState.Instance, &nativeOptions, callback);
+            if (!request.Completed)
+            {
+                throw new GraphicsApiException<Backend>(
+                    "wgpu-native did not complete the adapter request synchronously.");
+            }
+
+            if (request.Status != WGPURequestAdapterStatus.Success || request.Adapter.IsNull)
+            {
+                throw new GraphicsApiException<Backend>(
+                    $"Could not get WebGPU adapter: {request.Status}: {request.Message}");
+            }
+
+            var infoStatus = wgpuAdapterGetInfo(request.Adapter, out var info);
+            if (infoStatus != WGPUStatus.Success)
+            {
+                wgpuAdapterRelease(request.Adapter);
+                throw new GraphicsApiException<Backend>(
+                    $"Could not inspect WebGPU adapter: {infoStatus}.");
+            }
+
             try
             {
-                if (s_deviceErrorStates.TryGetValue((nint)data, out callbackState))
+                if (!options.ForceFallbackAdapter && info.adapterType == WGPUAdapterType.CPU)
                 {
-                    var messageString = Marshal.PtrToStringUTF8((nint)message) ?? "Failed to get message";
-                    callbackState.Errors.Enqueue(new DeviceUncapturedError(errorType, messageString));
+                    wgpuAdapterRelease(request.Adapter);
+                    throw new GraphicsApiException<Backend>(
+                        $"Rejected CPU WebGPU adapter '{info.device}'.");
+                }
+
+                if (options.BackendType != GPUBackendType.Undefined
+                    && info.backendType != ToNative(options.BackendType))
+                {
+                    wgpuAdapterRelease(request.Adapter);
+                    throw new GraphicsApiException<Backend>(
+                        $"Requested {options.BackendType}, received {info.backendType}.");
                 }
             }
-            catch
+            finally
             {
-                callbackState?.MarkCallbackFailure();
+                wgpuAdapterInfoFreeMembers(info);
             }
-        }, (void*)stateId);
+
+            return ValueTask.FromResult(
+                new GPUAdapter<Backend>(
+                    new(request.Adapter.Handle, new AdapterState(instanceState))));
+        }
+        finally
+        {
+            requestHandle.Free();
+        }
     }
 
-    private void ThrowPendingDeviceError(nint device)
+    [UnmanagedCallersOnly]
+    private static unsafe void AdapterRequested(
+        WGPURequestAdapterStatus status,
+        WGPUAdapter adapter,
+        WGPUStringView message,
+        void* userdata1,
+        void* userdata2)
     {
-        if (_deviceErrorStateIds.TryGetValue(device, out var stateId)
-            && s_deviceErrorStates.TryGetValue(stateId, out var state)
-            && state.TakeError() is { } error)
+        AdapterRequestState? request = null;
+        try
+        {
+            request = (AdapterRequestState?)GCHandle.FromIntPtr((nint)userdata1).Target;
+            if (request is null)
+            {
+                return;
+            }
+
+            request.Status = status;
+            request.Adapter = adapter;
+            request.Message = message.ToString();
+            request.Completed = true;
+        }
+        catch
+        {
+            if (request is not null)
+            {
+                request.Message = "Native adapter callback failed.";
+                request.Completed = true;
+            }
+        }
+    }
+
+    [UnmanagedCallersOnly]
+    private static unsafe void DeviceRequested(
+        WGPURequestDeviceStatus status,
+        WGPUDevice device,
+        WGPUStringView message,
+        void* userdata1,
+        void* userdata2)
+    {
+        DeviceRequestState? request = null;
+        try
+        {
+            request = (DeviceRequestState?)GCHandle.FromIntPtr((nint)userdata1).Target;
+            if (request is null)
+            {
+                return;
+            }
+
+            request.Status = status;
+            request.Device = device;
+            request.Message = message.ToString();
+            request.Completed = true;
+        }
+        catch
+        {
+            if (request is not null)
+            {
+                request.Message = "Native device callback failed.";
+                request.Completed = true;
+            }
+        }
+    }
+
+    [UnmanagedCallersOnly]
+    private static unsafe void DeviceLost(
+        WGPUDevice* device,
+        WGPUDeviceLostReason reason,
+        WGPUStringView message,
+        void* userdata1,
+        void* userdata2)
+    {
+        try
+        {
+            var state = (DeviceState?)GCHandle.FromIntPtr((nint)userdata1).Target;
+            state?.EnqueueDeviceLost(reason, message);
+        }
+        catch
+        {
+        }
+    }
+
+    [UnmanagedCallersOnly]
+    private static unsafe void UncapturedError(
+        WGPUDevice* device,
+        WGPUErrorType type,
+        WGPUStringView message,
+        void* userdata1,
+        void* userdata2)
+    {
+        try
+        {
+            var state = (DeviceState?)GCHandle.FromIntPtr((nint)userdata1).Target;
+            state?.Enqueue(type, message);
+        }
+        catch
+        {
+        }
+    }
+
+    [UnmanagedCallersOnly]
+    private static unsafe void ErrorScopePopped(
+        WGPUPopErrorScopeStatus status,
+        WGPUErrorType type,
+        WGPUStringView message,
+        void* userdata1,
+        void* userdata2)
+    {
+        ErrorScopeState? state = null;
+        try
+        {
+            state = (ErrorScopeState?)GCHandle.FromIntPtr((nint)userdata1).Target;
+            if (state is null)
+            {
+                return;
+            }
+
+            state.Status = status;
+            state.ErrorType = type;
+            state.Message = message.ToString();
+            state.Completed = true;
+        }
+        catch
+        {
+            if (state is not null)
+            {
+                state.Message = "Native error-scope callback failed.";
+                state.Completed = true;
+            }
+        }
+    }
+
+    [UnmanagedCallersOnly]
+    private static unsafe void BufferMapped(
+        WGPUMapAsyncStatus status,
+        WGPUStringView message,
+        void* userdata1,
+        void* userdata2)
+    {
+        MapState? state = null;
+        try
+        {
+            state = (MapState?)GCHandle.FromIntPtr((nint)userdata1).Target;
+            state?.Completion.TrySetResult((status, message.ToString()));
+        }
+        catch (Exception error)
+        {
+            state?.Completion.TrySetException(error);
+        }
+    }
+
+    [UnmanagedCallersOnly]
+    private static unsafe void QueueWorkDone(
+        WGPUQueueWorkDoneStatus status,
+        void* userdata1,
+        void* userdata2)
+    {
+        try
+        {
+            var state = (QueueWorkState?)GCHandle.FromIntPtr((nint)userdata1).Target;
+            state?.Completion.TrySetResult(status);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void ThrowPendingDeviceError(DeviceState state)
+    {
+        if (state.TakeError() is { } error)
         {
             throw error;
         }
     }
 
-    private nint DetachDeviceErrorState(nint device)
+    private static unsafe void PumpNative(DeviceState state)
     {
-        return _deviceErrorStateIds.TryRemove(device, out var stateId) ? stateId : 0;
+        wgpuInstanceProcessEvents(state.Instance.Instance);
+        _ = wgpuDevicePoll(state.Device, false, null);
     }
 
-    private static void ReleaseDeviceErrorState(nint stateId)
+    private static void PollNative(DeviceState state)
     {
-        if (stateId != 0)
+        PumpNative(state);
+        ThrowPendingDeviceError(state);
+    }
+
+    private static ErrorScopeState PopErrorScope(DeviceState deviceState)
+    {
+        var result = new ErrorScopeState();
+        var resultHandle = GCHandle.Alloc(result);
+        try
         {
-            s_deviceErrorStates.TryRemove(stateId, out _);
+            unsafe
+            {
+                WGPUPopErrorScopeCallbackInfo callback = new()
+                {
+                    mode = WGPUCallbackMode.AllowSpontaneous,
+                    callback = &ErrorScopePopped,
+                    userdata1 = (void*)GCHandle.ToIntPtr(resultHandle),
+                };
+                _ = wgpuDevicePopErrorScope(deviceState.Device, callback);
+            }
+
+            while (!result.Completed)
+            {
+                PumpNative(deviceState);
+                Thread.Sleep(1);
+            }
+
+            if (result.Status != WGPUPopErrorScopeStatus.Success)
+            {
+                throw new GraphicsApiException<Backend>(
+                    $"WebGPU error scope failed: {result.Status}: {result.Message}");
+            }
+
+            return result;
+        }
+        finally
+        {
+            resultHandle.Free();
         }
     }
 
-    unsafe ValueTask<GPUDevice<Backend>> IBackend<Backend>.RequestDeviceAsync(GPUAdapter<Backend> adapter, GPUDeviceDescriptor descriptor, CancellationToken cancellation)
+    unsafe ValueTask<GPUDevice<Backend>> IBackend<Backend>.RequestDeviceAsync(
+        GPUAdapter<Backend> adapter,
+        GPUDeviceDescriptor descriptor,
+        CancellationToken cancellation)
     {
-        WGPUDeviceDescriptor descriptor_ = new();
-        // TODO: filling descriptor fields
-
-        var tcs = new TaskCompletionSource<GPUDevice<Backend>>();
-        void OnDeviceRequestEnded(WGPURequestDeviceStatus status, WGPUDevice device, char* message, void* pUserData)
+        cancellation.ThrowIfCancellationRequested();
+        var deviceState = new DeviceState(StateOf(adapter));
+        var persistentUserdata = deviceState.RegisterCallbacks();
+        var request = new DeviceRequestState();
+        var requestHandle = GCHandle.Alloc(request);
+        try
         {
-            if (status == WGPURequestDeviceStatus.Success)
+            if (descriptor.RequiredLimits is { Count: > 0 })
             {
-                var queue_ = wgpuDeviceGetQueue(device);
-                var queue = new GPUQueue<Backend>(new(queue_.Handle));
-                RegisterDeviceErrorCallback(device);
-                tcs.SetResult(new(new(device.Handle)) { Queue = queue });
+                throw new NotSupportedException(
+                    "Named GPU required limits are not supported by the native backend.");
             }
-            else
+
+            using var label = NativeUtf8String.Create(descriptor.Label);
+            using var queueLabel = NativeUtf8String.Create(descriptor.DefaultQueue.Label);
+            var requiredFeatures = stackalloc WGPUFeatureName[descriptor.RequiredFeatures.Length];
+            for (var index = 0; index < descriptor.RequiredFeatures.Length; index++)
             {
-                tcs.SetException(new GraphicsApiException<Backend>($"Could not get WebGPU device: {Marshal.PtrToStringUTF8((nint)message)}"));
+                requiredFeatures[index] = ToNative(descriptor.RequiredFeatures.Span[index]);
             }
+
+            WGPUDeviceDescriptor nativeDescriptor = new()
+            {
+                label = label.View,
+                requiredFeatureCount = (nuint)descriptor.RequiredFeatures.Length,
+                requiredFeatures = requiredFeatures,
+                defaultQueue = new()
+                {
+                    label = queueLabel.View,
+                },
+                deviceLostCallbackInfo = new()
+                {
+                    mode = WGPUCallbackMode.AllowSpontaneous,
+                    callback = &DeviceLost,
+                    userdata1 = persistentUserdata,
+                },
+                uncapturedErrorCallbackInfo = new()
+                {
+                    callback = &UncapturedError,
+                    userdata1 = persistentUserdata,
+                },
+            };
+            WGPURequestDeviceCallbackInfo callback = new()
+            {
+                mode = WGPUCallbackMode.AllowSpontaneous,
+                callback = &DeviceRequested,
+                userdata1 = (void*)GCHandle.ToIntPtr(requestHandle),
+            };
+            _ = wgpuAdapterRequestDevice(ToNative(adapter.Handle), &nativeDescriptor, callback);
+            if (!request.Completed)
+            {
+                throw new GraphicsApiException<Backend>(
+                    "wgpu-native did not complete the device request synchronously.");
+            }
+
+            if (request.Status != WGPURequestDeviceStatus.Success || request.Device.IsNull)
+            {
+                if (request.Device.IsNotNull)
+                {
+                    wgpuDeviceRelease(request.Device);
+                }
+                throw new GraphicsApiException<Backend>(
+                    $"Could not get WebGPU device: {request.Status}: {request.Message}");
+            }
+
+            deviceState.Device = request.Device;
+            var nativeQueue = wgpuDeviceGetQueue(request.Device);
+            if (nativeQueue.IsNull)
+            {
+                wgpuDeviceRelease(request.Device);
+                throw new GraphicsApiException<Backend>("wgpuDeviceGetQueue returned null.");
+            }
+
+            var queue = new GPUQueue<Backend>(new(nativeQueue.Handle, deviceState));
+            return ValueTask.FromResult(
+                new GPUDevice<Backend>(new(request.Device.Handle, deviceState)) { Queue = queue });
         }
-        wgpuAdapterRequestDevice(ToNative(adapter.Handle), &descriptor_, OnDeviceRequestEnded, null);
-        return new(tcs.Task);
+        catch
+        {
+            deviceState.Dispose();
+            throw;
+        }
+        finally
+        {
+            requestHandle.Free();
+        }
     }
 
     unsafe GPUBuffer<Backend> IBackend<Backend>.CreateBuffer(GPUDevice<Backend> device, GPUBufferDescriptor descriptor)
@@ -190,7 +673,11 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             usage = ToNative(descriptor.Usage),
         };
         var handle = wgpuDeviceCreateBuffer(ToNative(device.Handle), &nativeDescriptor);
-        return new(new(handle.Handle))
+        if (handle.IsNull)
+        {
+            throw new GraphicsApiException<Backend>("wgpuDeviceCreateBuffer returned null.");
+        }
+        return new(new(handle.Handle, StateOf(device)))
         {
             Length = alignedSize
         };
@@ -213,16 +700,17 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUTexture<Backend> IBackend<Backend>.CreateTexture(GPUDevice<Backend> handle, GPUTextureDescriptor descriptor)
     {
-        using var pLabel = InteropUtf8StringValue.Create(descriptor.Label);
+        using var label = NativeUtf8String.Create(descriptor.Label);
         WGPUTextureDescriptor desc = new();
         desc.usage = ToNative(descriptor.Usage);
         desc.mipLevelCount = (uint)descriptor.MipLevelCount;
         desc.sampleCount = (uint)descriptor.SampleCount;
-        desc.label = pLabel.CharPointer;
+        desc.label = label.View;
         desc.dimension = ToNative(descriptor.Dimension);
         desc.size = ToNative(descriptor.Size);
         desc.size.depthOrArrayLayers = (uint)descriptor.Size.DepthOrArrayLayers;
         desc.format = ToNative(descriptor.Format);
+        desc.viewFormatCount = (nuint)descriptor.ViewFormats.Length;
         var p = stackalloc WGPUTextureFormat[descriptor.ViewFormats.Length];
         if (descriptor.ViewFormats.Length > 0)
         {
@@ -233,7 +721,22 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             }
         }
         var h = wgpuDeviceCreateTexture(ToNative(handle.Handle), &desc);
-        return new GPUTexture<Backend>(new GPUHandle<Backend, GPUTexture<Backend>>(h.Handle));
+        if (h.IsNull)
+        {
+            throw new GraphicsApiException<Backend>("wgpuDeviceCreateTexture returned null.");
+        }
+        return new GPUTexture<Backend>(new GPUHandle<Backend, GPUTexture<Backend>>(h.Handle))
+        {
+            Label = descriptor.Label,
+            Width = checked((int)descriptor.Size.Width),
+            Height = checked((int)descriptor.Size.Height),
+            DepthOrArrayLayers = checked((int)descriptor.Size.DepthOrArrayLayers),
+            MipLevelCount = descriptor.MipLevelCount,
+            SampleCount = descriptor.SampleCount,
+            Dimension = descriptor.Dimension,
+            Format = descriptor.Format,
+            Usage = descriptor.Usage,
+        };
     }
 
     void PopulateNative(ref WGPUExtent3D native, GPUExtent3D value)
@@ -246,17 +749,19 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUSampler<Backend> IBackend<Backend>.CreateSampler(GPUDevice<Backend> handle, GPUSamplerDescriptor descriptor)
     {
-        var nativeDescriptor = ToNative(descriptor);
+        using var label = NativeUtf8String.Create(descriptor.Label);
+        var nativeDescriptor = ToNative(descriptor, label.View);
         var result = wgpuDeviceCreateSampler(ToNative(handle.Handle), &nativeDescriptor);
         return new GPUSampler<Backend>(new(result.Handle));
-        // TODO: add finally / using to free the label
     }
 
-    private unsafe WGPUSamplerDescriptor ToNative(GPUSamplerDescriptor descriptor)
+    private WGPUSamplerDescriptor ToNative(
+        GPUSamplerDescriptor descriptor,
+        WGPUStringView label)
     {
         WGPUSamplerDescriptor nativeDescriptor = new()
         {
-            label = (char*)Marshal.StringToHGlobalAnsi(descriptor.Label),
+            label = label,
             addressModeU = ToNative(descriptor.AddressModeU),
             addressModeV = ToNative(descriptor.AddressModeV),
             addressModeW = ToNative(descriptor.AddressModeW),
@@ -273,6 +778,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUBindGroupLayout<Backend> IBackend<Backend>.CreateBindGroupLayout(GPUDevice<Backend> handle, GPUBindGroupLayoutDescriptor descriptor)
     {
+        using var label = NativeUtf8String.Create(descriptor.Label);
         var entries = stackalloc WGPUBindGroupLayoutEntry[descriptor.Entries.Length];
         var index = 0;
         foreach (var entry in descriptor.Entries.Span)
@@ -284,7 +790,8 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         }
         var nativeDescriptor = new WGPUBindGroupLayoutDescriptor
         {
-            entryCount = (uint)descriptor.Entries.Length,
+            label = label.View,
+            entryCount = (nuint)descriptor.Entries.Length,
             entries = entries
         };
         return new(new(wgpuDeviceCreateBindGroupLayout(ToNative(handle.Handle), &nativeDescriptor).Handle));
@@ -343,10 +850,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUPipelineLayout<Backend> IBackend<Backend>.CreatePipelineLayout(GPUDevice<Backend> handle, GPUPipelineLayoutDescriptor descriptor)
     {
+        using var label = NativeUtf8String.Create(descriptor.Label);
         var bindGroupLayouts = stackalloc WGPUBindGroupLayout[descriptor.BindGroupLayouts.Count];
         var native = new WGPUPipelineLayoutDescriptor
         {
-            bindGroupLayoutCount = (ulong)descriptor.BindGroupLayouts.Count,
+            label = label.View,
+            bindGroupLayoutCount = (nuint)descriptor.BindGroupLayouts.Count,
             bindGroupLayouts = bindGroupLayouts
         };
         var index = 0;
@@ -356,10 +865,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             index++;
         }
 
-
         return new(new(wgpuDeviceCreatePipelineLayout(ToNative(handle.Handle), &native).Handle));
-
-        throw new NotImplementedException();
     }
 
     WGPUBindGroupEntry ToNative(GPUBindGroupEntry value)
@@ -398,7 +904,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     unsafe GPUBindGroup<Backend> IBackend<Backend>.CreateBindGroup(GPUDevice<Backend> handle, GPUBindGroupDescriptor descriptor)
     {
         var entries = stackalloc WGPUBindGroupEntry[descriptor.Entries.Length];
-        using var label = InteropUtf8StringValue.Create(descriptor.Label);
+        using var label = NativeUtf8String.Create(descriptor.Label);
         for (var i = 0; i < descriptor.Entries.Length; i++)
         {
             entries[i] = ToNative(descriptor.Entries.Span[i]);
@@ -406,7 +912,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
         WGPUBindGroupDescriptor nativeDescriptor = new()
         {
-            label = label.CharPointer,
+            label = label.View,
             layout = ToNative(descriptor.Layout),
             entryCount = (nuint)descriptor.Entries.Length,
             entries = entries
@@ -422,35 +928,49 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     unsafe GPUShaderModule<Backend> IBackend<Backend>.CreateShaderModule(GPUDevice<Backend> handle, GPUShaderModuleDescriptor descriptor)
     {
         var nativeDevice = ToNative(handle.Handle);
-        ThrowPendingDeviceError((nint)nativeDevice.Handle);
-        using var codeUtf8 = InteropUtf8StringValue.Create(descriptor.Code);
-        var dc = new WGPUShaderModuleWGSLDescriptor
+        var deviceState = StateOf(handle);
+        lock (deviceState.ValidationGate)
         {
-            code = codeUtf8.CharPointer,
-            chain = new WGPUChainedStruct
+            ThrowPendingDeviceError(deviceState);
+            using var code = NativeUtf8String.Create(descriptor.Code);
+            using var label = NativeUtf8String.Create(descriptor.Label);
+            var source = new WGPUShaderSourceWGSL
             {
-                sType = Native.WGPUSType.ShaderModuleWGSLDescriptor
-            }
-        };
+                code = code.View,
+                chain = new WGPUChainedStruct
+                {
+                    sType = Native.WGPUSType.ShaderSourceWGSL,
+                },
+            };
+            var nativeDescriptor = new WGPUShaderModuleDescriptor
+            {
+                nextInChain = &source.chain,
+                label = label.View,
+            };
 
-        var d = new WGPUShaderModuleDescriptor
-        {
-            nextInChain = &dc.chain,
-        };
-        var h = wgpuDeviceCreateShaderModule(nativeDevice, &d);
-        try
-        {
-            ThrowPendingDeviceError((nint)nativeDevice.Handle);
-        }
-        catch
-        {
-            if (h.Handle != 0)
+            wgpuDevicePushErrorScope(nativeDevice, WGPUErrorFilter.Validation);
+            var result = wgpuDeviceCreateShaderModule(nativeDevice, &nativeDescriptor);
+            try
             {
-                wgpuShaderModuleRelease(h);
+                var error = PopErrorScope(deviceState);
+                if (error.ErrorType != WGPUErrorType.NoError || result.IsNull)
+                {
+                    throw new GraphicsApiException<Backend>(
+                        $"WebGPU shader module creation failed: {error.ErrorType}: {error.Message}");
+                }
+                ThrowPendingDeviceError(deviceState);
             }
-            throw;
+            catch
+            {
+                if (result.IsNotNull)
+                {
+                    wgpuShaderModuleRelease(result);
+                }
+                throw;
+            }
+
+            return new(new(result.Handle));
         }
-        return new(new(h.Handle));
     }
 
     GPUComputePipeline<Backend> IBackend<Backend>.CreateComputePipeline(GPUDevice<Backend> handle, GPUComputePipelineDescriptor descriptor)
@@ -467,11 +987,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         WGPURenderPipelineDescriptor desc = new();
         try
         {
-            using var pipelineLabel = InteropUtf8StringValue.Create(descriptor.Label);
-            using var vertexEntryPoint = InteropUtf8StringValue.Create(descriptor.Vertex.EntryPoint);
-            using var fragmentEntryPoint = InteropUtf8StringValue.Create(descriptor.Fragment?.EntryPoint);
+            using var pipelineLabel = NativeUtf8String.Create(descriptor.Label);
 
-            desc.label = pipelineLabel.CharPointer;
+            desc.label = pipelineLabel.View;
             if (descriptor.Layout is not null)
             {
                 desc.layout = ToNative(descriptor.Layout);
@@ -493,8 +1011,33 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
                 *desc.fragment = ToNative(descriptor.Fragment.Value);
             }
 
-            var result = wgpuDeviceCreateRenderPipeline(ToNative(handle.Handle), &desc);
-            return new(new(result.Handle));
+            var deviceState = StateOf(handle);
+            lock (deviceState.ValidationGate)
+            {
+                ThrowPendingDeviceError(deviceState);
+                wgpuDevicePushErrorScope(deviceState.Device, WGPUErrorFilter.Validation);
+                var result = wgpuDeviceCreateRenderPipeline(ToNative(handle.Handle), &desc);
+                try
+                {
+                    var error = PopErrorScope(deviceState);
+                    if (error.ErrorType != WGPUErrorType.NoError || result.IsNull)
+                    {
+                        throw new GraphicsApiException<Backend>(
+                            $"WebGPU render pipeline creation failed: {error.ErrorType}: {error.Message}");
+                    }
+                    ThrowPendingDeviceError(deviceState);
+                }
+                catch
+                {
+                    if (result.IsNotNull)
+                    {
+                        wgpuRenderPipelineRelease(result);
+                    }
+                    throw;
+                }
+
+                return new(new(result.Handle));
+            }
         }
         finally
         {
@@ -503,25 +1046,27 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
                 Free(*desc.fragment);
                 NativeMemory.Free(desc.fragment);
             }
+            NativeMemory.Free(desc.depthStencil);
             Free(desc.vertex);
         }
     }
 
     unsafe private WGPUFragmentState ToNative(GPUFragmentState fragment)
     {
+        if (fragment.Constants.Length > 0)
+        {
+            throw new NotSupportedException("Pipeline constants are not supported.");
+        }
+
         var result = new WGPUFragmentState
         {
             module = ToNative(fragment.Module),
-            constantCount = (ulong)fragment.Constants.Length,
-            targetCount = (ulong)fragment.Targets.Length
+            constantCount = (nuint)fragment.Constants.Length,
+            targetCount = (nuint)fragment.Targets.Length
         };
         if (fragment.EntryPoint is not null)
         {
             result.entryPoint = MarshalString(fragment.EntryPoint);
-        }
-        if (fragment.Constants.Length > 0)
-        {
-            throw new NotSupportedException();
         }
         if (fragment.Targets.Length > 0)
         {
@@ -540,7 +1085,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new()
         {
             format = ToNative(depthStencil.Format),
-            depthWriteEnabled = depthStencil.DepthWriteEnabled,
+            depthWriteEnabled = ToNativeOptional(depthStencil.DepthWriteEnabled),
             depthCompare = ToNative(depthStencil.DepthCompare),
             stencilFront = ToNative(depthStencil.StencilFront),
             stencilBack = ToNative(depthStencil.StencilBack),
@@ -565,9 +1110,14 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe private void Free(WGPUFragmentState value)
     {
+        NativeMemory.Free(value.entryPoint.data);
         if (value.targets is not null)
         {
-            // TODO: implement free
+            for (nuint index = 0; index < value.targetCount; index++)
+            {
+                NativeMemory.Free(value.targets[index].blend);
+            }
+            NativeMemory.Free(value.targets);
         }
     }
 
@@ -643,12 +1193,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         };
         if (vertex.EntryPoint is not null)
         {
-            result.entryPoint = (char*)MarshalString(vertex.EntryPoint);
+            result.entryPoint = MarshalString(vertex.EntryPoint);
         }
         if (vertex.Buffers.Length > 0)
         {
             result.buffers = Alloc<WGPUVertexBufferLayout>(vertex.Buffers.Length);
-            result.bufferCount = (ulong)vertex.Buffers.Length;
+            result.bufferCount = (nuint)vertex.Buffers.Length;
             for (var i = 0; i < vertex.Buffers.Length; i++)
             {
                 result.buffers[i] = ToNative(vertex.Buffers.Span[i]);
@@ -663,7 +1213,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             arrayStride = value.ArrayStride,
             stepMode = ToNative(value.StepMode),
-            attributeCount = (ulong)value.Attributes.Length
+            attributeCount = (nuint)value.Attributes.Length
         };
         if (value.Attributes.Length > 0)
         {
@@ -686,21 +1236,17 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         };
     }
 
-    unsafe private char* MarshalString(string value)
+    unsafe private WGPUStringView MarshalString(string value)
     {
-        var size = System.Text.Encoding.UTF8.GetByteCount(value) + 1;
-        var buffer = NativeMemory.Alloc((nuint)size);
-        System.Text.Encoding.UTF8.GetBytes(value, new Span<byte>(buffer, size));
-        ((byte*)buffer)[size - 1] = 0;
-        return (char*)buffer;
+        var bytes = System.Text.Encoding.UTF8.GetBytes(value);
+        var buffer = (byte*)NativeMemory.Alloc((nuint)bytes.Length);
+        bytes.CopyTo(new Span<byte>(buffer, bytes.Length));
+        return new WGPUStringView(buffer, bytes.Length);
     }
 
     unsafe void Free(WGPUVertexState value)
     {
-        if (value.entryPoint is not null)
-        {
-            NativeMemory.Free(value.entryPoint);
-        }
+        NativeMemory.Free(value.entryPoint.data);
         if (value.buffers is not null)
         {
             foreach (var b in value.GetBuffers())
@@ -713,6 +1259,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe void Free(WGPUVertexBufferLayout value)
     {
+        NativeMemory.Free(value.attributes);
     }
 
     private void PopolateNative(ref WGPUFragmentState target, GPUVertexState value)
@@ -736,11 +1283,11 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUCommandEncoder<Backend> IBackend<Backend>.CreateCommandEncoder(GPUDevice<Backend> handle, GPUCommandEncoderDescriptor descriptor)
     {
-        var label = InteropUtf8StringValue.Create(descriptor.Label);
+        using var label = NativeUtf8String.Create(descriptor.Label);
 
         WGPUCommandEncoderDescriptor nativeDescriptor = new()
         {
-            label = label.CharPointer
+            label = label.View
         };
         var h = wgpuDeviceCreateCommandEncoder(ToNative(handle.Handle), &nativeDescriptor);
         return new(new(h.Handle));
@@ -759,43 +1306,52 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     async ValueTask IBackend<Backend>.MapAsync(GPUBuffer<Backend> handle, GPUMapMode mode, ulong offset, ulong size, CancellationToken cancellation)
     {
-        var t = new TaskCompletionSource();
-        GCHandle h = GCHandle.Alloc(t);
+        var state = new MapState();
+        var stateHandle = GCHandle.Alloc(state);
         try
         {
-            unsafe static void BufferMapped(WGPUBufferMapAsyncStatus status, void* userData)
+            unsafe
             {
-                var h_ = GCHandle.FromIntPtr((nint)userData);
-                var t_ = h_.Target as TaskCompletionSource;
-                if (t_ is not null)
+                WGPUBufferMapCallbackInfo callback = new()
                 {
-                    if (status == WGPUBufferMapAsyncStatus.Success)
-                    {
-                        t_.SetResult();
-                    }
-                    else
-                    {
-                        t_.SetException(new GraphicsApiException<Backend>($"Map buffer failed {Enum.GetName(status)}"));
-                    }
-                }
+                    mode = WGPUCallbackMode.AllowSpontaneous,
+                    callback = &BufferMapped,
+                    userdata1 = (void*)GCHandle.ToIntPtr(stateHandle),
+                };
+                _ = wgpuBufferMapAsync(
+                    ToNative(handle.Handle),
+                    ToNative(mode),
+                    checked((nuint)offset),
+                    checked((nuint)size),
+                    callback);
+            }
 
-            }
-            unsafe void Go()
+            using var cancellationRegistration = cancellation.Register(
+                static state => wgpuBufferUnmap((WGPUBuffer)(nint)state!),
+                handle.Handle.Pointer);
+            var result = await state.Completion.Task.ConfigureAwait(false);
+            if (cancellation.IsCancellationRequested)
             {
-                wgpuBufferMapAsync(ToNative(handle.Handle), ToNative(mode), offset, size, BufferMapped, (void*)GCHandle.ToIntPtr(h));
+                throw new OperationCanceledException(cancellation);
             }
-            Go();
-            await t.Task;
+            if (result.Status != WGPUMapAsyncStatus.Success)
+            {
+                throw new GraphicsApiException<Backend>(
+                    $"Map buffer failed {result.Status}: {result.Message}");
+            }
         }
         finally
         {
-            h.Free();
+            stateHandle.Free();
         }
     }
 
     unsafe Span<byte> IBackend<Backend>.GetMappedRange(GPUBuffer<Backend> handle, ulong offset, ulong size)
     {
-        var ptr = wgpuBufferGetMappedRange(ToNative(handle.Handle), offset, size);
+        var ptr = wgpuBufferGetMappedRange(
+            ToNative(handle.Handle),
+            checked((nuint)offset),
+            checked((nuint)size));
         return new(ptr, (int)size);
     }
 
@@ -815,6 +1371,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         var result = new WGPURenderPassColorAttachment
         {
             view = ToNative(((GPUTextureView<Backend>)c.View).Handle),
+            depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
             loadOp = ToNative(c.LoadOp),
             storeOp = ToNative(c.StoreOp),
             clearValue = ToNative(c.ClearValue)
@@ -864,7 +1421,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return ToNative(((GPUTexture<Backend>)value).Handle);
     }
 
-    WGPUImageCopyTexture ToNative(GPUImageCopyTexture value)
+    WGPUTexelCopyTextureInfo ToNative(GPUImageCopyTexture value)
     {
         return new()
         {
@@ -890,7 +1447,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return ToNative(((GPUBuffer<Backend>)value).Handle);
     }
 
-    WGPUTextureDataLayout ToNative(GPUImageDataLayout value)
+    WGPUTexelCopyBufferLayout ToNative(GPUImageDataLayout value)
     {
         return new()
         {
@@ -900,7 +1457,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         };
     }
 
-    WGPUImageCopyBuffer ToNative(GPUImageCopyBuffer value)
+    WGPUTexelCopyBufferInfo ToNative(GPUImageCopyBuffer value)
     {
         return new()
         {
@@ -921,8 +1478,8 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe void IBackend<Backend>.CopyTextureToBuffer(GPUCommandEncoder<Backend> handle, GPUImageCopyTexture source, GPUImageCopyBuffer destination, GPUExtent3D copySize)
     {
-        WGPUImageCopyTexture nativeSource = ToNative(source);
-        WGPUImageCopyBuffer nativeDestination = ToNative(destination);
+        WGPUTexelCopyTextureInfo nativeSource = ToNative(source);
+        WGPUTexelCopyBufferInfo nativeDestination = ToNative(destination);
         WGPUExtent3D nativeCopySize = ToNative(copySize);
         wgpuCommandEncoderCopyTextureToBuffer(ToNative(handle.Handle), &nativeSource, &nativeDestination, &nativeCopySize);
     }
@@ -935,10 +1492,10 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUCommandBuffer<Backend> IBackend<Backend>.Finish(GPUCommandEncoder<Backend> handle, GPUCommandBufferDescriptor descriptor)
     {
-        using var label = InteropUtf8StringValue.Create(descriptor.Label);
+        using var label = NativeUtf8String.Create(descriptor.Label);
         WGPUCommandBufferDescriptor d = new()
         {
-            label = label.CharPointer
+            label = label.View
         };
         var h = wgpuCommandEncoderFinish(ToNative(handle.Handle), &d);
         return new(new(h.Handle));
@@ -958,18 +1515,23 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             cmds[i] = ToNative(commandBuffers[i].Handle);
         }
-        wgpuQueueSubmit(ToNative(handle.Handle), (uint)count, cmds);
+        wgpuQueueSubmit(ToNative(handle.Handle), (nuint)count, cmds);
     }
 
 
     unsafe void IBackend<Backend>.WriteBuffer(GPUQueue<Backend> handle, GPUBuffer<Backend> buffer, ulong bufferOffset, nint data, ulong dataOffset, ulong size)
     {
-        wgpuQueueWriteBuffer(ToNative(handle.Handle), ToNative(buffer.Handle), bufferOffset, (void*)data, size);
+        wgpuQueueWriteBuffer(
+            ToNative(handle.Handle),
+            ToNative(buffer.Handle),
+            bufferOffset,
+            (void*)data,
+            checked((nuint)size));
     }
 
     unsafe void IBackend<Backend>.WriteTexture(GPUQueue<Backend> handle, GPUImageCopyTexture destination, ReadOnlySpan<byte> data, GPUImageDataLayout dataLayout, GPUExtent3D size)
     {
-        var nativeDestination = new WGPUImageCopyTexture
+        var nativeDestination = new WGPUTexelCopyTextureInfo
         {
             aspect = ToNative(destination.Aspect),
             mipLevel = destination.MipLevel,
@@ -1029,7 +1591,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             ptr = (uint*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dynamicOffsets));
         }
-        wgpuRenderPassEncoderSetBindGroup(ToNative(handle.Handle), (uint)index, bindGroup is not null ? ToNative(bindGroup.Handle) : WGPUBindGroup.Null, (ulong)dynamicOffsets.Length, ptr);
+        wgpuRenderPassEncoderSetBindGroup(
+            ToNative(handle.Handle),
+            (uint)index,
+            bindGroup is not null ? ToNative(bindGroup.Handle) : WGPUBindGroup.Null,
+            (nuint)dynamicOffsets.Length,
+            ptr);
     }
 
     void IBackend<Backend>.SetBindGroup(GPURenderPassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
@@ -1100,38 +1667,45 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     WGPUPresentMode ToNative(GPUPresentMode mode)
     {
-        return (WGPUPresentMode)mode;
+        return MapEnumByName<GPUPresentMode, WGPUPresentMode>(mode);
     }
 
     WGPUCompositeAlphaMode ToNative(GPUCompositeAlphaMode alphaMode)
     {
-        return (WGPUCompositeAlphaMode)alphaMode;
+        return MapEnumByName<GPUCompositeAlphaMode, WGPUCompositeAlphaMode>(alphaMode);
     }
 
     unsafe GPUTexture<Backend> IBackend<Backend>.GetCurrentTexture(GPUSurface<Backend> handle)
     {
         WGPUSurfaceTexture result = new();
         wgpuSurfaceGetCurrentTexture(ToNative(handle.Handle), &result);
-        if (result.status != WGPUSurfaceGetCurrentTextureStatus.Success)
+        if (result.status is not (
+            WGPUSurfaceGetCurrentTextureStatus.SuccessOptimal
+            or WGPUSurfaceGetCurrentTextureStatus.SuccessSuboptimal))
         {
             throw new GraphicsApiException<Backend>($"Failed to get current texture, status {Enum.GetName(result.status)}");
         }
         return new GPUTexture<Backend>(new(result.texture.Handle));
     }
 
-    unsafe WGPUTextureViewDescriptor ToNative(GPUTextureViewDescriptor descriptor)
+    WGPUTextureViewDescriptor ToNative(
+        GPUTextureViewDescriptor descriptor,
+        WGPUStringView label)
     {
-        var result = new WGPUTextureViewDescriptor();
-        if (!string.IsNullOrEmpty(descriptor.Label))
+        var result = new WGPUTextureViewDescriptor
         {
-            result.label = (char*)Marshal.StringToHGlobalAnsi(descriptor.Label);
-        }
+            label = label,
+        };
         result.format = ToNative(descriptor.Format);
         result.dimension = ToNative(descriptor.Dimension);
         result.baseMipLevel = (uint)descriptor.BaseMipLevel;
-        result.mipLevelCount = (uint)descriptor.MipLevelCount;
+        result.mipLevelCount = descriptor.MipLevelCount == 0
+            ? WGPU_MIP_LEVEL_COUNT_UNDEFINED
+            : (uint)descriptor.MipLevelCount;
         result.baseArrayLayer = (uint)descriptor.BaseArrayLayer;
-        result.arrayLayerCount = (uint)descriptor.ArrayLayerCount;
+        result.arrayLayerCount = descriptor.ArrayLayerCount == 0
+            ? WGPU_ARRAY_LAYER_COUNT_UNDEFINED
+            : (uint)descriptor.ArrayLayerCount;
         result.aspect = ToNative(descriptor.Aspect);
         return result;
     }
@@ -1145,18 +1719,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         }
         else
         {
-            var d_ = ToNative(descriptor.Value);
-            try
-            {
-                resultHandle = wgpuTextureCreateView(ToNative(handle.Handle), &d_);
-            }
-            finally
-            {
-                if (d_.label is not null)
-                {
-                    Marshal.FreeHGlobal((nint)d_.label);
-                }
-            }
+            using var label = NativeUtf8String.Create(descriptor.Value.Label);
+            var nativeDescriptor = ToNative(descriptor.Value, label.View);
+            resultHandle = wgpuTextureCreateView(ToNative(handle.Handle), &nativeDescriptor);
         }
         return new GPUTextureView<Backend>(new GPUHandle<Backend, GPUTextureView<Backend>>(resultHandle.Handle));
     }
@@ -1171,35 +1736,76 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         throw new NotImplementedException();
     }
 
-    ValueTask IBackend<Backend>.OnSubmittedWorkDoneAsync(GPUQueue<Backend> handle, CancellationToken cancellation)
+    async ValueTask IBackend<Backend>.OnSubmittedWorkDoneAsync(
+        GPUQueue<Backend> handle,
+        CancellationToken cancellation)
     {
-        throw new NotImplementedException();
+        var state = new QueueWorkState();
+        var stateHandle = GCHandle.Alloc(state);
+        try
+        {
+            unsafe
+            {
+                WGPUQueueWorkDoneCallbackInfo callback = new()
+                {
+                    mode = WGPUCallbackMode.AllowSpontaneous,
+                    callback = &QueueWorkDone,
+                    userdata1 = (void*)GCHandle.ToIntPtr(stateHandle),
+                };
+                _ = wgpuQueueOnSubmittedWorkDone(ToNative(handle.Handle), callback);
+            }
+
+            var status = await state.Completion.Task.ConfigureAwait(false);
+            if (cancellation.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(cancellation);
+            }
+            if (status != WGPUQueueWorkDoneStatus.Success)
+            {
+                throw new GraphicsApiException<Backend>(
+                    $"WebGPU queue work failed: {status}.");
+            }
+        }
+        finally
+        {
+            stateHandle.Free();
+        }
     }
 
     unsafe void IBackend<Backend>.Poll(GPUDevice<Backend> device)
     {
-        var nativeDevice = ToNative(device.Handle);
-        wgpuDevicePoll(nativeDevice, false, null);
-        ThrowPendingDeviceError((nint)nativeDevice.Handle);
+        PollNative(StateOf(device));
     }
 
     async ValueTask IBackend<Backend>.PollAsync(GPUDevice<Backend> device, CancellationToken cancellation)
     {
-        var nativeDevice = ToNative(device.Handle);
-        await Task.Run(() =>
-        {
-            unsafe static void PollWait(WGPUDevice device)
-            {
-                wgpuDevicePoll(device, true, null);
-            }
-            PollWait(nativeDevice);
-        }, cancellation).ConfigureAwait(true);
-        ThrowPendingDeviceError((nint)nativeDevice.Handle);
+        cancellation.ThrowIfCancellationRequested();
+        PollNative(StateOf(device));
+        await Task.CompletedTask;
     }
 
     ValueTask<GPUAdapterInfo> IBackend<Backend>.RequestAdapterInfoAsync(GPUAdapter<Backend> adapter, CancellationToken cancellation)
     {
-        throw new NotImplementedException();
+        cancellation.ThrowIfCancellationRequested();
+        var status = wgpuAdapterGetInfo(ToNative(adapter.Handle), out var info);
+        if (status != WGPUStatus.Success)
+        {
+            throw new GraphicsApiException<Backend>(
+                $"Could not inspect WebGPU adapter: {status}.");
+        }
+
+        try
+        {
+            return ValueTask.FromResult(new GPUAdapterInfo(
+                info.vendor.ToString(),
+                info.architecture.ToString(),
+                info.device.ToString(),
+                info.description.ToString()));
+        }
+        finally
+        {
+            wgpuAdapterInfoFreeMembers(info);
+        }
     }
 
     void IBackend<Backend>.Present(GPUSurface<Backend> surface)

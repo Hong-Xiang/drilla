@@ -1,7 +1,7 @@
-﻿using DualDrill.Common.Interop;
-using Evergine.Bindings.WebGPU;
+﻿using WebGPU;
 namespace DualDrill.Graphics.Backend;
-using static Evergine.Bindings.WebGPU.WebGPUNative;
+
+using static WebGPU.WebGPU;
 using Backend = DualDrill.Graphics.Backend.WebGPUNETBackend;
 
 public sealed partial class WebGPUNETBackend
@@ -72,9 +72,7 @@ public sealed partial class WebGPUNETBackend
 
     unsafe void IBackend<Backend>.InsertDebugMarker(GPUCommandEncoder<Backend> handle, string markerLabel)
     {
-        var markerLabel_native_string = InteropUtf8String.Create(markerLabel);
-        using var markerLabel_native_pined_string = markerLabel_native_string.Pin();
-        wgpuCommandEncoderInsertDebugMarker(ToNative(handle.Handle), (char*)markerLabel_native_pined_string.Pointer);
+        wgpuCommandEncoderInsertDebugMarker(ToNative(handle.Handle), markerLabel);
     }
 
     unsafe void IBackend<Backend>.PopDebugGroup(GPUCommandEncoder<Backend> handle)
@@ -84,9 +82,7 @@ public sealed partial class WebGPUNETBackend
 
     unsafe void IBackend<Backend>.PushDebugGroup(GPUCommandEncoder<Backend> handle, string groupLabel)
     {
-        var groupLabel_native_string = InteropUtf8String.Create(groupLabel);
-        using var groupLabel_native_pined_string = groupLabel_native_string.Pin();
-        wgpuCommandEncoderPushDebugGroup(ToNative(handle.Handle), (char*)groupLabel_native_pined_string.Pointer);
+        wgpuCommandEncoderPushDebugGroup(ToNative(handle.Handle), groupLabel);
     }
 
     unsafe void IBackend<Backend>.ResolveQuerySet(GPUCommandEncoder<Backend> handle, GPUQuerySet<Backend> querySet, uint firstQuery, uint queryCount, GPUBuffer<Backend> destination, ulong destinationOffset)
@@ -119,9 +115,7 @@ public sealed partial class WebGPUNETBackend
 
     unsafe void IBackend<Backend>.InsertDebugMarker(GPUComputePassEncoder<Backend> handle, string markerLabel)
     {
-        var markerLabel_native_string = InteropUtf8String.Create(markerLabel);
-        using var markerLabel_native_pined_string = markerLabel_native_string.Pin();
-        wgpuComputePassEncoderInsertDebugMarker(ToNative(handle.Handle), (char*)markerLabel_native_pined_string.Pointer);
+        wgpuComputePassEncoderInsertDebugMarker(ToNative(handle.Handle), markerLabel);
     }
 
     unsafe void IBackend<Backend>.PopDebugGroup(GPUComputePassEncoder<Backend> handle)
@@ -131,9 +125,7 @@ public sealed partial class WebGPUNETBackend
 
     unsafe void IBackend<Backend>.PushDebugGroup(GPUComputePassEncoder<Backend> handle, string groupLabel)
     {
-        var groupLabel_native_string = InteropUtf8String.Create(groupLabel);
-        using var groupLabel_native_pined_string = groupLabel_native_string.Pin();
-        wgpuComputePassEncoderPushDebugGroup(ToNative(handle.Handle), (char*)groupLabel_native_pined_string.Pointer);
+        wgpuComputePassEncoderPushDebugGroup(ToNative(handle.Handle), groupLabel);
     }
 
     unsafe void IBackend<Backend>.SetPipeline(GPUComputePassEncoder<Backend> handle, GPUComputePipeline<Backend> pipeline)
@@ -151,9 +143,12 @@ public sealed partial class WebGPUNETBackend
 
     void IGPUHandleDisposer<Backend, GPUDevice<Backend>>.DisposeHandle(GPUHandle<Backend, GPUDevice<Backend>> handle)
     {
-        var errorStateId = DetachDeviceErrorState(handle.Pointer);
         wgpuDeviceRelease(ToNative(handle));
-        ReleaseDeviceErrorState(errorStateId);
+        if (handle.Data is DeviceState state)
+        {
+            wgpuInstanceProcessEvents(state.Instance.Instance);
+            state.Dispose();
+        }
     }
 
     WGPUDevice ToNative(GPUHandle<Backend, GPUDevice<Backend>> instance)
@@ -227,9 +222,7 @@ public sealed partial class WebGPUNETBackend
 
     unsafe void IBackend<Backend>.InsertDebugMarker(GPURenderBundleEncoder<Backend> handle, string markerLabel)
     {
-        var markerLabel_native_string = InteropUtf8String.Create(markerLabel);
-        using var markerLabel_native_pined_string = markerLabel_native_string.Pin();
-        wgpuRenderBundleEncoderInsertDebugMarker(ToNative(handle.Handle), (char*)markerLabel_native_pined_string.Pointer);
+        wgpuRenderBundleEncoderInsertDebugMarker(ToNative(handle.Handle), markerLabel);
     }
 
     unsafe void IBackend<Backend>.PopDebugGroup(GPURenderBundleEncoder<Backend> handle)
@@ -239,9 +232,7 @@ public sealed partial class WebGPUNETBackend
 
     unsafe void IBackend<Backend>.PushDebugGroup(GPURenderBundleEncoder<Backend> handle, string groupLabel)
     {
-        var groupLabel_native_string = InteropUtf8String.Create(groupLabel);
-        using var groupLabel_native_pined_string = groupLabel_native_string.Pin();
-        wgpuRenderBundleEncoderPushDebugGroup(ToNative(handle.Handle), (char*)groupLabel_native_pined_string.Pointer);
+        wgpuRenderBundleEncoderPushDebugGroup(ToNative(handle.Handle), groupLabel);
     }
 
     unsafe void IBackend<Backend>.SetPipeline(GPURenderBundleEncoder<Backend> handle, GPURenderPipeline<Backend> pipeline)
@@ -294,9 +285,7 @@ public sealed partial class WebGPUNETBackend
 
     unsafe void IBackend<Backend>.InsertDebugMarker(GPURenderPassEncoder<Backend> handle, string markerLabel)
     {
-        var markerLabel_native_string = InteropUtf8String.Create(markerLabel);
-        using var markerLabel_native_pined_string = markerLabel_native_string.Pin();
-        wgpuRenderPassEncoderInsertDebugMarker(ToNative(handle.Handle), (char*)markerLabel_native_pined_string.Pointer);
+        wgpuRenderPassEncoderInsertDebugMarker(ToNative(handle.Handle), markerLabel);
     }
 
     unsafe void IBackend<Backend>.PopDebugGroup(GPURenderPassEncoder<Backend> handle)
@@ -306,9 +295,7 @@ public sealed partial class WebGPUNETBackend
 
     unsafe void IBackend<Backend>.PushDebugGroup(GPURenderPassEncoder<Backend> handle, string groupLabel)
     {
-        var groupLabel_native_string = InteropUtf8String.Create(groupLabel);
-        using var groupLabel_native_pined_string = groupLabel_native_string.Pin();
-        wgpuRenderPassEncoderPushDebugGroup(ToNative(handle.Handle), (char*)groupLabel_native_pined_string.Pointer);
+        wgpuRenderPassEncoderPushDebugGroup(ToNative(handle.Handle), groupLabel);
     }
 
     unsafe void IBackend<Backend>.SetPipeline(GPURenderPassEncoder<Backend> handle, GPURenderPipeline<Backend> pipeline)
@@ -380,109 +367,135 @@ public sealed partial class WebGPUNETBackend
         => new(instance.Pointer);
 
     WGPUAddressMode ToNative(GPUAddressMode value)
-        => (WGPUAddressMode)(value);
+        => MapEnumByName<GPUAddressMode, WGPUAddressMode>(value);
 
     WGPUBlendFactor ToNative(GPUBlendFactor value)
-        => (WGPUBlendFactor)(value);
+        => MapEnumByName<GPUBlendFactor, WGPUBlendFactor>(value);
 
     WGPUBlendOperation ToNative(GPUBlendOperation value)
-        => (WGPUBlendOperation)(value);
+        => MapEnumByName<GPUBlendOperation, WGPUBlendOperation>(value);
 
     WGPUBufferBindingType ToNative(GPUBufferBindingType value)
-        => (WGPUBufferBindingType)(value);
+        => (int)value == 0
+            ? WGPUBufferBindingType.BindingNotUsed
+            : MapEnumByName<GPUBufferBindingType, WGPUBufferBindingType>(value);
 
     WGPUBufferMapState ToNative(GPUBufferMapState value)
-        => (WGPUBufferMapState)(value);
+        => MapEnumByName<GPUBufferMapState, WGPUBufferMapState>(value);
 
     WGPUBufferUsage ToNative(GPUBufferUsage value)
-        => (WGPUBufferUsage)(value);
+        => MapEnumByName<GPUBufferUsage, WGPUBufferUsage>(value);
 
     WGPUColorWriteMask ToNative(GPUColorWriteMask value)
-        => (WGPUColorWriteMask)(value);
+        => MapEnumByName<GPUColorWriteMask, WGPUColorWriteMask>(value);
 
     WGPUCompareFunction ToNative(GPUCompareFunction value)
-        => (WGPUCompareFunction)(value);
+        => (int)value == 0
+            ? WGPUCompareFunction.Undefined
+            : MapEnumByName<GPUCompareFunction, WGPUCompareFunction>(value);
 
     WGPUCompilationMessageType ToNative(GPUCompilationMessageType value)
-        => (WGPUCompilationMessageType)(value);
+        => MapEnumByName<GPUCompilationMessageType, WGPUCompilationMessageType>(value);
 
     WGPUCullMode ToNative(GPUCullMode value)
-        => (WGPUCullMode)(value);
+        => MapEnumByName<GPUCullMode, WGPUCullMode>(value);
 
     WGPUDeviceLostReason ToNative(GPUDeviceLostReason value)
-        => (WGPUDeviceLostReason)(value);
+        => value switch
+        {
+            GPUDeviceLostReason.Undefined => WGPUDeviceLostReason.Unknown,
+            GPUDeviceLostReason.Destroyed => WGPUDeviceLostReason.Destroyed,
+            _ => throw new ArgumentOutOfRangeException(nameof(value), value, null),
+        };
 
     WGPUErrorFilter ToNative(GPUErrorFilter value)
-        => (WGPUErrorFilter)(value);
+        => MapEnumByName<GPUErrorFilter, WGPUErrorFilter>(value);
 
     WGPUFeatureName ToNative(GPUFeatureName value)
-        => (WGPUFeatureName)(value);
+        => MapEnumByName<GPUFeatureName, WGPUFeatureName>(value);
 
     WGPUFilterMode ToNative(GPUFilterMode value)
-        => (WGPUFilterMode)(value);
+        => MapEnumByName<GPUFilterMode, WGPUFilterMode>(value);
 
     WGPUFrontFace ToNative(GPUFrontFace value)
-        => (WGPUFrontFace)(value);
+        => MapEnumByName<GPUFrontFace, WGPUFrontFace>(value);
 
     WGPUIndexFormat ToNative(GPUIndexFormat value)
-        => (WGPUIndexFormat)(value);
+        => (int)value == 0
+            ? WGPUIndexFormat.Undefined
+            : MapEnumByName<GPUIndexFormat, WGPUIndexFormat>(value);
 
     WGPULoadOp ToNative(GPULoadOp value)
-        => (WGPULoadOp)(value);
+        => (int)value == 0
+            ? WGPULoadOp.Undefined
+            : MapEnumByName<GPULoadOp, WGPULoadOp>(value);
 
     WGPUMapMode ToNative(GPUMapMode value)
-        => (WGPUMapMode)(value);
+        => MapEnumByName<GPUMapMode, WGPUMapMode>(value);
 
     WGPUMipmapFilterMode ToNative(GPUMipmapFilterMode value)
-        => (WGPUMipmapFilterMode)(value);
+        => MapEnumByName<GPUMipmapFilterMode, WGPUMipmapFilterMode>(value);
 
     WGPUPowerPreference ToNative(GPUPowerPreference value)
-        => (WGPUPowerPreference)(value);
+        => (int)value == 0
+            ? WGPUPowerPreference.Undefined
+            : MapEnumByName<GPUPowerPreference, WGPUPowerPreference>(value);
 
     WGPUPrimitiveTopology ToNative(GPUPrimitiveTopology value)
-        => (WGPUPrimitiveTopology)(value);
+        => MapEnumByName<GPUPrimitiveTopology, WGPUPrimitiveTopology>(value);
 
     WGPUQueryType ToNative(GPUQueryType value)
-        => (WGPUQueryType)(value);
+        => MapEnumByName<GPUQueryType, WGPUQueryType>(value);
 
     WGPUSamplerBindingType ToNative(GPUSamplerBindingType value)
-        => (WGPUSamplerBindingType)(value);
+        => (int)value == 0
+            ? WGPUSamplerBindingType.BindingNotUsed
+            : MapEnumByName<GPUSamplerBindingType, WGPUSamplerBindingType>(value);
 
     WGPUShaderStage ToNative(GPUShaderStage value)
-        => (WGPUShaderStage)(value);
+        => MapEnumByName<GPUShaderStage, WGPUShaderStage>(value);
 
     WGPUStencilOperation ToNative(GPUStencilOperation value)
-        => (WGPUStencilOperation)(value);
+        => MapEnumByName<GPUStencilOperation, WGPUStencilOperation>(value);
 
     WGPUStorageTextureAccess ToNative(GPUStorageTextureAccess value)
-        => (WGPUStorageTextureAccess)(value);
+        => (int)value == 0
+            ? WGPUStorageTextureAccess.BindingNotUsed
+            : MapEnumByName<GPUStorageTextureAccess, WGPUStorageTextureAccess>(value);
 
     WGPUStoreOp ToNative(GPUStoreOp value)
-        => (WGPUStoreOp)(value);
+        => (int)value == 0
+            ? WGPUStoreOp.Undefined
+            : MapEnumByName<GPUStoreOp, WGPUStoreOp>(value);
 
     WGPUTextureAspect ToNative(GPUTextureAspect value)
-        => (WGPUTextureAspect)(value);
+        => MapEnumByName<GPUTextureAspect, WGPUTextureAspect>(value);
 
     WGPUTextureDimension ToNative(GPUTextureDimension value)
-        => (WGPUTextureDimension)(value);
+        => MapEnumByName<GPUTextureDimension, WGPUTextureDimension>(value);
 
     WGPUTextureFormat ToNative(GPUTextureFormat value)
-        => (WGPUTextureFormat)(value);
+        => (int)value == 0
+            ? WGPUTextureFormat.Undefined
+            : MapEnumByName<GPUTextureFormat, WGPUTextureFormat>(value);
 
     WGPUTextureSampleType ToNative(GPUTextureSampleType value)
-        => (WGPUTextureSampleType)(value);
+        => (int)value == 0
+            ? WGPUTextureSampleType.BindingNotUsed
+            : MapEnumByName<GPUTextureSampleType, WGPUTextureSampleType>(value);
 
     WGPUTextureUsage ToNative(GPUTextureUsage value)
-        => (WGPUTextureUsage)(value);
+        => MapEnumByName<GPUTextureUsage, WGPUTextureUsage>(value);
 
     WGPUTextureViewDimension ToNative(GPUTextureViewDimension value)
-        => (WGPUTextureViewDimension)(value);
+        => (int)value == 0
+            ? WGPUTextureViewDimension.Undefined
+            : MapEnumByName<GPUTextureViewDimension, WGPUTextureViewDimension>(value);
 
     WGPUVertexFormat ToNative(GPUVertexFormat value)
-        => (WGPUVertexFormat)(value);
+        => MapEnumByName<GPUVertexFormat, WGPUVertexFormat>(value);
 
     WGPUVertexStepMode ToNative(GPUVertexStepMode value)
-        => (WGPUVertexStepMode)(value);
+        => MapEnumByName<GPUVertexStepMode, WGPUVertexStepMode>(value);
 
 }
-

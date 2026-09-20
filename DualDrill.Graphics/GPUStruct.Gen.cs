@@ -1,5 +1,3 @@
-﻿using Evergine.Bindings.WebGPU;
-
 namespace DualDrill.Graphics;
 
 public partial struct GPUAdapterProperties
@@ -165,8 +163,8 @@ public partial struct GPUInstanceExtras
     public string DxilPath { get; set; }
     public string DxcPath { get; set; }
     public GPUChainedStruct Chain { get; set; }
-    public WGPUDx12Compiler Dx12ShaderCompiler { get; set; }
-    public WGPUGles3MinorVersion Gles3MinorVersion { get; set; }
+    public GPUDx12Compiler Dx12ShaderCompiler { get; set; }
+    public GPUGles3MinorVersion Gles3MinorVersion { get; set; }
 }
 public partial struct GPUDeviceExtras
 {
@@ -268,7 +266,7 @@ public partial struct GPUBindGroupLayoutEntryExtras
 }
 public partial struct GPUQuerySetDescriptorExtras
 {
-    public ReadOnlyMemory<WGPUPipelineStatisticName> PipelineStatistics { get; set; }
+    public ReadOnlyMemory<GPUPipelineStatisticName> PipelineStatistics { get; set; }
     public GPUChainedStruct Chain { get; set; }
 }
 public partial struct GPUSurfaceConfigurationExtras
