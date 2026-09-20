@@ -15,6 +15,8 @@ public interface IShaderModuleReflection
 {
     public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module);
     public ImmutableArray<ShaderStorageBufferBinding> GetStorageBufferBindings(IShaderModuleDeclaration module);
+    public ImmutableArray<ShaderTextureBinding> GetTextureBindings(IShaderModuleDeclaration module);
+    public ImmutableArray<ShaderSamplerBinding> GetSamplerBindings(IShaderModuleDeclaration module);
     public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
         IShaderModuleDeclaration module,
         int group);
@@ -274,6 +276,54 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         ];
     }
 
+    public ImmutableArray<ShaderTextureBinding> GetTextureBindings(IShaderModuleDeclaration module)
+    {
+        ShaderModuleMetadataValidator.Validate(module);
+        return
+        [
+            .. module.Declarations
+                     .OfType<VariableDeclaration>()
+                     .Where(declaration => declaration.Type is SampledTexture2DF32Type)
+                     .Select(declaration =>
+                     {
+                         var group = declaration.Attributes.OfType<GroupAttribute>().Single().Binding;
+                         var binding = declaration.Attributes.OfType<BindingAttribute>().Single().Binding;
+                         return new ShaderTextureBinding(
+                             declaration.Name,
+                             group,
+                             binding,
+                             Visibility(declaration));
+                     })
+                     .OrderBy(binding => binding.Group)
+                     .ThenBy(binding => binding.Binding)
+                     .ThenBy(binding => binding.Name, StringComparer.Ordinal)
+        ];
+    }
+
+    public ImmutableArray<ShaderSamplerBinding> GetSamplerBindings(IShaderModuleDeclaration module)
+    {
+        ShaderModuleMetadataValidator.Validate(module);
+        return
+        [
+            .. module.Declarations
+                     .OfType<VariableDeclaration>()
+                     .Where(declaration => declaration.Type is SamplerStateType)
+                     .Select(declaration =>
+                     {
+                         var group = declaration.Attributes.OfType<GroupAttribute>().Single().Binding;
+                         var binding = declaration.Attributes.OfType<BindingAttribute>().Single().Binding;
+                         return new ShaderSamplerBinding(
+                             declaration.Name,
+                             group,
+                             binding,
+                             Visibility(declaration));
+                     })
+                     .OrderBy(binding => binding.Group)
+                     .ThenBy(binding => binding.Binding)
+                     .ThenBy(binding => binding.Name, StringComparer.Ordinal)
+        ];
+    }
+
     public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
         IShaderModuleDeclaration module,
         int group)
@@ -295,9 +345,35 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
                 Visibility = storage.Visibility,
                 Buffer = CreateBufferLayout(storage)
             });
+        var textures = GetTextureBindings(module)
+            .Where(texture => texture.Group == group)
+            .Select(texture => new GPUBindGroupLayoutEntry
+            {
+                Binding = texture.Binding,
+                Visibility = texture.Visibility,
+                Texture = new GPUTextureBindingLayout
+                {
+                    ViewDimension = texture.Dimension,
+                    SampleType = texture.SampleType,
+                    Multisampled = texture.Multisampled
+                }
+            });
+        var samplers = GetSamplerBindings(module)
+            .Where(sampler => sampler.Group == group)
+            .Select(sampler => new GPUBindGroupLayoutEntry
+            {
+                Binding = sampler.Binding,
+                Visibility = sampler.Visibility,
+                Sampler = new GPUSamplerBindingLayout
+                {
+                    Type = sampler.SamplerType
+                }
+            });
         return new GPUBindGroupLayoutDescriptor
         {
             Entries = uniforms.Concat(storageBuffers)
+                              .Concat(textures)
+                              .Concat(samplers)
                               .OrderBy(entry => entry.Binding)
                               .ToArray()
         };
@@ -308,6 +384,19 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         int group)
     {
         ValidateGroup(group);
+        var handleBindings = GetTextureBindings(module)
+            .Where(texture => texture.Group == group)
+            .Select(texture => texture.Name)
+            .Concat(GetSamplerBindings(module)
+                .Where(sampler => sampler.Group == group)
+                .Select(sampler => sampler.Name))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (handleBindings.Length > 0)
+            throw new NotSupportedException(
+                $"Bind group {group} contains texture or sampler binding(s) " +
+                $"{string.Join(", ", handleBindings.Select(name => $"'{name}'"))}; " +
+                $"use {nameof(GetBindGroupLayoutDescriptor)} for mixed resource groups.");
         var uniforms = GetUniformBindings(module)
             .Where(uniform => uniform.Group == group)
             .Select(uniform => new GPUBindGroupLayoutEntryBuffer

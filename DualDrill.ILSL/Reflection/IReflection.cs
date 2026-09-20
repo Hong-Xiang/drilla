@@ -8,6 +8,8 @@ public interface IReflection
 {
     public ImmutableArray<GPUVertexBufferLayout>? GetVertexBufferLayout();
     public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module);
+    public ImmutableArray<ShaderTextureBinding> GetTextureBindings(IShaderModuleDeclaration module);
+    public ImmutableArray<ShaderSamplerBinding> GetSamplerBindings(IShaderModuleDeclaration module);
     public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
         IShaderModuleDeclaration module,
         int group);

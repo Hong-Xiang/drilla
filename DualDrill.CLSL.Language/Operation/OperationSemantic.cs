@@ -25,6 +25,14 @@ public interface IOperationSemantic<in TX, in TV, in TR, out TO>
         TX ctx, ReadWriteStructuredBufferLoadOperation op, TR result, TV buffer, TV index);
     TO ReadWriteStructuredBufferStore(
         TX ctx, ReadWriteStructuredBufferStoreOperation op, TV buffer, TV index, TV value);
+    TO TextureSampleLevel(
+        TX ctx,
+        TextureSampleLevelOperation op,
+        TR result,
+        TV texture,
+        TV sampler,
+        TV uv,
+        TV lod);
     TO VectorCompositeConstruction(TX ctx, VectorCompositeConstructionOperation op, TR result,
         IReadOnlyList<TV> components);
     TO ZeroConstructorOperation(TX ctx, ZeroConstructorOperation op, TR result);

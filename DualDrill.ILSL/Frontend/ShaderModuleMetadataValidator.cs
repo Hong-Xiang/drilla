@@ -41,6 +41,22 @@ internal static class ShaderModuleMetadataValidator
                 groups,
                 bindings,
                 writable: true);
+        if (type is SampledTexture2DF32Type)
+            return ValidateHandleAttributes(
+                declaration,
+                attributes,
+                addressSpaces,
+                groups,
+                bindings,
+                "sampled texture");
+        if (type is SamplerStateType)
+            return ValidateHandleAttributes(
+                declaration,
+                attributes,
+                addressSpaces,
+                groups,
+                bindings,
+                "sampler");
 
         if (addressSpaces.Length != 1 || groups.Length != 1 || bindings.Length != 1)
             throw Invalid(
@@ -110,6 +126,44 @@ internal static class ShaderModuleMetadataValidator
             throw Invalid(declaration, $"binding must be nonnegative; found {binding.Binding}.");
 
         return StorageAddressSpace.Instance;
+    }
+
+    private static IAddressSpace ValidateHandleAttributes(
+        string declaration,
+        IReadOnlyCollection<IShaderAttribute> attributes,
+        IReadOnlyCollection<IAddressSpaceAttribute> addressSpaces,
+        IReadOnlyCollection<GroupAttribute> groups,
+        IReadOnlyCollection<BindingAttribute> bindings,
+        string kind)
+    {
+        if (addressSpaces.Count != 0 || groups.Count != 1 || bindings.Count != 1)
+            throw Invalid(
+                declaration,
+                $"a {kind} requires no address-space attribute and exactly one [Group] and [Binding] attribute " +
+                $"(found {addressSpaces.Count}, {groups.Count}, and {bindings.Count}).");
+
+        var unsupported = attributes
+            .Where(attribute => attribute is not GroupAttribute and
+                                not BindingAttribute &&
+                                !IsUniformVisibility(attribute))
+            .Select(AttributeName)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (unsupported.Length > 0)
+            throw Invalid(
+                declaration,
+                $"{kind} attribute(s) {string.Join(", ", unsupported)} are not supported.");
+
+        var group = groups.Single();
+        var binding = bindings.Single();
+        if (group.Binding < 0)
+            throw Invalid(declaration, $"group must be nonnegative; found {group.Binding}.");
+        if (binding.Binding < 0)
+            throw Invalid(declaration, $"binding must be nonnegative; found {binding.Binding}.");
+        if (binding.HasDynamicOffset)
+            throw Invalid(declaration, $"{kind} bindings do not support dynamic offsets.");
+
+        return HandleAddressSpace.Instance;
     }
 
     public static void Validate(IShaderModuleDeclaration module)
@@ -248,14 +302,17 @@ internal static class ShaderModuleMetadataValidator
     }
 
     internal static bool IsResourceType(IShaderType type) =>
-        type is ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType;
+        type is ReadOnlyStructuredBufferType or
+            ReadWriteStructuredBufferType or
+            SampledTexture2DF32Type or
+            SamplerStateType;
 
     internal static bool IsResourceTypeOrPointer(IShaderType type) =>
         IsResourceType(type) ||
         type is IPtrType pointer && IsResourceTypeOrPointer(pointer.BaseType);
 
     private static bool IsResourceDeclaration(VariableDeclaration declaration) =>
-        declaration.AddressSpace is UniformAddressSpace or StorageAddressSpace ||
+        declaration.AddressSpace is UniformAddressSpace or StorageAddressSpace or HandleAddressSpace ||
         IsResourceType(declaration.Type) ||
         declaration.Attributes.Any(IsResourceMetadata);
 
@@ -286,7 +343,13 @@ internal static class ShaderModuleMetadataValidator
         if (IsResourceTypeOrPointer(type))
             throw Invalid(
                 declaration,
-                "structured buffers are valid only as static shader-module fields.");
+                type is ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType ||
+                type is IPtrType
+                {
+                    BaseType: ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType
+                }
+                    ? "structured buffers are valid only as static shader-module fields."
+                    : "texture and sampler handles are valid only as static shader-module fields.");
     }
 
     public static void ValidateFunctionAttributes(

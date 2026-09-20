@@ -49,10 +49,18 @@ public sealed class FunctionToOperationPass
     private IEnumerable<Instruction<IShaderValue, IShaderValue>> TransformInstruction(
         Instruction<IShaderValue, IShaderValue> inst)
     {
-        if (inst.Operation is not CallOperation ||
-            inst.OperandCount == 0 ||
-            inst.Operand0 is not FunctionDeclaration function)
+        if (inst.Operation is not CallOperation call)
             return [inst];
+        if (inst.Operand0 is not FunctionDeclaration function)
+        {
+            var resourceOperation = ResourceOperations()
+                .FirstOrDefault(operation =>
+                    operation.Function.Type is FunctionType type &&
+                    type.Equals(call.CalleeType));
+            if (resourceOperation is not null)
+                throw new OperationFunctionNotMatchException(resourceOperation.Function, resourceOperation);
+            return [inst];
+        }
 
         var operation = function.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault()?.Operation;
         if (operation is not null && IsResourceOperation(operation))
@@ -72,7 +80,18 @@ public sealed class FunctionToOperationPass
             StructuredBufferLoadOperation or
             ReadWriteStructuredBufferLengthOperation or
             ReadWriteStructuredBufferLoadOperation or
-            ReadWriteStructuredBufferStoreOperation;
+            ReadWriteStructuredBufferStoreOperation or
+            TextureSampleLevelOperation;
+
+    private static IEnumerable<IOperation> ResourceOperations()
+    {
+        yield return StructuredBufferLengthOperation.Instance;
+        yield return StructuredBufferLoadOperation.Instance;
+        yield return ReadWriteStructuredBufferLengthOperation.Instance;
+        yield return ReadWriteStructuredBufferLoadOperation.Instance;
+        yield return ReadWriteStructuredBufferStoreOperation.Instance;
+        yield return TextureSampleLevelOperation.Instance;
+    }
 
     private static bool HasPhysicalOperandShape(
         Instruction<IShaderValue, IShaderValue> instruction,
@@ -192,6 +211,31 @@ public sealed class FunctionToOperationPass
                             [
                                 WithPayload(
                                     InstF.ReadWriteStructuredBufferStore(default, store, buffer, index, value),
+                                    ctx)
+                            ];
+                        }
+                    case TextureSampleLevelOperation sample:
+                        {
+                            if (!IsExactResourceFunction(op, f, sample) ||
+                                arguments is not [var texture, var sampler, var uv, var lod] ||
+                                !texture.Type.Equals(sample.TexturePointerType) ||
+                                !sampler.Type.Equals(sample.SamplerPointerType) ||
+                                !uv.Type.Equals(ShaderType.Vec2F32) ||
+                                !lod.Type.Equals(ShaderType.F32) ||
+                                ctx.Result is not { } sampleResult ||
+                                !sampleResult.Type.Equals(ShaderType.Vec4F32))
+                                throw new OperationFunctionNotMatchException(f, sample);
+                            return
+                            [
+                                WithPayload(
+                                    InstF.TextureSampleLevel(
+                                        default,
+                                        sample,
+                                        sampleResult,
+                                        texture,
+                                        sampler,
+                                        uv,
+                                        lod),
                                     ctx)
                             ];
                         }
@@ -348,6 +392,16 @@ public sealed class FunctionToOperationPass
             IShaderValue buffer,
             IShaderValue index,
             IShaderValue value) =>
+            [ctx];
+
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> TextureSampleLevel(
+            Instruction<IShaderValue, IShaderValue> ctx,
+            TextureSampleLevelOperation op,
+            IShaderValue result,
+            IShaderValue texture,
+            IShaderValue sampler,
+            IShaderValue uv,
+            IShaderValue lod) =>
             [ctx];
 
 
