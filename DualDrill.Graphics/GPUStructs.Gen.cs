@@ -1,4 +1,5 @@
 ﻿namespace DualDrill.Graphics;
+
 public partial struct GPUBindGroupDescriptor()
 {
     public string Label { get; set; }
@@ -286,16 +287,16 @@ public partial struct GPUSamplerBindingLayout()
 public partial struct GPUSamplerDescriptor()
 {
     public string Label { get; set; }
-    public GPUAddressMode AddressModeU { get; set; }
-    public GPUAddressMode AddressModeV { get; set; }
-    public GPUAddressMode AddressModeW { get; set; }
+    public GPUAddressMode AddressModeU { get; set; } = GPUAddressMode.ClampToEdge;
+    public GPUAddressMode AddressModeV { get; set; } = GPUAddressMode.ClampToEdge;
+    public GPUAddressMode AddressModeW { get; set; } = GPUAddressMode.ClampToEdge;
     public GPUCompareFunction Compare { get; set; }
-    public float LodMaxClamp { get; set; }
-    public float LodMinClamp { get; set; }
-    public GPUFilterMode MagFilter { get; set; }
-    public ushort MaxAnisotropy { get; set; }
-    public GPUFilterMode MinFilter { get; set; }
-    public GPUMipmapFilterMode MipmapFilter { get; set; }
+    public float LodMaxClamp { get; set; } = 32;
+    public float LodMinClamp { get; set; } = 0;
+    public GPUFilterMode MagFilter { get; set; } = GPUFilterMode.Nearest;
+    public ushort MaxAnisotropy { get; set; } = 1;
+    public GPUFilterMode MinFilter { get; set; } = GPUFilterMode.Nearest;
+    public GPUMipmapFilterMode MipmapFilter { get; set; } = GPUMipmapFilterMode.Nearest;
 }
 
 public partial struct GPUShaderModuleCompilationHint()
@@ -391,4 +392,3 @@ public partial struct GPUVertexBufferLayout()
 //{
 //    public ReadOnlyMemory<GPUVertexBufferLayout?> Buffers { get; set; }
 //}
-

@@ -239,10 +239,38 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         }
     }
 
-    private sealed class QueueWorkState
+    private sealed class QueueWorkState : IDisposable
     {
+        private GCHandle _callbackHandle;
+
         public TaskCompletionSource<WGPUQueueWorkDoneStatus> Completion { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public unsafe void* RegisterCallback()
+        {
+            _callbackHandle = GCHandle.Alloc(this);
+            return (void*)GCHandle.ToIntPtr(_callbackHandle);
+        }
+
+        public void Complete(WGPUQueueWorkDoneStatus status)
+        {
+            try
+            {
+                Completion.TrySetResult(status);
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_callbackHandle.IsAllocated)
+            {
+                _callbackHandle.Free();
+            }
+        }
     }
 
     private static InstanceState StateOf(GPUInstance<Backend> instance)
@@ -328,6 +356,17 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     private static WGPUOptionalBool ToNativeOptional(bool value)
         => value ? WGPUOptionalBool.True : WGPUOptionalBool.False;
 
+    internal static void ThrowIfNativeFailed(WGPUStatus status, string operation)
+    {
+        if (status != WGPUStatus.Success)
+        {
+            throw new GraphicsApiException<Backend>($"{operation} failed: {status}.");
+        }
+    }
+
+    internal static bool IsHardwareAdapter(WGPUAdapterType adapterType)
+        => adapterType is WGPUAdapterType.DiscreteGPU or WGPUAdapterType.IntegratedGPU;
+
     public unsafe GPUInstance<Backend> CreateGPUInstance()
     {
         EnsureNativeVersion();
@@ -396,11 +435,11 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
             try
             {
-                if (!options.ForceFallbackAdapter && info.adapterType == WGPUAdapterType.CPU)
+                if (!options.ForceFallbackAdapter && !IsHardwareAdapter(info.adapterType))
                 {
                     wgpuAdapterRelease(request.Adapter);
                     throw new GraphicsApiException<Backend>(
-                        $"Rejected CPU WebGPU adapter '{info.device}'.");
+                        $"Rejected non-hardware WebGPU adapter '{info.device}' classified as {info.adapterType}.");
                 }
 
                 if (options.BackendType != GPUBackendType.Undefined
@@ -586,7 +625,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         try
         {
             var state = (QueueWorkState?)GCHandle.FromIntPtr((nint)userdata1).Target;
-            state?.Completion.TrySetResult(status);
+            state?.Complete(status);
         }
         catch
         {
@@ -955,7 +994,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             binding = (uint)value.Binding,
             offset = value.Offset,
-            size = value.Size,
+            size = value.Size == 0 ? WGPU_WHOLE_SIZE : value.Size,
         };
         if (value.Buffer is not null)
         {
@@ -1486,7 +1525,17 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     void IBackend<Backend>.CopyBufferToTexture(GPUCommandEncoder<Backend> handle, GPUImageCopyBuffer source, GPUImageCopyTexture destination, GPUExtent3D copySize)
     {
-        throw new NotImplementedException();
+        unsafe
+        {
+            var nativeSource = ToNative(source);
+            var nativeDestination = ToNative(destination);
+            var nativeCopySize = ToNative(copySize);
+            wgpuCommandEncoderCopyBufferToTexture(
+                ToNative(handle.Handle),
+                &nativeSource,
+                &nativeDestination,
+                &nativeCopySize);
+        }
     }
 
     WGPUTexture ToNative(IGPUTexture value)
@@ -1525,8 +1574,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new()
         {
             offset = value.Offset,
-            bytesPerRow = value.BytesPerRow,
-            rowsPerImage = value.RowsPerImage,
+            bytesPerRow = value.BytesPerRow == 0
+                ? WGPU_COPY_STRIDE_UNDEFINED
+                : value.BytesPerRow,
+            rowsPerImage = value.RowsPerImage == 0
+                ? WGPU_COPY_STRIDE_UNDEFINED
+                : value.RowsPerImage,
         };
     }
 
@@ -1813,8 +1866,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         GPUQueue<Backend> handle,
         CancellationToken cancellation)
     {
+        cancellation.ThrowIfCancellationRequested();
         var state = new QueueWorkState();
-        var stateHandle = GCHandle.Alloc(state);
+        var submitted = false;
         try
         {
             unsafe
@@ -1823,25 +1877,26 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
                 {
                     mode = WGPUCallbackMode.AllowSpontaneous,
                     callback = &QueueWorkDone,
-                    userdata1 = (void*)GCHandle.ToIntPtr(stateHandle),
+                    userdata1 = state.RegisterCallback(),
                 };
                 _ = wgpuQueueOnSubmittedWorkDone(ToNative(handle.Handle), callback);
+                submitted = true;
             }
 
-            var status = await state.Completion.Task.ConfigureAwait(false);
-            if (cancellation.IsCancellationRequested)
-            {
-                throw new OperationCanceledException(cancellation);
-            }
+            var status = await state.Completion.Task.WaitAsync(cancellation).ConfigureAwait(false);
             if (status != WGPUQueueWorkDoneStatus.Success)
             {
                 throw new GraphicsApiException<Backend>(
                     $"WebGPU queue work failed: {status}.");
             }
         }
-        finally
+        catch
         {
-            stateHandle.Free();
+            if (!submitted)
+            {
+                state.Dispose();
+            }
+            throw;
         }
     }
 
@@ -1887,7 +1942,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     void IBackend<Backend>.Present(GPUSurface<Backend> surface)
     {
-        wgpuSurfacePresent(ToNative(surface.Handle));
+        ThrowIfNativeFailed(
+            wgpuSurfacePresent(ToNative(surface.Handle)),
+            nameof(wgpuSurfacePresent));
     }
 }
 static class WebGPUNETExtension
