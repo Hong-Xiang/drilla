@@ -426,6 +426,28 @@ public sealed class SlangTargetLowering
                 case StructuredBufferLoadOperation load:
                     ValidateStructuredBufferLoad(instruction, load);
                     break;
+                case ReadWriteStructuredBufferLengthOperation rwLength:
+                    ValidateReadWriteStructuredBufferLength(instruction, rwLength);
+                    var rwCount = instruction.Result!;
+                    var rwStride = ShaderValue.Intermediate(ShaderType.U32);
+                    statements.Add(new SlangGetDimensions(
+                        Operand(instruction.Operand0),
+                        rwCount,
+                        rwStride));
+                    CaptureDefinition(rwCount, statements);
+                    return;
+                case ReadWriteStructuredBufferLoadOperation rwLoad:
+                    ValidateReadWriteStructuredBufferLoad(instruction, rwLoad);
+                    break;
+                case ReadWriteStructuredBufferStoreOperation rwStore:
+                    ValidateReadWriteStructuredBufferStore(instruction, rwStore);
+                    statements.Add(new SlangAssign(
+                        new SlangIndexedPlace(
+                            Place(instruction.Operand0, instruction.Operation.Name),
+                            Operand(instruction.Operand1),
+                            ShaderType.F32),
+                        Operand(instruction[2])));
+                    return;
                 case AddressOfMemberOperation member:
                     DefineAlias(instruction, new SlangMemberPlace(
                         Place(instruction.Operand0, instruction.Operation.Name),
@@ -510,6 +532,7 @@ public sealed class SlangTargetLowering
                 or CallOperation
                 or LiteralOperation
                 or StructuredBufferLoadOperation
+                or ReadWriteStructuredBufferLoadOperation
                 or IUnaryExpressionOperation
                 or IBinaryExpressionOperation
                 or VectorCompositeConstructionOperation
@@ -519,8 +542,8 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             StructuredBufferLengthOperation operation)
         {
-            if (instruction.OperandCount != 1 ||
-                instruction.Operand0?.Type is not IPtrType ||
+            if (!HasPhysicalOperandShape(instruction, 1) ||
+                instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
                 instruction.Result is null ||
                 !instruction.Result.Type.Equals(ShaderType.U32))
@@ -531,15 +554,64 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             StructuredBufferLoadOperation operation)
         {
-            if (instruction.OperandCount != 2 ||
-                instruction.Operand0?.Type is not IPtrType ||
+            if (!HasPhysicalOperandShape(instruction, 2) ||
+                instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
-                instruction.Operand1 is null ||
-                !instruction.Operand1.Type.Equals(ShaderType.U32) ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
                 instruction.Result is null ||
                 !instruction.Result.Type.Equals(ShaderType.F32))
                 throw UnsupportedOperation(instruction, "invalid read-only storage-buffer load signature");
         }
+
+        private void ValidateReadWriteStructuredBufferLength(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            ReadWriteStructuredBufferLengthOperation operation)
+        {
+            if (!HasPhysicalOperandShape(instruction, 1) ||
+                instruction.Operand0!.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.U32))
+                throw UnsupportedOperation(instruction, "invalid read-write storage-buffer Length signature");
+        }
+
+        private void ValidateReadWriteStructuredBufferLoad(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            ReadWriteStructuredBufferLoadOperation operation)
+        {
+            if (!HasPhysicalOperandShape(instruction, 2) ||
+                instruction.Operand0!.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.F32))
+                throw UnsupportedOperation(instruction, "invalid read-write storage-buffer load signature");
+        }
+
+        private void ValidateReadWriteStructuredBufferStore(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            ReadWriteStructuredBufferStoreOperation operation)
+        {
+            if (!HasPhysicalOperandShape(instruction, 3) ||
+                instruction.Operand0!.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
+                !instruction.RestOperands[0].Type.Equals(ShaderType.F32) ||
+                instruction.Result is not null)
+                throw UnsupportedOperation(instruction, "invalid read-write storage-buffer store signature");
+        }
+
+        private static bool HasPhysicalOperandShape(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            int expectedCount) =>
+            instruction.OperandCount == expectedCount &&
+            instruction.Operand0 is not null &&
+            (expectedCount == 1
+                ? instruction.Operand1 is null
+                : instruction.Operand1 is not null) &&
+            !instruction.RestOperands.IsDefault &&
+            instruction.RestOperands.Length == Math.Max(0, expectedCount - 2) &&
+            instruction.RestOperands.All(static operand => operand is not null);
 
         private static bool IsStructuredBufferValue(IShaderValue? value) =>
             value is not null &&

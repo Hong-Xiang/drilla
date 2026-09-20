@@ -8,8 +8,6 @@ public sealed record ShaderStorageBufferBinding(
     int Binding,
     GPUShaderStage Visibility,
     bool HasDynamicOffset,
+    GPUBufferBindingType Kind,
     uint ElementStride,
-    ulong MinimumBindingSize)
-{
-    public GPUBufferBindingType Kind => GPUBufferBindingType.ReadOnlyStorage;
-}
+    ulong MinimumBindingSize);

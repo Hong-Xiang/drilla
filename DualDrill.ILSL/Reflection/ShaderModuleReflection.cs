@@ -265,7 +265,8 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         [
             .. module.Declarations
                      .OfType<VariableDeclaration>()
-                     .Where(declaration => declaration.Type is ReadOnlyStructuredBufferType)
+                     .Where(declaration =>
+                         declaration.Type is ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType)
                      .Select(CreateStorageBufferBinding)
                      .OrderBy(binding => binding.Group)
                      .ThenBy(binding => binding.Binding)
@@ -352,10 +353,15 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
             declaration.Name,
             group,
             binding.Binding,
-            Visibility(declaration),
+            declaration.Type is ReadWriteStructuredBufferType
+                ? WritableVisibility(declaration)
+                : Visibility(declaration),
             binding.HasDynamicOffset,
-            ReadOnlyStructuredBufferType.Instance.ElementStride,
-            ReadOnlyStructuredBufferType.Instance.ElementStride);
+            declaration.Type is ReadWriteStructuredBufferType
+                ? GPUBufferBindingType.Storage
+                : GPUBufferBindingType.ReadOnlyStorage,
+            4,
+            4);
     }
 
     private static GPUShaderStage Visibility(VariableDeclaration declaration)
@@ -366,6 +372,14 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
         return visibility == GPUShaderStage.None
             ? GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute
             : visibility;
+    }
+
+    private static GPUShaderStage WritableVisibility(VariableDeclaration declaration)
+    {
+        var visibility = declaration.Attributes
+            .OfType<IShaderStageAttribute>()
+            .Aggregate(GPUShaderStage.None, (stages, stage) => stages | stage.Stage);
+        return visibility == GPUShaderStage.None ? GPUShaderStage.Compute : visibility;
     }
 
     private static GPUBufferBindingLayout CreateBufferLayout(ShaderUniformBinding uniform) =>

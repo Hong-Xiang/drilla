@@ -26,12 +26,21 @@ internal static class ShaderModuleMetadataValidator
         var groups = attributes.OfType<GroupAttribute>().ToArray();
         var bindings = attributes.OfType<BindingAttribute>().ToArray();
         if (type is ReadOnlyStructuredBufferType)
-            return ValidateReadOnlyStorageAttributes(
+            return ValidateStorageAttributes(
                 declaration,
                 attributes,
                 addressSpaces,
                 groups,
-                bindings);
+                bindings,
+                writable: false);
+        if (type is ReadWriteStructuredBufferType)
+            return ValidateStorageAttributes(
+                declaration,
+                attributes,
+                addressSpaces,
+                groups,
+                bindings,
+                writable: true);
 
         if (addressSpaces.Length != 1 || groups.Length != 1 || bindings.Length != 1)
             throw Invalid(
@@ -63,30 +72,35 @@ internal static class ShaderModuleMetadataValidator
         return addressSpaces[0].AddressSpace;
     }
 
-    private static IAddressSpace ValidateReadOnlyStorageAttributes(
+    private static IAddressSpace ValidateStorageAttributes(
         string declaration,
         IReadOnlyCollection<IShaderAttribute> attributes,
         IReadOnlyCollection<IAddressSpaceAttribute> addressSpaces,
         IReadOnlyCollection<GroupAttribute> groups,
-        IReadOnlyCollection<BindingAttribute> bindings)
+        IReadOnlyCollection<BindingAttribute> bindings,
+        bool writable)
     {
         if (addressSpaces.Count != 0 || groups.Count != 1 || bindings.Count != 1)
             throw Invalid(
                 declaration,
-                "a read-only storage buffer requires no address-space attribute and exactly one [Group] and " +
+                $"a {(writable ? "read-write" : "read-only")} storage buffer requires no address-space attribute " +
+                "and exactly one [Group] and " +
                 $"[Binding] attribute (found {addressSpaces.Count}, {groups.Count}, and {bindings.Count}).");
 
         var unsupported = attributes
             .Where(attribute => attribute is not GroupAttribute and
                                 not BindingAttribute &&
-                                !IsUniformVisibility(attribute))
+                                (!writable
+                                    ? !IsUniformVisibility(attribute)
+                                    : attribute is not ComputeAttribute))
             .Select(AttributeName)
             .Order(StringComparer.Ordinal)
             .ToArray();
         if (unsupported.Length > 0)
             throw Invalid(
                 declaration,
-                $"read-only storage buffer attribute(s) {string.Join(", ", unsupported)} are not supported.");
+                $"{(writable ? "read-write" : "read-only")} storage buffer attribute(s) " +
+                $"{string.Join(", ", unsupported)} are not supported.");
 
         var group = groups.Single();
         var binding = bindings.Single();
@@ -132,6 +146,19 @@ internal static class ShaderModuleMetadataValidator
             RejectResourceValueType($"return of function '{function.Name}'", function.Return.Type);
             ValidateInterfaceAttributes($"return of function '{function.Name}'", function.Return.Attributes);
             ValidateComputeFunction(function);
+        }
+
+        if (resources.Any(resource => resource.Writable))
+        {
+            var graphicsEntry = module.Declarations
+                .OfType<FunctionDeclaration>()
+                .FirstOrDefault(function => function.Attributes
+                    .OfType<IShaderStageAttribute>()
+                    .Any(stage => stage is VertexAttribute or FragmentAttribute));
+            if (graphicsEntry is not null)
+                throw Invalid(
+                    $"function '{graphicsEntry.Name}'",
+                    "modules declaring read-write storage buffers support compute entry points only.");
         }
 
         foreach (var structure in module.Declarations.OfType<StructureDeclaration>())
@@ -220,7 +247,8 @@ internal static class ShaderModuleMetadataValidator
                 $"mapped intrinsic cannot preserve interface attribute(s) {AttributeNames(attributes)}.");
     }
 
-    internal static bool IsResourceType(IShaderType type) => type is ReadOnlyStructuredBufferType;
+    internal static bool IsResourceType(IShaderType type) =>
+        type is ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType;
 
     internal static bool IsResourceTypeOrPointer(IShaderType type) =>
         IsResourceType(type) ||
@@ -249,7 +277,8 @@ internal static class ShaderModuleMetadataValidator
         return new ResourceBinding(
             declaration.Name,
             declaration.Attributes.OfType<GroupAttribute>().Single().Binding,
-            declaration.Attributes.OfType<BindingAttribute>().Single().Binding);
+            declaration.Attributes.OfType<BindingAttribute>().Single().Binding,
+            declaration.Type is ReadWriteStructuredBufferType);
     }
 
     private static void RejectResourceValueType(string declaration, IShaderType type)
@@ -411,5 +440,5 @@ internal static class ShaderModuleMetadataValidator
     private static NotSupportedException Invalid(string declaration, string message) =>
         new($"{Boundary} rejected {declaration}: {message}");
 
-    private sealed record ResourceBinding(string Name, int Group, int Binding);
+    private sealed record ResourceBinding(string Name, int Group, int Binding, bool Writable);
 }

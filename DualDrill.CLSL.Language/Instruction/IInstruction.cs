@@ -34,6 +34,7 @@ public readonly record struct Instruction<TV, TR>(
             0 => [],
             1 => [Operand0!],
             2 => [Operand0!, Operand1!],
+            _ when RestOperands.IsDefault => [Operand0!, Operand1!],
             _ => [Operand0!, Operand1!, .. RestOperands]
         };
 
@@ -56,7 +57,7 @@ public readonly record struct Instruction<TV, TR>(
             Result is not null ? fd(Result) : default,
             Operand0 is not null ? fu(Operand0) : default,
             Operand1 is not null ? fu(Operand1) : default,
-            [.. RestOperands.Select(fu)],
+            RestOperands.IsDefault ? [] : [.. RestOperands.Select(fu)],
             Payload
         );
 
@@ -128,6 +129,29 @@ public static class Instruction
             IShaderValue buffer,
             IShaderValue index) =>
             Create(op, result, [buffer, index]);
+
+        public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferLength(
+            Unit ctx,
+            ReadWriteStructuredBufferLengthOperation op,
+            IShaderValue result,
+            IShaderValue buffer) =>
+            Create(op, result, [buffer]);
+
+        public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferLoad(
+            Unit ctx,
+            ReadWriteStructuredBufferLoadOperation op,
+            IShaderValue result,
+            IShaderValue buffer,
+            IShaderValue index) =>
+            Create(op, result, [buffer, index]);
+
+        public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferStore(
+            Unit ctx,
+            ReadWriteStructuredBufferStoreOperation op,
+            IShaderValue buffer,
+            IShaderValue index,
+            IShaderValue value) =>
+            Create(op, default, [buffer, index, value]);
 
         public Instruction<IShaderValue, IShaderValue> Store(Unit ctx, StoreOperation op, IShaderValue ptr,
             IShaderValue value) =>

@@ -348,6 +348,15 @@ internal static class OperationValidator
             case StructuredBufferLoadOperation load:
                 Require(instruction, [load.BufferPointerType, ShaderType.U32], ShaderType.F32);
                 return;
+            case ReadWriteStructuredBufferLengthOperation rwLength:
+                Require(instruction, [rwLength.BufferPointerType], ShaderType.U32);
+                return;
+            case ReadWriteStructuredBufferLoadOperation rwLoad:
+                Require(instruction, [rwLoad.BufferPointerType, ShaderType.U32], ShaderType.F32);
+                return;
+            case ReadWriteStructuredBufferStoreOperation store:
+                Require(instruction, [store.BufferPointerType, ShaderType.U32, ShaderType.F32], null);
+                return;
             case VectorCompositeConstructionOperation vector:
                 Require(instruction, vector.ParameterTypes, vector.ResultType);
                 return;

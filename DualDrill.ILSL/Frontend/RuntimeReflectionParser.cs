@@ -100,9 +100,14 @@ public sealed class RuntimeReflectionParser
             return found;
 
         if (SharedBuiltinSymbolTable.IsStructuredBufferFamily(type))
+        {
+            var supportedType = type.GetGenericTypeDefinition() == typeof(StructuredBuffer<>)
+                ? "StructuredBuffer<float>"
+                : "RWStructuredBuffer<float>";
             throw new NotSupportedException(
                 $"Shader resource type validation rejected '{type}': " +
-                "only StructuredBuffer<float> is supported.");
+                $"only {supportedType} is supported.");
+        }
         if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(type))
             throw new NotSupportedException(
                 $"Shader resource type validation rejected '{type}': " +
