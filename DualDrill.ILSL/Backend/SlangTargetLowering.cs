@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -18,6 +19,7 @@ public sealed class SlangTargetLowering
     public ShaderModuleDeclaration<SlangFunctionBody> Lower(
         ShaderModuleDeclaration<RegionFunctionBody> module)
     {
+        ShaderModuleMetadataValidator.Validate(module);
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
             definition => new FunctionLowerer(definition.Value).Lower());
