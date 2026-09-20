@@ -10,8 +10,8 @@ not implemented interfaces. This slice changes documentation and tests only.
 > [shader metadata validation](./shader-metadata.md),
 > [uniform buffer layout and typed reflection](./uniform-layout.md), and
 > [compute entry points](./compute-entry.md). The current storage subset is
-> documented in
-> [Read-only f32 structured buffers](./readonly-structured-buffer.md).
+> documented in [Read-only f32 structured buffers](./readonly-structured-buffer.md)
+> and [Writable f32 structured buffers](./writable-structured-buffer.md).
 
 **Current useful compiler subset:** vertex/fragment scalar/vector signatures,
 read-only uniform struct fields, ordinary direct helper calls, and a selection

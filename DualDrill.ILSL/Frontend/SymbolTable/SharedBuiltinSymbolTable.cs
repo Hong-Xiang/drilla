@@ -66,6 +66,7 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
             [typeof(float)] = ShaderType.F32,
             [typeof(double)] = ShaderType.F64,
             [typeof(StructuredBuffer<float>)] = ReadOnlyStructuredBufferType.Instance,
+            [typeof(RWStructuredBuffer<float>)] = ReadWriteStructuredBufferType.Instance,
             [typeof(Vector4)] = VecType<N4, FloatType<N32>>.Instance,
             [typeof(Vector3)] = VecType<N3, FloatType<N32>>.Instance,
             [typeof(Vector2)] = VecType<N2, FloatType<N32>>.Instance
@@ -155,12 +156,29 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
             ?? throw new MissingMethodException(buffer.FullName, "get_Item"),
             StructuredBufferLoadOperation.Instance.Function);
 
+        var writableBuffer = typeof(RWStructuredBuffer<float>);
+        var writableIndexer = writableBuffer.GetProperty("Item")
+            ?? throw new MissingMemberException(writableBuffer.FullName, "Item");
+        result.Add(
+            writableBuffer.GetProperty(nameof(RWStructuredBuffer<float>.Length))?.GetMethod
+            ?? throw new MissingMethodException(writableBuffer.FullName, "get_Length"),
+            ReadWriteStructuredBufferLengthOperation.Instance.Function);
+        result.Add(
+            writableIndexer.GetMethod
+            ?? throw new MissingMethodException(writableBuffer.FullName, "get_Item"),
+            ReadWriteStructuredBufferLoadOperation.Instance.Function);
+        result.Add(
+            writableIndexer.SetMethod
+            ?? throw new MissingMethodException(writableBuffer.FullName, "set_Item"),
+            ReadWriteStructuredBufferStoreOperation.Instance.Function);
+
         return result;
     }
 
     internal static bool IsStructuredBufferFamily(Type type) =>
         type.IsGenericType &&
-        type.GetGenericTypeDefinition() == typeof(StructuredBuffer<>);
+        type.GetGenericTypeDefinition() is var definition &&
+        (definition == typeof(StructuredBuffer<>) || definition == typeof(RWStructuredBuffer<>));
 
     internal static bool ContainsStructuredBuffer(Type type) =>
         IsStructuredBufferFamily(type) ||

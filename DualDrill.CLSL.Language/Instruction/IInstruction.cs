@@ -129,6 +129,29 @@ public static class Instruction
             IShaderValue index) =>
             Create(op, result, [buffer, index]);
 
+        public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferLength(
+            Unit ctx,
+            ReadWriteStructuredBufferLengthOperation op,
+            IShaderValue result,
+            IShaderValue buffer) =>
+            Create(op, result, [buffer]);
+
+        public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferLoad(
+            Unit ctx,
+            ReadWriteStructuredBufferLoadOperation op,
+            IShaderValue result,
+            IShaderValue buffer,
+            IShaderValue index) =>
+            Create(op, result, [buffer, index]);
+
+        public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferStore(
+            Unit ctx,
+            ReadWriteStructuredBufferStoreOperation op,
+            IShaderValue buffer,
+            IShaderValue index,
+            IShaderValue value) =>
+            Create(op, default, [buffer, index, value]);
+
         public Instruction<IShaderValue, IShaderValue> Store(Unit ctx, StoreOperation op, IShaderValue ptr,
             IShaderValue value) =>
             Create(op, default, [ptr, value]);

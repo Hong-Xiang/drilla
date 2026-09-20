@@ -56,5 +56,7 @@ readback evidence.
 The source guard is responsible for bounds safety. Host bindings must contain
 at least one complete f32 element, have byte length divisible by four, and
 satisfy device binding-offset limits. Read-only access does not prove physical
-non-aliasing. Read-write buffers, stores, dispatch, synchronization, allocation,
-and runtime resource management are outside this slice.
+non-aliasing. Writable storage is documented in
+[Writable f32 structured buffers](./writable-structured-buffer.md); dispatch,
+synchronization, allocation, and runtime resource management remain outside
+these compiler slices.
