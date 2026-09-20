@@ -74,12 +74,9 @@ public sealed class IntegerInequalityBranchTests
             stages.Compiled.FunctionDefinitions.Values,
             value => ReferenceEquals(value.Declaration, declaration));
         var model = Assert.Single(
-            stages.ControlFlow.FunctionDefinitions.Values,
+            stages.Labelled.FunctionDefinitions.Values,
             value => value.Environment.Method == method);
-        var graph = model.ControlFlow;
-        var blocks = model.Labels.ToDictionary(
-            label => graph[label].ByteOffset,
-            label => graph[label]);
+        var blocks = model.Blocks.Blocks.ToDictionary(block => block.ByteOffset);
 
         Assert.True(model.Labels.ToHashSet().SetEquals(body.Labels));
 
@@ -152,7 +149,7 @@ public sealed class IntegerInequalityBranchTests
         Assert.Equal(TInteger.Instance, operation.RightType);
     }
 
-    private static void AssertArms(FunctionBody4 body, Label branch, Label trueTarget, Label falseTarget)
+    private static void AssertArms(RegionFunctionBody body, Label branch, Label trueTarget, Label falseTarget)
     {
         var terminator =
             Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(body[branch].Body.Last);

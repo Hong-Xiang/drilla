@@ -48,7 +48,7 @@ internal class ValueDefinitionAnalysis
 
 public static class ValueDefinitionAnalysisExtension
 {
-    public static IEnumerable<IShaderValue> GetValueDefinitions(this FunctionBody4 body)
+    public static IEnumerable<IShaderValue> GetValueDefinitions(this RegionFunctionBody body)
     {
         return ((IEnumerable<IShaderValue>)
         [

@@ -29,7 +29,7 @@ public sealed record class ShaderModuleDeclaration<TBody>(
 
     public T Evaluate<T>(IDeclarationSemantic<T> semantic)
     {
-        if (this is ShaderModuleDeclaration<FunctionBody4> m) return semantic.VisitModule(m);
+        if (this is ShaderModuleDeclaration<RegionFunctionBody> m) return semantic.VisitModule(m);
         throw new NotSupportedException();
     }
 
@@ -51,15 +51,15 @@ public sealed record class ShaderModuleDeclaration<TBody>(
     public TResult Accept<TResult>(IDeclarationVisitor<TBody, TResult> visitor) => visitor.VisitModule(this);
 
 
-    public ShaderModuleDeclaration<FunctionBody4> RunPass(IShaderModuleSimplePass pass)
+    public ShaderModuleDeclaration<RegionFunctionBody> RunPass(IShaderModuleSimplePass pass)
     {
         var decls = Declarations.Select(d => d.AcceptVisitor(pass))
                                 .OfType<IDeclaration>()
                                 .ToList();
         var funcs = decls.OfType<FunctionDeclaration>().ToFrozenSet();
-        Dictionary<FunctionDeclaration, FunctionBody4> funcDefs = [];
+        Dictionary<FunctionDeclaration, RegionFunctionBody> funcDefs = [];
         foreach (var kv in FunctionDefinitions)
-            if (kv.Value is FunctionBody4 body)
+            if (kv.Value is RegionFunctionBody body)
             {
                 var fr = pass.VisitFunctionBody(body);
                 if (funcs.Contains(fr.Declaration)) funcDefs.Add(fr.Declaration, fr);
@@ -73,7 +73,7 @@ public sealed record class ShaderModuleDeclaration<TBody>(
 
 
         // TODO: collect used non-function scope declrations
-        return new ShaderModuleDeclaration<FunctionBody4>(
+        return new ShaderModuleDeclaration<RegionFunctionBody>(
             [.. decls.Concat(moduleVariables).Distinct()],
             funcDefs.ToImmutableDictionary()
         );

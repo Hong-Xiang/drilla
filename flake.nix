@@ -19,6 +19,7 @@
           nodejs_22
           pnpm
           shader-slang
+          wabt
         ];
 
         shellHook = ''

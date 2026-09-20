@@ -142,6 +142,18 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph, IPrintable
 
 public static class ControlFlowGraph
 {
+    public static ControlFlowGraph<TBlock> Create<TBlock>(
+        BlockList<TBlock> blocks,
+        Func<TBlock, ISuccessor> getSuccessor,
+        Action<ControlFlowGraph<TBlock>, IndentedTextWriter, PrettyPrintOption>? prettyPrint = null)
+        where TBlock : ILabeledEntity =>
+        new(
+            blocks.EntryLabel,
+            blocks.Blocks.ToDictionary(
+                block => block.Label,
+                block => new ControlFlowGraph<TBlock>.NodeDefinition(getSuccessor(block), block)),
+            prettyPrint);
+
     public static ControlFlowGraph<Unit> Create(
         Label entry,
         IReadOnlyDictionary<Label, ISuccessor> definitions

@@ -8,13 +8,14 @@ using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Language.FunctionBody;
 
-public sealed class FunctionBody4
+public sealed class RegionFunctionBody
     : IFunctionBody, ILocalDeclarationContext
 {
-    public FunctionBody4(FunctionDeclaration declaration, RegionTree<Label, ShaderRegionBody> body)
+    public RegionFunctionBody(FunctionDeclaration declaration, RegionTree<Label, ShaderRegionBody> body)
     {
         Declaration = declaration;
         Body = body;
+        Control = ScopedRegionControl.Create(declaration, body);
         {
             var labels = ImmutableArray.CreateBuilder<Label>();
             var enqueued = new HashSet<Label>();
@@ -50,6 +51,7 @@ public sealed class FunctionBody4
     public ImmutableArray<IShaderValue> Values { get; }
     public FunctionDeclaration Declaration { get; }
     public RegionTree<Label, ShaderRegionBody> Body { get; }
+    public ScopedControlIndex<Label> Control { get; }
 
     public void Dump(IndentedTextWriter writer)
     {
@@ -95,9 +97,9 @@ public sealed class FunctionBody4
 
     public IEnumerable<IShaderValue> UsedValues() => Body.Fold(new ValueUseAnalysis());
 
-    public FunctionBody4 MapValueUse(Func<IShaderValue, IShaderValue> mapValue)
+    public RegionFunctionBody MapValueUse(Func<IShaderValue, IShaderValue> mapValue)
     {
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration,
             Body.Select(
                 static l => l,
@@ -113,15 +115,15 @@ public sealed class FunctionBody4
                             j => j.Select(mapValue),
                             mapValue)
                     ),
-                    body.ImmediatePostDominator
+                    body.PostDominance
                 )
             )
         );
     }
 
-    public FunctionBody4 MapRegionBody(Func<ShaderRegionBody, ShaderRegionBody> mapRegionBody)
+    public RegionFunctionBody MapRegionBody(Func<ShaderRegionBody, ShaderRegionBody> mapRegionBody)
     {
-        return new FunctionBody4(
+        return new RegionFunctionBody(
             Declaration,
             Body.Select(
                 static l => l,

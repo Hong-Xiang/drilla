@@ -55,10 +55,10 @@ internal sealed class EmittedScalarProgram
         }
     }
 
-    private readonly FunctionBody4 body;
+    private readonly RegionFunctionBody body;
     private readonly Func<State, Flow> execute;
 
-    internal EmittedScalarProgram(FunctionBody4 body, string source)
+    internal EmittedScalarProgram(RegionFunctionBody body, string source)
     {
         this.body = body;
         var lines = source.Replace("{", "\n{\n", StringComparison.Ordinal)
@@ -147,6 +147,16 @@ internal sealed class EmittedScalarProgram
                             default: throw new NotSupportedException("Unsupported loop flow.");
                         }
                     }
+                };
+            }
+            if (line == "do")
+            {
+                var loop = Block();
+                Expect("while(false);");
+                return state => loop(state) switch
+                {
+                    Flow.Break or Flow.Continue => new Flow.Next(),
+                    var flow => flow
                 };
             }
             if (Regex.Match(line, @"^if\((.+)\)$") is { Success: true } conditional)

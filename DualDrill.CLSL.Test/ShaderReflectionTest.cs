@@ -25,7 +25,7 @@ public class ShaderReflectionTest
         //  [UniformAttribute()]
         //  Vector2 data;
 
-        var module = ShaderModuleDeclaration<FunctionBody4>.Empty with
+        var module = ShaderModuleDeclaration<RegionFunctionBody>.Empty with
         {
             Declarations =
             [

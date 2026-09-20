@@ -130,10 +130,16 @@ public class RegionJumpTests
         var parameter = ShaderValue.Intermediate(ShaderType.I32);
         var terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
         var entryBody = ShaderRegionBody.Create(entry, [], [],
-            terms.Br(new RegionJump<IShaderValue>(target, [source])), target);
-        var targetBody = ShaderRegionBody.Create(target, [parameter], [], terms.ReturnVoid(), null);
+            terms.Br(new RegionJump<IShaderValue>(target, [source])),
+            new ExitPostDominance.Block(target, false));
+        var targetBody = ShaderRegionBody.Create(
+            target,
+            [parameter],
+            [],
+            terms.ReturnVoid(),
+            new ExitPostDominance.FunctionExit(false));
         var declaration = new FunctionDeclaration("Map", [], new FunctionReturn(UnitType.Instance, []), []);
-        var body = new FunctionBody4(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry,
+        var body = new RegionFunctionBody(declaration, RegionTree<Label, ShaderRegionBody>.Block(entry,
             [RegionTree<Label, ShaderRegionBody>.Block(target, [], targetBody, null)], entryBody, target));
 
         var mapped = body.MapValueUse(value => ReferenceEquals(value, source) ? replacement : value);

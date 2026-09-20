@@ -13,7 +13,7 @@ using DualDrill.CLSL.Language.Symbol;
 
 namespace DualDrill.CLSL.Frontend;
 
-public sealed record CilInstructionBlock
+public sealed record CilInstructionBlock : ILabeledEntity
 {
     internal CilInstructionBlock(
         Label label,
@@ -101,21 +101,20 @@ public sealed class PreCilFunctionBody : IFunctionBody, IPrintable
         Code.PrettyPrint(writer, option);
 }
 
-public sealed class MethodBodyAnalysisModel : IFunctionBody, IPrintable
+public sealed class LabelledCilFunctionBody : IFunctionBody, IPrintable
 {
     private readonly FrozenDictionary<Label, int> labelIndices;
 
-    public MethodBodyAnalysisModel(
+    internal LabelledCilFunctionBody(
         PreCilFunctionBody pre,
-        ControlFlowGraph<CilInstructionBlock> graph)
+        BlockList<CilInstructionBlock> blocks)
     {
         Pre = pre;
-        ControlFlow = graph;
-        ValidateSource(pre, graph);
-        labelIndices = graph.Labels()
-                            .ToFrozenDictionary(
-                                label => label,
-                                label => graph[label].InstructionIndex);
+        Blocks = blocks;
+        ValidateSource(pre, blocks);
+        labelIndices = blocks.Blocks.ToFrozenDictionary(
+            block => block.Label,
+            block => block.InstructionIndex);
         Labels = [.. labelIndices.OrderBy(pair => pair.Value).Select(pair => pair.Key)];
     }
 
@@ -124,63 +123,144 @@ public sealed class MethodBodyAnalysisModel : IFunctionBody, IPrintable
     public FunctionDeclaration Declaration => Raw.Declaration;
     public LinearCode<CilInstructionInfo> RawCode => Raw.Code;
     public LinearCode<Annotated<CilInstructionInfo, PreStack>> PreAnnotatedCode => Pre.Code;
-    public ControlFlowGraph<CilInstructionBlock> ControlFlow { get; }
+    public BlockList<CilInstructionBlock> Blocks { get; }
     public ImmutableArray<Label> Labels { get; }
     public ILocalDeclarationContext DeclarationContext => Raw.DeclarationContext;
     public CilMethodEnvironment Environment => RawCode.Environment;
     public int InstructionCount => RawCode.Count;
     public int CodeByteSize => Environment.CodeByteSize;
     public CilInstructionInfo this[int index] => RawCode[index];
+    public CilInstructionBlock this[Label label] =>
+        Blocks.Blocks.Single(block => ReferenceEquals(block.Label, label));
 
     public int LabelToInstructionIndex(Label label) => labelIndices[label];
 
     public void Dump(IndentedTextWriter writer) =>
-        ControlFlow.PrettyPrint(writer, PrettyPrintOption.Default);
+        Blocks.PrettyPrint(writer, PrettyPrintOption.Default);
 
     public void PrettyPrint(IndentedTextWriter writer, PrettyPrintOption option) =>
-        ControlFlow.PrettyPrint(writer, option);
+        Blocks.PrettyPrint(writer, option);
 
     private static void ValidateSource(
         PreCilFunctionBody pre,
-        ControlFlowGraph<CilInstructionBlock> graph)
+        BlockList<CilInstructionBlock> blocks)
     {
-        if (graph[graph.EntryLabel].InstructionIndex != 0)
-            throw new ArgumentException("The control-flow graph entry must begin at original instruction index 0.",
-                nameof(graph));
+        var entry = blocks.Blocks.Single(block => ReferenceEquals(block.Label, blocks.EntryLabel));
+        if (entry.InstructionIndex != 0)
+            throw new ArgumentException("The labelled CIL entry must begin at original instruction index 0.",
+                nameof(blocks));
 
         var preByIndex = pre.Code.Instructions.ToFrozenDictionary(item => item.Node.Index);
-        var labels = graph.Labels().ToImmutableArray();
-        if (graph.Count != labels.Length)
-            throw new ArgumentException(
-                "The control-flow graph contains definitions disconnected from its entry.",
-                nameof(graph));
-        var graphIndices = new HashSet<int>();
-        foreach (var label in labels)
+        var blocksByLabel = blocks.Blocks.ToDictionary(block => block.Label);
+        var reachableLabels = new HashSet<Label>(ReferenceEqualityComparer.Instance);
+        void Visit(Label label)
         {
-            var block = graph[label];
-            if (!ReferenceEquals(label, block.Label))
-                throw new ArgumentException("A control-flow graph key does not match its block label.", nameof(graph));
-            if (!graph.Successor(label).Equals(block.Terminator.ToSuccessor()))
-                throw new ArgumentException(
-                    "A control-flow graph successor does not match its block terminator.",
-                    nameof(graph));
+            if (!reachableLabels.Add(label))
+                return;
+            foreach (var target in blocksByLabel[label].Terminator.ToSuccessor().AllTargets())
+                Visit(target);
+        }
+        Visit(blocks.EntryLabel);
+        if (reachableLabels.Count != blocks.Blocks.Length)
+            throw new ArgumentException(
+                "The labelled CIL blocks contain definitions disconnected from the entry.",
+                nameof(blocks));
 
+        var blockIndices = new HashSet<int>();
+        foreach (var block in blocks.Blocks)
+        {
             foreach (var item in block.Instructions)
-                if (!graphIndices.Add(item.Node.Index) ||
+                if (!blockIndices.Add(item.Node.Index) ||
                     !preByIndex.TryGetValue(item.Node.Index, out var source) ||
                     !source.Node.Equals(item.Node) ||
                     !ReferenceEquals(source.Node.Instruction, item.Node.Instruction) ||
                     !ReferenceEquals(source.Annotation, item.Annotation))
                     throw new ArgumentException(
-                        "The control-flow graph does not belong to the stored Pre-annotated source.",
-                        nameof(graph));
+                        "The labelled CIL blocks do not belong to the stored Pre-annotated source.",
+                        nameof(blocks));
         }
 
-        if (graphIndices.Count != preByIndex.Count)
+        if (blockIndices.Count != preByIndex.Count)
             throw new ArgumentException(
-                "The control-flow graph does not partition the complete reachable Pre-annotated source.",
-                nameof(graph));
+                "The labelled CIL blocks do not partition the complete reachable Pre-annotated source.",
+                nameof(blocks));
     }
+}
+
+public sealed class ShaderStackFunctionBody : IFunctionBody, IPrintable
+{
+    internal ShaderStackFunctionBody(
+        LabelledCilFunctionBody source,
+        BlockList<ShaderStackBasicBlock> blocks)
+    {
+        Source = source;
+        Blocks = blocks;
+        if (!ReferenceEquals(source.Blocks.EntryLabel, blocks.EntryLabel) ||
+            source.Blocks.Blocks.Length != blocks.Blocks.Length)
+            throw new ArgumentException("Shader-stack blocks must preserve the labelled CIL entry and block count.",
+                nameof(blocks));
+        foreach (var (cil, shader) in source.Blocks.Blocks.Zip(blocks.Blocks))
+            if (!ReferenceEquals(cil.Label, shader.Label) ||
+                !cil.EntryStack.Types.Reverse().Select(type => type.ShaderType).SequenceEqual(shader.EntryStack))
+                throw new ArgumentException(
+                    "Shader-stack blocks must preserve CIL label identity, order and entry-stack types.",
+                    nameof(blocks));
+        DeclarationContext = new CilStageDeclarationContext(
+            source.Raw.DeclarationContext.LocalVariables,
+            [.. blocks.Blocks.Select(block => block.Label)],
+            []);
+    }
+
+    public LabelledCilFunctionBody Source { get; }
+    public FunctionDeclaration Declaration => Source.Declaration;
+    public BlockList<ShaderStackBasicBlock> Blocks { get; }
+    public ILocalDeclarationContext DeclarationContext { get; }
+
+    public void Dump(IndentedTextWriter writer) =>
+        Blocks.PrettyPrint(writer, PrettyPrintOption.Default);
+
+    public void PrettyPrint(IndentedTextWriter writer, PrettyPrintOption option) =>
+        Blocks.PrettyPrint(writer, option);
+}
+
+public sealed class ShaderStackControlFlowBody : IFunctionBody, IPrintable
+{
+    internal ShaderStackControlFlowBody(
+        ShaderStackFunctionBody source,
+        ControlFlowGraph<ShaderStackBasicBlock> graph)
+    {
+        Source = source;
+        Graph = graph;
+        if (!ReferenceEquals(source.Blocks.EntryLabel, graph.EntryLabel) ||
+            source.Blocks.Blocks.Length != graph.Count)
+            throw new ArgumentException("Shader-stack CFG must preserve every source block.", nameof(graph));
+        foreach (var label in graph.Labels())
+        {
+            var block = graph[label];
+            var sourceBlock = source.Blocks.Blocks.Single(candidate => ReferenceEquals(candidate.Label, label));
+            if (!ReferenceEquals(block, sourceBlock) ||
+                !ReferenceEquals(label, block.Label) ||
+                !graph.Successor(label).Equals(block.Successor))
+                throw new ArgumentException("A shader-stack CFG definition does not match its block payload.",
+                    nameof(graph));
+            foreach (var target in graph.Successor(label).AllTargets())
+                if (!block.ExitStack.SequenceEqual(graph[target].EntryStack))
+                    throw new ArgumentException(
+                        $"Shader-stack edge {label} -> {target} has mismatched stack types.",
+                        nameof(graph));
+        }
+    }
+
+    public ShaderStackFunctionBody Source { get; }
+    public FunctionDeclaration Declaration => Source.Declaration;
+    public ControlFlowGraph<ShaderStackBasicBlock> Graph { get; }
+    public ILocalDeclarationContext DeclarationContext => Source.DeclarationContext;
+
+    public void Dump(IndentedTextWriter writer) =>
+        CilStagePrettyPrinter.PrintShaderStackControlFlow(this, writer);
+
+    public void PrettyPrint(IndentedTextWriter writer, PrettyPrintOption option) =>
+        CilStagePrettyPrinter.PrintShaderStackControlFlow(this, writer);
 }
 
 public sealed record class CilValueBasicBlock(
@@ -195,7 +275,7 @@ public sealed record class CilValueBasicBlock(
 public sealed class CilValueControlFlowBody : IFunctionBody, IPrintable
 {
     internal CilValueControlFlowBody(
-        MethodBodyAnalysisModel source,
+        ShaderStackControlFlowBody source,
         ControlFlowGraph<CilValueBasicBlock> graph)
     {
         Source = source;
@@ -212,12 +292,12 @@ public sealed class CilValueControlFlowBody : IFunctionBody, IPrintable
                           .Distinct<IShaderValue>(ReferenceEqualityComparer.Instance)
                           .ToImmutableArray();
         DeclarationContext = new CilStageDeclarationContext(
-            source.Raw.DeclarationContext.LocalVariables,
+            source.Source.Source.Raw.DeclarationContext.LocalVariables,
             [.. graph.Labels()],
             values);
     }
 
-    public MethodBodyAnalysisModel Source { get; }
+    public ShaderStackControlFlowBody Source { get; }
     public FunctionDeclaration Declaration => Source.Declaration;
     public ControlFlowGraph<CilValueBasicBlock> Graph { get; }
     public ILocalDeclarationContext DeclarationContext { get; }
