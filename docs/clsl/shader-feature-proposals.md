@@ -310,7 +310,7 @@ The following immutable references informed the contracts.
 
 | Source | Pinned revision and paths | License |
 |---|---|---|
-| WGSL normative specification | gpuweb/gpuweb `358eebc8e7bf2d6efa41a4b8b3fbc3a715288204`, [wgsl/index.bs][wgsl]: host-shareable types (3704-3722), resource interface (11401-11489), layout (11728-12320), uniformity (12504-12555), sampling (18947-19024,19594-19793) | [LICENSE.md][wgsl-license]: documents `W3C-20150513`; repository software `BSD-3-Clause` |
+| WGSL normative specification | gpuweb/gpuweb `358eebc8e7bf2d6efa41a4b8b3fbc3a715288204`, [wgsl/index.bs][wgsl]: host-shareable types (3704-3722), resource interface (11401-11489), layout (11728-12320), uniformity (12504-12555), sampling (18947-19024,19594-19793) | [LICENSE.md][wgsl-license]: documents under the W3C Software and Document License (2023); repository software `BSD-3-Clause` |
 | Slang compiler/docs | shader-slang/slang `69947dec841ea46e68ccdccae45a1080fcaea01c` (`v2025.12.1`), [conventional features][slang-types] (292-348,610-634), [SPIR-V target][slang-spirv] (184-208,244-248,426-436), [layout][slang-layout], [reflection][slang-reflect] (322-450,509-519) | [LICENSE][slang-license]: `Apache-2.0 WITH LLVM-exception` |
 | ILGPU managed compute design | m4rs-mt/ILGPU `ea51bcbdc3695554b8b9899a225d37c12cd0babe`, [memory views][ilgpu-views] and [kernels][ilgpu-kernels] | [LICENSE.txt][ilgpu-license]: `NCSA` |
 
