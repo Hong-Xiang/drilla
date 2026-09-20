@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -477,6 +478,72 @@ internal static class ScalarControlFlowOracle
                 case Control.Transfer transfer:
                     var incoming = machine.ReadArguments(transfer.Jump);
                     var target = graph[transfer.Jump.Label];
+                    machine.Bind(target, incoming);
+                    label = transfer.Jump.Label;
+                    break;
+            }
+        }
+    }
+
+    internal static Execution RunCfg(
+        ControlFlowGraph<CilValueBasicBlock> graph,
+        FunctionDeclaration declaration,
+        ImmutableArray<Value> arguments,
+        ImmutableArray<VariableDeclaration> locals,
+        bool initLocals,
+        int stepLimit = 10000)
+    {
+        var machine = Machine.ForValueCfg(
+            declaration,
+            arguments,
+            locals,
+            initLocals,
+            "raw typed CFG",
+            stepLimit);
+        var label = graph.EntryLabel;
+        while (true)
+        {
+            var block = graph[label];
+            switch (machine.Execute(label, block))
+            {
+                case Control.Returned returned:
+                    return machine.Complete(returned.Value);
+                case Control.Transfer transfer:
+                    var incoming = machine.ReadArguments(transfer.Jump);
+                    var target = graph[transfer.Jump.Label];
+                    machine.Bind(target, incoming);
+                    label = transfer.Jump.Label;
+                    break;
+            }
+        }
+    }
+
+    internal static Execution RunFactsCfg(
+        ControlFlowGraph<Annotated<CilValueBasicBlock, BlockControlFacts>> graph,
+        FunctionDeclaration declaration,
+        ImmutableArray<Value> arguments,
+        ImmutableArray<VariableDeclaration> locals,
+        bool initLocals,
+        int stepLimit = 10000)
+    {
+        var machine = Machine.ForValueCfg(
+            declaration,
+            arguments,
+            locals,
+            initLocals,
+            "raw control-facts CFG",
+            stepLimit);
+        var label = graph.EntryLabel;
+        while (true)
+        {
+            var block = graph[label].Node;
+            switch (machine.Execute(label, block))
+            {
+                case Control.Returned returned:
+                    return machine.Complete(returned.Value);
+                case Control.Transfer transfer:
+                    var incoming = machine.ReadArguments(transfer.Jump);
+                    var target = graph[transfer.Jump.Label].Node;
                     machine.Bind(target, incoming);
                     label = transfer.Jump.Label;
                     break;
