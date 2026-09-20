@@ -172,7 +172,8 @@ Integer negation is unchecked two's-complement arithmetic; floating negation is
 native sign inversion, including signed zero and infinities. Other unary
 operations remain unsupported. C# uint negation first promotes to i64; it is not
 an unsigned `neg` variant. Its i32-to-u64 widening conversion is not yet supported
-by Slang emission and is rejected explicitly, independently of canonical `neg`.
+by Slang target lowering and is rejected before target AST construction,
+independently of canonical `neg`. The emitter only spells the accepted target AST.
 Exception flow, `initobj`, indirect
 loads/stores, `ldnull`, and `dup` remain
 unsupported. `initobj` is rejected at shared instruction dispatch because the

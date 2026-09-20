@@ -259,6 +259,29 @@ public sealed class ScalarNegationTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void UnsignedWideningFailsInTargetLoweringAndPublicSlang()
+    {
+        var stages = CompilerTestPipeline.CompileStages(Method(nameof(NegateUInt32)));
+        var module = stages.Compiled
+            .RunPass(new FunctionToOperationPass())
+            .RunPass(new StablePointerRegionParameterPass());
+
+        var loweringError = Assert.Throws<NotSupportedException>(
+            () => new SlangTargetLowering().Lower(module));
+        Assert.Equal(
+            "Function 'NegateUInt32': operation 'conv.i32.u64': " +
+            "i32-to-u64 conversion; unsigned widening is not implemented.",
+            loweringError.Message);
+
+        var publicError = Assert.Throws<NotSupportedException>(
+            () => new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(new UInt32NegationShader()));
+        Assert.Equal(
+            "Function 'fs': operation 'conv.i32.u64': " +
+            "i32-to-u64 conversion; unsigned widening is not implemented.",
+            publicError.Message);
+    }
+
+    [Fact]
     public void ScalarOracleSupportsExactI64LiteralZeroAndSignature()
     {
         Assert.Equal(
@@ -462,6 +485,13 @@ public sealed class ScalarNegationTests(ITestOutputHelper output)
         [Fragment]
         [return: Location(0)]
         public static long fs([Location(0)] long value) => -value;
+    }
+
+    private sealed class UInt32NegationShader : ISharpShader
+    {
+        [Fragment]
+        [return: Location(0)]
+        public static long fs([Location(0)] uint value) => -value;
     }
 
     private sealed class Float32NegationShader : ISharpShader

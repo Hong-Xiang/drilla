@@ -224,9 +224,6 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 CallOperation when operands.Length >= 1 =>
                     $"{Operand(0)}({string.Join(',', operands[1..].Select(RenderOperand))})",
                 LiteralOperation when operands.Length == 1 => Operand(0),
-                ScalarConversionOperation<IntType<N32>, UIntType<N64>> =>
-                    throw new NotSupportedException(
-                        "Slang output does not support i32-to-u64 conversion; unsigned widening is not implemented."),
                 IConversionOperation conversion when operands.Length == 1 =>
                     $"{conversion.ResultType.Name}({Operand(0)})",
                 IVectorSwizzleGetOperation swizzle when operands.Length == 1 =>
