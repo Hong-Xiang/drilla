@@ -332,6 +332,12 @@ internal sealed record SlangDefinitionOrigin(
     SlangBind Definition,
     SlangAssign? Capture);
 
+internal sealed record SlangInstructionOrigin(
+    Label Label,
+    int InstructionOrdinal,
+    Instruction<IShaderValue, IShaderValue> Source,
+    SlangStatement Target);
+
 internal sealed record SlangTransferArgumentOrigin(
     int Position,
     IShaderValue Argument,
@@ -362,20 +368,37 @@ internal sealed record SlangGateOrigin(
     SlangBind Comparison,
     SlangIf Conditional);
 
+internal sealed record SlangReturnOrigin(
+    Label Label,
+    IShaderValue? Value,
+    SlangStatement Return);
+
+internal sealed record SlangCarrierBreakOrigin(
+    Label Owner,
+    Label NextBinding,
+    SlangDoOnce Carrier,
+    SlangBreak Break);
+
 internal sealed record SlangLoweringOrigins(
     VariableDeclaration? ControlToken,
     ImmutableDictionary<IShaderValue, VariableDeclaration> ParameterSlots,
     ImmutableDictionary<IShaderValue, VariableDeclaration> Captures,
     ImmutableArray<SlangParameterOrigin> Parameters,
     ImmutableArray<SlangDefinitionOrigin> Definitions,
+    ImmutableArray<SlangInstructionOrigin> Instructions,
     ImmutableArray<SlangTransferOrigin> Transfers,
     ImmutableArray<SlangConditionalOrigin> Conditionals,
-    ImmutableArray<SlangGateOrigin> Gates)
+    ImmutableArray<SlangGateOrigin> Gates,
+    ImmutableArray<SlangReturnOrigin> Returns,
+    ImmutableArray<SlangCarrierBreakOrigin> CarrierBreaks)
 {
     internal static SlangLoweringOrigins Empty { get; } = new(
         null,
         ImmutableDictionary<IShaderValue, VariableDeclaration>.Empty,
         ImmutableDictionary<IShaderValue, VariableDeclaration>.Empty,
+        [],
+        [],
+        [],
         [],
         [],
         [],

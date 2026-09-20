@@ -6,6 +6,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
@@ -20,20 +21,24 @@ internal static class CooperationTargetVerifier
         ShaderModuleDeclaration<SlangFunctionBody> target,
         CLSLCooperationFacts facts)
     {
+        var moduleStorage = source.Declarations.OfType<VariableDeclaration>()
+            .ToImmutableHashSet<VariableDeclaration>(ReferenceEqualityComparer.Instance);
         foreach (var participation in facts.EntryUniformQuadParticipations)
             foreach (var (function, labels) in participation.OriginalBlocks)
                 VerifyFunction(
                     participation,
                     source.FunctionDefinitions[function],
                     target.FunctionDefinitions[function],
-                    labels);
+                    labels,
+                    moduleStorage);
     }
 
     private static void VerifyFunction(
         EntryUniformQuadParticipation participation,
         RegionFunctionBody source,
         SlangFunctionBody target,
-        ImmutableArray<Label> labels)
+        ImmutableArray<Label> labels,
+        ImmutableHashSet<VariableDeclaration> moduleStorage)
     {
         var context =
             $"PortableWgsl target correspondence for entry '{participation.Entry.Name}', " +
@@ -49,6 +54,25 @@ internal static class CooperationTargetVerifier
                 throw Error(context, $"did not preserve label '{label.Name}' exactly once");
 
         var origins = target.Origins;
+        VerifyOriginalTransfers(
+            participation.Uniformity[source.Declaration],
+            source,
+            context);
+        var activeStorage = VerifyOriginalStorage(
+            participation.Uniformity[source.Declaration],
+            source,
+            moduleStorage,
+            context);
+        VerifyActivationTemplate(source, target, origins, context);
+        VerifyCarrierPartition(source, origins, tree, context);
+        VerifyReturns(
+            participation.Uniformity[source.Declaration],
+            source,
+            origins,
+            tree,
+            context);
+        VerifyBreaks(origins, tree, context);
+        VerifyOriginTables(source, origins, tree, context);
         VerifyControlledVariables(origins, tree, context);
         VerifyDefinitions(
             participation.Uniformity[source.Declaration],
@@ -64,8 +88,263 @@ internal static class CooperationTargetVerifier
             context);
         VerifyTransfers(source, origins, tree, context);
         VerifyGates(origins, tree, context);
-        VerifyRelevantSites(participation, source, tree, context);
-        VerifyControlDataflow(target, origins, context);
+        VerifyTerminalTemplates(source, origins, tree, context);
+        VerifyRelevantSites(participation, source, origins, tree, context);
+        VerifyClosedWorld(origins, tree, context);
+        VerifyControlDataflow(
+            activeStorage,
+            target,
+            origins,
+            context);
+    }
+
+    private static void VerifyOriginalTransfers(
+        CooperationFunctionUniformityFacts facts,
+        RegionFunctionBody source,
+        string context)
+    {
+        if (source.Control.Transfers.Length != facts.OriginalTransfers.Length)
+            throw Error(context, "original transfer count changed before target verification");
+        foreach (var transfer in facts.OriginalTransfers)
+            if (!CooperationUniformity.CooperationTransferFacts.Matches(
+                    source,
+                    transfer,
+                    allowPointerParameterErasure: true))
+                throw Error(
+                    context,
+                    $"original transfer from block '{transfer.Source.Name}', arm {transfer.Arm} " +
+                    "changed target/owner/kind/arguments");
+    }
+
+    private static ImmutableHashSet<VariableDeclaration> VerifyOriginalStorage(
+        CooperationFunctionUniformityFacts facts,
+        RegionFunctionBody source,
+        ImmutableHashSet<VariableDeclaration> moduleStorage,
+        string context)
+    {
+        var actual = source.UsedValues()
+            .OfType<VariablePointerValue>()
+            .Select(static value => value.Declaration)
+            .Where(static variable => variable.AddressSpace is not FunctionAddressSpace)
+            .ToImmutableHashSet<VariableDeclaration>(ReferenceEqualityComparer.Instance);
+        var whitelist = facts.OriginalNonFunctionStorage.ToImmutableHashSet<VariableDeclaration>(
+            ReferenceEqualityComparer.Instance);
+        if (facts.OriginalNonFunctionStorage.Any(variable =>
+                variable.AddressSpace is FunctionAddressSpace ||
+                !moduleStorage.Contains(variable)) ||
+            actual.Any(variable =>
+                !moduleStorage.Contains(variable) ||
+                !whitelist.Contains(variable)))
+            throw Error(context, "original non-function storage roots changed before target verification");
+        return actual;
+    }
+
+    private static void VerifyActivationTemplate(
+        RegionFunctionBody source,
+        SlangFunctionBody target,
+        SlangLoweringOrigins origins,
+        string context)
+    {
+        var expected = Activation(source.Body);
+        if (!expected.Escapes.IsEmpty)
+            throw Error(context, "source-derived activation template has unresolved transfers");
+        var declarations = target.Body.Statements.TakeWhile(static statement => statement is SlangDeclare).Count();
+        if (target.Body.Statements.Skip(declarations).Any(static statement => statement is SlangDeclare))
+            throw Error(context, "activation template contains a misplaced declaration");
+        MatchBlock(
+            expected.Body,
+            new SlangBlock([.. target.Body.Statements.Skip(declarations)]),
+            context);
+        return;
+
+        Template Activation(RegionTree<Label, ShaderRegionBody> region)
+        {
+            if (region.Definition.Kind is RegionKind.Loop)
+                throw Error(context, "activation template does not admit loops");
+            var suffix = Raw(region);
+            var bindings = region.Bindings.ToImmutableArray();
+            var innermost = true;
+            for (var index = bindings.Length - 1; index >= 0; index--)
+            {
+                var child = bindings[index];
+                var caught = new SlangContinuationOrigin(
+                    child.Label,
+                    region.Label,
+                    ScopedContinuationKind.Forward);
+                if (!suffix.Escapes.Contains(caught))
+                    throw Error(context, "activation template cannot consume its checked continuation");
+
+                var statements = ImmutableArray.CreateBuilder<SlangStatement>();
+                if (innermost)
+                {
+                    statements.AddRange(suffix.Body.Statements);
+                    innermost = false;
+                }
+                else
+                {
+                    var carrier = suffix.Body.Statements.ToBuilder();
+                    if (!suffix.Escapes.IsEmpty)
+                    {
+                        var carrierOrigin = Single(
+                            origins.CarrierBreaks,
+                            origin => ReferenceEquals(origin.Owner, region.Label) &&
+                                      ReferenceEquals(origin.NextBinding, child.Label),
+                            context,
+                            "source-derived carrier exit");
+                        carrier.Add(carrierOrigin.Break);
+                    }
+                    statements.Add(new SlangDoOnce(new SlangBlock(carrier.ToImmutable())));
+                }
+
+                var childTemplate = Activation(child);
+                if (suffix.Escapes.Count == 1)
+                {
+                    statements.AddRange(childTemplate.Body.Statements);
+                }
+                else
+                {
+                    var gate = Single(
+                        origins.Gates,
+                        origin => Equals(origin.Continuation, caught),
+                        context,
+                        "source-derived continuation gate");
+                    statements.Add(gate.Comparison);
+                    statements.Add(new SlangIf(
+                        gate.Conditional.Condition,
+                        childTemplate.Body,
+                        SlangBlock.Empty));
+                }
+
+                suffix = new(
+                    new SlangBlock(statements.ToImmutable()),
+                    suffix.Escapes.Remove(caught).Union(childTemplate.Escapes));
+            }
+            return suffix;
+        }
+
+        Template Raw(RegionTree<Label, ShaderRegionBody> region)
+        {
+            var statements = ImmutableArray.CreateBuilder<SlangStatement>();
+            foreach (var parameter in region.Body.Parameters)
+            {
+                var origin = Single(
+                    origins.Parameters,
+                    item => ReferenceEquals(item.Label, region.Label) &&
+                            ReferenceEquals(item.Parameter, parameter),
+                    context,
+                    "source-derived parameter load");
+                statements.Add(origin.Definition);
+                if (origin.Capture is not null)
+                    statements.Add(origin.Capture);
+            }
+
+            foreach (var (ordinal, instruction) in region.Body.Body.Elements.Index())
+            {
+                var origin = origins.Instructions.SingleOrDefault(item =>
+                    ReferenceEquals(item.Label, region.Label) &&
+                    item.InstructionOrdinal == ordinal);
+                if (origin is null)
+                {
+                    if (instruction.Operation is AddressOfMemberOperation or AddressOfVecComponentOperation)
+                        continue;
+                    throw Error(context, "activation template is missing a source instruction");
+                }
+                statements.Add(origin.Target);
+                var definition = origins.Definitions.SingleOrDefault(item =>
+                    ReferenceEquals(item.Label, region.Label) &&
+                    item.InstructionOrdinal == ordinal);
+                if (definition?.Capture is not null)
+                    statements.Add(definition.Capture);
+            }
+
+            ImmutableHashSet<SlangContinuationOrigin> escapes;
+            switch (region.Body.Body.Last)
+            {
+                case Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>:
+                case Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>:
+                    statements.Add(Single(
+                        origins.Returns,
+                        item => ReferenceEquals(item.Label, region.Label),
+                        context,
+                        "source-derived return").Return);
+                    escapes = ImmutableHashSet<SlangContinuationOrigin>.Empty;
+                    break;
+                case Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>:
+                    var transfer = Transfer(region.Label, 0);
+                    statements.AddRange(TransferStatements(transfer));
+                    escapes = ImmutableHashSet.Create(transfer.Continuation);
+                    break;
+                case Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>:
+                    var whenTrue = Transfer(region.Label, 0);
+                    var whenFalse = Transfer(region.Label, 1);
+                    var conditional = Single(
+                        origins.Conditionals,
+                        item => ReferenceEquals(item.Source, region.Label),
+                        context,
+                        "source-derived conditional");
+                    statements.Add(new SlangIf(
+                        conditional.Conditional.Condition,
+                        new SlangBlock(TransferStatements(whenTrue)),
+                        new SlangBlock(TransferStatements(whenFalse))));
+                    escapes = ImmutableHashSet.Create(whenTrue.Continuation, whenFalse.Continuation);
+                    break;
+                default:
+                    throw Error(context, "activation template encountered unsupported source control");
+            }
+
+            return new(
+                new SlangBlock(
+                [
+                    new SlangDoOnce(new SlangBlock(
+                    [
+                        new SlangScope(region.Label, new SlangBlock(statements.ToImmutable()))
+                    ]))
+                ]),
+                escapes);
+        }
+
+        SlangTransferOrigin Transfer(Label sourceLabel, int arm) =>
+            Single(
+                origins.Transfers,
+                item => ReferenceEquals(item.Source, sourceLabel) && item.Arm == arm,
+                context,
+                "source-derived transfer");
+
+        static ImmutableArray<SlangStatement> TransferStatements(SlangTransferOrigin transfer) =>
+        [
+            .. transfer.Arguments.Select(static argument => (SlangStatement)argument.Definition),
+            .. transfer.Arguments.Select(static argument => (SlangStatement)argument.Assignment),
+            transfer.TokenAssignment,
+            transfer.Break
+        ];
+    }
+
+    private static void MatchBlock(SlangBlock expected, SlangBlock actual, string context)
+    {
+        if (expected.Statements.Length != actual.Statements.Length)
+            throw Error(context, "actual AST does not match the source-derived activation template");
+        foreach (var (left, right) in expected.Statements.Zip(actual.Statements))
+        {
+            switch (left, right)
+            {
+                case (SlangScope expectedScope, SlangScope actualScope)
+                    when ReferenceEquals(expectedScope.OriginalLabel, actualScope.OriginalLabel):
+                    MatchBlock(expectedScope.Body, actualScope.Body, context);
+                    break;
+                case (SlangDoOnce expectedOnce, SlangDoOnce actualOnce):
+                    MatchBlock(expectedOnce.Body, actualOnce.Body, context);
+                    break;
+                case (SlangIf expectedIf, SlangIf actualIf)
+                    when Equals(expectedIf.Condition, actualIf.Condition):
+                    MatchBlock(expectedIf.WhenTrue, actualIf.WhenTrue, context);
+                    MatchBlock(expectedIf.WhenFalse, actualIf.WhenFalse, context);
+                    break;
+                default:
+                    if (!ReferenceEquals(left, right))
+                        throw Error(context, "actual AST does not match the source-derived activation template");
+                    break;
+            }
+        }
     }
 
     private static void VerifyDefinitions(
@@ -93,8 +372,19 @@ internal static class CooperationTargetVerifier
             var ordinal = fact.InstructionOrdinal ??
                 throw Error(context, "uniform operation fact has no instruction ordinal");
             var sourceInstruction = source[fact.Label].Body.Elements.ElementAt(ordinal);
-            if (!ReferenceEquals(sourceInstruction.Result, fact.Value))
-                throw Error(context, "uniform value fact does not identify its source definition");
+            if (!ReferenceEquals(sourceInstruction.Operation, fact.Operation) ||
+                !ReferenceEquals(sourceInstruction.Result, fact.Value) ||
+                !ReferenceEquals(sourceInstruction.Payload, fact.Payload) ||
+                !sourceInstruction.Operands.SequenceEqual(
+                    fact.Operands,
+                    ReferenceEqualityComparer.Instance) ||
+                (fact.Callee is not null &&
+                 (sourceInstruction.OperandCount == 0 ||
+                  !ReferenceEquals(sourceInstruction[0], fact.Callee))))
+                throw Error(
+                    context,
+                    $"uniform fact for block '{fact.Label.Name}', instruction {ordinal} " +
+                    "does not match the analyzed source definition");
             var origin = Single(
                 origins.Definitions,
                 item => ReferenceEquals(item.Label, fact.Label) &&
@@ -121,7 +411,7 @@ internal static class CooperationTargetVerifier
                 context);
         }
 
-        foreach (var returned in facts.UniformReturns)
+        foreach (var returned in facts.UniformReturns.Where(static returned => returned.IsUniform))
         {
             if (returned.Value is null)
                 continue;
@@ -140,6 +430,350 @@ internal static class CooperationTargetVerifier
                     context,
                     $"uniform return in block '{returned.Label.Name}' does not preserve value lineage");
         }
+    }
+
+    private static void VerifyOriginTables(
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context)
+    {
+        var parameters = new Dictionary<IShaderValue, Label>(ReferenceEqualityComparer.Instance);
+        source.Body.Traverse(region =>
+        {
+            foreach (var parameter in region.Body.Parameters)
+                parameters.Add(parameter, region.Label);
+        });
+        if (origins.Parameters.Length != parameters.Count)
+            throw Error(context, "block-parameter origin count does not match the source");
+        foreach (var origin in origins.Parameters)
+        {
+            if (!parameters.TryGetValue(origin.Parameter, out var label) ||
+                !ReferenceEquals(label, origin.Label))
+                throw Error(context, "block-parameter origin does not match its source definition");
+            RequirePresent(tree, origin.Definition, context);
+            RequireSourceScope(tree, origin.Definition, origin.Label, context);
+            VerifyParameterOrigin(origin, origins, tree, context);
+        }
+        if (origins.Parameters.Select(static origin => origin.Parameter)
+                .Distinct(ReferenceEqualityComparer.Instance).Count() != origins.Parameters.Length)
+            throw Error(context, "block parameter has multiple target origins");
+
+        var definitionSites = new HashSet<(Label Label, int Ordinal)>();
+        var definitionTargets = new HashSet<SlangBind>(ReferenceEqualityComparer.Instance);
+        foreach (var origin in origins.Definitions)
+        {
+            if (!definitionSites.Add((origin.Label, origin.InstructionOrdinal)) ||
+                !definitionTargets.Add(origin.Definition))
+                throw Error(context, "source definition has multiple target origins");
+            var sourceInstruction = SourceInstruction(source, origin.Label, origin.InstructionOrdinal, context);
+            if (!origin.Source.Equals(sourceInstruction))
+                throw Error(context, "definition origin does not match its source instruction");
+            RequirePresent(tree, origin.Definition, context);
+            RequireSourceScope(tree, origin.Definition, origin.Label, context);
+            var targetInstruction = origin.Definition.Instruction;
+            if (!ReferenceEquals(targetInstruction.Operation, sourceInstruction.Operation) ||
+                !ReferenceEquals(targetInstruction.Result, sourceInstruction.Result) ||
+                !ReferenceEquals(targetInstruction.Payload, sourceInstruction.Payload))
+                throw Error(context, "definition origin changed its source operation/result/operand lineage");
+            VerifyCapture(
+                sourceInstruction.Result ??
+                throw Error(context, "definition origin source has no result"),
+                origin.Definition,
+                origin.Capture,
+                origins,
+                tree,
+                context);
+        }
+
+        var instructionSites = new HashSet<(Label Label, int Ordinal)>();
+        var instructionTargets = new HashSet<SlangStatement>(ReferenceEqualityComparer.Instance);
+        var addressDefinitions = SourceDefinitions(source);
+        foreach (var origin in origins.Instructions)
+        {
+            if (!instructionSites.Add((origin.Label, origin.InstructionOrdinal)) ||
+                !instructionTargets.Add(origin.Target))
+                throw Error(context, "source instruction has multiple target origins");
+            var sourceInstruction = SourceInstruction(source, origin.Label, origin.InstructionOrdinal, context);
+            if (!origin.Source.Equals(sourceInstruction))
+                throw Error(context, "instruction origin does not match its source instruction");
+            RequirePresent(tree, origin.Target, context);
+            RequireSourceScope(tree, origin.Target, origin.Label, context);
+            switch (origin.Target)
+            {
+                case SlangBind binding:
+                    VerifyTargetInstruction(sourceInstruction, binding.Instruction, origins, context);
+                    break;
+                case SlangEffect effect:
+                    VerifyTargetInstruction(sourceInstruction, effect.Instruction, origins, context);
+                    break;
+                case SlangAssign assignment:
+                    if (!SourceAssignmentMatches(
+                            sourceInstruction,
+                            assignment,
+                            addressDefinitions,
+                            origins))
+                        throw Error(
+                            context,
+                            "source store/setter changed its typed target/value lineage");
+                    break;
+                default:
+                    throw Error(context, "instruction origin has the wrong target statement kind");
+            }
+        }
+
+        var sourceCalls = ImmutableArray.CreateBuilder<(Label Label, int Ordinal)>();
+        source.Body.Traverse((_, label, block) =>
+        {
+            foreach (var (ordinal, instruction) in block.Body.Elements.Index())
+                if (instruction.Operation is CallOperation)
+                    sourceCalls.Add((label, ordinal));
+            return false;
+        });
+        foreach (var call in sourceCalls)
+            if (!instructionSites.Contains(call))
+                throw Error(context, "source call is missing its exact target instruction origin");
+
+        foreach (var definition in origins.Definitions)
+        {
+            var instruction = origins.Instructions.SingleOrDefault(origin =>
+                ReferenceEquals(origin.Label, definition.Label) &&
+                origin.InstructionOrdinal == definition.InstructionOrdinal);
+            if (instruction is null || !ReferenceEquals(instruction.Target, definition.Definition))
+                throw Error(context, "definition and instruction origins disagree");
+        }
+    }
+
+    private static void VerifyTargetInstruction(
+        Instruction<IShaderValue, IShaderValue> source,
+        Instruction<SlangOperand, IShaderValue> target,
+        SlangLoweringOrigins origins,
+        string context)
+    {
+        if (!ReferenceEquals(target.Operation, source.Operation) ||
+            !ReferenceEquals(target.Result, source.Result) ||
+            !ReferenceEquals(target.Payload, source.Payload) ||
+            source.Operation is CallOperation &&
+            !OperandsMatch(source.Operands, target.Operands, origins))
+            throw Error(context, "instruction origin changed its source operation/result/operand lineage");
+    }
+
+    private static bool SourceAssignmentMatches(
+        Instruction<IShaderValue, IShaderValue> source,
+        SlangAssign target,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> addressDefinitions,
+        SlangLoweringOrigins origins) =>
+        source.Operation switch
+        {
+            StoreOperation =>
+                PlaceMatches(SourcePlace(source.Operand0!, addressDefinitions), target.Target) &&
+                OperandMatches(source.Operand1!, target.Value, origins),
+            IVectorComponentSetOperation component =>
+                PlaceMatches(
+                    new SlangComponentPlace(
+                        SourcePlace(source.Operand0!, addressDefinitions),
+                        component.Component.Name,
+                        component.ElementType),
+                    target.Target) &&
+                OperandMatches(source.Operand1!, target.Value, origins),
+            IVectorSwizzleSetOperation swizzle =>
+                PlaceMatches(
+                    new SlangSwizzlePlace(
+                        SourcePlace(source.Operand0!, addressDefinitions),
+                        swizzle.Pattern.Name,
+                        swizzle.ValueVecType),
+                    target.Target) &&
+                OperandMatches(source.Operand1!, target.Value, origins),
+            _ => false
+        };
+
+    private static SlangPlace SourcePlace(
+        IShaderValue value,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> addressDefinitions) =>
+        value switch
+        {
+            VariablePointerValue variable => new SlangVariablePlace(variable.Declaration),
+            ParameterPointerValue parameter => new SlangParameterPlace(parameter.Declaration),
+            _ when addressDefinitions.TryGetValue(value, out var definition) =>
+                definition.Operation switch
+                {
+                    AddressOfMemberOperation member =>
+                        new SlangMemberPlace(
+                            SourcePlace(definition.Operand0!, addressDefinitions),
+                            member.Member),
+                    AddressOfVecComponentOperation component =>
+                        new SlangComponentPlace(
+                            SourcePlace(definition.Operand0!, addressDefinitions),
+                            component.Component.Name,
+                            component.Target.ElementType),
+                    _ => throw new NotSupportedException(
+                        $"PortableWgsl cannot derive source place for '{value}'.")
+                },
+            _ => throw new NotSupportedException(
+                $"PortableWgsl cannot derive source place for '{value}'.")
+        };
+
+    private static bool PlaceMatches(SlangPlace expected, SlangPlace actual) =>
+        (expected, actual) switch
+        {
+            (SlangVariablePlace left, SlangVariablePlace right) =>
+                ReferenceEquals(left.Variable, right.Variable),
+            (SlangParameterPlace left, SlangParameterPlace right) =>
+                ReferenceEquals(left.Parameter, right.Parameter),
+            (SlangMemberPlace left, SlangMemberPlace right) =>
+                ReferenceEquals(left.Member, right.Member) &&
+                PlaceMatches(left.Target, right.Target),
+            (SlangComponentPlace left, SlangComponentPlace right) =>
+                left.Component == right.Component &&
+                Equals(left.ComponentType, right.ComponentType) &&
+                PlaceMatches(left.Target, right.Target),
+            (SlangSwizzlePlace left, SlangSwizzlePlace right) =>
+                left.Pattern == right.Pattern &&
+                Equals(left.SwizzleType, right.SwizzleType) &&
+                PlaceMatches(left.Target, right.Target),
+            _ => false
+        };
+
+    private static Dictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> SourceDefinitions(
+        RegionFunctionBody source)
+    {
+        var result = new Dictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>>(
+            ReferenceEqualityComparer.Instance);
+        source.Body.Traverse(region =>
+        {
+            foreach (var instruction in region.Body.Body.Elements)
+                if (instruction.Result is { } value)
+                    result.Add(value, instruction);
+        });
+        return result;
+    }
+
+    private static Instruction<IShaderValue, IShaderValue> SourceInstruction(
+        RegionFunctionBody source,
+        Label label,
+        int ordinal,
+        string context)
+    {
+        if (!source.Labels.Contains(label, ReferenceEqualityComparer.Instance) ||
+            ordinal < 0 ||
+            ordinal >= source[label].Body.Elements.Count())
+            throw Error(context, "origin references a missing source instruction");
+        return source[label].Body.Elements.ElementAt(ordinal);
+    }
+
+    private static void VerifyReturns(
+        CooperationFunctionUniformityFacts facts,
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context)
+    {
+        if (origins.Returns.Length != facts.UniformReturns.Length)
+            throw Error(context, "target return origin count does not match source return terminators");
+        foreach (var fact in facts.UniformReturns)
+        {
+            var origin = Single(
+                origins.Returns,
+                item => ReferenceEquals(item.Label, fact.Label),
+                context,
+                "source return origin");
+            RequirePresent(tree, origin.Return, context);
+            if (!ReferenceEquals(origin.Value, fact.Value))
+                throw Error(context, "target return origin changed its source value");
+            switch (source[fact.Label].Body.Last, origin.Return)
+            {
+                case (Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>, SlangReturnVoid):
+                    break;
+                case (
+                    Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned,
+                    SlangReturnValue targetReturn)
+                    when ReferenceEquals(returned.Expr, fact.Value) &&
+                         OperandMatches(returned.Expr, targetReturn.Value, origins):
+                    break;
+                default:
+                    throw Error(context, "target return does not preserve its source terminator/value");
+            }
+            var sourceScope = tree.Ancestors(origin.Return).OfType<SlangScope>().FirstOrDefault();
+            if (sourceScope is null || !ReferenceEquals(sourceScope.OriginalLabel, fact.Label))
+                throw Error(context, "target return moved outside its original terminal source scope");
+        }
+
+        var actual = tree.Statements.Where(static statement =>
+                statement is SlangReturnValue or SlangReturnVoid)
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        var accounted = origins.Returns.Select(static origin => origin.Return)
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        if (!actual.SetEquals(accounted))
+            throw Error(context, "target contains an unaccounted return");
+    }
+
+    private static void VerifyBreaks(
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context)
+    {
+        foreach (var origin in origins.CarrierBreaks)
+        {
+            RequirePresent(tree, origin.Carrier, context);
+            RequirePresent(tree, origin.Break, context);
+            if (!ReferenceEquals(tree.NearestDoOnce(origin.Break), origin.Carrier) ||
+                origin.Carrier.Body.Statements.IsEmpty ||
+                !ReferenceEquals(origin.Carrier.Body.Statements[^1], origin.Break) ||
+                !Descendants(origin.Carrier.Body).Any(statement =>
+                    statement is SlangScope { OriginalLabel: var label } &&
+                    ReferenceEquals(label, origin.Owner)))
+                throw Error(context, "synthetic carrier break has the wrong parent/position/owner");
+        }
+
+        var actual = tree.Statements.OfType<SlangBreak>()
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        var accounted = origins.Transfers.Select(static origin => origin.Break)
+            .Concat(origins.CarrierBreaks.Select(static origin => origin.Break))
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        if (!actual.SetEquals(accounted))
+            throw Error(context, "target contains an unaccounted break");
+    }
+
+    private static void VerifyCarrierPartition(
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context)
+    {
+        var parameterBuilder = ImmutableHashSet.CreateBuilder<IShaderValue>(
+            ReferenceEqualityComparer.Instance);
+        source.Body.Traverse(region =>
+        {
+            parameterBuilder.UnionWith(region.Body.Parameters);
+        });
+        var parameters = parameterBuilder.ToImmutable();
+        if (origins.ParameterSlots.Count != parameters.Count ||
+            !origins.ParameterSlots.Keys.ToHashSet(ReferenceEqualityComparer.Instance).SetEquals(parameters))
+            throw Error(context, "parameter-slot map does not match original block parameters");
+
+        var slots = origins.ParameterSlots.Values.ToArray();
+        var captures = origins.Captures.Values.ToArray();
+        if (slots.Distinct(ReferenceEqualityComparer.Instance).Count() != slots.Length ||
+            captures.Distinct(ReferenceEqualityComparer.Instance).Count() != captures.Length)
+            throw Error(context, "controlled parameter/capture slots are not injective");
+
+        var generated = slots.Concat(captures)
+            .Concat(origins.ControlToken is null ? [] : [origins.ControlToken])
+            .ToArray();
+        if (generated.Distinct(ReferenceEqualityComparer.Instance).Count() != generated.Length)
+            throw Error(context, "parameter slots, capture slots, and control token are not disjoint");
+        var originalStorage = source.LocalVariables
+            .Concat(source.UsedValues()
+                .OfType<VariablePointerValue>()
+                .Select(static value => value.Declaration))
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        if (generated.Any(originalStorage.Contains))
+            throw Error(context, "generated control carrier aliases original user storage");
+
+        var declarations = tree.Statements.OfType<SlangDeclare>().ToArray();
+        if (generated.Any(variable => declarations.Count(statement =>
+                ReferenceEquals(statement.Variable, variable)) != 1))
+            throw Error(context, "generated control carrier is not declared exactly once in the target AST");
     }
 
     private static void VerifyParameterOrigin(
@@ -385,23 +1019,82 @@ internal static class CooperationTargetVerifier
         }
     }
 
+    private static void VerifyTerminalTemplates(
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context)
+    {
+        foreach (var label in source.Labels)
+        {
+            var scope = Single(
+                tree.Statements.OfType<SlangScope>(),
+                item => ReferenceEquals(item.OriginalLabel, label),
+                context,
+                "source-label scope");
+            switch (source[label].Body.Last)
+            {
+                case Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>:
+                case Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>:
+                    var returned = Single(
+                        origins.Returns,
+                        origin => ReferenceEquals(origin.Label, label),
+                        context,
+                        "terminal return origin");
+                    if (!tree.IsLastDirect(returned.Return, scope.Body))
+                        throw Error(context, $"source block '{label.Name}' return is not terminal");
+                    break;
+                case Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>:
+                    var transfer = Single(
+                        origins.Transfers,
+                        origin => ReferenceEquals(origin.Source, label) && origin.Arm == 0,
+                        context,
+                        "terminal transfer origin");
+                    if (!tree.IsLastDirect(transfer.Break, scope.Body))
+                        throw Error(context, $"source block '{label.Name}' transfer is not terminal");
+                    break;
+                case Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>:
+                    var conditional = Single(
+                        origins.Conditionals,
+                        origin => ReferenceEquals(origin.Source, label),
+                        context,
+                        "terminal conditional origin");
+                    if (!tree.IsLastDirect(conditional.Conditional, scope.Body))
+                        throw Error(context, $"source block '{label.Name}' conditional is not terminal");
+                    foreach (var arm in new[] { 0, 1 })
+                    {
+                        var armTransfer = Single(
+                            origins.Transfers,
+                            origin => ReferenceEquals(origin.Source, label) && origin.Arm == arm,
+                            context,
+                            $"terminal conditional arm {arm}");
+                        var targetBlock = arm == 0
+                            ? conditional.Conditional.WhenTrue
+                            : conditional.Conditional.WhenFalse;
+                        if (!tree.IsLastDirect(armTransfer.Break, targetBlock))
+                            throw Error(
+                                context,
+                                $"source block '{label.Name}' conditional arm {arm} transfer is not terminal");
+                    }
+                    break;
+                default:
+                    throw Error(context, $"source block '{label.Name}' has an unsupported terminal template");
+            }
+        }
+    }
+
     private static void VerifyControlledVariables(
         SlangLoweringOrigins origins,
         TargetTree tree,
         string context)
     {
-        var allowedWrites = origins.Transfers.Select(static item => item.TokenAssignment)
-            .Concat(origins.Transfers.SelectMany(static item => item.Arguments)
-                .Select(static item => item.Assignment))
-            .Concat(origins.Parameters.Select(static item => item.Capture).OfType<SlangAssign>())
-            .Concat(origins.Definitions.Select(static item => item.Capture).OfType<SlangAssign>())
-            .ToHashSet(ReferenceEqualityComparer.Instance);
+        var allowedWrites = ControlledWrites(origins);
         var controlled = origins.ParameterSlots.Values
             .Concat(origins.Captures.Values)
             .Concat(origins.ControlToken is null ? [] : [origins.ControlToken])
             .ToHashSet(ReferenceEqualityComparer.Instance);
         foreach (var assignment in tree.Statements.OfType<SlangAssign>())
-            if (assignment.Target is SlangVariablePlace { Variable: var variable } &&
+            if (RootVariable(assignment.Target) is { } variable &&
                 controlled.Contains(variable) &&
                 !allowedWrites.Contains(assignment))
                 throw Error(context, "target contains an unaccounted control/capture/slot write");
@@ -420,36 +1113,118 @@ internal static class CooperationTargetVerifier
                     throw Error(context, "target contains an unaccounted control-token read");
     }
 
-    private static void VerifyRelevantSites(
-        EntryUniformQuadParticipation participation,
-        RegionFunctionBody source,
+    private static VariableDeclaration? RootVariable(SlangPlace place) =>
+        place switch
+        {
+            SlangVariablePlace variable => variable.Variable,
+            SlangMemberPlace member => RootVariable(member.Target),
+            SlangComponentPlace component => RootVariable(component.Target),
+            SlangSwizzlePlace swizzle => RootVariable(swizzle.Target),
+            _ => null
+        };
+
+    private static void VerifyClosedWorld(
+        SlangLoweringOrigins origins,
         TargetTree tree,
         string context)
     {
-        var targetInstructions = tree.Statements.Select(static statement =>
-                (Instruction<SlangOperand, IShaderValue>?)(statement switch
-                {
-                    SlangBind binding => binding.Instruction,
-                    SlangEffect effect => effect.Instruction,
-                    _ => null
-                }))
-            .OfType<Instruction<SlangOperand, IShaderValue>>()
-            .ToImmutableArray();
-        foreach (var site in RelevantSites(participation, source.Declaration))
+        var instructionTargets = origins.Instructions.Select(static origin => origin.Target)
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        var allowedBinds = instructionTargets.OfType<SlangBind>()
+            .Concat(origins.Parameters.Select(static origin => origin.Definition))
+            .Concat(origins.Transfers.SelectMany(static origin => origin.Arguments)
+                .Select(static origin => origin.Definition))
+            .Concat(origins.Gates.Select(static origin => origin.Comparison))
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        var results = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        foreach (var binding in tree.Statements.OfType<SlangBind>())
         {
-            var sourceInstruction = source[site.Label].Body.Elements.ElementAt(site.InstructionOrdinal);
-            if (targetInstructions.Count(instruction =>
-                    ReferenceEquals(instruction.Operation, sourceInstruction.Operation) &&
-                    ReferenceEquals(instruction.Result, sourceInstruction.Result) &&
-                    ReferenceEquals(instruction.Payload, sourceInstruction.Payload)) != 1)
+            if (!allowedBinds.Contains(binding))
                 throw Error(
                     context,
-                    $"did not preserve exactly one placement of block '{site.Label.Name}', operation " +
-                    $"'{sourceInstruction.Operation.Name}'");
+                    binding.Instruction.Operation is CallOperation
+                        ? "target contains an unaccounted target call"
+                        : "target contains an unaccounted target definition");
+            if (!results.Add(binding.Instruction.Result!))
+                throw Error(context, "target defines one SSA result more than once");
+        }
+
+        var allowedEffects = instructionTargets.OfType<SlangEffect>()
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        foreach (var effect in tree.Statements.OfType<SlangEffect>())
+            if (!allowedEffects.Contains(effect))
+                throw Error(context, "target contains an unaccounted effect");
+
+        var allowedAssignments = instructionTargets.OfType<SlangAssign>()
+            .Concat(ControlledWrites(origins))
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        foreach (var assignment in tree.Statements.OfType<SlangAssign>())
+            if (!allowedAssignments.Contains(assignment))
+                throw Error(context, "target contains an unaccounted write");
+    }
+
+    private static HashSet<SlangAssign> ControlledWrites(SlangLoweringOrigins origins) =>
+        origins.Transfers.Select(static item => item.TokenAssignment)
+            .Concat(origins.Transfers.SelectMany(static item => item.Arguments)
+                .Select(static item => item.Assignment))
+            .Concat(origins.Parameters.Select(static item => item.Capture).OfType<SlangAssign>())
+            .Concat(origins.Definitions.Select(static item => item.Capture).OfType<SlangAssign>())
+            .ToHashSet<SlangAssign>(ReferenceEqualityComparer.Instance);
+
+    private static void VerifyRelevantSites(
+        EntryUniformQuadParticipation participation,
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context)
+    {
+        foreach (var fact in participation.OriginalRelevantInstructions.Where(
+                     fact => ReferenceEquals(fact.Function, source.Declaration)))
+        {
+            var sourceInstruction = source[fact.Label].Body.Elements.ElementAt(fact.InstructionOrdinal);
+            if (!ReferenceEquals(sourceInstruction.Operation, fact.Operation) ||
+                !ReferenceEquals(sourceInstruction.Result, fact.Result) ||
+                !ReferenceEquals(sourceInstruction.Payload, fact.Payload) ||
+                !sourceInstruction.Operands.SequenceEqual(
+                    fact.Operands,
+                    ReferenceEqualityComparer.Instance))
+                throw Error(
+                    context,
+                    $"relevant operation fact for block '{fact.Label.Name}', instruction " +
+                    $"{fact.InstructionOrdinal} does not match the analyzed source");
+            var origin = Single(
+                origins.Instructions,
+                item => ReferenceEquals(item.Label, fact.Label) &&
+                        item.InstructionOrdinal == fact.InstructionOrdinal &&
+                        item.Source.Equals(sourceInstruction),
+                context,
+                "relevant operation origin");
+            RequirePresent(tree, origin.Target, context);
+            var targetInstruction = origin.Target switch
+            {
+                SlangBind binding => binding.Instruction,
+                SlangEffect effect => effect.Instruction,
+                _ => throw Error(context, "relevant operation origin is not a target instruction")
+            };
+            if (!ReferenceEquals(targetInstruction.Operation, sourceInstruction.Operation) ||
+                !ReferenceEquals(targetInstruction.Result, sourceInstruction.Result) ||
+                !ReferenceEquals(targetInstruction.Payload, sourceInstruction.Payload) ||
+                !OperandsMatch(sourceInstruction.Operands, targetInstruction.Operands, origins))
+                throw Error(
+                    context,
+                    $"relevant operation in block '{fact.Label.Name}', instruction " +
+                    $"{fact.InstructionOrdinal} changed its callee/operand lineage");
+            var sourceScope = tree.Ancestors(origin.Target).OfType<SlangScope>().FirstOrDefault();
+            if (sourceScope is null || !ReferenceEquals(sourceScope.OriginalLabel, fact.Label))
+                throw Error(
+                    context,
+                    $"relevant operation in block '{fact.Label.Name}', instruction " +
+                    $"{fact.InstructionOrdinal} moved outside its original source-label scope");
         }
     }
 
     private static void VerifyControlDataflow(
+        ImmutableHashSet<VariableDeclaration> activeStorage,
         SlangFunctionBody target,
         SlangLoweringOrigins origins,
         string context)
@@ -458,7 +1233,7 @@ internal static class CooperationTargetVerifier
             static item => item.Conditional,
             static item => item,
             ReferenceEqualityComparer.Instance);
-        var initial = ImmutableArray.Create(TargetState.Empty);
+        var initial = ImmutableArray.Create(TargetState.WithVariables(activeStorage));
         var result = Execute(target.Body, initial, gates, origins.ControlToken, context);
         if (!result.Breaks.IsEmpty)
             throw Error(context, "root target block has an unowned break");
@@ -631,17 +1406,6 @@ internal static class CooperationTargetVerifier
         return false;
     }
 
-    private static IEnumerable<(Label Label, int InstructionOrdinal)> RelevantSites(
-        EntryUniformQuadParticipation participation,
-        FunctionDeclaration function) =>
-        participation.OriginalSensitiveSites
-            .Where(site => ReferenceEquals(site.Function, function))
-            .Select(static site => (site.Label, site.InstructionOrdinal))
-            .Concat(participation.CallInheritance
-                .Where(site => ReferenceEquals(site.Caller, function))
-                .Select(static site => (site.Label, site.InstructionOrdinal)))
-            .Distinct();
-
     private static T Single<T>(
         IEnumerable<T> source,
         Func<T, bool> predicate,
@@ -658,6 +1422,17 @@ internal static class CooperationTargetVerifier
     {
         if (!tree.Contains(statement))
             throw Error(context, "origin references a target statement that is not in the actual AST");
+    }
+
+    private static void RequireSourceScope(
+        TargetTree tree,
+        SlangStatement statement,
+        Label label,
+        string context)
+    {
+        var scope = tree.Ancestors(statement).OfType<SlangScope>().FirstOrDefault();
+        if (scope is null || !ReferenceEquals(scope.OriginalLabel, label))
+            throw Error(context, $"target instruction moved outside source-label scope '{label.Name}'");
     }
 
     private static IEnumerable<SlangStatement> Descendants(SlangBlock block)
@@ -732,6 +1507,11 @@ internal static class CooperationTargetVerifier
         internal SlangDoOnce? NearestDoOnce(SlangStatement statement) =>
             Ancestors(statement).OfType<SlangDoOnce>().FirstOrDefault();
 
+        internal bool IsLastDirect(SlangStatement statement, SlangBlock block) =>
+            locations.TryGetValue(statement, out var location) &&
+            ReferenceEquals(location.Block, block) &&
+            location.Index == block.Statements.Length - 1;
+
         private void Collect(SlangBlock block, SlangStatement? parent, string context)
         {
             foreach (var (index, statement) in block.Statements.Index())
@@ -770,6 +1550,9 @@ internal static class CooperationTargetVerifier
             ImmutableHashSet.Create<VariableDeclaration>(ReferenceEqualityComparer.Instance),
             null);
 
+        internal static TargetState WithVariables(ImmutableHashSet<VariableDeclaration> variables) =>
+            Empty with { Variables = variables };
+
         internal TargetState Define(IShaderValue value) => this with { Values = Values.Add(value) };
 
         internal TargetState Assign(
@@ -801,4 +1584,8 @@ internal static class CooperationTargetVerifier
                 Normalize([.. left.Normal, .. right.Normal]),
                 Normalize([.. left.Breaks, .. right.Breaks]));
     }
+
+    private readonly record struct Template(
+        SlangBlock Body,
+        ImmutableHashSet<SlangContinuationOrigin> Escapes);
 }

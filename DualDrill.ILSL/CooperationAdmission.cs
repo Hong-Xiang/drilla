@@ -23,11 +23,21 @@ public sealed record CooperationCallSite(
     FunctionDeclaration Callee,
     object? Payload);
 
+public sealed record CooperationInstructionFact(
+    FunctionDeclaration Function,
+    Label Label,
+    int InstructionOrdinal,
+    IOperation Operation,
+    IShaderValue? Result,
+    ImmutableArray<IShaderValue> Operands,
+    object? Payload);
+
 public sealed record EntryUniformQuadParticipation(
     FunctionDeclaration Entry,
     ImmutableDictionary<FunctionDeclaration, ImmutableArray<Label>> OriginalBlocks,
     ImmutableArray<OperationRequirementSite> OriginalSensitiveSites,
     ImmutableArray<CooperationCallSite> CallInheritance,
+    ImmutableArray<CooperationInstructionFact> OriginalRelevantInstructions,
     ImmutableDictionary<FunctionDeclaration, CooperationFunctionUniformityFacts> Uniformity);
 
 public sealed record CLSLCooperationFacts(
@@ -224,28 +234,31 @@ internal static class CooperationAdmission
             foreach (var builtin in uniformity.UniformBuiltinCalls)
             {
                 var targetName = builtin.Builtin.Name == "mix" ? "lerp" : builtin.Builtin.Name;
-                var collision = normalized.Declarations
+                var uniformCollision = normalized.Declarations
                     .OfType<FunctionDeclaration>()
                     .FirstOrDefault(function =>
                         string.Equals(function.Name, targetName, StringComparison.Ordinal));
-                if (collision is not null)
+                if (uniformCollision is not null)
                     throw new NotSupportedException(
                         $"PortableWgsl entry '{entry.Function.Name}', function '{builtin.Function.Name}', " +
                         $"block '{builtin.Label.Name}', operation 'call': numeric builtin " +
                         $"'{builtin.Builtin.Name}' supporting a uniformity proof maps to target spelling " +
-                        $"'{targetName}', which collides with module declaration '{collision.Name}'.");
+                        $"'{targetName}', which collides with module declaration '{uniformCollision.Name}'.");
             }
 
+            var callInheritance = closure.SelectMany(function => calls[function]).ToImmutableArray();
+            var sensitiveSites = summary.RequirementSites
+                .Where(static site => (site.Requirements & SensitiveRequirements) != 0)
+                .ToImmutableArray();
             participation.Add(new EntryUniformQuadParticipation(
                 entry.Function,
                 ImmutableDictionary.CreateRange(
                     ReferenceEqualityComparer.Instance,
                     uniformity.Functions.Select(static item =>
                         KeyValuePair.Create(item.Key, item.Value.OriginalBlocks))),
-                summary.RequirementSites
-                    .Where(static site => (site.Requirements & SensitiveRequirements) != 0)
-                    .ToImmutableArray(),
-                closure.SelectMany(function => calls[function]).ToImmutableArray(),
+                sensitiveSites,
+                callInheritance,
+                RelevantInstructionFacts(normalized, sensitiveSites, callInheritance),
                 uniformity.Functions));
         }
 
@@ -324,6 +337,32 @@ internal static class CooperationAdmission
         });
         return result.ToImmutable();
     }
+
+    private static ImmutableArray<CooperationInstructionFact> RelevantInstructionFacts(
+        ShaderModuleDeclaration<RegionFunctionBody> module,
+        ImmutableArray<OperationRequirementSite> sensitiveSites,
+        ImmutableArray<CooperationCallSite> calls) =>
+    [
+        .. sensitiveSites
+            .Select(static site => (site.Function, site.Label, site.InstructionOrdinal))
+            .Concat(calls.Select(static site => (site.Caller, site.Label, site.InstructionOrdinal)))
+            .Distinct()
+            .Select(site =>
+            {
+                var instruction = InstructionAt(
+                    module.FunctionDefinitions[site.Item1],
+                    site.Label,
+                    site.InstructionOrdinal);
+                return new CooperationInstructionFact(
+                    site.Item1,
+                    site.Label,
+                    site.InstructionOrdinal,
+                    instruction.Operation,
+                    instruction.Result,
+                    [.. instruction.Operands],
+                    instruction.Payload);
+            })
+    ];
 
     private static void CheckDerivative(
         ShaderModuleDeclaration<RegionFunctionBody> module,
@@ -442,6 +481,7 @@ internal static class CooperationAdmission
         foreach (var participation in facts.EntryUniformQuadParticipations)
             foreach (var (function, labels) in participation.OriginalBlocks)
             {
+                var sourceBody = source.FunctionDefinitions[function];
                 var pointerBody = pointer.FunctionDefinitions[function];
                 if (labels.Length != pointerBody.Labels.Length ||
                     !labels.ToHashSet(ReferenceEqualityComparer.Instance)
@@ -449,18 +489,92 @@ internal static class CooperationAdmission
                     throw new NotSupportedException(
                         $"PortableWgsl pointer lowering changed original block identity in " +
                         $"function '{function.Name}' for entry '{participation.Entry.Name}'.");
-                foreach (var site in RelevantSites(participation, function))
+                foreach (var fact in participation.OriginalRelevantInstructions.Where(
+                             fact => ReferenceEquals(fact.Function, function)))
                 {
                     var before = InstructionAt(
-                        source.FunctionDefinitions[function],
-                        site.Label,
-                        site.InstructionOrdinal);
-                    var after = InstructionAt(pointerBody, site.Label, site.InstructionOrdinal);
-                    if (!SameInstruction(before, after))
+                        sourceBody,
+                        fact.Label,
+                        fact.InstructionOrdinal);
+                    var after = InstructionAt(pointerBody, fact.Label, fact.InstructionOrdinal);
+                    if (!MatchesInstructionFact(before, fact) || !SameInstruction(before, after))
                         throw new NotSupportedException(
                             $"PortableWgsl pointer lowering did not preserve exactly one placement of " +
-                            $"function '{function.Name}', block '{site.Label.Name}', operation " +
+                            $"function '{function.Name}', block '{fact.Label.Name}', operation " +
                             $"'{before.Operation.Name}'{Provenance(before.Payload)}.");
+                }
+
+                var uniformity = participation.Uniformity[function];
+                if (sourceBody.Control.Transfers.Length != uniformity.OriginalTransfers.Length ||
+                    pointerBody.Control.Transfers.Length != uniformity.OriginalTransfers.Length)
+                    throw PointerProofError(
+                        participation,
+                        function,
+                        sourceBody.Entry,
+                        "original transfer count changed");
+                foreach (var transfer in uniformity.OriginalTransfers)
+                    if (!CooperationUniformity.CooperationTransferFacts.Matches(
+                            sourceBody,
+                            transfer,
+                            allowPointerParameterErasure: false) ||
+                        !CooperationUniformity.CooperationTransferFacts.Matches(
+                            pointerBody,
+                            transfer,
+                            allowPointerParameterErasure: true))
+                        throw PointerProofError(
+                            participation,
+                            function,
+                            transfer.Source,
+                            $"original transfer arm {transfer.Arm} target/owner/kind/arguments changed");
+
+                foreach (var fact in uniformity.UniformValues)
+                {
+                    if (fact.Kind is CooperationUniformValueKind.BlockParameter)
+                    {
+                        var position = sourceBody[fact.Label].Parameters.IndexOf(fact.Value);
+                        if (position < 0)
+                            throw PointerProofError(
+                                participation,
+                                function,
+                                fact.Label,
+                                "uniform block parameter identity changed");
+                        continue;
+                    }
+
+                    var ordinal = fact.InstructionOrdinal ??
+                        throw PointerProofError(
+                            participation,
+                            function,
+                            fact.Label,
+                            "uniform definition has no source instruction");
+                    var before = InstructionAt(sourceBody, fact.Label, ordinal);
+                    var after = InstructionAt(pointerBody, fact.Label, ordinal);
+                    if (!MatchesUniformFact(before, fact) || !SameInstruction(before, after))
+                        throw PointerProofError(
+                            participation,
+                            function,
+                            fact.Label,
+                            "proof-relevant uniform definition changed");
+                }
+
+                foreach (var binding in uniformity.UniformBindings)
+                {
+                    var beforeJump = JumpAt(sourceBody[binding.Source].Body.Last, binding.Arm);
+                    if (!ReferenceEquals(beforeJump.Label, binding.Target) ||
+                        beforeJump.Arguments.Length <= binding.ParameterPosition ||
+                        !ReferenceEquals(
+                            beforeJump.Arguments[binding.ParameterPosition],
+                            binding.Argument) ||
+                        sourceBody[binding.Target].Parameters.Length <= binding.ParameterPosition ||
+                        !ReferenceEquals(
+                            sourceBody[binding.Target].Parameters[binding.ParameterPosition],
+                            binding.Parameter))
+                        throw PointerProofError(
+                            participation,
+                            function,
+                            binding.Source,
+                            $"uniform incoming binding arm {binding.Arm}, parameter " +
+                            $"{binding.ParameterPosition} changed");
                 }
             }
     }
@@ -470,17 +584,6 @@ internal static class CooperationAdmission
         ShaderModuleDeclaration<SlangFunctionBody> target,
         CLSLCooperationFacts facts) =>
         CooperationTargetVerifier.Verify(pointer, target, facts);
-
-    private static IEnumerable<(Label Label, int InstructionOrdinal)> RelevantSites(
-        EntryUniformQuadParticipation participation,
-        FunctionDeclaration function) =>
-        participation.OriginalSensitiveSites
-            .Where(site => ReferenceEquals(site.Function, function))
-            .Select(static site => (site.Label, site.InstructionOrdinal))
-            .Concat(participation.CallInheritance
-                .Where(site => ReferenceEquals(site.Caller, function))
-                .Select(static site => (site.Label, site.InstructionOrdinal)))
-            .Distinct();
 
     private static Instruction<IShaderValue, IShaderValue> InstructionAt(
         RegionFunctionBody body,
@@ -493,7 +596,46 @@ internal static class CooperationAdmission
         Instruction<IShaderValue, IShaderValue> after) =>
         ReferenceEquals(before.Operation, after.Operation) &&
         ReferenceEquals(before.Result, after.Result) &&
-        ReferenceEquals(before.Payload, after.Payload);
+        ReferenceEquals(before.Payload, after.Payload) &&
+        before.Operands.SequenceEqual(after.Operands, ReferenceEqualityComparer.Instance);
+
+    private static bool MatchesUniformFact(
+        Instruction<IShaderValue, IShaderValue> instruction,
+        CooperationUniformValueFact fact) =>
+        ReferenceEquals(instruction.Operation, fact.Operation) &&
+        ReferenceEquals(instruction.Result, fact.Value) &&
+        ReferenceEquals(instruction.Payload, fact.Payload) &&
+        instruction.Operands.SequenceEqual(fact.Operands, ReferenceEqualityComparer.Instance) &&
+        (fact.Callee is null ||
+         instruction.OperandCount > 0 && ReferenceEquals(instruction[0], fact.Callee));
+
+    private static bool MatchesInstructionFact(
+        Instruction<IShaderValue, IShaderValue> instruction,
+        CooperationInstructionFact fact) =>
+        ReferenceEquals(instruction.Operation, fact.Operation) &&
+        ReferenceEquals(instruction.Result, fact.Result) &&
+        ReferenceEquals(instruction.Payload, fact.Payload) &&
+        instruction.Operands.SequenceEqual(fact.Operands, ReferenceEqualityComparer.Instance);
+
+    private static RegionJump<IShaderValue> JumpAt(
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
+        int arm) =>
+        terminator switch
+        {
+            Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch when arm == 0 => branch.Target,
+            Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch when arm == 0 => branch.TrueTarget,
+            Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch when arm == 1 => branch.FalseTarget,
+            _ => throw new NotSupportedException($"PortableWgsl source control arm {arm} changed.")
+        };
+
+    private static NotSupportedException PointerProofError(
+        EntryUniformQuadParticipation participation,
+        FunctionDeclaration function,
+        Label label,
+        string reason) =>
+        new(
+            $"PortableWgsl pointer lowering changed analyzed uniformity proof for entry " +
+            $"'{participation.Entry.Name}', function '{function.Name}', block '{label.Name}': {reason}.");
 
     private static NotSupportedException ShapeError(
         FunctionDeclaration entry,

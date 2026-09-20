@@ -17,6 +17,7 @@ using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.CodeTextWriter;
+using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
 using Xunit.Abstractions;
 
@@ -158,6 +159,103 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         Assert.Contains("if", slang);
         Assert.Contains("ddx(", slang);
         Assert.Contains("dpdx(", wgsl);
+    }
+
+    [Fact]
+    public void PortableDerivativeCanReadExistingUniformStructStorage()
+    {
+        var shader = new UniformStorageDerivativeShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var fragment = Assert.Single(
+            raw.FunctionDefinitions,
+            item => item.Key.Name == nameof(UniformStorageDerivativeShader.Fragment));
+        var slang = Emit(shader, CLSLCompileTarget.SLang);
+        var wgsl = Emit(shader, CLSLCompileTarget.WGSL);
+
+        output.WriteLine("=== C3 uniform storage CIL ===");
+        output.WriteLine(fragment.Value.PrettyPrint());
+        output.WriteLine("=== C3 uniform storage Slang ===");
+        output.WriteLine(slang);
+        output.WriteLine("=== C3 uniform storage WGSL ===");
+        output.WriteLine(wgsl);
+
+        Assert.Contains("ddx(", slang);
+        Assert.Contains("dpdx(", wgsl);
+    }
+
+    [Fact]
+    public void UnreferencedNonlocalStorageIsNotInitiallyDefined()
+    {
+        var shader = new UniformStorageDerivativeShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var original = Assert.Single(source.Declarations.OfType<VariableDeclaration>());
+        var unreferenced = new VariableDeclaration(
+            original.AddressSpace,
+            "unreferenced",
+            original.Type,
+            original.Attributes);
+        source = new(
+            [.. source.Declarations, unreferenced],
+            source.FunctionDefinitions);
+        var facts = CLSLCooperationAnalysis.Analyze(source);
+        var pointer = source.RunPass(new StablePointerRegionParameterPass());
+        var target = new SlangTargetLowering().Lower(pointer);
+        var entry = target.FunctionDefinitions.Keys.Single(function =>
+            function.Name == nameof(UniformStorageDerivativeShader.Fragment));
+        var body = target.GetBody(entry);
+        var load = body.Origins.Definitions.Single(origin =>
+            origin.Source.Operation is LoadOperation &&
+            origin.Definition.Instruction.Operands.Single() is SlangPlaceOperand
+            {
+                Place: SlangMemberPlace
+            });
+        var member = Assert.IsType<SlangMemberPlace>(
+            Assert.IsType<SlangPlaceOperand>(load.Definition.Instruction.Operands.Single()).Place);
+        var corruptedLoad = new SlangBind(
+            load.Definition.Instruction.Select(
+                operand => operand is SlangPlaceOperand { Place: SlangMemberPlace }
+                    ? new SlangPlaceOperand(new SlangMemberPlace(
+                        new SlangVariablePlace(unreferenced),
+                        member.Member))
+                    : operand,
+                static result => result));
+        var corruptedBody = Rewrite(
+            body,
+            statement => ReferenceEquals(statement, load.Definition)
+                ? corruptedLoad
+                : statement);
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            target.Declarations,
+            target.FunctionDefinitions.SetItem(entry, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(pointer, corrupted, facts));
+
+        Assert.Contains("without a reaching definition", error.Message);
+    }
+
+    [Fact]
+    public void ErasedUnusedGlobalPointerDoesNotRemainAnActiveStorageRoot()
+    {
+        var fixture = CreateUnusedGlobalPointerFixture();
+        var prepared = PrepareTarget(fixture.Module);
+        var sourceBody = fixture.Module.GetBody(fixture.Function);
+        var pointerBody = prepared.Pointer.GetBody(fixture.Function);
+        var sourceJump = Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(
+            sourceBody[sourceBody.Entry].Body.Last).Target;
+        var pointerJump = Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(
+            pointerBody[pointerBody.Entry].Body.Last).Target;
+        var uniformity = Assert.Single(
+            Assert.Single(prepared.Facts.EntryUniformQuadParticipations).Uniformity.Values);
+
+        Assert.Single(sourceBody[fixture.Body].Parameters);
+        Assert.Single(sourceJump.Arguments);
+        Assert.Same(fixture.Storage.Value, sourceJump.Arguments[0]);
+        Assert.Single(uniformity.OriginalNonFunctionStorage);
+        Assert.Same(fixture.Storage, uniformity.OriginalNonFunctionStorage[0]);
+        Assert.Empty(pointerBody[fixture.Body].Parameters);
+        Assert.Empty(pointerJump.Arguments);
     }
 
     [Fact]
@@ -382,8 +480,673 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
                     corrupted,
                     prepared.Facts));
             output.WriteLine($"{item.Name}: {error.Message}");
-            Assert.Contains(item.Expected, error.Message);
+            AssertVerifierRejection(error, item.Expected);
         }
+    }
+
+    [Fact]
+    public void StaleUniformFactsCannotCertifyChangedPointerProducer()
+    {
+        var module = PhiConditionalModule();
+        var function = Assert.Single(module.FunctionDefinitions.Keys);
+        var body = module.GetBody(function);
+        var condition = Assert.Single(body[body.Entry].Body.Elements).Result!;
+        var varying = ShaderValue.Intermediate(ShaderType.Bool);
+        var literalTrue = ShaderValue.Literal(new BoolLiteral(true));
+        var load = Instruction<IShaderValue, IShaderValue>.Create(
+            new LoadOperation(),
+            varying,
+            [function.Parameters[0].Value]);
+        var uniform = Instruction<IShaderValue, IShaderValue>.Create(
+            LogicalBinaryOperation<LogicalAnd>.Instance,
+            condition,
+            [literalTrue, literalTrue],
+            "uniform-and");
+        body = body.MapRegionBody(block => ReferenceEquals(block.Label, body.Entry)
+            ? block with { Body = Seq.Create(new[] { load, uniform }, block.Body.Last) }
+            : block);
+        module = new(
+            module.Declarations,
+            module.FunctionDefinitions.SetItem(function, body));
+        var facts = CLSLCooperationAnalysis.Analyze(module);
+        var pointer = module.RunPass(new StablePointerRegionParameterPass());
+        var corruptedBody = pointer.GetBody(function).MapRegionBody(block =>
+            ReferenceEquals(block.Label, body.Entry)
+                ? block with
+                {
+                    Body = Seq.Create(
+                        new[]
+                        {
+                            load,
+                            Instruction<IShaderValue, IShaderValue>.Create(
+                                uniform.Operation,
+                                condition,
+                                [varying, literalTrue],
+                                uniform.Payload)
+                        },
+                        block.Body.Last)
+                }
+                : block);
+        var corruptedPointer = new ShaderModuleDeclaration<RegionFunctionBody>(
+            pointer.Declarations,
+            pointer.FunctionDefinitions.SetItem(function, corruptedBody));
+
+        var fresh = Assert.Throws<NotSupportedException>(() =>
+            CLSLCooperationAnalysis.Analyze(corruptedPointer));
+        var stale = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                corruptedPointer,
+                new SlangTargetLowering().Lower(corruptedPointer),
+                facts));
+
+        Assert.Contains("conditional control is varying", fresh.Message);
+        Assert.Contains("does not match the analyzed source definition", stale.Message);
+    }
+
+    [Fact]
+    public void TargetVerifierRejectsAliasedUniformAndVaryingParameterSlots()
+    {
+        var module = PhiConditionalModule();
+        var function = Assert.Single(module.FunctionDefinitions.Keys);
+        var body = module.GetBody(function);
+        var entry = body.Entry;
+        var condition = Assert.Single(body[entry].Body.Elements).Result!;
+        var varying = ShaderValue.Intermediate(ShaderType.Bool);
+        var literalTrue = ShaderValue.Literal(new BoolLiteral(true));
+        var load = Instruction<IShaderValue, IShaderValue>.Create(
+            new LoadOperation(),
+            varying,
+            [function.Parameters[0].Value]);
+        var uniform = Instruction<IShaderValue, IShaderValue>.Create(
+            LogicalBinaryOperation<LogicalAnd>.Instance,
+            condition,
+            [literalTrue, literalTrue]);
+        var join = body.Labels.Single(label => label.Name == "join");
+        var uniformParameter = Assert.Single(body[join].Parameters);
+        var varyingParameter = ShaderValue.Intermediate(ShaderType.Bool);
+        body = body.MapRegionBody(block =>
+        {
+            var terminator = block.Body.Last.Select(
+                jump => ReferenceEquals(jump.Label, join)
+                    ? new RegionJump<IShaderValue>(jump.Label, [.. jump.Arguments, varying])
+                    : jump,
+                static value => value);
+            var elements = ReferenceEquals(block.Label, entry)
+                ? [load, uniform]
+                : block.Body.Elements;
+            return block with
+            {
+                Parameters = ReferenceEquals(block.Label, join)
+                    ? [.. block.Parameters, varyingParameter]
+                    : block.Parameters,
+                Body = Seq.Create(elements, terminator)
+            };
+        });
+        module = new(
+            module.Declarations,
+            module.FunctionDefinitions.SetItem(function, body));
+        var prepared = PrepareTarget(module);
+        var targetBody = prepared.Target.GetBody(function);
+        var uniformSlot = targetBody.Origins.ParameterSlots[uniformParameter];
+        var varyingSlot = targetBody.Origins.ParameterSlots[varyingParameter];
+        SlangPlace ReplacePlace(SlangPlace place) =>
+            place is SlangVariablePlace variable && ReferenceEquals(variable.Variable, varyingSlot)
+                ? new SlangVariablePlace(uniformSlot)
+                : place;
+        SlangOperand ReplaceOperand(SlangOperand operand) =>
+            operand is SlangPlaceOperand place
+                ? new SlangPlaceOperand(ReplacePlace(place.Place))
+                : operand;
+        var aliased = Rewrite(targetBody, statement => statement switch
+        {
+            SlangBind bind => new SlangBind(
+                bind.Instruction.Select(ReplaceOperand, static value => value)),
+            SlangAssign assignment => new SlangAssign(
+                ReplacePlace(assignment.Target),
+                ReplaceOperand(assignment.Value)),
+            _ => statement
+        });
+        aliased = new SlangFunctionBody(
+            aliased.Declaration,
+            aliased.Body,
+            aliased.Origins with
+            {
+                ParameterSlots = aliased.Origins.ParameterSlots.SetItem(varyingParameter, uniformSlot),
+                Parameters = [.. aliased.Origins.Parameters.Select(origin =>
+                    ReferenceEquals(origin.Slot, varyingSlot)
+                        ? origin with { Slot = uniformSlot }
+                        : origin)],
+                Transfers = [.. aliased.Origins.Transfers.Select(origin => origin with
+                {
+                    Arguments = [.. origin.Arguments.Select(argument =>
+                        ReferenceEquals(argument.Slot, varyingSlot)
+                            ? argument with { Slot = uniformSlot }
+                            : argument)]
+                })]
+            });
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(function, aliased));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        Assert.Contains("slots are not injective", error.Message);
+    }
+
+    [Fact]
+    public void RelevantDerivativeMustKeepExactCalleeAndSourceScope()
+    {
+        var prepared = PrepareTarget(PhiConditionalModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var derivative = body.Origins.Instructions.Single(origin =>
+            Equals(origin.Source.Payload, "phi-derivative"));
+        var binding = Assert.IsType<SlangBind>(derivative.Target);
+        var operands = binding.Instruction.Operands.ToImmutableArray();
+        var sin = ShaderFunction.Instance.GetFunction("sin", ShaderType.F32, ShaderType.F32);
+        var changedCall = new SlangBind(
+            Instruction<SlangOperand, IShaderValue>.Create(
+                binding.Instruction.Operation,
+                binding.Instruction.Result,
+                [new SlangValueOperand(sin), operands[1]],
+                binding.Instruction.Payload));
+        var wrongBuiltin = Rewrite(
+            body,
+            statement => ReferenceEquals(statement, binding) ? changedCall : statement);
+        var wrongBuiltinModule = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, wrongBuiltin));
+
+        var calleeError = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                wrongBuiltinModule,
+                prepared.Facts));
+
+        var removed = Rewrite(
+            body,
+            statement => ReferenceEquals(statement, binding) ? null : statement);
+        var hoisted = new SlangFunctionBody(
+            removed.Declaration,
+            new SlangBlock([binding, .. removed.Body.Statements]),
+            removed.Origins);
+        var hoistedModule = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, hoisted));
+        var placementError = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                hoistedModule,
+                prepared.Facts));
+
+        Assert.Contains("changed its source operation/result/operand lineage", calleeError.Message);
+        AssertVerifierRejection(placementError, "moved outside source-label scope");
+    }
+
+    [Fact]
+    public void TargetVerifierRejectsUnaccountedEarlyReturn()
+    {
+        var prepared = PrepareTarget(new UniformIgnoringArgumentShader());
+        var helper = prepared.Target.FunctionDefinitions.Keys.Single(function =>
+            function.Name == nameof(UniformIgnoringArgumentShader.Always));
+        var body = prepared.Target.GetBody(helper);
+        var loaded = ShaderValue.Intermediate(ShaderType.F32);
+        var condition = ShaderValue.Intermediate(ShaderType.Bool);
+        var load = new SlangBind(Instruction<SlangOperand, IShaderValue>.Create(
+            new LoadOperation(),
+            loaded,
+            [new SlangPlaceOperand(new SlangParameterPlace(helper.Parameters[0]))]));
+        var comparison = new SlangBind(Instruction<SlangOperand, IShaderValue>.Create(
+            NumericBinaryRelationalOperation<FloatType<N32>, BinaryRelational.Gt>.Instance,
+            condition,
+            [
+                new SlangValueOperand(loaded),
+                new SlangValueOperand(ShaderValue.Literal(new F32Literal(0.0f)))
+            ]));
+        var corruptedBody = new SlangFunctionBody(
+            helper,
+            new SlangBlock(
+            [
+                load,
+                comparison,
+                new SlangReturnValue(new SlangValueOperand(condition)),
+                .. body.Body.Statements
+            ]),
+            body.Origins);
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(helper, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        AssertVerifierRejection(error, "unaccounted return");
+    }
+
+    [Fact]
+    public void TargetVerifierRejectsUnaccountedCarrierBreak()
+    {
+        var prepared = PrepareTarget(PhiConditionalModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var corruptedBody = new SlangFunctionBody(
+            body.Declaration,
+            new SlangBlock(
+            [
+                new SlangDoOnce(new SlangBlock([(SlangStatement)new SlangBreak()])),
+                .. body.Body.Statements
+            ]),
+            body.Origins);
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        AssertVerifierRejection(error, "unaccounted break");
+    }
+
+    [Fact]
+    public void TargetVerifierRejectsCaptureWriteClaimedByWrongDefinition()
+    {
+        var fixture = CaptureAuthorizationModule();
+        var prepared = PrepareTarget(fixture.Module);
+        var body = prepared.Target.GetBody(prepared.Function);
+        var definition = body.Origins.Definitions.Single(origin =>
+            ReferenceEquals(origin.Source.Result, fixture.VaryingComputation));
+        Assert.Null(definition.Capture);
+        var capture = body.Origins.Captures[fixture.UniformCondition];
+        var overwrite = new SlangAssign(
+            new SlangVariablePlace(capture),
+            new SlangValueOperand(fixture.VaryingComputation));
+        var corruptedBody = Rewrite(
+            body,
+            static statement => statement,
+            statements => InsertAfter(statements, definition.Definition, overwrite));
+        corruptedBody = new SlangFunctionBody(
+            corruptedBody.Declaration,
+            corruptedBody.Body,
+            corruptedBody.Origins with
+            {
+                Definitions = [.. corruptedBody.Origins.Definitions.Select(origin =>
+                    ReferenceEquals(origin.Source.Result, fixture.VaryingComputation)
+                        ? origin with { Capture = overwrite }
+                        : origin)]
+            });
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        Assert.Contains("unexpected capture assignment", error.Message);
+    }
+
+    [Fact]
+    public void TargetVerifierRejectsUnaccountedDerivativeClone()
+    {
+        var prepared = PrepareTarget(PhiConditionalModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var derivative = Assert.IsType<SlangBind>(
+            body.Origins.Instructions.Single(origin =>
+                Equals(origin.Source.Payload, "phi-derivative")).Target);
+        var clone = new SlangBind(derivative.Instruction);
+        var corruptedBody = Rewrite(
+            body,
+            static statement => statement,
+            statements => InsertAfter(statements, derivative, clone));
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        AssertVerifierRejection(error, "unaccounted target call");
+    }
+
+    [Fact]
+    public void SourceStoreCannotTargetProjectedUniformCapture()
+    {
+        var fixture = ProjectedCaptureStoreModule();
+        var prepared = PrepareTarget(fixture.Module);
+        var body = prepared.Target.GetBody(prepared.Function);
+        var capture = body.Origins.Captures[fixture.UniformVector];
+        var store = body.Origins.Instructions.Single(origin =>
+            origin.Source.Operation is StoreOperation);
+        var assignment = Assert.IsType<SlangAssign>(store.Target);
+        var corruptedAssignment = new SlangAssign(
+            new SlangComponentPlace(
+                new SlangVariablePlace(capture),
+                "x",
+                ShaderType.F32),
+            assignment.Value);
+        var corruptedBody = Rewrite(
+            body,
+            statement => ReferenceEquals(statement, assignment)
+                ? corruptedAssignment
+                : statement);
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        Assert.Contains("source store/setter changed its typed target/value lineage", error.Message);
+    }
+
+    [Fact]
+    public void AccountedReturnMustRemainTerminalInSourceScope()
+    {
+        var dpdx = ShaderFunction.Instance.GetFunction("dpdx", ShaderType.F32, ShaderType.F32);
+        var result = ShaderValue.Intermediate(ShaderType.F32);
+        var module = DerivativeCallModule(
+            new CallOperation((FunctionType)dpdx.Type),
+            result,
+            dpdx,
+            [ShaderValue.Literal(new F32Literal(1.0f))]);
+        var prepared = PrepareTarget(module);
+        var body = prepared.Target.GetBody(prepared.Function);
+        var derivative = Assert.IsType<SlangBind>(
+            body.Origins.Instructions.Single(origin =>
+                ReferenceEquals(origin.Source.Result, result)).Target);
+        var returned = body.Origins.Returns.Single().Return;
+        var corruptedBody = Rewrite(
+            body,
+            static statement => statement,
+            statements => MoveAfter(statements, derivative, returned));
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        AssertVerifierRejection(error, "return is not terminal");
+    }
+
+    [Fact]
+    public void SourceConditionalMustRemainTerminalInSourceScope()
+    {
+        var prepared = PrepareTarget(AddEntryNop(PhiConditionalModule()));
+        var body = prepared.Target.GetBody(prepared.Function);
+        var nop = body.Origins.Instructions.Single(origin =>
+            ReferenceEquals(origin.Label, prepared.Pointer.GetBody(prepared.Function).Entry) &&
+            origin.Source.Operation is NopOperation).Target;
+        var corruptedBody = Rewrite(
+            body,
+            static statement => statement,
+            statements =>
+            {
+                var rewrittenConditional = statements.OfType<SlangIf>().SingleOrDefault();
+                return rewrittenConditional is null
+                    ? statements
+                    : MoveAfter(statements, nop, rewrittenConditional);
+            });
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        AssertVerifierRejection(error, "conditional is not terminal");
+    }
+
+    [Fact]
+    public void SourceUnconditionalTransferMustRemainTerminalInSourceScope()
+    {
+        var fixture = CaptureAuthorizationModule();
+        var prepared = PrepareTarget(AddEntryNop(fixture.Module));
+        var body = prepared.Target.GetBody(prepared.Function);
+        var entry = prepared.Pointer.GetBody(prepared.Function).Entry;
+        var transfer = body.Origins.Transfers.Single(origin =>
+            ReferenceEquals(origin.Source, entry));
+        var nop = body.Origins.Instructions.Single(origin =>
+            ReferenceEquals(origin.Label, entry) &&
+            origin.Source.Operation is NopOperation).Target;
+        var corruptedBody = Rewrite(
+            body,
+            static statement => statement,
+            statements => MoveAfter(statements, nop, transfer.Break));
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        AssertVerifierRejection(error, "transfer is not terminal");
+    }
+
+    [Fact]
+    public void ContinuationGateMustRemainInSourceDerivedActivationSchedule()
+    {
+        var prepared = PrepareTarget(PhiConditionalModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var moved = body.Origins.Gates.Single(origin =>
+            origin.Continuation.Target.Name == "derivative");
+        var right = body.Origins.Gates.Single(origin =>
+            origin.Continuation.Target.Name == "right");
+        var removed = Rewrite(
+            body,
+            statement => ReferenceEquals(statement, moved.Comparison) ||
+                         ReferenceEquals(statement, moved.Conditional)
+                ? null
+                : statement);
+        var destination = removed.Origins.Gates.Single(origin =>
+            ReferenceEquals(origin.Continuation.Target, right.Continuation.Target));
+        var relocated = Rewrite(
+            removed,
+            statement => ReferenceEquals(statement, destination.Conditional)
+                ? destination.Conditional with
+                {
+                    WhenTrue = new SlangBlock(
+                    [
+                        .. destination.Conditional.WhenTrue.Statements,
+                        moved.Comparison,
+                        moved.Conditional
+                    ])
+                }
+                : statement);
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, relocated));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        Assert.Contains("activation template", error.Message);
+    }
+
+    [Fact]
+    public void StaleFactsRejectRedirectedZeroArgumentForwardEdges()
+    {
+        var fixture = CreateZeroArgumentForwardFixture();
+        var facts = CLSLCooperationAnalysis.Analyze(fixture.Module);
+        var pointer = fixture.Module.RunPass(new StablePointerRegionParameterPass());
+        var sourceBody = pointer.GetBody(fixture.Function);
+        var changedBody = sourceBody.MapRegionBody(block =>
+        {
+            if (ReferenceEquals(block.Label, fixture.Left))
+                return block with
+                {
+                    Body = Seq.Create(
+                        block.Body.Elements,
+                        Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                            new(fixture.Returned, [])))
+                };
+            if (ReferenceEquals(block.Label, fixture.Right))
+                return block with
+                {
+                    Body = Seq.Create(
+                        block.Body.Elements,
+                        Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                            new(fixture.Derivative, [])))
+                };
+            return block;
+        });
+        var changedPointer = new ShaderModuleDeclaration<RegionFunctionBody>(
+            pointer.Declarations,
+            pointer.FunctionDefinitions.SetItem(fixture.Function, changedBody));
+        var changedTarget = new SlangTargetLowering().Lower(changedPointer);
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                changedPointer,
+                changedTarget,
+                facts));
+
+        Assert.Contains("original transfer", error.Message);
+    }
+
+    [Fact]
+    public void StablePointerErasureRetainsFollowingUniformScalarBinding()
+    {
+        var fixture = CreateMixedPointerUniformBindingFixture();
+        var prepared = PrepareTarget(fixture.Module);
+        var sourceBody = fixture.Module.GetBody(fixture.Function);
+        var pointerBody = prepared.Pointer.GetBody(fixture.Function);
+        var sourceParameters = sourceBody[fixture.Branch].Parameters;
+        var pointerParameters = pointerBody[fixture.Branch].Parameters;
+        var sourceJump = Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(
+            sourceBody[sourceBody.Entry].Body.Last).Target;
+        var pointerJump = Assert.IsType<Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue>>(
+            pointerBody[pointerBody.Entry].Body.Last).Target;
+
+        Assert.Equal(2, sourceParameters.Length);
+        Assert.Same(fixture.UniformCondition, sourceParameters[1]);
+        Assert.Equal(2, sourceJump.Arguments.Length);
+        Assert.Single(pointerParameters);
+        Assert.Same(fixture.UniformCondition, pointerParameters[0]);
+        Assert.Single(pointerJump.Arguments);
+        Assert.Same(sourceJump.Arguments[1], pointerJump.Arguments[0]);
+    }
+
+    [Fact]
+    public void SiblingGatesMustRemainInSourceDerivedOrder()
+    {
+        var prepared = PrepareTarget(PhiConditionalModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var left = body.Origins.Gates.Single(origin =>
+            origin.Continuation.Target.Name == "left");
+        var corruptedBody = Rewrite(
+            body,
+            static statement => statement,
+            statements => MoveGateBeforeCarrier(statements, left));
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        Assert.Contains("activation template", error.Message);
+    }
+
+    [Fact]
+    public void UngatedContinuationMustRemainInSourceDerivedPosition()
+    {
+        var prepared = PrepareTarget(PhiConditionalModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var join = prepared.Pointer.GetBody(prepared.Function).Labels.Single(label => label.Name == "join");
+        var rawJoin = FindDirectCarrier(body.Body, join);
+        var left = body.Origins.Gates.Single(origin =>
+            origin.Continuation.Target.Name == "left");
+        var removed = Rewrite(
+            body,
+            statement => ReferenceEquals(statement, rawJoin) ? null : statement);
+        var destination = removed.Origins.Gates.Single(origin =>
+            ReferenceEquals(origin.Continuation.Target, left.Continuation.Target));
+        var relocated = Rewrite(
+            removed,
+            statement => ReferenceEquals(statement, destination.Conditional)
+                ? destination.Conditional with
+                {
+                    WhenTrue = new SlangBlock(
+                    [
+                        .. destination.Conditional.WhenTrue.Statements,
+                        rawJoin
+                    ])
+                }
+                : statement);
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, relocated));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        Assert.Contains("activation template", error.Message);
+    }
+
+    [Fact]
+    public void TargetVerifierRejectsUnaccountedHelperCallClone()
+    {
+        var prepared = PrepareTarget(new UniformConditionalDerivativeShader());
+        var entry = prepared.Target.FunctionDefinitions.Keys.Single(function =>
+            function.Name == nameof(UniformConditionalDerivativeShader.Fragment));
+        var body = prepared.Target.GetBody(entry);
+        var helperCall = Assert.IsType<SlangBind>(
+            body.Origins.Instructions.Single(origin =>
+                origin.Source.Operation is CallOperation &&
+                origin.Source.OperandCount > 0 &&
+                origin.Source[0] is FunctionDeclaration callee &&
+                callee.Name == nameof(UniformConditionalDerivativeShader.UniformChoice)).Target);
+        var clone = new SlangBind(helperCall.Instruction);
+        var corruptedBody = Rewrite(
+            body,
+            static statement => statement,
+            statements => InsertAfter(statements, helperCall, clone));
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(entry, corruptedBody));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        AssertVerifierRejection(error, "unaccounted target call");
     }
 
     [Fact]
@@ -527,6 +1290,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     [InlineData(typeof(NonlinearPureHelperShader), "conditional control")]
     [InlineData(typeof(IdentityLiteralConditionalShader), "conditional control")]
     [InlineData(typeof(DerivativeConditionShader), "conditional control")]
+    [InlineData(typeof(UniformStorageConditionalShader), "conditional control")]
     [InlineData(typeof(SwitchDerivativeShader), "control is not admitted")]
     [InlineData(typeof(UniformSwitchDerivativeShader), "switch control is not admitted")]
     [InlineData(typeof(LoopContinueDerivativeShader), "RegionKind.Loop")]
@@ -788,12 +1552,33 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass()));
     }
 
+    private static void AssertVerifierRejection(NotSupportedException error, string expected)
+    {
+        Assert.True(
+            error.Message.Contains(expected, StringComparison.Ordinal) ||
+            error.Message.Contains("activation template", StringComparison.Ordinal) ||
+            error.Message.Contains("source-derived", StringComparison.Ordinal),
+            $"Expected '{expected}' or activation-template rejection, got: {error.Message}");
+    }
+
     private static PreparedTarget PrepareTarget(ShaderModuleDeclaration<RegionFunctionBody> source)
     {
         var facts = CLSLCooperationAnalysis.Analyze(source);
         var pointer = source.RunPass(new StablePointerRegionParameterPass());
         var target = new SlangTargetLowering().Lower(pointer);
         return new(pointer, target, facts, Assert.Single(source.FunctionDefinitions.Keys));
+    }
+
+    private static PreparedTarget PrepareTarget(ISharpShader shader)
+    {
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var facts = CLSLCooperationAnalysis.Analyze(source);
+        var pointer = source.RunPass(new StablePointerRegionParameterPass());
+        var target = new SlangTargetLowering().Lower(pointer);
+        return new(pointer, target, facts, Assert.Single(
+            source.FunctionDefinitions.Keys,
+            function => function.Attributes.Any(attribute => attribute is FragmentAttribute)));
     }
 
     private static SlangFunctionBody Rewrite(
@@ -851,6 +1636,10 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
                 Definition = Replace(origin.Definition),
                 Capture = ReplaceOptional(origin.Capture)
             })],
+            Instructions = [.. source.Origins.Instructions.Select(origin => origin with
+            {
+                Target = Replace(origin.Target)
+            })],
             Transfers = [.. source.Origins.Transfers.Select(origin => origin with
             {
                 Arguments = [.. origin.Arguments.Select(argument => argument with
@@ -869,6 +1658,15 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             {
                 Comparison = Replace(origin.Comparison),
                 Conditional = Replace(origin.Conditional)
+            })],
+            Returns = [.. source.Origins.Returns.Select(origin => origin with
+            {
+                Return = Replace(origin.Return)
+            })],
+            CarrierBreaks = [.. source.Origins.CarrierBreaks.Select(origin => origin with
+            {
+                Carrier = Replace(origin.Carrier),
+                Break = Replace(origin.Break)
             })]
         };
         return new(source.Declaration, body, origins);
@@ -888,6 +1686,64 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         destination = ReferenceIndex(builder, after);
         builder.Insert(destination + 1, moved);
         return builder.ToImmutable();
+    }
+
+    private static ImmutableArray<SlangStatement> InsertAfter(
+        ImmutableArray<SlangStatement> statements,
+        SlangStatement previous,
+        SlangStatement inserted)
+    {
+        var index = ReferenceIndex(statements, previous);
+        return index < 0
+            ? statements
+            : statements.Insert(index + 1, inserted);
+    }
+
+    private static ImmutableArray<SlangStatement> MoveGateBeforeCarrier(
+        ImmutableArray<SlangStatement> statements,
+        SlangGateOrigin gate)
+    {
+        var comparison = ReferenceIndex(statements, gate.Comparison);
+        var rewrittenConditional = statements.OfType<SlangIf>().SingleOrDefault(statement =>
+            Equals(statement.Condition, gate.Conditional.Condition));
+        var conditional = rewrittenConditional is null
+            ? -1
+            : ReferenceIndex(statements, rewrittenConditional);
+        if (comparison <= 0 || conditional != comparison + 1 ||
+            statements[comparison - 1] is not SlangDoOnce carrier)
+            return statements;
+        var builder = statements.ToBuilder();
+        builder[comparison - 1] = gate.Comparison;
+        builder[comparison] = rewrittenConditional!;
+        builder[conditional] = carrier;
+        return builder.ToImmutable();
+    }
+
+    private static SlangDoOnce FindDirectCarrier(SlangBlock block, Label label) =>
+        FindDirectCarrierOrNull(block, label) ??
+        throw new InvalidOperationException("Could not locate raw source carrier.");
+
+    private static SlangDoOnce? FindDirectCarrierOrNull(SlangBlock block, Label label)
+    {
+        foreach (var statement in block.Statements)
+        {
+            if (statement is SlangDoOnce once &&
+                once.Body.Statements.Any(child =>
+                    child is SlangScope scope && ReferenceEquals(scope.OriginalLabel, label)))
+                return once;
+            var nested = statement switch
+            {
+                SlangScope parent => FindDirectCarrierOrNull(parent.Body, label),
+                SlangDoOnce parent => FindDirectCarrierOrNull(parent.Body, label),
+                SlangIf conditional => FindDirectCarrierOrNull(conditional.WhenTrue, label) ??
+                                       FindDirectCarrierOrNull(conditional.WhenFalse, label),
+                SlangLoop loop => FindDirectCarrierOrNull(loop.Body, label),
+                _ => null
+            };
+            if (nested is not null)
+                return nested;
+        }
+        return null;
     }
 
     private static ImmutableArray<SlangStatement> WrapTransferInDoOnce(
@@ -922,6 +1778,35 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         ShaderModuleDeclaration<SlangFunctionBody> Target,
         CLSLCooperationFacts Facts,
         FunctionDeclaration Function);
+
+    private sealed record CaptureAuthorizationFixture(
+        ShaderModuleDeclaration<RegionFunctionBody> Module,
+        IShaderValue UniformCondition,
+        IShaderValue VaryingComputation);
+
+    private sealed record ProjectedCaptureStoreFixture(
+        ShaderModuleDeclaration<RegionFunctionBody> Module,
+        IShaderValue UniformVector);
+
+    private sealed record ZeroArgumentForwardFixture(
+        ShaderModuleDeclaration<RegionFunctionBody> Module,
+        FunctionDeclaration Function,
+        Label Left,
+        Label Right,
+        Label Derivative,
+        Label Returned);
+
+    private sealed record MixedPointerUniformBindingFixture(
+        ShaderModuleDeclaration<RegionFunctionBody> Module,
+        FunctionDeclaration Function,
+        Label Branch,
+        IShaderValue UniformCondition);
+
+    private sealed record UnusedGlobalPointerFixture(
+        ShaderModuleDeclaration<RegionFunctionBody> Module,
+        FunctionDeclaration Function,
+        VariableDeclaration Storage,
+        Label Body);
 
     private static ShaderModuleDeclaration<SlangFunctionBody> DirectTarget(ISharpShader shader)
     {
@@ -1235,6 +2120,416 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body));
     }
 
+    private static CaptureAuthorizationFixture CaptureAuthorizationModule()
+    {
+        var varyingParameter = new ParameterDeclaration("varying", ShaderType.Bool, []);
+        var declaration = new FunctionDeclaration(
+            "Fragment",
+            [varyingParameter],
+            new FunctionReturn(ShaderType.F32, [new LocationAttribute(0)]),
+            [new FragmentAttribute()]);
+        var entry = Label.Create("entry");
+        var next = Label.Create("next");
+        var derivative = Label.Create("derivative");
+        var returned = Label.Create("returned");
+        var varying = ShaderValue.Intermediate(ShaderType.Bool);
+        var uniform = ShaderValue.Intermediate(ShaderType.Bool);
+        var varyingComputation = ShaderValue.Intermediate(ShaderType.Bool);
+        var derivativeValue = ShaderValue.Intermediate(ShaderType.F32);
+        var literalTrue = ShaderValue.Literal(new BoolLiteral(true));
+        var dpdx = ShaderFunction.Instance.GetFunction("dpdx", ShaderType.F32, ShaderType.F32);
+        var entryBody = RegionFixture.Body(
+            entry,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new LoadOperation(),
+                    varying,
+                    [varyingParameter.Value]),
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new LiteralOperation(),
+                    uniform,
+                    [literalTrue])
+            ],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(next, [])));
+        var nextBody = RegionFixture.Body(
+            next,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    LogicalBinaryOperation<LogicalAnd>.Instance,
+                    varyingComputation,
+                    [varying, literalTrue])
+            ],
+            Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
+                uniform,
+                new(derivative, []),
+                new(returned, [])));
+        var derivativeBody = RegionFixture.Body(
+            derivative,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new CallOperation((FunctionType)dpdx.Type),
+                    derivativeValue,
+                    [dpdx, ShaderValue.Literal(new F32Literal(1.0f))],
+                    "capture-derivative")
+            ],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(derivativeValue));
+        var returnedBody = RegionFixture.Body(
+            returned,
+            [],
+            [],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(
+                ShaderValue.Literal(new F32Literal(0.0f))));
+        var body = RegionFixture.CreateFunctionBody(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [
+                    RegionTree.Block(returned, [], returnedBody, null),
+                    RegionTree.Block(derivative, [], derivativeBody, null),
+                    RegionTree.Block(next, [], nextBody, null)
+                ],
+                entryBody,
+                next));
+        return new(
+            new ShaderModuleDeclaration<RegionFunctionBody>(
+                [declaration],
+                ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body)),
+            uniform,
+            varyingComputation);
+    }
+
+    private static ProjectedCaptureStoreFixture ProjectedCaptureStoreModule()
+    {
+        var varyingParameter = new ParameterDeclaration("varying", ShaderType.F32, []);
+        var declaration = new FunctionDeclaration(
+            "Fragment",
+            [varyingParameter],
+            new FunctionReturn(ShaderType.F32, [new LocationAttribute(0)]),
+            [new FragmentAttribute()]);
+        var local = new VariableDeclaration(
+            FunctionAddressSpace.Instance,
+            "local",
+            ShaderType.F32,
+            []);
+        var entry = Label.Create("entry");
+        var next = Label.Create("next");
+        var derivative = Label.Create("derivative");
+        var returned = Label.Create("returned");
+        var uniformVector = ShaderValue.Intermediate(ShaderType.Vec2F32);
+        var varying = ShaderValue.Intermediate(ShaderType.F32);
+        var norm = ShaderValue.Intermediate(ShaderType.F32);
+        var condition = ShaderValue.Intermediate(ShaderType.Bool);
+        var derivativeValue = ShaderValue.Intermediate(ShaderType.F32);
+        var dot = ShaderFunction.Instance.GetFunction(
+            "dot",
+            ShaderType.F32,
+            ShaderType.Vec2F32,
+            ShaderType.Vec2F32);
+        var dpdx = ShaderFunction.Instance.GetFunction("dpdx", ShaderType.F32, ShaderType.F32);
+        var entryBody = RegionFixture.Body(
+            entry,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    VectorCompositeConstructionOperation.Get(
+                        (IVecType)ShaderType.Vec2F32,
+                        [ShaderType.F32, ShaderType.F32]),
+                    uniformVector,
+                    [
+                        ShaderValue.Literal(new F32Literal(1.0f)),
+                        ShaderValue.Literal(new F32Literal(0.0f))
+                    ]),
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new LoadOperation(),
+                    varying,
+                    [varyingParameter.Value])
+            ],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(next, [])));
+        var nextBody = RegionFixture.Body(
+            next,
+            [],
+            [
+                Instruction.Factory.Store(default, new StoreOperation(), local.Value, varying),
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new CallOperation((FunctionType)dot.Type),
+                    norm,
+                    [dot, uniformVector, uniformVector]),
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    NumericBinaryRelationalOperation<FloatType<N32>, BinaryRelational.Gt>.Instance,
+                    condition,
+                    [norm, ShaderValue.Literal(new F32Literal(0.5f))])
+            ],
+            Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
+                condition,
+                new(derivative, []),
+                new(returned, [])));
+        var derivativeBody = RegionFixture.Body(
+            derivative,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new CallOperation((FunctionType)dpdx.Type),
+                    derivativeValue,
+                    [dpdx, ShaderValue.Literal(new F32Literal(1.0f))])
+            ],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(derivativeValue));
+        var returnedBody = RegionFixture.Body(
+            returned,
+            [],
+            [],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(
+                ShaderValue.Literal(new F32Literal(0.0f))));
+        var body = RegionFixture.CreateFunctionBody(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [
+                    RegionTree.Block(returned, [], returnedBody, null),
+                    RegionTree.Block(derivative, [], derivativeBody, null),
+                    RegionTree.Block(next, [], nextBody, null)
+                ],
+                entryBody,
+                next));
+        return new(
+            new ShaderModuleDeclaration<RegionFunctionBody>(
+                [declaration, local],
+                ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body)),
+            uniformVector);
+    }
+
+    private static ZeroArgumentForwardFixture CreateZeroArgumentForwardFixture()
+    {
+        var declaration = new FunctionDeclaration(
+            "Fragment",
+            [],
+            new FunctionReturn(ShaderType.F32, [new LocationAttribute(0)]),
+            [new FragmentAttribute()]);
+        var entry = Label.Create("entry");
+        var left = Label.Create("left");
+        var right = Label.Create("right");
+        var derivative = Label.Create("derivative");
+        var returned = Label.Create("returned");
+        var condition = ShaderValue.Intermediate(ShaderType.Bool);
+        var derivativeValue = ShaderValue.Intermediate(ShaderType.F32);
+        var dpdx = ShaderFunction.Instance.GetFunction("dpdx", ShaderType.F32, ShaderType.F32);
+        var entryBody = RegionFixture.Body(
+            entry,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new LiteralOperation(),
+                    condition,
+                    [ShaderValue.Literal(new BoolLiteral(true))])
+            ],
+            Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
+                condition,
+                new(left, []),
+                new(right, [])));
+        var leftBody = RegionFixture.Body(
+            left,
+            [],
+            [],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(derivative, [])));
+        var rightBody = RegionFixture.Body(
+            right,
+            [],
+            [],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(returned, [])));
+        var derivativeBody = RegionFixture.Body(
+            derivative,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new CallOperation((FunctionType)dpdx.Type),
+                    derivativeValue,
+                    [dpdx, ShaderValue.Literal(new F32Literal(1.0f))],
+                    "redirect-derivative")
+            ],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(derivativeValue));
+        var returnedBody = RegionFixture.Body(
+            returned,
+            [],
+            [],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(
+                ShaderValue.Literal(new F32Literal(0.0f))));
+        var body = RegionFixture.CreateFunctionBody(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [
+                    RegionTree.Block(returned, [], returnedBody, null),
+                    RegionTree.Block(derivative, [], derivativeBody, null),
+                    RegionTree.Block(right, [], rightBody, null),
+                    RegionTree.Block(left, [], leftBody, null)
+                ],
+                entryBody,
+                null));
+        return new(
+            new ShaderModuleDeclaration<RegionFunctionBody>(
+                [declaration],
+                ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body)),
+            declaration,
+            left,
+            right,
+            derivative,
+            returned);
+    }
+
+    private static MixedPointerUniformBindingFixture CreateMixedPointerUniformBindingFixture()
+    {
+        var varyingParameter = new ParameterDeclaration("varying", ShaderType.F32, []);
+        var declaration = new FunctionDeclaration(
+            "Fragment",
+            [varyingParameter],
+            new FunctionReturn(ShaderType.F32, [new LocationAttribute(0)]),
+            [new FragmentAttribute()]);
+        var entry = Label.Create("entry");
+        var branch = Label.Create("branch");
+        var derivative = Label.Create("derivative");
+        var returned = Label.Create("returned");
+        var pointerParameter = ShaderValue.Intermediate(varyingParameter.Value.Type);
+        var uniformCondition = ShaderValue.Intermediate(ShaderType.Bool);
+        var varying = ShaderValue.Intermediate(ShaderType.F32);
+        var derivativeValue = ShaderValue.Intermediate(ShaderType.F32);
+        var literalTrue = ShaderValue.Literal(new BoolLiteral(true));
+        var dpdx = ShaderFunction.Instance.GetFunction("dpdx", ShaderType.F32, ShaderType.F32);
+        var entryBody = RegionFixture.Body(
+            entry,
+            [],
+            [],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                new(branch, [varyingParameter.Value, literalTrue])));
+        var branchBody = RegionFixture.Body(
+            branch,
+            [pointerParameter, uniformCondition],
+            [],
+            Terminator.B.BrIf<RegionJump<IShaderValue>, IShaderValue>(
+                uniformCondition,
+                new(derivative, []),
+                new(returned, [])));
+        var derivativeBody = RegionFixture.Body(
+            derivative,
+            [],
+            [
+                Instruction.Factory.Load(
+                    default,
+                    new LoadOperation(),
+                    varying,
+                    varyingParameter.Value),
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new CallOperation((FunctionType)dpdx.Type),
+                    derivativeValue,
+                    [dpdx, varying],
+                    "mixed-pointer-derivative")
+            ],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(derivativeValue));
+        var returnedBody = RegionFixture.Body(
+            returned,
+            [],
+            [],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(
+                ShaderValue.Literal(new F32Literal(0.0f))));
+        var body = RegionFixture.CreateFunctionBody(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [
+                    RegionTree.Block(returned, [], returnedBody, null),
+                    RegionTree.Block(derivative, [], derivativeBody, null),
+                    RegionTree.Block(branch, [], branchBody, null)
+                ],
+                entryBody,
+                branch));
+        return new(
+            new ShaderModuleDeclaration<RegionFunctionBody>(
+                [declaration],
+                ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body)),
+            declaration,
+            branch,
+            uniformCondition);
+    }
+
+    private static UnusedGlobalPointerFixture CreateUnusedGlobalPointerFixture()
+    {
+        var structure = new StructureDeclaration
+        {
+            Name = "UnusedGlobals",
+            Members = [new MemberDeclaration("value", ShaderType.F32, [])]
+        };
+        var structureType = new StructureType(structure);
+        var storage = new VariableDeclaration(
+            UniformAddressSpace.Instance,
+            "unusedGlobals",
+            structureType,
+            [
+                new UniformAttribute(),
+                new GroupAttribute(0),
+                new BindingAttribute(0)
+            ]);
+        var declaration = new FunctionDeclaration(
+            "Fragment",
+            [],
+            new FunctionReturn(ShaderType.F32, [new LocationAttribute(0)]),
+            [new FragmentAttribute()]);
+        var entry = Label.Create("entry");
+        var bodyLabel = Label.Create("body");
+        var pointerParameter = ShaderValue.Intermediate(storage.Value.Type);
+        var derivative = ShaderValue.Intermediate(ShaderType.F32);
+        var dpdx = ShaderFunction.Instance.GetFunction("dpdx", ShaderType.F32, ShaderType.F32);
+        var entryBody = RegionFixture.Body(
+            entry,
+            [],
+            [],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                new(bodyLabel, [storage.Value])));
+        var terminalBody = RegionFixture.Body(
+            bodyLabel,
+            [pointerParameter],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new CallOperation((FunctionType)dpdx.Type),
+                    derivative,
+                    [dpdx, ShaderValue.Literal(new F32Literal(1.0f))],
+                    "unused-global-pointer-derivative")
+            ],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(derivative));
+        var body = RegionFixture.CreateFunctionBody(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [RegionTree.Block(bodyLabel, [], terminalBody, null)],
+                entryBody,
+                bodyLabel));
+        return new(
+            new ShaderModuleDeclaration<RegionFunctionBody>(
+                [structure, storage, declaration],
+                ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body)),
+            declaration,
+            storage,
+            bodyLabel);
+    }
+
+    private static ShaderModuleDeclaration<RegionFunctionBody> AddEntryNop(
+        ShaderModuleDeclaration<RegionFunctionBody> module)
+    {
+        var function = Assert.Single(module.FunctionDefinitions.Keys);
+        var body = module.GetBody(function);
+        var updated = body.MapRegionBody(block =>
+            ReferenceEquals(block.Label, body.Entry)
+                ? block with
+                {
+                    Body = Seq.Create(
+                        [.. block.Body.Elements,
+                         Instruction<IShaderValue, IShaderValue>.Create(NopOperation.Instance, null, [])],
+                        block.Body.Last)
+                }
+                : block);
+        return new(module.Declarations, module.FunctionDefinitions.SetItem(function, updated));
+    }
+
     private sealed class DirectDerivativeShader : ISharpShader
     {
         [Fragment]
@@ -1325,6 +2620,41 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
         [ShaderMethod]
         private static float sin(float value) => value;
+    }
+
+    private struct CooperationGlobals
+    {
+        public float value;
+    }
+
+    private sealed class UniformStorageDerivativeShader : ISharpShader
+    {
+        [Uniform]
+        [Group(0)]
+        [Binding(0)]
+        private static readonly CooperationGlobals globals;
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment([Location(0)] float varying) =>
+            DMath.dpdx(globals.value + varying);
+    }
+
+    private sealed class UniformStorageConditionalShader : ISharpShader
+    {
+        [Uniform]
+        [Group(0)]
+        [Binding(0)]
+        private static readonly CooperationGlobals globals;
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment([Location(0)] float varying)
+        {
+            if (globals.value > 0.0f)
+                return DMath.dpdx(varying);
+            return varying;
+        }
     }
 
     private sealed class VectorDerivativeShader : ISharpShader

@@ -47,12 +47,18 @@ public sealed class SlangTargetLowering
             ImmutableArray.CreateBuilder<SlangParameterOrigin>();
         private readonly ImmutableArray<SlangDefinitionOrigin>.Builder definitionOrigins =
             ImmutableArray.CreateBuilder<SlangDefinitionOrigin>();
+        private readonly ImmutableArray<SlangInstructionOrigin>.Builder instructionOrigins =
+            ImmutableArray.CreateBuilder<SlangInstructionOrigin>();
         private readonly ImmutableArray<SlangTransferOrigin>.Builder transferOrigins =
             ImmutableArray.CreateBuilder<SlangTransferOrigin>();
         private readonly ImmutableArray<SlangConditionalOrigin>.Builder conditionalOrigins =
             ImmutableArray.CreateBuilder<SlangConditionalOrigin>();
         private readonly ImmutableArray<SlangGateOrigin>.Builder gateOrigins =
             ImmutableArray.CreateBuilder<SlangGateOrigin>();
+        private readonly ImmutableArray<SlangReturnOrigin>.Builder returnOrigins =
+            ImmutableArray.CreateBuilder<SlangReturnOrigin>();
+        private readonly ImmutableArray<SlangCarrierBreakOrigin>.Builder carrierBreakOrigins =
+            ImmutableArray.CreateBuilder<SlangCarrierBreakOrigin>();
         private readonly RegionFunctionBody source;
         private readonly VariableDeclaration? token;
 
@@ -117,9 +123,12 @@ public sealed class SlangTargetLowering
                     captures.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
                     parameterOrigins.ToImmutable(),
                     definitionOrigins.ToImmutable(),
+                    instructionOrigins.ToImmutable(),
                     transferOrigins.ToImmutable(),
                     conditionalOrigins.ToImmutable(),
-                    gateOrigins.ToImmutable()));
+                    gateOrigins.ToImmutable(),
+                    returnOrigins.ToImmutable(),
+                    carrierBreakOrigins.ToImmutable()));
         }
 
         private Lowered LowerRegion(RegionTree<Label, ShaderRegionBody> region)
@@ -191,9 +200,16 @@ public sealed class SlangTargetLowering
                 else
                 {
                     var carrier = suffix.Statements.ToBuilder();
+                    SlangBreak? carrierBreak = null;
                     if (!suffix.Escapes.IsEmpty)
-                        carrier.Add(new SlangBreak());
-                    statements.Add(new SlangDoOnce(new SlangBlock(carrier.ToImmutable())));
+                    {
+                        carrierBreak = new SlangBreak();
+                        carrier.Add(carrierBreak);
+                    }
+                    var once = new SlangDoOnce(new SlangBlock(carrier.ToImmutable()));
+                    statements.Add(once);
+                    if (carrierBreak is not null)
+                        carrierBreakOrigins.Add(new(region.Label, child.Label, once, carrierBreak));
                 }
 
                 var childLowered = LowerRegion(child);
@@ -262,9 +278,9 @@ public sealed class SlangTargetLowering
             terminator switch
             {
                 Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> =>
-                    Lowered.Completed(new SlangReturnVoid()),
+                    LowerReturnVoid(sourceLabel),
                 Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
-                    Lowered.Completed(new SlangReturnValue(Operand(returned.Expr))),
+                    LowerReturnValue(sourceLabel, returned.Expr),
                 Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch =>
                     LowerTransfer(sourceLabel, 0, branch.Target),
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
@@ -273,6 +289,20 @@ public sealed class SlangTargetLowering
                     LowerSwitch(sourceLabel, branch),
                 _ => throw Error($"unsupported terminator in block '{sourceLabel.Name}'")
             };
+
+        private Lowered LowerReturnVoid(Label sourceLabel)
+        {
+            var statement = new SlangReturnVoid();
+            returnOrigins.Add(new(sourceLabel, null, statement));
+            return Lowered.Completed(statement);
+        }
+
+        private Lowered LowerReturnValue(Label sourceLabel, IShaderValue value)
+        {
+            var statement = new SlangReturnValue(Operand(value));
+            returnOrigins.Add(new(sourceLabel, value, statement));
+            return Lowered.Completed(statement);
+        }
 
         private Lowered LowerConditional(
             Label sourceLabel,
@@ -496,25 +526,31 @@ public sealed class SlangTargetLowering
                     throw UnsupportedOperation(
                         instruction, "i32-to-u64 conversion; unsigned widening is not implemented");
                 case StoreOperation:
-                    statements.Add(new SlangAssign(
+                    var store = new SlangAssign(
                         Place(instruction.Operand0, instruction.Operation.Name),
-                        Operand(instruction.Operand1)));
+                        Operand(instruction.Operand1));
+                    statements.Add(store);
+                    instructionOrigins.Add(new(label, ordinal, instruction, store));
                     return;
                 case IVectorComponentSetOperation component:
-                    statements.Add(new SlangAssign(
+                    var componentSet = new SlangAssign(
                         new SlangComponentPlace(
                             Place(instruction.Operand0, instruction.Operation.Name),
                             component.Component.Name,
                             component.ElementType),
-                        Operand(instruction.Operand1)));
+                        Operand(instruction.Operand1));
+                    statements.Add(componentSet);
+                    instructionOrigins.Add(new(label, ordinal, instruction, componentSet));
                     return;
                 case IVectorSwizzleSetOperation swizzle:
-                    statements.Add(new SlangAssign(
+                    var swizzleSet = new SlangAssign(
                         new SlangSwizzlePlace(
                             Place(instruction.Operand0, instruction.Operation.Name),
                             swizzle.Pattern.Name,
                             swizzle.ValueVecType),
-                        Operand(instruction.Operand1)));
+                        Operand(instruction.Operand1));
+                    statements.Add(swizzleSet);
+                    instructionOrigins.Add(new(label, ordinal, instruction, swizzleSet));
                     return;
                 case ZeroConstructorOperation zero when zero.ResultType is not IVecType:
                     throw UnsupportedOperation(instruction, $"zero construction of {zero.ResultType.Name}");
@@ -526,7 +562,9 @@ public sealed class SlangTargetLowering
             if (lowered.Result is null ||
                 instruction.Operation is CallOperation { ResultType: UnitType })
             {
-                statements.Add(new SlangEffect(lowered));
+                var effect = new SlangEffect(lowered);
+                statements.Add(effect);
+                instructionOrigins.Add(new(label, ordinal, instruction, effect));
             }
             else
             {
@@ -538,6 +576,7 @@ public sealed class SlangTargetLowering
                 statements.Add(definition);
                 var capture = CaptureDefinition(lowered.Result, statements);
                 definitionOrigins.Add(new(label, ordinal, instruction, definition, capture));
+                instructionOrigins.Add(new(label, ordinal, instruction, definition));
             }
         }
 

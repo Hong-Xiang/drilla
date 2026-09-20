@@ -28,6 +28,7 @@ public sealed record CooperationUniformValueFact(
     int? InstructionOrdinal,
     IShaderValue Value,
     CooperationUniformValueKind Kind,
+    IOperation? Operation,
     ImmutableArray<IShaderValue> Operands,
     FunctionDeclaration? Callee,
     object? Payload);
@@ -51,15 +52,28 @@ public sealed record CooperationUniformConditionalFact(
 public sealed record CooperationUniformReturnFact(
     FunctionDeclaration Function,
     Label Label,
-    IShaderValue? Value);
+    IShaderValue? Value,
+    bool IsUniform);
+
+public sealed record CooperationTransferFact(
+    FunctionDeclaration Function,
+    Label Source,
+    int Arm,
+    Label Target,
+    Label Owner,
+    ScopedContinuationKind Kind,
+    ImmutableArray<IShaderValue> Arguments,
+    ImmutableArray<IShaderValue> TargetParameters);
 
 public sealed record CooperationFunctionUniformityFacts(
     FunctionDeclaration Function,
     ImmutableArray<Label> OriginalBlocks,
+    ImmutableArray<VariableDeclaration> OriginalNonFunctionStorage,
     ImmutableArray<CooperationUniformValueFact> UniformValues,
     ImmutableArray<CooperationUniformBindingFact> UniformBindings,
     ImmutableArray<CooperationUniformConditionalFact> UniformConditionals,
     ImmutableArray<CooperationUniformReturnFact> UniformReturns,
+    ImmutableArray<CooperationTransferFact> OriginalTransfers,
     bool ReturnsUniform);
 
 internal sealed record CooperationUniformityResult(
@@ -103,6 +117,8 @@ internal static class CooperationUniformity
         Visit(entry);
         var completed = new Dictionary<FunctionDeclaration, CooperationFunctionUniformityFacts>(
             ReferenceEqualityComparer.Instance);
+        var moduleStorage = module.Declarations.OfType<VariableDeclaration>()
+            .ToImmutableHashSet<VariableDeclaration>(ReferenceEqualityComparer.Instance);
         var builtinCalls = ImmutableArray.CreateBuilder<(
             FunctionDeclaration Function,
             Label Label,
@@ -115,6 +131,7 @@ internal static class CooperationUniformity
                 effects[function],
                 completed,
                 entry,
+                moduleStorage,
                 builtinCalls);
             completed.Add(function, analyzed);
         }
@@ -129,6 +146,7 @@ internal static class CooperationUniformity
         FunctionEffectSummary effects,
         IReadOnlyDictionary<FunctionDeclaration, CooperationFunctionUniformityFacts> completed,
         FunctionDeclaration entry,
+        ImmutableHashSet<VariableDeclaration> moduleStorage,
         ImmutableArray<(
             FunctionDeclaration Function,
             Label Label,
@@ -243,6 +261,7 @@ internal static class CooperationUniformity
                         null,
                         parameter,
                         CooperationUniformValueKind.BlockParameter,
+                        null,
                         [.. edges.Select(edge => edge.Jump.Arguments[position])],
                         null,
                         null));
@@ -273,6 +292,7 @@ internal static class CooperationUniformity
                     ordinal,
                     result,
                     classification.Kind,
+                    instruction.Operation,
                     [.. instruction.Operands],
                     classification.Callee,
                     instruction.Payload));
@@ -283,13 +303,13 @@ internal static class CooperationUniformity
             switch (block.Body.Last)
             {
                 case Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>:
-                    uniformReturns.Add(new(body.Declaration, label, null));
+                    uniformReturns.Add(new(body.Declaration, label, null, true));
                     break;
                 case Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned:
                     RequireAvailable(returned.Expr, environment, entry, body.Declaration, label);
-                    if (IsUniform(returned.Expr, environment))
-                        uniformReturns.Add(new(body.Declaration, label, returned.Expr));
-                    else
+                    var isUniform = IsUniform(returned.Expr, environment);
+                    uniformReturns.Add(new(body.Declaration, label, returned.Expr, isUniform));
+                    if (!isUniform)
                         allReturnsUniform = false;
                     break;
                 case Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch:
@@ -321,11 +341,104 @@ internal static class CooperationUniformity
         return new(
             body.Declaration,
             order,
+            [.. body.UsedValues()
+                .OfType<VariablePointerValue>()
+                .Select(static value => value.Declaration)
+                .Where(variable =>
+                    variable.AddressSpace is not FunctionAddressSpace &&
+                    moduleStorage.Contains(variable))
+                .Distinct<VariableDeclaration>(ReferenceEqualityComparer.Instance)],
             uniformValues.ToImmutable(),
             uniformBindings.ToImmutable(),
             uniformConditionals.ToImmutable(),
             uniformReturns.ToImmutable(),
+            CooperationTransferFacts.Capture(body, order),
             allReturnsUniform);
+    }
+
+    internal static class CooperationTransferFacts
+    {
+        internal static ImmutableArray<CooperationTransferFact> Capture(
+            RegionFunctionBody body,
+            ImmutableArray<Label> blockOrder) =>
+        [
+            .. blockOrder.SelectMany(source =>
+                Jumps(body[source].Body.Last).Select((jump, arm) =>
+                {
+                    var transfer = body.Control.Resolve(source, arm);
+                    return new CooperationTransferFact(
+                        body.Declaration,
+                        source,
+                        arm,
+                        transfer.Target,
+                        transfer.Owner,
+                        transfer.Kind,
+                        jump.Arguments,
+                        body[jump.Label].Parameters);
+                }))
+        ];
+
+        internal static bool Matches(
+            RegionFunctionBody body,
+            CooperationTransferFact fact,
+            bool allowPointerParameterErasure)
+        {
+            if (!ReferenceEquals(body.Declaration, fact.Function))
+                return false;
+            ScopedTransfer<Label> transfer;
+            RegionJump<IShaderValue> jump;
+            try
+            {
+                transfer = body.Control.Resolve(fact.Source, fact.Arm);
+                jump = Jumps(body[fact.Source].Body.Last)[fact.Arm];
+            }
+            catch (KeyNotFoundException)
+            {
+                return false;
+            }
+            catch (IndexOutOfRangeException)
+            {
+                return false;
+            }
+
+            if (!ReferenceEquals(transfer.Source, fact.Source) ||
+                transfer.Arm != fact.Arm ||
+                !ReferenceEquals(transfer.Target, fact.Target) ||
+                !ReferenceEquals(transfer.Owner, fact.Owner) ||
+                transfer.Kind != fact.Kind ||
+                !ReferenceEquals(jump.Label, fact.Target))
+                return false;
+
+            if (!allowPointerParameterErasure)
+                return jump.Arguments.AsEnumerable().SequenceEqual(
+                           fact.Arguments,
+                           ReferenceEqualityComparer.Instance) &&
+                       body[fact.Target].Parameters.AsEnumerable().SequenceEqual(
+                           fact.TargetParameters,
+                           ReferenceEqualityComparer.Instance);
+
+            var retained = fact.TargetParameters.Zip(fact.Arguments)
+                .Where(static pair => pair.First.Type is not IPtrType)
+                .ToImmutableArray();
+            return body[fact.Target].Parameters.AsEnumerable().SequenceEqual(
+                       retained.Select(static pair => pair.First),
+                       ReferenceEqualityComparer.Instance) &&
+                   jump.Arguments.AsEnumerable().SequenceEqual(
+                       retained.Select(static pair => pair.Second),
+                       ReferenceEqualityComparer.Instance);
+        }
+
+        private static ImmutableArray<RegionJump<IShaderValue>> Jumps(
+            ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
+            terminator switch
+            {
+                Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => [branch.Target],
+                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    [branch.TrueTarget, branch.FalseTarget],
+                Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> => [],
+                Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
+                _ => []
+            };
     }
 
     private static UniformClassification Classify(
