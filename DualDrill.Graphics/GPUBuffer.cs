@@ -36,6 +36,6 @@ public sealed partial record class GPUBuffer<TBackend>(GPUHandle<TBackend, GPUBu
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }

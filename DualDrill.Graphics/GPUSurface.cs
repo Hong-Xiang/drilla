@@ -29,7 +29,7 @@ public sealed partial record class GPUSurface<TBackend>(GPUHandle<TBackend, GPUS
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 
     public IGPUTexture? GetCurrentTexture()
