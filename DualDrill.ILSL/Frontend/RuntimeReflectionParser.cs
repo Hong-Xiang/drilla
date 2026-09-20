@@ -41,6 +41,9 @@ public sealed class RuntimeReflectionParser
         var moduleType = module.GetType();
         return ParseOperation($"shader module {moduleType}", () =>
         {
+            ShaderModuleMetadataValidator.ValidateTypeAttributes(
+                $"shader module type '{moduleType.FullName}'",
+                [.. moduleType.GetCustomAttributes().OfType<IShaderAttribute>()]);
             foreach (var variable in ParseAllModuleVariableDeclarations(moduleType))
                 _ = variable;
 
@@ -133,6 +136,7 @@ public sealed class RuntimeReflectionParser
             return found;
 
         var attributes = field.GetCustomAttributes().OfType<IShaderAttribute>().ToImmutableHashSet();
+        RejectAttributedBackingField(field, attributes);
         var addressSpace = ShaderModuleMetadataValidator.ValidateResourceAttributes(
             $"field '{field.DeclaringType?.FullName}.{field.Name}'",
             attributes);
@@ -154,6 +158,7 @@ public sealed class RuntimeReflectionParser
             return found;
 
         var attributes = field.GetCustomAttributes().OfType<IShaderAttribute>().ToImmutableHashSet();
+        RejectAttributedBackingField(field, attributes);
         if (attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata) &&
             Context[Symbol.Variable(field)] is null)
             ShaderModuleMetadataValidator.ValidateOrdinaryModuleField(
@@ -525,6 +530,7 @@ public sealed class RuntimeReflectionParser
             var attributes = field.GetCustomAttributes().OfType<IShaderAttribute>().ToImmutableHashSet();
             if (attributes.Count == 0)
                 continue;
+            RejectAttributedBackingField(field, attributes);
             if (attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
                 variables.Add(ParseModuleVariableDeclaration(field));
             else
@@ -547,6 +553,19 @@ public sealed class RuntimeReflectionParser
                     $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
                     "shader metadata on module properties is not supported; use an attributed field.");
         }
+    }
+
+    private static void RejectAttributedBackingField(
+        FieldInfo field,
+        ImmutableHashSet<IShaderAttribute> attributes)
+    {
+        if (attributes.Count > 0 &&
+            field.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false) &&
+            field.Name.EndsWith("k__BackingField", StringComparison.Ordinal))
+            throw new NotSupportedException(
+                "Shader module metadata validation rejected " +
+                $"compiler-generated backing field '{field.DeclaringType?.FullName}.{field.Name}': " +
+                "shader metadata on property backing fields is not supported; annotate a field declaration instead.");
     }
 
     private VariableDeclaration ParseLocalVariable(LocalVariableInfo info) =>

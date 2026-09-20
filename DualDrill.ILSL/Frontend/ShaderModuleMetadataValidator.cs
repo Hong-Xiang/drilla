@@ -31,7 +31,10 @@ internal static class ShaderModuleMetadataValidator
             throw Invalid(declaration, "only [Uniform] resources are supported by this compiler slice.");
 
         var unsupported = attributes
-            .Where(attribute => attribute is not UniformAttribute and not GroupAttribute and not BindingAttribute)
+            .Where(attribute => attribute is not UniformAttribute and
+                                not GroupAttribute and
+                                not BindingAttribute &&
+                                !IsUniformVisibility(attribute))
             .Select(AttributeName)
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -50,11 +53,12 @@ internal static class ShaderModuleMetadataValidator
 
     public static void Validate(IShaderModuleDeclaration module)
     {
-        var resources = module.Declarations
-            .OfType<VariableDeclaration>()
-            .Where(IsResourceDeclaration)
-            .Select(ValidateResource)
-            .ToArray();
+        var resources = new List<ResourceBinding>();
+        foreach (var variable in module.Declarations.OfType<VariableDeclaration>())
+            if (IsResourceDeclaration(variable))
+                resources.Add(ValidateResource(variable));
+            else
+                ValidateOrdinaryModuleVariable(variable);
 
         var duplicate = resources
             .GroupBy(resource => (resource.Group, resource.Binding))
@@ -77,10 +81,23 @@ internal static class ShaderModuleMetadataValidator
         }
 
         foreach (var structure in module.Declarations.OfType<StructureDeclaration>())
-        foreach (var member in structure.Members.Where(member => member.Attributes.Count > 0))
+        {
+            ValidateTypeAttributes($"structure '{structure.Name}'", structure.Attributes);
+            foreach (var member in structure.Members.Where(member => member.Attributes.Count > 0))
+                throw Invalid(
+                    $"structure member '{structure.Name}.{member.Name}'",
+                    $"attribute(s) {AttributeNames(member.Attributes)} are not supported.");
+        }
+    }
+
+    public static void ValidateTypeAttributes(
+        string declaration,
+        ImmutableHashSet<IShaderAttribute> attributes)
+    {
+        if (attributes.Count > 0)
             throw Invalid(
-                $"structure member '{structure.Name}.{member.Name}'",
-                $"attribute(s) {AttributeNames(member.Attributes)} are not supported.");
+                declaration,
+                $"attribute(s) {AttributeNames(attributes)} are not supported.");
     }
 
     public static void ValidateOrdinaryModuleField(
@@ -91,6 +108,14 @@ internal static class ShaderModuleMetadataValidator
             throw Invalid(
                 declaration,
                 $"attribute(s) {AttributeNames(attributes)} are not valid on an ordinary module field.");
+    }
+
+    private static void ValidateOrdinaryModuleVariable(VariableDeclaration variable)
+    {
+        if (variable.Attributes.Count > 0)
+            throw Invalid(
+                $"module variable '{variable.Name}'",
+                $"attribute(s) {AttributeNames(variable.Attributes)} are not valid on an ordinary module variable.");
     }
 
     public static void ValidateInterfaceAttributes(
@@ -118,6 +143,9 @@ internal static class ShaderModuleMetadataValidator
     private static bool IsResourceDeclaration(VariableDeclaration declaration) =>
         declaration.AddressSpace is UniformAddressSpace ||
         declaration.Attributes.Any(IsResourceMetadata);
+
+    private static bool IsUniformVisibility(IShaderAttribute attribute) =>
+        attribute is VertexAttribute or FragmentAttribute or ComputeAttribute;
 
     private static ResourceBinding ValidateResource(VariableDeclaration declaration)
     {
