@@ -1,5 +1,6 @@
 ﻿namespace DualDrill.Graphics;
-public partial interface IGPURenderBundle
+
+public partial interface IGPURenderBundle : IDisposable
 {
 }
 
@@ -27,7 +28,7 @@ public sealed partial record class GPUPipelineLayout<TBackend>(GPUHandle<TBacken
         Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUComputePipeline
+public partial interface IGPUComputePipeline : IDisposable
 {
 }
 
@@ -69,7 +70,7 @@ public sealed partial record class GPUShaderModule<TBackend>(GPUHandle<TBackend,
         Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUQuerySet
+public partial interface IGPUQuerySet : IDisposable
 {
 }
 
@@ -83,7 +84,7 @@ public sealed partial record class GPUQuerySet<TBackend>(GPUHandle<TBackend, GPU
         Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUSampler
+public partial interface IGPUSampler : IDisposable
 {
 }
 
@@ -97,7 +98,7 @@ public sealed partial record class GPUSampler<TBackend>(GPUHandle<TBackend, GPUS
         Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUBindGroup
+public partial interface IGPUBindGroup : IDisposable
 {
 }
 
@@ -145,7 +146,7 @@ public sealed partial record class GPUCommandBuffer<TBackend>(GPUHandle<TBackend
         Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUBindGroupLayout
+public partial interface IGPUBindGroupLayout : IDisposable
 {
 }
 
