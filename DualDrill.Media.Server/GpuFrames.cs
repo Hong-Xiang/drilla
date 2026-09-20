@@ -236,7 +236,7 @@ internal sealed class GpuFrames : IDisposable
         deadline.CancelAfter(MapTimeout);
         Task map = _readback.MapAsync(GPUMapMode.Read, 0, _bufferBytes, deadline.Token).AsTask();
         Exception? pollingFailure = null;
-        while (!map.IsCompleted)
+        do
         {
             try
             {
@@ -252,7 +252,7 @@ internal sealed class GpuFrames : IDisposable
                 // MapAsync completes cancellation only after its native callback is terminal.
                 await Task.Delay(1, CancellationToken.None);
             }
-        }
+        } while (!map.IsCompleted);
 
         bool mapped = false;
         try
