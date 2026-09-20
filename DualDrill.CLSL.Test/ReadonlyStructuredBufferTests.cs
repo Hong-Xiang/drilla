@@ -281,10 +281,15 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var targetBody = Assert.Single(target.FunctionDefinitions, pair =>
             pair.Key.Name == nameof(ReadOnlyBufferShader.Shade)).Value;
         var dimensions = Assert.Single(TargetStatements(targetBody.Body).OfType<SlangGetDimensions>());
+        var origin = Assert.Single(targetBody.Origins.Dimensions);
 
         Assert.Same(length.Result, dimensions.Count);
+        Assert.Equal(length, origin.Source);
+        Assert.Same(dimensions, origin.Dimensions);
         Assert.Equal(ShaderType.U32, dimensions.Count.Type);
         Assert.Equal(ShaderType.U32, dimensions.Stride.Type);
+        Assert.IsType<IntermediateValue>(dimensions.Stride);
+        Assert.NotSame(dimensions.Count, dimensions.Stride);
         Assert.Equal(ReadOnlyStructuredBufferType.Instance, dimensions.Buffer.Type);
     }
 

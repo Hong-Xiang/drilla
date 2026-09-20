@@ -16,6 +16,7 @@ using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Reflection;
 using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
 using DualDrill.Mathematics;
@@ -184,6 +185,152 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void PortableDerivativeCanReadGuaranteedReadonlyBufferElement()
+    {
+        var shader = new ReadonlyBufferLoadDerivativeShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var function = source.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(ReadonlyBufferLoadDerivativeShader.Fragment));
+        var load = Assert.Single(
+            Instructions(source.GetBody(function)),
+            instruction => instruction.Operation is StructuredBufferLoadOperation);
+        var summary = FunctionEffectAnalysis.Analyze(source)[function];
+        var participation = Assert.Single(CLSLCooperationAnalysis.Analyze(source).EntryUniformQuadParticipations);
+        var storage = Assert.Single(new ShaderModuleReflection().GetStorageBufferBindings(raw));
+        var slang = Emit(shader, CLSLCompileTarget.SLang);
+        var wgsl = Emit(shader, CLSLCompileTarget.WGSL);
+
+        output.WriteLine("host obligation: the reflected four-byte minimum binding contains element zero");
+        output.WriteLine(slang);
+        output.WriteLine(wgsl);
+
+        var site = Assert.Single(summary.RequirementSites, candidate =>
+            candidate.Operation is StructuredBufferLoadOperation);
+        Assert.Equal(OperationRequirement.MemoryRead, site.Requirements);
+        Assert.Same(load.Payload, site.Payload);
+        Assert.Contains(participation.OriginalRelevantInstructions, fact =>
+            ReferenceEquals(fact.Function, function) &&
+            fact.Operation is StructuredBufferLoadOperation &&
+            ReferenceEquals(fact.Result, load.Result) &&
+            ReferenceEquals(fact.Payload, load.Payload));
+        Assert.Equal(4ul, storage.MinimumBindingSize);
+        Assert.Matches(@"v_\d+_Input\[v_\d+\]", slang);
+        Assert.Contains("ddx(", slang);
+        Assert.Matches(@"Input_0\[u32\(0\)\]", wgsl);
+        Assert.Contains("dpdx(", wgsl);
+    }
+
+    [Fact]
+    public void PortableDerivativeCanUseReadonlyBufferLengthAsData()
+    {
+        var shader = new ReadonlyBufferLengthDerivativeShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var function = source.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(ReadonlyBufferLengthDerivativeShader.Fragment));
+        var length = Assert.Single(
+            Instructions(source.GetBody(function)),
+            instruction => instruction.Operation is StructuredBufferLengthOperation);
+        var summary = FunctionEffectAnalysis.Analyze(source)[function];
+        var participation = Assert.Single(CLSLCooperationAnalysis.Analyze(source).EntryUniformQuadParticipations);
+        var slang = Emit(shader, CLSLCompileTarget.SLang);
+        var wgsl = Emit(shader, CLSLCompileTarget.WGSL);
+
+        output.WriteLine(slang);
+        output.WriteLine(wgsl);
+
+        Assert.DoesNotContain(summary.RequirementSites, site =>
+            site.Operation is StructuredBufferLengthOperation);
+        Assert.Contains(participation.OriginalRelevantInstructions, fact =>
+            ReferenceEquals(fact.Function, function) &&
+            fact.Operation is StructuredBufferLengthOperation &&
+            ReferenceEquals(fact.Result, length.Result) &&
+            ReferenceEquals(fact.Payload, length.Payload) &&
+            fact.Operands.AsEnumerable().SequenceEqual(
+                length.Operands,
+                ReferenceEqualityComparer.Instance));
+        Assert.Contains(".GetDimensions(", slang);
+        Assert.Contains("ddx(", slang);
+        Assert.Contains("arrayLength(", wgsl);
+        Assert.Contains("dpdx(", wgsl);
+    }
+
+    [Fact]
+    public void PortableUniformHelperCarriesReadonlyLengthAcrossBlocks()
+    {
+        var shader = new ReadonlyBufferLengthAcrossBlocksShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var fragment = Assert.Single(
+            raw.FunctionDefinitions,
+            item => item.Key.Name == nameof(ReadonlyBufferLengthAcrossBlocksShader.Fragment));
+        Assert.Contains(
+            fragment.Value.Code.Instructions,
+            item => item.Instruction.OpCode.Name?.StartsWith("brtrue", StringComparison.Ordinal) is true ||
+                    item.Instruction.OpCode.Name?.StartsWith("brfalse", StringComparison.Ordinal) is true);
+        Assert.Contains(
+            fragment.Value.Code.Instructions,
+            item => item.Instruction.Operand is System.Reflection.MethodInfo
+            {
+                Name: nameof(ReadonlyBufferLengthAcrossBlocksShader.UniformChoice)
+            });
+
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var facts = CLSLCooperationAnalysis.Analyze(source);
+        var pointer = source.RunPass(new StablePointerRegionParameterPass());
+        var target = new SlangTargetLowering().Lower(pointer);
+        CooperationAdmission.CheckTargetCorrespondence(pointer, target, facts);
+        var function = source.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(ReadonlyBufferLengthAcrossBlocksShader.Fragment));
+        var targetBody = target.GetBody(function);
+        var dimensions = Assert.Single(
+            targetBody.Origins.Dimensions,
+            origin => ReferenceEquals(origin.Label, source.GetBody(function).Entry));
+        var length = Assert.Single(
+            Instructions(source.GetBody(function)),
+            instruction => ReferenceEquals(instruction.Result, dimensions.Dimensions.Count));
+        var countCarrier = Assert.Single(targetBody.Origins.Definitions, definition =>
+            definition.Source.Operands.Any(operand =>
+                ReferenceEquals(operand, dimensions.Dimensions.Count)) &&
+            targetBody.Origins.Transfers.SelectMany(transfer => transfer.Arguments)
+                .Any(argument => ReferenceEquals(argument.Argument, definition.Source.Result)));
+        var transferArguments = targetBody.Origins.Transfers
+            .SelectMany(transfer => transfer.Arguments)
+            .Where(argument => ReferenceEquals(argument.Argument, countCarrier.Source.Result))
+            .ToArray();
+        var slang = Emit(shader, CLSLCompileTarget.SLang);
+        var wgsl = Emit(shader, CLSLCompileTarget.WGSL);
+
+        output.WriteLine(fragment.Value.PrettyPrint());
+        output.WriteLine(targetBody.PrettyPrint());
+        output.WriteLine(slang);
+        output.WriteLine(wgsl);
+
+        Assert.Same(length.Result, dimensions.Dimensions.Count);
+        Assert.NotEmpty(transferArguments);
+        Assert.All(transferArguments, transferArgument =>
+        {
+            Assert.Same(countCarrier.Source.Result, transferArgument.Argument);
+            Assert.Same(
+                countCarrier.Source.Result,
+                Assert.IsType<SlangValueOperand>(
+                    transferArgument.Definition.Instruction.Operands.Single()).Value);
+            Assert.Same(
+                targetBody.Origins.ParameterSlots[transferArgument.Parameter],
+                transferArgument.Slot);
+            Assert.True(AreInOrder(
+                targetBody.Body,
+                transferArgument.Definition,
+                transferArgument.Assignment));
+        });
+        Assert.Contains(".GetDimensions(", slang);
+        Assert.Contains("if", slang);
+        Assert.Contains("ddx(", slang);
+        Assert.Contains("arrayLength(", wgsl);
+        Assert.Contains("dpdx(", wgsl);
+    }
+
+    [Fact]
     public void UnreferencedNonlocalStorageIsNotInitiallyDefined()
     {
         var shader = new UniformStorageDerivativeShader();
@@ -194,7 +341,10 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             original.AddressSpace,
             "unreferenced",
             original.Type,
-            original.Attributes);
+            [
+                .. original.Attributes.Where(static attribute => attribute is not BindingAttribute),
+                new BindingAttribute(1)
+            ]);
         source = new(
             [.. source.Declarations, unreferenced],
             source.FunctionDefinitions);
@@ -485,6 +635,155 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void TargetVerifierRejectsCorruptedDimensionsOriginsAndCarriers()
+    {
+        var prepared = PrepareTarget(DimensionsCaptureModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var origin = Assert.Single(body.Origins.Dimensions);
+        var dimensions = origin.Dimensions;
+        var capture = Assert.IsType<SlangAssign>(origin.Capture);
+        var wrongBuffer = new VariableDeclaration(
+            StorageAddressSpace.Instance,
+            "wrong_buffer",
+            ReadOnlyStructuredBufferType.Instance,
+            [new GroupAttribute(0), new BindingAttribute(7)]);
+        var cases = new (string Name, Func<SlangFunctionBody> Mutate, string Expected)[]
+        {
+            (
+                "changed-buffer-root-with-updated-origin",
+                () =>
+                {
+                    var changed = dimensions with
+                    {
+                        Buffer = new SlangPlaceOperand(new SlangVariablePlace(wrongBuffer))
+                    };
+                    return Rewrite(
+                        body,
+                        statement => ReferenceEquals(statement, dimensions) ? changed : statement);
+                },
+                "dimensions origin changed its source operation/result/operand lineage"),
+            (
+                "changed-count-with-updated-origin",
+                () =>
+                {
+                    var changed = dimensions with
+                    {
+                        Count = ShaderValue.Intermediate(ShaderType.U32)
+                    };
+                    return Rewrite(
+                        body,
+                        statement => ReferenceEquals(statement, dimensions) ? changed : statement);
+                },
+                "dimensions origin changed its source operation/result/operand lineage"),
+            (
+                "aliased-stride-with-updated-origin",
+                () =>
+                {
+                    var changed = dimensions with { Stride = dimensions.Count };
+                    return Rewrite(
+                        body,
+                        statement => ReferenceEquals(statement, dimensions) ? changed : statement);
+                },
+                "dimensions stride is not a fresh writable u32 intermediate"),
+            (
+                "wrong-stride-type-with-updated-origin",
+                () =>
+                {
+                    var changed = dimensions with
+                    {
+                        Stride = ShaderValue.Intermediate(ShaderType.F32)
+                    };
+                    return Rewrite(
+                        body,
+                        statement => ReferenceEquals(statement, dimensions) ? changed : statement);
+                },
+                "dimensions stride is not a fresh writable u32 intermediate"),
+            (
+                "duplicate-dimensions-with-updated-origins",
+                () =>
+                {
+                    var duplicate = dimensions with
+                    {
+                        Stride = ShaderValue.Intermediate(ShaderType.U32)
+                    };
+                    var changed = Rewrite(
+                        body,
+                        static statement => statement,
+                        statements => InsertAfter(statements, dimensions, duplicate));
+                    return new SlangFunctionBody(
+                        changed.Declaration,
+                        changed.Body,
+                        changed.Origins with
+                        {
+                            Dimensions =
+                            [
+                                .. changed.Origins.Dimensions,
+                                origin with { Dimensions = duplicate }
+                            ]
+                        });
+                },
+                "activation template has duplicate source instruction origins"),
+            (
+                "dimensions-moved-outside-source-scope",
+                () =>
+                {
+                    var changed = Rewrite(
+                        body,
+                        statement => ReferenceEquals(statement, dimensions) ? null : statement);
+                    return new SlangFunctionBody(
+                        changed.Declaration,
+                        new SlangBlock([dimensions, .. changed.Body.Statements]),
+                        changed.Origins);
+                },
+                "activation template contains a misplaced declaration"),
+            (
+                "cross-block-count-capture-reads-stride-with-updated-origin",
+                () =>
+                {
+                    var changedCapture = new SlangAssign(
+                        capture.Target,
+                        new SlangValueOperand(dimensions.Stride));
+                    return Rewrite(
+                        body,
+                        statement => ReferenceEquals(statement, capture) ? changedCapture : statement);
+                },
+                "captured uniform definition writes the wrong value or carrier")
+        };
+
+        foreach (var item in cases)
+        {
+            var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+                prepared.Target.Declarations,
+                prepared.Target.FunctionDefinitions.SetItem(
+                    prepared.Function,
+                    item.Mutate()));
+            var error = Assert.Throws<NotSupportedException>(() =>
+                CooperationAdmission.CheckTargetCorrespondence(
+                    prepared.Pointer,
+                    corrupted,
+                    prepared.Facts));
+            output.WriteLine($"{item.Name}: {error.Message}");
+            Assert.Contains(item.Expected, error.Message);
+        }
+    }
+
+    [Fact]
+    public void DirectCrossBlockLengthUsesImmediateCountCapture()
+    {
+        var prepared = PrepareTarget(DimensionsCaptureModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var origin = Assert.Single(body.Origins.Dimensions);
+        var capture = Assert.IsType<SlangAssign>(origin.Capture);
+        var target = Assert.IsType<SlangVariablePlace>(capture.Target);
+        var value = Assert.IsType<SlangValueOperand>(capture.Value);
+
+        Assert.Same(origin.Source.Result, origin.Dimensions.Count);
+        Assert.Same(origin.Dimensions.Count, value.Value);
+        Assert.Same(body.Origins.Captures[origin.Dimensions.Count], target.Variable);
+        Assert.True(AreAdjacent(body.Body, origin.Dimensions, capture));
+    }
+
+    [Fact]
     public void StaleUniformFactsCannotCertifyChangedPointerProducer()
     {
         var module = PhiConditionalModule();
@@ -541,6 +840,55 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
         Assert.Contains("conditional control is varying", fresh.Message);
         Assert.Contains("does not match the analyzed source definition", stale.Message);
+    }
+
+    [Fact]
+    public void StaleResourceFactsCannotCertifyChangedLengthOrLoad()
+    {
+        var raw = new RuntimeReflectionParser(CompilationContext.Create())
+            .ParseShaderModule(new ReadonlyBufferLengthDerivativeShader());
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var facts = CLSLCooperationAnalysis.Analyze(source);
+        var pointer = source.RunPass(new StablePointerRegionParameterPass());
+        var function = pointer.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(ReadonlyBufferLengthDerivativeShader.Fragment));
+        var body = pointer.GetBody(function);
+        var sites = body.Labels
+            .SelectMany(label => body[label].Body.Elements.Select(
+                (instruction, ordinal) => (Label: label, Ordinal: ordinal, Instruction: instruction)))
+            .Where(site =>
+                site.Instruction.Operation is StructuredBufferLengthOperation or StructuredBufferLoadOperation)
+            .ToArray();
+        Assert.Equal(2, sites.Length);
+
+        foreach (var site in sites)
+        {
+            var corruptedBody = body.MapRegionBody(block =>
+                !ReferenceEquals(block.Label, site.Label)
+                    ? block
+                    : block with
+                    {
+                        Body = Seq.Create(
+                            block.Body.Elements.Select((instruction, ordinal) =>
+                                ordinal == site.Ordinal
+                                    ? instruction with { Payload = new object() }
+                                    : instruction),
+                            block.Body.Last)
+                    });
+            var corruptedPointer = new ShaderModuleDeclaration<RegionFunctionBody>(
+                pointer.Declarations,
+                pointer.FunctionDefinitions.SetItem(function, corruptedBody));
+            var target = new SlangTargetLowering().Lower(corruptedPointer);
+
+            var error = Assert.Throws<NotSupportedException>(() =>
+                CooperationAdmission.CheckTargetCorrespondence(
+                    corruptedPointer,
+                    target,
+                    facts));
+
+            Assert.Contains("relevant operation fact", error.Message);
+            Assert.Contains("does not match the analyzed source", error.Message);
+        }
     }
 
     [Fact]
@@ -1291,6 +1639,8 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     [InlineData(typeof(IdentityLiteralConditionalShader), "conditional control")]
     [InlineData(typeof(DerivativeConditionShader), "conditional control")]
     [InlineData(typeof(UniformStorageConditionalShader), "conditional control")]
+    [InlineData(typeof(ReadonlyBufferLengthConditionalShader), "conditional control")]
+    [InlineData(typeof(ReadonlyBufferLoadConditionalShader), "conditional control")]
     [InlineData(typeof(SwitchDerivativeShader), "control is not admitted")]
     [InlineData(typeof(UniformSwitchDerivativeShader), "switch control is not admitted")]
     [InlineData(typeof(LoopContinueDerivativeShader), "RegionKind.Loop")]
@@ -1545,6 +1895,59 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     private static string Emit(ISharpShader shader, CLSLCompileTarget target) =>
         new CLSLCompiler(new(target, CLSLCooperationProfile.PortableWgsl)).Emit(shader);
 
+    private static IEnumerable<Instruction<IShaderValue, IShaderValue>> Instructions(RegionFunctionBody body)
+    {
+        var instructions = new List<Instruction<IShaderValue, IShaderValue>>();
+        body.Body.Traverse((_, _, block) =>
+        {
+            instructions.AddRange(block.Body.Elements);
+            return false;
+        });
+        return instructions;
+    }
+
+    private static bool AreInOrder(
+        SlangBlock block,
+        SlangStatement first,
+        SlangStatement second)
+    {
+        var firstIndex = ReferenceIndex(block.Statements, first);
+        var secondIndex = ReferenceIndex(block.Statements, second);
+        if (firstIndex >= 0 && secondIndex > firstIndex)
+            return true;
+        return block.Statements.Any(statement => statement switch
+        {
+            SlangScope scope => AreInOrder(scope.Body, first, second),
+            SlangIf conditional =>
+                AreInOrder(conditional.WhenTrue, first, second) ||
+                AreInOrder(conditional.WhenFalse, first, second),
+            SlangDoOnce once => AreInOrder(once.Body, first, second),
+            SlangLoop loop => AreInOrder(loop.Body, first, second),
+            _ => false
+        });
+    }
+
+    private static bool AreAdjacent(
+        SlangBlock block,
+        SlangStatement first,
+        SlangStatement second)
+    {
+        var firstIndex = ReferenceIndex(block.Statements, first);
+        var secondIndex = ReferenceIndex(block.Statements, second);
+        if (firstIndex >= 0 && secondIndex == firstIndex + 1)
+            return true;
+        return block.Statements.Any(statement => statement switch
+        {
+            SlangScope scope => AreAdjacent(scope.Body, first, second),
+            SlangIf conditional =>
+                AreAdjacent(conditional.WhenTrue, first, second) ||
+                AreAdjacent(conditional.WhenFalse, first, second),
+            SlangDoOnce once => AreAdjacent(once.Body, first, second),
+            SlangLoop loop => AreAdjacent(loop.Body, first, second),
+            _ => false
+        });
+    }
+
     private static CLSLCooperationFacts Analyze(ISharpShader shader)
     {
         var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
@@ -1634,6 +2037,11 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             Definitions = [.. source.Origins.Definitions.Select(origin => origin with
             {
                 Definition = Replace(origin.Definition),
+                Capture = ReplaceOptional(origin.Capture)
+            })],
+            Dimensions = [.. source.Origins.Dimensions.Select(origin => origin with
+            {
+                Dimensions = Replace(origin.Dimensions),
                 Capture = ReplaceOptional(origin.Capture)
             })],
             Instructions = [.. source.Origins.Instructions.Select(origin => origin with
@@ -1846,6 +2254,63 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
                 null));
         return new ShaderModuleDeclaration<RegionFunctionBody>(
             [declaration],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body));
+    }
+
+    private static ShaderModuleDeclaration<RegionFunctionBody> DimensionsCaptureModule()
+    {
+        var input = new VariableDeclaration(
+            StorageAddressSpace.Instance,
+            "Input",
+            ReadOnlyStructuredBufferType.Instance,
+            [new GroupAttribute(0), new BindingAttribute(0)]);
+        var declaration = new FunctionDeclaration(
+            "Fragment",
+            [],
+            new FunctionReturn(ShaderType.F32, [new LocationAttribute(0)]),
+            [new FragmentAttribute()]);
+        var entry = Label.Create("entry");
+        var returned = Label.Create("returned");
+        var count = ShaderValue.Intermediate(ShaderType.U32);
+        var value = ShaderValue.Intermediate(ShaderType.F32);
+        var derivative = ShaderValue.Intermediate(ShaderType.F32);
+        var dpdx = ShaderFunction.Instance.GetFunction("dpdx", ShaderType.F32, ShaderType.F32);
+        var entryBody = RegionFixture.Body(
+            entry,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    StructuredBufferLengthOperation.Instance,
+                    count,
+                    [input.Value],
+                    "captured-length")
+            ],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(returned, [])));
+        var returnBody = RegionFixture.Body(
+            returned,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    StructuredBufferLoadOperation.Instance,
+                    value,
+                    [input.Value, count],
+                    "captured-length-load"),
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new CallOperation((FunctionType)dpdx.Type),
+                    derivative,
+                    [dpdx, value],
+                    "captured-length-derivative")
+            ],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(derivative));
+        var body = RegionFixture.CreateFunctionBody(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [RegionTree.Block(returned, [], returnBody, null)],
+                entryBody,
+                returned));
+        return new ShaderModuleDeclaration<RegionFunctionBody>(
+            [input, declaration],
             ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body));
     }
 
@@ -2640,6 +3105,49 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             DMath.dpdx(globals.value + varying);
     }
 
+    private sealed class ReadonlyBufferLoadDerivativeShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<float> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment() => DMath.dpdx(Input[0u]);
+    }
+
+    private sealed class ReadonlyBufferLengthDerivativeShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<float> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment() => DMath.dpdx(Input[Input.Length - 1u]);
+    }
+
+    private sealed class ReadonlyBufferLengthAcrossBlocksShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<float> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment()
+        {
+            var index = Input.Length - (UniformChoice() ? 1u : Input.Length);
+            return DMath.dpdx(Input[index]);
+        }
+
+        [ShaderMethod]
+        public static bool UniformChoice() => true;
+    }
+
     private sealed class UniformStorageConditionalShader : ISharpShader
     {
         [Uniform]
@@ -2654,6 +3162,40 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             if (globals.value > 0.0f)
                 return DMath.dpdx(varying);
             return varying;
+        }
+    }
+
+    private sealed class ReadonlyBufferLengthConditionalShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<float> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment()
+        {
+            if (Input.Length > 0u)
+                return DMath.dpdx(0.0f);
+            return 0.0f;
+        }
+    }
+
+    private sealed class ReadonlyBufferLoadConditionalShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<float> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment()
+        {
+            if (Input[0u] > 0.0f)
+                return DMath.dpdx(0.0f);
+            return 0.0f;
         }
     }
 
@@ -2708,8 +3250,8 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
     private sealed class ComputeDerivativeShader : ISharpShader
     {
-        [Compute]
-        public static float Compute(float varying) => DMath.dpdx(varying);
+        [Compute, WorkgroupSize(1, 1, 1)]
+        public static void Compute() => _ = DMath.dpdx(0.0f);
     }
 
     private sealed class SharedStageDerivativeShader : ISharpShader

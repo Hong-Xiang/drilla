@@ -51,6 +51,8 @@ public sealed class SlangTargetLowering
             ImmutableArray.CreateBuilder<SlangParameterOrigin>();
         private readonly ImmutableArray<SlangDefinitionOrigin>.Builder definitionOrigins =
             ImmutableArray.CreateBuilder<SlangDefinitionOrigin>();
+        private readonly ImmutableArray<SlangDimensionsOrigin>.Builder dimensionsOrigins =
+            ImmutableArray.CreateBuilder<SlangDimensionsOrigin>();
         private readonly ImmutableArray<SlangInstructionOrigin>.Builder instructionOrigins =
             ImmutableArray.CreateBuilder<SlangInstructionOrigin>();
         private readonly ImmutableArray<SlangTransferOrigin>.Builder transferOrigins =
@@ -133,6 +135,7 @@ public sealed class SlangTargetLowering
                     captures.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
                     parameterOrigins.ToImmutable(),
                     definitionOrigins.ToImmutable(),
+                    dimensionsOrigins.ToImmutable(),
                     instructionOrigins.ToImmutable(),
                     transferOrigins.ToImmutable(),
                     conditionalOrigins.ToImmutable(),
@@ -521,11 +524,13 @@ public sealed class SlangTargetLowering
                     ValidateStructuredBufferLength(instruction, length);
                     var count = instruction.Result!;
                     var stride = ShaderValue.Intermediate(ShaderType.U32);
-                    statements.Add(new SlangGetDimensions(
-                        Operand(instruction.Operand0),
+                    var dimensions = new SlangGetDimensions(
+                        new SlangPlaceOperand(Place(instruction.Operand0, instruction.Operation.Name)),
                         count,
-                        stride));
-                    CaptureDefinition(count, statements);
+                        stride);
+                    statements.Add(dimensions);
+                    var capture = CaptureDefinition(count, statements);
+                    dimensionsOrigins.Add(new(label, ordinal, instruction, dimensions, capture));
                     return;
                 case StructuredBufferLoadOperation load:
                     ValidateStructuredBufferLoad(instruction, load);

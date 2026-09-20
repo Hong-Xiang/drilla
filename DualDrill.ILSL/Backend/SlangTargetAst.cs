@@ -343,6 +343,13 @@ internal sealed record SlangDefinitionOrigin(
     SlangBind Definition,
     SlangAssign? Capture);
 
+internal sealed record SlangDimensionsOrigin(
+    Label Label,
+    int InstructionOrdinal,
+    Instruction<IShaderValue, IShaderValue> Source,
+    SlangGetDimensions Dimensions,
+    SlangAssign? Capture);
+
 internal sealed record SlangInstructionOrigin(
     Label Label,
     int InstructionOrdinal,
@@ -396,6 +403,7 @@ internal sealed record SlangLoweringOrigins(
     ImmutableDictionary<IShaderValue, VariableDeclaration> Captures,
     ImmutableArray<SlangParameterOrigin> Parameters,
     ImmutableArray<SlangDefinitionOrigin> Definitions,
+    ImmutableArray<SlangDimensionsOrigin> Dimensions,
     ImmutableArray<SlangInstructionOrigin> Instructions,
     ImmutableArray<SlangTransferOrigin> Transfers,
     ImmutableArray<SlangConditionalOrigin> Conditionals,
@@ -407,6 +415,7 @@ internal sealed record SlangLoweringOrigins(
         null,
         ImmutableDictionary<IShaderValue, VariableDeclaration>.Empty,
         ImmutableDictionary<IShaderValue, VariableDeclaration>.Empty,
+        [],
         [],
         [],
         [],

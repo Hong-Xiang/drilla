@@ -45,6 +45,17 @@ Slang output uses `StructuredBuffer<float>`, `GetDimensions(count, stride)` and
 indexed loads. WGSL output uses `var<storage, read>`, `arrayLength`, and indexed
 loads.
 
+With the `PortableWgsl` cooperation profile, fragment derivatives may consume
+`Input[0]` or values derived from `Input.Length`. The minimum binding size of
+four bytes guarantees that element zero exists; no synthetic varying bounds
+branch is introduced. A helper-proven uniform conditional may carry a Length
+value through checked forward blocks before derivative use. Length and loads
+remain varying data: using either to control derivative execution is rejected.
+The target verifier preserves each source Length/load operation and its
+operation, result, operands, payload, label and ordinal; `GetDimensions` also
+has an exact buffer place, original count identity, fresh u32 stride, and
+checked capture/slot lineage.
+
 Typed reflection reports `ReadOnlyStorage`, element stride `4`, minimum binding
 size `4`, binding coordinates, visibility, and dynamic-offset policy. Bind-group
 descriptor projections combine uniforms and read-only storage entries.
@@ -53,8 +64,8 @@ For the source-level reference values `Input = [1, 3, 5]` and `Scale = 2`,
 `Input[1] * Scale` is `6`. This is an arithmetic oracle, not GPU execution or
 readback evidence.
 
-The source guard is responsible for bounds safety. Host bindings must contain
-at least one complete f32 element, have byte length divisible by four, and
-satisfy device binding-offset limits. Read-only access does not prove physical
-non-aliasing. Read-write buffers, stores, dispatch, synchronization, allocation,
-and runtime resource management are outside this slice.
+The source or host is responsible for bounds beyond element zero. Host bindings
+must contain at least one complete f32 element, have byte length divisible by
+four, and satisfy device binding-offset limits. Read-only access does not prove
+physical non-aliasing. Read-write buffers, stores, dispatch, synchronization,
+allocation, and runtime resource management are outside this slice.

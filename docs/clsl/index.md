@@ -21,6 +21,7 @@ Current production contracts:
 - [Shader metadata validation](./shader-metadata.md)
 - [Uniform buffer layout and reflection](./uniform-layout.md)
 - [Compute entry points](./compute-entry.md)
+- [Read-only f32 structured buffers](./readonly-structured-buffer.md)
 
 ## Key Features
 

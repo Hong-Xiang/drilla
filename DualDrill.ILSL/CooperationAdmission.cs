@@ -258,7 +258,7 @@ internal static class CooperationAdmission
                         KeyValuePair.Create(item.Key, item.Value.OriginalBlocks))),
                 sensitiveSites,
                 callInheritance,
-                RelevantInstructionFacts(normalized, sensitiveSites, callInheritance),
+                RelevantInstructionFacts(normalized, sensitiveSites, callInheritance, closure),
                 uniformity.Functions));
         }
 
@@ -341,11 +341,29 @@ internal static class CooperationAdmission
     private static ImmutableArray<CooperationInstructionFact> RelevantInstructionFacts(
         ShaderModuleDeclaration<RegionFunctionBody> module,
         ImmutableArray<OperationRequirementSite> sensitiveSites,
-        ImmutableArray<CooperationCallSite> calls) =>
-    [
-        .. sensitiveSites
+        ImmutableArray<CooperationCallSite> calls,
+        ImmutableArray<FunctionDeclaration> closure)
+    {
+        var resourceSites = ImmutableArray.CreateBuilder<(
+            FunctionDeclaration Function,
+            Label Label,
+            int InstructionOrdinal)>();
+        foreach (var function in closure)
+            module.FunctionDefinitions[function].Body.Traverse((_, label, block) =>
+            {
+                foreach (var (instruction, ordinal) in block.Body.Elements.Select(
+                             static (instruction, ordinal) => (instruction, ordinal)))
+                    if (instruction.Operation is StructuredBufferLengthOperation or StructuredBufferLoadOperation)
+                        resourceSites.Add((function, label, ordinal));
+                return false;
+            });
+
+        return
+        [
+            .. sensitiveSites
             .Select(static site => (site.Function, site.Label, site.InstructionOrdinal))
             .Concat(calls.Select(static site => (site.Caller, site.Label, site.InstructionOrdinal)))
+            .Concat(resourceSites)
             .Distinct()
             .Select(site =>
             {
@@ -362,7 +380,8 @@ internal static class CooperationAdmission
                     [.. instruction.Operands],
                     instruction.Payload);
             })
-    ];
+        ];
+    }
 
     private static void CheckDerivative(
         ShaderModuleDeclaration<RegionFunctionBody> module,
