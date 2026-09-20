@@ -9,6 +9,11 @@ if (args is ["--self-test"])
     return CpuFrames.RunSelfTest() == 0 ? WebRtcSession.RunSignalSelfTest() : 1;
 }
 
+if (args is ["--gpu-self-test"])
+{
+    return await GpuFrames.RunSelfTestAsync();
+}
+
 GstSharpOptions nativeOptions = new();
 GstApp.Initialize(nativeOptions);
 GstSdp.Initialize(nativeOptions);

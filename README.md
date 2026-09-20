@@ -7,8 +7,9 @@ For compiler development on Linux without WebView2, use the
 offers Triangle, Uniform, animated Mandelbrot, and animated Raymarching shaders
 compiled from C# through Slang to WGSL.
 
-The isolated [.NET CPU-to-WebRTC proof of concept](DualDrill.Media.Server/README.md)
-streams managed BGRA frames through GStreamer to a local browser.
+The isolated [.NET GPU-to-WebRTC proof of concept](DualDrill.Media.Server/README.md)
+renders with Rust wgpu-native, reads back BGRA frames, and streams them through
+GStreamer to a local browser without WebView.
 
 ## develop
 

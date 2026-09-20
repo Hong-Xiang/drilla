@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -50,6 +51,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
     private Element? _webrtc;
     private Bus? _bus;
     private CpuBgraInput? _input;
+    private GpuFrames? _gpu;
     private byte[]? _pixels;
     private Promise? _offerPromise;
     private Promise? _setLocalOfferPromise;
@@ -100,6 +102,10 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
         try
         {
+            _gpu = await GpuFrames.CreateAsync(_stop.Token);
+            _logger.LogInformation(
+                "GPU source: {Device}, {Backend}, {AdapterType}",
+                _gpu.AdapterInfo.Device, _gpu.AdapterInfo.BackendType, _gpu.AdapterInfo.AdapterType);
             InitializePipeline();
             _producerTask = ProduceFramesAsync(_stop.Token);
             _busTask = Task.Run(() => MonitorBus(_stop.Token), CancellationToken.None);
@@ -182,11 +188,12 @@ internal sealed class WebRtcSession : IAsyncDisposable
         _socket.Dispose();
         _stop.Dispose();
         GstSharp.DrainPendingReleases();
+        _gpu?.Dispose();
     }
 
     private void InitializePipeline()
     {
-        Pipeline pipeline = Pipeline.New("cpu-webrtc");
+        Pipeline pipeline = Pipeline.New("gpu-webrtc");
         _pipeline = pipeline;
 
         _source = Make<AppSrc>("appsrc", "cpu-source");
@@ -241,6 +248,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
         try
         {
             using PeriodicTimer timer = new(TimeSpan.FromSeconds(1d / CpuFrames.FramesPerSecond));
+            var elapsed = Stopwatch.StartNew();
             ulong frameNumber = 0;
 
             while (await timer.WaitForNextTickAsync(cancellationToken))
@@ -250,7 +258,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
                     continue;
                 }
 
-                CpuFrames.Fill(_pixels!, frameNumber);
+                await _gpu!.RenderAsync(_pixels!, elapsed.Elapsed, cancellationToken);
                 FlowReturn result = _input!.Push(_pixels);
 
                 if (cancellationToken.IsCancellationRequested &&
@@ -273,7 +281,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            Fail("The CPU frame producer failed.", exception);
+            Fail("The GPU frame producer failed.", exception);
         }
     }
 

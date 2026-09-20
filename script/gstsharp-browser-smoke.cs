@@ -63,39 +63,65 @@ for (var iteration = 0; iteration < 4; iteration++)
               const canvas = document.createElement('canvas');
               const context = canvas.getContext('2d', {willReadFrequently: true});
               if (!context) throw new Error('Canvas unavailable');
-              function sample() {
+              function sample(metadata) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 context.drawImage(video, 0, 0);
                 const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-                let red = 0, green = 0, blue = 0, yellow = 0, white = 0, whiteX = 0, whiteY = 0;
+                let red = 0, green = 0, blue = 0, foreground = 0, background = 0;
                 for (let i = 0; i < pixels.length; i += 4) {
                   const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
-                  const x = (i / 4) % canvas.width, y = Math.floor(i / 4 / canvas.width);
-                  const left = x < canvas.width / 2, top = y < canvas.height / 2;
-                  if (left && top && r > 150 && g < 100 && b < 100) red++;
-                  if (!left && top && g > 150 && r < 100 && b < 100) green++;
-                  if (left && !top && b > 150 && r < 100 && g < 100) blue++;
-                  if (!left && !top && r > 150 && g > 150 && b < 100) yellow++;
-                  if (r > 210 && g > 210 && b > 210) { white++; whiteX += x; whiteY += y; }
+                  const maximum = Math.max(r, g, b), minimum = Math.min(r, g, b);
+                  if (maximum < 40) background++;
+                  if (maximum > 90 && maximum - minimum > 45) foreground++;
+                  if (r > 130 && r > g * 1.5 && r > b * 1.5) red++;
+                  if (g > 130 && g > r * 1.5 && g > b * 1.5) green++;
+                  if (b > 130 && b > r * 1.5 && b > g * 1.5) blue++;
                 }
-                return {red, green, blue, yellow, white, markerX: whiteX / white, markerY: whiteY / white};
+                return {pixels, metadata, red, green, blue, foreground, background};
+              }
+              function nextFrame() {
+                return new Promise((resolve, reject) => {
+                  const id = video.requestVideoFrameCallback((_, metadata) => {
+                    clearTimeout(timer);
+                    try { resolve(sample(metadata)); } catch (error) { reject(error); }
+                  });
+                  const timer = setTimeout(() => {
+                    video.cancelVideoFrameCallback(id);
+                    reject(new Error('Decoded video stopped advancing'));
+                  }, 5000);
+                });
               }
               for (let i = 0; i < 200; i++) {
-                if (video.readyState >= 2 && video.getVideoPlaybackQuality().totalVideoFrames >= 10) {
-                  const first = sample();
+                if (video.readyState >= 2) {
+                  const first = await nextFrame();
                   await new Promise(resolve => setTimeout(resolve, 500));
-                  const second = sample();
-                  if (first.white < 300 || second.white < 300)
-                    throw new Error('CPU-generated white marker was not decoded');
-                  if (Math.hypot(first.markerX - second.markerX, first.markerY - second.markerY) < 4)
-                    throw new Error('Received marker did not move');
-                  if (Math.min(second.red, second.green, second.blue, second.yellow) < 10000)
-                    throw new Error('Expected CPU-generated RGB regions were not decoded');
+                  const second = await nextFrame();
+                  if (first.pixels.length !== second.pixels.length)
+                    throw new Error('Video dimensions changed');
+                  let difference = 0, motionPixels = 0;
+                  for (let p = 0; p < first.pixels.length; p += 4) {
+                    const delta = Math.abs(first.pixels[p] - second.pixels[p])
+                      + Math.abs(first.pixels[p + 1] - second.pixels[p + 1])
+                      + Math.abs(first.pixels[p + 2] - second.pixels[p + 2]);
+                    difference += delta;
+                    if (delta > 90) motionPixels++;
+                  }
+                  const motionScore = difference / (canvas.width * canvas.height * 3);
+                  const decodedDelta = second.metadata.presentedFrames - first.metadata.presentedFrames;
+                  if (decodedDelta <= 0 || second.metadata.mediaTime <= first.metadata.mediaTime)
+                    throw new Error('Decoded frame metadata did not advance');
+                  if (motionPixels < 1000 || motionScore < 3)
+                    throw new Error('Decoded GPU triangle did not rotate');
+                  if (second.foreground < 5000 || second.background < 40000
+                      || Math.min(second.red, second.green, second.blue) < 300)
+                    throw new Error('Expected GPU triangle and dark background were not decoded');
                   return {
                     width: video.videoWidth, height: video.videoHeight,
                     decodedFrames: video.getVideoPlaybackQuality().totalVideoFrames,
-                    ...second
+                    decodedDelta, motionPixels, motionScore,
+                    foreground: second.foreground, background: second.background,
+                    red: second.red, green: second.green, blue: second.blue
                   };
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -131,15 +157,34 @@ for (var iteration = 0; iteration < 4; iteration++)
                   const oldSocket = globalThis.__mediaSockets.at(-1);
                   const oldClose = oldSocket.onclose, oldError = oldSocket.onerror;
                   if (!oldClose || !oldError) throw new Error('Missing stale callback fixture');
+                  const video = document.getElementById('video');
+                  const oldStream = video.srcObject;
                   document.getElementById('stop').click();
                   await new Promise(resolve => setTimeout(resolve, 500));
                   document.getElementById('start').click();
                   oldClose.call(oldSocket, new CloseEvent('close'));
                   oldError.call(oldSocket, new Event('error'));
-                  const video = document.getElementById('video');
+                  function nextFrame() {
+                    return new Promise((resolve, reject) => {
+                      const id = video.requestVideoFrameCallback((_, metadata) => {
+                        clearTimeout(timer);
+                        resolve(metadata);
+                      });
+                      const timer = setTimeout(() => {
+                        video.cancelVideoFrameCallback(id);
+                        reject(new Error('Replacement video stopped advancing'));
+                      }, 5000);
+                    });
+                  }
                   for (let i = 0; i < 200; i++) {
-                    if (video.srcObject && video.readyState >= 2
-                        && video.getVideoPlaybackQuality().totalVideoFrames >= 3) return true;
+                    if (video.srcObject && video.srcObject !== oldStream && video.readyState >= 2) {
+                      const replacement = video.srcObject;
+                      const first = await nextFrame(), second = await nextFrame();
+                      if (video.srcObject !== replacement || second.mediaTime <= first.mediaTime
+                          || second.presentedFrames <= first.presentedFrames)
+                        throw new Error('Replacement stream did not produce new frames');
+                      return true;
+                    }
                     await new Promise(resolve => setTimeout(resolve, 100));
                   }
                   throw new Error('Old callbacks terminated the replacement session: '
@@ -172,7 +217,7 @@ for (var iteration = 0; iteration < 4; iteration++)
     await Task.Delay(500, cancellation);
 }
 
-Console.WriteLine($"PASS: CPU colors and moving marker decoded across four connections, including tab-close recovery; last count {previousFrame}.");
+Console.WriteLine($"PASS: GPU triangle decoded and moved across four connections, including tab-close recovery; last count {previousFrame}.");
 return 0;
 
 sealed class BrowserProtocol : IAsyncDisposable

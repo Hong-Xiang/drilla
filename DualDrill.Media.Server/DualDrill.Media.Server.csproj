@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
     <PackageReference Include="GstSharp.Net" />
     <PackageReference Include="GstSharp.Net.App" />
     <PackageReference Include="GstSharp.Net.Sdp" />
