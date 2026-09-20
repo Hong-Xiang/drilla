@@ -165,6 +165,19 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                     writer.Write(RenderOperand(assignment.Value));
                     writer.WriteLine(';');
                     break;
+                case SlangGetDimensions dimensions:
+                    writer.Write("uint ");
+                    writer.Write(GetValueName(dimensions.Count));
+                    writer.Write(", ");
+                    writer.Write(GetValueName(dimensions.Stride));
+                    writer.WriteLine(';');
+                    writer.Write(RenderOperand(dimensions.Buffer));
+                    writer.Write(".GetDimensions(");
+                    writer.Write(GetValueName(dimensions.Count));
+                    writer.Write(", ");
+                    writer.Write(GetValueName(dimensions.Stride));
+                    writer.WriteLine(");");
+                    break;
                 case SlangScope scope:
                     using (writer.IndentedScopeWithBracket())
                     {
@@ -225,6 +238,8 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 CallOperation when operands.Length >= 1 =>
                     $"{Operand(0)}({string.Join(',', operands[1..].Select(RenderOperand))})",
                 LiteralOperation when operands.Length == 1 => Operand(0),
+                StructuredBufferLoadOperation when operands.Length == 2 =>
+                    $"{Operand(0)}[{Operand(1)}]",
                 IConversionOperation conversion when operands.Length == 1 =>
                     $"{conversion.ResultType.Name}({Operand(0)})",
                 IVectorSwizzleGetOperation swizzle when operands.Length == 1 =>
@@ -334,6 +349,12 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 case FragmentAttribute:
                     writer.WriteLine("[shader(\"fragment\")]");
                     break;
+                case ComputeAttribute:
+                    writer.WriteLine("[shader(\"compute\")]");
+                    break;
+                case WorkgroupSizeAttribute size:
+                    writer.WriteLine($"[numthreads({size.X}, {size.Y}, {size.Z})]");
+                    break;
                 case VertexAttribute:
                     writer.WriteLine("[shader(\"vertex\")]");
                     break;
@@ -343,6 +364,7 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                     {
                         BuiltinBinding.position => "SV_POSITION",
                         BuiltinBinding.vertex_index => "SV_VertexId",
+                        BuiltinBinding.global_invocation_id => "SV_DispatchThreadID",
                         _ => throw new NotSupportedException(
                             $"Unsupported Slang builtin binding {builtin.Slot}.")
                     });

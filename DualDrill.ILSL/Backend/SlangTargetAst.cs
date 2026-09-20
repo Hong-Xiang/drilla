@@ -110,6 +110,15 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
                     DumpOperand(writer, assign.Value);
                     writer.WriteLine();
                     break;
+                case SlangGetDimensions dimensions:
+                    writer.Write("dimensions ");
+                    DumpValue(writer, dimensions.Count);
+                    writer.Write(", ");
+                    DumpValue(writer, dimensions.Stride);
+                    writer.Write(" <- ");
+                    DumpOperand(writer, dimensions.Buffer);
+                    writer.WriteLine();
+                    break;
                 case SlangScope scope:
                     writer.Write("scope");
                     DumpLabel(writer, scope.OriginalLabel);
@@ -289,6 +298,8 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
             SlangBind bind => [bind.Instruction.Result!, .. bind.Instruction.Operands.SelectMany(Values)],
             SlangEffect effect => effect.Instruction.Operands.SelectMany(Values),
             SlangAssign assign => [.. Values(assign.Target), .. Values(assign.Value)],
+            SlangGetDimensions dimensions =>
+                [dimensions.Count, dimensions.Stride, .. Values(dimensions.Buffer)],
             SlangIf conditional => Values(conditional.Condition),
             SlangReturnValue returned => Values(returned.Value),
             _ => []
@@ -330,6 +341,13 @@ internal sealed record SlangDefinitionOrigin(
     int InstructionOrdinal,
     Instruction<IShaderValue, IShaderValue> Source,
     SlangBind Definition,
+    SlangAssign? Capture);
+
+internal sealed record SlangDimensionsOrigin(
+    Label Label,
+    int InstructionOrdinal,
+    Instruction<IShaderValue, IShaderValue> Source,
+    SlangGetDimensions Dimensions,
     SlangAssign? Capture);
 
 internal sealed record SlangInstructionOrigin(
@@ -385,6 +403,7 @@ internal sealed record SlangLoweringOrigins(
     ImmutableDictionary<IShaderValue, VariableDeclaration> Captures,
     ImmutableArray<SlangParameterOrigin> Parameters,
     ImmutableArray<SlangDefinitionOrigin> Definitions,
+    ImmutableArray<SlangDimensionsOrigin> Dimensions,
     ImmutableArray<SlangInstructionOrigin> Instructions,
     ImmutableArray<SlangTransferOrigin> Transfers,
     ImmutableArray<SlangConditionalOrigin> Conditionals,
@@ -396,6 +415,7 @@ internal sealed record SlangLoweringOrigins(
         null,
         ImmutableDictionary<IShaderValue, VariableDeclaration>.Empty,
         ImmutableDictionary<IShaderValue, VariableDeclaration>.Empty,
+        [],
         [],
         [],
         [],
@@ -454,6 +474,11 @@ public sealed record SlangAssign : SlangStatement
     public SlangPlace Target { get; }
     public SlangOperand Value { get; }
 }
+
+public sealed record SlangGetDimensions(
+    SlangOperand Buffer,
+    IShaderValue Count,
+    IShaderValue Stride) : SlangStatement;
 
 public sealed record SlangScope(Label? OriginalLabel, SlangBlock Body) : SlangStatement;
 public sealed record SlangIf(SlangOperand Condition, SlangBlock WhenTrue, SlangBlock WhenFalse) : SlangStatement;

@@ -23,13 +23,16 @@ public sealed class RaymarchingPrimitivesShaderReflection : IReflection
         return builder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(IShaderModuleDeclaration module)
-    {
-        return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
-    }
+    public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module) =>
+        _shaderModuleReflection.GetUniformBindings(module);
 
-    public GPUBindGroupLayoutDescriptorBuffer? GetBindGroupLayoutDescriptorBuffer(IShaderModuleDeclaration module)
-    {
-        return _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module);
-    }
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
+        IShaderModuleDeclaration module,
+        int group) =>
+        _shaderModuleReflection.GetBindGroupLayoutDescriptor(module, group);
+
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(
+        IShaderModuleDeclaration module,
+        int group) =>
+        _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module, group);
 }

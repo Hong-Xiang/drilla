@@ -12,6 +12,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Transform;
+using DualDrill.CLSL.Reflection;
 using DualDrill.Mathematics;
 using DualDrill.Shaders;
 using Xunit.Abstractions;
@@ -263,6 +264,79 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
             functionName => Assert.Contains(functionName, compilation.Wgsl));
         Assert.Contains("calcAO", compilation.Wgsl);
         Assert.Contains("smoothstep", compilation.Wgsl);
+    }
+
+    [Fact]
+    public async Task UniformReferenceLayoutMatchesSlangReflectionAndWgsl()
+    {
+        var compilation = await CompileUniformLayout(
+            new ShaderModule.UniformLayoutReferenceShaderModule(),
+            "r176-layout-reference");
+        using var reflectionJson = compilation.Reflection;
+
+        AssertUniformReflectionMatchesTarget(compilation.Uniforms, reflectionJson.RootElement);
+        Assert.Matches(@"@align\(16\)\s+\w*Tint\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(16\)\s+\w*Exposure\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(4\)\s+\w*Mode\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(8\)\s+\w*Padding\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(4\)\s+\w*Weight\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(16\)\s+\w*Offset\w*\s*:", compilation.Wgsl);
+    }
+
+    [Fact]
+    public async Task UniformProfileFamiliesMatchSlangReflectionAndWgsl()
+    {
+        var compilation = await CompileUniformLayout(
+            new ShaderModule.UniformLayoutProfileShaderModule(),
+            "r176-layout-profile");
+        using var reflectionJson = compilation.Reflection;
+
+        AssertUniformReflectionMatchesTarget(compilation.Uniforms, reflectionJson.RootElement);
+        Assert.Equal(14, compilation.Uniforms.Count);
+        Assert.Matches(@"var<uniform>\s+\w*F32\w*\s*:\s*f32", compilation.Wgsl);
+        Assert.Matches(@"var<uniform>\s+\w*I32x3\w*\s*:\s*vec3<i32>", compilation.Wgsl);
+        Assert.Matches(@"var<uniform>\s+\w*U32x4\w*\s*:\s*vec4<u32>", compilation.Wgsl);
+        Assert.Matches(@"@align\(16\)\s+\w*Value\w*\s*:\s*f32", compilation.Wgsl);
+        Assert.Matches(@"@align\(4\)\s+\w*Scalar\w*\s*:\s*f32", compilation.Wgsl);
+    }
+
+    [Fact]
+    public async Task UniformEffectiveAlignmentMatchesEveryBoundedOffsetClass()
+    {
+        var compilation = await CompileUniformLayout(
+            new ShaderModule.UniformEffectiveAlignmentShaderModule(),
+            "r176-effective-align");
+        using var reflectionJson = compilation.Reflection;
+
+        AssertUniformReflectionMatchesTarget(compilation.Uniforms, reflectionJson.RootElement);
+
+        var packed = Assert.Single(compilation.Uniforms, uniform => uniform.Name == "Packed");
+        Assert.Equal(
+            new[]
+            {
+                new ShaderBufferMemberLayout("Position", 0, 8, 16, 8),
+                new ShaderBufferMemberLayout("Time", 8, 4, 8, 4),
+                new ShaderBufferMemberLayout("Tail", 12, 4, 4, 4)
+            },
+            packed.Layout.Members.ToArray());
+
+        var scalars = Assert.Single(compilation.Uniforms, uniform => uniform.Name == "Scalars");
+        Assert.Equal(
+            new[]
+            {
+                new ShaderBufferMemberLayout("First", 0, 4, 16, 4),
+                new ShaderBufferMemberLayout("Second", 4, 4, 4, 4),
+                new ShaderBufferMemberLayout("Third", 8, 4, 8, 4),
+                new ShaderBufferMemberLayout("Fourth", 12, 4, 4, 4),
+                new ShaderBufferMemberLayout("Fifth", 16, 4, 16, 4)
+            },
+            scalars.Layout.Members.ToArray());
+
+        Assert.Matches(@"@align\(16\)\s+\w*Position\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(8\)\s+\w*Time\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(4\)\s+\w*Tail\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(8\)\s+\w*Third\w*\s*:", compilation.Wgsl);
+        Assert.Matches(@"@align\(16\)\s+\w*Fifth\w*\s*:", compilation.Wgsl);
     }
 
     [Fact]
@@ -529,6 +603,78 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
 
         return (reflection, slang, wgsl);
     }
+
+    async Task<UniformCompilation> CompileUniformLayout(ISharpShader shader, string outputName)
+    {
+        var slangCompiler = new CLSLCompiler(new(CLSLCompileTarget.SLang));
+        var module = slangCompiler.Parse(shader);
+        var uniforms = new ShaderModuleReflection().GetUniformBindings(module);
+        var slang = slangCompiler.Emit(shader);
+        await File.WriteAllTextAsync(Path.Combine(OutputFolder, $"{outputName}.slang"), slang);
+        var reflectionText = await new SlangService().ReflectAsync(slang);
+        var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
+
+        await File.WriteAllTextAsync(Path.Combine(OutputFolder, $"{outputName}.json"), reflectionText);
+        await File.WriteAllTextAsync(Path.Combine(OutputFolder, $"{outputName}.wgsl"), wgsl);
+
+        return new UniformCompilation(JsonDocument.Parse(reflectionText), slang, wgsl, uniforms);
+    }
+
+    static void AssertUniformReflectionMatchesTarget(
+        IReadOnlyCollection<ShaderUniformBinding> uniforms,
+        JsonElement reflection)
+    {
+        var target = reflection.GetProperty("parameters")
+                               .EnumerateArray()
+                               .ToDictionary(parameter =>
+                               {
+                                   var binding = parameter.GetProperty("binding");
+                                   var group = binding.TryGetProperty("space", out var space)
+                                       ? space.GetInt32()
+                                       : 0;
+                                   return (Group: group, Binding: binding.GetProperty("index").GetInt32());
+                               });
+
+        Assert.Equal(
+            uniforms.Select(uniform => (uniform.Group, uniform.Binding)).Order(),
+            target.Keys.Order());
+
+        foreach (var uniform in uniforms)
+        {
+            var parameter = target[(uniform.Group, uniform.Binding)];
+            Assert.EndsWith(uniform.Name, parameter.GetProperty("name").GetString());
+            var type = parameter.GetProperty("type");
+            Assert.Equal("constantBuffer", type.GetProperty("kind").GetString());
+            Assert.Equal(
+                uniform.Layout.Size,
+                type.GetProperty("elementVarLayout")
+                    .GetProperty("binding")
+                    .GetProperty("size")
+                    .GetUInt32());
+
+            if (uniform.Layout.Members.IsEmpty)
+                continue;
+
+            var fields = type.GetProperty("elementType")
+                             .GetProperty("fields")
+                             .EnumerateArray()
+                             .ToDictionary(field => field.GetProperty("name").GetString()
+                                 ?? throw new InvalidDataException("Slang reflection field has no name"));
+            Assert.Equal(uniform.Layout.Members.Select(member => member.Name), fields.Keys);
+            foreach (var member in uniform.Layout.Members)
+            {
+                var binding = fields[member.Name].GetProperty("binding");
+                Assert.Equal(member.Offset, binding.GetProperty("offset").GetUInt32());
+                Assert.Equal(member.Size, binding.GetProperty("size").GetUInt32());
+            }
+        }
+    }
+
+    private sealed record UniformCompilation(
+        JsonDocument Reflection,
+        string Slang,
+        string Wgsl,
+        IReadOnlyCollection<ShaderUniformBinding> Uniforms);
 
     private sealed class MultipleReturnShader : ISharpShader
     {

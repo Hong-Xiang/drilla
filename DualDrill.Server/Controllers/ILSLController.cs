@@ -91,8 +91,8 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, SlangS
 
     private ICLSLCompiler Compiler => throw new NotImplementedException();
 
-    [HttpGet("wgsl/bindgrouplayoutdescriptor/{name}")]
-    public async Task<IActionResult> GetBindGroupLayoutDescriptor(string name)
+    [HttpGet("wgsl/bindgrouplayoutdescriptor/{name}/{group:int}")]
+    public async Task<IActionResult> GetBindGroupLayoutDescriptor(string name, int group)
     {
         if (name == nameof(RaymarchingPrimitiveShader))
         {
@@ -100,7 +100,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, SlangS
             var type = shaderModule.GetType();
             var module = Compiler.Parse(shaderModule);
             var reflection = new RaymarchingPrimitivesShaderReflection();
-            return Ok(reflection.GetBindGroupLayoutDescriptor(module));
+            return Ok(reflection.GetBindGroupLayoutDescriptor(module, group));
         }
         else if (name == nameof(MandelbrotDistanceShader))
         {
@@ -108,22 +108,22 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, SlangS
             var type = shaderModule.GetType();
             var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
-            return Ok(reflection.GetBindGroupLayoutDescriptor(module));
+            return Ok(reflection.GetBindGroupLayoutDescriptor(module, group));
         }
         else if (name == nameof(MandelbrotDistanceShader))
         {
             var shaderModule = new MandelbrotDistanceShader();
             var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
-            return Ok(reflection.GetBindGroupLayoutDescriptor(module));
+            return Ok(reflection.GetBindGroupLayoutDescriptor(module, group));
         }
 
         return NotFound();
     }
 
 
-    [HttpGet("wgsl/bindgrouplayoutdescriptorbuffer/{name}")]
-    public async Task<IActionResult> GetBindGroupLayoutDescriptorBuffer(string name)
+    [HttpGet("wgsl/bindgrouplayoutdescriptorbuffer/{name}/{group:int}")]
+    public async Task<IActionResult> GetBindGroupLayoutDescriptorBuffer(string name, int group)
     {
         if (name == nameof(RaymarchingPrimitiveShader))
         {
@@ -131,7 +131,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, SlangS
             var type = shaderModule.GetType();
             var module = Compiler.Parse(shaderModule);
             var reflection = new RaymarchingPrimitivesShaderReflection();
-            return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
+            return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module, group));
         }
         else if (name == nameof(MandelbrotDistanceShader))
         {
@@ -139,7 +139,7 @@ public class ILSLController(ILSLDevelopShaderModuleService ShaderModules, SlangS
             var type = shaderModule.GetType();
             var module = Compiler.Parse(shaderModule);
             var reflection = new SampleFragmentShaderReflection();
-            return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module));
+            return Ok(reflection.GetBindGroupLayoutDescriptorBuffer(module, group));
         }
 
         return NotFound();

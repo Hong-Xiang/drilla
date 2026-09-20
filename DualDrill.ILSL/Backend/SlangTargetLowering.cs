@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -9,6 +10,7 @@ using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Reflection;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Backend;
@@ -18,6 +20,8 @@ public sealed class SlangTargetLowering
     public ShaderModuleDeclaration<SlangFunctionBody> Lower(
         ShaderModuleDeclaration<RegionFunctionBody> module)
     {
+        ShaderModuleMetadataValidator.Validate(module);
+        WgslUniformLayoutValidator.Validate(module);
         PortableDerivativeTarget.ValidateModuleBindings(module);
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
@@ -47,6 +51,8 @@ public sealed class SlangTargetLowering
             ImmutableArray.CreateBuilder<SlangParameterOrigin>();
         private readonly ImmutableArray<SlangDefinitionOrigin>.Builder definitionOrigins =
             ImmutableArray.CreateBuilder<SlangDefinitionOrigin>();
+        private readonly ImmutableArray<SlangDimensionsOrigin>.Builder dimensionsOrigins =
+            ImmutableArray.CreateBuilder<SlangDimensionsOrigin>();
         private readonly ImmutableArray<SlangInstructionOrigin>.Builder instructionOrigins =
             ImmutableArray.CreateBuilder<SlangInstructionOrigin>();
         private readonly ImmutableArray<SlangTransferOrigin>.Builder transferOrigins =
@@ -65,6 +71,12 @@ public sealed class SlangTargetLowering
         internal FunctionLowerer(RegionFunctionBody source)
         {
             this.source = source;
+            var resourceLocal = source.LocalVariables.FirstOrDefault(variable =>
+                ShaderModuleMetadataValidator.IsResourceTypeOrPointer(variable.Type));
+            if (resourceLocal is not null)
+                throw Error(
+                    $"local '{resourceLocal.Name}' has resource type '{resourceLocal.Type.Name}'; " +
+                    "structured buffers are valid only as static shader-module fields");
             source.Body.Traverse(region =>
             {
                 blocks.Add(region.Label, region);
@@ -123,6 +135,7 @@ public sealed class SlangTargetLowering
                     captures.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
                     parameterOrigins.ToImmutable(),
                     definitionOrigins.ToImmutable(),
+                    dimensionsOrigins.ToImmutable(),
                     instructionOrigins.ToImmutable(),
                     transferOrigins.ToImmutable(),
                     conditionalOrigins.ToImmutable(),
@@ -507,6 +520,21 @@ public sealed class SlangTargetLowering
         {
             switch (instruction.Operation)
             {
+                case StructuredBufferLengthOperation length:
+                    ValidateStructuredBufferLength(instruction, length);
+                    var count = instruction.Result!;
+                    var stride = ShaderValue.Intermediate(ShaderType.U32);
+                    var dimensions = new SlangGetDimensions(
+                        new SlangPlaceOperand(Place(instruction.Operand0, instruction.Operation.Name)),
+                        count,
+                        stride);
+                    statements.Add(dimensions);
+                    var capture = CaptureDefinition(count, statements);
+                    dimensionsOrigins.Add(new(label, ordinal, instruction, dimensions, capture));
+                    return;
+                case StructuredBufferLoadOperation load:
+                    ValidateStructuredBufferLoad(instruction, load);
+                    break;
                 case AddressOfMemberOperation member:
                     DefineAlias(instruction, new SlangMemberPlace(
                         Place(instruction.Operand0, instruction.Operation.Name),
@@ -525,6 +553,12 @@ public sealed class SlangTargetLowering
                 case ScalarConversionOperation<IntType<N32>, UIntType<N64>>:
                     throw UnsupportedOperation(
                         instruction, "i32-to-u64 conversion; unsigned widening is not implemented");
+                case LoadOperation when IsStructuredBufferValue(instruction.Operand0) ||
+                                        IsStructuredBufferValue(instruction.Result):
+                    throw UnsupportedOperation(instruction, "whole structured-buffer loads are not supported");
+                case StoreOperation when IsStructuredBufferValue(instruction.Operand0) ||
+                                         IsStructuredBufferValue(instruction.Operand1):
+                    throw UnsupportedOperation(instruction, "whole structured-buffer stores are not supported");
                 case StoreOperation:
                     var store = new SlangAssign(
                         Place(instruction.Operand0, instruction.Operation.Name),
@@ -598,10 +632,41 @@ public sealed class SlangTargetLowering
                 or LoadOperation
                 or CallOperation
                 or LiteralOperation
+                or StructuredBufferLoadOperation
                 or IUnaryExpressionOperation
                 or IBinaryExpressionOperation
                 or VectorCompositeConstructionOperation
                 or ZeroConstructorOperation;
+
+        private void ValidateStructuredBufferLength(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            StructuredBufferLengthOperation operation)
+        {
+            if (instruction.OperandCount != 1 ||
+                instruction.Operand0?.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.U32))
+                throw UnsupportedOperation(instruction, "invalid read-only storage-buffer Length signature");
+        }
+
+        private void ValidateStructuredBufferLoad(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            StructuredBufferLoadOperation operation)
+        {
+            if (instruction.OperandCount != 2 ||
+                instruction.Operand0?.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                instruction.Operand1 is null ||
+                !instruction.Operand1.Type.Equals(ShaderType.U32) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.F32))
+                throw UnsupportedOperation(instruction, "invalid read-only storage-buffer load signature");
+        }
+
+        private static bool IsStructuredBufferValue(IShaderValue? value) =>
+            value is not null &&
+            ShaderModuleMetadataValidator.IsResourceTypeOrPointer(value.Type);
 
         private void DefineAlias(
             Instruction<IShaderValue, IShaderValue> instruction,

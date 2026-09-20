@@ -54,6 +54,7 @@ internal static class CooperationTargetVerifier
                 throw Error(context, $"did not preserve label '{label.Name}' exactly once");
 
         var origins = target.Origins;
+        var requiredCaptures = RequiredCaptures(source, context);
         VerifyOriginalTransfers(
             participation.Uniformity[source.Declaration],
             source,
@@ -64,7 +65,7 @@ internal static class CooperationTargetVerifier
             moduleStorage,
             context);
         VerifyActivationTemplate(source, target, origins, context);
-        VerifyCarrierPartition(source, origins, tree, context);
+        VerifyCarrierPartition(source, origins, tree, requiredCaptures, context);
         VerifyReturns(
             participation.Uniformity[source.Declaration],
             source,
@@ -72,13 +73,14 @@ internal static class CooperationTargetVerifier
             tree,
             context);
         VerifyBreaks(origins, tree, context);
-        VerifyOriginTables(source, origins, tree, context);
+        VerifyOriginTables(source, origins, tree, requiredCaptures, context);
         VerifyControlledVariables(origins, tree, context);
         VerifyDefinitions(
             participation.Uniformity[source.Declaration],
             source,
             origins,
             tree,
+            requiredCaptures,
             context);
         VerifyConditionals(
             participation.Uniformity[source.Declaration],
@@ -89,7 +91,7 @@ internal static class CooperationTargetVerifier
         VerifyTransfers(source, origins, tree, context);
         VerifyGates(origins, tree, context);
         VerifyTerminalTemplates(source, origins, tree, context);
-        VerifyRelevantSites(participation, source, origins, tree, context);
+        VerifyRelevantSites(participation, source, origins, tree, requiredCaptures, context);
         VerifyClosedWorld(origins, tree, context);
         VerifyControlDataflow(
             activeStorage,
@@ -240,21 +242,43 @@ internal static class CooperationTargetVerifier
 
             foreach (var (ordinal, instruction) in region.Body.Body.Elements.Index())
             {
-                var origin = origins.Instructions.SingleOrDefault(item =>
-                    ReferenceEquals(item.Label, region.Label) &&
-                    item.InstructionOrdinal == ordinal);
-                if (origin is null)
+                var instructionOrigins = origins.Instructions.Where(item =>
+                        ReferenceEquals(item.Label, region.Label) &&
+                        item.InstructionOrdinal == ordinal)
+                    .Take(2)
+                    .ToArray();
+                var dimensionOrigins = origins.Dimensions.Where(item =>
+                        ReferenceEquals(item.Label, region.Label) &&
+                        item.InstructionOrdinal == ordinal)
+                    .Take(2)
+                    .ToArray();
+                if (instructionOrigins.Length > 1 || dimensionOrigins.Length > 1)
+                    throw Error(context, "activation template has duplicate source instruction origins");
+                var origin = instructionOrigins.SingleOrDefault();
+                var dimensions = dimensionOrigins.SingleOrDefault();
+                if (origin is not null && dimensions is not null)
+                    throw Error(context, "activation template has multiple origins for one source instruction");
+                if (origin is null && dimensions is null)
                 {
                     if (instruction.Operation is AddressOfMemberOperation or AddressOfVecComponentOperation)
                         continue;
                     throw Error(context, "activation template is missing a source instruction");
                 }
-                statements.Add(origin.Target);
-                var definition = origins.Definitions.SingleOrDefault(item =>
-                    ReferenceEquals(item.Label, region.Label) &&
-                    item.InstructionOrdinal == ordinal);
-                if (definition?.Capture is not null)
-                    statements.Add(definition.Capture);
+                if (dimensions is not null)
+                {
+                    statements.Add(dimensions.Dimensions);
+                    if (dimensions.Capture is not null)
+                        statements.Add(dimensions.Capture);
+                }
+                else
+                {
+                    statements.Add(origin!.Target);
+                    var definition = origins.Definitions.SingleOrDefault(item =>
+                        ReferenceEquals(item.Label, region.Label) &&
+                        item.InstructionOrdinal == ordinal);
+                    if (definition?.Capture is not null)
+                        statements.Add(definition.Capture);
+                }
             }
 
             ImmutableHashSet<SlangContinuationOrigin> escapes;
@@ -352,6 +376,7 @@ internal static class CooperationTargetVerifier
         RegionFunctionBody source,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         foreach (var fact in facts.UniformValues)
@@ -365,7 +390,12 @@ internal static class CooperationTargetVerifier
                     context,
                     "uniform block parameter origin");
                 RequirePresent(tree, parameterOrigin.Definition, context);
-                VerifyParameterOrigin(parameterOrigin, origins, tree, context);
+                VerifyParameterOrigin(
+                    parameterOrigin,
+                    origins,
+                    tree,
+                    requiredCaptures,
+                    context);
                 continue;
             }
 
@@ -408,6 +438,7 @@ internal static class CooperationTargetVerifier
                 origin.Capture,
                 origins,
                 tree,
+                requiredCaptures,
                 context);
         }
 
@@ -436,6 +467,7 @@ internal static class CooperationTargetVerifier
         RegionFunctionBody source,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         var parameters = new Dictionary<IShaderValue, Label>(ReferenceEqualityComparer.Instance);
@@ -453,7 +485,7 @@ internal static class CooperationTargetVerifier
                 throw Error(context, "block-parameter origin does not match its source definition");
             RequirePresent(tree, origin.Definition, context);
             RequireSourceScope(tree, origin.Definition, origin.Label, context);
-            VerifyParameterOrigin(origin, origins, tree, context);
+            VerifyParameterOrigin(origin, origins, tree, requiredCaptures, context);
         }
         if (origins.Parameters.Select(static origin => origin.Parameter)
                 .Distinct(ReferenceEqualityComparer.Instance).Count() != origins.Parameters.Length)
@@ -483,16 +515,46 @@ internal static class CooperationTargetVerifier
                 origin.Capture,
                 origins,
                 tree,
+                requiredCaptures,
+                context);
+        }
+
+        var addressDefinitions = SourceDefinitions(source);
+        var sourceValues = SourceValues(source, addressDefinitions);
+        var carrierValues = CarrierValues(origins);
+        var dimensionSites = new HashSet<(Label Label, int Ordinal)>();
+        var dimensionTargets = new HashSet<SlangGetDimensions>(ReferenceEqualityComparer.Instance);
+        foreach (var origin in origins.Dimensions)
+        {
+            if (!dimensionSites.Add((origin.Label, origin.InstructionOrdinal)) ||
+                !dimensionTargets.Add(origin.Dimensions))
+                throw Error(context, "source dimensions operation has multiple target origins");
+            var sourceInstruction = SourceInstruction(source, origin.Label, origin.InstructionOrdinal, context);
+            if (!origin.Source.Equals(sourceInstruction))
+                throw Error(context, "dimensions origin does not match its source instruction");
+            RequirePresent(tree, origin.Dimensions, context);
+            RequireSourceScope(tree, origin.Dimensions, origin.Label, context);
+            VerifyDimensionsOrigin(
+                source,
+                sourceInstruction,
+                origin,
+                addressDefinitions,
+                sourceValues,
+                carrierValues,
+                origins,
+                tree,
+                requiredCaptures,
                 context);
         }
 
         var instructionSites = new HashSet<(Label Label, int Ordinal)>();
         var instructionTargets = new HashSet<SlangStatement>(ReferenceEqualityComparer.Instance);
-        var addressDefinitions = SourceDefinitions(source);
         foreach (var origin in origins.Instructions)
         {
             if (!instructionSites.Add((origin.Label, origin.InstructionOrdinal)) ||
-                !instructionTargets.Add(origin.Target))
+                !instructionTargets.Add(origin.Target) ||
+                dimensionSites.Contains((origin.Label, origin.InstructionOrdinal)) ||
+                origin.Target is SlangGetDimensions)
                 throw Error(context, "source instruction has multiple target origins");
             var sourceInstruction = SourceInstruction(source, origin.Label, origin.InstructionOrdinal, context);
             if (!origin.Source.Equals(sourceInstruction))
@@ -502,10 +564,20 @@ internal static class CooperationTargetVerifier
             switch (origin.Target)
             {
                 case SlangBind binding:
-                    VerifyTargetInstruction(sourceInstruction, binding.Instruction, origins, context);
+                    VerifyTargetInstruction(
+                        sourceInstruction,
+                        binding.Instruction,
+                        addressDefinitions,
+                        origins,
+                        context);
                     break;
                 case SlangEffect effect:
-                    VerifyTargetInstruction(sourceInstruction, effect.Instruction, origins, context);
+                    VerifyTargetInstruction(
+                        sourceInstruction,
+                        effect.Instruction,
+                        addressDefinitions,
+                        origins,
+                        context);
                     break;
                 case SlangAssign assignment:
                     if (!SourceAssignmentMatches(
@@ -534,6 +606,17 @@ internal static class CooperationTargetVerifier
             if (!instructionSites.Contains(call))
                 throw Error(context, "source call is missing its exact target instruction origin");
 
+        var sourceDimensions = ImmutableArray.CreateBuilder<(Label Label, int Ordinal)>();
+        source.Body.Traverse((_, label, block) =>
+        {
+            foreach (var (ordinal, instruction) in block.Body.Elements.Index())
+                if (instruction.Operation is StructuredBufferLengthOperation)
+                    sourceDimensions.Add((label, ordinal));
+            return false;
+        });
+        if (!dimensionSites.SetEquals(sourceDimensions))
+            throw Error(context, "source dimensions operation count does not match its target origins");
+
         foreach (var definition in origins.Definitions)
         {
             var instruction = origins.Instructions.SingleOrDefault(origin =>
@@ -547,15 +630,110 @@ internal static class CooperationTargetVerifier
     private static void VerifyTargetInstruction(
         Instruction<IShaderValue, IShaderValue> source,
         Instruction<SlangOperand, IShaderValue> target,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> addressDefinitions,
         SlangLoweringOrigins origins,
-        string context)
+        string context,
+        bool requireOperands = false)
     {
         if (!ReferenceEquals(target.Operation, source.Operation) ||
             !ReferenceEquals(target.Result, source.Result) ||
             !ReferenceEquals(target.Payload, source.Payload) ||
-            source.Operation is CallOperation &&
-            !OperandsMatch(source.Operands, target.Operands, origins))
+            (requireOperands ||
+             source.Operation is CallOperation or StructuredBufferLoadOperation) &&
+            !OperandsMatch(source.Operands, target.Operands, origins, addressDefinitions))
             throw Error(context, "instruction origin changed its source operation/result/operand lineage");
+    }
+
+    private static void VerifyDimensionsOrigin(
+        RegionFunctionBody sourceBody,
+        Instruction<IShaderValue, IShaderValue> source,
+        SlangDimensionsOrigin origin,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> addressDefinitions,
+        IReadOnlySet<IShaderValue> sourceValues,
+        IReadOnlySet<IShaderValue> carrierValues,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
+        string context)
+    {
+        var dimensions = origin.Dimensions;
+        if (source.Operation is not StructuredBufferLengthOperation ||
+            source.OperandCount != 1 ||
+            source.Result is null ||
+            !ReferenceEquals(origin.Source.Operation, source.Operation) ||
+            !ReferenceEquals(origin.Source.Result, source.Result) ||
+            !ReferenceEquals(origin.Source.Payload, source.Payload) ||
+            !origin.Source.Operands.SequenceEqual(
+                source.Operands,
+                ReferenceEqualityComparer.Instance) ||
+            dimensions.Buffer is not SlangPlaceOperand buffer ||
+            !PlaceMatches(SourcePlace(source.Operand0!, addressDefinitions), buffer.Place) ||
+            !ReferenceEquals(dimensions.Count, source.Result))
+            throw Error(context, "dimensions origin changed its source operation/result/operand lineage");
+
+        if (dimensions.Stride is not IntermediateValue ||
+            !dimensions.Stride.Type.Equals(ShaderType.U32) ||
+            ReferenceEquals(dimensions.Stride, dimensions.Count) ||
+            sourceValues.Contains(dimensions.Stride) ||
+            carrierValues.Contains(dimensions.Stride))
+            throw Error(context, "dimensions stride is not a fresh writable u32 intermediate");
+
+        VerifyCapture(
+            source.Result,
+            dimensions,
+            origin.Capture,
+            origins,
+            tree,
+            requiredCaptures,
+            context);
+
+        sourceBody.Body.Traverse((_, label, block) =>
+        {
+            foreach (var (ordinal, instruction) in block.Body.Elements.Index())
+            {
+                if (!instruction.Operands.Any(operand => ReferenceEquals(operand, source.Result)))
+                    continue;
+                var consumer = Single(
+                    origins.Instructions,
+                    item => ReferenceEquals(item.Label, label) &&
+                            item.InstructionOrdinal == ordinal &&
+                            item.Source.Equals(instruction),
+                    context,
+                    "dimensions count consumer origin");
+                RequirePresent(tree, consumer.Target, context);
+                RequireSourceScope(tree, consumer.Target, label, context);
+                switch (consumer.Target)
+                {
+                    case SlangBind binding:
+                        VerifyTargetInstruction(
+                            instruction,
+                            binding.Instruction,
+                            addressDefinitions,
+                            origins,
+                            context,
+                            requireOperands: true);
+                        break;
+                    case SlangEffect effect:
+                        VerifyTargetInstruction(
+                            instruction,
+                            effect.Instruction,
+                            addressDefinitions,
+                            origins,
+                            context,
+                            requireOperands: true);
+                        break;
+                    case SlangAssign assignment when SourceAssignmentMatches(
+                        instruction,
+                        assignment,
+                        addressDefinitions,
+                        origins):
+                        break;
+                    default:
+                        throw Error(context, "dimensions count consumer changed its source operand lineage");
+                }
+            }
+            return false;
+        });
     }
 
     private static bool SourceAssignmentMatches(
@@ -645,6 +823,88 @@ internal static class CooperationTargetVerifier
                 if (instruction.Result is { } value)
                     result.Add(value, instruction);
         });
+        return result;
+    }
+
+    private static HashSet<IShaderValue> RequiredCaptures(
+        RegionFunctionBody source,
+        string context)
+    {
+        var definitions = new Dictionary<IShaderValue, Label>(ReferenceEqualityComparer.Instance);
+        source.Body.Traverse(region =>
+        {
+            foreach (var parameter in region.Body.Parameters)
+                if (!definitions.TryAdd(parameter, region.Label))
+                    throw Error(context, $"source value '{parameter}' has multiple definitions");
+            foreach (var instruction in region.Body.Body.Elements)
+                if (instruction.Result is { } result &&
+                    !definitions.TryAdd(result, region.Label))
+                    throw Error(context, $"source value '{result}' has multiple definitions");
+        });
+
+        var required = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        source.Body.Traverse(region =>
+        {
+            foreach (var value in region.Body.Body.Elements
+                         .SelectMany(static instruction => instruction.Operands)
+                         .Concat(TerminatorValues(region.Body.Body.Last)))
+            {
+                if (!definitions.TryGetValue(value, out var definition) ||
+                    definition.Equals(region.Label) ||
+                    value.Type is IPtrType)
+                    continue;
+                if (value.Type is UnitType)
+                    throw Error(context, $"unit value '{value}' crosses original-label scope");
+                required.Add(value);
+            }
+        });
+        return required;
+    }
+
+    private static IEnumerable<IShaderValue> TerminatorValues(
+        ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
+        terminator switch
+        {
+            Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
+                [returned.Expr],
+            Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch =>
+                branch.Target.Arguments,
+            Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
+                [branch.Condition, .. branch.TrueTarget.Arguments, .. branch.FalseTarget.Arguments],
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch =>
+                [
+                    branch.Selector,
+                    .. branch.CaseTargets.SelectMany(static target => target.Arguments),
+                    .. branch.DefaultTarget.Arguments
+                ],
+            Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
+            _ => throw Error(
+                nameof(RequiredCaptures),
+                $"unsupported terminator '{terminator.GetType().Name}'")
+        };
+
+    private static HashSet<IShaderValue> SourceValues(
+        RegionFunctionBody source,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> definitions)
+    {
+        var result = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        result.UnionWith(source.UsedValues().OfType<IShaderValue>());
+        result.UnionWith(source.Declaration.Parameters.Select(static parameter => parameter.Value));
+        result.UnionWith(definitions.Keys);
+        source.Body.Traverse(region =>
+        {
+            result.UnionWith(region.Body.Parameters);
+        });
+        return result;
+    }
+
+    private static HashSet<IShaderValue> CarrierValues(SlangLoweringOrigins origins)
+    {
+        var result = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        result.UnionWith(origins.ParameterSlots.Values.Select(static variable => variable.Value));
+        result.UnionWith(origins.Captures.Values.Select(static variable => variable.Value));
+        if (origins.ControlToken is { } token)
+            result.Add(token.Value);
         return result;
     }
 
@@ -738,6 +998,7 @@ internal static class CooperationTargetVerifier
         RegionFunctionBody source,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         var parameterBuilder = ImmutableHashSet.CreateBuilder<IShaderValue>(
@@ -750,6 +1011,11 @@ internal static class CooperationTargetVerifier
         if (origins.ParameterSlots.Count != parameters.Count ||
             !origins.ParameterSlots.Keys.ToHashSet(ReferenceEqualityComparer.Instance).SetEquals(parameters))
             throw Error(context, "parameter-slot map does not match original block parameters");
+        var captureKeys = origins.Captures.Keys.ToHashSet(ReferenceEqualityComparer.Instance);
+        if (requiredCaptures.Any(value => !captureKeys.Contains(value)))
+            throw Error(context, "source value crosses source-label scope without its required capture");
+        if (captureKeys.Any(value => !requiredCaptures.Contains(value)))
+            throw Error(context, "target capture map contains a value without a source cross-label use");
 
         var slots = origins.ParameterSlots.Values.ToArray();
         var captures = origins.Captures.Values.ToArray();
@@ -780,6 +1046,7 @@ internal static class CooperationTargetVerifier
         SlangParameterOrigin origin,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
         var instruction = origin.Definition.Instruction;
@@ -801,23 +1068,30 @@ internal static class CooperationTargetVerifier
             origin.Capture,
             origins,
             tree,
+            requiredCaptures,
             context);
     }
 
     private static void VerifyCapture(
         IShaderValue value,
-        SlangBind definition,
+        SlangStatement definition,
         SlangAssign? assignment,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
+        var required = requiredCaptures.Contains(value);
         if (!origins.Captures.TryGetValue(value, out var capture))
         {
+            if (required)
+                throw Error(context, "source value crosses source-label scope without its required capture");
             if (assignment is not null)
                 throw Error(context, "definition has an unexpected capture assignment");
             return;
         }
+        if (!required)
+            throw Error(context, "definition has a capture without a source cross-label use");
         if (assignment is null)
             throw Error(context, "captured uniform definition is missing its capture assignment");
         RequirePresent(tree, assignment, context);
@@ -1149,6 +1423,16 @@ internal static class CooperationTargetVerifier
                 throw Error(context, "target defines one SSA result more than once");
         }
 
+        var allowedDimensions = origins.Dimensions.Select(static origin => origin.Dimensions)
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+        foreach (var dimensions in tree.Statements.OfType<SlangGetDimensions>())
+        {
+            if (!allowedDimensions.Contains(dimensions))
+                throw Error(context, "target contains an unaccounted dimensions operation");
+            if (!results.Add(dimensions.Count) || !results.Add(dimensions.Stride))
+                throw Error(context, "target defines one SSA result more than once");
+        }
+
         var allowedEffects = instructionTargets.OfType<SlangEffect>()
             .ToHashSet(ReferenceEqualityComparer.Instance);
         foreach (var effect in tree.Statements.OfType<SlangEffect>())
@@ -1169,6 +1453,7 @@ internal static class CooperationTargetVerifier
                 .Select(static item => item.Assignment))
             .Concat(origins.Parameters.Select(static item => item.Capture).OfType<SlangAssign>())
             .Concat(origins.Definitions.Select(static item => item.Capture).OfType<SlangAssign>())
+            .Concat(origins.Dimensions.Select(static item => item.Capture).OfType<SlangAssign>())
             .ToHashSet<SlangAssign>(ReferenceEqualityComparer.Instance);
 
     private static void VerifyRelevantSites(
@@ -1176,8 +1461,12 @@ internal static class CooperationTargetVerifier
         RegionFunctionBody source,
         SlangLoweringOrigins origins,
         TargetTree tree,
+        IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
+        var addressDefinitions = SourceDefinitions(source);
+        var sourceValues = SourceValues(source, addressDefinitions);
+        var carrierValues = CarrierValues(origins);
         foreach (var fact in participation.OriginalRelevantInstructions.Where(
                      fact => ReferenceEquals(fact.Function, source.Declaration)))
         {
@@ -1192,6 +1481,30 @@ internal static class CooperationTargetVerifier
                     context,
                     $"relevant operation fact for block '{fact.Label.Name}', instruction " +
                     $"{fact.InstructionOrdinal} does not match the analyzed source");
+            if (sourceInstruction.Operation is StructuredBufferLengthOperation)
+            {
+                var dimensions = Single(
+                    origins.Dimensions,
+                    item => ReferenceEquals(item.Label, fact.Label) &&
+                            item.InstructionOrdinal == fact.InstructionOrdinal &&
+                            item.Source.Equals(sourceInstruction),
+                    context,
+                    "relevant dimensions origin");
+                RequirePresent(tree, dimensions.Dimensions, context);
+                RequireSourceScope(tree, dimensions.Dimensions, fact.Label, context);
+                VerifyDimensionsOrigin(
+                    source,
+                    sourceInstruction,
+                    dimensions,
+                    addressDefinitions,
+                    sourceValues,
+                    carrierValues,
+                    origins,
+                    tree,
+                    requiredCaptures,
+                    context);
+                continue;
+            }
             var origin = Single(
                 origins.Instructions,
                 item => ReferenceEquals(item.Label, fact.Label) &&
@@ -1209,7 +1522,11 @@ internal static class CooperationTargetVerifier
             if (!ReferenceEquals(targetInstruction.Operation, sourceInstruction.Operation) ||
                 !ReferenceEquals(targetInstruction.Result, sourceInstruction.Result) ||
                 !ReferenceEquals(targetInstruction.Payload, sourceInstruction.Payload) ||
-                !OperandsMatch(sourceInstruction.Operands, targetInstruction.Operands, origins))
+                !OperandsMatch(
+                    sourceInstruction.Operands,
+                    targetInstruction.Operands,
+                    origins,
+                    addressDefinitions))
                 throw Error(
                     context,
                     $"relevant operation in block '{fact.Label.Name}', instruction " +
@@ -1285,6 +1602,15 @@ internal static class CooperationTargetVerifier
                     RequireDefined(assignment.Value, state, context);
                 return Flow.FromNormal(
                     [.. input.Select(state => state.Assign(assignment.Target, assignment.Value, token))]);
+            case SlangGetDimensions dimensions:
+                foreach (var state in input)
+                    RequireDefined(dimensions.Buffer, state, context);
+                return Flow.FromNormal(
+                [
+                    .. input.Select(state => state
+                        .Define(dimensions.Count)
+                        .Define(dimensions.Stride))
+                ]);
             case SlangScope scope:
                 return Execute(scope.Body, input, gates, token, context);
             case SlangDoOnce once:
@@ -1359,15 +1685,22 @@ internal static class CooperationTargetVerifier
     private static bool OperandsMatch(
         IEnumerable<IShaderValue> source,
         IEnumerable<SlangOperand> target,
-        SlangLoweringOrigins origins) =>
+        SlangLoweringOrigins origins,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>>? addressDefinitions = null) =>
         source.Count() == target.Count() &&
-        source.Zip(target).All(pair => OperandMatches(pair.First, pair.Second, origins));
+        source.Zip(target).All(pair =>
+            OperandMatches(pair.First, pair.Second, origins, addressDefinitions));
 
     private static bool OperandMatches(
         IShaderValue source,
         SlangOperand target,
-        SlangLoweringOrigins origins)
+        SlangLoweringOrigins origins,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>>? addressDefinitions = null)
     {
+        if (source.Type is IPtrType &&
+            addressDefinitions is not null &&
+            target is SlangPlaceOperand place)
+            return PlaceMatches(SourcePlace(source, addressDefinitions), place.Place);
         if (origins.Captures.TryGetValue(source, out var capture))
             return target is SlangPlaceOperand
             {

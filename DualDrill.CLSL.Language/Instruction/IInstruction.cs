@@ -114,6 +114,21 @@ public static class Instruction
             IShaderValue result, IShaderValue l, IShaderValue r) =>
             Create(op, result, [l, r]);
 
+        public Instruction<IShaderValue, IShaderValue> StructuredBufferLength(
+            Unit ctx,
+            StructuredBufferLengthOperation op,
+            IShaderValue result,
+            IShaderValue buffer) =>
+            Create(op, result, [buffer]);
+
+        public Instruction<IShaderValue, IShaderValue> StructuredBufferLoad(
+            Unit ctx,
+            StructuredBufferLoadOperation op,
+            IShaderValue result,
+            IShaderValue buffer,
+            IShaderValue index) =>
+            Create(op, result, [buffer, index]);
+
         public Instruction<IShaderValue, IShaderValue> Store(Unit ctx, StoreOperation op, IShaderValue ptr,
             IShaderValue value) =>
             Create(op, default, [ptr, value]);
