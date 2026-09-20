@@ -6,9 +6,10 @@ The accompanying [API examples](./shader-feature-proposals.md) are proposals,
 not implemented interfaces. This slice changes documentation and tests only.
 
 > **Current status:** bounded uniform buffer layout and typed reflection were
-> implemented after this historical snapshot. See
-> [Uniform buffer layout](./uniform-layout.md). The inventory below is preserved
-> as evidence of the earlier baseline.
+> implemented after this historical snapshot, together with fail-closed
+> [shader metadata validation](./shader-metadata.md). See also
+> [Uniform buffer layout](./uniform-layout.md). The inventory below is
+> preserved as evidence of the earlier baseline.
 
 **Current useful compiler subset:** vertex/fragment scalar/vector signatures,
 read-only uniform struct fields, ordinary direct helper calls, and a selection
