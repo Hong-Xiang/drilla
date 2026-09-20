@@ -298,7 +298,7 @@ internal static class CilPreStackAnalyzer
             where TOp : UnaryArithmetic.IOp<TOp>
         {
             var operand = Pop();
-            Require(CilStackType.Float32.Instance, operand, $"unary arithmetic {TOp.Instance.Name} operand");
+            RequireScalar(operand, $"unary arithmetic {TOp.Instance.Name} operand");
             return Push(operand);
         }
 

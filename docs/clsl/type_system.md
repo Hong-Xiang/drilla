@@ -52,13 +52,19 @@ to represent the shader types directly using csharp types.
 ## Type Mapping
 
 ### Primitive Types
-| C# Type  | CLSL Type | WGSL Type |
-|----------|-----------|------------|
-| bool     | `BoolType`  | bool      |
-| int      | `IntType<N32>`       | i32       |
-| uint     | `UIntType<N32>`      | u32       |
-| float    | `FloatType<N32>`      | f32       |
-| double   | `FloatType<N64>`       | f64       |
+| C# Type | CLSL Type | WGSL Type |
+|----------|-----------|-----------|
+| bool | `BoolType` | bool |
+| int | `IntType<N32>` | i32 |
+| uint | `UIntType<N32>` | u32 |
+| long | `IntType<N64>` | unsupported |
+| float | `FloatType<N32>` | f32 |
+| double | `FloatType<N64>` | unsupported |
+
+Native CIL `neg` is represented without conversion for canonical i32, i64, f32
+and f64 values. Slang uses `int64_t` and `double` for the wide forms. The public
+WGSL target supports i32/f32 negation and rejects reachable i64/f64 negation
+rather than truncating or demoting it.
 
 ### Vector Types
 | C# Type     | CLSL Type            | WGSL Type |
