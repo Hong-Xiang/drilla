@@ -47,7 +47,7 @@ public sealed class GPUDeviceDisposalTests
         using var allowQueueExit = new ManualResetEventSlim();
         using var aliasStarted = new ManualResetEventSlim();
         using var aliasCompleted = new ManualResetEventSlim();
-        var queue = new BlockingQueue(queueEntered, allowQueueExit);
+        var queue = new BlockingQueue(nativeDevice.Queue, queueEntered, allowQueueExit);
         var device = nativeDevice with { Queue = queue };
         var alias = device with { };
         var aliasDisposal = Task.Run(() =>
@@ -85,6 +85,7 @@ public sealed class GPUDeviceDisposalTests
     }
 
     private sealed class BlockingQueue(
+        IGPUQueue inner,
         ManualResetEventSlim entered,
         ManualResetEventSlim allowExit) : IGPUQueue
     {
@@ -97,7 +98,14 @@ public sealed class GPUDeviceDisposalTests
             if (Interlocked.Increment(ref disposeCalls) == 1)
             {
                 entered.Set();
-                Assert.True(allowExit.Wait(SynchronizationTimeout));
+                try
+                {
+                    Assert.True(allowExit.Wait(SynchronizationTimeout));
+                }
+                finally
+                {
+                    inner.Dispose();
+                }
             }
         }
 
