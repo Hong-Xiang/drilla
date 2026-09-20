@@ -5,6 +5,7 @@ using DotNext.Patterns;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.Nat;
@@ -64,6 +65,7 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
             [typeof(Half)] = ShaderType.F16,
             [typeof(float)] = ShaderType.F32,
             [typeof(double)] = ShaderType.F64,
+            [typeof(StructuredBuffer<float>)] = ReadOnlyStructuredBufferType.Instance,
             [typeof(Vector4)] = VecType<N4, FloatType<N32>>.Instance,
             [typeof(Vector3)] = VecType<N3, FloatType<N32>>.Instance,
             [typeof(Vector2)] = VecType<N2, FloatType<N32>>.Instance
@@ -143,6 +145,25 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
             if (m.Name == "Dot")
                 result.Add(m, ShaderFunction.Instance.GetFunction("dot", ShaderType.F32, vec4f32t, vec4f32t));
 
+        var buffer = typeof(StructuredBuffer<float>);
+        result.Add(
+            buffer.GetProperty(nameof(StructuredBuffer<float>.Length))?.GetMethod
+            ?? throw new MissingMethodException(buffer.FullName, "get_Length"),
+            StructuredBufferLengthOperation.Instance.Function);
+        result.Add(
+            buffer.GetProperty("Item")?.GetMethod
+            ?? throw new MissingMethodException(buffer.FullName, "get_Item"),
+            StructuredBufferLoadOperation.Instance.Function);
+
         return result;
     }
+
+    internal static bool IsStructuredBufferFamily(Type type) =>
+        type.IsGenericType &&
+        type.GetGenericTypeDefinition() == typeof(StructuredBuffer<>);
+
+    internal static bool ContainsStructuredBuffer(Type type) =>
+        IsStructuredBufferFamily(type) ||
+        type.HasElementType && type.GetElementType() is { } element && ContainsStructuredBuffer(element) ||
+        type.IsGenericType && type.GetGenericArguments().Any(ContainsStructuredBuffer);
 }

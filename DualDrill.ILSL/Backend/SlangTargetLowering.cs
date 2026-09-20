@@ -52,6 +52,12 @@ public sealed class SlangTargetLowering
         internal FunctionLowerer(RegionFunctionBody source)
         {
             this.source = source;
+            var resourceLocal = source.LocalVariables.FirstOrDefault(variable =>
+                ShaderModuleMetadataValidator.IsResourceTypeOrPointer(variable.Type));
+            if (resourceLocal is not null)
+                throw Error(
+                    $"local '{resourceLocal.Name}' has resource type '{resourceLocal.Type.Name}'; " +
+                    "structured buffers are valid only as static shader-module fields");
             source.Body.Traverse(region =>
             {
                 blocks.Add(region.Label, region);
@@ -407,6 +413,19 @@ public sealed class SlangTargetLowering
         {
             switch (instruction.Operation)
             {
+                case StructuredBufferLengthOperation length:
+                    ValidateStructuredBufferLength(instruction, length);
+                    var count = instruction.Result!;
+                    var stride = ShaderValue.Intermediate(ShaderType.U32);
+                    statements.Add(new SlangGetDimensions(
+                        Operand(instruction.Operand0),
+                        count,
+                        stride));
+                    CaptureDefinition(count, statements);
+                    return;
+                case StructuredBufferLoadOperation load:
+                    ValidateStructuredBufferLoad(instruction, load);
+                    break;
                 case AddressOfMemberOperation member:
                     DefineAlias(instruction, new SlangMemberPlace(
                         Place(instruction.Operand0, instruction.Operation.Name),
@@ -425,6 +444,12 @@ public sealed class SlangTargetLowering
                 case ScalarConversionOperation<IntType<N32>, UIntType<N64>>:
                     throw UnsupportedOperation(
                         instruction, "i32-to-u64 conversion; unsigned widening is not implemented");
+                case LoadOperation when IsStructuredBufferValue(instruction.Operand0) ||
+                                        IsStructuredBufferValue(instruction.Result):
+                    throw UnsupportedOperation(instruction, "whole structured-buffer loads are not supported");
+                case StoreOperation when IsStructuredBufferValue(instruction.Operand0) ||
+                                         IsStructuredBufferValue(instruction.Operand1):
+                    throw UnsupportedOperation(instruction, "whole structured-buffer stores are not supported");
                 case StoreOperation:
                     statements.Add(new SlangAssign(
                         Place(instruction.Operand0, instruction.Operation.Name),
@@ -484,10 +509,45 @@ public sealed class SlangTargetLowering
                 or LoadOperation
                 or CallOperation
                 or LiteralOperation
+                or StructuredBufferLoadOperation
                 or IUnaryExpressionOperation
                 or IBinaryExpressionOperation
                 or VectorCompositeConstructionOperation
                 or ZeroConstructorOperation;
+
+        private void ValidateStructuredBufferLength(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            StructuredBufferLengthOperation operation)
+        {
+            if (instruction.OperandCount != 1 ||
+                instruction.Operand0?.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.U32))
+                throw UnsupportedOperation(instruction, "invalid read-only storage-buffer Length signature");
+        }
+
+        private void ValidateStructuredBufferLoad(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            StructuredBufferLoadOperation operation)
+        {
+            if (instruction.OperandCount != 2 ||
+                instruction.Operand0?.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                instruction.Operand1 is null ||
+                !instruction.Operand1.Type.Equals(ShaderType.U32) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.F32))
+                throw UnsupportedOperation(instruction, "invalid read-only storage-buffer load signature");
+        }
+
+        private static bool IsStructuredBufferValue(IShaderValue? value) =>
+            value?.Type switch
+            {
+                ReadOnlyStructuredBufferType => true,
+                IPtrType { BaseType: ReadOnlyStructuredBufferType } => true,
+                _ => false
+            };
 
         private void DefineAlias(
             Instruction<IShaderValue, IShaderValue> instruction,

@@ -342,6 +342,12 @@ internal static class OperationValidator
             case IBinaryStatementOperation statement:
                 Require(instruction, [statement.LeftType, statement.RightType], null, allowPointerAddressSpace: true);
                 return;
+            case StructuredBufferLengthOperation length:
+                Require(instruction, [length.BufferPointerType], ShaderType.U32);
+                return;
+            case StructuredBufferLoadOperation load:
+                Require(instruction, [load.BufferPointerType, ShaderType.U32], ShaderType.F32);
+                return;
             case VectorCompositeConstructionOperation vector:
                 Require(instruction, vector.ParameterTypes, vector.ResultType);
                 return;

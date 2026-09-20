@@ -2,6 +2,9 @@
 
 CLSL supports a deliberately narrow compute-signature profile:
 
+Read-only f32 storage is documented separately in
+[Read-only f32 structured buffers](./readonly-structured-buffer.md).
+
 Method, parameter and return metadata cardinality is checked from raw reflection
 metadata before conversion to declaration attribute sets. This includes
 identical duplicate `Compute`, `WorkgroupSize`, `Builtin`, and `Location`

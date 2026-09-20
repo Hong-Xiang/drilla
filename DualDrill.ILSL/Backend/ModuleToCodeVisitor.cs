@@ -69,13 +69,15 @@ public sealed class ModuleToCodeVisitor<TBody>(
                     Writer.Write(b.Binding);
                     Writer.Write(") ");
                     break;
-                case UniformAttribute u:
+                case UniformAttribute:
                     Writer.Write("var<uniform> ");
                     break;
                 default:
                     throw new NotSupportedException($"VisitVariableDeclaration attribute {a} not support ");
             }
 
+        if (decl.Type is ReadOnlyStructuredBufferType)
+            Writer.Write("var<storage, read> ");
         Writer.Write(decl.Name);
         Writer.Write(": ");
         await OnTypeReference(decl.Type);

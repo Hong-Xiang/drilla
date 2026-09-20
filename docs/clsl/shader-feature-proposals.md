@@ -1,8 +1,10 @@
 # Proposed typed C# resource slices
 
 > **Historical proposal snapshot.** The compute-signature subset is now
-> implemented; see [Compute entry points](./compute-entry.md). The resource
-> wrappers and operations in this document remain proposals.
+> implemented; see [Compute entry points](./compute-entry.md). The first
+> read-only f32 storage subset is also implemented; see
+> [Read-only f32 structured buffers](./readonly-structured-buffer.md). Remaining
+> resource wrappers and operations in this document are proposals.
 
 **DESIGN ONLY. None of the new resource wrappers, operations, workgroup/layout
 attributes or reflection records below exists as an approved CLSL API.**

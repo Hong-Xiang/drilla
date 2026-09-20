@@ -85,6 +85,33 @@ public sealed class FunctionToOperationPass
             if (f.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } opAttr)
                 switch (opAttr.Operation)
                 {
+                    case StructuredBufferLengthOperation length:
+                        {
+                            if (arguments is not [var buffer] ||
+                                !buffer.Type.Equals(length.BufferPointerType) ||
+                                !result.Type.Equals(ShaderType.U32))
+                                throw new OperationFunctionNotMatchException(f, length);
+                            return
+                            [
+                                WithPayload(
+                                    InstF.StructuredBufferLength(default, length, result, buffer),
+                                    ctx)
+                            ];
+                        }
+                    case StructuredBufferLoadOperation load:
+                        {
+                            if (arguments is not [var buffer, var index] ||
+                                !buffer.Type.Equals(load.BufferPointerType) ||
+                                !index.Type.Equals(ShaderType.U32) ||
+                                !result.Type.Equals(ShaderType.F32))
+                                throw new OperationFunctionNotMatchException(f, load);
+                            return
+                            [
+                                WithPayload(
+                                    InstF.StructuredBufferLoad(default, load, result, buffer, index),
+                                    ctx)
+                            ];
+                        }
                     case IBinaryExpressionOperation be:
                         {
                             var r = arguments[1];
@@ -191,6 +218,21 @@ public sealed class FunctionToOperationPass
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Operation2(
             Instruction<IShaderValue, IShaderValue> ctx, IBinaryExpressionOperation op, IShaderValue result,
             IShaderValue l, IShaderValue r) => [ctx];
+
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> StructuredBufferLength(
+            Instruction<IShaderValue, IShaderValue> ctx,
+            StructuredBufferLengthOperation op,
+            IShaderValue result,
+            IShaderValue buffer) =>
+            [ctx];
+
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> StructuredBufferLoad(
+            Instruction<IShaderValue, IShaderValue> ctx,
+            StructuredBufferLoadOperation op,
+            IShaderValue result,
+            IShaderValue buffer,
+            IShaderValue index) =>
+            [ctx];
 
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Store(Instruction<IShaderValue, IShaderValue> ctx,
