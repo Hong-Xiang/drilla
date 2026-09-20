@@ -111,6 +111,29 @@ internal sealed class FunctionBodyFormatter(IndentedTextWriter Writer, RegionFun
         return default;
     }
 
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Switch(
+        IShaderValue selector,
+        IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+        RegionJump<IShaderValue> defaultTarget)
+    {
+        Writer.Write("switch ");
+        Dump(selector);
+        Writer.WriteLine();
+        using (Writer.IndentedScope())
+        {
+            foreach (var (index, target) in caseTargets.Index())
+            {
+                Writer.Write($"case {index} -> ");
+                Dump(target);
+                Writer.WriteLine();
+            }
+            Writer.Write("default -> ");
+            Dump(defaultTarget);
+            Writer.WriteLine();
+        }
+        return default;
+    }
+
 
     private void Dump(IShaderValue value)
     {

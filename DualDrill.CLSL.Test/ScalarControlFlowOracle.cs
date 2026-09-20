@@ -200,9 +200,18 @@ internal static class ScalarControlFlowOracle
                     new Control.Transfer(branch.Target),
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                     new Control.Transfer(Read(branch.Condition).Bool ? branch.TrueTarget : branch.FalseTarget),
+                Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    new Control.Transfer(SelectSwitchTarget(Read(branch.Selector).Int, branch)),
                 _ => throw new NotSupportedException($"{context}, {label}: unsupported terminator {body.Last}.")
             };
         }
+
+        private static RegionJump<IShaderValue> SelectSwitchTarget(
+            int selector,
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch) =>
+            selector >= 0 && selector < branch.CaseTargets.Length
+                ? branch.CaseTargets[selector]
+                : branch.DefaultTarget;
 
         internal ImmutableArray<Value> ReadArguments(RegionJump<IShaderValue> jump) =>
             [.. jump.Arguments.Select(Read)];
@@ -294,6 +303,8 @@ internal static class ScalarControlFlowOracle
                 new Value.Integer(unchecked(l.Data - r.Data)),
             (Value.Integer l, Value.Integer r, BinaryArithmetic.Mul) =>
                 new Value.Integer(unchecked(l.Data * r.Data)),
+            (Value.Integer l, Value.Integer r, BinaryArithmetic.BitwiseAnd) =>
+                new Value.Integer(l.Data & r.Data),
             (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Eq) =>
                 new Value.Boolean(l.Data == r.Data),
             (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Ne) =>

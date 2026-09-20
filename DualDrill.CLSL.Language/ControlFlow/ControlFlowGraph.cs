@@ -136,6 +136,14 @@ public sealed class ControlFlowGraph<TData> : IControlFlowGraph, IPrintable
             "br_if -> t: " + LabelName(trueTarget, labelIds) +
             " f: " + LabelName(falseTarget, labelIds);
 
+        public string Switch(
+            Unit context,
+            IReadOnlyList<Label> caseTargets,
+            Label defaultTarget) =>
+            "switch -> [" +
+            string.Join(", ", caseTargets.Select(target => LabelName(target, labelIds))) +
+            "] default: " + LabelName(defaultTarget, labelIds);
+
         public string Terminate(Unit context) => "return";
     }
 }

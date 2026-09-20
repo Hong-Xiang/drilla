@@ -91,6 +91,27 @@ public sealed class InstructionBlockPartitioner
         return trueLabel;
     }
 
+    public ImmutableArray<Label> AddSwitch(
+        int source,
+        IReadOnlyList<int> caseTargets,
+        int defaultTarget)
+    {
+        ValidateInstructionIndex(source, nameof(source));
+        ValidateInstructionIndex(defaultTarget, nameof(defaultTarget));
+        if (defaultTarget != source + 1)
+            throw new ArgumentException("A switch default must be the physical fallthrough instruction.",
+                nameof(defaultTarget));
+
+        var targets = caseTargets.Select(target =>
+        {
+            ValidateInstructionIndex(target, nameof(caseTargets));
+            return GetOrCreateLabel(target);
+        }).ToImmutableArray();
+        var defaultLabel = GetOrCreateLabel(defaultTarget);
+        IndexSuccessors.Add(source, Successor.Switch(targets, defaultLabel));
+        return targets;
+    }
+
     public void AddReturn(int source)
     {
         ValidateInstructionIndex(source, nameof(source));

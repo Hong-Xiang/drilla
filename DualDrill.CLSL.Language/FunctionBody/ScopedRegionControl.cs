@@ -27,6 +27,10 @@ internal static class ScopedRegionControl
             foreach (var (index, parameter) in region.Body.Parameters.Index())
                 if (parameter.Type is null)
                     throw Invalid($"region '{region.Label}' parameter at index {index} type is missing");
+            if (region.Body.Body.Last is Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch &&
+                !branch.Selector.Type.Equals(ShaderType.I32))
+                throw Invalid(
+                    $"region '{region.Label}' switch selector must be i32, got '{branch.Selector.Type.Name}'");
             if (!bodies.TryAdd(region.Label, region.Body))
                 throw Invalid($"duplicate defined label '{region.Label}'");
             foreach (var (arm, jump) in Jumps(region.Body).Index())
@@ -73,6 +77,8 @@ internal static class ScopedRegionControl
             Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => [branch.Target],
             Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
                 [branch.TrueTarget, branch.FalseTarget],
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch =>
+                [.. branch.CaseTargets, branch.DefaultTarget],
             Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> => [],
             Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
             _ => throw new NotSupportedException($"Unsupported region terminator '{body.Body.Last}'.")

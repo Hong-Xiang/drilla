@@ -294,6 +294,14 @@ public static class CilStagePrettyPrinter
         public string BrIf(ShaderStackOperand condition, Label trueTarget, Label falseTarget) =>
             $"br_if {OperandName(condition)} true={Name(trueTarget)} false={Name(falseTarget)}";
 
+        public string Switch(
+            ShaderStackOperand selector,
+            IReadOnlyList<Label> caseTargets,
+            Label defaultTarget) =>
+            $"switch {OperandName(selector)} cases=[" +
+            string.Join(", ", caseTargets.Select(Name)) +
+            $"] default={Name(defaultTarget)}";
+
         private string Name(Label label) =>
             labelIds is null ? $"^({label.Name})" : LabelName(label, labelIds);
     }
@@ -391,6 +399,14 @@ public static class CilStagePrettyPrinter
                 writer.Write(LabelName(branch.BranchTarget, labelIds));
                 writer.Write(" fallthrough=");
                 writer.Write(LabelName(branch.FallThroughTarget, labelIds));
+                return;
+            case CilControlFlow.Switch branch:
+                writer.Write("native ");
+                writer.Write(OpCodeName(branch.Instruction));
+                writer.Write(" cases=[");
+                writer.Write(string.Join(", ", branch.CaseTargets.Select(target => LabelName(target, labelIds))));
+                writer.Write("] default=");
+                writer.Write(LabelName(branch.DefaultTarget, labelIds));
                 return;
             case CilControlFlow.FallThrough fallThrough:
                 writer.Write("synthetic fallthrough target=");
@@ -679,6 +695,14 @@ public static class CilStagePrettyPrinter
             RegionJump<IShaderValue> trueTarget,
             RegionJump<IShaderValue> falseTarget) =>
             $"br_if {Value(condition)} true={Jump(trueTarget)} false={Jump(falseTarget)}";
+
+        public string Switch(
+            IShaderValue selector,
+            IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+            RegionJump<IShaderValue> defaultTarget) =>
+            $"switch {Value(selector)} cases=[" +
+            string.Join(", ", caseTargets.Select(Jump)) +
+            $"] default={Jump(defaultTarget)}";
 
         private string Jump(RegionJump<IShaderValue> jump) =>
             $"{Label(jump.Label)}({string.Join(", ", jump.Arguments.Select(Value))})";

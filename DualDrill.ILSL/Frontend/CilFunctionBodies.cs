@@ -10,6 +10,7 @@ using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -30,6 +31,7 @@ public sealed record CilInstructionBlock : ILabeledEntity
             CilControlFlow.Return control => control.Instruction,
             CilControlFlow.Branch control => control.Instruction,
             CilControlFlow.ConditionalBranch control => control.Instruction,
+            CilControlFlow.Switch control => control.Instruction,
             _ => (CilInstructionInfo?)null
         };
         if (nativeInstruction is { } source &&
@@ -285,6 +287,11 @@ public sealed class CilValueControlFlowBody : IFunctionBody, IPrintable
             var block = graph[label];
             if (!ReferenceEquals(label, block.Label) || !graph.Successor(label).Equals(block.Successor))
                 throw new ArgumentException("A value CFG definition does not match its block payload.", nameof(graph));
+            if (block.Body.Last is Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch &&
+                !branch.Selector.Type.Equals(ShaderType.I32))
+                throw new ArgumentException(
+                    $"Value CFG switch selector at {label} must be i32, got {branch.Selector.Type.Name}.",
+                    nameof(graph));
         }
 
         var values = graph.Labels()
@@ -338,6 +345,16 @@ public sealed class CilValueControlFlowBody : IFunctionBody, IPrintable
             RegionJump<IShaderValue> trueTarget,
             RegionJump<IShaderValue> falseTarget) =>
             [condition, .. trueTarget.Arguments, .. falseTarget.Arguments];
+
+        public IEnumerable<IShaderValue> Switch(
+            IShaderValue selector,
+            IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+            RegionJump<IShaderValue> defaultTarget) =>
+            [
+                selector,
+                .. caseTargets.SelectMany(target => target.Arguments),
+                .. defaultTarget.Arguments
+            ];
     }
 }
 
