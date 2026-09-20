@@ -15,6 +15,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
     private const int MaxSignalBytes = 64 * 1024;
     private const int MaxCandidateBytes = 4 * 1024;
     private const int MaxRemoteCandidates = 128;
+    private const int MaxQueuedSignals = 256;
     private static readonly TimeSpan AnswerTimeout = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan BusPollInterval = TimeSpan.FromMilliseconds(100);
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
@@ -33,7 +34,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
     private readonly ILogger<WebRtcSession> _logger;
     private readonly CancellationTokenSource _stop;
     private readonly Channel<OutboundSignal> _outgoing = Channel.CreateBounded<OutboundSignal>(
-        new BoundedChannelOptions(32)
+        new BoundedChannelOptions(MaxQueuedSignals)
         {
             SingleReader = true,
             SingleWriter = false,
@@ -720,6 +721,11 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
     private void Fail(string message, Exception? exception = null)
     {
+        if (!_failure.TrySetResult(message))
+        {
+            return;
+        }
+
         if (exception is null)
         {
             _logger.LogError("{Message}", message);
@@ -728,8 +734,6 @@ internal sealed class WebRtcSession : IAsyncDisposable
         {
             _logger.LogError(exception, "{Message}", message);
         }
-
-        _failure.TrySetResult(message);
     }
 
     private void DisconnectNativeHandlers()
