@@ -12,14 +12,16 @@ namespace DualDrill.CLSL.Test;
 public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 {
     [Fact]
-    public void EmptyComputeEntryIsRejectedBySlangEmitter()
+    public void ComputeEntryWithoutWorkgroupSizeIsRejectedByMetadataValidation()
     {
         var exception = Assert.Throws<NotSupportedException>(() =>
-            new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(new EmptyComputeShader()));
+            new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(new MissingWorkgroupComputeShader()));
 
         output.WriteLine(exception.Message);
         Assert.Equal(
-            "Slang attribute DualDrill.CLSL.Language.ShaderAttribute.ComputeAttribute is not supported.",
+            "Shader module metadata validation rejected method " +
+            $"'{typeof(MissingWorkgroupComputeShader).FullName}.cs': " +
+            "a compute entry requires exactly one [WorkgroupSize] attribute; found 0.",
             exception.Message);
     }
 
@@ -127,7 +129,7 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
         Vector2 uv) =>
         texture.Sample(sampler, uv);
 
-    private sealed class EmptyComputeShader : ISharpShader
+    private sealed class MissingWorkgroupComputeShader : ISharpShader
     {
         [Compute]
         public static void cs()

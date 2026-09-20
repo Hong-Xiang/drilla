@@ -125,6 +125,13 @@ public sealed class ShaderModuleFormatter<TBody>
                 Writer.Write("@");
                 Writer.Write("fragment");
                 break;
+            case ComputeAttribute:
+                Writer.Write("@");
+                Writer.Write("compute");
+                break;
+            case WorkgroupSizeAttribute size:
+                Writer.Write($"@workgroup_size({size.X}, {size.Y}, {size.Z})");
+                break;
             case VertexAttribute:
                 Writer.Write("@");
                 Writer.Write("vertex");

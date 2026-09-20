@@ -47,6 +47,10 @@ public sealed class RuntimeReflectionParser
                 _ = variable;
 
             RejectAttributedModuleProperties(moduleType);
+            foreach (var method in moduleType.GetMethods(
+                         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                         BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                ShaderModuleMetadataValidator.ValidateReflectedComputeMetadata(method);
             var entryMethods = moduleType
                                .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
                                            BindingFlags.Instance)
@@ -219,6 +223,8 @@ public sealed class RuntimeReflectionParser
 
     private void CollectMethod(MethodBase method)
     {
+        if (method is MethodInfo methodInfo)
+            ShaderModuleMetadataValidator.ValidateReflectedComputeMetadata(methodInfo);
         var declaration = ParseMethodDeclaration(method);
         CollectMethodSignature(method);
         if (IsMethodBoundary(method) || completedMethods.Contains(method) || inProgressMethods.Contains(method))
