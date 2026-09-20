@@ -140,6 +140,28 @@ internal static class ShaderModuleMetadataValidator
             throw Invalid(declaration, $"location must be nonnegative; found {location.Binding}.");
     }
 
+    public static void ValidateMappedIntrinsicFunctionAttributes(
+        string declaration,
+        IReadOnlyCollection<IShaderAttribute> attributes)
+    {
+        var stages = attributes.OfType<IShaderStageAttribute>().Cast<IShaderAttribute>().ToArray();
+        if (stages.Length > 0)
+            throw Invalid(
+                declaration,
+                $"mapped intrinsic cannot preserve entry-stage attribute(s) {AttributeNames(stages)}.");
+    }
+
+    public static void ValidateMappedIntrinsicInterfaceAttributes(
+        string declaration,
+        IReadOnlyCollection<IShaderAttribute> attributes)
+    {
+        ValidateInterfaceAttributes(declaration, attributes);
+        if (attributes.Count > 0)
+            throw Invalid(
+                declaration,
+                $"mapped intrinsic cannot preserve interface attribute(s) {AttributeNames(attributes)}.");
+    }
+
     private static bool IsResourceDeclaration(VariableDeclaration declaration) =>
         declaration.AddressSpace is UniformAddressSpace ||
         declaration.Attributes.Any(IsResourceMetadata);

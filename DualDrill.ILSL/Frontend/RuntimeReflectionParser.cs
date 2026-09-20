@@ -163,8 +163,7 @@ public sealed class RuntimeReflectionParser
 
         var attributes = GetShaderAttributes(field);
         RejectAttributedBackingField(field, attributes);
-        if (attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata) &&
-            Context[Symbol.Variable(field)] is null)
+        if (attributes.Length > 0 && Context[Symbol.Variable(field)] is null)
             ShaderModuleMetadataValidator.ValidateOrdinaryModuleField(
                 $"field '{field.DeclaringType?.FullName}.{field.Name}'",
                 attributes);
@@ -446,15 +445,19 @@ public sealed class RuntimeReflectionParser
             $"method '{method.DeclaringType?.FullName}.{method.Name}'",
             attributes);
         var metadataAttributes = attributes.OfType<IShaderMetadataAttribute>().ToArray();
-        if (metadataAttributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } operationAttribute)
+        var operationAttribute = metadataAttributes.OfType<IOperationMethodAttribute>().SingleOrDefault();
+        var shaderOperationAttribute = attributes.OfType<IShaderOperationMethodAttribute>().SingleOrDefault();
+        if (operationAttribute is not null || shaderOperationAttribute is not null)
+            ValidateMappedIntrinsicSignature(method, attributes);
+
+        if (operationAttribute is not null)
         {
             var function = operationAttribute.Operation.Function;
             Context.AddFunctionDeclaration(symbol, function);
             return function;
         }
 
-        if (attributes.OfType<IShaderOperationMethodAttribute>().SingleOrDefault()
-            is { } shaderOperationAttribute)
+        if (shaderOperationAttribute is not null)
         {
             var result = ParseMethodReturn(method);
             var parameters = method.GetParameters().Select(ParseParameterCore);
@@ -608,6 +611,24 @@ public sealed class RuntimeReflectionParser
 
     private static ImmutableArray<IShaderAttribute> GetShaderAttributes(ICustomAttributeProvider provider) =>
         [.. provider.GetCustomAttributes(inherit: true).OfType<IShaderAttribute>()];
+
+    private static void ValidateMappedIntrinsicSignature(
+        MethodBase method,
+        IReadOnlyCollection<IShaderAttribute> attributes)
+    {
+        var name = $"{method.DeclaringType?.FullName}.{method.Name}";
+        ShaderModuleMetadataValidator.ValidateMappedIntrinsicFunctionAttributes(
+            $"method '{name}'",
+            attributes);
+        foreach (var parameter in method.GetParameters())
+            ShaderModuleMetadataValidator.ValidateMappedIntrinsicInterfaceAttributes(
+                $"parameter of mapped intrinsic '{name}.{parameter.Name}'",
+                GetShaderAttributes(parameter));
+        if (method is MethodInfo methodInfo)
+            ShaderModuleMetadataValidator.ValidateMappedIntrinsicInterfaceAttributes(
+                $"return of mapped intrinsic '{name}'",
+                GetShaderAttributes(methodInfo.ReturnParameter));
+    }
 
     private void EnsureUsable()
     {

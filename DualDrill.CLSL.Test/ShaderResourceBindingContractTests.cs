@@ -5,16 +5,101 @@ using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Test.ShaderModule;
+using DualDrill.Common.Nat;
+using DualDrill.Mathematics;
 using DualDrill.Shaders;
 
 namespace DualDrill.CLSL.Test;
 
 public sealed class ShaderResourceBindingContractTests
 {
+    [Fact]
+    public void MappedIntrinsicRejectsDuplicateParameterLocationFromClrMetadata()
+    {
+        var method = EmitMappedIntrinsic(IntrinsicMetadata.DuplicateParameterLocation);
+        var parameter = Assert.Single(method.GetParameters());
+        Assert.Equal(2, parameter.GetCustomAttributes<LocationAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Contains("exactly one interface attribute is allowed", exception.Message);
+        Assert.Contains("found [Location], [Location]", exception.Message);
+    }
+
+    [Fact]
+    public void MappedIntrinsicRejectsMisplacedReturnBinding()
+    {
+        var method = EmitMappedIntrinsic(IntrinsicMetadata.ReturnBinding);
+        Assert.Single(method.ReturnParameter.GetCustomAttributes<BindingAttribute>());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Contains("return of mapped intrinsic", exception.Message);
+        Assert.Contains("[Binding]", exception.Message);
+    }
+
+    [Fact]
+    public void MappedIntrinsicRejectsSingleInterfaceAnnotationThatItCannotPreserve()
+    {
+        var method = EmitMappedIntrinsic(IntrinsicMetadata.SingleParameterLocation);
+        var parameter = Assert.Single(method.GetParameters());
+        Assert.Single(parameter.GetCustomAttributes<LocationAttribute>());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Contains("parameter of mapped intrinsic", exception.Message);
+        Assert.Contains("cannot preserve interface attribute(s) [Location]", exception.Message);
+    }
+
+    [Fact]
+    public void MappedIntrinsicRejectsEntryStageAnnotationThatItCannotPreserve()
+    {
+        var method = EmitMappedIntrinsic(IntrinsicMetadata.VertexStage);
+        Assert.Single(method.GetCustomAttributes<VertexAttribute>());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(method));
+
+        Assert.Contains("mapped intrinsic", exception.Message);
+        Assert.Contains("cannot preserve entry-stage attribute(s) [Vertex]", exception.Message);
+    }
+
+    [Fact]
+    public void OpaqueReferenceMemberRejectsDuplicateLocationFromClrMetadata()
+    {
+        var fixture = EmitOpaqueMemberFixture(OpaqueMemberMetadata.DuplicateLocation);
+        Assert.Equal(2, fixture.Field.GetCustomAttributes<LocationAttribute>().Count());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(fixture.Read));
+
+        var detail = exception.InnerException?.Message ?? exception.Message;
+        Assert.Contains("field 'OpaquePayload.Value'", detail);
+        Assert.Contains("[Location], [Location]", detail);
+    }
+
+    [Fact]
+    public void OpaqueReferenceMemberRejectsExplicitAlignment()
+    {
+        var fixture = EmitOpaqueMemberFixture(OpaqueMemberMetadata.Align);
+        Assert.Single(fixture.Field.GetCustomAttributes<AlignAttribute>());
+
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(fixture.Read));
+
+        var detail = exception.InnerException?.Message ?? exception.Message;
+        Assert.Contains("field 'OpaquePayload.Value'", detail);
+        Assert.Contains("[Align]", detail);
+    }
+
     [Fact]
     public void RootModuleRejectsIdenticalGroupAttributesFromClrMetadata()
     {
@@ -480,11 +565,115 @@ public sealed class ShaderResourceBindingContractTests
             ?? throw new InvalidOperationException("Emitted interface method was not found.");
     }
 
+    private static MethodInfo EmitMappedIntrinsic(IntrinsicMetadata metadata)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName($"MappedIntrinsicMetadata_{metadata}_{Guid.NewGuid():N}"),
+            AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("Fixture").DefineType(
+            $"Mapped{metadata}Intrinsic",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+        var method = type.DefineMethod(
+            "Broadcast",
+            MethodAttributes.Public | MethodAttributes.Static,
+            typeof(vec4f32),
+            [typeof(float)]);
+        var operationAttribute = typeof(OperationMethodAttribute<>).MakeGenericType(
+            typeof(VectorFromScalarConstructOperation<N4, FloatType<N32>>));
+        method.SetCustomAttribute(ParameterlessAttribute(operationAttribute));
+        var parameter = method.DefineParameter(1, ParameterAttributes.None, "value");
+
+        switch (metadata)
+        {
+            case IntrinsicMetadata.DuplicateParameterLocation:
+                parameter.SetCustomAttribute(IntAttribute<LocationAttribute>(0));
+                parameter.SetCustomAttribute(IntAttribute<LocationAttribute>(0));
+                break;
+            case IntrinsicMetadata.ReturnBinding:
+                method.DefineParameter(0, ParameterAttributes.Retval, null)
+                    .SetCustomAttribute(BindingAttribute(0));
+                break;
+            case IntrinsicMetadata.SingleParameterLocation:
+                parameter.SetCustomAttribute(IntAttribute<LocationAttribute>(0));
+                break;
+            case IntrinsicMetadata.VertexStage:
+                method.SetCustomAttribute(ParameterlessAttribute<VertexAttribute>());
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(metadata));
+        }
+
+        var il = method.GetILGenerator();
+        il.Emit(OpCodes.Ldstr, "Shader-only intrinsic stubs must not execute.");
+        il.Emit(
+            OpCodes.Newobj,
+            typeof(InvalidOperationException).GetConstructor([typeof(string)])
+            ?? throw new InvalidOperationException("InvalidOperationException constructor was not found."));
+        il.Emit(OpCodes.Throw);
+
+        var created = type.CreateTypeInfo()?.AsType()
+            ?? throw new InvalidOperationException("Could not create emitted intrinsic fixture.");
+        return created.GetMethod("Broadcast")
+            ?? throw new InvalidOperationException("Emitted intrinsic method was not found.");
+    }
+
+    private static ResourceFixture EmitOpaqueMemberFixture(OpaqueMemberMetadata metadata)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName($"OpaqueMemberMetadata_{metadata}_{Guid.NewGuid():N}"),
+            AssemblyBuilderAccess.Run);
+        var module = assembly.DefineDynamicModule("Fixture");
+        var payload = module.DefineType("OpaquePayload", TypeAttributes.Public | TypeAttributes.Sealed);
+        payload.DefineDefaultConstructor(MethodAttributes.Public);
+        var field = payload.DefineField("Value", typeof(float), FieldAttributes.Public);
+        switch (metadata)
+        {
+            case OpaqueMemberMetadata.DuplicateLocation:
+                field.SetCustomAttribute(IntAttribute<LocationAttribute>(0));
+                field.SetCustomAttribute(IntAttribute<LocationAttribute>(0));
+                break;
+            case OpaqueMemberMetadata.Align:
+                field.SetCustomAttribute(IntAttribute<AlignAttribute>(16));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(metadata));
+        }
+
+        var payloadType = payload.CreateTypeInfo()?.AsType()
+            ?? throw new InvalidOperationException("Could not create emitted opaque payload.");
+        var payloadField = payloadType.GetField("Value")
+            ?? throw new InvalidOperationException("Emitted opaque field was not found.");
+        var consumer = module.DefineType(
+            "OpaqueConsumer",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+        var read = consumer.DefineMethod(
+            "Read",
+            MethodAttributes.Public | MethodAttributes.Static,
+            typeof(float),
+            [payloadType]);
+        read.DefineParameter(1, ParameterAttributes.None, "payload");
+        var il = read.GetILGenerator();
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldfld, payloadField);
+        il.Emit(OpCodes.Ret);
+
+        var consumerType = consumer.CreateTypeInfo()?.AsType()
+            ?? throw new InvalidOperationException("Could not create emitted opaque consumer.");
+        return new ResourceFixture(
+            payloadType,
+            payloadField,
+            consumerType.GetMethod("Read")
+            ?? throw new InvalidOperationException("Emitted opaque reader was not found."));
+    }
+
     private static CustomAttributeBuilder ParameterlessAttribute<TAttribute>()
         where TAttribute : Attribute =>
+        ParameterlessAttribute(typeof(TAttribute));
+
+    private static CustomAttributeBuilder ParameterlessAttribute(Type attributeType) =>
         new(
-            typeof(TAttribute).GetConstructor(Type.EmptyTypes)
-            ?? throw new InvalidOperationException($"{typeof(TAttribute)} has no parameterless constructor."),
+            attributeType.GetConstructor(Type.EmptyTypes)
+            ?? throw new InvalidOperationException($"{attributeType} has no parameterless constructor."),
             []);
 
     private static CustomAttributeBuilder IntAttribute<TAttribute>(int value)
@@ -695,5 +884,19 @@ public sealed class ShaderResourceBindingContractTests
     {
         Builtin,
         ReturnLocation
+    }
+
+    private enum IntrinsicMetadata
+    {
+        DuplicateParameterLocation,
+        ReturnBinding,
+        SingleParameterLocation,
+        VertexStage
+    }
+
+    private enum OpaqueMemberMetadata
+    {
+        DuplicateLocation,
+        Align
     }
 }
