@@ -147,10 +147,31 @@ public sealed class UniformLayoutTests
 
     [Theory]
     [MemberData(nameof(UnsupportedUniforms))]
-    public void PublicEmissionRejectsUnsupportedUniformsBeforeTargetText(string _, ISharpShader shader)
+    public void PublicEmissionRejectsUnsupportedUniformsBeforeTargetText(string profile, ISharpShader shader)
     {
         var exception = Assert.Throws<NotSupportedException>(
             () => new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader));
+
+        var metadataDiagnostic = profile switch
+        {
+            "member align" =>
+                $"Shader module metadata validation rejected field " +
+                $"'{typeof(UnsupportedUniformShaders.MemberAlign).FullName}.Field': " +
+                "attribute(s) [Align] are not valid on an ordinary module field.",
+            "structure align" =>
+                "Shader module metadata validation rejected structure 'StructureAlign': " +
+                "attribute(s) [Align] are not supported.",
+            "variable align" =>
+                $"Shader module metadata validation rejected field " +
+                $"'{typeof(UnsupportedUniformShaders.VariableAlign).FullName}.Value': " +
+                "resource attribute(s) [Align] are not supported.",
+            _ => null
+        };
+        if (metadataDiagnostic is not null)
+        {
+            Assert.Equal(metadataDiagnostic, exception.Message);
+            return;
+        }
 
         Assert.Contains("Uniform", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("WGSL uniform layout profile", exception.Message);
