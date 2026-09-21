@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
@@ -9,6 +10,7 @@ using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.CLSL.Reflection;
 using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Backend;
@@ -18,6 +20,10 @@ public sealed class SlangTargetLowering
     public ShaderModuleDeclaration<SlangFunctionBody> Lower(
         ShaderModuleDeclaration<RegionFunctionBody> module)
     {
+        ShaderModuleMetadataValidator.Validate(module);
+        WgslUniformLayoutValidator.Validate(module);
+        ValidateTextureSampleOperations(module);
+        PortableDerivativeTarget.ValidateModuleBindings(module);
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
             definition => new FunctionLowerer(definition.Value).Lower());
@@ -31,6 +37,48 @@ public sealed class SlangTargetLowering
         return new ShaderModuleDeclaration<SlangFunctionBody>(module.Declarations, definitions);
     }
 
+    private static void ValidateTextureSampleOperations(ShaderModuleDeclaration<RegionFunctionBody> module)
+    {
+        foreach (var (function, body) in module.FunctionDefinitions)
+            body.Body.Traverse(region =>
+            {
+                foreach (var instruction in region.Body.Body.Elements)
+                    if (instruction.Operation is TextureSampleLevelOperation operation)
+                        ValidateTextureSampleLevel(function, instruction, operation);
+            });
+    }
+
+    private static void ValidateTextureSampleLevel(
+        FunctionDeclaration function,
+        Instruction<IShaderValue, IShaderValue> instruction,
+        TextureSampleLevelOperation operation)
+    {
+        if (!HasPhysicalOperandShape(instruction, 4) ||
+            instruction.Operand0!.Type is not IPtrType ||
+            !instruction.Operand0.Type.Equals(operation.TexturePointerType) ||
+            instruction.Operand1!.Type is not IPtrType ||
+            !instruction.Operand1.Type.Equals(operation.SamplerPointerType) ||
+            !instruction.RestOperands[0].Type.Equals(ShaderType.Vec2F32) ||
+            !instruction.RestOperands[1].Type.Equals(ShaderType.F32) ||
+            instruction.Result is null ||
+            !instruction.Result.Type.Equals(ShaderType.Vec4F32))
+            throw new NotSupportedException(
+                $"Function '{function.Name}': operation '{instruction.Operation.Name}': " +
+                "invalid texture SampleLevel signature.");
+    }
+
+    private static bool HasPhysicalOperandShape(
+        Instruction<IShaderValue, IShaderValue> instruction,
+        int expectedCount) =>
+        instruction.OperandCount == expectedCount &&
+        instruction.Operand0 is not null &&
+        (expectedCount == 1
+            ? instruction.Operand1 is null
+            : instruction.Operand1 is not null) &&
+        !instruction.RestOperands.IsDefault &&
+        instruction.RestOperands.Length == Math.Max(0, expectedCount - 2) &&
+        instruction.RestOperands.All(static operand => operand is not null);
+
     private sealed class FunctionLowerer
     {
         private readonly Dictionary<IShaderValue, SlangPlace> aliases =
@@ -42,12 +90,36 @@ public sealed class SlangTargetLowering
         private readonly Dictionary<IShaderValue, VariableDeclaration> parameterSlots =
             new(ReferenceEqualityComparer.Instance);
         private readonly Dictionary<Continuation, int> tokenIds = [];
+        private readonly ImmutableArray<SlangParameterOrigin>.Builder parameterOrigins =
+            ImmutableArray.CreateBuilder<SlangParameterOrigin>();
+        private readonly ImmutableArray<SlangDefinitionOrigin>.Builder definitionOrigins =
+            ImmutableArray.CreateBuilder<SlangDefinitionOrigin>();
+        private readonly ImmutableArray<SlangDimensionsOrigin>.Builder dimensionsOrigins =
+            ImmutableArray.CreateBuilder<SlangDimensionsOrigin>();
+        private readonly ImmutableArray<SlangInstructionOrigin>.Builder instructionOrigins =
+            ImmutableArray.CreateBuilder<SlangInstructionOrigin>();
+        private readonly ImmutableArray<SlangTransferOrigin>.Builder transferOrigins =
+            ImmutableArray.CreateBuilder<SlangTransferOrigin>();
+        private readonly ImmutableArray<SlangConditionalOrigin>.Builder conditionalOrigins =
+            ImmutableArray.CreateBuilder<SlangConditionalOrigin>();
+        private readonly ImmutableArray<SlangGateOrigin>.Builder gateOrigins =
+            ImmutableArray.CreateBuilder<SlangGateOrigin>();
+        private readonly ImmutableArray<SlangReturnOrigin>.Builder returnOrigins =
+            ImmutableArray.CreateBuilder<SlangReturnOrigin>();
+        private readonly ImmutableArray<SlangCarrierBreakOrigin>.Builder carrierBreakOrigins =
+            ImmutableArray.CreateBuilder<SlangCarrierBreakOrigin>();
         private readonly RegionFunctionBody source;
         private readonly VariableDeclaration? token;
 
         internal FunctionLowerer(RegionFunctionBody source)
         {
             this.source = source;
+            var resourceLocal = source.LocalVariables.FirstOrDefault(variable =>
+                ShaderModuleMetadataValidator.IsResourceTypeOrPointer(variable.Type));
+            if (resourceLocal is not null)
+                throw Error(
+                    $"local '{resourceLocal.Name}' has resource type '{resourceLocal.Type.Name}'; " +
+                    "structured buffers are valid only as static shader-module fields");
             source.Body.Traverse(region =>
             {
                 blocks.Add(region.Label, region);
@@ -99,7 +171,20 @@ public sealed class SlangTargetLowering
                 .Select(variable => (SlangStatement)new SlangDeclare(variable));
             return new SlangFunctionBody(
                 source.Declaration,
-                new SlangBlock([.. declarations, .. lowered.Statements]));
+                new SlangBlock([.. declarations, .. lowered.Statements]),
+                new SlangLoweringOrigins(
+                    token,
+                    parameterSlots.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
+                    captures.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
+                    parameterOrigins.ToImmutable(),
+                    definitionOrigins.ToImmutable(),
+                    dimensionsOrigins.ToImmutable(),
+                    instructionOrigins.ToImmutable(),
+                    transferOrigins.ToImmutable(),
+                    conditionalOrigins.ToImmutable(),
+                    gateOrigins.ToImmutable(),
+                    returnOrigins.ToImmutable(),
+                    carrierBreakOrigins.ToImmutable()));
         }
 
         private Lowered LowerRegion(RegionTree<Label, ShaderRegionBody> region)
@@ -122,11 +207,17 @@ public sealed class SlangTargetLowering
             }
             else if (repeats)
             {
-                var condition = TokenEquals(repeat, statements);
-                statements.Add(new SlangIf(
-                    condition,
+                var gate = TokenEquals(repeat, statements);
+                var conditional = new SlangIf(
+                    gate.Condition,
                     new SlangBlock([(SlangStatement)new SlangContinue()]),
-                    new SlangBlock([(SlangStatement)new SlangBreak()])));
+                    new SlangBlock([(SlangStatement)new SlangBreak()]));
+                statements.Add(conditional);
+                gateOrigins.Add(new(
+                    Origin(repeat),
+                    gate.TokenId,
+                    gate.Comparison,
+                    conditional));
             }
             else if (!outward.IsEmpty)
             {
@@ -165,9 +256,16 @@ public sealed class SlangTargetLowering
                 else
                 {
                     var carrier = suffix.Statements.ToBuilder();
+                    SlangBreak? carrierBreak = null;
                     if (!suffix.Escapes.IsEmpty)
-                        carrier.Add(new SlangBreak());
-                    statements.Add(new SlangDoOnce(new SlangBlock(carrier.ToImmutable())));
+                    {
+                        carrierBreak = new SlangBreak();
+                        carrier.Add(carrierBreak);
+                    }
+                    var once = new SlangDoOnce(new SlangBlock(carrier.ToImmutable()));
+                    statements.Add(once);
+                    if (carrierBreak is not null)
+                        carrierBreakOrigins.Add(new(region.Label, child.Label, once, carrierBreak));
                 }
 
                 var childLowered = LowerRegion(child);
@@ -177,11 +275,17 @@ public sealed class SlangTargetLowering
                 }
                 else
                 {
-                    var condition = TokenEquals(caught, statements);
-                    statements.Add(new SlangIf(
-                        condition,
+                    var gate = TokenEquals(caught, statements);
+                    var conditional = new SlangIf(
+                        gate.Condition,
                         new SlangBlock(childLowered.Statements),
-                        SlangBlock.Empty));
+                        SlangBlock.Empty);
+                    statements.Add(conditional);
+                    gateOrigins.Add(new(
+                        Origin(caught),
+                        gate.TokenId,
+                        gate.Comparison,
+                        conditional));
                 }
 
                 suffix = new Lowered(
@@ -201,11 +305,18 @@ public sealed class SlangTargetLowering
                     new LoadOperation(),
                     parameter,
                     [new SlangPlaceOperand(new SlangVariablePlace(parameterSlots[parameter]))]);
-                statements.Add(new SlangBind(load));
-                CaptureDefinition(parameter, statements);
+                var definition = new SlangBind(load);
+                statements.Add(definition);
+                var capture = CaptureDefinition(parameter, statements);
+                parameterOrigins.Add(new(
+                    region.Label,
+                    parameter,
+                    parameterSlots[parameter],
+                    definition,
+                    capture));
             }
-            foreach (var instruction in region.Body.Body.Elements)
-                LowerInstruction(instruction, statements);
+            foreach (var (ordinal, instruction) in region.Body.Body.Elements.Index())
+                LowerInstruction(region.Label, ordinal, instruction, statements);
 
             var terminated = LowerTerminator(region.Body.Body.Last, region.Label);
             statements.AddRange(terminated.Statements);
@@ -223,9 +334,9 @@ public sealed class SlangTargetLowering
             terminator switch
             {
                 Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> =>
-                    Lowered.Completed(new SlangReturnVoid()),
+                    LowerReturnVoid(sourceLabel),
                 Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
-                    Lowered.Completed(new SlangReturnValue(Operand(returned.Expr))),
+                    LowerReturnValue(sourceLabel, returned.Expr),
                 Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch =>
                     LowerTransfer(sourceLabel, 0, branch.Target),
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
@@ -235,19 +346,33 @@ public sealed class SlangTargetLowering
                 _ => throw Error($"unsupported terminator in block '{sourceLabel.Name}'")
             };
 
+        private Lowered LowerReturnVoid(Label sourceLabel)
+        {
+            var statement = new SlangReturnVoid();
+            returnOrigins.Add(new(sourceLabel, null, statement));
+            return Lowered.Completed(statement);
+        }
+
+        private Lowered LowerReturnValue(Label sourceLabel, IShaderValue value)
+        {
+            var statement = new SlangReturnValue(Operand(value));
+            returnOrigins.Add(new(sourceLabel, value, statement));
+            return Lowered.Completed(statement);
+        }
+
         private Lowered LowerConditional(
             Label sourceLabel,
             Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch)
         {
             var whenTrue = LowerTransfer(sourceLabel, 0, branch.TrueTarget);
             var whenFalse = LowerTransfer(sourceLabel, 1, branch.FalseTarget);
+            var conditional = new SlangIf(
+                Operand(branch.Condition),
+                new SlangBlock(whenTrue.Statements),
+                new SlangBlock(whenFalse.Statements));
+            conditionalOrigins.Add(new(sourceLabel, branch.Condition, conditional));
             return new Lowered(
-                [
-                    new SlangIf(
-                        Operand(branch.Condition),
-                        new SlangBlock(whenTrue.Statements),
-                        new SlangBlock(whenFalse.Statements))
-                ],
+                [conditional],
                 whenTrue.Escapes.Union(whenFalse.Escapes));
         }
 
@@ -295,51 +420,84 @@ public sealed class SlangTargetLowering
             var target = blocks[transfer.Target].Body;
             var statements = ImmutableArray.CreateBuilder<SlangStatement>();
             var values = ImmutableArray.CreateBuilder<IShaderValue>();
-            foreach (var argument in jump.Arguments)
+            var snapshots = ImmutableArray.CreateBuilder<(
+                int Position,
+                IShaderValue Argument,
+                IShaderValue Snapshot,
+                SlangBind Definition)>();
+            foreach (var (position, argument) in jump.Arguments.Index())
             {
                 if (argument.Type is IPtrType)
                     throw Error(
                         $"transfer from '{sourceLabel.Name}', arm {arm}, retains a pointer argument");
                 var captured = ShaderValue.Intermediate(argument.Type);
-                statements.Add(new SlangBind(
+                var definition = new SlangBind(
                     Instruction<SlangOperand, IShaderValue>.Create(
                         new LoadOperation(),
                         captured,
-                        [Operand(argument)])));
+                        [Operand(argument)]));
+                statements.Add(definition);
                 values.Add(captured);
+                snapshots.Add((position, argument, captured, definition));
             }
 
-            foreach (var (parameter, value) in target.Parameters.Zip(values))
-                statements.Add(new SlangAssign(
+            var arguments = ImmutableArray.CreateBuilder<SlangTransferArgumentOrigin>();
+            foreach (var ((parameter, value), snapshot) in target.Parameters.Zip(values).Zip(snapshots))
+            {
+                var assignment = new SlangAssign(
                     new SlangVariablePlace(parameterSlots[parameter]),
-                    new SlangValueOperand(value)));
+                    new SlangValueOperand(value));
+                statements.Add(assignment);
+                arguments.Add(new(
+                    snapshot.Position,
+                    snapshot.Argument,
+                    snapshot.Snapshot,
+                    snapshot.Definition,
+                    parameter,
+                    parameterSlots[parameter],
+                    assignment));
+            }
 
             var continuation = Continuation.From(transfer);
-            statements.Add(new SlangAssign(
+            var tokenId = tokenIds[continuation];
+            var tokenAssignment = new SlangAssign(
                 new SlangVariablePlace(token ??
                     throw Error("a scoped transfer requires a control token")),
-                new SlangValueOperand(Int(tokenIds[continuation]))));
-            statements.Add(new SlangBreak());
+                new SlangValueOperand(Int(tokenId)));
+            var @break = new SlangBreak();
+            statements.Add(tokenAssignment);
+            statements.Add(@break);
+            transferOrigins.Add(new(
+                sourceLabel,
+                arm,
+                jump,
+                Origin(continuation),
+                tokenId,
+                arguments.ToImmutable(),
+                tokenAssignment,
+                @break));
             return new Lowered(
                 statements.ToImmutable(),
                 ImmutableHashSet.Create(continuation));
         }
 
-        private SlangOperand TokenEquals(
+        private Gate TokenEquals(
             Continuation continuation,
             ImmutableArray<SlangStatement>.Builder statements)
         {
             var result = ShaderValue.Intermediate(ShaderType.Bool);
-            statements.Add(new SlangBind(
+            var tokenId = tokenIds[continuation];
+            var comparison = new SlangBind(
                 Instruction<SlangOperand, IShaderValue>.Create(
                     NumericBinaryRelationalOperation<IntType<N32>, BinaryRelational.Eq>.Instance,
                     result,
                     [
                         new SlangPlaceOperand(new SlangVariablePlace(token ??
                             throw Error("a scoped gate requires a control token"))),
-                        new SlangValueOperand(Int(tokenIds[continuation]))
-                    ])));
-            return new SlangValueOperand(result);
+                        new SlangValueOperand(Int(tokenId))
+                    ]));
+            statements.Add(comparison);
+            return new Gate(comparison, new SlangValueOperand(result), tokenId);
         }
 
         private void FindCrossLabelCaptures()
@@ -398,11 +556,57 @@ public sealed class SlangTargetLowering
             };
 
         private void LowerInstruction(
+            Label label,
+            int ordinal,
             Instruction<IShaderValue, IShaderValue> instruction,
             ImmutableArray<SlangStatement>.Builder statements)
         {
             switch (instruction.Operation)
             {
+                case StructuredBufferLengthOperation length:
+                    ValidateStructuredBufferLength(instruction, length);
+                    var count = instruction.Result!;
+                    var stride = ShaderValue.Intermediate(ShaderType.U32);
+                    var dimensions = new SlangGetDimensions(
+                        new SlangPlaceOperand(Place(instruction.Operand0, instruction.Operation.Name)),
+                        count,
+                        stride);
+                    statements.Add(dimensions);
+                    var capture = CaptureDefinition(count, statements);
+                    dimensionsOrigins.Add(new(label, ordinal, instruction, dimensions, capture));
+                    return;
+                case StructuredBufferLoadOperation load:
+                    ValidateStructuredBufferLoad(instruction, load);
+                    break;
+                case ReadWriteStructuredBufferLengthOperation rwLength:
+                    ValidateReadWriteStructuredBufferLength(instruction, rwLength);
+                    var rwCount = instruction.Result!;
+                    var rwStride = ShaderValue.Intermediate(ShaderType.U32);
+                    var rwDimensions = new SlangGetDimensions(
+                        new SlangPlaceOperand(Place(instruction.Operand0, instruction.Operation.Name)),
+                        rwCount,
+                        rwStride);
+                    statements.Add(rwDimensions);
+                    var rwCapture = CaptureDefinition(rwCount, statements);
+                    dimensionsOrigins.Add(new(label, ordinal, instruction, rwDimensions, rwCapture));
+                    return;
+                case ReadWriteStructuredBufferLoadOperation rwLoad:
+                    ValidateReadWriteStructuredBufferLoad(instruction, rwLoad);
+                    break;
+                case ReadWriteStructuredBufferStoreOperation rwStore:
+                    ValidateReadWriteStructuredBufferStore(instruction, rwStore);
+                    var indexedStore = new SlangAssign(
+                        new SlangIndexedPlace(
+                            Place(instruction.Operand0, instruction.Operation.Name),
+                            Operand(instruction.Operand1),
+                            ShaderType.F32),
+                        Operand(instruction[2]));
+                    statements.Add(indexedStore);
+                    instructionOrigins.Add(new(label, ordinal, instruction, indexedStore));
+                    return;
+                case TextureSampleLevelOperation sample:
+                    ValidateTextureSampleLevel(source.Declaration, instruction, sample);
+                    break;
                 case AddressOfMemberOperation member:
                     DefineAlias(instruction, new SlangMemberPlace(
                         Place(instruction.Operand0, instruction.Operation.Name),
@@ -421,26 +625,42 @@ public sealed class SlangTargetLowering
                 case ScalarConversionOperation<IntType<N32>, UIntType<N64>>:
                     throw UnsupportedOperation(
                         instruction, "i32-to-u64 conversion; unsigned widening is not implemented");
+                case LoadOperation when IsResourceValue(instruction.Operand0) ||
+                                        IsResourceValue(instruction.Result):
+                    throw UnsupportedOperation(
+                        instruction,
+                        "whole structured-buffer or texture/sampler handle loads are not supported");
+                case StoreOperation when IsResourceValue(instruction.Operand0) ||
+                                         IsResourceValue(instruction.Operand1):
+                    throw UnsupportedOperation(
+                        instruction,
+                        "whole structured-buffer or texture/sampler handle stores are not supported");
                 case StoreOperation:
-                    statements.Add(new SlangAssign(
+                    var store = new SlangAssign(
                         Place(instruction.Operand0, instruction.Operation.Name),
-                        Operand(instruction.Operand1)));
+                        Operand(instruction.Operand1));
+                    statements.Add(store);
+                    instructionOrigins.Add(new(label, ordinal, instruction, store));
                     return;
                 case IVectorComponentSetOperation component:
-                    statements.Add(new SlangAssign(
+                    var componentSet = new SlangAssign(
                         new SlangComponentPlace(
                             Place(instruction.Operand0, instruction.Operation.Name),
                             component.Component.Name,
                             component.ElementType),
-                        Operand(instruction.Operand1)));
+                        Operand(instruction.Operand1));
+                    statements.Add(componentSet);
+                    instructionOrigins.Add(new(label, ordinal, instruction, componentSet));
                     return;
                 case IVectorSwizzleSetOperation swizzle:
-                    statements.Add(new SlangAssign(
+                    var swizzleSet = new SlangAssign(
                         new SlangSwizzlePlace(
                             Place(instruction.Operand0, instruction.Operation.Name),
                             swizzle.Pattern.Name,
                             swizzle.ValueVecType),
-                        Operand(instruction.Operand1)));
+                        Operand(instruction.Operand1));
+                    statements.Add(swizzleSet);
+                    instructionOrigins.Add(new(label, ordinal, instruction, swizzleSet));
                     return;
                 case ZeroConstructorOperation zero when zero.ResultType is not IVecType:
                     throw UnsupportedOperation(instruction, $"zero construction of {zero.ResultType.Name}");
@@ -452,7 +672,9 @@ public sealed class SlangTargetLowering
             if (lowered.Result is null ||
                 instruction.Operation is CallOperation { ResultType: UnitType })
             {
-                statements.Add(new SlangEffect(lowered));
+                var effect = new SlangEffect(lowered);
+                statements.Add(effect);
+                instructionOrigins.Add(new(label, ordinal, instruction, effect));
             }
             else
             {
@@ -460,19 +682,25 @@ public sealed class SlangTargetLowering
                     throw UnsupportedOperation(instruction, "only calls may produce Unit effects");
                 if (lowered.Result.Type is IPtrType)
                     throw UnsupportedOperation(instruction, "pointer results must lower to typed places");
-                statements.Add(new SlangBind(lowered));
-                CaptureDefinition(lowered.Result, statements);
+                var definition = new SlangBind(lowered);
+                statements.Add(definition);
+                var capture = CaptureDefinition(lowered.Result, statements);
+                definitionOrigins.Add(new(label, ordinal, instruction, definition, capture));
+                instructionOrigins.Add(new(label, ordinal, instruction, definition));
             }
         }
 
-        private void CaptureDefinition(
+        private SlangAssign? CaptureDefinition(
             IShaderValue value,
             ImmutableArray<SlangStatement>.Builder statements)
         {
-            if (captures.TryGetValue(value, out var capture))
-                statements.Add(new SlangAssign(
-                    new SlangVariablePlace(capture),
-                    new SlangValueOperand(value)));
+            if (!captures.TryGetValue(value, out var capture))
+                return null;
+            var assignment = new SlangAssign(
+                new SlangVariablePlace(capture),
+                new SlangValueOperand(value));
+            statements.Add(assignment);
+            return assignment;
         }
 
         private static bool IsSupportedExpression(IOperation operation) =>
@@ -480,10 +708,92 @@ public sealed class SlangTargetLowering
                 or LoadOperation
                 or CallOperation
                 or LiteralOperation
+                or StructuredBufferLoadOperation
+                or ReadWriteStructuredBufferLoadOperation
+                or TextureSampleLevelOperation
                 or IUnaryExpressionOperation
                 or IBinaryExpressionOperation
                 or VectorCompositeConstructionOperation
                 or ZeroConstructorOperation;
+
+        private void ValidateStructuredBufferLength(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            StructuredBufferLengthOperation operation)
+        {
+            if (!HasPhysicalOperandShape(instruction, 1) ||
+                instruction.Operand0!.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.U32))
+                throw UnsupportedOperation(instruction, "invalid read-only storage-buffer Length signature");
+        }
+
+        private void ValidateStructuredBufferLoad(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            StructuredBufferLoadOperation operation)
+        {
+            if (!HasPhysicalOperandShape(instruction, 2) ||
+                instruction.Operand0!.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.F32))
+                throw UnsupportedOperation(instruction, "invalid read-only storage-buffer load signature");
+        }
+
+        private void ValidateReadWriteStructuredBufferLength(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            ReadWriteStructuredBufferLengthOperation operation)
+        {
+            if (!HasPhysicalOperandShape(instruction, 1) ||
+                instruction.Operand0!.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.U32))
+                throw UnsupportedOperation(instruction, "invalid read-write storage-buffer Length signature");
+        }
+
+        private void ValidateReadWriteStructuredBufferLoad(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            ReadWriteStructuredBufferLoadOperation operation)
+        {
+            if (!HasPhysicalOperandShape(instruction, 2) ||
+                instruction.Operand0!.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
+                instruction.Result is null ||
+                !instruction.Result.Type.Equals(ShaderType.F32))
+                throw UnsupportedOperation(instruction, "invalid read-write storage-buffer load signature");
+        }
+
+        private void ValidateReadWriteStructuredBufferStore(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            ReadWriteStructuredBufferStoreOperation operation)
+        {
+            if (!HasPhysicalOperandShape(instruction, 3) ||
+                instruction.Operand0!.Type is not IPtrType ||
+                !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
+                !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
+                !instruction.RestOperands[0].Type.Equals(ShaderType.F32) ||
+                instruction.Result is not null)
+                throw UnsupportedOperation(instruction, "invalid read-write storage-buffer store signature");
+        }
+
+        private static bool HasPhysicalOperandShape(
+            Instruction<IShaderValue, IShaderValue> instruction,
+            int expectedCount) =>
+            instruction.OperandCount == expectedCount &&
+            instruction.Operand0 is not null &&
+            (expectedCount == 1
+                ? instruction.Operand1 is null
+                : instruction.Operand1 is not null) &&
+            !instruction.RestOperands.IsDefault &&
+            instruction.RestOperands.Length == Math.Max(0, expectedCount - 2) &&
+            instruction.RestOperands.All(static operand => operand is not null);
+
+        private static bool IsResourceValue(IShaderValue? value) =>
+            value is not null &&
+            ShaderModuleMetadataValidator.IsResourceTypeOrPointer(value.Type);
 
         private void DefineAlias(
             Instruction<IShaderValue, IShaderValue> instruction,
@@ -503,6 +813,9 @@ public sealed class SlangTargetLowering
         private SlangOperand Operand(IShaderValue? value)
         {
             if (value is null) throw Error("instruction contains a missing operand");
+            if (value is FunctionDeclaration function &&
+                PortableDerivativeTarget.TryLower(function, out var target))
+                return new SlangValueOperand(target);
             if (captures.TryGetValue(value, out var capture))
                 return new SlangPlaceOperand(new SlangVariablePlace(capture));
             return value.Type is IPtrType
@@ -538,6 +851,9 @@ public sealed class SlangTargetLowering
             $"{continuation.Kind.ToString().ToLowerInvariant()} " +
             $"{continuation.Target} owned by {continuation.Owner}";
 
+        private static SlangContinuationOrigin Origin(Continuation continuation) =>
+            new(continuation.Target, continuation.Owner, continuation.Kind);
+
         private sealed record Continuation(
             Label Target,
             Label Owner,
@@ -554,5 +870,10 @@ public sealed class SlangTargetLowering
             internal static Lowered Completed(SlangStatement statement) =>
                 new([statement], ImmutableHashSet<Continuation>.Empty);
         }
+
+        private readonly record struct Gate(
+            SlangBind Comparison,
+            SlangOperand Condition,
+            int TokenId);
     }
 }

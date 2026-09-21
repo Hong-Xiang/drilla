@@ -26,12 +26,24 @@ public class ReflectionTestShaderReflection : IReflection
         return vertexBufferLayoutBuilder.Build();
     }
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor(IShaderModuleDeclaration module)
-    {
-        return _shaderModuleReflection.GetBindGroupLayoutDescriptor(module);
-    }
+    public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module) =>
+        _shaderModuleReflection.GetUniformBindings(module);
 
-    public GPUBindGroupLayoutDescriptor? GetBindGroupLayoutDescriptor() => null;
+    public ImmutableArray<ShaderTextureBinding> GetTextureBindings(IShaderModuleDeclaration module) =>
+        _shaderModuleReflection.GetTextureBindings(module);
+
+    public ImmutableArray<ShaderSamplerBinding> GetSamplerBindings(IShaderModuleDeclaration module) =>
+        _shaderModuleReflection.GetSamplerBindings(module);
+
+    public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
+        IShaderModuleDeclaration module,
+        int group) =>
+        _shaderModuleReflection.GetBindGroupLayoutDescriptor(module, group);
+
+    public GPUBindGroupLayoutDescriptorBuffer GetBindGroupLayoutDescriptorBuffer(
+        IShaderModuleDeclaration module,
+        int group) =>
+        _shaderModuleReflection.GetBindGroupLayoutDescriptorBuffer(module, group);
 }
 
 public struct ReflectionTestShader : ISharpShader

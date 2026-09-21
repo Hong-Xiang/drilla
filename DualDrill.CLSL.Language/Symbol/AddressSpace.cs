@@ -7,6 +7,8 @@ public enum AddressSpaceKind
     Generic,
     Function,
     Uniform,
+    Storage,
+    Handle,
     Input,
     Output
 }
@@ -28,6 +30,8 @@ public interface IAddressSpaceSemantic<T>
     T Generic(GenericAddressSpace s);
     T Function(FunctionAddressSpace s);
     T Uniform(UniformAddressSpace s);
+    T Storage(StorageAddressSpace s);
+    T Handle(HandleAddressSpace s);
     T Input(InputAddressSpace s);
     T Output(OutputAddressSpace s);
 }
@@ -98,6 +102,30 @@ public sealed class UniformAddressSpace
     public static UniformAddressSpace Instance { get; } = new();
 
     public T Eval<T>(IAddressSpaceSemantic<T> semantic) => semantic.Uniform(this);
+
+    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic) => semantic.AddressSpace(this);
+}
+
+public sealed class StorageAddressSpace
+    : IAddressSpace<StorageAddressSpace>
+    , ISingleton<StorageAddressSpace>
+{
+    public AddressSpaceKind Kind => AddressSpaceKind.Storage;
+    public static StorageAddressSpace Instance { get; } = new();
+
+    public T Eval<T>(IAddressSpaceSemantic<T> semantic) => semantic.Storage(this);
+
+    public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic) => semantic.AddressSpace(this);
+}
+
+public sealed class HandleAddressSpace
+    : IAddressSpace<HandleAddressSpace>
+    , ISingleton<HandleAddressSpace>
+{
+    public AddressSpaceKind Kind => AddressSpaceKind.Handle;
+    public static HandleAddressSpace Instance { get; } = new();
+
+    public T Eval<T>(IAddressSpaceSemantic<T> semantic) => semantic.Handle(this);
 
     public T EvalG<T>(IAddressSpaceGenericSemantic<T> semantic) => semantic.AddressSpace(this);
 }

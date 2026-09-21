@@ -12,14 +12,16 @@ namespace DualDrill.CLSL.Test;
 public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 {
     [Fact]
-    public void EmptyComputeEntryIsRejectedBySlangEmitter()
+    public void ComputeEntryWithoutWorkgroupSizeIsRejectedByMetadataValidation()
     {
         var exception = Assert.Throws<NotSupportedException>(() =>
-            new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(new EmptyComputeShader()));
+            new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(new MissingWorkgroupComputeShader()));
 
         output.WriteLine(exception.Message);
         Assert.Equal(
-            "Slang attribute DualDrill.CLSL.Language.ShaderAttribute.ComputeAttribute is not supported.",
+            "Shader module metadata validation rejected method " +
+            $"'{typeof(MissingWorkgroupComputeShader).FullName}.cs': " +
+            "a compute entry requires exactly one [WorkgroupSize] attribute; found 0.",
             exception.Message);
     }
 
@@ -80,33 +82,43 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void StructMemberSemanticsAreCollectedThenDroppedFromSlang()
+    public void StructMemberSemanticsAreRejectedBeforeSlangEmission()
     {
         var shader = new StructInterfaceShader();
         var compiler = new CLSLCompiler(new(CLSLCompileTarget.SLang));
-        var module = compiler.Parse(shader);
-        var structure = Assert.Single(
-            module.Declarations.OfType<StructureDeclaration>(),
-            declaration => declaration.Name == nameof(VertexOut));
+        var exception = Assert.Throws<NotSupportedException>(() => compiler.Emit(shader));
 
-        var position = Assert.Single(structure.Members, member => member.Name == nameof(VertexOut.Position));
+        output.WriteLine(exception.Message);
         Assert.Equal(
-            BuiltinBinding.position,
-            Assert.Single(position.Attributes.OfType<BuiltinAttribute>()).Slot);
-        var uv = Assert.Single(structure.Members, member => member.Name == nameof(VertexOut.Uv));
-        Assert.Equal(0, Assert.Single(uv.Attributes.OfType<LocationAttribute>()).Binding);
+            $"Shader module metadata validation rejected field '{typeof(VertexOut).FullName}.Position': " +
+            "attribute(s) [Builtin] are not valid on an ordinary module field.",
+            exception.Message);
+    }
 
-        var slang = compiler.Emit(shader);
-        output.WriteLine(slang);
-        var memberLines = slang.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .Where(line => line.EndsWith("Position;", StringComparison.Ordinal) ||
-                           line.EndsWith("Uv;", StringComparison.Ordinal))
-            .ToArray();
+    [Fact]
+    public void StructMemberLocationIsRejectedBeforeSlangEmission()
+    {
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(new StructLocationShader()));
 
-        Assert.Equal(["vec4<f32>Position;", "vec2<f32>Uv;"], memberLines);
-        Assert.DoesNotContain("SV_POSITION", slang);
-        Assert.DoesNotContain("TEXCOORD0", slang);
+        output.WriteLine(exception.Message);
+        Assert.Equal(
+            $"Shader module metadata validation rejected field '{typeof(LocationOnly).FullName}.Uv': " +
+            "attribute(s) [Location] are not valid on an ordinary module field.",
+            exception.Message);
+    }
+
+    [Fact]
+    public void StructMemberExplicitAlignmentIsRejectedBeforeSlangEmission()
+    {
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(new StructAlignmentShader()));
+
+        output.WriteLine(exception.Message);
+        Assert.Equal(
+            $"Shader module metadata validation rejected field '{typeof(ExplicitlyAligned).FullName}.Value': " +
+            "attribute(s) [Align] are not valid on an ordinary module field.",
+            exception.Message);
     }
 
     private static int ReadElement(int[] values, int index) => values[index];
@@ -117,7 +129,7 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
         Vector2 uv) =>
         texture.Sample(sampler, uv);
 
-    private sealed class EmptyComputeShader : ISharpShader
+    private sealed class MissingWorkgroupComputeShader : ISharpShader
     {
         [Compute]
         public static void cs()
@@ -146,5 +158,29 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
     {
         [Vertex]
         public static VertexOut vs(VertexOut value) => value;
+    }
+
+    private struct LocationOnly
+    {
+        [Location(0)]
+        public vec2f32 Uv;
+    }
+
+    private sealed class StructLocationShader : ISharpShader
+    {
+        [Vertex]
+        public static LocationOnly vs(LocationOnly value) => value;
+    }
+
+    private struct ExplicitlyAligned
+    {
+        [Align(16)]
+        public float Value;
+    }
+
+    private sealed class StructAlignmentShader : ISharpShader
+    {
+        [Vertex]
+        public static ExplicitlyAligned vs(ExplicitlyAligned value) => value;
     }
 }
