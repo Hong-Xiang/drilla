@@ -341,8 +341,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             item => item.Key.Name == nameof(TextureToWritableComputeShader.Run));
         Assert.Contains(
             method.Value.Code.Instructions,
-            item => item.Instruction.OpCode.Name?.StartsWith("brfalse", StringComparison.Ordinal) is true ||
-                    item.Instruction.OpCode.Name?.StartsWith("brtrue", StringComparison.Ordinal) is true);
+            item => item.Instruction.OpCode.FlowControl is System.Reflection.Emit.FlowControl.Cond_Branch);
         var compiled = new CLSLCompiler(new(CLSLCompileTarget.IR)).Compile(raw);
         var source = compiled.RunPass(new FunctionToOperationPass());
         var function = source.FunctionDefinitions.Keys.Single(candidate =>
