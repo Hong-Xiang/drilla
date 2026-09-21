@@ -1,5 +1,30 @@
 ﻿namespace DualDrill.Graphics;
 
+// Keep native-extension descriptors provider-neutral; the backend maps these names.
+public enum GPUDx12Compiler
+{
+    Undefined,
+    Fxc,
+    Dxc,
+}
+
+public enum GPUGles3MinorVersion
+{
+    Automatic,
+    Version0,
+    Version1,
+    Version2,
+}
+
+public enum GPUPipelineStatisticName
+{
+    VertexShaderInvocations,
+    ClipperInvocations,
+    ClipperPrimitivesOut,
+    FragmentShaderInvocations,
+    ComputeShaderInvocations,
+}
+
 public enum GPUQueueWorkDoneStatus : uint
 {
     Success = 0x00000000,

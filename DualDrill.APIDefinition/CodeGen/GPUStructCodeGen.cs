@@ -7,6 +7,20 @@ public sealed record class GPUStructCodeGen(
     ModuleDeclaration Module
 )
 {
+    static readonly IReadOnlyDictionary<(string Struct, string Property), string> PropertyDefaults =
+        new Dictionary<(string Struct, string Property), string>
+        {
+            [("GPUSamplerDescriptor", "AddressModeU")] = "GPUAddressMode.ClampToEdge",
+            [("GPUSamplerDescriptor", "AddressModeV")] = "GPUAddressMode.ClampToEdge",
+            [("GPUSamplerDescriptor", "AddressModeW")] = "GPUAddressMode.ClampToEdge",
+            [("GPUSamplerDescriptor", "LodMaxClamp")] = "32",
+            [("GPUSamplerDescriptor", "LodMinClamp")] = "0",
+            [("GPUSamplerDescriptor", "MagFilter")] = "GPUFilterMode.Nearest",
+            [("GPUSamplerDescriptor", "MaxAnisotropy")] = "1",
+            [("GPUSamplerDescriptor", "MinFilter")] = "GPUFilterMode.Nearest",
+            [("GPUSamplerDescriptor", "MipmapFilter")] = "GPUMipmapFilterMode.Nearest",
+        };
+
     public void EmitStruct(TextWriter tw, StructDeclaration decl)
     {
         tw.Write("public partial struct ");
@@ -32,7 +46,14 @@ public sealed record class GPUStructCodeGen(
             }
             tw.Write(' ');
             tw.Write(f.Name);
-            tw.WriteLine(" { get; set; }");
+            tw.Write(" { get; set; }");
+            if (PropertyDefaults.TryGetValue((decl.Name, f.Name), out var defaultValue))
+            {
+                tw.Write(" = ");
+                tw.Write(defaultValue);
+                tw.Write(';');
+            }
+            tw.WriteLine();
         }
 
         tw.WriteLine("}");

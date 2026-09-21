@@ -20,16 +20,16 @@ public class ApiGenController(
     public async Task<IActionResult> GetWebGPUWebIDLSpecAsync(CancellationToken cancellation)
         => Ok(await GetWebGPUIDLSpecAsync(cancellation));
 
-    [HttpGet("webgpu/evergine")]
-    public async Task<IActionResult> GetEverginApi()
+    [HttpGet("webgpu/native")]
+    public IActionResult GetNativeApi()
     {
-        return Ok(EvergineWebGPUApi.Create());
+        return Ok(AlimerWebGPUApi.Create());
     }
 
-    [HttpGet("webgpu/evergine/enum/name")]
-    public async Task<IActionResult> GetWebGPUEnumNames(CancellationToken cancellation)
+    [HttpGet("webgpu/native/enum/name")]
+    public IActionResult GetWebGPUEnumNames()
     {
-        return Ok(EvergineWebGPUApi.Create().Enums.Select(e => e.Name));
+        return Ok(AlimerWebGPUApi.Create().Enums.Select(e => e.Name));
     }
 
     [HttpGet("webgpu/spec")]
@@ -195,12 +195,12 @@ public class ApiGenController(
     private async ValueTask<ModuleDeclaration> GetGPUApiForCodeGenAsync(CancellationToken cancellation)
     {
         var gpuApi = await GetGPUApiSpecAsync(cancellation);
-        return gpuApi.CodeGenAdHocTransform(EvergineWebGPUApi.Create());
+        return gpuApi.CodeGenAdHocTransform(AlimerWebGPUApi.Create());
     }
 
     private async ValueTask<ModuleDeclaration> GetGPUApiSpecAsync(CancellationToken cancellation)
     {
         var idl = await GetWebGPUIDLSpecAsync(cancellation);
-        return GPUApi.ParseWebGPUWebIDLSpecToModuleDeclaration(idl, EvergineWebGPUApi.Create());
+        return GPUApi.ParseWebGPUWebIDLSpecToModuleDeclaration(idl, AlimerWebGPUApi.Create());
     }
 }
