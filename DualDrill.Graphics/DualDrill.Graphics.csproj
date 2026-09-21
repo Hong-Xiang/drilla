@@ -11,9 +11,6 @@
 		<PackageReference Include="Silk.NET.Input"  />
 		<PackageReference Include="Silk.NET.Vulkan" />
 		<PackageReference Include="Silk.NET.Vulkan.Extensions.EXT" />
-		<!-- <PackageReference Include="Silk.NET.WebGPU" Version="$(SilkNETVersion)" /> -->
-		<!-- <PackageReference Include="Silk.NET.WebGPU.Native.WGPU" Version="$(SilkNETVersion)" /> -->
-		<!-- <PackageReference Include="Silk.NET.WebGPU.Extensions.WGPU" Version="$(SilkNETVersion)" /> -->
 		<PackageReference Include="Silk.NET.Shaderc" />
 		<PackageReference Include="Silk.NET.Shaderc.Native" />
 		<PackageReference Include="DotNext.Unsafe" />
@@ -21,8 +18,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.HighPerformance" />
-		<PackageReference Include="Evergine.Bindings.WebGPU" />
-		<PackageReference Include="SixLabors.ImageSharp" />
+		<PackageReference Include="Alimer.Bindings.WebGPU" />
+		<PackageReference Include="Alimer.WebGPU.Native" />
 		<PackageReference Include="System.Reactive" />
 		<PackageReference Include="Varena" />
 	</ItemGroup>

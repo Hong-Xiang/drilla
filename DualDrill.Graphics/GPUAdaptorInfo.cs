@@ -7,4 +7,6 @@ public readonly record struct GPUAdapterInfo(
     string Description
 )
 {
+    public GPUBackendType BackendType { get; init; } = GPUBackendType.Undefined;
+    public GPUAdapterType AdapterType { get; init; } = GPUAdapterType.Unknown;
 }

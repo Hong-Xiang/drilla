@@ -6,14 +6,14 @@ using System.Reflection;
 
 namespace DualDrill.ApiGen;
 
-public sealed class EvergineWebGPUApi
+public sealed class AlimerWebGPUApi
 {
-    public static Assembly EvergineAssembly { get; } = typeof(Evergine.Bindings.WebGPU.WebGPUNative).Assembly;
-    public static ImmutableArray<Type> Types { get; } = [.. EvergineAssembly.GetTypes()];
+    public static Assembly AlimerAssembly { get; } = typeof(WebGPU.WebGPU).Assembly;
+    public static ImmutableArray<Type> Types { get; } = [.. AlimerAssembly.GetTypes()];
 
     public static ModuleDeclaration Create()
     {
-        return ModuleDeclaration.Create(nameof(EvergineWebGPUApi), [.. Types.Select(ParseType).OfType<ITypeDeclaration>()]);
+        return ModuleDeclaration.Create(nameof(AlimerWebGPUApi), [.. Types.Select(ParseType).OfType<ITypeDeclaration>()]);
     }
 
     public static string GetEnumTypeName(string apiName)
@@ -22,6 +22,15 @@ public sealed class EvergineWebGPUApi
         {
             "GPUColorWrite" => "WGPUColorWriteMask",
             _ => "W" + apiName
+        };
+    }
+
+    public static string GetManagedEnumTypeName(string apiName)
+    {
+        return apiName switch
+        {
+            "GPUColorWrite" => "GPUColorWriteMask",
+            _ => apiName,
         };
     }
     static string GetEnumMemberCSharpFriendlyName(string name)
@@ -38,23 +47,31 @@ public sealed class EvergineWebGPUApi
     }
 
 
-    public static string GetEnumMemberName(string enumName, string valueName, ModuleDeclaration module)
+    public static string GetManagedEnumMemberName(string enumName, string valueName)
     {
         if (enumName == "GPUDeviceLostReason" && valueName == "unknown")
         {
             return "Undefined";
         }
 
+        return GetEnumMemberCSharpFriendlyName(valueName);
+    }
+
+    public static string GetNativeEnumMemberName(
+        string enumName,
+        string valueName,
+        ModuleDeclaration module)
+    {
         var csharpFriendlyName = GetEnumMemberCSharpFriendlyName(valueName);
-        var targetEvergineEnumName = enumName switch
+        var targetNativeEnumName = enumName switch
         {
             "GPUColorWrite" => "WGPUColorWriteMask",
             _ => "W" + enumName
         };
-        var evergineEnum = module.Enums.Single(e => string.Equals(targetEvergineEnumName, e.Name, StringComparison.OrdinalIgnoreCase));
-        var evergineMember = evergineEnum.Values
-                                         .Single(m => string.Equals(m.Name, csharpFriendlyName, StringComparison.OrdinalIgnoreCase));
-        return evergineMember.Name;
+        var nativeEnum = module.Enums.Single(e => string.Equals(targetNativeEnumName, e.Name, StringComparison.OrdinalIgnoreCase));
+        var nativeMember = nativeEnum.Values
+                                     .Single(m => string.Equals(m.Name, csharpFriendlyName, StringComparison.OrdinalIgnoreCase));
+        return nativeMember.Name;
     }
 
     public static Type GetEnumType(string name)
@@ -68,7 +85,7 @@ public sealed class EvergineWebGPUApi
         {
             { IsValueType: true, IsEnum: true } => ParseEnum(type),
             { IsValueType: true, IsEnum: false, Name: var name }
-                when name.StartsWith("WGPU") && HasHandleField(type) => ParseHandle(type),
+                when name.StartsWith("WGPU") && HasHandle(type) => ParseHandle(type),
             { IsValueType: true, IsEnum: false, Name: var name }
                 when name.StartsWith("WGPU") => ParseStruct(type),
             _ => null,
@@ -86,7 +103,9 @@ public sealed class EvergineWebGPUApi
 
     static EnumMemberDeclaration ParseEnumMember(Type type, bool isFlag, FieldInfo member)
     {
-        return new(member.Name, new((int)Enum.Parse(type, member.Name, true), isFlag));
+        return new(
+            member.Name,
+            new(Convert.ToInt32(Enum.Parse(type, member.Name, true)), isFlag));
     }
 
     static ITypeDeclaration ParseHandle(Type type)
@@ -120,10 +139,10 @@ public sealed class EvergineWebGPUApi
         };
     }
 
-    static bool HasHandleField(Type t)
+    static bool HasHandle(Type t)
     {
-        return t.GetMembers()
-                .OfType<FieldInfo>()
-                .Any(f => f.Name == "Handle" && f.FieldType == typeof(nint));
+        return t.GetProperty("Handle", BindingFlags.Public | BindingFlags.Instance)
+            is { PropertyType: var propertyType }
+            && propertyType == typeof(nint);
     }
 }
