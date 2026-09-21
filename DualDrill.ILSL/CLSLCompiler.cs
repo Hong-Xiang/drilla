@@ -128,9 +128,10 @@ public sealed class CLSLCompiler : ICLSLCompiler
         }
     }
 
-    private static ShaderModuleDeclaration<SlangFunctionBody> Target(PreparedCompilation prepared) =>
+    private ShaderModuleDeclaration<SlangFunctionBody> Target(PreparedCompilation prepared) =>
         prepared.CheckedTarget ?? new SlangTargetLowering().Lower(
-            prepared.Normalized.RunPass(new StablePointerRegionParameterPass()));
+            prepared.Normalized.RunPass(new StablePointerRegionParameterPass()),
+            ControlFlowPolicy());
 
     private PreparedCompilation Prepare(ShaderModuleDeclaration<RawCilFunctionBody> raw)
     {
@@ -139,9 +140,17 @@ public sealed class CLSLCompiler : ICLSLCompiler
         var original = CilModuleCompiler.Compile(raw);
         ValidateModule(original, static body => body.Declaration, "Region");
         var normalized = original.RunPass(new FunctionToOperationPass());
-        var cooperation = CooperationAdmission.Prepare(normalized, option.Cooperation);
+        var cooperation = CooperationAdmission.Prepare(
+            normalized,
+            option.Cooperation,
+            ControlFlowPolicy());
         return new PreparedCompilation(original, normalized, cooperation.Target);
     }
+
+    private SlangControlFlowPolicy ControlFlowPolicy() =>
+        option.Target is CLSLCompileTarget.WGSL
+            ? SlangControlFlowPolicy.WgslCompatible
+            : SlangControlFlowPolicy.Native;
 
     private static void ValidateModule<TBody>(
         ShaderModuleDeclaration<TBody> module,

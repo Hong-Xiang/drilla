@@ -103,6 +103,18 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void PortableWgslKeepsLoopAdmissionFailClosedBeforeTargetLowering()
+    {
+        var supported = Emit(new DirectDerivativeShader(), CLSLCompileTarget.WGSL);
+        var error = Assert.Throws<NotSupportedException>(() =>
+            Emit(new LoopContinueDerivativeShader(), CLSLCompileTarget.WGSL));
+
+        Assert.Contains("dpdx(", supported);
+        Assert.Contains("PortableWgsl", error.Message);
+        Assert.Contains("RegionKind.Loop", error.Message);
+    }
+
+    [Fact]
     public void PortableUniformHelperConditionalRetainsRealCilAndCompiles()
     {
         var shader = new UniformConditionalDerivativeShader();

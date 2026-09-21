@@ -193,6 +193,94 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task WgslReturnCarrierPreservesMultipleSitesValuesEffectsAndTrace()
+    {
+        var method = ((Func<int, int, int, int>)MultiSiteReturnControl).Method;
+        var original = CompilerTestPipeline.CompileBody(method);
+        var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
+            new FunctionToOperationPass().VisitFunctionBody(original));
+        var native = Emit(lowered);
+        var target = Target(lowered, SlangControlFlowPolicy.WgslCompatible);
+        var compatible = new SlangEmitter(target).Emit();
+
+        var nativeHasNestedReturn = ReturnIndices(native).Any(returned =>
+            LoopScopes(native).Any(scope => scope.Start < returned && returned < scope.End));
+        Assert.All(ReturnIndices(compatible), returned =>
+            Assert.DoesNotContain(
+                LoopScopes(compatible),
+                scope => scope.Start < returned && returned < scope.End));
+        Assert.DoesNotContain("_return_value", native);
+        Assert.Equal(nativeHasNestedReturn, compatible.Contains("_return_value", StringComparison.Ordinal));
+        await new SlangService().ValidateAsync(compatible);
+
+        ImmutableArray<ImmutableArray<Value>> cases =
+        [
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(0)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(1)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(2)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(3)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(4)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(5)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(6)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(7)]
+        ];
+        foreach (var arguments in cases)
+        {
+            var expected = RunCfg(original, arguments);
+            var normalized = RunCfg(lowered, arguments);
+            var emittedNative = new EmittedScalarProgram(lowered, native).Run(arguments);
+            var emitted = new EmittedScalarProgram(lowered, compatible).Run(arguments);
+
+            Assert.Equal(expected.Result, normalized.Result);
+            Assert.Equal(expected.Result, emittedNative.Result);
+            Assert.Equal(expected.Result, emitted.Result);
+            Assert.True(expected.Trace.SequenceEqual(normalized.Trace));
+            Assert.True(expected.Trace.SequenceEqual(emittedNative.Trace));
+            Assert.True(expected.Trace.SequenceEqual(emitted.Trace));
+        }
+    }
+
+    [Fact]
+    public async Task WgslReturnCarrierHandlesExplicitLoopNestedReturn()
+    {
+        var loop = Label.Create("loop");
+        var declaration = new FunctionDeclaration(
+            "ExplicitLoopReturn",
+            [],
+            new FunctionReturn(ShaderType.I32, []),
+            []);
+        var body = CreateFunctionBody(
+            declaration,
+            RegionTree.Loop(
+                loop,
+                [],
+                Body(
+                    loop,
+                    [],
+                    [],
+                    Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(
+                        ShaderValue.Literal(new I32Literal(7)))),
+                null,
+                null));
+        var native = Emit(body);
+        var compatible = Emit(body, SlangControlFlowPolicy.WgslCompatible);
+
+        Assert.Contains(ReturnIndices(native), returned =>
+            LoopScopes(native).Any(scope => scope.Start < returned && returned < scope.End));
+        Assert.All(ReturnIndices(compatible), returned =>
+            Assert.DoesNotContain(
+                LoopScopes(compatible),
+                scope => scope.Start < returned && returned < scope.End));
+        Assert.Contains("_return_value", compatible);
+        await new SlangService().ValidateAsync(compatible);
+
+        var expected = RunCfg(body, []);
+        var emitted = new EmittedScalarProgram(body, compatible).Run([]);
+        Assert.Equal(expected.Result, emitted.Result);
+        Assert.True(expected.Trace.SequenceEqual(emitted.Trace));
+    }
+
+    [Fact]
     public void MultipleSourcesMayShareOneNormalTransfer()
     {
         var outer = Label.Create("outer");
@@ -277,11 +365,22 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         return Emit(body);
     }
 
-    private static string Emit(RegionFunctionBody body) =>
-        new SlangEmitter(new SlangTargetLowering().Lower(new ShaderModuleDeclaration<RegionFunctionBody>(
-            [body.Declaration],
-            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(body.Declaration, body))))
+    private static string Emit(
+        RegionFunctionBody body,
+        SlangControlFlowPolicy controlFlowPolicy = SlangControlFlowPolicy.Native) =>
+        new SlangEmitter(Target(body, controlFlowPolicy))
         .Emit();
+
+    private static ShaderModuleDeclaration<SlangFunctionBody> Target(
+        RegionFunctionBody body,
+        SlangControlFlowPolicy controlFlowPolicy) =>
+        new SlangTargetLowering().Lower(
+            new ShaderModuleDeclaration<RegionFunctionBody>(
+                [body.Declaration],
+                ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(
+                    body.Declaration,
+                    body)),
+            controlFlowPolicy);
 
     private void WriteActualCompilerOutput(
         string name,
@@ -318,6 +417,15 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         }
 
         return scopes.ToImmutable();
+    }
+
+    private static IEnumerable<int> ReturnIndices(string source)
+    {
+        const string returned = "return ";
+        for (var index = source.IndexOf(returned, StringComparison.Ordinal);
+             index >= 0;
+             index = source.IndexOf(returned, index + returned.Length, StringComparison.Ordinal))
+            yield return index;
     }
 
     private static IEnumerable<TextScope> BraceScopes(string source)
@@ -400,6 +508,47 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         }
 
         return result + 17;
+    }
+
+    private static int MultiSiteReturnControl(int outer, int inner, int path)
+    {
+        if (path == 0)
+            return 10;
+
+        var result = 1;
+        for (var i = 0; i < outer; i++)
+        {
+            if (path == 1 && i == 1)
+                return result + 100;
+
+            for (var j = 0; j < inner; j++)
+            {
+                if (path == 2 && j == 1)
+                    return result + 200;
+
+                switch (path)
+                {
+                    case 3:
+                        if (i == 1 && j == 0)
+                            return result + 300;
+                        break;
+                    case 4:
+                        if (j == 0)
+                            continue;
+                        break;
+                }
+
+                if (path == 5 && j == 1)
+                    break;
+                result = result * 3 + i + j;
+            }
+
+            if (path == 6 && i == 1)
+                break;
+            result = result * 5 + i;
+        }
+
+        return result + 400;
     }
 
     private static int OrdinaryLoopExit(int count)

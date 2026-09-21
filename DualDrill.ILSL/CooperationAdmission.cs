@@ -67,13 +67,15 @@ internal static class CooperationAdmission
 
     internal static CooperationPreparation Prepare(
         ShaderModuleDeclaration<RegionFunctionBody> normalized,
-        CLSLCooperationProfile profile)
+        CLSLCooperationProfile profile,
+        SlangControlFlowPolicy controlFlowPolicy = SlangControlFlowPolicy.Native)
     {
         var effects = FunctionEffectAnalysis.Analyze(normalized);
         return profile switch
         {
             CLSLCooperationProfile.Scalar => PrepareScalar(effects),
-            CLSLCooperationProfile.PortableWgsl => PreparePortable(normalized, effects),
+            CLSLCooperationProfile.PortableWgsl =>
+                PreparePortable(normalized, effects, controlFlowPolicy),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(profile),
                 profile,
@@ -114,7 +116,8 @@ internal static class CooperationAdmission
 
     private static CooperationPreparation PreparePortable(
         ShaderModuleDeclaration<RegionFunctionBody> normalized,
-        FunctionEffectAnalysisResult effects)
+        FunctionEffectAnalysisResult effects,
+        SlangControlFlowPolicy controlFlowPolicy)
     {
         var calls = normalized.FunctionDefinitions.ToImmutableDictionary(
             static item => item.Key,
@@ -267,7 +270,7 @@ internal static class CooperationAdmission
             return new CooperationPreparation(facts, null);
         var pointer = normalized.RunPass(new StablePointerRegionParameterPass());
         CheckPointerCorrespondence(normalized, pointer, facts);
-        var target = new SlangTargetLowering().Lower(pointer);
+        var target = new SlangTargetLowering().Lower(pointer, controlFlowPolicy);
         CheckTargetCorrespondence(pointer, target, facts);
         return new CooperationPreparation(facts, target);
     }
