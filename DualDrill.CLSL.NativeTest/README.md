@@ -5,11 +5,11 @@ fixture through the public CLSL WGSL compiler, renders it with native wgpu to a
 64×64 offscreen texture, and verifies two readback pixels. It needs no display,
 surface, window, or browser.
 
-It also renders compact scalar/vector early-return coverage, creates a native
-shader module from the canonical Compiler.Server raymarch source, and verifies
-that invalid WGSL reports a managed diagnostic instead of throwing across the
-native callback boundary. This remains a narrow baseline, not general
-C#-to-WGSL equivalence or raymarching image-parity coverage.
+It also renders input-selected scalar/vector early-return paths, creates a
+native shader module from the canonical Compiler.Server raymarch source, and
+verifies that invalid WGSL reports a managed diagnostic instead of throwing
+across the native callback boundary. This remains a narrow baseline, not
+general C#-to-WGSL equivalence or raymarching image-parity coverage.
 
 Run it from the repository root with the pinned compiler shell and native wgpu
 dependencies available. On the verified Ubuntu/NVIDIA host, nixGL intentionally
@@ -57,3 +57,9 @@ lowers such returns through its existing typed control carrier and emits the
 final value return after the loop. Shader sources and native dependencies stay
 unchanged; the canonical Compiler.Server raymarch must create a native shader
 module without claiming full image parity.
+
+The `PortableWgsl` cooperation profile remains fail-closed for participating
+functions containing loops; this workaround does not relax that admission rule
+or claim that loop-return lowering is checked by the cooperation verifier.
+Loop-free supported cooperative shaders continue through the existing verified
+target path.

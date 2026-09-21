@@ -22,8 +22,10 @@ rejected rather than silently replacing GPU rendering.
 
 The modern backend uses the matched Alimer managed/native packages and Rust
 wgpu-native, not Dawn. The demo deliberately uses a small standalone WGSL scene:
-the current canonical CLSL raymarch still encounters a documented Naga
-return-in-loop limitation and is not part of this integration.
+the compiler now emits the canonical CLSL raymarch as a native-accepted shader
+module despite Naga's return-in-loop limitation, but the media demo remains the
+independent animated triangle. Native module acceptance does not establish
+raymarch image parity or integrate that scene into the stream.
 
 ## Requirements
 

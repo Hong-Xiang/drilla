@@ -193,46 +193,36 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task WgslReturnCarrierPreservesNestedValuesEffectsAndTrace()
+    public async Task WgslReturnCarrierPreservesMultipleSitesValuesEffectsAndTrace()
     {
-        var method = ((Func<int, int, int, int>)NestedEarlyReturn).Method;
+        var method = ((Func<int, int, int, int>)MultiSiteReturnControl).Method;
         var original = CompilerTestPipeline.CompileBody(method);
         var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
             new FunctionToOperationPass().VisitFunctionBody(original));
         var native = Emit(lowered);
         var target = Target(lowered, SlangControlFlowPolicy.WgslCompatible);
-        var targetBody = target.FunctionDefinitions[lowered.Declaration];
         var compatible = new SlangEmitter(target).Emit();
 
-        var nativeReturn = native.IndexOf("return ", StringComparison.Ordinal);
-        var compatibleReturn = compatible.LastIndexOf("return ", StringComparison.Ordinal);
-        Assert.Contains(LoopScopes(native), scope =>
-            scope.Start < nativeReturn && nativeReturn < scope.End);
-        Assert.DoesNotContain(LoopScopes(compatible), scope =>
-            scope.Start < compatibleReturn && compatibleReturn < scope.End);
+        Assert.Contains(ReturnIndices(native), returned =>
+            LoopScopes(native).Any(scope => scope.Start < returned && returned < scope.End));
+        Assert.All(ReturnIndices(compatible), returned =>
+            Assert.DoesNotContain(
+                LoopScopes(compatible),
+                scope => scope.Start < returned && returned < scope.End));
         Assert.Contains("_return_value", compatible);
         Assert.DoesNotContain("_return_value", native);
-        var origins = targetBody.Origins;
-        var returnSlot = Assert.IsType<VariableDeclaration>(origins.ReturnValueSlot);
-        var returnTokenId = Assert.IsType<int>(origins.ReturnTokenId);
-        var epilogue = Assert.IsType<SlangReturnEpilogueOrigin>(origins.ReturnEpilogue);
-        Assert.NotEmpty(origins.HoistedReturns);
-        Assert.Same(returnSlot, epilogue.Slot);
-        Assert.Equal(returnTokenId, epilogue.TokenId);
-        Assert.All(origins.HoistedReturns, origin =>
-        {
-            Assert.Same(returnSlot, origin.Slot);
-            Assert.Equal(returnTokenId, origin.TokenId);
-            Assert.Same(
-                returnSlot,
-                Assert.IsType<SlangVariablePlace>(origin.ValueAssignment.Target).Variable);
-        });
         await new SlangService().ValidateAsync(compatible);
 
         ImmutableArray<ImmutableArray<Value>> cases =
         [
-            [new Value.Integer(2), new Value.Integer(3), new Value.Integer(1)],
-            [new Value.Integer(2), new Value.Integer(2), new Value.Integer(9)]
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(0)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(1)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(2)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(3)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(4)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(5)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(6)],
+            [new Value.Integer(3), new Value.Integer(3), new Value.Integer(7)]
         ];
         foreach (var arguments in cases)
         {
@@ -386,6 +376,15 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         return scopes.ToImmutable();
     }
 
+    private static IEnumerable<int> ReturnIndices(string source)
+    {
+        const string returned = "return ";
+        for (var index = source.IndexOf(returned, StringComparison.Ordinal);
+             index >= 0;
+             index = source.IndexOf(returned, index + returned.Length, StringComparison.Ordinal))
+            yield return index;
+    }
+
     private static IEnumerable<TextScope> BraceScopes(string source)
     {
         var openings = new Stack<int>();
@@ -466,6 +465,47 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         }
 
         return result + 17;
+    }
+
+    private static int MultiSiteReturnControl(int outer, int inner, int path)
+    {
+        if (path == 0)
+            return 10;
+
+        var result = 1;
+        for (var i = 0; i < outer; i++)
+        {
+            if (path == 1 && i == 1)
+                return result + 100;
+
+            for (var j = 0; j < inner; j++)
+            {
+                if (path == 2 && j == 1)
+                    return result + 200;
+
+                switch (path)
+                {
+                    case 3:
+                        if (i == 1 && j == 0)
+                            return result + 300;
+                        break;
+                    case 4:
+                        if (j == 0)
+                            continue;
+                        break;
+                }
+
+                if (path == 5 && j == 1)
+                    break;
+                result = result * 3 + i + j;
+            }
+
+            if (path == 6 && i == 1)
+                break;
+            result = result * 5 + i;
+        }
+
+        return result + 400;
     }
 
     private static int OrdinaryLoopExit(int count)

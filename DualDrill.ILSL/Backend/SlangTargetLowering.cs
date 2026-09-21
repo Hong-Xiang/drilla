@@ -117,8 +117,6 @@ public sealed class SlangTargetLowering
             ImmutableArray.CreateBuilder<SlangGateOrigin>();
         private readonly ImmutableArray<SlangReturnOrigin>.Builder returnOrigins =
             ImmutableArray.CreateBuilder<SlangReturnOrigin>();
-        private readonly ImmutableArray<SlangHoistedReturnOrigin>.Builder hoistedReturnOrigins =
-            ImmutableArray.CreateBuilder<SlangHoistedReturnOrigin>();
         private readonly ImmutableArray<SlangCarrierBreakOrigin>.Builder carrierBreakOrigins =
             ImmutableArray.CreateBuilder<SlangCarrierBreakOrigin>();
         private readonly RegionFunctionBody source;
@@ -202,18 +200,12 @@ public sealed class SlangTargetLowering
                 .Concat(returnValue is null ? [] : [returnValue])
                 .Concat(token is null ? [] : [token])
                 .Select(variable => (SlangStatement)new SlangDeclare(variable));
-            SlangReturnEpilogueOrigin? returnEpilogue = null;
             var statements = lowered.Statements;
             if (lowered.Returns)
             {
                 var returned = new SlangReturnValue(
                     new SlangPlaceOperand(new SlangVariablePlace(returnValue ??
                         throw Error("a hoisted return requires a typed value slot"))));
-                returnEpilogue = new(
-                    returnValue,
-                    returnTokenId ??
-                        throw Error("a hoisted return requires a reserved control token"),
-                    returned);
                 statements = statements.Add(returned);
             }
             return new SlangFunctionBody(
@@ -221,8 +213,6 @@ public sealed class SlangTargetLowering
                 new SlangBlock([.. declarations, .. statements]),
                 new SlangLoweringOrigins(
                     token,
-                    returnValue,
-                    returnTokenId,
                     parameterSlots.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
                     captures.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
                     parameterOrigins.ToImmutable(),
@@ -233,8 +223,6 @@ public sealed class SlangTargetLowering
                     conditionalOrigins.ToImmutable(),
                     gateOrigins.ToImmutable(),
                     returnOrigins.ToImmutable(),
-                    hoistedReturnOrigins.ToImmutable(),
-                    returnEpilogue,
                     carrierBreakOrigins.ToImmutable()));
         }
 
@@ -437,14 +425,6 @@ public sealed class SlangTargetLowering
                         throw Error("a nested typed return requires a control token")),
                     new SlangValueOperand(Int(tokenId)));
                 var @break = new SlangBreak();
-                hoistedReturnOrigins.Add(new(
-                    sourceLabel,
-                    value,
-                    slot,
-                    tokenId,
-                    valueAssignment,
-                    tokenAssignment,
-                    @break));
                 return new Lowered(
                     [valueAssignment, tokenAssignment, @break],
                     ImmutableHashSet<Continuation>.Empty,

@@ -53,7 +53,8 @@ public sealed class NativeWgpuSmokeTests(ITestOutputHelper output)
     {
         var pixels = await RenderAsync(new LoopReturnShader());
 
-        Assert.Equal([191, 0, 0, 255], PixelAt(pixels, 32, 32));
+        Assert.Equal([64, 0, 0, 255], PixelAt(pixels, 32, 32));
+        Assert.Equal([191, 64, 0, 255], PixelAt(pixels, 31, 32));
         Assert.Equal([0, 0, 0, 255], PixelAt(pixels, 0, 0));
     }
 
@@ -192,13 +193,13 @@ public sealed class NativeWgpuSmokeTests(ITestOutputHelper output)
     private sealed class LoopReturnShader : ISharpShader
     {
         [ShaderMethod]
-        private static float ScalarLoopValue()
+        private static float ScalarLoopValue(int selector)
         {
             var value = 0.0f;
             for (var i = 0; i < 4; i++)
             {
                 value += 0.25f;
-                if (i == 1)
+                if (i == (selector & 1))
                     return value;
                 value += 0.25f;
             }
@@ -218,14 +219,16 @@ public sealed class NativeWgpuSmokeTests(ITestOutputHelper output)
 
         [Fragment]
         [return: Location(0)]
-        public static vec4f32 fs()
+        public static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 position)
         {
-            var red = ScalarLoopValue();
+            var selector = (int)position.x;
+            var red = ScalarLoopValue(selector);
+            var after = 0.0f;
             for (var i = 0; i < 2; i++)
             {
-                if (i == 0)
-                    return vec4(red, 0.0f, 0.0f, 1.0f);
-                red = 0.0f;
+                if (i == (selector & 1))
+                    return vec4(red, after, 0.0f, 1.0f);
+                after += 0.25f;
             }
 
             return vec4(0.0f, 1.0f, 0.0f, 1.0f);
