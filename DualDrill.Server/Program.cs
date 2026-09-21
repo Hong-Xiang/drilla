@@ -2,8 +2,6 @@ using DualDrill.Engine.Headless;
 using DualDrill.Graphics;
 using DualDrill.Server.Connection;
 using DualDrill.Server.Controllers;
-using Serilog;
-using Serilog.Extensions.Logging;
 using System.Text.Json;
 
 namespace DualDrill.Server;
@@ -12,14 +10,6 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        var seriLogger = new LoggerConfiguration()
-              .Enrich.FromLogContext()
-              .MinimumLevel.Is(Serilog.Events.LogEventLevel.Debug)
-              .WriteTo.Console()
-              .CreateLogger();
-        var factory = new SerilogLoggerFactory(seriLogger);
-        SIPSorcery.LogFactory.Set(factory);
-
         var builder = WebApplication.CreateBuilder();
 
         builder.Services.AddHttpClient();

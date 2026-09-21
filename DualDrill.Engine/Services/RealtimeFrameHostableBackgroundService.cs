@@ -14,7 +14,6 @@ public sealed class RealtimeFrameHostableBackgroundService(
     ILogger<RealtimeFrameHostableBackgroundService> logger,
     HeadlessSurface surface,
     IWebViewService WebViewService
-    //HeadlessSurfaceCaptureVideoSource VideoSource
     ) : IHostableBackgroundService
 {
     readonly TimeSpan SampleRate = TimeSpan.FromSeconds(1.0 / 60.0);
