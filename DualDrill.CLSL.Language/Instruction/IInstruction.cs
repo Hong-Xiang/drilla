@@ -153,6 +153,16 @@ public static class Instruction
             IShaderValue value) =>
             Create(op, default, [buffer, index, value]);
 
+        public Instruction<IShaderValue, IShaderValue> TextureSampleLevel(
+            Unit ctx,
+            TextureSampleLevelOperation op,
+            IShaderValue result,
+            IShaderValue texture,
+            IShaderValue sampler,
+            IShaderValue uv,
+            IShaderValue lod) =>
+            Create(op, result, [texture, sampler, uv, lod]);
+
         public Instruction<IShaderValue, IShaderValue> Store(Unit ctx, StoreOperation op, IShaderValue ptr,
             IShaderValue value) =>
             Create(op, default, [ptr, value]);

@@ -21,6 +21,7 @@ Current production contracts:
 - [Shader metadata validation](./shader-metadata.md)
 - [Uniform buffer layout and reflection](./uniform-layout.md)
 - [Compute entry points](./compute-entry.md)
+- [Texture2D explicit-LOD sampling](./texture-sample-level.md)
 
 ## Key Features
 

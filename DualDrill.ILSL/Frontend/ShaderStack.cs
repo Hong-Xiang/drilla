@@ -357,6 +357,17 @@ internal static class OperationValidator
             case ReadWriteStructuredBufferStoreOperation store:
                 Require(instruction, [store.BufferPointerType, ShaderType.U32, ShaderType.F32], null);
                 return;
+            case TextureSampleLevelOperation sample:
+                Require(
+                    instruction,
+                    [
+                        sample.TexturePointerType,
+                        sample.SamplerPointerType,
+                        ShaderType.Vec2F32,
+                        ShaderType.F32
+                    ],
+                    ShaderType.Vec4F32);
+                return;
             case VectorCompositeConstructionOperation vector:
                 Require(instruction, vector.ParameterTypes, vector.ResultType);
                 return;

@@ -521,6 +521,20 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
                         : [Depth(2), Depth(1), Depth(0)],
                     converted ? 4 : 3);
                 return;
+            case TextureSampleLevelOperation sample:
+                if (stack.Count < 4 ||
+                    !TypeAtDepth(3).Equals(sample.TexturePointerType) ||
+                    !TypeAtDepth(2).Equals(sample.SamplerPointerType) ||
+                    !TypeAtDepth(1).Equals(ShaderType.Vec2F32) ||
+                    !TypeAtDepth(0).Equals(ShaderType.F32))
+                    throw Invalid(
+                        $"{sample.Name} requires exact texture, sampler, vec2<f32>, and f32 operands.");
+                Emit(
+                    sample,
+                    ShaderType.Vec4F32,
+                    [Depth(3), Depth(2), Depth(1), Depth(0)],
+                    4);
+                return;
             case IBinaryExpressionOperation binary:
                 var (left, right) = TopBinaryTypes();
                 if (!left.Equals(binary.LeftType) || !right.Equals(binary.RightType))

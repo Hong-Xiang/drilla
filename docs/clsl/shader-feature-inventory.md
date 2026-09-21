@@ -12,6 +12,8 @@ not implemented interfaces. This slice changes documentation and tests only.
 > [compute entry points](./compute-entry.md). The current storage subset is
 > documented in [Read-only f32 structured buffers](./readonly-structured-buffer.md)
 > and [Writable f32 structured buffers](./writable-structured-buffer.md).
+> The current sampled-texture subset is
+> [Texture2D explicit-LOD sampling](./texture-sample-level.md).
 
 **Current useful compiler subset:** vertex/fragment scalar/vector signatures,
 read-only uniform struct fields, ordinary direct helper calls, and a selection
