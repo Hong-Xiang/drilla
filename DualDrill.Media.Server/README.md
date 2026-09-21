@@ -1,6 +1,6 @@
 # DualDrill.Media.Server
 
-Local-only .NET 10 proof of concept for:
+Loopback-by-default .NET 10 proof of concept for:
 
 ```text
 C# -> Rust wgpu-native hardware GPU
@@ -16,9 +16,10 @@ C# -> Rust wgpu-native hardware GPU
 
 This prototype references only the shared Graphics project, not the existing
 Engine, WebView, JavaScript, or server projects. It reuses one offscreen texture
-and staging buffer, then copies one tightly packed 320x240 BGRA frame into a
-GStreamer-owned buffer. This is not zero-copy. Software/unknown adapters are
-rejected rather than silently replacing GPU rendering.
+and staging buffer, then copies one tightly packed BGRA frame into a
+GStreamer-owned buffer. The default is 320x240 at 30 fps. This is not zero-copy.
+Software/unknown adapters are rejected rather than silently replacing GPU
+rendering.
 
 The modern backend uses the matched Alimer managed/native packages and Rust
 wgpu-native, not Dawn. The demo deliberately uses a small standalone WGSL scene:
@@ -58,8 +59,31 @@ NIXPKGS_ALLOW_UNFREE=1 nix develop --builders '' .#media --command \
 ```
 
 Open <http://127.0.0.1:5084/> and select **Start**. The acceptance harness may
-rely on stable element IDs `#video`, `#status`, `#start`, and `#stop`; signaling
-uses `ws://127.0.0.1:5084/ws`.
+rely on stable element IDs `#video`, `#status`, `#stats`, `#start`, and `#stop`;
+signaling uses `ws://127.0.0.1:5084/ws`.
+
+Width, height, and an optional VP8 target bitrate are ordinary .NET
+configuration keys. Dimensions must be positive and even; bitrate is in bits per
+second. Omitting the bitrate preserves `vp8enc`'s native default instead of
+guessing a target. To try 1920x1080 at 30 fps and an explicit 8 Mbps target on
+the trusted LAN interface while retaining loopback:
+
+```sh
+NIXPKGS_ALLOW_UNFREE=1 nix develop --builders '' .#media --command \
+  nix run --builders '' --impure \
+  github:nix-community/nixGL/b6105297e6f0cd041670c3e8628394d4ee247ed5#nixVulkanNvidia -- \
+  dotnet run --project DualDrill.Media.Server/DualDrill.Media.Server.csproj -- \
+  --Video:Width=1920 --Video:Height=1080 --Video:Bitrate=8000000 \
+  --urls "http://127.0.0.1:5084;http://10.172.211.158:5084"
+```
+
+Only opt in to a non-loopback URL on a trusted LAN. This prototype has no
+authentication or TLS and must not be exposed to public networks or public IPv6.
+Open `http://10.172.211.158:5084/` from the receiving machine. The page reports
+decoded dimensions and frame rate plus the rate of received video RTP payload
+bytes from successive WebRTC statistics snapshots. That measured rate excludes
+IP/UDP/ICE/DTLS and other wire overhead. It is not the configured encoder target:
+the simple rotating triangle can compress far below 8 Mbps.
 
 Only one WebSocket viewer is admitted. A second handshake receives HTTP 409.
 Each session logs its hardware adapter and owns its GPU resources. Stopping,
@@ -95,8 +119,7 @@ dotnet run --project DualDrill.Media.Server/DualDrill.Media.Server.csproj -- --g
 
 It renders at width 65 to exercise 260-byte rows padded to 512 bytes, verifies
 BGRA channel order and opaque alpha, observes different animation frames, and
-renders the initial state again with the same resources. The fixed production
-stream remains 320x240.
+renders the initial state again with the same resources.
 
 ## Browser acceptance
 
@@ -125,14 +148,23 @@ dotnet run -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.c
   http://127.0.0.1:5084/ http://127.0.0.1:19223/
 ```
 
+The optional final arguments select expected decoded dimensions, for example
+`1920 1080`; omitting them preserves the 320x240 default.
+
 The dependency-free .NET script drives Chromium's DevTools protocol. It checks
 decoded dimensions, the colored triangle against its dark background, movement
-between distinct decoded frames, rejection of a concurrent viewer, and recovery
-after closing a tab. It also delivers delayed callbacks from a stopped connection
-after its replacement starts, requiring a different stream with advancing frame
-metadata. Color and motion comparisons allow for VP8 loss. Its restore is isolated
-from the repository's unrelated central NuGet declarations. Browser software
-decoding/rendering is independent of the server's hardware GPU source.
+between distinct decoded frames, a finite receiver bitrate/frame-rate sample,
+rejection of a concurrent viewer, and recovery after closing a tab. It also
+holds a statistics request and delivers delayed callbacks from a stopped
+connection after its replacement starts, requiring a different stream with
+advancing frame metadata and fresh statistics. Color and motion comparisons
+allow for VP8 loss. Its restore is isolated from the repository's unrelated
+central NuGet declarations. Browser software decoding/rendering is independent
+of the server's hardware GPU source.
+
+This verifies the transport mechanics and exposes receiver measurements; the
+low-complexity triangle is not a network-capacity or complex-scene quality
+benchmark. Neither Windows nor a real inter-host LAN path is claimed here.
 
 The browser module is plain JavaScript checked with the TypeScript version
 already pinned in `DualDrill.JS/pnpm-lock.yaml`:
@@ -145,11 +177,11 @@ bun x --package typescript@5.3.3 tsc --allowJs --checkJs --noEmit --strict \
 
 ## CPU frame ownership
 
-`CpuBgraInput.Push` synchronously copies exactly one tightly packed 320x240 BGRA
-frame into a mapped GStreamer-owned buffer, unmaps it, and transfers the buffer
-to `appsrc`. The caller may reuse its input bytes as soon as the call returns.
-GPU production is serialized: draw, copy, poll/map, remove row padding, unmap,
-then submit the CPU frame. The next frame never copies into a still-mapped
+`CpuBgraInput.Push` synchronously copies exactly one tightly packed configured
+BGRA frame into a mapped GStreamer-owned buffer, unmaps it, and transfers the
+buffer to `appsrc`. The caller may reuse its input bytes as soon as the call
+returns. GPU production is serialized: draw, copy, poll/map, remove row padding,
+unmap, then submit the CPU frame. The next frame never copies into a still-mapped
 staging buffer. Readback cancellation is drained before disposing its GPU owners.
 There is no shared texture handle crossing into GStreamer or a browser canvas,
 and no readback ring or implicit frame-ownership protocol.

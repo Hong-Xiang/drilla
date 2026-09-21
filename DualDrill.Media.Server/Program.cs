@@ -6,7 +6,10 @@ using Gst.WebRTC;
 
 if (args is ["--self-test"])
 {
-    return CpuFrames.RunSelfTest() == 0 ? WebRtcSession.RunSignalSelfTest() : 1;
+    return CpuFrames.RunSelfTest() == 0 &&
+        VideoSettings.RunSelfTest() == 0
+        ? WebRtcSession.RunSignalSelfTest()
+        : 1;
 }
 
 if (args is ["--gpu-self-test"])
@@ -14,18 +17,21 @@ if (args is ["--gpu-self-test"])
     return await GpuFrames.RunSelfTestAsync();
 }
 
-GstSharpOptions nativeOptions = new();
-GstApp.Initialize(nativeOptions);
-GstSdp.Initialize(nativeOptions);
-GstWebRTC.Initialize(nativeOptions);
 if (args is ["--native-self-test"])
 {
+    InitializeGStreamer();
     return NativeFrameCheck.Run();
 }
-WebRtcSession.EnsureNativeElements();
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls("http://127.0.0.1:5084");
+VideoSettings video = VideoSettings.Load(builder.Configuration);
+if (builder.Configuration["urls"] is null)
+{
+    builder.WebHost.UseUrls("http://127.0.0.1:5084");
+}
+
+InitializeGStreamer();
+WebRtcSession.EnsureNativeElements();
 
 var app = builder.Build();
 var gate = new ViewerGate();
@@ -60,6 +66,7 @@ app.Map("/ws", async context =>
         await using WebRtcSession session = new(
             socket,
             context.RequestServices.GetRequiredService<ILogger<WebRtcSession>>(),
+            video,
             context.RequestAborted);
         await session.RunAsync();
     }
@@ -71,6 +78,14 @@ app.Map("/ws", async context =>
 
 await app.RunAsync();
 return 0;
+
+static void InitializeGStreamer()
+{
+    GstSharpOptions nativeOptions = new();
+    GstApp.Initialize(nativeOptions);
+    GstSdp.Initialize(nativeOptions);
+    GstWebRTC.Initialize(nativeOptions);
+}
 
 internal sealed class ViewerGate
 {

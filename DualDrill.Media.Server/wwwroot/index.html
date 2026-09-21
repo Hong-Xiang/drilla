@@ -6,7 +6,7 @@
     <title>DualDrill GPU WebRTC proof of concept</title>
     <style>
       body {
-        max-width: 48rem;
+        max-width: 72rem;
         margin: 2rem auto;
         padding: 0 1rem;
         font:
@@ -15,8 +15,8 @@
       }
       video {
         display: block;
-        width: min(100%, 640px);
-        aspect-ratio: 4 / 3;
+        width: 100%;
+        height: auto;
         margin: 1rem 0;
         background: #111;
       }
@@ -27,6 +27,9 @@
       #status {
         min-height: 1.5rem;
         white-space: pre-wrap;
+      }
+      #stats {
+        min-height: 1.5rem;
       }
     </style>
   </head>
@@ -40,6 +43,11 @@
     <button id="start" type="button">Start</button>
     <button id="stop" type="button" disabled>Stop</button>
     <p id="status" role="status" aria-live="polite">Stopped.</p>
+    <p id="stats">Receiver stats: waiting for video.</p>
+    <p>
+      The inbound rate is received video RTP payload bytes only; it excludes
+      IP, UDP, ICE, DTLS, and other transport overhead.
+    </p>
 
     <script type="module" src="/client.js"></script>
   </body>

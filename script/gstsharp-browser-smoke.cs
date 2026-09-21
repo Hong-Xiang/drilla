@@ -7,14 +7,26 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-if (args.Length != 2)
+if (args.Length is not (2 or 4))
 {
-    Console.Error.WriteLine("Usage: dotnet run -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.cs -- <server-url> <chromium-debug-url>");
+    Console.Error.WriteLine(
+        "Usage: dotnet run -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.cs -- " +
+        "<server-url> <chromium-debug-url> [expected-width expected-height]");
     return 2;
 }
 
 var server = new Uri(args[0]);
 var debugger = new Uri(args[1]);
+var expectedWidth = args.Length == 4 && int.TryParse(args[2], out var width) && width > 0
+    ? width
+    : args.Length == 2
+        ? 320
+        : throw new ArgumentException("Expected width must be a positive integer.");
+var expectedHeight = args.Length == 4 && int.TryParse(args[3], out var height) && height > 0
+    ? height
+    : args.Length == 2
+        ? 240
+        : throw new ArgumentException("Expected height must be a positive integer.");
 using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 using var http = new HttpClient();
 var cancellation = timeout.Token;
@@ -38,9 +50,29 @@ for (var iteration = 0; iteration < 4; iteration++)
         {
             ["source"] = """
                 globalThis.__mediaSockets = [];
+                globalThis.__mediaStats = {
+                  activeByPeer: new WeakMap(), holdNext: false, release: null, overlap: false
+                };
                 const NativeWebSocket = globalThis.WebSocket;
                 globalThis.WebSocket = class extends NativeWebSocket {
                   constructor(url) { super(url); globalThis.__mediaSockets.push(this); }
+                };
+                const nativeGetStats = RTCPeerConnection.prototype.getStats;
+                RTCPeerConnection.prototype.getStats = async function(...args) {
+                  const state = globalThis.__mediaStats;
+                  const active = (state.activeByPeer.get(this) ?? 0) + 1;
+                  state.activeByPeer.set(this, active);
+                  if (active > 1) state.overlap = true;
+                  try {
+                    if (state.holdNext) {
+                      state.holdNext = false;
+                      await new Promise(resolve => { state.release = resolve; });
+                      state.release = null;
+                    }
+                    return await nativeGetStats.apply(this, args);
+                  } finally {
+                    state.activeByPeer.set(this, active - 1);
+                  }
                 };
                 """
         }, cancellation);
@@ -60,13 +92,16 @@ for (var iteration = 0; iteration < 4; iteration++)
             (async () => {
               const video = document.getElementById('video');
               if (!(video instanceof HTMLVideoElement)) throw new Error('Missing video');
+              const stats = document.getElementById('stats');
+              if (!(stats instanceof HTMLElement)) throw new Error('Missing receiver stats');
               const canvas = document.createElement('canvas');
               const context = canvas.getContext('2d', {willReadFrequently: true});
               if (!context) throw new Error('Canvas unavailable');
               function sample(metadata) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0);
+                canvas.width = Math.min(video.videoWidth, 320);
+                canvas.height = Math.max(1, Math.round(
+                  video.videoHeight * canvas.width / video.videoWidth));
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
                 let red = 0, green = 0, blue = 0, foreground = 0, background = 0;
                 for (let i = 0; i < pixels.length; i += 4) {
@@ -109,30 +144,48 @@ for (var iteration = 0; iteration < 4; iteration++)
                   }
                   const motionScore = difference / (canvas.width * canvas.height * 3);
                   const decodedDelta = second.metadata.presentedFrames - first.metadata.presentedFrames;
+                  const pixelCount = canvas.width * canvas.height;
                   if (decodedDelta <= 0 || second.metadata.mediaTime <= first.metadata.mediaTime)
                     throw new Error('Decoded frame metadata did not advance');
-                  if (motionPixels < 1000 || motionScore < 3)
+                  if (motionPixels < pixelCount * 0.01 || motionScore < 3)
                     throw new Error('Decoded GPU triangle did not rotate');
-                  if (second.foreground < 5000 || second.background < 40000
-                      || Math.min(second.red, second.green, second.blue) < 300)
+                  if (second.foreground < pixelCount * 0.05
+                      || second.background < pixelCount * 0.5
+                      || Math.min(second.red, second.green, second.blue) < pixelCount * 0.003)
                     throw new Error('Expected GPU triangle and dark background were not decoded');
-                  return {
-                    width: video.videoWidth, height: video.videoHeight,
-                    decodedFrames: video.getVideoPlaybackQuality().totalVideoFrames,
-                    decodedDelta, motionPixels, motionScore,
-                    foreground: second.foreground, background: second.background,
-                    red: second.red, green: second.green, blue: second.blue
-                  };
+                  for (let sample = 0; sample < 100; sample++) {
+                    const mbps = Number(stats.dataset.mbps);
+                    const fps = Number(stats.dataset.fps);
+                    if (Number.isFinite(mbps) && mbps > 0
+                        && Number.isFinite(fps) && fps > 0) {
+                      return {
+                        width: video.videoWidth, height: video.videoHeight,
+                        decodedFrames: video.getVideoPlaybackQuality().totalVideoFrames,
+                        decodedDelta, motionPixels, motionScore,
+                        foreground: second.foreground, background: second.background,
+                        red: second.red, green: second.green, blue: second.blue,
+                        statsMbps: mbps, statsFps: fps
+                      };
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  }
+                  throw new Error('No finite receiver bitrate/frame-rate sample: '
+                    + stats.textContent);
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
               }
               throw new Error('No decoded video: ' + document.getElementById('status')?.textContent);
             })()
             """, cancellation);
-        if (observation.GetProperty("width").GetInt32() != 320
-            || observation.GetProperty("height").GetInt32() != 240)
+        if (observation.GetProperty("width").GetInt32() != expectedWidth
+            || observation.GetProperty("height").GetInt32() != expectedHeight)
         {
             throw new InvalidOperationException($"Unexpected frame dimensions: {observation}");
+        }
+        if (observation.GetProperty("statsMbps").GetDouble() <= 0
+            || observation.GetProperty("statsFps").GetDouble() <= 0)
+        {
+            throw new InvalidOperationException($"Receiver stats were not positive: {observation}");
         }
         previousFrame = observation.GetProperty("decodedFrames").GetInt64();
         Console.WriteLine($"Connection {iteration + 1}: {observation}");
@@ -158,12 +211,22 @@ for (var iteration = 0; iteration < 4; iteration++)
                   const oldClose = oldSocket.onclose, oldError = oldSocket.onerror;
                   if (!oldClose || !oldError) throw new Error('Missing stale callback fixture');
                   const video = document.getElementById('video');
+                  const stats = document.getElementById('stats');
+                  const statsState = globalThis.__mediaStats;
+                  if (!(stats instanceof HTMLElement)) throw new Error('Missing receiver stats');
+                  statsState.holdNext = true;
+                  for (let i = 0; i < 50 && !statsState.release; i++)
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  if (!statsState.release) throw new Error('Could not hold an old stats request');
                   const oldStream = video.srcObject;
                   document.getElementById('stop').click();
+                  if (stats.dataset.mbps !== undefined)
+                    throw new Error('Stopping did not reset receiver stats');
                   await new Promise(resolve => setTimeout(resolve, 500));
                   document.getElementById('start').click();
                   oldClose.call(oldSocket, new CloseEvent('close'));
                   oldError.call(oldSocket, new Event('error'));
+                  statsState.release();
                   function nextFrame() {
                     return new Promise((resolve, reject) => {
                       const id = video.requestVideoFrameCallback((_, metadata) => {
@@ -183,7 +246,18 @@ for (var iteration = 0; iteration < 4; iteration++)
                       if (video.srcObject !== replacement || second.mediaTime <= first.mediaTime
                           || second.presentedFrames <= first.presentedFrames)
                         throw new Error('Replacement stream did not produce new frames');
-                      return true;
+                      for (let sample = 0; sample < 100; sample++) {
+                        const mbps = Number(stats.dataset.mbps);
+                        const fps = Number(stats.dataset.fps);
+                        if (Number.isFinite(mbps) && mbps > 0
+                            && Number.isFinite(fps) && fps > 0) {
+                          if (statsState.overlap)
+                            throw new Error('A connection overlapped getStats calls');
+                          return true;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                      }
+                      throw new Error('Replacement receiver stats never became measurable');
                     }
                     await new Promise(resolve => setTimeout(resolve, 100));
                   }
