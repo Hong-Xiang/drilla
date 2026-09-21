@@ -437,6 +437,109 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void PortableTextureSampleDataCrossesSourceLabelsBeforeDerivative()
+    {
+        var shader = new CrossLabelTextureSampleDerivativeShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var rawFunction = Assert.Single(
+            raw.FunctionDefinitions,
+            item => item.Key.Name == nameof(CrossLabelTextureSampleDerivativeShader.Fragment));
+        Assert.Contains(
+            rawFunction.Value.Code.Instructions,
+            item => item.Instruction.OpCode.FlowControl is System.Reflection.Emit.FlowControl.Cond_Branch);
+        Assert.Contains(
+            rawFunction.Value.Code.Instructions,
+            item => item.Instruction.Operand is System.Reflection.MethodInfo
+            {
+                Name: nameof(CrossLabelTextureSampleDerivativeShader.UniformChoice)
+            });
+
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var facts = CLSLCooperationAnalysis.Analyze(source);
+        var pointer = source.RunPass(new StablePointerRegionParameterPass());
+        var target = new SlangTargetLowering().Lower(pointer);
+        CooperationAdmission.CheckTargetCorrespondence(pointer, target, facts);
+        var function = source.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(CrossLabelTextureSampleDerivativeShader.Fragment));
+        var sourceBody = source.GetBody(function);
+        var pointerBody = pointer.GetBody(function);
+        var sites = pointerBody.Labels
+            .SelectMany(label => pointerBody[label].Body.Elements.Select(
+                (instruction, ordinal) => (Label: label, Ordinal: ordinal, Instruction: instruction)))
+            .ToArray();
+        var sample = Assert.Single(sites, site =>
+            site.Instruction.Operation is TextureSampleLevelOperation);
+        var definitions = sites
+            .Where(site => site.Instruction.Result is not null)
+            .ToDictionary(
+                site => site.Instruction.Result!,
+                site => site,
+                ReferenceEqualityComparer.Instance);
+        bool IsSampledData(IShaderValue value)
+        {
+            var visited = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+            return Trace(value);
+
+            bool Trace(IShaderValue candidate)
+            {
+                if (!visited.Add(candidate))
+                    return false;
+                if (ReferenceEquals(candidate, sample.Instruction.Result))
+                    return true;
+                if (definitions.TryGetValue(candidate, out var definition) &&
+                    definition.Instruction.Operands.Any(Trace))
+                    return true;
+                return sites.Any(site =>
+                    site.Instruction.Operation is StoreOperation &&
+                    ReferenceEquals(site.Instruction.Operand0, candidate) &&
+                    Trace(site.Instruction.Operand1!));
+            }
+        }
+
+        var targetBody = target.GetBody(function);
+        output.WriteLine(rawFunction.Value.PrettyPrint());
+        output.WriteLine(sourceBody.Dump());
+        output.WriteLine(pointerBody.Dump());
+        output.WriteLine(targetBody.PrettyPrint());
+        var carried = Assert.Single(targetBody.Origins.Captures.Keys, IsSampledData);
+        var definitionSite = definitions[carried];
+        var useSite = Assert.Single(sites, site =>
+            !ReferenceEquals(site.Label, definitionSite.Label) &&
+            site.Instruction.Operands.Any(operand => ReferenceEquals(operand, carried)));
+        var definitionOrigin = Assert.Single(targetBody.Origins.Definitions, origin =>
+            ReferenceEquals(origin.Source.Result, carried));
+        var capture = Assert.IsType<SlangAssign>(definitionOrigin.Capture);
+        var carrier = Assert.IsType<SlangVariablePlace>(capture.Target).Variable;
+        var consumer = Assert.Single(targetBody.Origins.Instructions, origin =>
+            ReferenceEquals(origin.Label, useSite.Label) &&
+            origin.InstructionOrdinal == useSite.Ordinal);
+        var consumerInstruction = Assert.IsType<SlangBind>(consumer.Target).Instruction;
+        var slang = Emit(shader, CLSLCompileTarget.SLang);
+        var wgsl = Emit(shader, CLSLCompileTarget.WGSL);
+
+        output.WriteLine(slang);
+        output.WriteLine(wgsl);
+
+        Assert.NotSame(definitionSite.Label, useSite.Label);
+        Assert.Same(carried, Assert.IsType<SlangValueOperand>(capture.Value).Value);
+        Assert.Same(targetBody.Origins.Captures[carried], carrier);
+        Assert.True(AreAdjacent(targetBody.Body, definitionOrigin.Definition, capture));
+        Assert.Contains(consumerInstruction.Operands, operand =>
+            operand is SlangPlaceOperand
+            {
+                Place: SlangVariablePlace { Variable: var variable }
+            } &&
+            ReferenceEquals(variable, carrier));
+        Assert.Contains(TextureSampleLevelOperation.Instance.Name, new CLSLCompiler(new(
+            CLSLCompileTarget.IR,
+            CLSLCooperationProfile.PortableWgsl)).Emit(shader));
+        Assert.Contains(".SampleLevel(", slang);
+        Assert.Contains("ddx(", slang);
+        Assert.Contains("textureSampleLevel(", wgsl);
+        Assert.Contains("dpdx(", wgsl);
+    }
+
+    [Fact]
     public void PortableTextureSampleRetainsSensitiveArgumentRequirements()
     {
         var shader = new TextureSampleSensitiveArgumentShader();
@@ -3662,6 +3765,32 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             [Location(0)] vec2f32 uv,
             [Location(1)] float lod) =>
             DMath.dpdx(Color.SampleLevel(Linear, uv, lod).x);
+    }
+
+    private sealed class CrossLabelTextureSampleDerivativeShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(2)]
+        private static readonly Texture2D<float> Color;
+
+        [Group(0), Binding(3)]
+        private static readonly SamplerState Linear;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment(
+            [Location(0)] vec2f32 uv,
+            [Location(1)] float lod)
+        {
+            var sampled = (int)Color.SampleLevel(Linear, uv, lod).x;
+            if (UniformChoice())
+                return DMath.dpdx((float)sampled);
+            return 0.0f;
+        }
+
+        [ShaderMethod]
+        public static bool UniformChoice() => true;
     }
 
     private sealed class TextureSampleSensitiveArgumentShader : ISharpShader
