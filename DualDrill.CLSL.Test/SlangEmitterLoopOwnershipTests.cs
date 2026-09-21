@@ -203,14 +203,14 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         var target = Target(lowered, SlangControlFlowPolicy.WgslCompatible);
         var compatible = new SlangEmitter(target).Emit();
 
-        Assert.Contains(ReturnIndices(native), returned =>
+        var nativeHasNestedReturn = ReturnIndices(native).Any(returned =>
             LoopScopes(native).Any(scope => scope.Start < returned && returned < scope.End));
         Assert.All(ReturnIndices(compatible), returned =>
             Assert.DoesNotContain(
                 LoopScopes(compatible),
                 scope => scope.Start < returned && returned < scope.End));
-        Assert.Contains("_return_value", compatible);
         Assert.DoesNotContain("_return_value", native);
+        Assert.Equal(nativeHasNestedReturn, compatible.Contains("_return_value", StringComparison.Ordinal));
         await new SlangService().ValidateAsync(compatible);
 
         ImmutableArray<ImmutableArray<Value>> cases =
@@ -228,13 +228,56 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         {
             var expected = RunCfg(original, arguments);
             var normalized = RunCfg(lowered, arguments);
+            var emittedNative = new EmittedScalarProgram(lowered, native).Run(arguments);
             var emitted = new EmittedScalarProgram(lowered, compatible).Run(arguments);
 
             Assert.Equal(expected.Result, normalized.Result);
+            Assert.Equal(expected.Result, emittedNative.Result);
             Assert.Equal(expected.Result, emitted.Result);
             Assert.True(expected.Trace.SequenceEqual(normalized.Trace));
+            Assert.True(expected.Trace.SequenceEqual(emittedNative.Trace));
             Assert.True(expected.Trace.SequenceEqual(emitted.Trace));
         }
+    }
+
+    [Fact]
+    public async Task WgslReturnCarrierHandlesExplicitLoopNestedReturn()
+    {
+        var loop = Label.Create("loop");
+        var declaration = new FunctionDeclaration(
+            "ExplicitLoopReturn",
+            [],
+            new FunctionReturn(ShaderType.I32, []),
+            []);
+        var body = CreateFunctionBody(
+            declaration,
+            RegionTree.Loop(
+                loop,
+                [],
+                Body(
+                    loop,
+                    [],
+                    [],
+                    Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(
+                        ShaderValue.Literal(new I32Literal(7)))),
+                null,
+                null));
+        var native = Emit(body);
+        var compatible = Emit(body, SlangControlFlowPolicy.WgslCompatible);
+
+        Assert.Contains(ReturnIndices(native), returned =>
+            LoopScopes(native).Any(scope => scope.Start < returned && returned < scope.End));
+        Assert.All(ReturnIndices(compatible), returned =>
+            Assert.DoesNotContain(
+                LoopScopes(compatible),
+                scope => scope.Start < returned && returned < scope.End));
+        Assert.Contains("_return_value", compatible);
+        await new SlangService().ValidateAsync(compatible);
+
+        var expected = RunCfg(body, []);
+        var emitted = new EmittedScalarProgram(body, compatible).Run([]);
+        Assert.Equal(expected.Result, emitted.Result);
+        Assert.True(expected.Trace.SequenceEqual(emitted.Trace));
     }
 
     [Fact]
