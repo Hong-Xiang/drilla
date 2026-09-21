@@ -6,11 +6,19 @@ silently omitted. Uniform layout rules are documented separately in
 
 ## Resource declarations
 
-A resource is an attributed field with exactly one address-space attribute,
-one `[Group]`, and one `[Binding]`. The current resource slice accepts only
-`[Uniform]`. Group and binding values must be nonnegative, and each
-`(group, binding)` pair must be unique across the module. Reusing a binding
-number in a different group is valid.
+A resource is a static field with exactly one `[Group]` and one `[Binding]`.
+Uniform data additionally requires exactly one `[Uniform]`; structured buffers,
+textures, and samplers derive their address space from their registered type
+and reject address-space/access attributes. Group and binding values must be
+nonnegative, and each `(group, binding)` pair must be unique across the module.
+Reusing a binding number in a different group is valid. Dynamic offsets are
+buffer-only; texture and sampler bindings reject them.
+
+A module resource declaration's `Type` is the direct resource type. Pointer-
+wrapped resource declaration types reject at any depth before ordinary/resource
+classification. This check does not inspect `VariableDeclaration.Value.Type`:
+valid resource values are naturally pointers in the IR. Ordinary scalar pointer
+globals remain outside this resource rule.
 
 The runtime-reflection frontend counts the raw CLR attributes before converting
 them to `ImmutableHashSet<IShaderAttribute>`. This ordering is required because
@@ -40,9 +48,10 @@ entry declaration instead.
 
 ## Preserved metadata and initialization
 
-Known `[Vertex]`, `[Fragment]`, and `[Compute]` visibility hints on a uniform
-field are preserved. Typed reflection ORs all present hints; a uniform without
-a hint defaults to all three stages.
+Known `[Vertex]`, `[Fragment]`, and `[Compute]` visibility hints on resources
+are preserved. Typed reflection ORs all present hints; resources without a hint
+default to all three stages except writable buffers, whose existing profile is
+compute-only.
 
 Metadata discovery reads declarations only. It does not read static field
 values or execute CLR field initializers.
@@ -52,7 +61,8 @@ values or execute CLR field initializers.
 Code that previously relied on ignored metadata must:
 
 1. use a field for each resource;
-2. provide one `[Uniform]`, `[Group(n)]`, and `[Binding(n)]`;
+2. provide one `[Group(n)]` and `[Binding(n)]`, plus `[Uniform]` only for
+   uniform data;
 3. choose a module-unique pair of nonnegative coordinates;
 4. remove unsupported type/member/property/intrinsic semantics; and
 5. request an explicit group from the descriptor APIs described in

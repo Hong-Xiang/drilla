@@ -491,6 +491,50 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
                     throw Invalid($"{load.Name} index must be u32.");
                 Emit(load, ShaderType.F32, [Depth(1), Depth(0)], 2);
                 return;
+            case ReadWriteStructuredBufferLengthOperation rwLength:
+                if (!TopType().Equals(rwLength.BufferPointerType))
+                    throw Invalid($"{rwLength.Name} operation stack: {TopType().Name}.");
+                Emit(rwLength, ShaderType.U32, [Depth(0)], 1);
+                NormalizeTop(ShaderType.U32);
+                return;
+            case ReadWriteStructuredBufferLoadOperation rwLoad:
+                if (stack.Count < 2 || !TypeAtDepth(1).Equals(rwLoad.BufferPointerType))
+                    throw Invalid($"{rwLoad.Name} requires an exact storage-buffer receiver.");
+                ConvertTopForDeclaration(ShaderType.U32);
+                if (!TypeAtDepth(0).Equals(ShaderType.U32))
+                    throw Invalid($"{rwLoad.Name} index must be u32.");
+                Emit(rwLoad, ShaderType.F32, [Depth(1), Depth(0)], 2);
+                return;
+            case ReadWriteStructuredBufferStoreOperation store:
+                if (stack.Count < 3 ||
+                    !TypeAtDepth(2).Equals(store.BufferPointerType) ||
+                    !TypeAtDepth(0).Equals(ShaderType.F32))
+                    throw Invalid($"{store.Name} requires an exact writable storage-buffer receiver and f32 value.");
+                var converted = ConvertAtDepthForDeclaration(ShaderType.U32, 1);
+                if (!TypeAtDepth(0).Equals(ShaderType.U32))
+                    throw Invalid($"{store.Name} index must be u32.");
+                Emit(
+                    store,
+                    null,
+                    converted
+                        ? [Depth(3), Depth(0), Depth(1)]
+                        : [Depth(2), Depth(1), Depth(0)],
+                    converted ? 4 : 3);
+                return;
+            case TextureSampleLevelOperation sample:
+                if (stack.Count < 4 ||
+                    !TypeAtDepth(3).Equals(sample.TexturePointerType) ||
+                    !TypeAtDepth(2).Equals(sample.SamplerPointerType) ||
+                    !TypeAtDepth(1).Equals(ShaderType.Vec2F32) ||
+                    !TypeAtDepth(0).Equals(ShaderType.F32))
+                    throw Invalid(
+                        $"{sample.Name} requires exact texture, sampler, vec2<f32>, and f32 operands.");
+                Emit(
+                    sample,
+                    ShaderType.Vec4F32,
+                    [Depth(3), Depth(2), Depth(1), Depth(0)],
+                    4);
+                return;
             case IBinaryExpressionOperation binary:
                 var (left, right) = TopBinaryTypes();
                 if (!left.Equals(binary.LeftType) || !right.Equals(binary.RightType))

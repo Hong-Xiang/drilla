@@ -227,6 +227,12 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
                 writer.Write('.');
                 writer.Write(swizzle.Pattern);
                 break;
+            case SlangIndexedPlace indexed:
+                DumpPlace(writer, indexed.Target);
+                writer.Write('[');
+                DumpOperand(writer, indexed.Index);
+                writer.Write(']');
+                break;
             default:
                 throw new NotSupportedException($"Unknown Slang place {place.GetType().Name}.");
         }
@@ -320,6 +326,7 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
             SlangMemberPlace member => Values(member.Target),
             SlangComponentPlace component => Values(component.Target),
             SlangSwizzlePlace swizzle => Values(swizzle.Target),
+            SlangIndexedPlace indexed => [.. Values(indexed.Target), .. Values(indexed.Index)],
             _ => []
         };
 }
@@ -538,6 +545,14 @@ public sealed record SlangSwizzlePlace(
     IShaderType SwizzleType) : SlangPlace
 {
     public override IShaderType Type => SwizzleType;
+}
+
+public sealed record SlangIndexedPlace(
+    SlangPlace Target,
+    SlangOperand Index,
+    IShaderType ElementType) : SlangPlace
+{
+    public override IShaderType Type => ElementType;
 }
 
 internal static class SlangLiteralFormatter

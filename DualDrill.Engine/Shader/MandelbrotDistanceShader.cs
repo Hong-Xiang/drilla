@@ -25,6 +25,12 @@ public class SampleFragmentShaderReflection : IReflection
     public ImmutableArray<ShaderUniformBinding> GetUniformBindings(IShaderModuleDeclaration module) =>
         _shaderModuleReflection.GetUniformBindings(module);
 
+    public ImmutableArray<ShaderTextureBinding> GetTextureBindings(IShaderModuleDeclaration module) =>
+        _shaderModuleReflection.GetTextureBindings(module);
+
+    public ImmutableArray<ShaderSamplerBinding> GetSamplerBindings(IShaderModuleDeclaration module) =>
+        _shaderModuleReflection.GetSamplerBindings(module);
+
     public GPUBindGroupLayoutDescriptor GetBindGroupLayoutDescriptor(
         IShaderModuleDeclaration module,
         int group) =>

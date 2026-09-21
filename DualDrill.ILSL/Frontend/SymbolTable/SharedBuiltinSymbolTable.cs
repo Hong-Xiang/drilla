@@ -24,6 +24,10 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
     public FrozenDictionary<Type, IShaderType> RuntimeTypes { get; }
     public FrozenDictionary<MethodBase, FunctionDeclaration> RuntimeMethods { get; }
 
+    internal static MethodInfo TextureSampleLevelMethod { get; } =
+        typeof(Texture2D<float>).GetMethod(nameof(Texture2D<float>.SampleLevel))
+        ?? throw new MissingMethodException(typeof(Texture2D<float>).FullName, nameof(Texture2D<float>.SampleLevel));
+
     public static SharedBuiltinSymbolTable Instance { get; } = new();
 
     // all entities in shared builtin context can only be directly refrenced
@@ -66,6 +70,9 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
             [typeof(float)] = ShaderType.F32,
             [typeof(double)] = ShaderType.F64,
             [typeof(StructuredBuffer<float>)] = ReadOnlyStructuredBufferType.Instance,
+            [typeof(RWStructuredBuffer<float>)] = ReadWriteStructuredBufferType.Instance,
+            [typeof(Texture2D<float>)] = SampledTexture2DF32Type.Instance,
+            [typeof(SamplerState)] = SamplerStateType.Instance,
             [typeof(Vector4)] = VecType<N4, FloatType<N32>>.Instance,
             [typeof(Vector3)] = VecType<N3, FloatType<N32>>.Instance,
             [typeof(Vector2)] = VecType<N2, FloatType<N32>>.Instance
@@ -155,12 +162,31 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
             ?? throw new MissingMethodException(buffer.FullName, "get_Item"),
             StructuredBufferLoadOperation.Instance.Function);
 
+        var writableBuffer = typeof(RWStructuredBuffer<float>);
+        var writableIndexer = writableBuffer.GetProperty("Item")
+            ?? throw new MissingMemberException(writableBuffer.FullName, "Item");
+        result.Add(
+            writableBuffer.GetProperty(nameof(RWStructuredBuffer<float>.Length))?.GetMethod
+            ?? throw new MissingMethodException(writableBuffer.FullName, "get_Length"),
+            ReadWriteStructuredBufferLengthOperation.Instance.Function);
+        result.Add(
+            writableIndexer.GetMethod
+            ?? throw new MissingMethodException(writableBuffer.FullName, "get_Item"),
+            ReadWriteStructuredBufferLoadOperation.Instance.Function);
+        result.Add(
+            writableIndexer.SetMethod
+            ?? throw new MissingMethodException(writableBuffer.FullName, "set_Item"),
+            ReadWriteStructuredBufferStoreOperation.Instance.Function);
+
+        result.Add(TextureSampleLevelMethod, TextureSampleLevelOperation.Instance.Function);
+
         return result;
     }
 
     internal static bool IsStructuredBufferFamily(Type type) =>
         type.IsGenericType &&
-        type.GetGenericTypeDefinition() == typeof(StructuredBuffer<>);
+        type.GetGenericTypeDefinition() is var definition &&
+        (definition == typeof(StructuredBuffer<>) || definition == typeof(RWStructuredBuffer<>));
 
     internal static bool ContainsStructuredBuffer(Type type) =>
         IsStructuredBufferFamily(type) ||
@@ -169,4 +195,22 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
          type.GetFunctionPointerParameterTypes().Any(ContainsStructuredBuffer)) ||
         type.HasElementType && type.GetElementType() is { } element && ContainsStructuredBuffer(element) ||
         type.IsGenericType && type.GetGenericArguments().Any(ContainsStructuredBuffer);
+
+    internal static bool IsTexture2DFamily(Type type) =>
+        type.IsGenericType &&
+        type.GetGenericTypeDefinition() == typeof(Texture2D<>);
+
+    internal static bool IsTextureOrSamplerFamily(Type type) =>
+        IsTexture2DFamily(type) || type == typeof(SamplerState);
+
+    internal static bool IsResourceFamily(Type type) =>
+        IsStructuredBufferFamily(type) || IsTextureOrSamplerFamily(type);
+
+    internal static bool ContainsShaderResource(Type type) =>
+        IsResourceFamily(type) ||
+        type.IsFunctionPointer &&
+        (ContainsShaderResource(type.GetFunctionPointerReturnType()) ||
+         type.GetFunctionPointerParameterTypes().Any(ContainsShaderResource)) ||
+        type.HasElementType && type.GetElementType() is { } element && ContainsShaderResource(element) ||
+        type.IsGenericType && type.GetGenericArguments().Any(ContainsShaderResource);
 }

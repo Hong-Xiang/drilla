@@ -78,6 +78,8 @@ public sealed class ModuleToCodeVisitor<TBody>(
 
         if (decl.Type is ReadOnlyStructuredBufferType)
             Writer.Write("var<storage, read> ");
+        else if (decl.Type is ReadWriteStructuredBufferType)
+            Writer.Write("var<storage, read_write> ");
         Writer.Write(decl.Name);
         Writer.Write(": ");
         await OnTypeReference(decl.Type);
