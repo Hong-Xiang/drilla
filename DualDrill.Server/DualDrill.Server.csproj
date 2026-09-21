@@ -25,10 +25,6 @@
 		<PackageReference Include="Microsoft.Web.WebView2" />
 		<PackageReference Include="pythonnet" />
 		<PackageReference Include="Swashbuckle.AspNetCore" />
-		<PackageReference Include="Veldrid" />
-		<PackageReference Include="Veldrid.SPIRV" />
-		<PackageReference Include="Veldrid.Utilities" />
-		<PackageReference Include="Vortice.Vulkan" />
 		<ProjectReference Include="..\DualDrill.APIDefinition\DualDrill.ApiGen.csproj" />
 		<ProjectReference Include="..\DualDrill.Client.Abstraction\DualDrill.Client.Abstraction.csproj" />
 		<ProjectReference Include="..\DualDrill.Common.Abstraction\DualDrill.Common.Abstraction.csproj" />

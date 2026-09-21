@@ -53,10 +53,6 @@
     <PackageVersion Include="HtmlAgilityPack" Version="1.11.71" />
     <PackageVersion Include="pythonnet" Version="3.0.4" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.1.0" />
-    <PackageVersion Include="Veldrid" Version="4.9.0" />
-    <PackageVersion Include="Veldrid.SPIRV" Version="1.0.15" />
-    <PackageVersion Include="Veldrid.Utilities" Version="4.9.0" />
-    <PackageVersion Include="Vortice.Vulkan" Version="1.9.9" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.6" />
     <PackageVersion Include="System.Reactive" Version="6.0.1" />
