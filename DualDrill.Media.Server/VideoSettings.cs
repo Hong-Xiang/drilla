@@ -56,7 +56,8 @@ internal sealed record VideoSettings
         AssertRejected("Video:Height", "0");
         AssertRejected("Video:Bitrate", "0");
         AssertRejected("Video:Bitrate", "not-a-number");
-        AssertRejected("Video:Width", int.MaxValue.ToString(CultureInfo.InvariantCulture));
+        AssertRejected("Video:Width", "2147483646");
+        AssertRejected("Video:Height", "2000000");
         Console.WriteLine("Video settings defaults, parsing, geometry, bitrate, and overflow validation passed.");
         return 0;
     }
