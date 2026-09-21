@@ -54,7 +54,13 @@
           shellHook = ''
             export GST_PLUGIN_SYSTEM_PATH_1_0="${dotnetPkgs.lib.makeSearchPath "lib/gstreamer-1.0" mediaPlugins}"
             export LD_LIBRARY_PATH="${
-              dotnetPkgs.lib.makeLibraryPath ([ dotnetPkgs.glib ] ++ mediaPlugins)
+              dotnetPkgs.lib.makeLibraryPath (
+                [
+                  dotnetPkgs.glib
+                  dotnetPkgs.vulkan-loader
+                ]
+                ++ mediaPlugins
+              )
             }''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           '';
         };
