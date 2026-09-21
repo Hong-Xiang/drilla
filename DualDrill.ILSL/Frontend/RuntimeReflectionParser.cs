@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Symbol;
@@ -100,13 +101,22 @@ public sealed class RuntimeReflectionParser
             return found;
 
         if (SharedBuiltinSymbolTable.IsStructuredBufferFamily(type))
+        {
+            var supportedType = type.GetGenericTypeDefinition() == typeof(StructuredBuffer<>)
+                ? "StructuredBuffer<float>"
+                : "RWStructuredBuffer<float>";
             throw new NotSupportedException(
                 $"Shader resource type validation rejected '{type}': " +
-                "only StructuredBuffer<float> is supported.");
-        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(type))
+                $"only {supportedType} is supported.");
+        }
+        if (SharedBuiltinSymbolTable.IsTexture2DFamily(type))
             throw new NotSupportedException(
                 $"Shader resource type validation rejected '{type}': " +
-                "structured buffers cannot be embedded in another CLR type.");
+                "only Texture2D<float> is supported.");
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(type))
+            throw new NotSupportedException(
+                $"Shader resource type validation rejected '{type}': " +
+                $"{ResourceSubject(type)} cannot be embedded in another CLR type.");
 
         if (!type.IsValueType)
         {
@@ -138,7 +148,7 @@ public sealed class RuntimeReflectionParser
         if (Context[symbol] is { } found)
             return found;
 
-        RejectStructuredBufferPlacement(
+        RejectResourcePlacement(
             parameter.ParameterType,
             $"parameter '{parameter.Member.DeclaringType?.FullName}.{parameter.Member.Name}.{parameter.Name}'");
         var declaration = new ParameterDeclaration(
@@ -155,15 +165,15 @@ public sealed class RuntimeReflectionParser
         if (Context[symbol] is { } found)
             return found;
 
-        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(field.FieldType) &&
-            !SharedBuiltinSymbolTable.IsStructuredBufferFamily(field.FieldType))
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(field.FieldType) &&
+            !SharedBuiltinSymbolTable.IsResourceFamily(field.FieldType))
             throw new NotSupportedException(
                 $"Shader resource validation rejected field '{field.DeclaringType?.FullName}.{field.Name}': " +
-                "structured buffers must be declared directly, not inside another CLR type.");
-        if (SharedBuiltinSymbolTable.IsStructuredBufferFamily(field.FieldType) && !field.IsStatic)
+                $"{ResourceSubject(field.FieldType)} must be declared directly, not inside another CLR type.");
+        if (SharedBuiltinSymbolTable.IsResourceFamily(field.FieldType) && !field.IsStatic)
             throw new NotSupportedException(
                 $"Shader resource validation rejected field '{field.DeclaringType?.FullName}.{field.Name}': " +
-                "structured buffers must be static shader-module fields.");
+                $"{ResourceSubject(field.FieldType)} must be static shader-module fields.");
 
         var attributes = GetShaderAttributes(field);
         RejectAttributedBackingField(field, attributes);
@@ -204,7 +214,7 @@ public sealed class RuntimeReflectionParser
 
     private MemberDeclaration ParseFieldCore(FieldInfo field)
     {
-        RejectStructuredBufferPlacement(
+        RejectResourcePlacement(
             field.FieldType,
             $"structure member field '{field.DeclaringType?.FullName}.{field.Name}'");
         if (field.DeclaringType is { } declaringType)
@@ -253,7 +263,7 @@ public sealed class RuntimeReflectionParser
         if (method is MethodInfo methodInfo)
             ShaderModuleMetadataValidator.ValidateReflectedComputeMetadata(methodInfo);
         var declaration = ParseMethodDeclaration(method);
-        CollectMethodSignature(method);
+        CollectMethodSignature(method, declaration);
         if (IsMethodBoundary(method) || completedMethods.Contains(method) || inProgressMethods.Contains(method))
             return;
 
@@ -378,7 +388,7 @@ public sealed class RuntimeReflectionParser
         if (field.IsStatic)
         {
             var attributes = GetShaderAttributes(field);
-            if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(field.FieldType) ||
+            if (SharedBuiltinSymbolTable.ContainsShaderResource(field.FieldType) ||
                 attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
                 _ = ParseStaticFieldCore(field);
             else
@@ -391,18 +401,32 @@ public sealed class RuntimeReflectionParser
         _ = ParseFieldCore(field);
     }
 
-    private void CollectMethodSignature(MethodBase method)
+    private void CollectMethodSignature(MethodBase method, FunctionDeclaration declaration)
     {
         if (method.DeclaringType is { } declaringType)
             CollectTypeReferences(declaringType);
         if (method is MethodInfo methodInfo)
             CollectTypeReferences(methodInfo.ReturnType);
         foreach (var parameter in method.GetParameters())
-            CollectTypeReferences(parameter.ParameterType);
+            if (IsTextureSampleLevelSamplerParameter(method, declaration, parameter))
+                CollectTypeReferences(typeof(SamplerState));
+            else
+                CollectTypeReferences(parameter.ParameterType);
         if (method is MethodInfo genericMethod)
             foreach (var argument in genericMethod.GetGenericArguments())
                 CollectTypeReferences(argument);
     }
+
+    private static bool IsTextureSampleLevelSamplerParameter(
+        MethodBase method,
+        FunctionDeclaration declaration,
+        ParameterInfo parameter) =>
+        method.Equals(SharedBuiltinSymbolTable.TextureSampleLevelMethod) &&
+        ReferenceEquals(declaration, TextureSampleLevelOperation.Instance.Function) &&
+        parameter.Position == 0 &&
+        parameter.IsIn &&
+        !parameter.IsOut &&
+        parameter.ParameterType == typeof(SamplerState).MakeByRefType();
 
     private void CollectTypeReferences(Type type)
     {
@@ -552,7 +576,7 @@ public sealed class RuntimeReflectionParser
     private FunctionReturn ParseMethodReturn(MethodBase method)
     {
         if (method is MethodInfo resourceMethod)
-            RejectStructuredBufferPlacement(
+            RejectResourcePlacement(
                 resourceMethod.ReturnType,
                 $"return of method '{method.DeclaringType?.FullName}.{method.Name}'");
         var returnType = method switch
@@ -602,11 +626,11 @@ public sealed class RuntimeReflectionParser
         foreach (var field in moduleType.GetFields(VariableBindingFlags))
         {
             var attributes = GetShaderAttributes(field);
-            var containsStructuredBuffer = SharedBuiltinSymbolTable.ContainsStructuredBuffer(field.FieldType);
-            if (attributes.Length == 0 && !containsStructuredBuffer)
+            var containsResource = SharedBuiltinSymbolTable.ContainsShaderResource(field.FieldType);
+            if (attributes.Length == 0 && !containsResource)
                 continue;
             RejectAttributedBackingField(field, attributes);
-            if (containsStructuredBuffer || attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
+            if (containsResource || attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
                 variables.Add(ParseModuleVariableDeclaration(field));
             else
                 ShaderModuleMetadataValidator.ValidateOrdinaryModuleField(
@@ -631,11 +655,11 @@ public sealed class RuntimeReflectionParser
             !field.Name.EndsWith("k__BackingField", StringComparison.Ordinal))
             return;
 
-        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(field.FieldType))
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(field.FieldType))
             throw new NotSupportedException(
                 "Shader resource validation rejected " +
                 $"compiler-generated backing field '{field.DeclaringType?.FullName}.{field.Name}': " +
-                "structured buffers must be declared as fields, not properties.");
+                $"{ResourceSubject(field.FieldType)} must be declared as fields, not properties.");
 
         if (attributes.Count > 0)
             throw new NotSupportedException(
@@ -646,7 +670,7 @@ public sealed class RuntimeReflectionParser
 
     private VariableDeclaration ParseLocalVariable(LocalVariableInfo info)
     {
-        RejectStructuredBufferPlacement(
+        RejectResourcePlacement(
             info.LocalType,
             $"local variable #{info.LocalIndex}");
         return new(
@@ -685,11 +709,11 @@ public sealed class RuntimeReflectionParser
     private static ImmutableArray<IShaderAttribute> GetValidatedPropertyAttributes(PropertyInfo property)
     {
         var attributes = GetShaderAttributes(property);
-        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(property.PropertyType))
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(property.PropertyType))
             throw new NotSupportedException(
                 "Shader resource validation rejected " +
                 $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
-                "structured buffers must be static shader-module fields.");
+                $"{ResourceSubject(property.PropertyType)} must be static shader-module fields.");
         if (attributes.Length > 0)
             throw new NotSupportedException(
                 "Shader module metadata validation rejected " +
@@ -710,13 +734,18 @@ public sealed class RuntimeReflectionParser
             _ = GetValidatedPropertyAttributes(property);
     }
 
-    private static void RejectStructuredBufferPlacement(Type type, string declaration)
+    private static void RejectResourcePlacement(Type type, string declaration)
     {
-        if (SharedBuiltinSymbolTable.ContainsStructuredBuffer(type))
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(type))
             throw new NotSupportedException(
                 $"Shader resource validation rejected {declaration}: " +
-                "structured buffers are valid only as static shader-module fields.");
+                $"{ResourceSubject(type)} are valid only as static shader-module fields.");
     }
+
+    private static string ResourceSubject(Type type) =>
+        SharedBuiltinSymbolTable.ContainsStructuredBuffer(type)
+            ? "structured buffers"
+            : "texture and sampler handles";
 
     private static void ValidateMappedIntrinsicSignature(
         MethodBase method,
@@ -728,7 +757,7 @@ public sealed class RuntimeReflectionParser
             attributes);
         foreach (var parameter in method.GetParameters())
         {
-            RejectStructuredBufferPlacement(
+            RejectResourcePlacement(
                 parameter.ParameterType,
                 $"parameter of mapped intrinsic '{name}.{parameter.Name}'");
             ShaderModuleMetadataValidator.ValidateMappedIntrinsicInterfaceAttributes(
@@ -737,7 +766,7 @@ public sealed class RuntimeReflectionParser
         }
         if (method is MethodInfo methodInfo)
         {
-            RejectStructuredBufferPlacement(
+            RejectResourcePlacement(
                 methodInfo.ReturnType,
                 $"return of mapped intrinsic '{name}'");
             ShaderModuleMetadataValidator.ValidateMappedIntrinsicInterfaceAttributes(

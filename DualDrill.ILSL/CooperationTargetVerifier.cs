@@ -610,7 +610,9 @@ internal static class CooperationTargetVerifier
         source.Body.Traverse((_, label, block) =>
         {
             foreach (var (ordinal, instruction) in block.Body.Elements.Index())
-                if (instruction.Operation is StructuredBufferLengthOperation)
+                if (instruction.Operation is
+                    StructuredBufferLengthOperation or
+                    ReadWriteStructuredBufferLengthOperation)
                     sourceDimensions.Add((label, ordinal));
             return false;
         });
@@ -639,7 +641,11 @@ internal static class CooperationTargetVerifier
             !ReferenceEquals(target.Result, source.Result) ||
             !ReferenceEquals(target.Payload, source.Payload) ||
             (requireOperands ||
-             source.Operation is CallOperation or StructuredBufferLoadOperation) &&
+             source.Operation is
+                 CallOperation or
+                 StructuredBufferLoadOperation or
+                 ReadWriteStructuredBufferLoadOperation or
+                 TextureSampleLevelOperation) &&
             !OperandsMatch(source.Operands, target.Operands, origins, addressDefinitions))
             throw Error(context, "instruction origin changed its source operation/result/operand lineage");
     }
@@ -657,7 +663,8 @@ internal static class CooperationTargetVerifier
         string context)
     {
         var dimensions = origin.Dimensions;
-        if (source.Operation is not StructuredBufferLengthOperation ||
+        if (source.Operation is not (StructuredBufferLengthOperation or
+            ReadWriteStructuredBufferLengthOperation) ||
             source.OperandCount != 1 ||
             source.Result is null ||
             !ReferenceEquals(origin.Source.Operation, source.Operation) ||
@@ -762,6 +769,12 @@ internal static class CooperationTargetVerifier
                         swizzle.ValueVecType),
                     target.Target) &&
                 OperandMatches(source.Operand1!, target.Value, origins),
+            ReadWriteStructuredBufferStoreOperation =>
+                target.Target is SlangIndexedPlace indexed &&
+                Equals(indexed.ElementType, ShaderType.F32) &&
+                PlaceMatches(SourcePlace(source.Operand0!, addressDefinitions), indexed.Target) &&
+                OperandMatches(source.Operand1!, indexed.Index, origins, addressDefinitions) &&
+                OperandMatches(source[2], target.Value, origins, addressDefinitions),
             _ => false
         };
 
@@ -808,6 +821,10 @@ internal static class CooperationTargetVerifier
             (SlangSwizzlePlace left, SlangSwizzlePlace right) =>
                 left.Pattern == right.Pattern &&
                 Equals(left.SwizzleType, right.SwizzleType) &&
+                PlaceMatches(left.Target, right.Target),
+            (SlangIndexedPlace left, SlangIndexedPlace right) =>
+                Equals(left.ElementType, right.ElementType) &&
+                Equals(left.Index, right.Index) &&
                 PlaceMatches(left.Target, right.Target),
             _ => false
         };
@@ -1394,6 +1411,7 @@ internal static class CooperationTargetVerifier
             SlangMemberPlace member => RootVariable(member.Target),
             SlangComponentPlace component => RootVariable(component.Target),
             SlangSwizzlePlace swizzle => RootVariable(swizzle.Target),
+            SlangIndexedPlace indexed => RootVariable(indexed.Target),
             _ => null
         };
 
@@ -1481,7 +1499,9 @@ internal static class CooperationTargetVerifier
                     context,
                     $"relevant operation fact for block '{fact.Label.Name}', instruction " +
                     $"{fact.InstructionOrdinal} does not match the analyzed source");
-            if (sourceInstruction.Operation is StructuredBufferLengthOperation)
+            if (sourceInstruction.Operation is
+                StructuredBufferLengthOperation or
+                ReadWriteStructuredBufferLengthOperation)
             {
                 var dimensions = Single(
                     origins.Dimensions,
@@ -1513,6 +1533,20 @@ internal static class CooperationTargetVerifier
                 context,
                 "relevant operation origin");
             RequirePresent(tree, origin.Target, context);
+            if (origin.Target is SlangAssign assignment)
+            {
+                if (!SourceAssignmentMatches(
+                        sourceInstruction,
+                        assignment,
+                        addressDefinitions,
+                        origins))
+                    throw Error(
+                        context,
+                        $"relevant operation in block '{fact.Label.Name}', instruction " +
+                        $"{fact.InstructionOrdinal} changed its target/operand lineage");
+                RequireSourceScope(tree, assignment, fact.Label, context);
+                continue;
+            }
             var targetInstruction = origin.Target switch
             {
                 SlangBind binding => binding.Instruction,
@@ -1599,7 +1633,15 @@ internal static class CooperationTargetVerifier
                 return Flow.FromNormal(input);
             case SlangAssign assignment:
                 foreach (var state in input)
+                {
                     RequireDefined(assignment.Value, state, context);
+                    if (assignment.Target is SlangIndexedPlace indexed)
+                    {
+                        RequireDefined(indexed.Index, state, context);
+                        if (!PlaceDefined(indexed.Target, state))
+                            throw Error(context, "control dataflow reads a value without a reaching definition");
+                    }
+                }
                 return Flow.FromNormal(
                     [.. input.Select(state => state.Assign(assignment.Target, assignment.Value, token))]);
             case SlangGetDimensions dimensions:
@@ -1670,6 +1712,7 @@ internal static class CooperationTargetVerifier
             SlangMemberPlace member => PlaceDefined(member.Target, state),
             SlangComponentPlace component => PlaceDefined(component.Target, state),
             SlangSwizzlePlace swizzle => PlaceDefined(swizzle.Target, state),
+            SlangIndexedPlace indexed => PlaceDefined(indexed.Target, state),
             _ => false
         };
 

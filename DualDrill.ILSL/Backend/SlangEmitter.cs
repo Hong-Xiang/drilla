@@ -240,6 +240,10 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 LiteralOperation when operands.Length == 1 => Operand(0),
                 StructuredBufferLoadOperation when operands.Length == 2 =>
                     $"{Operand(0)}[{Operand(1)}]",
+                ReadWriteStructuredBufferLoadOperation when operands.Length == 2 =>
+                    $"{Operand(0)}[{Operand(1)}]",
+                TextureSampleLevelOperation when operands.Length == 4 =>
+                    $"{Operand(0)}.SampleLevel({Operand(1)}, {Operand(2)}, {Operand(3)})",
                 IConversionOperation conversion when operands.Length == 1 =>
                     $"{conversion.ResultType.Name}({Operand(0)})",
                 IVectorSwizzleGetOperation swizzle when operands.Length == 1 =>
@@ -298,6 +302,8 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 SlangMemberPlace member => $"{RenderPlace(member.Target)}.{member.Member.Name}",
                 SlangComponentPlace component => $"{RenderPlace(component.Target)}.{component.Component}",
                 SlangSwizzlePlace swizzle => $"{RenderPlace(swizzle.Target)}.{swizzle.Pattern}",
+                SlangIndexedPlace indexed =>
+                    $"{RenderPlace(indexed.Target)}[{RenderOperand(indexed.Index)}]",
                 _ => throw new NotSupportedException($"Unknown Slang place {place.GetType().Name}.")
             };
 
