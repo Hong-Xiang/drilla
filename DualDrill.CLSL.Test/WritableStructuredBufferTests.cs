@@ -10,6 +10,7 @@ using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
+using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.ShaderAttribute;
@@ -531,9 +532,12 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
         var body = Assert.Single(target.FunctionDefinitions).Value;
         var assignment = Assert.Single(TargetStatements(body.Body).OfType<SlangAssign>());
         var indexed = Assert.IsType<SlangIndexedPlace>(assignment.Target);
+        var origin = Assert.Single(body.Origins.Instructions);
         Assert.Equal(ReadWriteStructuredBufferType.Instance, indexed.Target.Type);
         Assert.Equal(ShaderType.U32, indexed.Index.Type);
         Assert.Equal(ShaderType.F32, indexed.Type);
+        Assert.Equal(valid, origin.Source);
+        Assert.Same(assignment, origin.Target);
         Assert.Matches(
             @"v_\d+_Output\[v_\d+\] = v_\d+;",
             new SlangEmitter(target).Emit());
@@ -565,6 +569,32 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
                 new SlangTargetLowering().Lower(OperationModule(instruction)));
             Assert.Contains("invalid read-write storage-buffer store signature", exception.Message);
         });
+    }
+
+    [Fact]
+    public void WritableDimensionsOriginPreservesImmediateCrossBlockCapture()
+    {
+        var module = WritableDimensionsCaptureModule();
+        var target = new SlangTargetLowering().Lower(module);
+        var body = Assert.Single(target.FunctionDefinitions).Value;
+        var dimensions = Assert.Single(body.Origins.Dimensions);
+        var capture = Assert.IsType<SlangAssign>(dimensions.Capture);
+        var captured = Assert.IsType<SlangValueOperand>(capture.Value);
+        var carrier = Assert.IsType<SlangVariablePlace>(capture.Target).Variable;
+        var store = Assert.Single(body.Origins.Instructions, origin =>
+            origin.Source.Operation is ReadWriteStructuredBufferStoreOperation);
+        var assignment = Assert.IsType<SlangAssign>(store.Target);
+        var indexed = Assert.IsType<SlangIndexedPlace>(assignment.Target);
+        var index = Assert.IsType<SlangVariablePlace>(
+            Assert.IsType<SlangPlaceOperand>(indexed.Index).Place);
+
+        Assert.IsType<ReadWriteStructuredBufferLengthOperation>(dimensions.Source.Operation);
+        Assert.Same(dimensions.Source.Result, dimensions.Dimensions.Count);
+        Assert.Same(dimensions.Dimensions.Count, captured.Value);
+        Assert.Same(body.Origins.Captures[dimensions.Dimensions.Count], carrier);
+        Assert.True(AreAdjacent(body.Body, dimensions.Dimensions, capture));
+        Assert.Same(carrier, index.Variable);
+        Assert.Equal(ShaderType.F32, indexed.ElementType);
     }
 
     [Fact]
@@ -663,6 +693,28 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
         }
     }
 
+    private static bool AreAdjacent(
+        SlangBlock block,
+        SlangStatement first,
+        SlangStatement second)
+    {
+        var statements = block.Statements;
+        for (var index = 0; index + 1 < statements.Length; index++)
+            if (ReferenceEquals(statements[index], first) &&
+                ReferenceEquals(statements[index + 1], second))
+                return true;
+        return statements.Any(statement => statement switch
+        {
+            SlangScope scope => AreAdjacent(scope.Body, first, second),
+            SlangIf conditional =>
+                AreAdjacent(conditional.WhenTrue, first, second) ||
+                AreAdjacent(conditional.WhenFalse, first, second),
+            SlangDoOnce once => AreAdjacent(once.Body, first, second),
+            SlangLoop loop => AreAdjacent(loop.Body, first, second),
+            _ => false
+        });
+    }
+
     private static int Count(string value, string fragment) =>
         value.Split(fragment, StringSplitOptions.None).Length - 1;
 
@@ -701,6 +753,55 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
                 null));
         return new ShaderModuleDeclaration<RegionFunctionBody>(
             [.. declarations, function],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(function, body));
+    }
+
+    private static ShaderModuleDeclaration<RegionFunctionBody> WritableDimensionsCaptureModule()
+    {
+        var output = new VariableDeclaration(
+            StorageAddressSpace.Instance,
+            "Output",
+            ReadWriteStructuredBufferType.Instance,
+            [new GroupAttribute(0), new BindingAttribute(0)]);
+        var function = new FunctionDeclaration(
+            "Run",
+            [],
+            new FunctionReturn(UnitType.Instance, []),
+            [new ComputeAttribute(), new WorkgroupSizeAttribute(1, 1, 1)]);
+        var entry = DualDrill.CLSL.Language.Symbol.Label.Create("entry");
+        var store = DualDrill.CLSL.Language.Symbol.Label.Create("store");
+        var count = ShaderValue.Intermediate(ShaderType.U32);
+        var entryBody = RegionFixture.Body(
+            entry,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    ReadWriteStructuredBufferLengthOperation.Instance,
+                    count,
+                    [output.Value],
+                    "rw-captured-length")
+            ],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(store, [])));
+        var storeBody = RegionFixture.Body(
+            store,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    ReadWriteStructuredBufferStoreOperation.Instance,
+                    null,
+                    [output.Value, count, ShaderValue.Literal(new F32Literal(1.0f))],
+                    "rw-captured-store")
+            ],
+            Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>());
+        var body = RegionFixture.CreateFunctionBody(
+            function,
+            RegionTree.Block(
+                entry,
+                [RegionTree.Block(store, [], storeBody, null)],
+                entryBody,
+                store));
+        return new ShaderModuleDeclaration<RegionFunctionBody>(
+            [output, function],
             ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(function, body));
     }
 

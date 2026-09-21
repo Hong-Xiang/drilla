@@ -50,6 +50,11 @@ Slang uses `RWStructuredBuffer<float>`, `GetDimensions`, indexed reads and
 indexed assignments. WGSL uses `var<storage, read_write>`, `arrayLength`,
 indexed reads and stores.
 
+An explicit-LOD texture sample may supply the stored f32 value in compute code.
+This composes the existing typed sample `MemoryRead` and indexed store
+`MemoryWrite`; it does not add implicit derivatives, runtime dispatch, or GPU
+execution.
+
 Typed reflection reports `GPUBufferBindingType.Storage`, element stride `4`,
 minimum binding size `4`, group/binding, compute visibility, and dynamic-offset
 policy. `ShaderStorageBufferBinding.Kind` is now constructor data rather than a

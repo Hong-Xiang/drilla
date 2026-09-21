@@ -19,6 +19,7 @@ using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Reflection;
 using DualDrill.Common.CodeTextWriter;
 using DualDrill.Common.Nat;
+using DualDrill.Graphics;
 using DualDrill.Mathematics;
 using Xunit.Abstractions;
 
@@ -327,6 +328,139 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         Assert.Contains("if", slang);
         Assert.Contains("ddx(", slang);
         Assert.Contains("arrayLength(", wgsl);
+        Assert.Contains("dpdx(", wgsl);
+    }
+
+    [Fact]
+    public void ComputeTextureSampleWritesOneChannelToGuardedWritableOutput()
+    {
+        var shader = new TextureToWritableComputeShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var method = Assert.Single(
+            raw.FunctionDefinitions,
+            item => item.Key.Name == nameof(TextureToWritableComputeShader.Run));
+        Assert.Contains(
+            method.Value.Code.Instructions,
+            item => item.Instruction.OpCode.Name?.StartsWith("brfalse", StringComparison.Ordinal) is true ||
+                    item.Instruction.OpCode.Name?.StartsWith("brtrue", StringComparison.Ordinal) is true);
+        var compiled = new CLSLCompiler(new(CLSLCompileTarget.IR)).Compile(raw);
+        var source = compiled.RunPass(new FunctionToOperationPass());
+        var function = source.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(TextureToWritableComputeShader.Run));
+        var operations = Instructions(source.GetBody(function)).ToArray();
+        var length = Assert.Single(operations, instruction =>
+            instruction.Operation is ReadWriteStructuredBufferLengthOperation);
+        var sample = Assert.Single(operations, instruction =>
+            instruction.Operation is TextureSampleLevelOperation);
+        var store = Assert.Single(operations, instruction =>
+            instruction.Operation is ReadWriteStructuredBufferStoreOperation);
+        var effects = FunctionEffectAnalysis.Analyze(source)[function];
+        var reflection = new ShaderModuleReflection();
+        var storage = Assert.Single(reflection.GetStorageBufferBindings(raw));
+        var texture = Assert.Single(reflection.GetTextureBindings(raw));
+        var sampler = Assert.Single(reflection.GetSamplerBindings(raw));
+        var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
+        var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
+
+        output.WriteLine(method.Value.PrettyPrint());
+        output.WriteLine(slang);
+        output.WriteLine(wgsl);
+        output.WriteLine("source oracle: one sampled RGBA value contributes only its x channel to Output[0]");
+
+        Assert.DoesNotContain(effects.RequirementSites, site =>
+            site.Operation is ReadWriteStructuredBufferLengthOperation);
+        var read = Assert.Single(effects.RequirementSites, site =>
+            site.Operation is TextureSampleLevelOperation);
+        var write = Assert.Single(effects.RequirementSites, site =>
+            site.Operation is ReadWriteStructuredBufferStoreOperation);
+        Assert.Equal(OperationRequirement.MemoryRead, read.Requirements);
+        Assert.Equal(OperationRequirement.MemoryWrite, write.Requirements);
+        Assert.Same(sample.Payload, read.Payload);
+        Assert.Same(store.Payload, write.Payload);
+        Assert.NotNull(length.Payload);
+        Assert.Equal(GPUBufferBindingType.Storage, storage.Kind);
+        Assert.Equal(4ul, storage.MinimumBindingSize);
+        Assert.Equal(2, texture.Binding);
+        Assert.Equal(3, sampler.Binding);
+        Assert.Contains(".GetDimensions(", slang);
+        Assert.Contains(".SampleLevel(", slang);
+        Assert.Matches(@"v_\d+_Output\[v_\d+\] = ", slang);
+        Assert.Contains("arrayLength(", wgsl);
+        Assert.Contains("textureSampleLevel(", wgsl);
+        Assert.Contains("var<storage, read_write>", wgsl);
+    }
+
+    [Fact]
+    public void PortableDerivativeConsumesExplicitLodSampleAsData()
+    {
+        var shader = new TextureSampleDerivativeShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var function = source.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(TextureSampleDerivativeShader.Fragment));
+        var sample = Assert.Single(
+            Instructions(source.GetBody(function)),
+            instruction => instruction.Operation is TextureSampleLevelOperation);
+        var effects = FunctionEffectAnalysis.Analyze(source)[function];
+        var participation = Assert.Single(CLSLCooperationAnalysis.Analyze(source)
+            .EntryUniformQuadParticipations);
+        var pointer = source.RunPass(new StablePointerRegionParameterPass());
+        var target = new SlangTargetLowering().Lower(pointer);
+        CooperationAdmission.CheckTargetCorrespondence(pointer, target, new([participation]));
+        var sampleOrigin = Assert.Single(target.GetBody(function).Origins.Definitions, origin =>
+            origin.Source.Operation is TextureSampleLevelOperation);
+        var reflection = new ShaderModuleReflection();
+        var slang = Emit(shader, CLSLCompileTarget.SLang);
+        var wgsl = Emit(shader, CLSLCompileTarget.WGSL);
+
+        output.WriteLine(slang);
+        output.WriteLine(wgsl);
+
+        var read = Assert.Single(effects.RequirementSites, site =>
+            site.Operation is TextureSampleLevelOperation);
+        Assert.Equal(OperationRequirement.MemoryRead, read.Requirements);
+        Assert.Equal(OperationRequirement.None, read.Requirements & OperationRequirement.DerivativeQuad);
+        Assert.Same(sample.Payload, read.Payload);
+        Assert.Contains(participation.OriginalRelevantInstructions, fact =>
+            fact.Operation is TextureSampleLevelOperation &&
+            ReferenceEquals(fact.Result, sample.Result) &&
+            ReferenceEquals(fact.Payload, sample.Payload));
+        Assert.Same(sample.Result, sampleOrigin.Definition.Instruction.Result);
+        Assert.Single(reflection.GetTextureBindings(raw));
+        Assert.Single(reflection.GetSamplerBindings(raw));
+        Assert.Empty(reflection.GetStorageBufferBindings(raw));
+        Assert.Contains(".SampleLevel(", slang);
+        Assert.Contains("ddx(", slang);
+        Assert.Contains("textureSampleLevel(", wgsl);
+        Assert.Contains("dpdx(", wgsl);
+        Assert.DoesNotContain("RWStructuredBuffer", slang);
+        Assert.DoesNotContain("read_write", wgsl);
+    }
+
+    [Fact]
+    public void PortableTextureSampleRetainsSensitiveArgumentRequirements()
+    {
+        var shader = new TextureSampleSensitiveArgumentShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var function = source.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(TextureSampleSensitiveArgumentShader.Fragment));
+        var summary = FunctionEffectAnalysis.Analyze(source)[function];
+        var participation = Assert.Single(CLSLCooperationAnalysis.Analyze(source)
+            .EntryUniformQuadParticipations);
+        var slang = Emit(shader, CLSLCompileTarget.SLang);
+        var wgsl = Emit(shader, CLSLCompileTarget.WGSL);
+
+        Assert.Contains(summary.RequirementSites, site =>
+            site.Operation is TextureSampleLevelOperation &&
+            site.Requirements == OperationRequirement.MemoryRead);
+        Assert.Contains(summary.RequirementSites, site =>
+            (site.Requirements & OperationRequirement.DerivativeQuad) != 0);
+        Assert.Contains(participation.OriginalRelevantInstructions, fact =>
+            fact.Operation is TextureSampleLevelOperation);
+        Assert.Contains(".SampleLevel(", slang);
+        Assert.Contains("ddx(", slang);
+        Assert.Contains("textureSampleLevel(", wgsl);
         Assert.Contains("dpdx(", wgsl);
     }
 
@@ -781,6 +915,200 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         Assert.Same(origin.Dimensions.Count, value.Value);
         Assert.Same(body.Origins.Captures[origin.Dimensions.Count], target.Variable);
         Assert.True(AreAdjacent(body.Body, origin.Dimensions, capture));
+    }
+
+    [Fact]
+    public void TargetVerifierRejectsTextureSampleLineageMutationsAndMissingOrigins()
+    {
+        var prepared = PrepareTarget(new TextureSampleDerivativeShader());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var sample = Assert.Single(body.Origins.Definitions, origin =>
+            origin.Source.Operation is TextureSampleLevelOperation);
+        var instruction = sample.Definition.Instruction;
+        var operands = instruction.Operands.ToImmutableArray();
+        Assert.Equal(4, operands.Length);
+        var wrongTexture = new VariableDeclaration(
+            HandleAddressSpace.Instance,
+            "wrong_texture",
+            SampledTexture2DF32Type.Instance,
+            [new GroupAttribute(0), new BindingAttribute(7)]);
+        var wrongSampler = new VariableDeclaration(
+            HandleAddressSpace.Instance,
+            "wrong_sampler",
+            SamplerStateType.Instance,
+            [new GroupAttribute(0), new BindingAttribute(8)]);
+        var cases = new (string Name, Func<SlangFunctionBody> Mutate, string Expected)[]
+        {
+            (
+                "texture-root-with-updated-origins",
+                () => ReplaceSample(instruction with
+                {
+                    Operand0 = new SlangPlaceOperand(new SlangVariablePlace(wrongTexture))
+                }),
+                "instruction origin changed its source operation/result/operand lineage"),
+            (
+                "sampler-root-with-updated-origins",
+                () => ReplaceSample(instruction with
+                {
+                    Operand1 = new SlangPlaceOperand(new SlangVariablePlace(wrongSampler))
+                }),
+                "instruction origin changed its source operation/result/operand lineage"),
+            (
+                "uv-with-updated-origins",
+                () => ReplaceSample(instruction with
+                {
+                    RestOperands =
+                    [
+                        new SlangValueOperand(ShaderValue.Intermediate(ShaderType.Vec2F32)),
+                        operands[3]
+                    ]
+                }),
+                "instruction origin changed its source operation/result/operand lineage"),
+            (
+                "lod-with-updated-origins",
+                () => ReplaceSample(instruction with
+                {
+                    RestOperands =
+                    [
+                        operands[2],
+                        new SlangValueOperand(ShaderValue.Intermediate(ShaderType.F32))
+                    ]
+                }),
+                "instruction origin changed its source operation/result/operand lineage"),
+            (
+                "result-with-updated-origins",
+                () => ReplaceSample(instruction with
+                {
+                    Result = ShaderValue.Intermediate(ShaderType.Vec4F32)
+                }),
+                "definition origin changed its source operation/result/operand lineage"),
+            (
+                "missing-sample-origins",
+                () => new SlangFunctionBody(
+                    body.Declaration,
+                    body.Body,
+                    body.Origins with
+                    {
+                        Definitions = [.. body.Origins.Definitions.Where(origin =>
+                            !ReferenceEquals(origin.Definition, sample.Definition))],
+                        Instructions = [.. body.Origins.Instructions.Where(origin =>
+                            !ReferenceEquals(origin.Target, sample.Definition))]
+                    }),
+                "activation template is missing a source instruction")
+        };
+
+        SlangFunctionBody ReplaceSample(
+            Instruction<SlangOperand, IShaderValue> changedInstruction)
+        {
+            var changed = new SlangBind(changedInstruction);
+            return Rewrite(
+                body,
+                statement => ReferenceEquals(statement, sample.Definition) ? changed : statement);
+        }
+
+        foreach (var item in cases)
+        {
+            var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+                prepared.Target.Declarations,
+                prepared.Target.FunctionDefinitions.SetItem(prepared.Function, item.Mutate()));
+            var error = Assert.Throws<NotSupportedException>(() =>
+                CooperationAdmission.CheckTargetCorrespondence(
+                    prepared.Pointer,
+                    corrupted,
+                    prepared.Facts));
+            output.WriteLine($"{item.Name}: {error.Message}");
+            Assert.Contains(item.Expected, error.Message);
+        }
+    }
+
+    [Fact]
+    public void StaleTextureSampleFactCannotCertifyChangedSource()
+    {
+        var raw = new RuntimeReflectionParser(CompilationContext.Create())
+            .ParseShaderModule(new TextureSampleDerivativeShader());
+        var source = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var facts = CLSLCooperationAnalysis.Analyze(source);
+        var pointer = source.RunPass(new StablePointerRegionParameterPass());
+        var function = pointer.FunctionDefinitions.Keys.Single(candidate =>
+            candidate.Name == nameof(TextureSampleDerivativeShader.Fragment));
+        var body = pointer.GetBody(function);
+        var site = body.Labels
+            .SelectMany(label => body[label].Body.Elements.Select(
+                (instruction, ordinal) => (Label: label, Ordinal: ordinal, Instruction: instruction)))
+            .Single(item => item.Instruction.Operation is TextureSampleLevelOperation);
+        var corruptedBody = body.MapRegionBody(block =>
+            !ReferenceEquals(block.Label, site.Label)
+                ? block
+                : block with
+                {
+                    Body = Seq.Create(
+                        block.Body.Elements.Select((instruction, ordinal) =>
+                            ordinal == site.Ordinal
+                                ? instruction with { Payload = new object() }
+                                : instruction),
+                        block.Body.Last)
+                });
+        var corruptedPointer = new ShaderModuleDeclaration<RegionFunctionBody>(
+            pointer.Declarations,
+            pointer.FunctionDefinitions.SetItem(function, corruptedBody));
+        var target = new SlangTargetLowering().Lower(corruptedPointer);
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                corruptedPointer,
+                target,
+                facts));
+
+        Assert.Contains("relevant operation fact", error.Message);
+        Assert.Contains("does not match the analyzed source", error.Message);
+    }
+
+    [Fact]
+    public void TargetVerifierRequiresSourceDerivedTextureSampleCapture()
+    {
+        var prepared = PrepareTarget(TextureCaptureModule());
+        var body = prepared.Target.GetBody(prepared.Function);
+        var sample = Assert.Single(body.Origins.Definitions, origin =>
+            origin.Source.Operation is TextureSampleLevelOperation);
+        var capture = Assert.IsType<SlangAssign>(sample.Capture);
+        var carrier = Assert.IsType<SlangVariablePlace>(capture.Target).Variable;
+        var derivative = Assert.Single(body.Origins.Definitions, origin =>
+            origin.Source.Operation is CallOperation &&
+            Equals(origin.Source.Payload, "captured-sample-derivative"));
+        var changedDerivative = new SlangBind(
+            derivative.Definition.Instruction with
+            {
+                Operand1 = new SlangValueOperand(sample.Source.Result!)
+            });
+        var changed = Rewrite(body, statement =>
+            ReferenceEquals(statement, capture) ||
+            statement is SlangDeclare declaration && ReferenceEquals(declaration.Variable, carrier)
+                ? null
+                : ReferenceEquals(statement, derivative.Definition)
+                    ? changedDerivative
+                    : statement);
+        changed = new SlangFunctionBody(
+            changed.Declaration,
+            changed.Body,
+            changed.Origins with
+            {
+                Captures = changed.Origins.Captures.Remove(sample.Source.Result!),
+                Definitions = [.. changed.Origins.Definitions.Select(origin =>
+                    ReferenceEquals(origin.Source.Result, sample.Source.Result)
+                        ? origin with { Capture = null }
+                        : origin)]
+            });
+        var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+            prepared.Target.Declarations,
+            prepared.Target.FunctionDefinitions.SetItem(prepared.Function, changed));
+
+        var error = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(
+                prepared.Pointer,
+                corrupted,
+                prepared.Facts));
+
+        Assert.Contains("source value crosses source-label scope without its required capture", error.Message);
     }
 
     [Fact]
@@ -1691,6 +2019,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     [InlineData(typeof(UniformStorageConditionalShader), "conditional control")]
     [InlineData(typeof(ReadonlyBufferLengthConditionalShader), "conditional control")]
     [InlineData(typeof(ReadonlyBufferLoadConditionalShader), "conditional control")]
+    [InlineData(typeof(TextureSampleConditionalDerivativeShader), "conditional control")]
     [InlineData(typeof(SwitchDerivativeShader), "control is not admitted")]
     [InlineData(typeof(UniformSwitchDerivativeShader), "switch control is not admitted")]
     [InlineData(typeof(LoopContinueDerivativeShader), "RegionKind.Loop")]
@@ -2361,6 +2690,71 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
                 returned));
         return new ShaderModuleDeclaration<RegionFunctionBody>(
             [input, declaration],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body));
+    }
+
+    private static ShaderModuleDeclaration<RegionFunctionBody> TextureCaptureModule()
+    {
+        var texture = new VariableDeclaration(
+            HandleAddressSpace.Instance,
+            "Color",
+            SampledTexture2DF32Type.Instance,
+            [new GroupAttribute(0), new BindingAttribute(2)]);
+        var sampler = new VariableDeclaration(
+            HandleAddressSpace.Instance,
+            "Linear",
+            SamplerStateType.Instance,
+            [new GroupAttribute(0), new BindingAttribute(3)]);
+        var uv = new ParameterDeclaration("uv", ShaderType.Vec2F32, [new LocationAttribute(0)]);
+        var lod = new ParameterDeclaration("lod", ShaderType.F32, [new LocationAttribute(1)]);
+        var declaration = new FunctionDeclaration(
+            "Fragment",
+            [uv, lod],
+            new FunctionReturn(ShaderType.Vec4F32, [new LocationAttribute(0)]),
+            [new FragmentAttribute()]);
+        var entry = Label.Create("entry");
+        var returned = Label.Create("returned");
+        var uvValue = ShaderValue.Intermediate(ShaderType.Vec2F32);
+        var lodValue = ShaderValue.Intermediate(ShaderType.F32);
+        var sampled = ShaderValue.Intermediate(ShaderType.Vec4F32);
+        var derivative = ShaderValue.Intermediate(ShaderType.Vec4F32);
+        var dpdx = ShaderFunction.Instance.GetFunction(
+            "dpdx",
+            ShaderType.Vec4F32,
+            ShaderType.Vec4F32);
+        var entryBody = RegionFixture.Body(
+            entry,
+            [],
+            [
+                Instruction.Factory.Load(default, new LoadOperation(), uvValue, uv.Value),
+                Instruction.Factory.Load(default, new LoadOperation(), lodValue, lod.Value),
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    TextureSampleLevelOperation.Instance,
+                    sampled,
+                    [texture.Value, sampler.Value, uvValue, lodValue],
+                    "captured-sample")
+            ],
+            Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(returned, [])));
+        var returnBody = RegionFixture.Body(
+            returned,
+            [],
+            [
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new CallOperation((FunctionType)dpdx.Type),
+                    derivative,
+                    [dpdx, sampled],
+                    "captured-sample-derivative")
+            ],
+            Terminator.B.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>(derivative));
+        var body = RegionFixture.CreateFunctionBody(
+            declaration,
+            RegionTree.Block(
+                entry,
+                [RegionTree.Block(returned, [], returnBody, null)],
+                entryBody,
+                returned));
+        return new ShaderModuleDeclaration<RegionFunctionBody>(
+            [texture, sampler, declaration],
             ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(declaration, body));
     }
 
@@ -3229,6 +3623,86 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             if (Input.Length > 0u)
                 return DMath.dpdx(0.0f);
             return 0.0f;
+        }
+    }
+
+    private sealed class TextureToWritableComputeShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static readonly RWStructuredBuffer<float> Output;
+
+        [Group(0), Binding(2)]
+        private static readonly Texture2D<float> Color;
+
+        [Group(0), Binding(3)]
+        private static readonly SamplerState Linear;
+#pragma warning restore CS0649
+
+        [Compute, WorkgroupSize(1, 1, 1)]
+        public static void Run()
+        {
+            if (Output.Length > 0u)
+                Output[0u] = Color.SampleLevel(Linear, DMath.vec2(0.5f), 0.0f).x;
+        }
+    }
+
+    private sealed class TextureSampleDerivativeShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(2)]
+        private static readonly Texture2D<float> Color;
+
+        [Group(0), Binding(3)]
+        private static readonly SamplerState Linear;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment(
+            [Location(0)] vec2f32 uv,
+            [Location(1)] float lod) =>
+            DMath.dpdx(Color.SampleLevel(Linear, uv, lod).x);
+    }
+
+    private sealed class TextureSampleSensitiveArgumentShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(2)]
+        private static readonly Texture2D<float> Color;
+
+        [Group(0), Binding(3)]
+        private static readonly SamplerState Linear;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment(
+            [Location(0)] vec2f32 uv,
+            [Location(1)] float lod) =>
+            Color.SampleLevel(Linear, uv, DMath.dpdx(lod)).x;
+    }
+
+    private sealed class TextureSampleConditionalDerivativeShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(2)]
+        private static readonly Texture2D<float> Color;
+
+        [Group(0), Binding(3)]
+        private static readonly SamplerState Linear;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment(
+            [Location(0)] vec2f32 uv,
+            [Location(1)] float lod)
+        {
+            var sampled = Color.SampleLevel(Linear, uv, lod).x;
+            if (sampled > 0.0f)
+                return DMath.dpdx(sampled);
+            return sampled;
         }
     }
 

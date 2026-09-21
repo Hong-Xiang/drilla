@@ -45,6 +45,19 @@ the UV or LOD remain independent.
 Slang uses `Texture2D<vec4<f32>>`, `SamplerState`, and `.SampleLevel`; the WGSL
 target uses `texture_2d<f32>`, `sampler`, and `textureSampleLevel`.
 
+## Cooperation
+
+Under `PortableWgsl`, an explicit-LOD sample may contribute data to a fragment
+derivative. The sample remains varying for control decisions, and a derivative
+used to compute its UV or LOD retains its own `DerivativeQuad` requirement.
+Target verification preserves the exact source texture, sampler, UV, LOD,
+result, payload, label and ordinal, including any source-required cross-block
+capture.
+
+Writable buffers remain compute-only. The compute composition may guard
+`Output[0]` with `Output.Length` and store one sampled f32 channel, but a
+fragment sample/derivative module cannot add a writable declaration.
+
 ## Reflection and descriptors
 
 `GetTextureBindings` reports name, group, binding, OR-combined visibility,
