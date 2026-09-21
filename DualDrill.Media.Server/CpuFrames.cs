@@ -5,7 +5,7 @@ internal static class CpuFrames
 {
     internal const int Width = 320;
     internal const int Height = 240;
-    internal const int FramesPerSecond = VideoSettings.FramesPerSecond;
+    internal const int FramesPerSecond = VideoSettings.DefaultFramesPerSecond;
     internal const int BytesPerPixel = VideoSettings.BytesPerPixel;
     internal const int FrameBytes = Width * Height * BytesPerPixel;
     internal const ulong FrameDurationNanoseconds = ClockTime.NanosecondsPerSecond / FramesPerSecond;
@@ -102,7 +102,7 @@ internal sealed class CpuBgraInput
         this.video = video;
         using Caps caps = Caps.FromString(
             $"video/x-raw,format=BGRA,width={video.Width},height={video.Height}," +
-            $"framerate={VideoSettings.FramesPerSecond}/1")
+            $"framerate={video.FramesPerSecond}/1")
             ?? throw new InvalidOperationException("Could not parse the raw BGRA caps.");
         source.SetCaps(caps);
         source.SetLive(true);

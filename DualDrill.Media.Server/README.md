@@ -62,18 +62,20 @@ Open <http://127.0.0.1:5084/> and select **Start**. The acceptance harness may
 rely on stable element IDs `#video`, `#status`, `#stats`, `#start`, and `#stop`;
 signaling uses `ws://127.0.0.1:5084/ws`.
 
-Width, height, and an optional VP8 target bitrate are ordinary .NET
-configuration keys. Dimensions must be positive and even; bitrate is in bits per
-second. Omitting the bitrate preserves `vp8enc`'s native default instead of
-guessing a target. To try 1920x1080 at 30 fps and an explicit 8 Mbps target on
-the trusted LAN interface while retaining loopback:
+Width, height, frame rate, and an optional VP8 target bitrate are ordinary .NET
+configuration keys. Dimensions must be positive and even. Frame rate must be an
+integer from 1 through 120 fps and defaults to 30 fps. Bitrate is in bits per
+second; omitting it preserves `vp8enc`'s native default instead of guessing a
+target. To try 1920x1080 at 60 fps and an explicit 8 Mbps target on the trusted
+LAN interface while retaining loopback:
 
 ```sh
 NIXPKGS_ALLOW_UNFREE=1 nix develop --builders '' .#media --command \
   nix run --builders '' --impure \
   github:nix-community/nixGL/b6105297e6f0cd041670c3e8628394d4ee247ed5#nixVulkanNvidia -- \
   dotnet run --project DualDrill.Media.Server/DualDrill.Media.Server.csproj -- \
-  --Video:Width=1920 --Video:Height=1080 --Video:Bitrate=8000000 \
+  --Video:Width=1920 --Video:Height=1080 --Video:FramesPerSecond=60 \
+  --Video:Bitrate=8000000 \
   --urls "http://127.0.0.1:5084;http://10.172.211.158:5084"
 ```
 
@@ -153,14 +155,14 @@ The optional final arguments select expected decoded dimensions, for example
 
 The dependency-free .NET script drives Chromium's DevTools protocol. It checks
 decoded dimensions, the colored triangle against its dark background, movement
-between distinct decoded frames, a finite receiver bitrate/frame-rate sample,
-rejection of a concurrent viewer, and recovery after closing a tab. It also
-holds a statistics request and delivers delayed callbacks from a stopped
-connection after its replacement starts, requiring a different stream with
-advancing frame metadata and fresh statistics. Color and motion comparisons
-allow for VP8 loss. Its restore is isolated from the repository's unrelated
-central NuGet declarations. Browser software decoding/rendering is independent
-of the server's hardware GPU source.
+between distinct decoded frames, at least ten seconds of finite receiver
+bitrate/frame-rate samples per connection, rejection of a concurrent viewer, and
+recovery after closing a tab. It also holds a statistics request and delivers
+delayed callbacks from a stopped connection after its replacement starts,
+requiring a different stream with advancing frame metadata and fresh statistics.
+Color and motion comparisons allow for VP8 loss. Its restore is isolated from
+the repository's unrelated central NuGet declarations. Browser software
+decoding/rendering is independent of the server's hardware GPU source.
 
 This verifies the transport mechanics and exposes receiver measurements; the
 low-complexity triangle is not a network-capacity or complex-scene quality
