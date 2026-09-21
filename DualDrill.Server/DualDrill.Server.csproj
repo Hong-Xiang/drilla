@@ -24,9 +24,6 @@
 		<PackageReference Include="HtmlAgilityPack" />
 		<PackageReference Include="Microsoft.Web.WebView2" />
 		<PackageReference Include="pythonnet" />
-		<PackageReference Include="Serilog" />
-		<PackageReference Include="Serilog.Extensions.Logging" />
-		<PackageReference Include="Serilog.Sinks.Console" />
 		<PackageReference Include="Swashbuckle.AspNetCore" />
 		<PackageReference Include="Veldrid" />
 		<PackageReference Include="Veldrid.SPIRV" />
@@ -41,9 +38,6 @@
 		<ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
 		<ProjectReference Include="..\DualDrill.WebView\DualDrill.WebView.csproj" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
-		<PackageReference Include="SIPSorceryMedia.FFmpeg" />
-		<PackageReference Include="SIPSorcery" />
-		<PackageReference Include="SIPSorceryMedia.Encoders" />
 		<PackageReference Include="System.Reactive" />
 		<PackageReference Include="ICSharpCode.Decompiler" />
 		<PackageReference Update="DotNext.Unsafe" />

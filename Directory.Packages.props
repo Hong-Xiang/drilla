@@ -28,9 +28,6 @@
     <PackageVersion Include="R3" Version="1.2.9" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.4" />
     <PackageVersion Include="System.Reactive" Version="6.0.1" />
-    <PackageVersion Include="SIPSorceryMedia.FFmpeg" Version="1.4.2" />
-    <PackageVersion Include="SIPSorcery" Version="8.0.6" />
-    <PackageVersion Include="SIPSorceryMedia.Encoders" Version="0.0.13" />
     <PackageVersion Include="ICSharpCode.Decompiler" Version="9.1.0.7988" />
     <PackageVersion Include="Lokad.ILPack" Version="0.2.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
@@ -55,9 +52,6 @@
     <PackageVersion Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageVersion Include="HtmlAgilityPack" Version="1.11.71" />
     <PackageVersion Include="pythonnet" Version="3.0.4" />
-    <PackageVersion Include="Serilog" Version="4.1.0" />
-    <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
-    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.1.0" />
     <PackageVersion Include="Veldrid" Version="4.9.0" />
     <PackageVersion Include="Veldrid.SPIRV" Version="1.0.15" />
