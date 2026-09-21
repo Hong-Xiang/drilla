@@ -132,5 +132,7 @@ its namespace and uniform-binding migration.
 Control-flow support covers the exercised C# subset, not arbitrary CIL or a
 complete control-flow reconstruction algorithm. Shader compilation and manual
 browser rendering do not establish general semantic equivalence. The optional
-native project covers triangle readback and error reporting; automated
-raymarching image comparisons and a modern native-backend migration are deferred.
+native project covers triangle readback and error reporting, while the media
+server demonstrates the wgpu-native GPU-to-WebRTC path. Automated canonical
+raymarching image comparisons and migration of that shader into the media path
+remain deferred.
