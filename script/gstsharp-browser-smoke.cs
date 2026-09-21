@@ -229,13 +229,16 @@ for (var iteration = 0; iteration < 4; iteration++)
                     : current.framesPerSecond
                 );
               }
+              const finiteMbps = mbps.filter(Number.isFinite);
               const finiteFps = fps.filter(Number.isFinite);
               const jitters = samples.map(value => value.jitter).filter(Number.isFinite);
               const first = samples[0], last = samples.at(-1);
               return {
                 seconds: (last.timestamp - first.timestamp) / 1000,
-                mbpsAverage: mbps.reduce((sum, value) => sum + value, 0) / mbps.length,
-                mbpsMin: Math.min(...mbps), mbpsMax: Math.max(...mbps),
+                mbpsCount: finiteMbps.length,
+                mbpsAverage: finiteMbps.reduce((sum, value) => sum + value, 0) / finiteMbps.length,
+                mbpsMin: Math.min(...finiteMbps), mbpsMax: Math.max(...finiteMbps),
+                fpsCount: finiteFps.length,
                 fpsAverage: finiteFps.reduce((sum, value) => sum + value, 0) / finiteFps.length,
                 fpsMin: Math.min(...finiteFps), fpsMax: Math.max(...finiteFps),
                 packetsLostStart: first.packetsLost, packetsLostEnd: last.packetsLost,
@@ -247,8 +250,10 @@ for (var iteration = 0; iteration < 4; iteration++)
             })()
             """, cancellation);
         if (stable.GetProperty("seconds").GetDouble() < 4
-            || stable.GetProperty("mbpsAverage").GetDouble() <= 0
-            || stable.GetProperty("fpsAverage").GetDouble() <= 0)
+            || stable.GetProperty("mbpsCount").GetInt32() != 5
+            || stable.GetProperty("mbpsMin").GetDouble() <= 0
+            || stable.GetProperty("fpsCount").GetInt32() != 5
+            || stable.GetProperty("fpsMin").GetDouble() <= 0)
         {
             throw new InvalidOperationException($"Stable receiver window was invalid: {stable}");
         }
