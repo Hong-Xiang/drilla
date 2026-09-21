@@ -51,15 +51,18 @@ for (var iteration = 0; iteration < 4; iteration++)
             ["source"] = """
                 globalThis.__mediaSockets = [];
                 globalThis.__mediaStats = {
-                  activeByPeer: new WeakMap(), holdNext: false, release: null, overlap: false
+                  activeByPeer: new WeakMap(), peers: [], nativeGetStats: null,
+                  holdNext: false, release: null, overlap: false
                 };
                 const NativeWebSocket = globalThis.WebSocket;
                 globalThis.WebSocket = class extends NativeWebSocket {
                   constructor(url) { super(url); globalThis.__mediaSockets.push(this); }
                 };
                 const nativeGetStats = RTCPeerConnection.prototype.getStats;
+                globalThis.__mediaStats.nativeGetStats = nativeGetStats;
                 RTCPeerConnection.prototype.getStats = async function(...args) {
                   const state = globalThis.__mediaStats;
+                  if (!state.peers.includes(this)) state.peers.push(this);
                   const active = (state.activeByPeer.get(this) ?? 0) + 1;
                   state.activeByPeer.set(this, active);
                   if (active > 1) state.overlap = true;
@@ -187,8 +190,70 @@ for (var iteration = 0; iteration < 4; iteration++)
         {
             throw new InvalidOperationException($"Receiver stats were not positive: {observation}");
         }
+        var stable = await browser.EvaluateAsync("""
+            (async () => {
+              const state = globalThis.__mediaStats;
+              const peer = state.peers.at(-1);
+              if (!peer || typeof state.nativeGetStats !== 'function')
+                throw new Error('Current receiver peer was not captured');
+              async function sample() {
+                const report = await state.nativeGetStats.call(peer);
+                for (const value of report.values()) {
+                  if (value.type === 'inbound-rtp' && value.kind === 'video') {
+                    return {
+                      timestamp: value.timestamp,
+                      bytesReceived: value.bytesReceived,
+                      framesDecoded: value.framesDecoded,
+                      framesPerSecond: value.framesPerSecond,
+                      packetsLost: value.packetsLost,
+                      jitter: value.jitter
+                    };
+                  }
+                }
+                throw new Error('No inbound video RTP report');
+              }
+              const samples = [];
+              for (let i = 0; i < 6; i++) {
+                samples.push(await sample());
+                if (i < 5) await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+              const mbps = [], fps = [];
+              for (let i = 1; i < samples.length; i++) {
+                const previous = samples[i - 1], current = samples[i];
+                const seconds = (current.timestamp - previous.timestamp) / 1000;
+                if (!(seconds > 0)) throw new Error('Receiver stats time did not advance');
+                mbps.push((current.bytesReceived - previous.bytesReceived) * 8 / seconds / 1e6);
+                fps.push(
+                  Number.isFinite(current.framesDecoded) && Number.isFinite(previous.framesDecoded)
+                    ? (current.framesDecoded - previous.framesDecoded) / seconds
+                    : current.framesPerSecond
+                );
+              }
+              const finiteFps = fps.filter(Number.isFinite);
+              const jitters = samples.map(value => value.jitter).filter(Number.isFinite);
+              const first = samples[0], last = samples.at(-1);
+              return {
+                seconds: (last.timestamp - first.timestamp) / 1000,
+                mbpsAverage: mbps.reduce((sum, value) => sum + value, 0) / mbps.length,
+                mbpsMin: Math.min(...mbps), mbpsMax: Math.max(...mbps),
+                fpsAverage: finiteFps.reduce((sum, value) => sum + value, 0) / finiteFps.length,
+                fpsMin: Math.min(...finiteFps), fpsMax: Math.max(...finiteFps),
+                packetsLostStart: first.packetsLost, packetsLostEnd: last.packetsLost,
+                packetsLostDelta: last.packetsLost - first.packetsLost,
+                jitterMsAverage: jitters.reduce((sum, value) => sum + value, 0)
+                  / jitters.length * 1000,
+                jitterMsMax: Math.max(...jitters) * 1000
+              };
+            })()
+            """, cancellation);
+        if (stable.GetProperty("seconds").GetDouble() < 4
+            || stable.GetProperty("mbpsAverage").GetDouble() <= 0
+            || stable.GetProperty("fpsAverage").GetDouble() <= 0)
+        {
+            throw new InvalidOperationException($"Stable receiver window was invalid: {stable}");
+        }
         previousFrame = observation.GetProperty("decodedFrames").GetInt64();
-        Console.WriteLine($"Connection {iteration + 1}: {observation}");
+        Console.WriteLine($"Connection {iteration + 1}: snapshot={observation} stable={stable}");
 
         if (iteration == 0)
         {
