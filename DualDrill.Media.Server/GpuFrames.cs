@@ -80,14 +80,14 @@ internal sealed class GpuFrames : IDisposable
         _readback = readback;
         _width = width;
         _height = height;
-        _rowBytes = checked(width * CpuFrames.BytesPerPixel);
+        _rowBytes = checked(width * VideoSettings.BytesPerPixel);
         _paddedRowBytes = paddedRowBytes;
         _bufferBytes = checked((ulong)paddedRowBytes * height);
         _frameBytes = checked((int)(_rowBytes * height));
     }
 
-    internal static Task<GpuFrames> CreateAsync(CancellationToken cancellation) =>
-        CreateAsync(CpuFrames.Width, CpuFrames.Height, cancellation);
+    internal static Task<GpuFrames> CreateAsync(VideoSettings video, CancellationToken cancellation) =>
+        CreateAsync(checked((uint)video.Width), checked((uint)video.Height), cancellation);
 
     private static async Task<GpuFrames> CreateAsync(
         uint width,
@@ -95,7 +95,7 @@ internal sealed class GpuFrames : IDisposable
         CancellationToken cancellation)
     {
         cancellation.ThrowIfCancellationRequested();
-        uint paddedRowBytes = checked((width * CpuFrames.BytesPerPixel + 255) & ~255u);
+        uint paddedRowBytes = checked((width * VideoSettings.BytesPerPixel + 255) & ~255u);
         var resources = new Stack<IDisposable>();
 
         T Own<T>(T resource) where T : IDisposable
@@ -325,16 +325,16 @@ internal sealed class GpuFrames : IDisposable
         await frames.RenderAsync(first, TimeSpan.Zero, deadline.Token);
         await frames.RenderAsync(second, TimeSpan.FromSeconds(1), deadline.Token);
         await frames.RenderAsync(repeated, TimeSpan.Zero, deadline.Token);
-        int red = (35 * 65 + 18) * CpuFrames.BytesPerPixel;
-        int blue = (10 * 65 + 31) * CpuFrames.BytesPerPixel;
+        int red = (35 * 65 + 18) * VideoSettings.BytesPerPixel;
+        int blue = (10 * 65 + 31) * VideoSettings.BytesPerPixel;
         int changed = 0;
-        for (int i = 0; i < first.Length; i += CpuFrames.BytesPerPixel)
+        for (int i = 0; i < first.Length; i += VideoSettings.BytesPerPixel)
         {
             if (first[i + 3] != 255 || second[i + 3] != 255)
             {
                 throw new InvalidOperationException("GPU readback lost opaque alpha or included row padding.");
             }
-            if (!first.AsSpan(i, CpuFrames.BytesPerPixel).SequenceEqual(second.AsSpan(i, CpuFrames.BytesPerPixel)))
+            if (!first.AsSpan(i, VideoSettings.BytesPerPixel).SequenceEqual(second.AsSpan(i, VideoSettings.BytesPerPixel)))
             {
                 changed++;
             }

@@ -5,8 +5,8 @@ internal static class CpuFrames
 {
     internal const int Width = 320;
     internal const int Height = 240;
-    internal const int FramesPerSecond = 30;
-    internal const int BytesPerPixel = 4;
+    internal const int FramesPerSecond = VideoSettings.DefaultFramesPerSecond;
+    internal const int BytesPerPixel = VideoSettings.BytesPerPixel;
     internal const int FrameBytes = Width * Height * BytesPerPixel;
     internal const ulong FrameDurationNanoseconds = ClockTime.NanosecondsPerSecond / FramesPerSecond;
 
@@ -94,13 +94,15 @@ internal static class CpuFrames
 internal sealed class CpuBgraInput
 {
     private readonly AppSrc source;
+    private readonly VideoSettings video;
 
-    internal CpuBgraInput(AppSrc source)
+    internal CpuBgraInput(AppSrc source, VideoSettings video)
     {
         this.source = source;
+        this.video = video;
         using Caps caps = Caps.FromString(
-            $"video/x-raw,format=BGRA,width={CpuFrames.Width},height={CpuFrames.Height}," +
-            $"framerate={CpuFrames.FramesPerSecond}/1")
+            $"video/x-raw,format=BGRA,width={video.Width},height={video.Height}," +
+            $"framerate={video.FramesPerSecond}/1")
             ?? throw new InvalidOperationException("Could not parse the raw BGRA caps.");
         source.SetCaps(caps);
         source.SetLive(true);
@@ -115,12 +117,12 @@ internal sealed class CpuBgraInput
 
     internal FlowReturn Push(ReadOnlySpan<byte> pixels)
     {
-        CpuFrames.Validate(pixels);
+        video.ValidateFrame(pixels);
 
-        using Gst.Buffer buffer = Gst.Buffer.NewAllocate(null, CpuFrames.FrameBytes, null)
+        using Gst.Buffer buffer = Gst.Buffer.NewAllocate(null, checked((nuint)video.FrameBytes), null)
             ?? throw new InvalidOperationException("GStreamer could not allocate a CPU frame buffer.");
 
-        buffer.SetDuration(ClockTime.FromNanoseconds(CpuFrames.FrameDurationNanoseconds));
+        buffer.SetDuration(ClockTime.FromNanoseconds(video.FrameDurationNanoseconds));
 
         using (Gst.Buffer.MapScope map = buffer.Map(MapFlags.Write))
         {

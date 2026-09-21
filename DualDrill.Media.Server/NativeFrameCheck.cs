@@ -10,7 +10,7 @@ internal static class NativeFrameCheck
             ?? throw new InvalidOperationException("appsrc is unavailable.");
         using AppSink sink = ElementFactory.Make("appsink", "sink") as AppSink
             ?? throw new InvalidOperationException("appsink is unavailable.");
-        var input = new CpuBgraInput(source);
+        var input = new CpuBgraInput(source, VideoSettings.Default);
         sink.SetProperty("sync", false);
         if (!pipeline.AddMany(source, sink) || !source.Link(sink))
             throw new InvalidOperationException("Could not link the CPU frame check.");

@@ -33,6 +33,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
     private readonly WebSocket _socket;
     private readonly ILogger<WebRtcSession> _logger;
+    private readonly VideoSettings _video;
     private readonly CancellationTokenSource _stop;
     private readonly Channel<OutboundSignal> _outgoing = Channel.CreateBounded<OutboundSignal>(
         new BoundedChannelOptions(MaxQueuedSignals)
@@ -77,10 +78,12 @@ internal sealed class WebRtcSession : IAsyncDisposable
     internal WebRtcSession(
         WebSocket socket,
         ILogger<WebRtcSession> logger,
+        VideoSettings video,
         CancellationToken requestAborted)
     {
         _socket = socket;
         _logger = logger;
+        _video = video;
         _stop = CancellationTokenSource.CreateLinkedTokenSource(requestAborted);
     }
 
@@ -102,10 +105,16 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
         try
         {
-            _gpu = await GpuFrames.CreateAsync(_stop.Token);
+            _gpu = await GpuFrames.CreateAsync(_video, _stop.Token);
             _logger.LogInformation(
                 "GPU source: {Device}, {Backend}, {AdapterType}",
                 _gpu.AdapterInfo.Device, _gpu.AdapterInfo.BackendType, _gpu.AdapterInfo.AdapterType);
+            _logger.LogInformation(
+                "Video: {Width}x{Height} at {FramesPerSecond} fps; VP8 target bitrate: {TargetBitrate}",
+                _video.Width,
+                _video.Height,
+                _video.FramesPerSecond,
+                _video.TargetBitrate?.ToString() ?? "native default (not explicitly set)");
             InitializePipeline();
             _producerTask = ProduceFramesAsync(_stop.Token);
             _busTask = Task.Run(() => MonitorBus(_stop.Token), CancellationToken.None);
@@ -206,11 +215,15 @@ internal sealed class WebRtcSession : IAsyncDisposable
             "application/x-rtp,media=video,encoding-name=VP8,payload=96,clock-rate=90000")
             ?? throw new InvalidOperationException("Could not parse the VP8 RTP caps.");
 
-        _input = new CpuBgraInput(_source);
+        _input = new CpuBgraInput(_source, _video);
 
         encoder.SetProperty("deadline", 1L);
         encoder.SetProperty("cpu-used", 8);
-        encoder.SetProperty("keyframe-max-dist", 30);
+        encoder.SetProperty("keyframe-max-dist", _video.FramesPerSecond);
+        if (_video.TargetBitrate is { } targetBitrate)
+        {
+            encoder.SetProperty("target-bitrate", checked((uint)targetBitrate));
+        }
         payloader.SetProperty("pt", 96u);
 
         if (!pipeline.AddMany(_source, convert, encoder, payloader, _webrtc) ||
@@ -220,7 +233,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
             throw new InvalidOperationException("Could not assemble the appsrc-to-webrtcbin pipeline.");
         }
 
-        _pixels = new byte[CpuFrames.FrameBytes];
+        _pixels = new byte[_video.FrameBytes];
         _bus = pipeline.GetBus();
 
         _needDataHandler = (_, _) => Callback("need-data", () => _hungry = true);
@@ -247,33 +260,38 @@ internal sealed class WebRtcSession : IAsyncDisposable
     {
         try
         {
-            using PeriodicTimer timer = new(TimeSpan.FromSeconds(1d / CpuFrames.FramesPerSecond));
             var elapsed = Stopwatch.StartNew();
+            TimeSpan deadline = _video.FrameInterval;
             ulong frameNumber = 0;
 
-            while (await timer.WaitForNextTickAsync(cancellationToken))
+            while (true)
             {
-                if (!_hungry)
+                await DelayUntilAsync(elapsed, deadline, cancellationToken);
+
+                if (_hungry)
                 {
-                    continue;
+                    await _gpu!.RenderAsync(_pixels!, elapsed.Elapsed, cancellationToken);
+                    FlowReturn result = _input!.Push(_pixels);
+
+                    if (cancellationToken.IsCancellationRequested &&
+                        result == FlowReturn.Flushing)
+                    {
+                        return;
+                    }
+
+                    if (result != FlowReturn.Ok)
+                    {
+                        Fail($"appsrc rejected frame {frameNumber} with {result}.");
+                        return;
+                    }
+
+                    frameNumber++;
                 }
 
-                await _gpu!.RenderAsync(_pixels!, elapsed.Elapsed, cancellationToken);
-                FlowReturn result = _input!.Push(_pixels);
-
-                if (cancellationToken.IsCancellationRequested &&
-                    result == FlowReturn.Flushing)
-                {
-                    return;
-                }
-
-                if (result != FlowReturn.Ok)
-                {
-                    Fail($"appsrc rejected frame {frameNumber} with {result}.");
-                    return;
-                }
-
-                frameNumber++;
+                long skippedIntervals =
+                    (elapsed.Elapsed - deadline).Ticks / _video.FrameInterval.Ticks;
+                deadline += TimeSpan.FromTicks(
+                    checked(_video.FrameInterval.Ticks * (skippedIntervals + 1)));
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -282,6 +300,24 @@ internal sealed class WebRtcSession : IAsyncDisposable
         catch (Exception exception)
         {
             Fail("The GPU frame producer failed.", exception);
+        }
+    }
+
+    private static async Task DelayUntilAsync(
+        Stopwatch elapsed,
+        TimeSpan deadline,
+        CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            TimeSpan remaining = deadline - elapsed.Elapsed;
+            if (remaining <= TimeSpan.Zero)
+            {
+                return;
+            }
+            await Task.Delay(
+                TimeSpan.FromTicks(Math.Max(remaining.Ticks, TimeSpan.TicksPerMillisecond)),
+                cancellationToken);
         }
     }
 
