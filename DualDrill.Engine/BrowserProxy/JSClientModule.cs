@@ -110,12 +110,6 @@ public sealed class JSClientModule(IJSRuntime jsRuntime, IJSObjectReference Modu
     {
         return await Module.InvokeAsync<IJSObjectReference>("createHeadlessServerRenderService");
     }
-    public async ValueTask<IJSObjectReference> CreateHeadlessSharedBufferServerRenderService()
-    {
-        return await Module.InvokeAsync<IJSObjectReference>("createHeadlessSharedBufferServerRenderService");
-    }
-
-
     public async ValueTask<IJSObjectReference> CreateServerRenderPresentService()
     {
         return await Module.InvokeAsync<IJSObjectReference>("createServerRenderPresentService");
@@ -152,4 +146,3 @@ public static class JSClientModuleExtension
         await client.SetProperty<IJSObjectReference>(videoElement, null, "srcObject");
     }
 }
-
