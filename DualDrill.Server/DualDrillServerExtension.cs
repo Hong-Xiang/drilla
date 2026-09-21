@@ -1,6 +1,5 @@
 ﻿using DualDrill.Engine.Connection;
 using DualDrill.Engine.Headless;
-using DualDrill.Engine.Media;
 using DualDrill.Engine.Services;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
@@ -60,7 +59,6 @@ public static class DualDrillServerExtension
     private static void AddHeadlessServices(IServiceCollection services)
     {
         services.AddSingleton<HeadlessSurface>();
-        services.AddSingleton<HeadlessSurfaceCaptureVideoSource>();
         services.AddSingleton<IGPUSurface>(sp => sp.GetRequiredService<HeadlessSurface>());
     }
 

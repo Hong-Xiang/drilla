@@ -11,9 +11,6 @@
 		<PackageReference Include="R3"  />
 		<PackageReference Include="SixLabors.ImageSharp" />
 		<PackageReference Include="System.Reactive" />
-		<PackageReference Include="SIPSorceryMedia.FFmpeg" />
-		<PackageReference Include="SIPSorcery" />
-		<PackageReference Include="SIPSorceryMedia.Encoders" />
 		<PackageReference Include="System.ServiceModel.Primitives" />
 	</ItemGroup>
 

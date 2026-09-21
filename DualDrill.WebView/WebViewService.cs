@@ -1,5 +1,4 @@
-﻿using DnsClient.Internal;
-using DualDrill.Engine;
+﻿using DualDrill.Engine;
 using DualDrill.Engine.Connection;
 using DualDrill.Engine.Event;
 using DualDrill.Engine.Headless;
@@ -15,7 +14,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Web.WebView2.Core;
 using R3;
-using SIPSorcery.Net;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Windows;
@@ -263,8 +261,6 @@ sealed record class WebViewPeerConnectionProxy(Guid PeerId) : IPeerConnection
     public R3.Observable<IDataChannel> OnDataChannel => throw new NotImplementedException();
 
     public R3.Observable<IMediaStreamTrack> OnTrack => throw new NotImplementedException();
-
-    public R3.Observable<RTCPeerConnectionState> OnConnectionStateChange => throw new NotImplementedException();
 
     public ValueTask AddTrack(IMediaStreamTrack track)
     {
