@@ -123,7 +123,6 @@ public sealed class SlangTargetLowering
         private readonly SlangControlFlowPolicy controlFlowPolicy;
         private readonly VariableDeclaration? token;
         private readonly VariableDeclaration? returnValue;
-        private readonly int? returnTokenId;
 
         internal FunctionLowerer(
             RegionFunctionBody source,
@@ -172,9 +171,8 @@ public sealed class SlangTargetLowering
                     "return_value",
                     source.Declaration.ReturnType,
                     []);
-                returnTokenId = tokenIds.Count;
             }
-            if (tokenIds.Count > 0 || returnTokenId is not null)
+            if (tokenIds.Count > 0 || returnValue is not null)
                 token = new VariableDeclaration(
                     FunctionAddressSpace.Instance,
                     "control",
@@ -415,8 +413,7 @@ public sealed class SlangTargetLowering
             {
                 var slot = returnValue ??
                     throw Error("a nested typed return requires a return value slot");
-                var tokenId = returnTokenId ??
-                    throw Error("a nested typed return requires a reserved control token");
+                var tokenId = tokenIds.Count;
                 var valueAssignment = new SlangAssign(
                     new SlangVariablePlace(slot),
                     Operand(value));
