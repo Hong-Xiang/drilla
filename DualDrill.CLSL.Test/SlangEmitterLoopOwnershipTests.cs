@@ -193,6 +193,61 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task WgslReturnCarrierPreservesNestedValuesEffectsAndTrace()
+    {
+        var method = ((Func<int, int, int, int>)NestedEarlyReturn).Method;
+        var original = CompilerTestPipeline.CompileBody(method);
+        var lowered = new StablePointerRegionParameterPass().VisitFunctionBody(
+            new FunctionToOperationPass().VisitFunctionBody(original));
+        var native = Emit(lowered);
+        var target = Target(lowered, SlangControlFlowPolicy.WgslCompatible);
+        var targetBody = target.FunctionDefinitions[lowered.Declaration];
+        var compatible = new SlangEmitter(target).Emit();
+
+        var nativeReturn = native.IndexOf("return ", StringComparison.Ordinal);
+        var compatibleReturn = compatible.LastIndexOf("return ", StringComparison.Ordinal);
+        Assert.Contains(LoopScopes(native), scope =>
+            scope.Start < nativeReturn && nativeReturn < scope.End);
+        Assert.DoesNotContain(LoopScopes(compatible), scope =>
+            scope.Start < compatibleReturn && compatibleReturn < scope.End);
+        Assert.Contains("_return_value", compatible);
+        Assert.DoesNotContain("_return_value", native);
+        var origins = targetBody.Origins;
+        var returnSlot = Assert.IsType<VariableDeclaration>(origins.ReturnValueSlot);
+        var returnTokenId = Assert.IsType<int>(origins.ReturnTokenId);
+        var epilogue = Assert.IsType<SlangReturnEpilogueOrigin>(origins.ReturnEpilogue);
+        Assert.NotEmpty(origins.HoistedReturns);
+        Assert.Same(returnSlot, epilogue.Slot);
+        Assert.Equal(returnTokenId, epilogue.TokenId);
+        Assert.All(origins.HoistedReturns, origin =>
+        {
+            Assert.Same(returnSlot, origin.Slot);
+            Assert.Equal(returnTokenId, origin.TokenId);
+            Assert.Same(
+                returnSlot,
+                Assert.IsType<SlangVariablePlace>(origin.ValueAssignment.Target).Variable);
+        });
+        await new SlangService().ValidateAsync(compatible);
+
+        ImmutableArray<ImmutableArray<Value>> cases =
+        [
+            [new Value.Integer(2), new Value.Integer(3), new Value.Integer(1)],
+            [new Value.Integer(2), new Value.Integer(2), new Value.Integer(9)]
+        ];
+        foreach (var arguments in cases)
+        {
+            var expected = RunCfg(original, arguments);
+            var normalized = RunCfg(lowered, arguments);
+            var emitted = new EmittedScalarProgram(lowered, compatible).Run(arguments);
+
+            Assert.Equal(expected.Result, normalized.Result);
+            Assert.Equal(expected.Result, emitted.Result);
+            Assert.True(expected.Trace.SequenceEqual(normalized.Trace));
+            Assert.True(expected.Trace.SequenceEqual(emitted.Trace));
+        }
+    }
+
+    [Fact]
     public void MultipleSourcesMayShareOneNormalTransfer()
     {
         var outer = Label.Create("outer");
@@ -277,11 +332,22 @@ public sealed class SlangEmitterLoopOwnershipTests(ITestOutputHelper output)
         return Emit(body);
     }
 
-    private static string Emit(RegionFunctionBody body) =>
-        new SlangEmitter(new SlangTargetLowering().Lower(new ShaderModuleDeclaration<RegionFunctionBody>(
-            [body.Declaration],
-            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(body.Declaration, body))))
+    private static string Emit(
+        RegionFunctionBody body,
+        SlangControlFlowPolicy controlFlowPolicy = SlangControlFlowPolicy.Native) =>
+        new SlangEmitter(Target(body, controlFlowPolicy))
         .Emit();
+
+    private static ShaderModuleDeclaration<SlangFunctionBody> Target(
+        RegionFunctionBody body,
+        SlangControlFlowPolicy controlFlowPolicy) =>
+        new SlangTargetLowering().Lower(
+            new ShaderModuleDeclaration<RegionFunctionBody>(
+                [body.Declaration],
+                ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(
+                    body.Declaration,
+                    body)),
+            controlFlowPolicy);
 
     private void WriteActualCompilerOutput(
         string name,

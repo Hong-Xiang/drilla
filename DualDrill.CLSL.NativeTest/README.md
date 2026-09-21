@@ -5,9 +5,11 @@ fixture through the public CLSL WGSL compiler, renders it with native wgpu to a
 64×64 offscreen texture, and verifies two readback pixels. It needs no display,
 surface, window, or browser.
 
-It also verifies that invalid WGSL reports a managed diagnostic instead of
-throwing across the native callback boundary. This is a narrow baseline, not
-general C#-to-WGSL equivalence or raymarching image-parity coverage.
+It also renders compact scalar/vector early-return coverage, creates a native
+shader module from the canonical Compiler.Server raymarch source, and verifies
+that invalid WGSL reports a managed diagnostic instead of throwing across the
+native callback boundary. This remains a narrow baseline, not general
+C#-to-WGSL equivalence or raymarching image-parity coverage.
 
 Run it from the repository root with the pinned compiler shell and native wgpu
 dependencies available. On the verified Ubuntu/NVIDIA host, nixGL intentionally
@@ -50,8 +52,8 @@ clamp-to-edge addressing, nearest filtering, LOD range 0–32, and anisotropy 1.
 As with all C# structs, `default(GPUSamplerDescriptor)` bypasses those
 initializers and is not a valid sampler descriptor.
 
-Naga 27 still rejects the current canonical CLSL raymarch output because of its
-return-inside-loop validation bug. That shader remains explicitly unsupported
-by the native backend. The corrected reference shader and ordinary rendering
-shaders are accepted; changing compiler output or shader text is outside this
-migration.
+Naga 27 rejects value returns nested in loops. The WGSL compiler therefore
+lowers such returns through its existing typed control carrier and emits the
+final value return after the loop. Shader sources and native dependencies stay
+unchanged; the canonical Compiler.Server raymarch must create a native shader
+module without claiming full image parity.

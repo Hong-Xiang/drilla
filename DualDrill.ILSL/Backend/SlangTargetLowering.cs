@@ -15,10 +15,21 @@ using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Backend;
 
+internal enum SlangControlFlowPolicy
+{
+    Native,
+    WgslCompatible
+}
+
 public sealed class SlangTargetLowering
 {
     public ShaderModuleDeclaration<SlangFunctionBody> Lower(
-        ShaderModuleDeclaration<RegionFunctionBody> module)
+        ShaderModuleDeclaration<RegionFunctionBody> module) =>
+        Lower(module, SlangControlFlowPolicy.Native);
+
+    internal ShaderModuleDeclaration<SlangFunctionBody> Lower(
+        ShaderModuleDeclaration<RegionFunctionBody> module,
+        SlangControlFlowPolicy controlFlowPolicy)
     {
         ShaderModuleMetadataValidator.Validate(module);
         WgslUniformLayoutValidator.Validate(module);
@@ -26,7 +37,7 @@ public sealed class SlangTargetLowering
         PortableDerivativeTarget.ValidateModuleBindings(module);
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
-            definition => new FunctionLowerer(definition.Value).Lower());
+            definition => new FunctionLowerer(definition.Value, controlFlowPolicy).Lower());
         var missing = module.Declarations.OfType<FunctionDeclaration>()
             .Where(declaration => !definitions.ContainsKey(declaration))
             .Select(declaration => declaration.Name)
@@ -106,14 +117,22 @@ public sealed class SlangTargetLowering
             ImmutableArray.CreateBuilder<SlangGateOrigin>();
         private readonly ImmutableArray<SlangReturnOrigin>.Builder returnOrigins =
             ImmutableArray.CreateBuilder<SlangReturnOrigin>();
+        private readonly ImmutableArray<SlangHoistedReturnOrigin>.Builder hoistedReturnOrigins =
+            ImmutableArray.CreateBuilder<SlangHoistedReturnOrigin>();
         private readonly ImmutableArray<SlangCarrierBreakOrigin>.Builder carrierBreakOrigins =
             ImmutableArray.CreateBuilder<SlangCarrierBreakOrigin>();
         private readonly RegionFunctionBody source;
+        private readonly SlangControlFlowPolicy controlFlowPolicy;
         private readonly VariableDeclaration? token;
+        private readonly VariableDeclaration? returnValue;
+        private readonly int? returnTokenId;
 
-        internal FunctionLowerer(RegionFunctionBody source)
+        internal FunctionLowerer(
+            RegionFunctionBody source,
+            SlangControlFlowPolicy controlFlowPolicy)
         {
             this.source = source;
+            this.controlFlowPolicy = controlFlowPolicy;
             var resourceLocal = source.LocalVariables.FirstOrDefault(variable =>
                 ShaderModuleMetadataValidator.IsResourceTypeOrPointer(variable.Type));
             if (resourceLocal is not null)
@@ -146,7 +165,18 @@ public sealed class SlangTargetLowering
                 if (!tokenIds.ContainsKey(continuation))
                     tokenIds.Add(continuation, tokenIds.Count);
             }
-            if (tokenIds.Count > 0)
+            if (controlFlowPolicy is SlangControlFlowPolicy.WgslCompatible &&
+                source.Declaration.ReturnType is not UnitType &&
+                HasValueReturnInLoop(source.Body))
+            {
+                returnValue = new VariableDeclaration(
+                    FunctionAddressSpace.Instance,
+                    "return_value",
+                    source.Declaration.ReturnType,
+                    []);
+                returnTokenId = tokenIds.Count;
+            }
+            if (tokenIds.Count > 0 || returnTokenId is not null)
                 token = new VariableDeclaration(
                     FunctionAddressSpace.Instance,
                     "control",
@@ -158,22 +188,41 @@ public sealed class SlangTargetLowering
 
         internal SlangFunctionBody Lower()
         {
-            var lowered = LowerRegion(source.Body);
+            var lowered = LowerRegion(source.Body, 0);
             if (!lowered.Escapes.IsEmpty)
                 throw Error(
                     $"root region has unresolved scoped transfers: " +
                     string.Join(", ", lowered.Escapes.Select(Format)));
+            if (lowered.Returns != (returnValue is not null))
+                throw Error("WGSL-compatible return lowering did not reach the function root");
 
             var declarations = source.LocalVariables
                 .Concat(parameterSlots.Values)
                 .Concat(captures.Values)
+                .Concat(returnValue is null ? [] : [returnValue])
                 .Concat(token is null ? [] : [token])
                 .Select(variable => (SlangStatement)new SlangDeclare(variable));
+            SlangReturnEpilogueOrigin? returnEpilogue = null;
+            var statements = lowered.Statements;
+            if (lowered.Returns)
+            {
+                var returned = new SlangReturnValue(
+                    new SlangPlaceOperand(new SlangVariablePlace(returnValue ??
+                        throw Error("a hoisted return requires a typed value slot"))));
+                returnEpilogue = new(
+                    returnValue,
+                    returnTokenId ??
+                        throw Error("a hoisted return requires a reserved control token"),
+                    returned);
+                statements = statements.Add(returned);
+            }
             return new SlangFunctionBody(
                 source.Declaration,
-                new SlangBlock([.. declarations, .. lowered.Statements]),
+                new SlangBlock([.. declarations, .. statements]),
                 new SlangLoweringOrigins(
                     token,
+                    returnValue,
+                    returnTokenId,
                     parameterSlots.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
                     captures.ToImmutableDictionary(ReferenceEqualityComparer.Instance),
                     parameterOrigins.ToImmutable(),
@@ -184,12 +233,18 @@ public sealed class SlangTargetLowering
                     conditionalOrigins.ToImmutable(),
                     gateOrigins.ToImmutable(),
                     returnOrigins.ToImmutable(),
+                    hoistedReturnOrigins.ToImmutable(),
+                    returnEpilogue,
                     carrierBreakOrigins.ToImmutable()));
         }
 
-        private Lowered LowerRegion(RegionTree<Label, ShaderRegionBody> region)
+        private Lowered LowerRegion(
+            RegionTree<Label, ShaderRegionBody> region,
+            int enclosingLoopDepth)
         {
-            var activation = LowerActivation(region);
+            var loopDepth = enclosingLoopDepth +
+                (region.Definition.Kind is RegionKind.Loop ? 1 : 0);
+            var activation = LowerActivation(region, loopDepth);
             if (region.Definition.Kind is not RegionKind.Loop)
                 return activation;
 
@@ -200,8 +255,9 @@ public sealed class SlangTargetLowering
             var repeats = activation.Escapes.Contains(repeat);
             var outward = activation.Escapes.Remove(repeat);
             var statements = activation.Statements.ToBuilder();
+            var exitsLoop = !outward.IsEmpty || activation.Returns;
 
-            if (repeats && outward.IsEmpty)
+            if (repeats && !exitsLoop)
             {
                 statements.Add(new SlangContinue());
             }
@@ -219,19 +275,22 @@ public sealed class SlangTargetLowering
                     gate.Comparison,
                     conditional));
             }
-            else if (!outward.IsEmpty)
+            else if (exitsLoop)
             {
                 statements.Add(new SlangBreak());
             }
 
             return new Lowered(
                 [(SlangStatement)new SlangLoop(region.Label, new SlangBlock(statements.ToImmutable()))],
-                outward);
+                outward,
+                activation.Returns);
         }
 
-        private Lowered LowerActivation(RegionTree<Label, ShaderRegionBody> region)
+        private Lowered LowerActivation(
+            RegionTree<Label, ShaderRegionBody> region,
+            int loopDepth)
         {
-            var suffix = LowerRaw(region);
+            var suffix = LowerRaw(region, loopDepth);
             var bindings = region.Bindings.ToImmutableArray();
             var innermost = true;
 
@@ -257,7 +316,7 @@ public sealed class SlangTargetLowering
                 {
                     var carrier = suffix.Statements.ToBuilder();
                     SlangBreak? carrierBreak = null;
-                    if (!suffix.Escapes.IsEmpty)
+                    if (!suffix.Escapes.IsEmpty || suffix.Returns)
                     {
                         carrierBreak = new SlangBreak();
                         carrier.Add(carrierBreak);
@@ -268,8 +327,8 @@ public sealed class SlangTargetLowering
                         carrierBreakOrigins.Add(new(region.Label, child.Label, once, carrierBreak));
                 }
 
-                var childLowered = LowerRegion(child);
-                if (suffix.Escapes.Count == 1)
+                var childLowered = LowerRegion(child, loopDepth);
+                if (suffix.Escapes.Count == 1 && !suffix.Returns)
                 {
                     statements.AddRange(childLowered.Statements);
                 }
@@ -290,13 +349,16 @@ public sealed class SlangTargetLowering
 
                 suffix = new Lowered(
                     statements.ToImmutable(),
-                    suffix.Escapes.Remove(caught).Union(childLowered.Escapes));
+                    suffix.Escapes.Remove(caught).Union(childLowered.Escapes),
+                    suffix.Returns || childLowered.Returns);
             }
 
             return suffix;
         }
 
-        private Lowered LowerRaw(RegionTree<Label, ShaderRegionBody> region)
+        private Lowered LowerRaw(
+            RegionTree<Label, ShaderRegionBody> region,
+            int loopDepth)
         {
             var statements = ImmutableArray.CreateBuilder<SlangStatement>();
             foreach (var parameter in region.Body.Parameters)
@@ -318,25 +380,27 @@ public sealed class SlangTargetLowering
             foreach (var (ordinal, instruction) in region.Body.Body.Elements.Index())
                 LowerInstruction(region.Label, ordinal, instruction, statements);
 
-            var terminated = LowerTerminator(region.Body.Body.Last, region.Label);
+            var terminated = LowerTerminator(region.Body.Body.Last, region.Label, loopDepth);
             statements.AddRange(terminated.Statements);
             var original = new SlangScope(
                 region.Definition.Kind is RegionKind.Loop ? null : region.Label,
                 new SlangBlock(statements.ToImmutable()));
             return new Lowered(
                 [(SlangStatement)new SlangDoOnce(new SlangBlock([original]))],
-                terminated.Escapes);
+                terminated.Escapes,
+                terminated.Returns);
         }
 
         private Lowered LowerTerminator(
             ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator,
-            Label sourceLabel) =>
+            Label sourceLabel,
+            int loopDepth) =>
             terminator switch
             {
                 Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> =>
                     LowerReturnVoid(sourceLabel),
                 Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned =>
-                    LowerReturnValue(sourceLabel, returned.Expr),
+                    LowerReturnValue(sourceLabel, returned.Expr, loopDepth),
                 Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch =>
                     LowerTransfer(sourceLabel, 0, branch.Target),
                 Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
@@ -353,8 +417,40 @@ public sealed class SlangTargetLowering
             return Lowered.Completed(statement);
         }
 
-        private Lowered LowerReturnValue(Label sourceLabel, IShaderValue value)
+        private Lowered LowerReturnValue(
+            Label sourceLabel,
+            IShaderValue value,
+            int loopDepth)
         {
+            if (controlFlowPolicy is SlangControlFlowPolicy.WgslCompatible &&
+                loopDepth > 0)
+            {
+                var slot = returnValue ??
+                    throw Error("a nested typed return requires a return value slot");
+                var tokenId = returnTokenId ??
+                    throw Error("a nested typed return requires a reserved control token");
+                var valueAssignment = new SlangAssign(
+                    new SlangVariablePlace(slot),
+                    Operand(value));
+                var tokenAssignment = new SlangAssign(
+                    new SlangVariablePlace(token ??
+                        throw Error("a nested typed return requires a control token")),
+                    new SlangValueOperand(Int(tokenId)));
+                var @break = new SlangBreak();
+                hoistedReturnOrigins.Add(new(
+                    sourceLabel,
+                    value,
+                    slot,
+                    tokenId,
+                    valueAssignment,
+                    tokenAssignment,
+                    @break));
+                return new Lowered(
+                    [valueAssignment, tokenAssignment, @break],
+                    ImmutableHashSet<Continuation>.Empty,
+                    true);
+            }
+
             var statement = new SlangReturnValue(Operand(value));
             returnOrigins.Add(new(sourceLabel, value, statement));
             return Lowered.Completed(statement);
@@ -373,7 +469,8 @@ public sealed class SlangTargetLowering
             conditionalOrigins.Add(new(sourceLabel, branch.Condition, conditional));
             return new Lowered(
                 [conditional],
-                whenTrue.Escapes.Union(whenFalse.Escapes));
+                whenTrue.Escapes.Union(whenFalse.Escapes),
+                whenTrue.Returns || whenFalse.Returns);
         }
 
         private Lowered LowerSwitch(
@@ -401,7 +498,8 @@ public sealed class SlangTargetLowering
                     new SlangBlock(lowered.Statements)));
                 lowered = new Lowered(
                     statements.ToImmutable(),
-                    selected.Escapes.Union(lowered.Escapes));
+                    selected.Escapes.Union(lowered.Escapes),
+                    selected.Returns || lowered.Returns);
             }
             return lowered;
         }
@@ -478,7 +576,8 @@ public sealed class SlangTargetLowering
                 @break));
             return new Lowered(
                 statements.ToImmutable(),
-                ImmutableHashSet.Create(continuation));
+                ImmutableHashSet.Create(continuation),
+                false);
         }
 
         private Gate TokenEquals(
@@ -854,6 +953,18 @@ public sealed class SlangTargetLowering
         private static SlangContinuationOrigin Origin(Continuation continuation) =>
             new(continuation.Target, continuation.Owner, continuation.Kind);
 
+        private static bool HasValueReturnInLoop(
+            RegionTree<Label, ShaderRegionBody> region,
+            bool insideLoop = false)
+        {
+            var nested = insideLoop || region.Definition.Kind is RegionKind.Loop;
+            if (nested &&
+                region.Body.Body.Last is
+                    Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue>)
+                return true;
+            return region.Bindings.Any(child => HasValueReturnInLoop(child, nested));
+        }
+
         private sealed record Continuation(
             Label Target,
             Label Owner,
@@ -865,10 +976,11 @@ public sealed class SlangTargetLowering
 
         private readonly record struct Lowered(
             ImmutableArray<SlangStatement> Statements,
-            ImmutableHashSet<Continuation> Escapes)
+            ImmutableHashSet<Continuation> Escapes,
+            bool Returns)
         {
             internal static Lowered Completed(SlangStatement statement) =>
-                new([statement], ImmutableHashSet<Continuation>.Empty);
+                new([statement], ImmutableHashSet<Continuation>.Empty, false);
         }
 
         private readonly record struct Gate(

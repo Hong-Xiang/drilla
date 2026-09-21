@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DualDrill.APIDefinition\DualDrill.ApiGen.csproj" />
+    <ProjectReference Include="..\DualDrill.Compiler.Server\DualDrill.Compiler.Server.csproj" />
     <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
     <ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
   </ItemGroup>
