@@ -428,14 +428,18 @@ static class BrowserScripts
           const statsState = globalThis.__mediaStats;
           if (!(video instanceof HTMLVideoElement) || !(stats instanceof HTMLElement) || !stale)
             throw new Error('Missing reconnect fixture');
-          stale.close.call(globalThis.__mediaSockets.at(-2), new CloseEvent('close'));
-          stale.error.call(globalThis.__mediaSockets.at(-2), new Event('error'));
-          statsState.release();
           for (let i = 0; i < 200; i++) {
             const start = document.getElementById('start');
             if (!video.srcObject && start && !start.disabled) start.click();
             if (video.srcObject && video.srcObject !== stale.stream && video.readyState >= 2) {
+              const replacement = video.srcObject;
+              stale.close.call(globalThis.__mediaSockets.at(-2), new CloseEvent('close'));
+              stale.error.call(globalThis.__mediaSockets.at(-2), new Event('error'));
+              statsState.release();
+              await new Promise(resolve => setTimeout(resolve, 100));
               for (let sample = 0; sample < 100; sample++) {
+                if (video.srcObject !== replacement)
+                  throw new Error('Old callbacks terminated the replacement session');
                 const mbps = Number(stats.dataset.mbps);
                 const fps = Number(stats.dataset.fps);
                 if (Number.isFinite(mbps) && mbps > 0
