@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using DualDrill.CLSL.Backend;
 using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
@@ -24,6 +25,8 @@ internal static class CooperationTargetVerifier
         var moduleStorage = source.Declarations.OfType<VariableDeclaration>()
             .ToImmutableHashSet<VariableDeclaration>(ReferenceEqualityComparer.Instance);
         foreach (var participation in facts.EntryUniformQuadParticipations)
+        {
+            VerifyDependencyFacts(source, participation);
             foreach (var (function, labels) in participation.OriginalBlocks)
                 VerifyFunction(
                     participation,
@@ -31,7 +34,13 @@ internal static class CooperationTargetVerifier
                     target.FunctionDefinitions[function],
                     labels,
                     moduleStorage);
+        }
     }
+
+    private static void VerifyDependencyFacts(
+        ShaderModuleDeclaration<RegionFunctionBody> source,
+        EntryUniformQuadParticipation participation) =>
+        DependencyFactVerifier.Verify(source, participation);
 
     private static void VerifyFunction(
         EntryUniformQuadParticipation participation,
@@ -379,16 +388,17 @@ internal static class CooperationTargetVerifier
         IReadOnlySet<IShaderValue> requiredCaptures,
         string context)
     {
-        foreach (var fact in facts.UniformValues)
+        var addressDefinitions = SourceDefinitions(source);
+        foreach (var fact in facts.DependencyValues)
         {
-            if (fact.Kind is CooperationUniformValueKind.BlockParameter)
+            if (fact.Kind is CooperationDependencyValueKind.BlockParameter)
             {
                 var parameterOrigin = Single(
                     origins.Parameters,
                     item => ReferenceEquals(item.Parameter, fact.Value) &&
                             ReferenceEquals(item.Label, fact.Label),
                     context,
-                    "uniform block parameter origin");
+                    "dependency block parameter origin");
                 RequirePresent(tree, parameterOrigin.Definition, context);
                 VerifyParameterOrigin(
                     parameterOrigin,
@@ -400,7 +410,7 @@ internal static class CooperationTargetVerifier
             }
 
             var ordinal = fact.InstructionOrdinal ??
-                throw Error(context, "uniform operation fact has no instruction ordinal");
+                throw Error(context, "dependency operation fact has no instruction ordinal");
             var sourceInstruction = source[fact.Label].Body.Elements.ElementAt(ordinal);
             if (!ReferenceEquals(sourceInstruction.Operation, fact.Operation) ||
                 !ReferenceEquals(sourceInstruction.Result, fact.Value) ||
@@ -413,7 +423,7 @@ internal static class CooperationTargetVerifier
                   !ReferenceEquals(sourceInstruction[0], fact.Callee))))
                 throw Error(
                     context,
-                    $"uniform fact for block '{fact.Label.Name}', instruction {ordinal} " +
+                    $"dependency fact for block '{fact.Label.Name}', instruction {ordinal} " +
                     "does not match the analyzed source definition");
             var origin = Single(
                 origins.Definitions,
@@ -421,16 +431,20 @@ internal static class CooperationTargetVerifier
                         item.InstructionOrdinal == ordinal &&
                         item.Source.Equals(sourceInstruction),
                 context,
-                "uniform operation origin");
+                "dependency operation origin");
             RequirePresent(tree, origin.Definition, context);
             var targetInstruction = origin.Definition.Instruction;
             if (!ReferenceEquals(targetInstruction.Operation, sourceInstruction.Operation) ||
                 !ReferenceEquals(targetInstruction.Result, sourceInstruction.Result) ||
                 !ReferenceEquals(targetInstruction.Payload, sourceInstruction.Payload) ||
-                !OperandsMatch(sourceInstruction.Operands, targetInstruction.Operands, origins))
+                !OperandsMatch(
+                    sourceInstruction.Operands,
+                    targetInstruction.Operands,
+                    origins,
+                    addressDefinitions))
                 throw Error(
                     context,
-                    $"uniform producer in block '{fact.Label.Name}', instruction {ordinal} " +
+                    $"dependency producer in block '{fact.Label.Name}', instruction {ordinal} " +
                     "does not preserve its operation/result/operand lineage");
             VerifyCapture(
                 sourceInstruction.Result!,
@@ -442,7 +456,8 @@ internal static class CooperationTargetVerifier
                 context);
         }
 
-        foreach (var returned in facts.UniformReturns.Where(static returned => returned.IsUniform))
+        foreach (var returned in facts.DependencyReturns.Where(
+                     static returned => returned.Dependencies is CooperationUniformDependencies.Known))
         {
             if (returned.Value is null)
                 continue;
@@ -450,16 +465,16 @@ internal static class CooperationTargetVerifier
                 tree.Statements.OfType<SlangScope>(),
                 item => ReferenceEquals(item.OriginalLabel, returned.Label),
                 context,
-                "uniform return source scope");
+                "dependency return source scope");
             var targetReturn = Single(
                 Descendants(scope.Body).OfType<SlangReturnValue>(),
                 static _ => true,
                 context,
-                "uniform target return");
+                "dependency target return");
             if (!OperandMatches(returned.Value, targetReturn.Value, origins))
                 throw Error(
                     context,
-                    $"uniform return in block '{returned.Label.Name}' does not preserve value lineage");
+                    $"dependency return in block '{returned.Label.Name}' does not preserve value lineage");
         }
     }
 
@@ -945,9 +960,9 @@ internal static class CooperationTargetVerifier
         TargetTree tree,
         string context)
     {
-        if (origins.Returns.Length != facts.UniformReturns.Length)
+        if (origins.Returns.Length != facts.DependencyReturns.Length)
             throw Error(context, "target return origin count does not match source return terminators");
-        foreach (var fact in facts.UniformReturns)
+        foreach (var fact in facts.DependencyReturns)
         {
             var origin = Single(
                 origins.Returns,
@@ -1110,13 +1125,13 @@ internal static class CooperationTargetVerifier
         if (!required)
             throw Error(context, "definition has a capture without a source cross-label use");
         if (assignment is null)
-            throw Error(context, "captured uniform definition is missing its capture assignment");
+            throw Error(context, "captured dependency definition is missing its capture assignment");
         RequirePresent(tree, assignment, context);
         if (assignment.Target is not SlangVariablePlace { Variable: var target } ||
             !ReferenceEquals(target, capture) ||
             assignment.Value is not SlangValueOperand { Value: var assigned } ||
             !ReferenceEquals(assigned, value))
-            throw Error(context, "captured uniform definition writes the wrong value or carrier");
+            throw Error(context, "captured dependency definition writes the wrong value or carrier");
         if (!tree.AreAdjacent(definition, assignment))
             throw Error(context, "capture assignment does not immediately follow its definition");
     }
@@ -1827,6 +1842,399 @@ internal static class CooperationTargetVerifier
             })
                 yield return nested;
         }
+    }
+
+    private static bool SameDependencies(
+        CooperationUniformDependencies expected,
+        CooperationUniformDependencies actual) =>
+        CooperationUniformity.DependencyLattice.Equals(expected, actual);
+
+    private static class DependencyFactVerifier
+    {
+        internal static void Verify(
+            ShaderModuleDeclaration<RegionFunctionBody> source,
+            EntryUniformQuadParticipation participation)
+        {
+            var context = $"PortableWgsl dependency proof for entry '{participation.Entry.Name}'";
+            var calls = source.FunctionDefinitions.ToImmutableDictionary(
+                static item => item.Key,
+                item => CooperationAdmission.DirectCalls(
+                    item.Key,
+                    item.Value,
+                    source.FunctionDefinitions));
+            var closure = CooperationAdmission.Closure(participation.Entry, calls);
+            var expectedFunctions = closure.ToHashSet(ReferenceEqualityComparer.Instance);
+            if (!expectedFunctions.SetEquals(participation.Uniformity.Keys) ||
+                !expectedFunctions.SetEquals(participation.OriginalBlocks.Keys))
+                throw Error(context, "function closure does not match the stored dependency facts");
+
+            var effects = FunctionEffectAnalysis.Analyze(source);
+            var completed = new Dictionary<FunctionDeclaration, CooperationFunctionUniformityFacts>(
+                ReferenceEqualityComparer.Instance);
+            var visiting = new HashSet<FunctionDeclaration>(ReferenceEqualityComparer.Instance);
+
+            void Visit(FunctionDeclaration function)
+            {
+                if (completed.ContainsKey(function))
+                    return;
+                if (!visiting.Add(function))
+                    throw Error(context, $"function '{function.Name}' has a recursive dependency proof");
+                foreach (var call in calls[function])
+                    Visit(call.Callee);
+                VerifyFunction(
+                    source.FunctionDefinitions[function],
+                    effects[function],
+                    participation.Uniformity[function],
+                    completed,
+                    context);
+                completed.Add(function, participation.Uniformity[function]);
+                visiting.Remove(function);
+            }
+
+            Visit(participation.Entry);
+        }
+
+        private static void VerifyFunction(
+            RegionFunctionBody body,
+            FunctionEffectSummary effects,
+            CooperationFunctionUniformityFacts facts,
+            IReadOnlyDictionary<FunctionDeclaration, CooperationFunctionUniformityFacts> completed,
+            string context)
+        {
+            if (!ReferenceEquals(body.Declaration, facts.Function))
+                throw Error(context, "dependency facts changed their function identity");
+            if (!facts.EligibleFormalParameterPositions.SequenceEqual(
+                    facts.EligibleFormalParameterPositions.Distinct().Order()))
+                throw Error(context, "eligible formal parameter positions are not canonical");
+
+            var eligibleAll = CooperationUniformity.EligibleFormalLoads(body);
+            var eligible = ImmutableDictionary.CreateBuilder<ParameterPointerValue, int>(
+                ReferenceEqualityComparer.Instance);
+            foreach (var position in facts.EligibleFormalParameterPositions)
+            {
+                if (position < 0 || position >= body.Declaration.Parameters.Length)
+                    throw Error(context, $"function '{body.Declaration.Name}' has an invalid formal position");
+                var parameter = body.Declaration.Parameters[position];
+                if (!eligibleAll.TryGetValue(parameter.Value, out var actualPosition) ||
+                    actualPosition != position)
+                    throw Error(
+                        context,
+                        $"function '{body.Declaration.Name}' formal {position} is not an exact eligible load");
+                eligible.Add(parameter.Value, position);
+            }
+
+            var valueFacts = new Dictionary<IShaderValue, CooperationDependencyValueFact>(
+                ReferenceEqualityComparer.Instance);
+            foreach (var fact in facts.DependencyValues)
+            {
+                if (!ReferenceEquals(fact.Function, body.Declaration) ||
+                    fact.Dependencies is not CooperationUniformDependencies.Known ||
+                    !valueFacts.TryAdd(fact.Value, fact))
+                    throw Error(
+                        context,
+                        $"function '{body.Declaration.Name}' has malformed dependency value facts");
+            }
+
+            var dependencies = new Dictionary<IShaderValue, CooperationUniformDependencies.Known>(
+                ReferenceEqualityComparer.Instance);
+            var consumedValues = new HashSet<CooperationDependencyValueFact>(
+                ReferenceEqualityComparer.Instance);
+            var consumedBindings = new HashSet<CooperationDependencyBindingFact>(
+                ReferenceEqualityComparer.Instance);
+            var consumedReturns = new HashSet<CooperationDependencyReturnFact>(
+                ReferenceEqualityComparer.Instance);
+            var directRequirements = effects.RequirementSites
+                .Where(site => ReferenceEquals(site.Function, body.Declaration))
+                .ToDictionary(site => (site.Label, site.InstructionOrdinal));
+            var directUnknowns = effects.UnknownSites
+                .Where(site => ReferenceEquals(site.Function, body.Declaration))
+                .ToDictionary(site => (site.Label, site.InstructionOrdinal));
+            var incoming = Incoming(body);
+            var returnDependencies = ImmutableArray.CreateBuilder<CooperationUniformDependencies>();
+
+            CooperationUniformDependencies DependencyOf(IShaderValue value) =>
+                value is LiteralValue
+                    ? CooperationUniformity.DependencyLattice.Empty
+                    : dependencies.TryGetValue(value, out var found)
+                        ? found
+                        : CooperationUniformity.DependencyLattice.Unknown;
+
+            foreach (var label in facts.OriginalBlocks)
+            {
+                if (!body.Labels.Contains(label, ReferenceEqualityComparer.Instance))
+                    throw Error(context, $"function '{body.Declaration.Name}' lost block '{label.Name}'");
+                var block = body[label];
+                if (!ReferenceEquals(label, body.Entry))
+                    foreach (var (position, parameter) in block.Parameters.Index())
+                    {
+                        var edges = incoming[label];
+                        var arguments = edges.Select(edge =>
+                        {
+                            if (edge.Jump.Arguments.Length <= position)
+                                throw Error(context, "dependency binding has a missing incoming argument");
+                            return edge.Jump.Arguments[position];
+                        }).ToImmutableArray();
+                        var derived = CooperationUniformity.DependencyLattice.Union(
+                            arguments.Select(DependencyOf));
+                        VerifyBlockParameter(
+                            body,
+                            facts,
+                            label,
+                            parameter,
+                            arguments,
+                            edges,
+                            derived,
+                            valueFacts,
+                            consumedValues,
+                            consumedBindings,
+                            dependencies,
+                            DependencyOf,
+                            context);
+                    }
+
+                foreach (var (ordinal, instruction) in block.Body.Elements.Index())
+                {
+                    if (instruction.Result is not { } result)
+                        continue;
+                    var classification = CooperationUniformity.Classify(
+                        instruction,
+                        label,
+                        ordinal,
+                        DependencyOf,
+                        completed,
+                        eligible,
+                        directRequirements,
+                        directUnknowns);
+                    if (classification.Dependencies is CooperationUniformDependencies.Known known)
+                    {
+                        var fact = RequireValueFact(valueFacts, result, context);
+                        if (!ReferenceEquals(fact.Label, label) ||
+                            fact.InstructionOrdinal != ordinal ||
+                            fact.Kind != classification.Kind ||
+                            !SameDependencies(fact.Dependencies, known) ||
+                            !ReferenceEquals(fact.Operation, instruction.Operation) ||
+                            !fact.Operands.AsEnumerable().SequenceEqual(
+                                instruction.Operands,
+                                ReferenceEqualityComparer.Instance) ||
+                            !ReferenceEquals(fact.Callee, classification.Callee) ||
+                            !ReferenceEquals(fact.Payload, instruction.Payload))
+                            throw Error(
+                                context,
+                                $"function '{body.Declaration.Name}', block '{label.Name}', instruction " +
+                                $"{ordinal} has a forged dependency derivation");
+                        dependencies.Add(result, known);
+                        consumedValues.Add(fact);
+                    }
+                    else if (valueFacts.ContainsKey(result))
+                    {
+                        throw Error(
+                            context,
+                            $"function '{body.Declaration.Name}', block '{label.Name}', instruction " +
+                            $"{ordinal} claims an unknown value is dependency-known");
+                    }
+                }
+
+                var matchingReturns = facts.DependencyReturns
+                    .Where(fact => ReferenceEquals(fact.Label, label))
+                    .Take(2)
+                    .ToArray();
+                if (matchingReturns.Length > 1)
+                    throw Error(context, "one source return has multiple dependency facts");
+                var returnFact = matchingReturns.SingleOrDefault();
+                switch (block.Body.Last)
+                {
+                    case Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>:
+                        VerifyReturn(
+                            body.Declaration,
+                            label,
+                            null,
+                            CooperationUniformity.DependencyLattice.Empty,
+                            returnFact,
+                            consumedReturns,
+                            returnDependencies,
+                            context);
+                        break;
+                    case Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned:
+                        VerifyReturn(
+                            body.Declaration,
+                            label,
+                            returned.Expr,
+                            DependencyOf(returned.Expr),
+                            returnFact,
+                            consumedReturns,
+                            returnDependencies,
+                            context);
+                        break;
+                    case Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch:
+                        if (!CooperationUniformity.DependencyLattice.IsEmpty(
+                                DependencyOf(branch.Condition)))
+                            throw Error(
+                                context,
+                                $"function '{body.Declaration.Name}', block '{label.Name}' " +
+                                "conditional control is not unconditionally uniform");
+                        break;
+                }
+            }
+
+            if (consumedValues.Count != facts.DependencyValues.Length ||
+                consumedBindings.Count != facts.DependencyBindings.Length ||
+                consumedReturns.Count != facts.DependencyReturns.Length ||
+                !SameDependencies(
+                    facts.AggregateReturnDependencies,
+                    CooperationUniformity.DependencyLattice.Union(returnDependencies)))
+                throw Error(
+                    context,
+                    $"function '{body.Declaration.Name}' contains dependency facts not derived from the source");
+        }
+
+        private static void VerifyBlockParameter(
+            RegionFunctionBody body,
+            CooperationFunctionUniformityFacts facts,
+            Label label,
+            IShaderValue parameter,
+            ImmutableArray<IShaderValue> arguments,
+            ImmutableArray<(Label Source, int Arm, RegionJump<IShaderValue> Jump)> edges,
+            CooperationUniformDependencies derived,
+            IReadOnlyDictionary<IShaderValue, CooperationDependencyValueFact> valueFacts,
+            ISet<CooperationDependencyValueFact> consumedValues,
+            ISet<CooperationDependencyBindingFact> consumedBindings,
+            IDictionary<IShaderValue, CooperationUniformDependencies.Known> dependencies,
+            Func<IShaderValue, CooperationUniformDependencies> dependencyOf,
+            string context)
+        {
+            var bindings = facts.DependencyBindings.Where(fact =>
+                    ReferenceEquals(fact.Target, label) &&
+                    ReferenceEquals(fact.Parameter, parameter))
+                .ToArray();
+            if (derived is not CooperationUniformDependencies.Known known)
+            {
+                if (valueFacts.ContainsKey(parameter) || bindings.Length != 0)
+                    throw Error(context, "unknown block parameter has dependency facts");
+                return;
+            }
+
+            var valueFact = RequireValueFact(valueFacts, parameter, context);
+            if (valueFact.Kind is not CooperationDependencyValueKind.BlockParameter ||
+                !ReferenceEquals(valueFact.Label, label) ||
+                valueFact.InstructionOrdinal is not null ||
+                !SameDependencies(valueFact.Dependencies, known) ||
+                !ReferenceMultisetEquals(valueFact.Operands, arguments))
+                throw Error(context, "block parameter dependency fact does not match every incoming arm");
+            consumedValues.Add(valueFact);
+            dependencies.Add(parameter, known);
+
+            if (bindings.Length != edges.Length)
+                throw Error(context, "block parameter dependency binding count changed");
+            foreach (var edge in edges)
+            {
+                var position = body[label].Parameters.IndexOf(parameter);
+                var argument = edge.Jump.Arguments[position];
+                var transfer = Single(
+                    facts.OriginalTransfers,
+                    candidate => ReferenceEquals(candidate.Source, edge.Source) &&
+                                 candidate.Arm == edge.Arm,
+                    context,
+                    "dependency source transfer");
+                var originalPosition = transfer.TargetParameters.IndexOf(parameter);
+                var binding = Single(
+                    bindings,
+                    candidate => ReferenceEquals(candidate.Source, edge.Source) &&
+                                 candidate.Arm == edge.Arm,
+                    context,
+                    "block parameter dependency binding");
+                var argumentDependencies = dependencyOf(argument);
+                if (!ReferenceEquals(binding.Function, body.Declaration) ||
+                    binding.ParameterPosition != originalPosition ||
+                    !ReferenceEquals(binding.Argument, argument) ||
+                    !SameDependencies(binding.ArgumentDependencies, argumentDependencies) ||
+                    !SameDependencies(binding.ParameterDependencies, known))
+                    throw Error(context, "block parameter dependency binding changed source arm or value");
+                consumedBindings.Add(binding);
+            }
+        }
+
+        private static CooperationDependencyValueFact RequireValueFact(
+            IReadOnlyDictionary<IShaderValue, CooperationDependencyValueFact> facts,
+            IShaderValue value,
+            string context) =>
+            facts.TryGetValue(value, out var fact)
+                ? fact
+                : throw Error(context, "source-derived known value is missing its dependency fact");
+
+        private static bool ReferenceMultisetEquals(
+            ImmutableArray<IShaderValue> left,
+            ImmutableArray<IShaderValue> right)
+        {
+            if (left.Length != right.Length)
+                return false;
+            var remaining = right.ToList();
+            foreach (var value in left)
+            {
+                var index = remaining.FindIndex(candidate => ReferenceEquals(candidate, value));
+                if (index < 0)
+                    return false;
+                remaining.RemoveAt(index);
+            }
+            return remaining.Count == 0;
+        }
+
+        private static void VerifyReturn(
+            FunctionDeclaration function,
+            Label label,
+            IShaderValue? value,
+            CooperationUniformDependencies dependencies,
+            CooperationDependencyReturnFact? fact,
+            ISet<CooperationDependencyReturnFact> consumed,
+            ICollection<CooperationUniformDependencies> aggregate,
+            string context)
+        {
+            if (fact is null ||
+                !ReferenceEquals(fact.Function, function) ||
+                !ReferenceEquals(fact.Value, value) ||
+                !SameDependencies(fact.Dependencies, dependencies))
+                throw Error(context, "return dependency fact is not derived from its source value");
+            consumed.Add(fact);
+            aggregate.Add(dependencies);
+        }
+
+        private static Dictionary<
+            Label,
+            ImmutableArray<(Label Source, int Arm, RegionJump<IShaderValue> Jump)>> Incoming(
+            RegionFunctionBody body)
+        {
+            var result = body.Labels.ToDictionary<
+                Label,
+                Label,
+                ImmutableArray<(Label Source, int Arm, RegionJump<IShaderValue> Jump)>.Builder>(
+                static label => label,
+                static _ => ImmutableArray.CreateBuilder<(
+                    Label Source,
+                    int Arm,
+                    RegionJump<IShaderValue> Jump)>(),
+                ReferenceEqualityComparer.Instance);
+            foreach (var source in body.Labels)
+                foreach (var (arm, jump) in SourceJumps(body[source].Body.Last).Index())
+                    result[jump.Label].Add((source, arm, jump));
+            var immutable = new Dictionary<
+                Label,
+                ImmutableArray<(Label Source, int Arm, RegionJump<IShaderValue> Jump)>>(
+                ReferenceEqualityComparer.Instance);
+            foreach (var (label, edges) in result)
+                immutable.Add(label, edges.ToImmutable());
+            return immutable;
+        }
+
+        private static ImmutableArray<RegionJump<IShaderValue>> SourceJumps(
+            ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator) =>
+            terminator switch
+            {
+                Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch => [branch.Target],
+                Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch =>
+                    [branch.TrueTarget, branch.FalseTarget],
+                Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> => [],
+                Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue> => [],
+                _ => []
+            };
     }
 
     private static NotSupportedException Error(string context, string message) =>

@@ -159,7 +159,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         output.WriteLine("=== C3 uniformity facts ===");
         output.WriteLine(
             $"fragment conditionals={fragmentFacts.UniformConditionals.Length}, " +
-            $"helper returns-uniform={helperFacts.ReturnsUniform}");
+            $"helper return dependencies={Format(helperFacts.AggregateReturnDependencies)}");
         output.WriteLine("=== C3 verified target AST ===");
         output.WriteLine(target.GetBody(fragmentDeclaration).PrettyPrint());
         output.WriteLine("=== C3 uniform conditional Slang ===");
@@ -168,7 +168,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         output.WriteLine(wgsl);
 
         Assert.Single(fragmentFacts.UniformConditionals);
-        Assert.True(helperFacts.ReturnsUniform);
+        AssertKnown(helperFacts.AggregateReturnDependencies);
         Assert.Contains(nameof(UniformConditionalDerivativeShader.UniformChoice), slang);
         Assert.Contains("if", slang);
         Assert.Contains("ddx(", slang);
@@ -664,7 +664,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             facts.EntryUniformQuadParticipations[0].Uniformity.Values,
             item => item.Function.Name == nameof(UniformIgnoringArgumentShader.Always));
 
-        Assert.True(helper.ReturnsUniform);
+        AssertKnown(helper.AggregateReturnDependencies);
         Assert.Contains("dpdx(", Emit(new UniformIgnoringArgumentShader(), CLSLCompileTarget.WGSL));
     }
 
@@ -687,10 +687,10 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         var function = Assert.Single(participation.Uniformity.Values);
 
         Assert.Equal(2, function.UniformConditionals.Length);
-        Assert.Equal(2, function.UniformBindings.Count(binding => binding.ParameterPosition == 0));
+        Assert.Equal(2, function.DependencyBindings.Count(binding => binding.ParameterPosition == 0));
         Assert.Contains(
-            function.UniformValues,
-            fact => fact.Kind is CooperationUniformValueKind.BlockParameter);
+            function.DependencyValues,
+            fact => fact.Kind is CooperationDependencyValueKind.BlockParameter);
     }
 
     [Fact]
@@ -701,7 +701,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         var participation = Assert.Single(facts.EntryUniformQuadParticipations);
         var function = Assert.Single(participation.Uniformity.Values);
         var entry = function.OriginalBlocks[0];
-        var bindings = function.UniformBindings.Where(binding =>
+        var bindings = function.DependencyBindings.Where(binding =>
             ReferenceEquals(binding.Source, entry)).ToArray();
 
         Assert.Equal(4, bindings.Length);
@@ -728,7 +728,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void UniformFactsIgnoreLabelNamesAndRegionStorageOrder()
+    public void DependencyFactsIgnoreLabelNamesAndRegionStorageOrder()
     {
         var left = Assert.Single(
             CLSLCooperationAnalysis.Analyze(PhiConditionalModule(prefix: "left-", reverseBindings: false))
@@ -738,8 +738,8 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
                 .EntryUniformQuadParticipations).Uniformity.Values.Single();
 
         Assert.Equal(left.OriginalBlocks.Length, right.OriginalBlocks.Length);
-        Assert.Equal(left.UniformValues.Length, right.UniformValues.Length);
-        Assert.Equal(left.UniformBindings.Length, right.UniformBindings.Length);
+        Assert.Equal(left.DependencyValues.Length, right.DependencyValues.Length);
+        Assert.Equal(left.DependencyBindings.Length, right.DependencyBindings.Length);
         Assert.Equal(left.UniformConditionals.Length, right.UniformConditionals.Length);
     }
 
@@ -995,7 +995,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
                         body,
                         statement => ReferenceEquals(statement, capture) ? changedCapture : statement);
                 },
-                "captured uniform definition writes the wrong value or carrier")
+                "captured dependency definition writes the wrong value or carrier")
         };
 
         foreach (var item in cases)
@@ -1276,7 +1276,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void StaleUniformFactsCannotCertifyChangedPointerProducer()
+    public void StaleDependencyFactsCannotCertifyChangedPointerProducer()
     {
         var module = PhiConditionalModule();
         var function = Assert.Single(module.FunctionDefinitions.Keys);
@@ -1331,7 +1331,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
                 facts));
 
         Assert.Contains("conditional control is varying", fresh.Message);
-        Assert.Contains("does not match the analyzed source definition", stale.Message);
+        Assert.Contains("dependency proof", stale.Message);
     }
 
     [Fact]
@@ -2128,7 +2128,6 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     [InlineData(typeof(ComputeDerivativeShader), "not an unambiguous fragment")]
     [InlineData(typeof(SharedStageDerivativeShader), "not an unambiguous fragment")]
     [InlineData(typeof(NonlinearPureHelperShader), "conditional control")]
-    [InlineData(typeof(IdentityLiteralConditionalShader), "conditional control")]
     [InlineData(typeof(DerivativeConditionShader), "conditional control")]
     [InlineData(typeof(UniformStorageConditionalShader), "conditional control")]
     [InlineData(typeof(ReadonlyBufferLengthConditionalShader), "conditional control")]
@@ -2387,6 +2386,15 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
     private static string Emit(ISharpShader shader, CLSLCompileTarget target) =>
         new CLSLCompiler(new(target, CLSLCooperationProfile.PortableWgsl)).Emit(shader);
+
+    private static CooperationUniformDependencies.Known AssertKnown(
+        CooperationUniformDependencies dependencies) =>
+        Assert.IsType<CooperationUniformDependencies.Known>(dependencies);
+
+    private static string Format(CooperationUniformDependencies dependencies) =>
+        dependencies is CooperationUniformDependencies.Known known
+            ? $"[{string.Join(",", known.FormalParameterPositions)}]"
+            : "unknown";
 
     private static IEnumerable<Instruction<IShaderValue, IShaderValue>> Instructions(RegionFunctionBody body)
     {
