@@ -8,16 +8,16 @@ surface, window, or browser.
 It also renders input-selected scalar/vector early-return paths, creates a
 native shader module from the canonical Compiler.Server raymarch source, and
 verifies that invalid WGSL reports a managed diagnostic instead of throwing
-across the native callback boundary. This remains a narrow baseline, not
-general C#-to-WGSL equivalence or raymarching image-parity coverage.
+across the native callback boundary. The smoke coverage remains a narrow
+baseline; the separate oracle below checks canonical raymarch image parity.
 
 Run it from the repository root with the pinned compiler shell and native wgpu
 dependencies available. On the verified Ubuntu/NVIDIA host, nixGL intentionally
 and non-hermetically exposes the existing proprietary Vulkan driver:
 
 ```sh
-NIXPKGS_ALLOW_UNFREE=1 nix develop --command \
-  nix run --impure \
+NIXPKGS_ALLOW_UNFREE=1 nix develop --builders '' --command \
+  nix run --builders '' --impure \
   github:nix-community/nixGL/b6105297e6f0cd041670c3e8628394d4ee247ed5#nixVulkanNvidia -- \
   timeout 120s dotnet test \
   DualDrill.CLSL.NativeTest/DualDrill.CLSL.NativeTest.csproj \
@@ -55,11 +55,52 @@ initializers and is not a valid sampler descriptor.
 Naga 27 rejects value returns nested in loops. The WGSL compiler therefore
 lowers such returns through its existing typed control carrier and emits the
 final value return after the loop. Shader sources and native dependencies stay
-unchanged; the canonical Compiler.Server raymarch must create a native shader
-module without claiming full image parity.
+unchanged; module creation is covered by the smoke test and image equivalence
+by the parity oracle below.
 
 The `PortableWgsl` cooperation profile remains fail-closed for participating
 functions containing loops; this workaround does not relax that admission rule
 or claim that loop-return lowering is checked by the cooperation verifier.
 Loop-free supported cooperative shaders continue through the existing verified
 target path.
+
+## Raymarch image parity oracle
+
+The parity test reuses `RaymarchingPrimitiveShader` from the
+`DualDrill.Compiler.Server` assembly and compiles it through the public
+`CLSLCompiler` CIL → Slang → WGSL path. It independently compiles the pinned,
+pristine MIT-licensed Xds3zN GLSL reference in `Reference/` directly to WGSL
+with `slangc`. Both pipelines execute on the same adapter/device with an
+independent location-0 `vec2` reference vertex shader and the same six
+fullscreen vertices. The GLSL wrapper receives `mainImage` into a
+function-local color and then assigns the stage output so Slang does not emit
+an invalid private-address-space pointer argument.
+
+Four 320×180 RGBA8 profiles cover AA1/AA2/AA3 at time 1 with centered mouse,
+plus AA1 at time 3 with off-center mouse. The candidate receives the actual
+group-0 uniform bindings 0–3 (`iResolution`, `iTime`, `iMouse`, `iAA`).
+Comparison is unmasked RGB over every pixel; alpha must be exactly 255.
+Acceptance limits are MAE ≤ 1, RMSE ≤ 4, p99 ≤ 8, and max ≤ 64. Failures retain
+raw RGBA8 and dependency-free PPM reference/candidate/diff files under the test
+output's `oracle-failures/` directory.
+
+Run source-integrity, comparator, and direct reference-compilation checks
+without initializing native WebGPU:
+
+```sh
+nix develop --builders '' --command dotnet test \
+  DualDrill.CLSL.NativeTest/DualDrill.CLSL.NativeTest.csproj \
+  -c Release -r linux-x64 \
+  --filter 'FullyQualifiedName~RaymarchOraclePureTests'
+```
+
+Run all native tests on the verified NVIDIA host:
+
+```sh
+NIXPKGS_ALLOW_UNFREE=1 nix develop --builders '' --command \
+  nix run --builders '' --impure \
+  github:nix-community/nixGL/b6105297e6f0cd041670c3e8628394d4ee247ed5#nixVulkanNvidia -- \
+  timeout 300s dotnet test \
+  DualDrill.CLSL.NativeTest/DualDrill.CLSL.NativeTest.csproj \
+  -c Release -r linux-x64
+```

@@ -355,9 +355,9 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
 
         // exact distance
         vec3 q;
-        if (3.0 * p.x < m) q = p.xyz;
-        else if (3.0 * p.y < m) q = p.yzx;
-        else if (3.0 * p.z < m) q = p.zxy;
+        if (3.0f * p.x < m) q = p.xyz;
+        else if (3.0f * p.y < m) q = p.yzx;
+        else if (3.0f * p.z < m) q = p.zxy;
         else return m * 0.57735027f;
         float k = clamp(0.5f * (q.z - q.y + s), 0.0f, s);
         return length(vec3(q.x, q.y - s + k, q.z - k));
@@ -730,7 +730,7 @@ public struct RaymarchingPrimitiveShader : CLSL.ISharpShader
         if (sdBox(pos - vec3(-1.0f, 0.35f, -1.0f), vec3(0.35f, 0.35f, 2.5f)) < res.x)
         {
             res = opU(res, vec2(sdPyramid(pos - vec3(-1.0f, -0.6f, -3.0f), 1.0f), 13.56f));
-            res = opU(res, vec2(sdOctahedron0(pos - vec3(-1.0f, 0.15f, -2.0f), 0.35f), 23.56f));
+            res = opU(res, vec2(sdOctahedron1(pos - vec3(-1.0f, 0.15f, -2.0f), 0.35f), 23.56f));
             res = opU(res, vec2(sdTriPrism(pos - vec3(-1.0f, 0.15f, -1.0f), vec2(0.3f, 0.05f)), 43.5f));
             res = opU(res, vec2(sdEllipsoid(pos - vec3(-1.0f, 0.25f, 0.0f), vec3(0.2f, 0.25f, 0.05f)), 43.17f));
             res = opU(res, vec2(sdHorseshoe(pos - vec3(-1.0f, 0.25f, 1.0f), vec2(cos(1.3f), sin(1.3f)), 0.2f, 0.3f, vec2(0.03f, 0.08f)), 11.5f));
