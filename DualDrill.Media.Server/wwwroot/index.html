@@ -35,9 +35,9 @@
   <body>
     <h1>GPU → BGRA readback → GStreamer → WebRTC</h1>
     <p>
-      One browser at a time; use loopback or explicitly opt in on a trusted LAN.
-      A rotating triangle is rendered by wgpu-native on the server GPU and
-      streamed through GStreamer.
+      Up to four concurrent sessions by default; use loopback or explicitly opt
+      in on a trusted LAN. Each rotating triangle is rendered by wgpu-native on
+      the server GPU and streamed through its own GStreamer pipeline.
     </p>
     <video id="video" autoplay playsinline muted></video>
     <button id="start" type="button">Start</button>

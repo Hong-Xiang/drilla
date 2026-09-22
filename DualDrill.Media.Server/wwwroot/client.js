@@ -408,7 +408,7 @@ start.addEventListener("click", () => {
   socket.onerror = () =>
     stopSession(
       attempt,
-      "WebSocket failed (the single viewer slot may be occupied).",
+      "WebSocket failed (the media session limit may be reached).",
     );
   socket.onclose = () => stopSession(attempt, "Server disconnected.");
 });

@@ -6,7 +6,6 @@ using System.Threading.Channels;
 using Gst;
 using Gst.App;
 using Gst.GLib;
-using Gst.Interop;
 using Gst.Sdp;
 using Gst.WebRTC;
 using Task = System.Threading.Tasks.Task;
@@ -61,7 +60,6 @@ internal sealed class WebRtcSession : IAsyncDisposable
     private ulong _iceHandler;
     private EventHandler<AppSrc.NeedDataSignalArgs>? _needDataHandler;
     private EventHandler? _enoughDataHandler;
-    private Action<Exception>? _exceptionTrap;
     private Task? _sendTask;
     private Task? _receiveTask;
     private Task? _producerTask;
@@ -162,22 +160,59 @@ internal sealed class WebRtcSession : IAsyncDisposable
             return;
         }
 
-        _stop.Cancel();
-        await AwaitExpectedCancellation(_producerTask);
-        await AwaitExpectedCancellation(_receiveTask);
+        var failures = new List<Exception>();
 
-        _pipeline?.SetState(State.Null);
-        await AwaitExpectedCancellation(_busTask);
-        DisconnectNativeHandlers();
+        void Cleanup(string operation, Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+                _logger.LogError(exception, "Media session cleanup failed while {Operation}.", operation);
+            }
+        }
 
-        _offerPromise?.Dispose();
-        _setLocalOfferPromise?.Dispose();
-        _setRemoteAnswerPromise?.Dispose();
-        _pipeline?.Dispose();
+        async Task CleanupAsync(string operation, Task? task)
+        {
+            try
+            {
+                await AwaitExpectedCancellation(task);
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+                _logger.LogError(exception, "Media session cleanup failed while {Operation}.", operation);
+            }
+        }
+
+        Cleanup("cancelling work", _stop.Cancel);
+        await CleanupAsync("draining frame production", _producerTask);
+        await CleanupAsync("draining WebSocket input", _receiveTask);
+        await CleanupAsync("stopping answer timeout", _answerTimeoutTask);
+
+        Cleanup("stopping the GStreamer pipeline", () =>
+        {
+            if (_pipeline?.SetState(State.Null) == StateChangeReturn.Failure)
+            {
+                throw new InvalidOperationException("The media pipeline refused to enter NULL.");
+            }
+        });
+        await CleanupAsync("draining the GStreamer bus", _busTask);
+        Cleanup("disconnecting native handlers", DisconnectNativeHandlers);
+
+        Cleanup("disposing the offer promise", () => _offerPromise?.Dispose());
+        Cleanup("disposing the local-description promise", () => _setLocalOfferPromise?.Dispose());
+        Cleanup("disposing the remote-description promise", () => _setRemoteAnswerPromise?.Dispose());
+        Cleanup("disposing the GStreamer bus", () => _bus?.Dispose());
+        Cleanup("disposing the GStreamer pipeline", () => _pipeline?.Dispose());
+        _bus = null;
         _pipeline = null;
 
         _outgoing.Writer.TryComplete();
-        await AwaitExpectedCancellation(_sendTask);
+        await CleanupAsync("draining WebSocket output", _sendTask);
 
         if (_socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
         {
@@ -192,12 +227,23 @@ internal sealed class WebRtcSession : IAsyncDisposable
             {
                 _logger.LogDebug(exception, "The browser disconnected before the close reply.");
             }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+                _logger.LogError(exception, "Media session cleanup failed while closing WebSocket output.");
+            }
         }
 
-        _socket.Dispose();
-        _stop.Dispose();
-        GstSharp.DrainPendingReleases();
-        _gpu?.Dispose();
+        Cleanup("disposing the WebSocket", _socket.Dispose);
+        Cleanup("draining native releases", GstSharp.DrainPendingReleases);
+        Cleanup("disposing GPU resources", () => _gpu?.Dispose());
+        _gpu = null;
+        Cleanup("disposing cancellation", _stop.Dispose);
+
+        if (failures.Count != 0)
+        {
+            throw new AggregateException("Media session cleanup failed.", failures);
+        }
     }
 
     private void InitializePipeline()
@@ -251,9 +297,6 @@ internal sealed class WebRtcSession : IAsyncDisposable
             Callback("on-ice-candidate", () => QueueLocalCandidate(arguments));
             return null;
         });
-
-        _exceptionTrap = exception => Fail("A native callback failed.", exception);
-        ExceptionTrap.UnhandledException += _exceptionTrap;
     }
 
     private async Task ProduceFramesAsync(CancellationToken cancellationToken)
@@ -764,12 +807,6 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
     private void DisconnectNativeHandlers()
     {
-        if (_exceptionTrap is { } exceptionTrap)
-        {
-            ExceptionTrap.UnhandledException -= exceptionTrap;
-            _exceptionTrap = null;
-        }
-
         if (_source is { } source)
         {
             if (_needDataHandler is { } needData)
