@@ -93,16 +93,27 @@ var wgsl = compiler.Emit(shader);
 The admitted subset is an unambiguous fragment entry and its finite, acyclic call closure.
 Functions may use unconditional or conditional `Forward` transfers and uniform early returns,
 but every conditional decision in the closure must be proved uniform. Literals and known,
-deterministic pure typed operations preserve uniform operands. Helper-return summaries are
-context-independent: every returned value and internal decision must be uniform, so a helper
-returning a literal can prove control while an identity helper remains varying even when called
-with a literal. Entry/helper parameters, memory loads, derivative results, provider `None`, and
-pointer identity do not prove uniformity. Surviving non-function storage roots must be
+deterministic pure typed operations preserve uniform operands. Pure helper return summaries
+carry canonical dependencies on exact formal parameter positions. A call substitutes only
+those used formals, so `Identity(true)` and a helper returning its first argument from
+`(true, varying)` can prove caller control. Entry parameters remain varying, and
+parameter-dependent control inside a helper remains rejected even when a caller passes a
+literal. Only immutable, nonescaping, exact typed loads of non-pointer formals participate;
+stores, projections, pointer transfers, and escapes invalidate that formal's loads.
+Memory/resource loads, derivative results, provider `None`, and pointer identity do not prove
+uniformity. Surviving non-function storage roots must be
 module-declared members of the immutable original source-use whitelist; that verified subset is
 available as external input, while erased roots are not retained and loaded values remain
 varying. Exact incoming source arms determine block-parameter facts. Switches (including uniform switches),
 loops/repeats, continues, recursive or incomplete
 summaries, unowned cooperative helpers, and vertex/compute derivative use fail explicitly.
+
+The public cooperation-fact API now exposes `DependencyValues`,
+`DependencyBindings`, `DependencyReturns`, and `AggregateReturnDependencies`.
+`CooperationUniformDependencies.Unknown` is absorbing; a canonical
+`Known.FormalParameterPositions` set is empty only for unconditional uniformity.
+This replaces the former boolean `ReturnsUniform` and `Uniform*` value/binding/
+return collections without compatibility aliases.
 
 This profile currently admits matching f32 scalar/vector `dpdx`, `dpdy`, and `fwidth`; f16/f64
 are outside that deliberately narrow profile bound. Coarse/fine forms are separately rejected

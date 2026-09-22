@@ -140,6 +140,8 @@ public abstract record ShaderStackInstruction
         public ShaderStackOperand.Immediate Value { get; }
     }
 
+    public sealed record Duplicate : ShaderStackInstruction;
+
     public sealed record Drop : ShaderStackInstruction
     {
         internal Drop()
@@ -200,6 +202,9 @@ internal static class ShaderStackValidation
         {
             ShaderStackInstruction.Operation operation => Apply(operation, stack),
             ShaderStackInstruction.PushAlias alias => stack.Add(alias.Value.Type),
+            ShaderStackInstruction.Duplicate => stack.Length > 0
+                ? stack.Add(stack[^1])
+                : throw new ArgumentException("Cannot duplicate an empty shader stack."),
             ShaderStackInstruction.Drop => stack.Length > 0
                 ? stack.RemoveAt(stack.Length - 1)
                 : throw new ArgumentException("Cannot drop from an empty shader stack."),

@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.Declaration;
@@ -14,33 +15,67 @@ using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL;
 
-public enum CooperationUniformValueKind
+public abstract record CooperationUniformDependencies
+{
+    private CooperationUniformDependencies()
+    {
+    }
+
+    public sealed record Unknown : CooperationUniformDependencies;
+
+    public sealed record Known : CooperationUniformDependencies
+    {
+        public Known(IEnumerable<int> formalParameterPositions)
+        {
+            FormalParameterPositions =
+            [
+                .. formalParameterPositions
+                    .Distinct()
+                    .Order()
+                    .Select(position => position >= 0
+                        ? position
+                        : throw new ArgumentOutOfRangeException(
+                            nameof(formalParameterPositions),
+                            position,
+                            "Formal parameter positions must be non-negative."))
+            ];
+        }
+
+        public ImmutableArray<int> FormalParameterPositions { get; }
+    }
+}
+
+public enum CooperationDependencyValueKind
 {
     BlockParameter,
+    FunctionParameterLoad,
     OperationResult,
     HelperCallResult,
     NumericBuiltinResult
 }
 
-public sealed record CooperationUniformValueFact(
+public sealed record CooperationDependencyValueFact(
     FunctionDeclaration Function,
     Label Label,
     int? InstructionOrdinal,
     IShaderValue Value,
-    CooperationUniformValueKind Kind,
+    CooperationDependencyValueKind Kind,
+    CooperationUniformDependencies Dependencies,
     IOperation? Operation,
     ImmutableArray<IShaderValue> Operands,
     FunctionDeclaration? Callee,
     object? Payload);
 
-public sealed record CooperationUniformBindingFact(
+public sealed record CooperationDependencyBindingFact(
     FunctionDeclaration Function,
     Label Source,
     int Arm,
     Label Target,
     int ParameterPosition,
     IShaderValue Argument,
-    IShaderValue Parameter);
+    CooperationUniformDependencies ArgumentDependencies,
+    IShaderValue Parameter,
+    CooperationUniformDependencies ParameterDependencies);
 
 public sealed record CooperationUniformConditionalFact(
     FunctionDeclaration Function,
@@ -49,11 +84,11 @@ public sealed record CooperationUniformConditionalFact(
     Label TrueTarget,
     Label FalseTarget);
 
-public sealed record CooperationUniformReturnFact(
+public sealed record CooperationDependencyReturnFact(
     FunctionDeclaration Function,
     Label Label,
     IShaderValue? Value,
-    bool IsUniform);
+    CooperationUniformDependencies Dependencies);
 
 public sealed record CooperationTransferFact(
     FunctionDeclaration Function,
@@ -69,17 +104,18 @@ public sealed record CooperationFunctionUniformityFacts(
     FunctionDeclaration Function,
     ImmutableArray<Label> OriginalBlocks,
     ImmutableArray<VariableDeclaration> OriginalNonFunctionStorage,
-    ImmutableArray<CooperationUniformValueFact> UniformValues,
-    ImmutableArray<CooperationUniformBindingFact> UniformBindings,
+    ImmutableArray<int> EligibleFormalParameterPositions,
+    ImmutableArray<CooperationDependencyValueFact> DependencyValues,
+    ImmutableArray<CooperationDependencyBindingFact> DependencyBindings,
     ImmutableArray<CooperationUniformConditionalFact> UniformConditionals,
-    ImmutableArray<CooperationUniformReturnFact> UniformReturns,
+    ImmutableArray<CooperationDependencyReturnFact> DependencyReturns,
     ImmutableArray<CooperationTransferFact> OriginalTransfers,
-    bool ReturnsUniform);
+    CooperationUniformDependencies AggregateReturnDependencies);
 
 internal sealed record CooperationUniformityResult(
     ImmutableDictionary<FunctionDeclaration, CooperationFunctionUniformityFacts> Functions,
     ImmutableArray<(FunctionDeclaration Function, Label Label, int Ordinal, FunctionDeclaration Builtin)>
-        UniformBuiltinCalls);
+        DependencyBuiltinCalls);
 
 internal static class CooperationUniformity
 {
@@ -191,11 +227,11 @@ internal static class CooperationUniformity
 
         var order = TopologicalOrder(body.Entry, successors, incoming, regions.Count, entry, body.Declaration);
         var outgoing = new Dictionary<Label, FlowEnvironment>(ReferenceEqualityComparer.Instance);
-        var uniformValues = ImmutableArray.CreateBuilder<CooperationUniformValueFact>();
-        var uniformBindings = ImmutableArray.CreateBuilder<CooperationUniformBindingFact>();
+        var dependencyValues = ImmutableArray.CreateBuilder<CooperationDependencyValueFact>();
+        var dependencyBindings = ImmutableArray.CreateBuilder<CooperationDependencyBindingFact>();
         var uniformConditionals = ImmutableArray.CreateBuilder<CooperationUniformConditionalFact>();
-        var uniformReturns = ImmutableArray.CreateBuilder<CooperationUniformReturnFact>();
-        var allReturnsUniform = true;
+        var dependencyReturns = ImmutableArray.CreateBuilder<CooperationDependencyReturnFact>();
+        var eligibleFormals = EligibleFormalLoads(body);
         var definedValues = regions.Values
             .SelectMany(static region => region.Body.Parameters.Concat(
                 region.Body.Body.Elements.Select(static instruction => instruction.Result)
@@ -225,7 +261,8 @@ internal static class CooperationUniformity
                 initialAvailable.UnionWith(body.Declaration.Parameters.Select(static parameter => parameter.Value));
                 environment = new(
                     initialAvailable.ToImmutable(),
-                    ImmutableHashSet.Create<IShaderValue>(ReferenceEqualityComparer.Instance));
+                    ImmutableDictionary.Create<IShaderValue, CooperationUniformDependencies.Known>(
+                        ReferenceEqualityComparer.Instance));
             }
             else
             {
@@ -235,32 +272,37 @@ internal static class CooperationUniformity
                 var available = edges
                     .Select(edge => outgoing[edge.Source].Available)
                     .Aggregate(static (left, right) => left.Intersect(right));
-                var uniform = edges
-                    .Select(edge => outgoing[edge.Source].Uniform)
-                    .Aggregate(static (left, right) => left.Intersect(right));
-                environment = new(available, uniform);
+                var dependencies = edges
+                    .Select(edge => outgoing[edge.Source].Dependencies)
+                    .Aggregate(IntersectDependencies);
+                environment = new(available, dependencies);
 
                 foreach (var (position, parameter) in block.Parameters.Index())
                 {
-                    environment = environment.Define(parameter, uniform: edges.All(edge =>
-                        IsUniform(edge.Jump.Arguments[position], outgoing[edge.Source])));
-                    if (!environment.Uniform.Contains(parameter))
+                    var parameterDependencies = DependencyLattice.Union(
+                        edges.Select(edge =>
+                            DependenciesOf(edge.Jump.Arguments[position], outgoing[edge.Source])));
+                    environment = environment.Define(parameter, parameterDependencies);
+                    if (parameterDependencies is not CooperationUniformDependencies.Known knownParameter)
                         continue;
                     foreach (var edge in edges)
-                        uniformBindings.Add(new(
+                        dependencyBindings.Add(new(
                             body.Declaration,
                             edge.Source,
                             edge.Arm,
                             label,
                             position,
                             edge.Jump.Arguments[position],
-                            parameter));
-                    uniformValues.Add(new(
+                            DependenciesOf(edge.Jump.Arguments[position], outgoing[edge.Source]),
+                            parameter,
+                            knownParameter));
+                    dependencyValues.Add(new(
                         body.Declaration,
                         label,
                         null,
                         parameter,
-                        CooperationUniformValueKind.BlockParameter,
+                        CooperationDependencyValueKind.BlockParameter,
+                        knownParameter,
                         null,
                         [.. edges.Select(edge => edge.Jump.Arguments[position])],
                         null,
@@ -279,38 +321,45 @@ internal static class CooperationUniformity
                     instruction,
                     label,
                     ordinal,
-                    environment,
+                    value => DependenciesOf(value, environment),
                     completed,
+                    eligibleFormals,
                     directRequirements,
                     directUnknowns);
-                environment = environment.Define(result, classification.Uniform);
-                if (!classification.Uniform)
+                environment = environment.Define(result, classification.Dependencies);
+                if (classification.Dependencies is not CooperationUniformDependencies.Known known)
                     continue;
-                uniformValues.Add(new(
+                dependencyValues.Add(new(
                     body.Declaration,
                     label,
                     ordinal,
                     result,
                     classification.Kind,
+                    known,
                     instruction.Operation,
                     [.. instruction.Operands],
                     classification.Callee,
                     instruction.Payload));
-                if (classification.Kind is CooperationUniformValueKind.NumericBuiltinResult)
+                if (classification.Kind is CooperationDependencyValueKind.NumericBuiltinResult)
                     builtinCalls.Add((body.Declaration, label, ordinal, classification.Callee!));
             }
 
             switch (block.Body.Last)
             {
                 case Terminator.D.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>:
-                    uniformReturns.Add(new(body.Declaration, label, null, true));
+                    dependencyReturns.Add(new(
+                        body.Declaration,
+                        label,
+                        null,
+                        DependencyLattice.Empty));
                     break;
                 case Terminator.D.ReturnExpr<RegionJump<IShaderValue>, IShaderValue> returned:
                     RequireAvailable(returned.Expr, environment, entry, body.Declaration, label);
-                    var isUniform = IsUniform(returned.Expr, environment);
-                    uniformReturns.Add(new(body.Declaration, label, returned.Expr, isUniform));
-                    if (!isUniform)
-                        allReturnsUniform = false;
+                    dependencyReturns.Add(new(
+                        body.Declaration,
+                        label,
+                        returned.Expr,
+                        DependenciesOf(returned.Expr, environment)));
                     break;
                 case Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch:
                     foreach (var argument in branch.Target.Arguments)
@@ -318,7 +367,7 @@ internal static class CooperationUniformity
                     break;
                 case Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch:
                     RequireAvailable(branch.Condition, environment, entry, body.Declaration, label);
-                    if (!IsUniform(branch.Condition, environment))
+                    if (!DependencyLattice.IsEmpty(DependenciesOf(branch.Condition, environment)))
                         throw ShapeError(
                             entry,
                             body.Declaration,
@@ -348,12 +397,14 @@ internal static class CooperationUniformity
                     variable.AddressSpace is not FunctionAddressSpace &&
                     moduleStorage.Contains(variable))
                 .Distinct<VariableDeclaration>(ReferenceEqualityComparer.Instance)],
-            uniformValues.ToImmutable(),
-            uniformBindings.ToImmutable(),
+            [.. eligibleFormals.Values.Order()],
+            dependencyValues.ToImmutable(),
+            dependencyBindings.ToImmutable(),
             uniformConditionals.ToImmutable(),
-            uniformReturns.ToImmutable(),
+            dependencyReturns.ToImmutable(),
             CooperationTransferFacts.Capture(body, order),
-            allReturnsUniform);
+            DependencyLattice.Union(
+                dependencyReturns.Select(static returned => returned.Dependencies)));
     }
 
     internal static class CooperationTransferFacts
@@ -441,12 +492,13 @@ internal static class CooperationUniformity
             };
     }
 
-    private static UniformClassification Classify(
+    internal static DependencyClassification Classify(
         Instruction<IShaderValue, IShaderValue> instruction,
         Label label,
         int ordinal,
-        FlowEnvironment environment,
+        Func<IShaderValue, CooperationUniformDependencies> dependenciesOf,
         IReadOnlyDictionary<FunctionDeclaration, CooperationFunctionUniformityFacts> completed,
+        IReadOnlyDictionary<ParameterPointerValue, int> eligibleFormals,
         IReadOnlyDictionary<(Label Label, int Ordinal), OperationRequirementSite> directRequirements,
         IReadOnlyDictionary<(Label Label, int Ordinal), FunctionEffectUnknownSite> directUnknowns)
     {
@@ -456,29 +508,110 @@ internal static class CooperationUniformity
         {
             if (completed.TryGetValue(callee, out var helper))
                 return new(
-                    helper.ReturnsUniform,
-                    CooperationUniformValueKind.HelperCallResult,
+                    DependencyLattice.Substitute(
+                        helper.AggregateReturnDependencies,
+                        position =>
+                            position + 1 < instruction.OperandCount &&
+                            instruction[position + 1] is { } argument
+                                ? dependenciesOf(argument)
+                                : DependencyLattice.Unknown),
+                    CooperationDependencyValueKind.HelperCallResult,
                     callee);
             if (NumericBuiltins.Contains(callee))
                 return new(
-                    !DerivativeBuiltins.Contains(callee) &&
-                    instruction.Operands.Skip(1).All(operand => IsUniform(operand, environment)),
-                    CooperationUniformValueKind.NumericBuiltinResult,
+                    DerivativeBuiltins.Contains(callee)
+                        ? DependencyLattice.Unknown
+                        : DependencyLattice.Union(
+                            instruction.Operands.Skip(1).Select(operand =>
+                                dependenciesOf(operand))),
+                    CooperationDependencyValueKind.NumericBuiltinResult,
                     callee);
-            return UniformClassification.Varying;
+            return DependencyClassification.Varying;
         }
+
+        if (instruction.Operation is LoadOperation &&
+            instruction.OperandCount == 1 &&
+            instruction.Operand0 is ParameterPointerValue parameter &&
+            eligibleFormals.TryGetValue(parameter, out var position))
+            return new(
+                DependencyLattice.ForFormal(position),
+                CooperationDependencyValueKind.FunctionParameterLoad,
+                null);
 
         if (instruction.Operation is LoadOperation or StoreOperation or IAddressOfOperation or AccessChainOperation ||
             instruction.Operation is IOperationRequirementProvider ||
             instruction.Result?.Type is IPtrType ||
             directRequirements.ContainsKey((label, ordinal)) ||
             directUnknowns.ContainsKey((label, ordinal)))
-            return UniformClassification.Varying;
+            return DependencyClassification.Varying;
 
         return new(
-            instruction.Operands.All(operand => IsUniform(operand, environment)),
-            CooperationUniformValueKind.OperationResult,
+            FunctionEffectAnalysis.IsKnownPureOperation(instruction.Operation)
+                ? DependencyLattice.Union(
+                    instruction.Operands.Select(dependenciesOf))
+                : DependencyLattice.Unknown,
+            CooperationDependencyValueKind.OperationResult,
             null);
+    }
+
+    internal static ImmutableDictionary<ParameterPointerValue, int> EligibleFormalLoads(
+        RegionFunctionBody body)
+    {
+        var positions = new Dictionary<ParameterPointerValue, int>(
+            ReferenceEqualityComparer.Instance);
+        foreach (var (position, parameter) in body.Declaration.Parameters.Index())
+            if (parameter.Type is not IPtrType &&
+                !ShaderModuleMetadataValidator.IsResourceTypeOrPointer(parameter.Type))
+                positions.Add(parameter.Value, position);
+        var invalid = new HashSet<ParameterPointerValue>(ReferenceEqualityComparer.Instance);
+        var loaded = new HashSet<ParameterPointerValue>(ReferenceEqualityComparer.Instance);
+
+        body.Body.Traverse(region =>
+        {
+            foreach (var instruction in region.Body.Body.Elements)
+            {
+                foreach (var operand in instruction.Operands.OfType<ParameterPointerValue>())
+                {
+                    if (!positions.ContainsKey(operand))
+                        continue;
+                    if (instruction.Operation is not LoadOperation ||
+                        instruction.OperandCount != 1 ||
+                        !ReferenceEquals(instruction.Operand0, operand) ||
+                        instruction.Result is null ||
+                        !instruction.Result.Type.Equals(operand.Declaration.Type))
+                        invalid.Add(operand);
+                    else
+                        loaded.Add(operand);
+                }
+            }
+
+            foreach (var value in TerminatorValues(region.Body.Body.Last).OfType<ParameterPointerValue>())
+                if (positions.ContainsKey(value))
+                    invalid.Add(value);
+        });
+
+        var eligible = ImmutableDictionary.CreateBuilder<ParameterPointerValue, int>(
+            ReferenceEqualityComparer.Instance);
+        foreach (var (parameter, position) in positions)
+            if (loaded.Contains(parameter) &&
+                !invalid.Contains(parameter))
+                eligible.Add(parameter, position);
+        return eligible.ToImmutable();
+    }
+
+    private static ImmutableDictionary<IShaderValue, CooperationUniformDependencies.Known>
+        IntersectDependencies(
+            ImmutableDictionary<IShaderValue, CooperationUniformDependencies.Known> left,
+            ImmutableDictionary<IShaderValue, CooperationUniformDependencies.Known> right)
+    {
+        var result = ImmutableDictionary.CreateBuilder<
+            IShaderValue,
+            CooperationUniformDependencies.Known>(ReferenceEqualityComparer.Instance);
+        foreach (var (value, dependencies) in left)
+            if (right.TryGetValue(value, out var found) &&
+                DependencyLattice.Equals(dependencies, found))
+                result.Add(value, dependencies);
+        return result.ToImmutable();
     }
 
     private static ImmutableArray<(int Arm, RegionJump<IShaderValue> Jump)> Edges(
@@ -564,8 +697,14 @@ internal static class CooperationUniformity
                 "value is not definitely available on every incoming path");
     }
 
-    private static bool IsUniform(IShaderValue value, FlowEnvironment environment) =>
-        value is LiteralValue || environment.Uniform.Contains(value);
+    private static CooperationUniformDependencies DependenciesOf(
+        IShaderValue value,
+        FlowEnvironment environment) =>
+        value is LiteralValue
+            ? DependencyLattice.Empty
+            : environment.Dependencies.TryGetValue(value, out var dependencies)
+                ? dependencies
+                : DependencyLattice.Unknown;
 
     private static bool IsAlwaysAvailable(IShaderValue value) =>
         value is LiteralValue or FunctionDeclaration;
@@ -581,18 +720,78 @@ internal static class CooperationUniformity
 
     private readonly record struct FlowEnvironment(
         ImmutableHashSet<IShaderValue> Available,
-        ImmutableHashSet<IShaderValue> Uniform)
+        ImmutableDictionary<IShaderValue, CooperationUniformDependencies.Known> Dependencies)
     {
-        internal FlowEnvironment Define(IShaderValue value, bool uniform) =>
-            new(Available.Add(value), uniform ? Uniform.Add(value) : Uniform);
+        internal FlowEnvironment Define(
+            IShaderValue value,
+            CooperationUniformDependencies dependencies) =>
+            new(
+                Available.Add(value),
+                dependencies is CooperationUniformDependencies.Known known
+                    ? Dependencies.SetItem(value, known)
+                    : Dependencies.Remove(value));
     }
 
-    private readonly record struct UniformClassification(
-        bool Uniform,
-        CooperationUniformValueKind Kind,
+    internal readonly record struct DependencyClassification(
+        CooperationUniformDependencies Dependencies,
+        CooperationDependencyValueKind Kind,
         FunctionDeclaration? Callee)
     {
-        internal static UniformClassification Varying { get; } =
-            new(false, CooperationUniformValueKind.OperationResult, null);
+        internal static DependencyClassification Varying { get; } =
+            new(
+                DependencyLattice.Unknown,
+                CooperationDependencyValueKind.OperationResult,
+                null);
+    }
+
+    internal static class DependencyLattice
+    {
+        internal static CooperationUniformDependencies.Unknown Unknown { get; } = new();
+        internal static CooperationUniformDependencies.Known Empty { get; } = new([]);
+
+        internal static CooperationUniformDependencies.Known ForFormal(int position) =>
+            new([position]);
+
+        internal static CooperationUniformDependencies Union(
+            IEnumerable<CooperationUniformDependencies> dependencies)
+        {
+            var positions = ImmutableArray.CreateBuilder<int>();
+            foreach (var dependency in dependencies)
+            {
+                if (dependency is not CooperationUniformDependencies.Known known)
+                    return Unknown;
+                positions.AddRange(known.FormalParameterPositions);
+            }
+            return new CooperationUniformDependencies.Known(positions);
+        }
+
+        internal static CooperationUniformDependencies Substitute(
+            CooperationUniformDependencies dependencies,
+            Func<int, CooperationUniformDependencies> actual)
+        {
+            if (dependencies is not CooperationUniformDependencies.Known known)
+                return Unknown;
+            return Union(known.FormalParameterPositions.Select(actual));
+        }
+
+        internal static bool IsEmpty(CooperationUniformDependencies dependencies) =>
+            dependencies is CooperationUniformDependencies.Known
+            {
+                FormalParameterPositions: { IsEmpty: true }
+            };
+
+        internal static bool Equals(
+            CooperationUniformDependencies left,
+            CooperationUniformDependencies right) =>
+            (left, right) switch
+            {
+                (CooperationUniformDependencies.Unknown, CooperationUniformDependencies.Unknown) => true,
+                (
+                    CooperationUniformDependencies.Known leftKnown,
+                    CooperationUniformDependencies.Known rightKnown) =>
+                    leftKnown.FormalParameterPositions.AsEnumerable().SequenceEqual(
+                        rightKnown.FormalParameterPositions),
+                _ => false
+            };
     }
 }

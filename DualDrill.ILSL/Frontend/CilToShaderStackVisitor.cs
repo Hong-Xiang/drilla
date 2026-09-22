@@ -317,7 +317,11 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
     public Unit VisitLoadIndirectNativeInt(CilInstructionInfo inst) => throw new NotImplementedException();
     public Unit VisitLoadIndirectRef(CilInstructionInfo inst) => throw new NotImplementedException();
     public Unit VisitStoreIndirectRef(CilInstructionInfo inst) => throw new NotImplementedException();
-    public Unit VisitDup(CilInstructionInfo inst) => throw new NotImplementedException();
+    public Unit VisitDup(CilInstructionInfo inst)
+    {
+        Emit(new ShaderStackInstruction.Duplicate());
+        return default;
+    }
 
     private void EmitRelation<TOp>(bool isUn)
         where TOp : BinaryRelational.IOp<TOp>
