@@ -2,7 +2,9 @@
 
 CLSL validates shader metadata before it can be normalized, lowered, or
 silently omitted. Uniform layout rules are documented separately in
-[Uniform buffer layout](./uniform-layout.md).
+[Uniform buffer layout](./uniform-layout.md). The strict vertex
+`instance_index` contract is documented in
+[Vertex instance index](./instance-index.md).
 
 ## Resource declarations
 

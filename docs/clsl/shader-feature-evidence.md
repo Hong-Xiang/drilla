@@ -10,7 +10,10 @@ current CLSL behavior and [future API proposals](./shader-feature-proposals.md).
 > baseline. For current compute-signature support, see
 > [Compute entry points](./compute-entry.md); for current storage support, see
 > [Read-only f32 structured buffers](./readonly-structured-buffer.md) and
-> [Writable f32 structured buffers](./writable-structured-buffer.md).
+> [Writable f32 structured buffers](./writable-structured-buffer.md). Current
+> strict vertex `instance_index` support is documented in
+> [Vertex instance index](./instance-index.md); the historical rejection
+> capture below remains attributed to the stated baseline.
 
 ## Current CLSL probes
 

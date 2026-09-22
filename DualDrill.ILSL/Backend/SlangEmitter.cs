@@ -370,6 +370,7 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                     {
                         BuiltinBinding.position => "SV_POSITION",
                         BuiltinBinding.vertex_index => "SV_VertexId",
+                        BuiltinBinding.instance_index => "SV_InstanceID",
                         BuiltinBinding.global_invocation_id => "SV_DispatchThreadID",
                         _ => throw new NotSupportedException(
                             $"Unsupported Slang builtin binding {builtin.Slot}.")
