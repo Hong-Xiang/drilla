@@ -26,16 +26,6 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void InstanceIndexBuiltinIsRejectedBySlangEmitter()
-    {
-        var exception = Assert.Throws<NotSupportedException>(() =>
-            new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(new InstanceIndexShader()));
-
-        output.WriteLine(exception.Message);
-        Assert.Equal("Unsupported Slang builtin binding instance_index.", exception.Message);
-    }
-
-    [Fact]
     public void OrdinaryIntArrayIndexingIsRejectedDuringPreStackAnalysis()
     {
         var method = ((Func<int[], int, int>)ReadElement).Method;
@@ -135,14 +125,6 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
         public static void cs()
         {
         }
-    }
-
-    private sealed class InstanceIndexShader : ISharpShader
-    {
-        [Vertex]
-        [return: Builtin(BuiltinBinding.position)]
-        public static vec4f32 vs([Builtin(BuiltinBinding.instance_index)] uint index) =>
-            DMath.vec4(0f, 0f, 0f, 1f);
     }
 
     private struct VertexOut

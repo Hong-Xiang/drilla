@@ -193,6 +193,7 @@ internal static class ShaderModuleMetadataValidator
         foreach (var function in module.Declarations.OfType<FunctionDeclaration>())
         {
             ValidateFunctionAttributes(function);
+            ValidateInstanceIndexFunction(function);
             foreach (var parameter in function.Parameters)
             {
                 RejectResourceValueType(
@@ -383,6 +384,89 @@ internal static class ShaderModuleMetadataValidator
 
     private static void ValidateFunctionAttributes(FunctionDeclaration function) =>
         ValidateFunctionAttributes($"function '{function.Name}'", function.Attributes);
+
+    public static void ValidateReflectedInstanceIndexMetadata(MethodInfo method)
+    {
+        var parameters = method.GetParameters();
+        var inputs = parameters
+            .SelectMany(parameter => parameter
+                .GetCustomAttributes<BuiltinAttribute>()
+                .Where(attribute => attribute.Slot is BuiltinBinding.instance_index)
+                .Select(attribute => (Parameter: parameter, Attribute: attribute)))
+            .ToArray();
+        var returns = method.ReturnParameter
+            .GetCustomAttributes<BuiltinAttribute>()
+            .Count(attribute => attribute.Slot is BuiltinBinding.instance_index);
+        if (inputs.Length == 0 && returns == 0)
+            return;
+
+        var stages = method.GetCustomAttributes().OfType<IShaderStageAttribute>().ToArray();
+        var declaration = $"method '{method.DeclaringType?.FullName}.{method.Name}'";
+        ValidateInstanceIndexStage(declaration, stages);
+
+        if (returns > 0)
+            throw Invalid(
+                declaration,
+                "[Builtin(instance_index)] is valid only on a vertex input parameter.");
+        if (inputs.Length > 1)
+            throw Invalid(
+                declaration,
+                $"a vertex entry accepts at most one instance_index input; found {inputs.Length}.");
+
+        var parameter = inputs[0].Parameter;
+        if (parameter.ParameterType != typeof(uint))
+            throw Invalid(
+                $"parameter '{method.DeclaringType?.FullName}.{method.Name}.{parameter.Name}'",
+                $"instance_index must have CLR type {typeof(uint)}; found {parameter.ParameterType}.");
+    }
+
+    private static void ValidateInstanceIndexFunction(FunctionDeclaration function)
+    {
+        var inputs = function.Parameters
+            .SelectMany(parameter => parameter.Attributes
+                .OfType<BuiltinAttribute>()
+                .Where(attribute => attribute.Slot is BuiltinBinding.instance_index)
+                .Select(attribute => (Parameter: parameter, Attribute: attribute)))
+            .ToArray();
+        var returns = function.Return.Attributes
+            .OfType<BuiltinAttribute>()
+            .Count(attribute => attribute.Slot is BuiltinBinding.instance_index);
+        if (inputs.Length == 0 && returns == 0)
+            return;
+
+        var declaration = $"function '{function.Name}'";
+        ValidateInstanceIndexStage(
+            declaration,
+            function.Attributes.OfType<IShaderStageAttribute>().ToArray());
+
+        if (returns > 0)
+            throw Invalid(
+                declaration,
+                "[Builtin(instance_index)] is valid only on a vertex input parameter.");
+        if (inputs.Length > 1)
+            throw Invalid(
+                declaration,
+                $"a vertex entry accepts at most one instance_index input; found {inputs.Length}.");
+
+        var parameter = inputs[0].Parameter;
+        if (!parameter.Type.Equals(ShaderType.U32))
+            throw Invalid(
+                $"parameter '{function.Name}.{parameter.Name}'",
+                $"instance_index must have type {ShaderType.U32.Name}; found {parameter.Type.Name}.");
+    }
+
+    private static void ValidateInstanceIndexStage(
+        string declaration,
+        IReadOnlyCollection<IShaderStageAttribute> stages)
+    {
+        if (stages.Count == 1 && stages.Single() is VertexAttribute)
+            return;
+
+        var found = stages.Count == 0 ? "0" : AttributeNames(stages);
+        throw Invalid(
+            declaration,
+            $"instance_index requires exactly one [Vertex] stage attribute; found {found}.");
+    }
 
     public static void ValidateReflectedComputeMetadata(MethodInfo method)
     {
