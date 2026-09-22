@@ -174,10 +174,13 @@ operations remain unsupported. C# uint negation first promotes to i64; it is not
 an unsigned `neg` variant. Its i32-to-u64 widening conversion is not yet supported
 by Slang target lowering and is rejected before target AST construction,
 independently of canonical `neg`. The emitter only spells the accepted target AST.
-Exception flow, `initobj`, indirect
-loads/stores, `ldnull`, and `dup` remain
-unsupported. `initobj` is rejected at shared instruction dispatch because the
-value frontend does not yet emit its required zero-initialization store;
+`dup` duplicates the already evaluated top stack value without re-evaluating
+its producer or creating a value-IR instruction. It preserves the exact
+canonical stack type and pointer identity; object-reference categories and an
+empty stack are rejected. Exception flow, `initobj`, indirect loads/stores, and
+`ldnull` remain unsupported. `initobj` is rejected at shared instruction
+dispatch because the value frontend does not yet emit its required
+zero-initialization store;
 ordinary `pop` remains supported. Dead non-control instructions in one collected
 function remain absent from that function's Pre/CFG. A separately collected dead
 callee is nevertheless compiled by the module pipeline and may fail on its own

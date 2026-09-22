@@ -166,6 +166,9 @@ public static class ShaderStackToValuePass
                     case ShaderStackInstruction.PushAlias alias:
                         stack.Add(alias.Value.Value);
                         break;
+                    case ShaderStackInstruction.Duplicate:
+                        stack.Add(stack[^1]);
+                        break;
                     case ShaderStackInstruction.Drop:
                         stack.RemoveAt(stack.Count - 1);
                         break;
