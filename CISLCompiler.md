@@ -53,9 +53,10 @@ Then we use structured [control flow conversion algorithm](https://dl.acm.org/do
 
 ### Region parameter lowering in the SSA / Slang pipeline
 
-`RegionParameterToLocalVariablePass` collects region bodies with a fold and jump edges
-with a terminator algebra. It checks edge arity and types, including pointer address spaces,
-before lowering parameters.
+The public Slang/WGSL path runs `StablePointerRegionParameterPass` after
+`FunctionToOperationPass`. It checks edge arity and types, resolves only stable pointer
+aliases, and deliberately preserves ordinary parameters and every ordered arm argument for
+`SlangTargetLowering`.
 
 Pointer parameters are constraints on address identity, not values to copy into pointer locals.
 A finite dependency-graph traversal resolves each parameter to a single parameter or variable
@@ -65,15 +66,95 @@ addresses, and cycles without a stable address fail explicitly with function/blo
 Every pointer parameter is checked, including unused parameters and those in unreachable regions.
 This is deliberately not general pointer-phi or resource-pointer lowering.
 
-The resulting substitutions are applied through the existing maps. Ordinary value parameters
-continue to lower to local loads/stores; consumed jump arguments are removed along with their
-parameters, so running the pass again does not introduce more locals or instructions.
-Conditional edges to the same target may share identical value arguments; differing arguments
-are explicitly rejected until edge-specific value lowering is implemented, rather than
-unconditionally storing both argument lists and silently selecting the wrong one.
-Direct IR regression tests cover address identity, chains, cycles, rejected inputs, mixed
-parameter slots, and idempotence. Existing Slang end-to-end tests remain compilation checks,
-not GPU execution-equivalence proofs.
+`SlangTargetLowering` consumes the checked scoped-control index, snapshots all values from the
+selected arm before writing destination slots, and produces a typed target AST with distinct
+one-shot and repeating loop nodes. Cross-label values use explicit typed captures. The
+syntax-only emitter never inspects Region layout or postdominance.
+
+The generic `RegionParameterToLocalVariablePass` remains for non-target callers. It composes
+the same stable-pointer pass before erasing ordinary parameters into local loads/stores; its
+legacy same-target/different-value restriction does not apply to the public target path.
+
+### Portable cooperation profile
+
+`CLSLCompileOption` defaults to `CLSLCooperationProfile.Scalar`. This preserves ordinary
+scalar compilation, but it is not a safety opt-out: any known derivative-quad, subgroup, or
+workgroup-barrier requirement is rejected through every public compile and emit route.
+
+Choose `PortableWgsl` to admit the currently proved cooperative subset:
+
+```csharp
+var compiler = new CLSLCompiler(new(
+    CLSLCompileTarget.WGSL,
+    CLSLCooperationProfile.PortableWgsl));
+var wgsl = compiler.Emit(shader);
+```
+
+The admitted subset is an unambiguous fragment entry and its finite, acyclic call closure.
+Functions may use unconditional or conditional `Forward` transfers and uniform early returns,
+but every conditional decision in the closure must be proved uniform. Literals and known,
+deterministic pure typed operations preserve uniform operands. Helper-return summaries are
+context-independent: every returned value and internal decision must be uniform, so a helper
+returning a literal can prove control while an identity helper remains varying even when called
+with a literal. Entry/helper parameters, memory loads, derivative results, provider `None`, and
+pointer identity do not prove uniformity. Surviving non-function storage roots must be
+module-declared members of the immutable original source-use whitelist; that verified subset is
+available as external input, while erased roots are not retained and loaded values remain
+varying. Exact incoming source arms determine block-parameter facts. Switches (including uniform switches),
+loops/repeats, continues, recursive or incomplete
+summaries, unowned cooperative helpers, and vertex/compute derivative use fail explicitly.
+
+This profile currently admits matching f32 scalar/vector `dpdx`, `dpdy`, and `fwidth`; f16/f64
+are outside that deliberately narrow profile bound. Coarse/fine forms are separately rejected
+because the pinned Slang-to-WGSL route does not support them. Derivative operands may vary.
+
+The mapped Slang names are `ddx`, `ddy`, and `fwidth`. The Slang target-lowering module
+boundary rejects a module declaration with the mapped name of a derivative actually used by
+the module, including callers that invoke target lowering directly without a cooperation
+profile. This prevents ordinary user calls from capturing the target builtin spelling. It is
+a narrow collision check, not general symbol renaming; a user helper named `dpdx` remains an
+ordinary helper.
+
+Admission publishes immutable `CLSLCooperationFacts` containing the entry declaration,
+original block identities, proof-relevant value definitions and exact incoming arm bindings,
+the complete original `(source, arm, target, owner, kind, arguments)` transfer table, original
+sensitive/helper-call instructions, uniform conditionals/returns, and call-site-to-callee
+inheritance. Pointer correspondence anchors those facts to the analyzed source snapshot;
+pointer-parameter erasure is the only transfer-tuple change admitted there. Slang lowering
+publishes internal condition, transfer snapshot/slot/token, gate, definition, and capture
+origins. An independent structural verifier checks the actual target AST, including distinct
+generated carriers, exact callee/operand/source-scope lineage, bijective source
+returns/calls/effects and target breaks, and reaching control definitions on every live token
+path. It also derives the exact bounded activation template from the source Region bindings
+and checked `Forward` escapes, then matches raw scopes, suffix carriers, gated/ungated
+continuations, sibling order, and terminal exits structurally. The emitter remains syntax-only.
+`MaximalReconvergence` is reserved and rejected by the compiler constructor. Migrate
+derivative shaders by selecting `PortableWgsl` and keeping the entire cooperative call closure
+within the bound above.
+
+### Public scalar local promotion
+
+`PromoteLocalsPass.Run` operates on the flat `ControlFlowGraph<CilValueBasicBlock>` after
+stack-to-value conversion. It promotes each supplied function-local independently when every
+address use is a direct ordinary load or store and the pointee is exactly `i32` or `bool`.
+Escaped, aliased, pointer-valued, aggregate, volatile/atomic, unsupported, or incompletely
+initialized locals remain in storage.
+
+With `InitLocals`, promotion starts from an exact typed `0_i32` or `false` definition.
+Otherwise every load must be definitely assigned on every path. The pass uses pruned SSA:
+forward must-assignment, local liveness, dominance frontiers, and dominator-tree renaming.
+Existing block parameters and edge arguments remain an unchanged prefix; promoted values append
+in supplied declaration order. Entry parameters are never introduced, so a local requiring an
+entry phi because of a backedge remains in storage.
+
+The pass validates connected CFG structure, block labels and successors, empty entry parameters,
+every individual edge arity/type, duplicate supplied declarations, and load/store arity/types.
+Malformed input throws `ArgumentException`. Labels, topology, retained operations/results,
+payloads, and effect order are preserved, and an unchanged invocation returns the original graph.
+`CilLocalPromotionPass` maps the public value module through this transform using the raw method's
+exact local declarations and required `MethodBody.InitLocals` metadata. `CilModuleCompiler` runs it
+after `ShaderStackToValuePass` and before `CilBlockControlFactsPass`, so value indexes and
+topology-dependent facts are rebuilt from the promoted graph.
 
 ## CLSL Built in Attributes
 Some attributes are defined to extend C# language's semantic for shaders,

@@ -1,5 +1,6 @@
 ﻿namespace DualDrill.Graphics;
-public partial interface IGPURenderBundle
+
+public partial interface IGPURenderBundle : IDisposable
 {
 }
 
@@ -10,7 +11,7 @@ public sealed partial record class GPURenderBundle<TBackend>(GPUHandle<TBackend,
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 public partial interface IGPUPipelineLayout : IDisposable
@@ -24,10 +25,10 @@ public sealed partial record class GPUPipelineLayout<TBackend>(GPUHandle<TBacken
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUComputePipeline
+public partial interface IGPUComputePipeline : IDisposable
 {
 }
 
@@ -45,7 +46,7 @@ public sealed partial record class GPUComputePipeline<TBackend>(GPUHandle<TBacke
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 public partial interface IGPUShaderModule : IDisposable
@@ -66,10 +67,10 @@ public sealed partial record class GPUShaderModule<TBackend>(GPUHandle<TBackend,
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUQuerySet
+public partial interface IGPUQuerySet : IDisposable
 {
 }
 
@@ -80,10 +81,10 @@ public sealed partial record class GPUQuerySet<TBackend>(GPUHandle<TBackend, GPU
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUSampler
+public partial interface IGPUSampler : IDisposable
 {
 }
 
@@ -94,10 +95,10 @@ public sealed partial record class GPUSampler<TBackend>(GPUHandle<TBackend, GPUS
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUBindGroup
+public partial interface IGPUBindGroup : IDisposable
 {
 }
 
@@ -108,7 +109,7 @@ public sealed partial record class GPUBindGroup<TBackend>(GPUHandle<TBackend, GP
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 public partial interface IGPURenderPipeline : IDisposable
@@ -128,7 +129,7 @@ public sealed partial record class GPURenderPipeline<TBackend>(GPUHandle<TBacken
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 public partial interface IGPUCommandBuffer : IDisposable
@@ -142,10 +143,10 @@ public sealed partial record class GPUCommandBuffer<TBackend>(GPUHandle<TBackend
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
-public partial interface IGPUBindGroupLayout
+public partial interface IGPUBindGroupLayout : IDisposable
 {
 }
 
@@ -156,7 +157,7 @@ public sealed partial record class GPUBindGroupLayout<TBackend>(GPUHandle<TBacke
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 public partial interface IGPUComputePassEncoder
@@ -240,7 +241,7 @@ public sealed partial record class GPUComputePassEncoder<TBackend>(GPUHandle<TBa
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }
 public partial interface IGPURenderBundleEncoder
@@ -365,6 +366,6 @@ public sealed partial record class GPURenderBundleEncoder<TBackend>(GPUHandle<TB
 
     public void Dispose()
     {
-        TBackend.Instance.DisposeHandle(Handle);
+        Handle.Release(TBackend.Instance.DisposeHandle);
     }
 }

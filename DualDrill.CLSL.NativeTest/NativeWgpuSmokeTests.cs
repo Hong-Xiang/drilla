@@ -1,8 +1,12 @@
 using System.Diagnostics;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Test.ShaderModule;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
+using DualDrill.Mathematics;
+using DualDrill.Shaders;
 using Xunit.Abstractions;
+using static DualDrill.Mathematics.DMath;
 
 namespace DualDrill.CLSL.NativeTest;
 
@@ -39,9 +43,44 @@ public sealed class NativeWgpuSmokeTests(ITestOutputHelper output)
     {
         output.WriteLine("native wgpu");
 
+        var pixels = await RenderAsync(new MinimumHelloTriangleShaderModule());
+        Assert.Equal([255, 255, 255, 255], PixelAt(pixels, 32, 32));
+        Assert.Equal([0, 0, 0, 255], PixelAt(pixels, 0, 0));
+    }
+
+    [Fact]
+    public async Task Compiled_loop_returns_preserve_scalar_vector_values_and_effects()
+    {
+        var pixels = await RenderAsync(new LoopReturnShader());
+
+        Assert.Equal([64, 0, 0, 255], PixelAt(pixels, 32, 32));
+        Assert.Equal([191, 64, 0, 255], PixelAt(pixels, 31, 32));
+        Assert.Equal([0, 0, 0, 255], PixelAt(pixels, 0, 0));
+    }
+
+    [Fact]
+    public async Task Canonical_compiler_server_raymarch_creates_native_shader_module()
+    {
         var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL))
-            .Emit(new MinimumHelloTriangleShaderModule());
+            .Emit(new RaymarchingPrimitiveShader());
         Assert.False(string.IsNullOrWhiteSpace(wgsl));
+
+        using var instance = WebGPUNETBackend.Instance.CreateGPUInstance();
+        using var adapter = await instance.RequestAdapterAsync(
+            new()
+            {
+                PowerPreference = GPUPowerPreference.HighPerformance,
+                ForceFallbackAdapter = false,
+            },
+            CancellationToken.None);
+        using var device = await adapter.RequestDeviceAsync(new(), CancellationToken.None);
+        using var shader = device.CreateShaderModule(new() { Code = wgsl });
+        device.Poll();
+    }
+
+    private static async Task<byte[]> RenderAsync(ISharpShader source)
+    {
+        var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(source);
 
         using var instance = WebGPUNETBackend.Instance.CreateGPUInstance();
         using var adapter = await instance.RequestAdapterAsync(
@@ -143,12 +182,56 @@ public sealed class NativeWgpuSmokeTests(ITestOutputHelper output)
         try
         {
             var pixels = readback.GetMappedRange(0, BufferSize);
-            Assert.Equal([255, 255, 255, 255], PixelAt(pixels, 32, 32));
-            Assert.Equal([0, 0, 0, 255], PixelAt(pixels, 0, 0));
+            return pixels.ToArray();
         }
         finally
         {
             readback.Unmap();
+        }
+    }
+
+    private sealed class LoopReturnShader : ISharpShader
+    {
+        [ShaderMethod]
+        private static float ScalarLoopValue(int selector)
+        {
+            var value = 0.0f;
+            for (var i = 0; i < 4; i++)
+            {
+                value += 0.25f;
+                if (i == (selector & 1))
+                    return value;
+                value += 0.25f;
+            }
+
+            return 0.0f;
+        }
+
+        [Vertex]
+        [return: Builtin(BuiltinBinding.position)]
+        public static vec4f32 vs([Builtin(BuiltinBinding.vertex_index)] uint vertexIndex)
+        {
+            var index = (int)vertexIndex;
+            var x = (1 - index) * (1 - (index & 1)) * 0.5f;
+            var y = ((index & 1) * 2 - 1) * 0.5f;
+            return vec4(x, y, 0.0f, 1.0f);
+        }
+
+        [Fragment]
+        [return: Location(0)]
+        public static vec4f32 fs([Builtin(BuiltinBinding.position)] vec4f32 position)
+        {
+            var selector = (int)position.x;
+            var red = ScalarLoopValue(selector);
+            var after = 0.0f;
+            for (var i = 0; i < 2; i++)
+            {
+                if (i == (selector & 1))
+                    return vec4(red, after, 0.0f, 1.0f);
+                after += 0.25f;
+            }
+
+            return vec4(0.0f, 1.0f, 0.0f, 1.0f);
         }
     }
 

@@ -1,439 +1,799 @@
-﻿using System.Collections.Frozen;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DualDrill.CLSL.Frontend.SymbolTable;
-using DualDrill.CLSL.Language;
-using DualDrill.CLSL.Language.Analysis;
-using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
-using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.ShaderAttribute.Metadata;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using Lokad.ILPack.IL;
 
 namespace DualDrill.CLSL.Frontend;
 
-/// <summary>
-///     Parse shader module metadata from reflection APIs,
-///     including all types, shader module variables, functions signatures, etc.
-///     method bodies are not parsed.
-/// </summary>
-/// <param name="Context"></param>
-public sealed record class RuntimeReflectionParser(
-    ISymbolTable Context,
-    Dictionary<FunctionDeclaration, FunctionBody4> MethodBodies)
+public sealed class RuntimeReflectionParser
 {
-    // TODO static binding flags should not be used, add code to proper handle static readonly value
     private static readonly BindingFlags VariableBindingFlags =
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
 
+    private readonly HashSet<MethodBase> completedMethods = [];
+    private readonly HashSet<Type> collectedTypes = [];
+    private readonly Dictionary<MethodBase, CollectedMethod> collectedMethods = [];
+    private readonly HashSet<MethodBase> inProgressMethods = [];
+    private string? failedSource;
+
     public RuntimeReflectionParser()
-        : this(CompilationContext.Create(), [])
+        : this(CompilationContext.Create())
     {
     }
 
-    public RuntimeReflectionParser(ISymbolTable Context)
-        : this(Context, [])
+    public RuntimeReflectionParser(CompilationContext context)
     {
+        Context = context;
     }
 
-    public IShaderType ParseType(Type t)
-    {
-        if (Context[t] is { } found) return found;
+    public CompilationContext Context { get; }
 
-        if (t.IsValueType)
-        {
-            var structureType = ParseStructDeclaration(t);
-            Context.AddStructure(t, structureType);
-            return structureType;
-        }
-
-        return new OpaqueType(t);
-    }
-
-    /// <summary>
-    ///     Parse new struct declaration based on relfection APIs
-    ///     currently only supports structs
-    ///     all access control are ignored (all fields, properties, methods are treated as public)
-    ///     basically it will parse all fields (including privates) and properties with automatically generated get, set, init
-    ///     etc.
-    /// </summary>
-    private StructureType ParseStructDeclaration(Type t)
-    {
-        var fields = t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                      .Where(f => !f.Name.EndsWith("k__BackingField"));
-        var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        var result = new StructureDeclaration
-        {
-            Name = t.Name,
-            Attributes = [.. t.GetCustomAttributes().OfType<IShaderAttribute>()]
-        };
-        var fieldMembers = fields.Select(ParseField);
-        var propsMembers = props.Select(f => new MemberDeclaration(f.Name, ParseType(f.PropertyType),
-            [.. f.GetCustomAttributes().OfType<IShaderAttribute>()]));
-
-        result.Members = [.. fieldMembers, .. propsMembers];
-        return new StructureType(result);
-    }
-
-
-    public VariableDeclaration ParseStaticField(FieldInfo fieldInfo)
-    {
-        var symbol = Symbol.Variable(fieldInfo);
-        // TODO: distinct on module variable and function variable
-        if (Context[symbol] is { } found) return found;
-
-        var decl = new VariableDeclaration(
-            UniformAddressSpace.Instance,
-            fieldInfo.Name,
-            ParseType(fieldInfo.FieldType),
-            [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]
-        );
-
-        Context.AddVariable(symbol, decl);
-        return decl;
-    }
-
-    public MemberDeclaration ParseField(FieldInfo fieldInfo)
-    {
-        if (Context[fieldInfo] is { } found) return found;
-
-        var decl = new MemberDeclaration(fieldInfo.Name,
-            ParseType(fieldInfo.FieldType),
-            [.. fieldInfo.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.AddStructureMember(fieldInfo, decl);
-        return decl;
-    }
-
-    private ImmutableHashSet<IShaderAttribute> ParseAttribute(ParameterInfo p) =>
-    [
-        ..p.GetCustomAttributes<BuiltinAttribute>(),
-        ..p.GetCustomAttributes<LocationAttribute>()
-    ];
-
-    private ImmutableHashSet<IShaderAttribute> ParseAttribute(MethodBase m) =>
-    [
-        //..m.GetCustomAttributes<VertexAttribute>(),
-        //..m.GetCustomAttributes<FragmentAttribute>(),
-        ..m.GetCustomAttributes().OfType<IShaderAttribute>()
-        //..m.GetCustomAttributes<ShaderMethodAttribute>(),
-    ];
-
-    private VariableDeclaration ParseModuleVariableDeclaration(FieldInfo info)
-    {
-        var symbol = Symbol.Variable(info);
-        if (Context[symbol] is { } found) return found;
-
-        var addressSpace = info.GetCustomAttributes().OfType<IAddressSpaceAttribute>().Single().AddressSpace;
-
-        var decl = new VariableDeclaration(
-            addressSpace,
-            info.Name,
-            ParseType(info.FieldType),
-            [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.AddVariable(symbol, decl);
-        return decl;
-    }
-
-    private VariableDeclaration ParseModuleVariableDeclaration(PropertyInfo info)
-    {
-        var getter = info.GetGetMethod() ??
-                     throw new NotSupportedException("Properties without getter is not supported");
-        var symbol = Symbol.Variable(info);
-        if (Context[symbol] is { } found) return found;
-
-        var addressSpace = info.CustomAttributes.OfType<IAddressSpaceAttribute>().Single().AddressSpace;
-        var decl =
-            new VariableDeclaration(
-                addressSpace,
-                info.Name,
-                ParseType(info.PropertyType),
-                [.. info.GetCustomAttributes().OfType<IShaderAttribute>()]);
-        Context.AddVariable(symbol, decl);
-        return decl;
-    }
-
-    private IReadOnlyList<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
-    {
-        var fields = moduleType.GetFields(VariableBindingFlags);
-        fields = [.. fields.Where(f => f.GetCustomAttributes().Any(a => a is IShaderAttribute))];
-        return [.. fields.Select(ParseModuleVariableDeclaration)];
-    }
-
-    /// <summary>
-    ///     Parse shader module, since compilation context is fixed for this parser
-    ///     use a parser for multiple shader modules will merge them into a larger module
-    /// </summary>
-    /// <param name="module"></param>
-    /// <returns></returns>
-    public ShaderModuleDeclaration<FunctionBody4> ParseShaderModule(
-        ISharpShader module)
+    public ShaderModuleDeclaration<RawCilFunctionBody> ParseShaderModule(ISharpShader module)
     {
         var moduleType = module.GetType();
+        return ParseOperation($"shader module {moduleType}", () =>
+        {
+            ShaderModuleMetadataValidator.ValidateTypeAttributes(
+                $"shader module type '{moduleType.FullName}'",
+                GetShaderAttributes(moduleType));
+            foreach (var variable in ParseAllModuleVariableDeclarations(moduleType))
+                _ = variable;
 
-        var entryMethods = moduleType
-                           .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
-                                       BindingFlags.Instance)
-                           .Where(m => m.GetCustomAttributes().Any(a => a is IShaderStageAttribute))
-                           .OrderBy(m => m.Name)
-                           .ToImmutableArray();
-
-        var variables = ParseAllModuleVariableDeclarations(moduleType);
-
-        foreach (var m in entryMethods) _ = ParseMethod(m);
-
-        return new ShaderModuleDeclaration<FunctionBody4>(
-            [
-                .. Context.StructureDeclarations,
-                ..variables,
-                .. Context.FunctionDeclarations
-            ],
-            MethodBodies.ToImmutableDictionary());
+            RejectAttributedModuleProperties(moduleType);
+            foreach (var method in moduleType.GetMethods(
+                         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                         BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                ShaderModuleMetadataValidator.ValidateReflectedComputeMetadata(method);
+            var entryMethods = moduleType
+                               .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                                           BindingFlags.Instance)
+                               .Where(method => method.GetCustomAttributes().Any(attribute =>
+                                   attribute is IShaderStageAttribute))
+                               .OrderBy(method => method.Name)
+                               .ToImmutableArray();
+            foreach (var method in entryMethods)
+                CollectMethod(method);
+            var result = BuildModule();
+            ShaderModuleMetadataValidator.Validate(result);
+            return result;
+        });
     }
 
-    public ParameterDeclaration ParseParameter(ParameterInfo parameter)
+    public ShaderModuleDeclaration<RawCilFunctionBody> ParseMethod(MethodBase method) =>
+        ParseOperation($"method {method}", () =>
+        {
+            CollectMethod(method);
+            var result = BuildModule();
+            ShaderModuleMetadataValidator.Validate(result);
+            return result;
+        });
+
+    public IShaderType ParseType(Type type) =>
+        ParseOperation($"type {type}", () => ParseTypeCore(type));
+
+    public ParameterDeclaration ParseParameter(ParameterInfo parameter) =>
+        ParseOperation($"parameter {parameter}", () => ParseParameterCore(parameter));
+
+    public VariableDeclaration ParseStaticField(FieldInfo field) =>
+        ParseOperation($"static field {field}", () => ParseStaticFieldCore(field));
+
+    public MemberDeclaration ParseField(FieldInfo field) =>
+        ParseOperation($"field {field}", () => ParseFieldCore(field));
+
+    private IShaderType ParseTypeCore(Type type)
+    {
+        CollectTypeReferences(type);
+        return Context[type] ??
+               throw new InvalidOperationException($"Type {type} was not registered during collection.");
+    }
+
+    private IShaderType GetOrAddType(Type type)
+    {
+        if (Context[type] is { } found)
+            return found;
+
+        if (SharedBuiltinSymbolTable.IsStructuredBufferFamily(type))
+        {
+            var supportedType = type.GetGenericTypeDefinition() == typeof(StructuredBuffer<>)
+                ? "StructuredBuffer<float>"
+                : "RWStructuredBuffer<float>";
+            throw new NotSupportedException(
+                $"Shader resource type validation rejected '{type}': " +
+                $"only {supportedType} is supported.");
+        }
+        if (SharedBuiltinSymbolTable.IsTexture2DFamily(type))
+            throw new NotSupportedException(
+                $"Shader resource type validation rejected '{type}': " +
+                "only Texture2D<float> is supported.");
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(type))
+            throw new NotSupportedException(
+                $"Shader resource type validation rejected '{type}': " +
+                $"{ResourceSubject(type)} cannot be embedded in another CLR type.");
+
+        if (!type.IsValueType)
+        {
+            ShaderModuleMetadataValidator.ValidateTypeAttributes(
+                $"reference type '{type.FullName}'",
+                GetShaderAttributes(type));
+            var opaque = new OpaqueType(type);
+            Context.AddType(type, opaque);
+            return opaque;
+        }
+
+        var attributes = GetShaderAttributes(type);
+        ShaderModuleMetadataValidator.ValidateTypeAttributes($"structure '{type.Name}'", attributes);
+        var declaration = new StructureDeclaration
+        {
+            Name = type.Name,
+            Attributes = attributes.ToImmutableHashSet(),
+            Members = []
+        };
+        var structure = new StructureType(declaration);
+        Context.AddStructure(type, structure);
+        PopulateStructDeclaration(type, declaration);
+        return structure;
+    }
+
+    private ParameterDeclaration ParseParameterCore(ParameterInfo parameter)
     {
         var symbol = Symbol.Parameter(parameter);
-        if (Context[symbol] is { } found) return found;
+        if (Context[symbol] is { } found)
+            return found;
 
-        var p = new ParameterDeclaration(
-            parameter.Name ?? throw new NotSupportedException("Can not parse parameter without name"),
-            ParseType(parameter.ParameterType),
+        RejectResourcePlacement(
+            parameter.ParameterType,
+            $"parameter '{parameter.Member.DeclaringType?.FullName}.{parameter.Member.Name}.{parameter.Name}'");
+        var declaration = new ParameterDeclaration(
+            parameter.Name ?? throw new NotSupportedException("Cannot parse a parameter without a name."),
+            ParseTypeCore(parameter.ParameterType),
             ParseAttribute(parameter));
-        Context.AddParameter(symbol, p);
-        return p;
+        Context.AddParameter(symbol, declaration);
+        return declaration;
+    }
+
+    private VariableDeclaration ParseStaticFieldCore(FieldInfo field)
+    {
+        var symbol = Symbol.Variable(field);
+        if (Context[symbol] is { } found)
+            return found;
+
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(field.FieldType) &&
+            !SharedBuiltinSymbolTable.IsResourceFamily(field.FieldType))
+            throw new NotSupportedException(
+                $"Shader resource validation rejected field '{field.DeclaringType?.FullName}.{field.Name}': " +
+                $"{ResourceSubject(field.FieldType)} must be declared directly, not inside another CLR type.");
+        if (SharedBuiltinSymbolTable.IsResourceFamily(field.FieldType) && !field.IsStatic)
+            throw new NotSupportedException(
+                $"Shader resource validation rejected field '{field.DeclaringType?.FullName}.{field.Name}': " +
+                $"{ResourceSubject(field.FieldType)} must be static shader-module fields.");
+
+        var attributes = GetShaderAttributes(field);
+        RejectAttributedBackingField(field, attributes);
+        var type = ParseTypeCore(field.FieldType);
+        var addressSpace = ShaderModuleMetadataValidator.ValidateResourceAttributes(
+            $"field '{field.DeclaringType?.FullName}.{field.Name}'",
+            attributes,
+            type);
+        if (attributes.OfType<UniformAttribute>().Any())
+            ValidateUniformClrStructure(field);
+        var declaration = new VariableDeclaration(
+            addressSpace,
+            field.Name,
+            type,
+            attributes.ToImmutableHashSet());
+        Context.AddVariable(symbol, declaration);
+        return declaration;
+    }
+
+    private void ValidateUniformClrStructure(FieldInfo field)
+    {
+        var type = field.FieldType;
+        if (SharedBuiltinSymbolTable.Instance.RuntimeTypes.ContainsKey(type) || !type.IsValueType)
+            return;
+
+        if (type.IsExplicitLayout)
+            throw new NotSupportedException(
+                $"Uniform field {field.DeclaringType}.{field.Name} uses explicitly laid out structure " +
+                $"{type}; CLR explicit layout is not supported by the WGSL uniform layout profile.");
+
+        var property = type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                           .FirstOrDefault();
+        if (property is not null)
+            throw new NotSupportedException(
+                $"Uniform field {field.DeclaringType}.{field.Name} uses property-bearing structure {type}; " +
+                $"property '{property.Name}' is not supported by the WGSL uniform layout profile.");
+    }
+
+    private MemberDeclaration ParseFieldCore(FieldInfo field)
+    {
+        RejectResourcePlacement(
+            field.FieldType,
+            $"structure member field '{field.DeclaringType?.FullName}.{field.Name}'");
+        if (field.DeclaringType is { } declaringType)
+            CollectTypeReferences(declaringType);
+        CollectTypeReferences(field.FieldType);
+        if (Context[field] is { } found)
+            return found;
+
+        var attributes = GetShaderAttributes(field);
+        RejectAttributedBackingField(field, attributes);
+        if (attributes.Length > 0 && Context[Symbol.Variable(field)] is null)
+            ShaderModuleMetadataValidator.ValidateOrdinaryModuleField(
+                $"field '{field.DeclaringType?.FullName}.{field.Name}'",
+                attributes);
+
+        var declaration = new MemberDeclaration(
+            field.Name,
+            ParseTypeCore(field.FieldType),
+            attributes.ToImmutableHashSet());
+        Context.AddStructureMember(field, declaration);
+        return declaration;
+    }
+
+    private TResult ParseOperation<TResult>(string source, Func<TResult> parse)
+    {
+        EnsureUsable();
+        var completed = false;
+        try
+        {
+            var result = parse();
+            completed = true;
+            return result;
+        }
+        finally
+        {
+            if (!completed)
+            {
+                failedSource ??= source;
+                inProgressMethods.Clear();
+            }
+        }
+    }
+
+    private void CollectMethod(MethodBase method)
+    {
+        if (method is MethodInfo methodInfo)
+            ShaderModuleMetadataValidator.ValidateReflectedComputeMetadata(methodInfo);
+        var declaration = ParseMethodDeclaration(method);
+        CollectMethodSignature(method, declaration);
+        if (IsMethodBoundary(method) || completedMethods.Contains(method) || inProgressMethods.Contains(method))
+            return;
+
+        if (method.GetMethodBody() is null)
+            throw new NotSupportedException(
+                $"Referenced method {method} has no decodable CIL body and is not a registered builtin or intrinsic.");
+
+        inProgressMethods.Add(method);
+        var completed = false;
+        try
+        {
+            var rawCode = CilMethodDecoder.Decode(method);
+            foreach (var referencedMethod in rawCode.Instructions
+                         .Select(instruction => instruction.Instruction.Operand)
+                         .OfType<MethodInfo>())
+                ValidateReferencedPropertyAccessor(referencedMethod);
+            var locals = rawCode.Environment.LocalVariables.Select(ParseLocalVariable).ToImmutableArray();
+            collectedMethods.Add(method, new CollectedMethod(declaration, rawCode, locals));
+
+            foreach (var clause in rawCode.Environment.Body?.ExceptionHandlingClauses ?? [])
+                if (clause.Flags == ExceptionHandlingClauseOptions.Clause &&
+                    clause.CatchType is { } catchType)
+                    CollectTypeReferences(catchType);
+
+            foreach (var instruction in rawCode.Instructions)
+                CollectOperand(method, instruction);
+
+            completedMethods.Add(method);
+            completed = true;
+        }
+        finally
+        {
+            inProgressMethods.Remove(method);
+            if (!completed)
+                collectedMethods.Remove(method);
+        }
+    }
+
+    private void CollectOperand(MethodBase source, CilInstructionInfo instruction)
+    {
+        try
+        {
+            switch (instruction.Instruction.Operand)
+            {
+                case null:
+                case sbyte:
+                case byte:
+                case short:
+                case ushort:
+                case int:
+                case uint:
+                case long:
+                case ulong:
+                case float:
+                case double:
+                case char:
+                case string:
+                case int[]:
+                    return;
+                case ParameterInfo parameter:
+                    CollectTypeReferences(parameter.ParameterType);
+                    return;
+                case LocalVariableInfo local:
+                    CollectTypeReferences(local.LocalType);
+                    return;
+                case FieldInfo field:
+                    CollectField(field);
+                    return;
+                case MethodBase method:
+                    CollectMethod(method);
+                    return;
+                case Type type:
+                    CollectTypeReferences(type);
+                    return;
+                case byte[]:
+                    throw new NotSupportedException("Inline signature metadata is not supported.");
+                case var operand:
+                    throw new NotSupportedException(
+                        $"Metadata operand type {operand.GetType().FullName} is not supported.");
+            }
+        }
+        catch (NotSupportedException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (BadImageFormatException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (TypeLoadException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (FileLoadException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (MissingMemberException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (AmbiguousMatchException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (TargetInvocationException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+        catch (InvalidProgramException exception)
+        {
+            throw OperandCollectionFailure(source, instruction, exception);
+        }
+    }
+
+    private void CollectField(FieldInfo field)
+    {
+        if (field.DeclaringType is { } declaringType)
+            CollectTypeReferences(declaringType);
+        CollectTypeReferences(field.FieldType);
+
+        if (field.IsStatic)
+        {
+            var attributes = GetShaderAttributes(field);
+            if (SharedBuiltinSymbolTable.ContainsShaderResource(field.FieldType) ||
+                attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
+                _ = ParseStaticFieldCore(field);
+            else
+                ShaderModuleMetadataValidator.ValidateOrdinaryModuleField(
+                    $"field '{field.DeclaringType?.FullName}.{field.Name}'",
+                    attributes);
+            return;
+        }
+
+        _ = ParseFieldCore(field);
+    }
+
+    private void CollectMethodSignature(MethodBase method, FunctionDeclaration declaration)
+    {
+        if (method.DeclaringType is { } declaringType)
+            CollectTypeReferences(declaringType);
+        if (method is MethodInfo methodInfo)
+            CollectTypeReferences(methodInfo.ReturnType);
+        foreach (var parameter in method.GetParameters())
+            if (IsTextureSampleLevelSamplerParameter(method, declaration, parameter))
+                CollectTypeReferences(typeof(SamplerState));
+            else
+                CollectTypeReferences(parameter.ParameterType);
+        if (method is MethodInfo genericMethod)
+            foreach (var argument in genericMethod.GetGenericArguments())
+                CollectTypeReferences(argument);
+    }
+
+    private static bool IsTextureSampleLevelSamplerParameter(
+        MethodBase method,
+        FunctionDeclaration declaration,
+        ParameterInfo parameter) =>
+        method.Equals(SharedBuiltinSymbolTable.TextureSampleLevelMethod) &&
+        ReferenceEquals(declaration, TextureSampleLevelOperation.Instance.Function) &&
+        parameter.Position == 0 &&
+        parameter.IsIn &&
+        !parameter.IsOut &&
+        parameter.ParameterType == typeof(SamplerState).MakeByRefType();
+
+    private void CollectTypeReferences(Type type)
+    {
+        if (!collectedTypes.Add(type))
+            return;
+        if (type.IsFunctionPointer)
+        {
+            _ = GetOrAddType(type);
+            CollectTypeReferences(type.GetFunctionPointerReturnType());
+            foreach (var parameterType in type.GetFunctionPointerParameterTypes())
+                CollectTypeReferences(parameterType);
+            return;
+        }
+
+        if (type.HasElementType && type.GetElementType() is { } element)
+            CollectTypeReferences(element);
+        foreach (var argument in type.GetGenericArguments())
+            CollectTypeReferences(argument);
+        _ = GetOrAddType(type);
+
+        if (SharedBuiltinSymbolTable.Instance.RuntimeTypes.ContainsKey(type) ||
+            type.IsPointer ||
+            type.IsByRef ||
+            type.IsArray ||
+            type.IsGenericParameter)
+            return;
+
+        foreach (var property in type.GetProperties(
+                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                     BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            _ = GetValidatedPropertyAttributes(property);
+
+        if (type.BaseType is { } baseType)
+            CollectTypeReferences(baseType);
+
+        foreach (var field in type.GetFields(
+                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance |
+                     BindingFlags.DeclaredOnly))
+        {
+            _ = ParseFieldCore(field);
+            CollectTypeReferences(field.FieldType);
+        }
+    }
+
+    private ShaderModuleDeclaration<RawCilFunctionBody> BuildModule()
+    {
+        var moduleSymbols = Context.Freeze();
+        var definitions = collectedMethods
+                          .OrderBy(pair => pair.Key.DeclaringType?.FullName, StringComparer.Ordinal)
+                          .ThenBy(pair => pair.Key.Name, StringComparer.Ordinal)
+                          .Select(pair =>
+                          {
+                              var collected = pair.Value;
+                              var methodSymbols = new CompilationContext(moduleSymbols);
+                              foreach (var (index, parameter) in collected.Declaration.Parameters.Index())
+                                  methodSymbols.AddParameter(Symbol.Parameter(index), parameter);
+                              foreach (var parameter in collected.Code.Environment.Parameters)
+                              {
+                                  var declarationIndex = parameter.Position +
+                                                         (collected.Code.Environment.IsStatic ? 0 : 1);
+                                  methodSymbols.AddParameter(
+                                      Symbol.Parameter(parameter),
+                                      collected.Declaration.Parameters[declarationIndex]);
+                              }
+
+                              foreach (var (local, declaration) in
+                                       collected.Code.Environment.LocalVariables.Zip(collected.LocalVariables))
+                                  methodSymbols.AddVariable(Symbol.Variable(local), declaration);
+
+                              var body = new RawCilFunctionBody(
+                                  collected.Declaration,
+                                  collected.Code,
+                                  collected.LocalVariables,
+                                  methodSymbols.Freeze());
+                              return KeyValuePair.Create(collected.Declaration, body);
+                          })
+                          .ToImmutableDictionary();
+
+        var declarations = Context.StructureDeclarations.Cast<IDeclaration>()
+                                  .Concat(Context.VariableDeclarations.Where(variable =>
+                                      variable.AddressSpace is not FunctionAddressSpace))
+                                  .Concat(Context.FunctionDeclarations)
+                                  .Distinct()
+                                  .OrderBy(declaration => declaration switch
+                                  {
+                                      StructureDeclaration => 0,
+                                      VariableDeclaration => 1,
+                                      FunctionDeclaration => 2,
+                                      _ => 3
+                                  })
+                                  .ThenBy(declaration => declaration.Name, StringComparer.Ordinal)
+                                  .ToImmutableArray();
+        return new ShaderModuleDeclaration<RawCilFunctionBody>(declarations, definitions);
+    }
+
+    private FunctionDeclaration ParseMethodDeclaration(MethodBase method)
+    {
+        var symbol = Symbol.Function(method);
+        if (Context[symbol] is { } found)
+            return found;
+
+        var attributes = GetShaderAttributes(method);
+        ShaderModuleMetadataValidator.ValidateFunctionAttributes(
+            $"method '{method.DeclaringType?.FullName}.{method.Name}'",
+            attributes);
+        var metadataAttributes = attributes.OfType<IShaderMetadataAttribute>().ToArray();
+        var operationAttribute = metadataAttributes.OfType<IOperationMethodAttribute>().SingleOrDefault();
+        var shaderOperationAttribute = attributes.OfType<IShaderOperationMethodAttribute>().SingleOrDefault();
+        if (operationAttribute is not null || shaderOperationAttribute is not null)
+            ValidateMappedIntrinsicSignature(method, attributes);
+
+        if (operationAttribute is not null)
+        {
+            var function = operationAttribute.Operation.Function;
+            Context.AddFunctionDeclaration(symbol, function);
+            return function;
+        }
+
+        if (shaderOperationAttribute is not null)
+        {
+            var result = ParseMethodReturn(method);
+            var parameters = method.GetParameters().Select(ParseParameterCore);
+            var operation = shaderOperationAttribute.GetOperation(result.Type, parameters.Select(p => p.Type));
+            Context.AddFunctionDeclaration(symbol, operation.Function);
+            return operation.Function;
+        }
+
+        var declaration = new FunctionDeclaration(
+            method.Name,
+            method.IsStatic
+                ? [.. method.GetParameters().Select(ParseParameterCore)]
+                :
+                [
+                    new ParameterDeclaration(
+                        "this",
+                        ParseTypeCore(method.DeclaringType ??
+                                      throw new NotSupportedException($"Method {method} has no declaring type.")),
+                        []),
+                    .. method.GetParameters().Select(ParseParameterCore)
+                ],
+            ParseMethodReturn(method),
+            attributes.ToImmutableHashSet());
+        Context.AddFunctionDeclaration(symbol, declaration);
+        return declaration;
     }
 
     private FunctionReturn ParseMethodReturn(MethodBase method)
     {
+        if (method is MethodInfo resourceMethod)
+            RejectResourcePlacement(
+                resourceMethod.ReturnType,
+                $"return of method '{method.DeclaringType?.FullName}.{method.Name}'");
         var returnType = method switch
         {
-            MethodInfo m => ParseType(m.ReturnType),
-            ConstructorInfo c => ParseType(c.DeclaringType),
-            _ => throw new NotSupportedException($"Unsupported method {method}")
+            MethodInfo methodInfo => ParseTypeCore(methodInfo.ReturnType),
+            ConstructorInfo constructor => ParseTypeCore(constructor.DeclaringType ??
+                                                          throw new NotSupportedException(
+                                                              $"Constructor {constructor} has no declaring type.")),
+            _ => throw new NotSupportedException($"Unsupported method {method}.")
         };
-
-        var returnAttributes = method switch
-        {
-            MethodInfo m => ParseAttribute(m.ReturnParameter),
-            ConstructorInfo m => [],
-            _ => throw new NotSupportedException($"Unsupported method {method}")
-        };
-
-        return new FunctionReturn(returnType, returnAttributes);
+        var attributes = method is MethodInfo returnMethod ? ParseAttribute(returnMethod.ReturnParameter) : [];
+        return new FunctionReturn(returnType, attributes);
     }
 
-    public FunctionDeclaration ParseMethod(MethodBase method)
+    private void PopulateStructDeclaration(Type type, StructureDeclaration declaration)
     {
-        var symbol = Symbol.Function(method);
-        if (Context[symbol] is { } found) return found;
-
-        var metaAttributes = method.GetCustomAttributes().OfType<IShaderMetadataAttribute>().ToFrozenSet();
-
-
-        {
-            if (metaAttributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } attr)
-            {
-                var f = attr.Operation.Function;
-                Context.AddFunctionDeclaration(symbol, f);
-                return f;
-            }
-        }
-
-        {
-            var shaderMethodOperationAttribute = method.GetCustomAttributes().OfType<IShaderOperationMethodAttribute>()
-                                                       .SingleOrDefault();
-            if (shaderMethodOperationAttribute is not null)
-            {
-                var result = ParseMethodReturn(method);
-                var parameters = method.GetParameters().Select(ParseParameter);
-                var op = shaderMethodOperationAttribute.GetOperation(result.Type, parameters.Select(p => p.Type));
-                Context.AddFunctionDeclaration(symbol, op.Function);
-                return op.Function;
-            }
-        }
-
-        var model = new MethodBodyAnalysisModel(method);
-
-        var isEntryMethod = method.GetCustomAttributes().Any(a => a is IShaderStageAttribute);
-
-        var decl = new FunctionDeclaration(
-            method.Name,
-            method.IsStatic
-                ? [.. model.Parameters.Select(ParseParameter)]
-                :
-                [
-                    new ParameterDeclaration("this",
-                        ParseType(method.DeclaringType),
-                        []),
-                    .. model.Parameters.Select(ParseParameter)
-                ],
-            ParseMethodReturn(method),
-            ParseAttribute(method));
-
-        if (IsMethodDefinition(method))
-        {
-            Context.AddFunctionDefinition(symbol, decl, model);
-            {
-                foreach (var v in model.LocalVariables) _ = ParseType(v.LocalType);
-            }
-            var callees = FilterCalledMethods(model.CalledMethods()).ToArray();
-            foreach (var callee in callees) _ = ParseMethod(callee);
-
-            if (model.Body is not null) MethodBodies.Add(decl, ParseMethodBody3(decl));
-        }
-        else
-        {
-            Context.AddFunctionDeclaration(symbol, decl);
-        }
-
-        return decl;
+        var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                         .Where(field => !field.Name.EndsWith("k__BackingField", StringComparison.Ordinal));
+        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        declaration.Members =
+        [
+            .. fields.Select(ParseFieldCore),
+            .. properties.Select(ParseProperty)
+        ];
     }
 
-
-    private VariableDeclaration ParseLocalVariable(LocalVariableInfo info, ISymbolTable methodTable)
+    private MemberDeclaration ParseProperty(PropertyInfo property)
     {
-        var t = ParseType(info.LocalType);
-        var result = new VariableDeclaration(
+        var attributes = GetValidatedPropertyAttributes(property);
+        return new MemberDeclaration(
+            property.Name,
+            ParseTypeCore(property.PropertyType),
+            attributes.ToImmutableHashSet());
+    }
+
+    private VariableDeclaration ParseModuleVariableDeclaration(FieldInfo field)
+    {
+        var symbol = Symbol.Variable(field);
+        if (Context[symbol] is { } found)
+            return found;
+        return ParseStaticFieldCore(field);
+    }
+
+    private ImmutableArray<VariableDeclaration> ParseAllModuleVariableDeclarations(Type moduleType)
+    {
+        var variables = ImmutableArray.CreateBuilder<VariableDeclaration>();
+        foreach (var field in moduleType.GetFields(VariableBindingFlags))
+        {
+            var attributes = GetShaderAttributes(field);
+            var containsResource = SharedBuiltinSymbolTable.ContainsShaderResource(field.FieldType);
+            if (attributes.Length == 0 && !containsResource)
+                continue;
+            RejectAttributedBackingField(field, attributes);
+            if (containsResource || attributes.Any(ShaderModuleMetadataValidator.IsResourceMetadata))
+                variables.Add(ParseModuleVariableDeclaration(field));
+            else
+                ShaderModuleMetadataValidator.ValidateOrdinaryModuleField(
+                    $"field '{field.DeclaringType?.FullName}.{field.Name}'",
+                    attributes);
+        }
+
+        return variables.ToImmutable();
+    }
+
+    private static void RejectAttributedModuleProperties(Type moduleType)
+    {
+        foreach (var property in moduleType.GetProperties(VariableBindingFlags))
+            _ = GetValidatedPropertyAttributes(property);
+    }
+
+    private static void RejectAttributedBackingField(
+        FieldInfo field,
+        IReadOnlyCollection<IShaderAttribute> attributes)
+    {
+        if (!field.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false) ||
+            !field.Name.EndsWith("k__BackingField", StringComparison.Ordinal))
+            return;
+
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(field.FieldType))
+            throw new NotSupportedException(
+                "Shader resource validation rejected " +
+                $"compiler-generated backing field '{field.DeclaringType?.FullName}.{field.Name}': " +
+                $"{ResourceSubject(field.FieldType)} must be declared as fields, not properties.");
+
+        if (attributes.Count > 0)
+            throw new NotSupportedException(
+                "Shader module metadata validation rejected " +
+                $"compiler-generated backing field '{field.DeclaringType?.FullName}.{field.Name}': " +
+                "shader metadata on property backing fields is not supported; annotate a field declaration instead.");
+    }
+
+    private VariableDeclaration ParseLocalVariable(LocalVariableInfo info)
+    {
+        RejectResourcePlacement(
+            info.LocalType,
+            $"local variable #{info.LocalIndex}");
+        return new(
             FunctionAddressSpace.Instance,
             $"loc_{info.LocalIndex}",
-            t,
-            []
-        );
-        methodTable.AddVariable(Symbol.Variable(info), result);
-        return result;
+            ParseTypeCore(info.LocalType),
+            []);
     }
 
-    public FunctionBody4 ParseMethodBody3(FunctionDeclaration f)
+    private bool IsMethodBoundary(MethodBase method)
     {
-        var model = Context.GetFunctionDefinition(f);
-        // TODO: avoid duplicate
-        var cfa = model.ControlFlowGraph.ControlFlowAnalysis();
-        var methodTable = new CompilationContext(Context);
-        foreach (var v in model.LocalVariables)
-        {
-            var loc = ParseLocalVariable(v, methodTable);
-        }
+        if (SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(method) ||
+            method.GetCustomAttributes().Any(attribute =>
+                attribute is IOperationMethodAttribute or IShaderOperationMethodAttribute))
+            return true;
 
-        {
-            foreach (var (index, p) in f.Parameters.Index()) methodTable.AddParameter(Symbol.Parameter(index), p);
-        }
-
-        Dictionary<Label, ImmutableStack<IShaderValue>> basicBlockInputs = new()
-        {
-            [model.ControlFlowGraph.EntryLabel] = []
-        };
-        //Dictionary<Label, ImmutableStack<ValueDeclaration>> basicBlockOutputs = [];
-        Dictionary<Label, ShaderRegionBody> basicBlocks = [];
-
-        foreach (var l in model.ControlFlowGraph.Labels())
-        {
-            Debug.WriteLine($"Label {l} == ");
-            var visitor = new RuntimeReflectionInstructionParserVisitor3(
-                model,
-                f,
-                model.ControlFlowGraph.Successor(l),
-                basicBlockInputs[l]);
-            var ilRange = model.ControlFlowGraph[l];
-            for (var i = ilRange.InstructionIndex; i < ilRange.InstructionIndex + ilRange.InstructionCount; i++)
-            {
-                var cilInst = model[i];
-                //Debug.Write($"parse {cilInst.Instruction.OpCode}");
-                cilInst.Evaluate(visitor, model.IsStatic, methodTable);
-                //Debug.Write(" -> ");
-                //Debug.WriteLine(string.Join(", ", visitor.Stack.Select(v => visitor.GetValueType(v).Name)));
-            }
-
-            var terminator = visitor.Terminator;
-
-            {
-                var successor = model.ControlFlowGraph.Successor(l);
-                var args = visitor.GetStackOutput();
-                terminator ??=
-                    Terminator.B.Br<RegionJump, IShaderValue>(new RegionJump(successor.AllTargets().Single(), args));
-
-                foreach (var tl in successor.AllTargets())
-                {
-                    ImmutableStack<IShaderValue> output =
-                        [.. visitor.Stack.Select(v => (IShaderValue)ShaderValue.Intermediate(v.Type)).Reverse()];
-                    if (basicBlockInputs.TryGetValue(tl, out var existed))
-                    {
-                        if (!existed.Select(v => v.Type).SequenceEqual(output.Select(v => v.Type)))
-                            throw new ValidationException("Stack output mismatch", model.Method);
-                    }
-                    else
-                    {
-                        basicBlockInputs.Add(tl, output);
-                    }
-                }
-
-                basicBlocks.Add(l, new ShaderRegionBody(
-                    l,
-                    [.. basicBlockInputs[l].Reverse()],
-                    Seq.Create(
-                        [.. visitor.Instructions],
-                        terminator ?? throw new NotSupportedException("failed to resolve terminator")
-                    ),
-                    cfa.PostDominatorTree.ImmediatePostDominator(l)
-                ));
-            }
-        }
-
-        // return new StackIRFunctionBody3(
-        //     model.ControlFlowGraph.EntryLabel,
-        //     basicBlocks.ToFrozenDictionary()
-        // );
-        return new FunctionBody4(
-            f,
-            RegionTree.Create(
-                cfa,
-                basicBlocks.Select(kv => (kv.Key, kv.Value))
-            )
-        );
+        return method.DeclaringType is { } declaringType &&
+               Context[declaringType] is IVecType &&
+               method.IsSpecialName &&
+               method.GetCustomAttributes().Any(attribute => attribute is CompilerGeneratedAttribute);
     }
 
-    //ILocalDeclarationContext GetMethodLocalDeclaration(MethodBase method)
-    //{
-    //    var methodBody = method.GetMethodBody();
-    //    if (methodBody is null)
-    //    {
-    //        return LocalDeclarationContext.Empty;
-    //    }
-
-    //    var instructions = method.GetInstructions();
-    //    if (instructions is null)
-    //    {
-    //        return LocalDeclarationContext.Empty;
-    //    }
-
-    //    throw new NotImplementedException();
-    //}
-
-    private bool IsMethodDefinition(MethodBase m) => !SharedBuiltinSymbolTable.Instance.RuntimeMethods.ContainsKey(m);
-
-    private IEnumerable<MethodBase> FilterCalledMethods(IEnumerable<MethodBase> calleeCandidates)
+    private static ImmutableHashSet<IShaderAttribute> ParseAttribute(ParameterInfo parameter)
     {
-        return calleeCandidates
-            .Where(m =>
-            {
-                if (!IsMethodDefinition(m)) return false;
-
-                // generated getter and setters should not be considered
-                var t = m.DeclaringType;
-                if (Context[t] is IVecType st) return false;
-
-                if (m.IsSpecialName &&
-                    m.CustomAttributes.Any(a => a.AttributeType == typeof(CompilerGeneratedAttribute)))
-                {
-                    var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (props.Any(p => p.GetMethod == m || p.SetMethod == m)) return false;
-                }
-
-                return true;
-            });
+        var attributes = GetShaderAttributes(parameter);
+        var declaration = parameter.Position < 0
+            ? $"return of method '{parameter.Member.DeclaringType?.FullName}.{parameter.Member.Name}'"
+            : $"parameter '{parameter.Member.DeclaringType?.FullName}.{parameter.Member.Name}.{parameter.Name}'";
+        ShaderModuleMetadataValidator.ValidateInterfaceAttributes(declaration, attributes);
+        return attributes.ToImmutableHashSet();
     }
+
+    private static ImmutableArray<IShaderAttribute> GetShaderAttributes(ICustomAttributeProvider provider) =>
+        [.. provider.GetCustomAttributes(inherit: true).OfType<IShaderAttribute>()];
+
+    private static ImmutableArray<IShaderAttribute> GetValidatedPropertyAttributes(PropertyInfo property)
+    {
+        var attributes = GetShaderAttributes(property);
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(property.PropertyType))
+            throw new NotSupportedException(
+                "Shader resource validation rejected " +
+                $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
+                $"{ResourceSubject(property.PropertyType)} must be static shader-module fields.");
+        if (attributes.Length > 0)
+            throw new NotSupportedException(
+                "Shader module metadata validation rejected " +
+                $"property '{property.DeclaringType?.FullName}.{property.Name}': " +
+                "shader metadata on module properties is not supported; use an attributed field.");
+        return attributes;
+    }
+
+    private static void ValidateReferencedPropertyAccessor(MethodInfo method)
+    {
+        if (!method.IsSpecialName || method.DeclaringType is null)
+            return;
+
+        var property = method.DeclaringType
+            .GetProperties(VariableBindingFlags | BindingFlags.DeclaredOnly)
+            .FirstOrDefault(candidate => candidate.GetMethod == method || candidate.SetMethod == method);
+        if (property is not null)
+            _ = GetValidatedPropertyAttributes(property);
+    }
+
+    private static void RejectResourcePlacement(Type type, string declaration)
+    {
+        if (SharedBuiltinSymbolTable.ContainsShaderResource(type))
+            throw new NotSupportedException(
+                $"Shader resource validation rejected {declaration}: " +
+                $"{ResourceSubject(type)} are valid only as static shader-module fields.");
+    }
+
+    private static string ResourceSubject(Type type) =>
+        SharedBuiltinSymbolTable.ContainsStructuredBuffer(type)
+            ? "structured buffers"
+            : "texture and sampler handles";
+
+    private static void ValidateMappedIntrinsicSignature(
+        MethodBase method,
+        IReadOnlyCollection<IShaderAttribute> attributes)
+    {
+        var name = $"{method.DeclaringType?.FullName}.{method.Name}";
+        ShaderModuleMetadataValidator.ValidateMappedIntrinsicFunctionAttributes(
+            $"method '{name}'",
+            attributes);
+        foreach (var parameter in method.GetParameters())
+        {
+            RejectResourcePlacement(
+                parameter.ParameterType,
+                $"parameter of mapped intrinsic '{name}.{parameter.Name}'");
+            ShaderModuleMetadataValidator.ValidateMappedIntrinsicInterfaceAttributes(
+                $"parameter of mapped intrinsic '{name}.{parameter.Name}'",
+                GetShaderAttributes(parameter));
+        }
+        if (method is MethodInfo methodInfo)
+        {
+            RejectResourcePlacement(
+                methodInfo.ReturnType,
+                $"return of mapped intrinsic '{name}'");
+            ShaderModuleMetadataValidator.ValidateMappedIntrinsicInterfaceAttributes(
+                $"return of mapped intrinsic '{name}'",
+                GetShaderAttributes(methodInfo.ReturnParameter));
+        }
+    }
+
+    private void EnsureUsable()
+    {
+        if (failedSource is not null)
+            throw new InvalidOperationException(
+                $"This runtime-reflection parser failed while collecting {failedSource}; " +
+                "create a new parser with a fresh compilation context.");
+    }
+
+    private static NotSupportedException OperandCollectionFailure(
+        MethodBase source,
+        CilInstructionInfo instruction,
+        Exception exception) =>
+        new(
+            $"Failed to collect metadata operand at IL_{instruction.ByteOffset:X4} " +
+            $"({instruction.Instruction.OpCode}) in {source}.",
+            exception);
+
+    private sealed record CollectedMethod(
+        FunctionDeclaration Declaration,
+        LinearCode<CilInstructionInfo> Code,
+        ImmutableArray<VariableDeclaration> LocalVariables);
 }

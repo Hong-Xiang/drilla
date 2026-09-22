@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="GstSharp.Net" Version="1.28.13" />
+    <PackageVersion Include="GstSharp.Net.App" Version="1.28.13" />
+    <PackageVersion Include="GstSharp.Net.Sdp" Version="1.28.13" />
+    <PackageVersion Include="GstSharp.Net.WebRTC" Version="1.28.13" />
+  </ItemGroup>
+</Project>

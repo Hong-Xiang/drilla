@@ -1,0 +1,264 @@
+using System.Reflection;
+using System.Reflection.Metadata;
+using DualDrill.CLSL.Frontend;
+using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Analysis;
+using DualDrill.CLSL.Language.ControlFlow;
+using DualDrill.CLSL.Language.FunctionBody;
+using DualDrill.CLSL.Language.Symbol;
+using Lokad.ILPack.IL;
+
+namespace DualDrill.CLSL.Test;
+
+public sealed class LinearCilControlFlowTests
+{
+    [Fact]
+    public void LinearInstructionsRemainOrderedThroughConcreteBlocks()
+    {
+        var model = CreateModel(nameof(CountDown));
+        var blocks = model.Blocks.Blocks.OrderBy(block => block.InstructionIndex);
+        var blockedInstructions = blocks.SelectMany(block => block.Instructions).Select(item => item.Node).ToArray();
+
+        Assert.Equal(model.RawCode.Instructions.Length, blockedInstructions.Length);
+        Assert.Equal(model.RawCode.Instructions, blockedInstructions);
+        Assert.Equal(Enumerable.Range(0, model.InstructionCount),
+            model.RawCode.Instructions.Select(instruction => instruction.Index));
+        Assert.Equal(
+            model.Environment.Offsets.SkipLast(1),
+            model.RawCode.Instructions.Select(instruction => instruction.ByteOffset));
+        Assert.Equal(
+            model.Environment.Offsets.Skip(1),
+            model.RawCode.Instructions.Select(instruction => instruction.NextByteOffset));
+    }
+
+    [Fact]
+    public void ConcreteControlPreservesForwardBackwardAndFallthroughTopology()
+    {
+        var model = CreateModel(nameof(CountDown));
+        var blocks = model.Blocks.Blocks;
+
+        Assert.Contains(blocks,
+            block => Targets(block.Terminator).Any(target => model.LabelToInstructionIndex(target) >
+                                                             block.InstructionIndex));
+        Assert.Contains(blocks,
+            block => Targets(block.Terminator).Any(target => model.LabelToInstructionIndex(target) <
+                                                             block.InstructionIndex));
+        Assert.Contains(blocks, block => block.Terminator is CilControlFlow.FallThrough);
+
+        var labels = blocks.Select(block => block.Label).ToHashSet();
+        Assert.All(blocks, block => Assert.All(
+            block.Terminator.ToSuccessor().AllTargets(),
+            target => Assert.Contains(target, labels)));
+    }
+
+    [Fact]
+    public void NativeProjectionAndLoweredBooleanKeepDistinctArmMeanings()
+    {
+        var method = GetMethod(nameof(Choose));
+        var stages = CompilerTestPipeline.CompileStages(method);
+        var model = Assert.Single(
+            stages.Labelled.FunctionDefinitions.Values,
+            body => body.Environment.Method == method);
+        var control = model.Blocks.Blocks.Select(block => block.Terminator)
+                           .OfType<CilControlFlow.ConditionalBranch>()
+                           .Single();
+        var successor = Assert.IsType<ConditionalSuccessor>(control.ToSuccessor());
+        var block = model.Blocks.Blocks.Single(block => ReferenceEquals(block.Terminator, control)).Label;
+        var valueBody = Assert.Single(
+            stages.ValueControlFlow.FunctionDefinitions.Values,
+            body => body.Source.Source.Source.Environment.Method == method);
+        var lowered = Assert.IsType<Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue>>(
+            valueBody.Graph[block].Body.Last);
+
+        Assert.Equal(control.BranchTarget, successor.TrueTarget);
+        Assert.Equal(control.FallThroughTarget, successor.FalseTarget);
+
+        switch (control.Instruction.Instruction.OpCode.ToILOpCode())
+        {
+            case ILOpCode.Brfalse:
+            case ILOpCode.Brfalse_s:
+                Assert.Equal(control.FallThroughTarget, lowered.TrueTarget.Label);
+                Assert.Equal(control.BranchTarget, lowered.FalseTarget.Label);
+                break;
+            case ILOpCode.Brtrue:
+            case ILOpCode.Brtrue_s:
+                Assert.Equal(control.BranchTarget, lowered.TrueTarget.Label);
+                Assert.Equal(control.FallThroughTarget, lowered.FalseTarget.Label);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Expected brtrue/brfalse, got {control.Instruction.Instruction.OpCode}.");
+        }
+    }
+
+    [Fact]
+    public void ExceptionHandlingAndItsControlOpcodesAreRejected()
+    {
+        var method = GetMethod(nameof(TryFinally));
+        var raw = CilMethodDecoder.Decode(method);
+        var instructions = raw.Instructions;
+        var exception = Assert.Throws<NotSupportedException>(() =>
+            CilPreStackPass.Run(CompilerTestPipeline.ParseRaw(method)));
+        var leave = Assert.Single(instructions,
+            instruction => instruction.Instruction.OpCode.ToILOpCode() is ILOpCode.Leave or ILOpCode.Leave_s);
+        var endFinally = Assert.Single(instructions,
+            instruction => instruction.Instruction.OpCode.ToILOpCode() == ILOpCode.Endfinally);
+
+        Assert.Contains(method.Name, exception.Message);
+        Assert.Throws<ArgumentException>(() => new CilControlFlow.Branch(leave, Label.Create(0)));
+        Assert.Throws<ArgumentException>(() => new CilControlFlow.Return(endFinally));
+    }
+
+    [Fact]
+    public void ConditionalProjectionPreservesParallelArmsAndConcretePayload()
+    {
+        var model = CreateModel(nameof(Choose));
+        var originalBlock = model.Blocks.Blocks
+                                 .Single(block => block.Terminator is CilControlFlow.ConditionalBranch);
+        var original = Assert.IsType<CilControlFlow.ConditionalBranch>(originalBlock.Terminator);
+        var sameTarget = new CilControlFlow.ConditionalBranch(
+            original.Instruction,
+            original.BranchTarget,
+            original.BranchTarget);
+        var successor = Assert.IsType<ConditionalSuccessor>(sameTarget.ToSuccessor());
+        var projectedGraph = new ControlFlowGraph<CilControlFlow>(
+            original.BranchTarget,
+            new Dictionary<Label, ControlFlowGraph<CilControlFlow>.NodeDefinition>
+            {
+                [original.BranchTarget] = new(sameTarget.ToSuccessor(), sameTarget)
+            });
+
+        Assert.Equal([original.BranchTarget, original.BranchTarget], successor.GetReferencedLabels());
+        Assert.Single(projectedGraph.Predecessor(original.BranchTarget));
+        Assert.Same(sameTarget, projectedGraph[original.BranchTarget]);
+
+        Assert.Same(originalBlock, model[originalBlock.Label]);
+        Assert.Same(original.Instruction.Instruction,
+            Assert.IsType<CilControlFlow.ConditionalBranch>(
+                model[originalBlock.Label].Terminator).Instruction.Instruction);
+    }
+
+    [Fact]
+    public void PartitionAndGenericFactoryPreserveExactCilSourceAndControlObjects()
+    {
+        var method = GetMethod(nameof(CountDown));
+        var pre = Assert.Single(CilPreStackPass.Run(CompilerTestPipeline.ParseRaw(method)).FunctionDefinitions.Values);
+        var blocks = CilBlockPartitioner.Partition(pre.Raw.Code, pre.Code);
+        var graph = ControlFlowGraph.Create(blocks, static block => block.Terminator.ToSuccessor());
+        var model = new LabelledCilFunctionBody(pre, blocks);
+
+        Assert.Same(blocks.EntryLabel, graph.EntryLabel);
+        Assert.Equal(pre.Code.Instructions, blocks.Blocks.SelectMany(block => block.Instructions));
+        foreach (var block in blocks.Blocks)
+        {
+            Assert.Same(block, graph[block.Label]);
+            Assert.Same(block.Terminator, graph[block.Label].Terminator);
+            Assert.Same(block.Label, graph[block.Label].Label);
+            foreach (var item in block.Instructions)
+            {
+                var source = Assert.Single(pre.Code.Instructions, row => row.Node.Index == item.Node.Index);
+                Assert.Same(source, item);
+                Assert.Same(source.Annotation, item.Annotation);
+                Assert.Same(pre.Raw.Code[item.Node.Index].Instruction, item.Node.Instruction);
+            }
+        }
+
+        Assert.Equal(blocks.PrettyPrint(), model.PrettyPrint());
+    }
+
+    [Fact]
+    public void PartitionStillRejectsForeignEnvironmentReorderedAndForeignInstructions()
+    {
+        var method = GetMethod(nameof(Choose));
+        var first = CreateModel(nameof(Choose));
+        var other = CilMethodDecoder.Decode(method);
+        Assert.Throws<ArgumentException>(() =>
+            CilBlockPartitioner.Partition(other, first.PreAnnotatedCode));
+
+        var reordered = new LinearCode<Annotated<CilInstructionInfo, PreStack>>(
+            first.Environment,
+            [.. first.PreAnnotatedCode.Instructions.Reverse()],
+            CilStagePrettyPrinter.PrintPreAnnotatedLinearCode);
+        Assert.Throws<ArgumentException>(() =>
+            CilBlockPartitioner.Partition(first.RawCode, reordered));
+
+        var foreign = new LinearCode<Annotated<CilInstructionInfo, PreStack>>(
+            first.Environment,
+            [.. first.PreAnnotatedCode.Instructions.Select(row => row.SelectNode(
+                node => other[node.Index], CilStagePrettyPrinter.PrintAnnotatedInstruction))],
+            CilStagePrettyPrinter.PrintPreAnnotatedLinearCode);
+        Assert.Throws<ArgumentException>(() =>
+            CilBlockPartitioner.Partition(first.RawCode, foreign));
+    }
+
+    [Fact]
+    public void PartitionDoesNotInventANativeReturnAtEndOfCode()
+    {
+        var model = CreateModel(nameof(Choose));
+        var first = model.PreAnnotatedCode.Instructions[0];
+        var raw = new LinearCode<CilInstructionInfo>(
+            model.Environment, [first.Node], CilStagePrettyPrinter.PrintRawLinearCode);
+        var pre = new LinearCode<Annotated<CilInstructionInfo, PreStack>>(
+            model.Environment, [first], CilStagePrettyPrinter.PrintPreAnnotatedLinearCode);
+
+        var blocks = CilBlockPartitioner.Partition(raw, pre);
+
+        Assert.IsType<CilControlFlow.EndOfCode>(Assert.Single(blocks.Blocks).Terminator);
+        Assert.Contains("control: synthetic end-of-code", blocks.PrettyPrint());
+        Assert.DoesNotContain("native ret", blocks.PrettyPrint());
+    }
+
+    private static LabelledCilFunctionBody CreateModel(string name)
+        => CompilerTestPipeline.Labelled(GetMethod(name));
+
+    private static MethodInfo GetMethod(string name)
+    {
+        var method = typeof(LinearCilControlFlowTests).GetMethod(
+            name,
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException($"{name} fixture was not found.");
+        return method;
+    }
+
+    private static CilInstructionInfo[] Decode(MethodInfo method)
+    {
+        var instructions = method.GetInstructions()?.ToArray()
+                           ?? throw new InvalidOperationException($"{method} has no CIL body.");
+        var codeSize = method.GetMethodBody()?.GetILAsByteArray()?.Length
+                       ?? throw new InvalidOperationException($"{method} has no CIL bytes.");
+        return
+        [
+            .. instructions.Select((instruction, index) => new CilInstructionInfo(
+                index,
+                instruction.Offset,
+                index + 1 < instructions.Length ? instructions[index + 1].Offset : codeSize,
+                instruction))
+        ];
+    }
+
+    private static IEnumerable<Label> Targets(CilControlFlow control) =>
+        control.ToSuccessor().AllTargets();
+
+    private static int CountDown(int value)
+    {
+        while (value > 0)
+            value--;
+        return value;
+    }
+
+    private static int Choose(bool choose, int left, int right) => choose ? left : right;
+
+    private static int TryFinally(int value)
+    {
+        try
+        {
+            value++;
+        }
+        finally
+        {
+            value--;
+        }
+
+        return value;
+    }
+}

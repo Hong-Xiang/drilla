@@ -13,103 +13,6 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
 {
     public IDeclaration? VisitFunction(FunctionDeclaration decl) => decl;
 
-    private static FunctionBody4 EliminatePointerParameters(FunctionBody4 body)
-    {
-        var blocks = body.Body.Fold(new RegionBodiesSemantic()).ToImmutableDictionary(b => b.Label);
-        var jumps = blocks.Values.SelectMany(block =>
-            block.Body.Last.Evaluate(new JumpsSemantic()).Select(jump => (Source: block.Label, Jump: jump)))
-            .ToImmutableArray();
-        foreach (var (source, jump) in jumps)
-        {
-            if (!blocks.TryGetValue(jump.Label, out var target))
-                throw new InvalidOperationException(
-                    $"Function '{body.Declaration.Name}': jump from '{source.Name}' has unknown target '{jump.Label.Name}'.");
-            if (jump.Arguments.Length != target.Parameters.Length)
-                throw new InvalidOperationException(
-                    $"Function '{body.Declaration.Name}': jump to '{jump.Label.Name}' has incorrect argument count.");
-            foreach (var (parameter, argument) in target.Parameters.Zip(jump.Arguments))
-            {
-                var sameType = (parameter.Type, argument.Type) switch
-                {
-                    (IPtrType p, IPtrType a) => Equals(p.BaseType, a.BaseType)
-                        && Equals(p.AddressSpace, a.AddressSpace),
-                    _ => Equals(parameter.Type, argument.Type)
-                };
-                if (!sameType)
-                    throw new InvalidOperationException(
-                        $"Function '{body.Declaration.Name}': jump to '{jump.Label.Name}' has incorrect argument type.");
-            }
-        }
-
-        var incoming = jumps.ToLookup(edge => edge.Jump.Label, edge => edge.Jump);
-        var constraints = blocks.Values.SelectMany(block =>
-                block.Parameters.Select((parameter, index) => (Parameter: parameter,
-                    Constraint: new PointerConstraint(block.Label, index,
-                        [.. incoming[block.Label].Select(jump => jump.Arguments[index])]))))
-            .Where(item => item.Parameter.Type is IPtrType)
-            .ToImmutableDictionary(item => item.Parameter, item => item.Constraint);
-        var replacements = constraints.ToImmutableDictionary(
-            item => item.Key,
-            item => ResolvePointer(item.Key, constraints, body.Declaration.Name));
-
-        if (replacements.IsEmpty) return body;
-
-        return body.MapRegionBody(block => block with
-        {
-            Parameters = [.. block.Parameters.Where(p => p.Type is not IPtrType)],
-            Body = Seq.Create(block.Body.Elements, block.Body.Last.Select(
-                jump => new RegionJump(jump.Label,
-                    [.. jump.Arguments.Where((_, index) => blocks[jump.Label].Parameters[index].Type is not IPtrType)]),
-                static value => value))
-        }).MapValueUse(value => replacements.TryGetValue(value, out var root) ? root : value);
-    }
-
-    private sealed record PointerConstraint(Label Block, int Index, ImmutableArray<IShaderValue> Sources);
-
-    private static IShaderValue ResolvePointer(IShaderValue parameter,
-        ImmutableDictionary<IShaderValue, PointerConstraint> constraints, string function)
-    {
-        var origin = constraints[parameter];
-        NotSupportedException Unsupported(string reason) =>
-            new($"Function '{function}', block '{origin.Block.Name}', pointer parameter {origin.Index}: {reason}.");
-
-        var pending = new Stack<IShaderValue>();
-        var visited = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
-        IShaderValue? root = null;
-        pending.Push(parameter);
-        // Follow dependencies, not tentative aliases: a back edge cannot establish an address.
-        while (pending.TryPop(out var value))
-        {
-            if (!visited.Add(value)) continue;
-            if (constraints.TryGetValue(value, out var constraint))
-            {
-                if (constraint.Sources.IsEmpty) throw Unsupported("no incoming address");
-                foreach (var source in constraint.Sources) pending.Push(source);
-            }
-            else if (value is ParameterPointerValue or VariablePointerValue)
-            {
-                if (root is not null && !ReferenceEquals(root, value))
-                    throw Unsupported("multiple stable addresses");
-                root = value;
-            }
-            else
-            {
-                throw Unsupported("unsupported pointer source");
-            }
-        }
-
-        return root ?? throw Unsupported("no stable address");
-    }
-
-    private sealed class JumpsSemantic : ITerminatorSemantic<RegionJump, IShaderValue, ImmutableArray<RegionJump>>
-    {
-        public ImmutableArray<RegionJump> Br(RegionJump target) => [target];
-        public ImmutableArray<RegionJump> BrIf(IShaderValue condition, RegionJump trueTarget, RegionJump falseTarget) =>
-            [trueTarget, falseTarget];
-        public ImmutableArray<RegionJump> ReturnExpr(IShaderValue expr) => [];
-        public ImmutableArray<RegionJump> ReturnVoid() => [];
-    }
-
     private sealed class RegionBodiesSemantic
         : IRegionTreeFoldSemantic<Label, ShaderRegionBody, ImmutableArray<ShaderRegionBody>, ImmutableArray<ShaderRegionBody>>
     {
@@ -122,9 +25,9 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
         public ImmutableArray<ShaderRegionBody> Single(ShaderRegionBody value) => [value];
     }
 
-    public FunctionBody4 VisitFunctionBody(FunctionBody4 body)
+    public RegionFunctionBody VisitFunctionBody(RegionFunctionBody body)
     {
-        body = EliminatePointerParameters(body);
+        body = new StablePointerRegionParameterPass().VisitFunctionBody(body);
         var regionParameters = body.Body.Fold(new RegionBodiesSemantic())
             .ToImmutableDictionary(block => block.Label, block => block.Parameters);
         if (regionParameters.Values.All(parameters => parameters.IsEmpty)) return body;
@@ -147,7 +50,8 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
                         .. bb.Body.Elements,
                         .. bb.Body.Last.Evaluate(new JumpStoreSemantic(regionParameters, parameterVariables))
                     ],
-                    bb.Body.Last.Select(static jump => new RegionJump(jump.Label, []), static value => value)
+                    bb.Body.Last.Select(static jump => new RegionJump<IShaderValue>(jump.Label, []),
+                        static value => value)
                 )
             };
         }).MapValueUse(v =>
@@ -171,14 +75,15 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
     private sealed record class JumpStoreSemantic(
         IReadOnlyDictionary<Label, ImmutableArray<IShaderValue>> Parameters,
         IReadOnlyDictionary<IShaderValue, VariableDeclaration> ParameterVars
-    ) : ITerminatorSemantic<RegionJump, IShaderValue, IEnumerable<Instruction<IShaderValue, IShaderValue>>>
+    ) : ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue,
+        IEnumerable<Instruction<IShaderValue, IShaderValue>>>
     {
-        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Br(RegionJump target) =>
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Br(RegionJump<IShaderValue> target) =>
             Parameters[target.Label].Zip(target.Arguments, StoreLocalVar);
 
 
-        public IEnumerable<Instruction<IShaderValue, IShaderValue>> BrIf(IShaderValue condition, RegionJump trueTarget,
-            RegionJump falseTarget)
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> BrIf(IShaderValue condition,
+            RegionJump<IShaderValue> trueTarget, RegionJump<IShaderValue> falseTarget)
         {
             if (trueTarget.Label == falseTarget.Label)
             {
@@ -190,6 +95,13 @@ public sealed class RegionParameterToLocalVariablePass : IShaderModuleSimplePass
 
             return [.. Br(trueTarget), .. Br(falseTarget)];
         }
+
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> Switch(
+            IShaderValue selector,
+            IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+            RegionJump<IShaderValue> defaultTarget) =>
+            throw new NotSupportedException(
+                "Switch region arguments require selected-edge stores; eager region-parameter lowering cannot emit them safely.");
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReturnExpr(IShaderValue expr) => [];
 

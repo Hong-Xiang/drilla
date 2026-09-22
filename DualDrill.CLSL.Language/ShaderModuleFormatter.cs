@@ -9,8 +9,9 @@ using DualDrill.Common.CodeTextWriter;
 
 namespace DualDrill.CLSL.Language;
 
-public sealed class ShaderModuleFormatter
-    : IDeclarationVisitor<FunctionBody4, Unit>
+public sealed class ShaderModuleFormatter<TBody>
+    : IDeclarationVisitor<TBody, Unit>
+    where TBody : IFunctionBody
 {
     public ShaderModuleFormatter()
     {
@@ -20,9 +21,9 @@ public sealed class ShaderModuleFormatter
 
     private StringWriter BaseWriter { get; }
     private IndentedTextWriter Writer { get; }
-    private Stack<ShaderModuleDeclaration<FunctionBody4>> VisitingModule { get; } = [];
+    private Stack<ShaderModuleDeclaration<TBody>> VisitingModule { get; } = [];
 
-    private ShaderModuleDeclaration<FunctionBody4> Module => VisitingModule.Peek();
+    private ShaderModuleDeclaration<TBody> Module => VisitingModule.Peek();
 
     public Unit VisitFunction(FunctionDeclaration decl)
     {
@@ -64,7 +65,7 @@ public sealed class ShaderModuleFormatter
         return default;
     }
 
-    public Unit VisitModule(ShaderModuleDeclaration<FunctionBody4> decl)
+    public Unit VisitModule(ShaderModuleDeclaration<TBody> decl)
     {
         VisitingModule.Push(decl);
         foreach (var d in decl.Declarations) d.AcceptVisitor(this);
@@ -124,6 +125,13 @@ public sealed class ShaderModuleFormatter
                 Writer.Write("@");
                 Writer.Write("fragment");
                 break;
+            case ComputeAttribute:
+                Writer.Write("@");
+                Writer.Write("compute");
+                break;
+            case WorkgroupSizeAttribute size:
+                Writer.Write($"@workgroup_size({size.X}, {size.Y}, {size.Z})");
+                break;
             case VertexAttribute:
                 Writer.Write("@");
                 Writer.Write("vertex");
@@ -170,10 +178,7 @@ public sealed class ShaderModuleFormatter
         Writer.Write(type.Name);
     }
 
-    private void OnBody(FunctionBody4 body)
-    {
-        new FunctionBodyFormatter(Writer, body).Dump();
-    }
+    private void OnBody(TBody body) => body.Dump(Writer);
 
     public string Dump() => BaseWriter.ToString();
 }

@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 
 namespace DualDrill.ApiGen.CodeGen;
 
-internal sealed record class GpuApiCodeGenTransform(ModuleDeclaration EvergineModule) : INameTransform
+internal sealed record class GpuApiCodeGenTransform(ModuleDeclaration NativeModule) : INameTransform
 {
     static ImmutableHashSet<string> SupportMethodHandles = [
      "GPUAdapter",
@@ -33,7 +33,8 @@ internal sealed record class GpuApiCodeGenTransform(ModuleDeclaration EvergineMo
 
     string? INameTransform.EnumValueName(string enumName, string valueName)
     {
-        return EvergineWebGPUApi.GetEnumMemberName(enumName, valueName, EvergineModule);
+        _ = AlimerWebGPUApi.GetNativeEnumMemberName(enumName, valueName, NativeModule);
+        return AlimerWebGPUApi.GetManagedEnumMemberName(enumName, valueName);
     }
 
     string? INameTransform.PropertyName(string typeName, string propertyName)

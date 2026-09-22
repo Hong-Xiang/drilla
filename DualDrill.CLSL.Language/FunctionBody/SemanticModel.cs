@@ -8,7 +8,7 @@ namespace DualDrill.CLSL.Language.FunctionBody;
 
 public sealed class SemanticModel
     : IRegionTreeFoldLazySemantic<Label, ShaderRegionBody, Unit, Unit>
-    , ITerminatorSemantic<RegionJump, IShaderValue, Unit>
+    , ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>
 
 {
     private readonly Dictionary<Label, ImmutableStack<Label>> DefinedScope = [];
@@ -21,13 +21,13 @@ public sealed class SemanticModel
 
     private readonly Dictionary<IShaderValue, int> ValueUsage = [];
 
-    private readonly Stack<ITerminator<RegionJump, IShaderValue>> VisitingTerminator = [];
+    private readonly Stack<ITerminator<RegionJump<IShaderValue>, IShaderValue>> VisitingTerminator = [];
     private int LabelCount;
     private ImmutableStack<Label> Scope = [];
     private int ValueCount = 0;
 
 
-    public SemanticModel(FunctionBody4 body)
+    public SemanticModel(RegionFunctionBody body)
     {
         FunctionBody = body;
         ValueIndices = body.GetValueDefinitions().Concat(body.GetUsedValues()).Distinct().Select((v, i) => (v, i))
@@ -39,7 +39,7 @@ public sealed class SemanticModel
                 LabelUsage.Add(l, []);
     }
 
-    public FunctionBody4 FunctionBody { get; }
+    public RegionFunctionBody FunctionBody { get; }
 
     private Label? CurrentScope => Scope.IsEmpty ? null : Scope.Peek();
 
@@ -47,8 +47,8 @@ public sealed class SemanticModel
     Unit ISeqSemantic<Func<Unit>, ShaderRegionBody, Func<Unit>, Unit>.Single(ShaderRegionBody value)
     {
         foreach (var e in value.Body.Elements)
-        foreach (var o in e.Operands)
-            ValueUse(o, null);
+            foreach (var o in e.Operands)
+                ValueUse(o, null);
 
         VisitingTerminator.Push(value.Body.Last);
         value.Body.Last.Evaluate(this);
@@ -83,25 +83,37 @@ public sealed class SemanticModel
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnVoid() => default;
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnVoid() => default;
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.ReturnExpr(IShaderValue expr)
     {
         ValueUse(expr, null);
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.Br(RegionJump target)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Br(RegionJump<IShaderValue> target)
     {
         LabelUse(target.Label, VisitingTerminator.Peek());
         return default;
     }
 
-    Unit ITerminatorSemantic<RegionJump, IShaderValue, Unit>.BrIf(IShaderValue condition, RegionJump trueTarget,
-        RegionJump falseTarget)
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.BrIf(IShaderValue condition,
+        RegionJump<IShaderValue> trueTarget, RegionJump<IShaderValue> falseTarget)
     {
         LabelUse(trueTarget.Label, VisitingTerminator.Peek());
         LabelUse(falseTarget.Label, VisitingTerminator.Peek());
+        return default;
+    }
+
+    Unit ITerminatorSemantic<RegionJump<IShaderValue>, IShaderValue, Unit>.Switch(
+        IShaderValue selector,
+        IReadOnlyList<RegionJump<IShaderValue>> caseTargets,
+        RegionJump<IShaderValue> defaultTarget)
+    {
+        ValueUse(selector, null);
+        foreach (var target in caseTargets)
+            LabelUse(target.Label, VisitingTerminator.Peek());
+        LabelUse(defaultTarget.Label, VisitingTerminator.Peek());
         return default;
     }
 
@@ -125,7 +137,7 @@ public sealed class SemanticModel
         LabelCount++;
     }
 
-    private void LabelUse(Label label, ITerminator<RegionJump, IShaderValue> terminator)
+    private void LabelUse(Label label, ITerminator<RegionJump<IShaderValue>, IShaderValue> terminator)
     {
         if (LabelUsage.TryGetValue(label, out var usages))
             usages.Add(CurrentScope ?? throw new NullReferenceException());

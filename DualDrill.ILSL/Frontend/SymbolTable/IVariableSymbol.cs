@@ -21,9 +21,3 @@ public sealed record class ShaderModuleFieldVariableSymbol(
 ) : IVariableSymbol
 {
 };
-
-public sealed record class ShaderModulePropertyGetterVariableSymbol(
-    PropertyInfo Property
-) : IVariableSymbol
-{
-};

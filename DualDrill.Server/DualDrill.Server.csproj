@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
-		<TargetFramework>net9.0-windows</TargetFramework>
+		<TargetFramework>net10.0-windows</TargetFramework>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<PropertyGroup>
@@ -24,14 +24,7 @@
 		<PackageReference Include="HtmlAgilityPack" />
 		<PackageReference Include="Microsoft.Web.WebView2" />
 		<PackageReference Include="pythonnet" />
-		<PackageReference Include="Serilog" />
-		<PackageReference Include="Serilog.Extensions.Logging" />
-		<PackageReference Include="Serilog.Sinks.Console" />
 		<PackageReference Include="Swashbuckle.AspNetCore" />
-		<PackageReference Include="Veldrid" />
-		<PackageReference Include="Veldrid.SPIRV" />
-		<PackageReference Include="Veldrid.Utilities" />
-		<PackageReference Include="Vortice.Vulkan" />
 		<ProjectReference Include="..\DualDrill.APIDefinition\DualDrill.ApiGen.csproj" />
 		<ProjectReference Include="..\DualDrill.Client.Abstraction\DualDrill.Client.Abstraction.csproj" />
 		<ProjectReference Include="..\DualDrill.Common.Abstraction\DualDrill.Common.Abstraction.csproj" />
@@ -41,9 +34,6 @@
 		<ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
 		<ProjectReference Include="..\DualDrill.WebView\DualDrill.WebView.csproj" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
-		<PackageReference Include="SIPSorceryMedia.FFmpeg" />
-		<PackageReference Include="SIPSorcery" />
-		<PackageReference Include="SIPSorceryMedia.Encoders" />
 		<PackageReference Include="System.Reactive" />
 		<PackageReference Include="ICSharpCode.Decompiler" />
 		<PackageReference Update="DotNext.Unsafe" />

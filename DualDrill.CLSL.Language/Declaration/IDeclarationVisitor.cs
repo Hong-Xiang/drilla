@@ -25,13 +25,13 @@ public interface IDeclarationSemantic<T>
     T VisitParameter(ParameterDeclaration decl);
     T VisitStructure(StructureDeclaration decl);
     T VisitMember(MemberDeclaration decl);
-    T VisitModule(ShaderModuleDeclaration<FunctionBody4> decl);
+    T VisitModule(ShaderModuleDeclaration<RegionFunctionBody> decl);
 }
 
 public interface IShaderModuleSimplePass
     : IDeclarationVisitor<IDeclaration?>
 {
-    FunctionBody4 VisitFunctionBody(FunctionBody4 body);
+    RegionFunctionBody VisitFunctionBody(RegionFunctionBody body);
 }
 
 public static class DeclarationExtension

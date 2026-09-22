@@ -13,7 +13,6 @@ export {
 export { getProperty, setProperty } from "./lib/dotnet-server-interop";
 export { createWebGPURenderService } from "./webgpu/rotateCube";
 export { createServerRenderPresentService } from "./render/DistributeRenderService";
-export { createHeadlessSharedBufferServerRenderService } from "./render/headlessSharedBufferServerRenderService";
 export { createHeadlessServerRenderService } from "./render/headlessRenderService";
 export { getDotnetWasmExports } from "./lib/jsexport-client";
 export { createAsyncMessageEmitter } from "./asyncMessage";

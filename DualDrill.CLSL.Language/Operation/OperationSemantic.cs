@@ -17,6 +17,22 @@ public interface IOperationSemantic<in TX, in TV, in TR, out TO>
     TO AccessChain(TX ctx, AccessChainOperation op, TR result, TV target, IReadOnlyList<TV> indices);
     TO Operation1(TX ctx, IUnaryExpressionOperation op, TR result, TV e);
     TO Operation2(TX ctx, IBinaryExpressionOperation op, TR result, TV l, TV r);
+    TO StructuredBufferLength(TX ctx, StructuredBufferLengthOperation op, TR result, TV buffer);
+    TO StructuredBufferLoad(TX ctx, StructuredBufferLoadOperation op, TR result, TV buffer, TV index);
+    TO ReadWriteStructuredBufferLength(
+        TX ctx, ReadWriteStructuredBufferLengthOperation op, TR result, TV buffer);
+    TO ReadWriteStructuredBufferLoad(
+        TX ctx, ReadWriteStructuredBufferLoadOperation op, TR result, TV buffer, TV index);
+    TO ReadWriteStructuredBufferStore(
+        TX ctx, ReadWriteStructuredBufferStoreOperation op, TV buffer, TV index, TV value);
+    TO TextureSampleLevel(
+        TX ctx,
+        TextureSampleLevelOperation op,
+        TR result,
+        TV texture,
+        TV sampler,
+        TV uv,
+        TV lod);
     TO VectorCompositeConstruction(TX ctx, VectorCompositeConstructionOperation op, TR result,
         IReadOnlyList<TV> components);
     TO ZeroConstructorOperation(TX ctx, ZeroConstructorOperation op, TR result);

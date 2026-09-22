@@ -13,6 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DualDrill.APIDefinition\DualDrill.ApiGen.csproj" />
+    <ProjectReference Include="..\DualDrill.Compiler.Server\DualDrill.Compiler.Server.csproj" />
     <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
     <ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
   </ItemGroup>
@@ -24,11 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Shared\Shaders\RaymarchingPrimitiveShader.cs"
-             Link="ShaderModule\RaymarchingPrimitiveShader.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="Reference\reference-Xds3zN.glslf"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest" />
@@ -37,11 +34,5 @@
     <AssemblyMetadata Include="RaymarchReferenceSha256"
                       Value="59e27ceb51248f33c7228ca458f443c6fcd1fb16c09a5975ad277f1adfe8bdda" />
   </ItemGroup>
-
-  <Target Name="PreserveNativeWgpuRuntimeLayout" AfterTargets="CopyFilesToOutputDirectory">
-    <MakeDir Directories="$(TargetDir)runtimes/linux-x64/native" />
-    <Copy SourceFiles="$(TargetDir)libwgpu_native.so"
-          DestinationFolder="$(TargetDir)runtimes/linux-x64/native" />
-  </Target>
 
 </Project>

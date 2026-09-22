@@ -7,12 +7,16 @@ For compiler development on Linux without WebView2, use the
 offers Triangle, Uniform, animated Mandelbrot, and animated Raymarching shaders
 compiled from C# through Slang to WGSL.
 
+The isolated [.NET GPU-to-WebRTC proof of concept](DualDrill.Media.Server/README.md)
+renders with Rust wgpu-native, reads back BGRA frames, and streams them through
+GStreamer to a local browser without WebView.
+
 ## develop
 
 requirements:
 
 - [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
-- [dotnet 9.0](https://dotnet.microsoft.com/en-us/download)
+- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download)
 - [slangc](https://github.com/shader-slang/slang) on `PATH` (the Nix package
   is `shader-slang`; the unrelated `slang` package does not provide it), or
   installed through the Vulkan SDK
@@ -25,7 +29,7 @@ On x86-64 Linux, enter the pinned compiler development shell from the repository
 nix develop
 ```
 
-The shell supplies .NET SDK/runtime 9, Slang (`slangc`), LLVM 16 native
+The shell supplies .NET SDK/runtime 10, Slang (`slangc`), LLVM 16 native
 libraries for LLVMSharp, the Vulkan loader needed by native WebGPU bindings,
 Node.js, and pnpm. It preserves the host Vulkan ICD/driver environment and
 any inherited `LD_LIBRARY_PATH`; it does not install or select Vulkan tools,
@@ -128,5 +132,7 @@ its namespace and uniform-binding migration.
 Control-flow support covers the exercised C# subset, not arbitrary CIL or a
 complete control-flow reconstruction algorithm. Shader compilation and manual
 browser rendering do not establish general semantic equivalence. The optional
-native project covers triangle readback and error reporting; automated
-raymarching image comparisons and a modern native-backend migration are deferred.
+native project covers triangle readback and error reporting, while the media
+server demonstrates the wgpu-native GPU-to-WebRTC path. Automated canonical
+raymarching image comparisons and migration of that shader into the media path
+remain deferred.
