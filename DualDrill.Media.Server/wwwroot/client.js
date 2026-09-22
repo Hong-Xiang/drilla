@@ -8,11 +8,18 @@
  * framesDecoded: number | null, framesPerSecond: number | null,
  * packetsLost: number | null, jitter: number | null}} InboundSample
  * @typedef {{megabitsPerSecond: number, framesPerSecond: number | null}} Measurement
+ * @typedef {{x: number, y: number}} PointerPosition
  * @typedef {{peer: RTCPeerConnection, socket: WebSocket,
  * pending: RTCIceCandidateInit[], signals: Promise<void>,
  * statsBaseline: InboundSample | null, statsTimer: number | null,
- * statsRunning: boolean}} Attempt
+ * statsRunning: boolean, answerAccepted: boolean,
+ * pointerId: number | null, pointerFrame: number | null,
+ * pointerLatest: PointerPosition | null,
+ * pointerPosition: PointerPosition}} Attempt
  */
+
+const MaxPointerBufferedBytes = 64 * 1024;
+const KeyboardPointerStep = 0.05;
 
 const video = document.querySelector("video");
 const status = document.querySelector("#status");
@@ -142,6 +149,76 @@ function clearStats() {
   }
 }
 
+/** @param {number} value */
+function clampNormalized(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+/** @param {Attempt} attempt */
+function canSendPointer(attempt) {
+  return (
+    active === attempt &&
+    attempt.answerAccepted &&
+    attempt.socket.readyState === WebSocket.OPEN &&
+    attempt.peer.connectionState === "connected" &&
+    ui.video.srcObject !== null &&
+    ui.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+  );
+}
+
+/** @param {Attempt} attempt */
+function flushPointer(attempt) {
+  attempt.pointerFrame = null;
+  if (active !== attempt || attempt.pointerLatest === null) return;
+  if (!canSendPointer(attempt)) {
+    attempt.pointerLatest = null;
+    return;
+  }
+  if (attempt.socket.bufferedAmount > MaxPointerBufferedBytes) {
+    attempt.pointerFrame = requestAnimationFrame(() => flushPointer(attempt));
+    return;
+  }
+  const position = attempt.pointerLatest;
+  attempt.pointerLatest = null;
+  attempt.socket.send(
+    JSON.stringify({ type: "pointer", x: position.x, y: position.y }),
+  );
+}
+
+/** @param {Attempt} attempt @param {PointerPosition} position */
+function queuePointer(attempt, position) {
+  if (!canSendPointer(attempt)) return;
+  attempt.pointerPosition = position;
+  attempt.pointerLatest = position;
+  attempt.pointerFrame ??= requestAnimationFrame(() => flushPointer(attempt));
+}
+
+/** @param {PointerEvent} event @returns {PointerPosition} */
+function pointerPosition(event) {
+  const bounds = ui.video.getBoundingClientRect();
+  if (bounds.width <= 0 || bounds.height <= 0) {
+    throw new Error("The video image has no displayed area.");
+  }
+  return {
+    x: clampNormalized((event.clientX - bounds.left) / bounds.width),
+    y: clampNormalized((event.clientY - bounds.top) / bounds.height),
+  };
+}
+
+/** @param {Attempt} attempt */
+function clearPointer(attempt) {
+  const pointerId = attempt.pointerId;
+  attempt.pointerId = null;
+  if (pointerId !== null && ui.video.hasPointerCapture(pointerId)) {
+    ui.video.releasePointerCapture(pointerId);
+  }
+  if (attempt.pointerFrame !== null) {
+    cancelAnimationFrame(attempt.pointerFrame);
+    attempt.pointerFrame = null;
+  }
+  attempt.pointerLatest = null;
+}
+
 /**
  * @param {InboundSample} sample
  * @param {Measurement | null} measurement
@@ -262,6 +339,7 @@ function parseSignal(text) {
 /** @param {Attempt} attempt @param {string} message */
 function stopSession(attempt, message) {
   if (active !== attempt) return;
+  clearPointer(attempt);
   active = null;
   const { peer, socket } = attempt;
   attempt.statsRunning = false;
@@ -328,6 +406,9 @@ async function handleSignal(attempt, signal) {
       return;
     }
     case "status":
+      if (signal.message === "answer accepted") {
+        attempt.answerAccepted = true;
+      }
       ui.status.textContent = signal.message;
       return;
     case "error":
@@ -350,6 +431,11 @@ start.addEventListener("click", () => {
     statsBaseline: null,
     statsTimer: null,
     statsRunning: false,
+    answerAccepted: false,
+    pointerId: null,
+    pointerFrame: null,
+    pointerLatest: null,
+    pointerPosition: { x: 0.5, y: 0.5 },
   };
   active = attempt;
   ui.start.disabled = true;
@@ -415,4 +501,81 @@ start.addEventListener("click", () => {
 
 stop.addEventListener("click", () => {
   if (active) stopSession(active, "Stopped.");
+});
+
+video.addEventListener("pointerdown", (event) => {
+  const attempt = active;
+  if (
+    !attempt ||
+    !canSendPointer(attempt) ||
+    !event.isPrimary ||
+    event.button !== 0 ||
+    !["mouse", "touch"].includes(event.pointerType) ||
+    attempt.pointerId !== null
+  ) {
+    return;
+  }
+  event.preventDefault();
+  ui.video.focus();
+  attempt.pointerId = event.pointerId;
+  ui.video.setPointerCapture(event.pointerId);
+  queuePointer(attempt, pointerPosition(event));
+});
+
+video.addEventListener("pointermove", (event) => {
+  const attempt = active;
+  if (!attempt || attempt.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  queuePointer(attempt, pointerPosition(event));
+});
+
+video.addEventListener("pointerup", (event) => {
+  const attempt = active;
+  if (!attempt || attempt.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  queuePointer(attempt, pointerPosition(event));
+  attempt.pointerId = null;
+  if (ui.video.hasPointerCapture(event.pointerId)) {
+    ui.video.releasePointerCapture(event.pointerId);
+  }
+});
+
+video.addEventListener("pointercancel", (event) => {
+  const attempt = active;
+  if (!attempt || attempt.pointerId !== event.pointerId) return;
+  clearPointer(attempt);
+});
+
+video.addEventListener("lostpointercapture", (event) => {
+  const attempt = active;
+  if (!attempt || attempt.pointerId !== event.pointerId) return;
+  clearPointer(attempt);
+});
+
+video.addEventListener("keydown", (event) => {
+  const attempt = active;
+  if (!attempt || !canSendPointer(attempt)) return;
+  let x = attempt.pointerPosition.x;
+  let y = attempt.pointerPosition.y;
+  switch (event.key) {
+    case "ArrowLeft":
+      x -= KeyboardPointerStep;
+      break;
+    case "ArrowRight":
+      x += KeyboardPointerStep;
+      break;
+    case "ArrowUp":
+      y -= KeyboardPointerStep;
+      break;
+    case "ArrowDown":
+      y += KeyboardPointerStep;
+      break;
+    default:
+      return;
+  }
+  event.preventDefault();
+  queuePointer(attempt, {
+    x: clampNormalized(x),
+    y: clampNormalized(y),
+  });
 });

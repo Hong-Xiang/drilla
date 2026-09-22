@@ -8,7 +8,8 @@ if (args is ["--self-test"])
 {
     return CpuFrames.RunSelfTest() == 0 &&
         VideoSettings.RunSelfTest() == 0 &&
-        SessionSettings.RunSelfTest() == 0
+        SessionSettings.RunSelfTest() == 0 &&
+        PointerPosition.RunSelfTest() == 0
         ? WebRtcSession.RunSignalSelfTest()
         : 1;
 }

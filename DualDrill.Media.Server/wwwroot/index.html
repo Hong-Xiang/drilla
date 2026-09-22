@@ -18,6 +18,9 @@
         height: auto;
         margin: 1rem 0;
         background: #111;
+        cursor: crosshair;
+        touch-action: none;
+        user-select: none;
       }
       button {
         margin-right: 0.5rem;
@@ -39,7 +42,19 @@
       in on a trusted LAN. Each rotating triangle is rendered by wgpu-native on
       the server GPU and streamed through its own GStreamer pipeline.
     </p>
-    <video id="video" autoplay playsinline muted></video>
+    <video
+      id="video"
+      autoplay
+      playsinline
+      muted
+      tabindex="0"
+      aria-label="Interactive streamed triangle"
+      aria-describedby="controls-help"
+    ></video>
+    <p id="controls-help">
+      Drag the video with a primary mouse or touch pointer to move the triangle.
+      When the video is focused, the arrow keys move it too.
+    </p>
     <button id="start" type="button">Start</button>
     <button id="stop" type="button" disabled>Stop</button>
     <p id="status" role="status" aria-live="polite">Stopped.</p>
