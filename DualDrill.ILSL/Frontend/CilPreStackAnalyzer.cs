@@ -323,7 +323,14 @@ internal static class CilPreStackAnalyzer
         public ImmutableStack<CilStackType> VisitStoreIndirectRef(CilInstructionInfo inst) =>
             Unsupported("reference indirect store");
 
-        public ImmutableStack<CilStackType> VisitDup(CilInstructionInfo inst) => Unsupported("dup");
+        public ImmutableStack<CilStackType> VisitDup(CilInstructionInfo inst)
+        {
+            var value = Pop();
+            if (value is CilStackType.ObjectReference)
+                throw Error("dup does not support object references");
+            Push(value);
+            return Push(value);
+        }
 
         public ImmutableStack<CilStackType> VisitPop(CilInstructionInfo inst)
         {

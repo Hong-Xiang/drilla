@@ -194,6 +194,9 @@ public static class CilStagePrettyPrinter
                 writer.Write("push-alias ");
                 writer.Write(OperandName(alias.Value));
                 break;
+            case ShaderStackInstruction.Duplicate:
+                writer.Write("duplicate");
+                break;
             case ShaderStackInstruction.Drop:
                 writer.Write("drop");
                 break;

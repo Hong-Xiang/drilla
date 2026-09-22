@@ -260,16 +260,20 @@ public sealed class CilPreStackAnalysisTests
     }
 
     [Fact]
-    public void ReachableDupIsPreservedByRawParsingAndRejectedByPre()
+    public void ReachableDupPreservesItsExactCanonicalPreType()
     {
         var module = CompilerTestPipeline.ParseRaw(Fixtures.ReachableDup);
-        Assert.Contains(
-            CompilerTestPipeline.RawBody(module, Fixtures.ReachableDup).Code.Instructions,
+        var model = CompilerTestPipeline.Labelled(module, Fixtures.ReachableDup);
+        var dup = Assert.Single(
+            model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Dup);
 
-        var exception = Assert.Throws<ValidationException>(() => CilPreStackPass.Run(module));
-        Assert.Contains("dup", exception.Message);
-        Assert.Contains(Fixtures.ReachableDup.Name, exception.Message);
+        var before = Assert.Single(Pre(model, dup.Index).Types);
+        Assert.IsType<CilStackType.Int32>(before);
+        Assert.Collection(
+            Pre(model, dup.Index + 1).Types,
+            first => Assert.Same(before, first),
+            second => Assert.Same(before, second));
     }
 
     [Fact]
