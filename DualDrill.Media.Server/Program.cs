@@ -7,7 +7,9 @@ using Gst.WebRTC;
 if (args is ["--self-test"])
 {
     return CpuFrames.RunSelfTest() == 0 &&
-        VideoSettings.RunSelfTest() == 0
+        VideoSettings.RunSelfTest() == 0 &&
+        SessionSettings.RunSelfTest() == 0 &&
+        PointerPosition.RunSelfTest() == 0
         ? WebRtcSession.RunSignalSelfTest()
         : 1;
 }
@@ -25,6 +27,7 @@ if (args is ["--native-self-test"])
 
 var builder = WebApplication.CreateBuilder(args);
 VideoSettings video = VideoSettings.Load(builder.Configuration);
+SessionSettings sessions = SessionSettings.Load(builder.Configuration);
 if (builder.Configuration["urls"] is null)
 {
     builder.WebHost.UseUrls("http://127.0.0.1:5084");
@@ -34,7 +37,7 @@ InitializeGStreamer();
 WebRtcSession.EnsureNativeElements();
 
 var app = builder.Build();
-var gate = new ViewerGate();
+var gate = new SessionGate(sessions.MaxConcurrent);
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -51,29 +54,23 @@ app.Map("/ws", async context =>
         return;
     }
 
-    object owner = new();
-
-    if (!gate.TryAcquire(owner))
+    using SessionAdmission? admission = gate.TryAcquire();
+    if (admission is null)
     {
         context.Response.StatusCode = StatusCodes.Status409Conflict;
-        await context.Response.WriteAsync("This proof of concept allows one viewer.", context.RequestAborted);
+        await context.Response.WriteAsync(
+            $"All {sessions.MaxConcurrent} media session slots are in use.",
+            context.RequestAborted);
         return;
     }
 
-    try
-    {
-        WebSocket socket = await context.WebSockets.AcceptWebSocketAsync();
-        await using WebRtcSession session = new(
-            socket,
-            context.RequestServices.GetRequiredService<ILogger<WebRtcSession>>(),
-            video,
-            context.RequestAborted);
-        await session.RunAsync();
-    }
-    finally
-    {
-        gate.Release(owner);
-    }
+    WebSocket socket = await context.WebSockets.AcceptWebSocketAsync();
+    await using WebRtcSession session = new(
+        socket,
+        context.RequestServices.GetRequiredService<ILogger<WebRtcSession>>(),
+        video,
+        context.RequestAborted);
+    await session.RunAsync();
 });
 
 await app.RunAsync();
@@ -85,20 +82,4 @@ static void InitializeGStreamer()
     GstApp.Initialize(nativeOptions);
     GstSdp.Initialize(nativeOptions);
     GstWebRTC.Initialize(nativeOptions);
-}
-
-internal sealed class ViewerGate
-{
-    private object? _owner;
-
-    internal bool TryAcquire(object owner) =>
-        Interlocked.CompareExchange(ref _owner, owner, null) is null;
-
-    internal void Release(object owner)
-    {
-        if (!ReferenceEquals(Interlocked.CompareExchange(ref _owner, null, owner), owner))
-        {
-            throw new InvalidOperationException("The active viewer did not own the session gate.");
-        }
-    }
 }

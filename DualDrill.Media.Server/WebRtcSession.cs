@@ -6,7 +6,6 @@ using System.Threading.Channels;
 using Gst;
 using Gst.App;
 using Gst.GLib;
-using Gst.Interop;
 using Gst.Sdp;
 using Gst.WebRTC;
 using Task = System.Threading.Tasks.Task;
@@ -61,14 +60,14 @@ internal sealed class WebRtcSession : IAsyncDisposable
     private ulong _iceHandler;
     private EventHandler<AppSrc.NeedDataSignalArgs>? _needDataHandler;
     private EventHandler? _enoughDataHandler;
-    private Action<Exception>? _exceptionTrap;
     private Task? _sendTask;
     private Task? _receiveTask;
     private Task? _producerTask;
     private Task? _busTask;
     private Task? _answerTimeoutTask;
+    private PointerPosition _pointer = PointerPosition.Center;
     private volatile bool _hungry;
-    private volatile bool _remoteDescriptionSet;
+    private int _remoteDescriptionSet;
     private int _remoteCandidateCount;
     private int _negotiationStarted;
     private int _offerSent;
@@ -162,22 +161,59 @@ internal sealed class WebRtcSession : IAsyncDisposable
             return;
         }
 
-        _stop.Cancel();
-        await AwaitExpectedCancellation(_producerTask);
-        await AwaitExpectedCancellation(_receiveTask);
+        var failures = new List<Exception>();
 
-        _pipeline?.SetState(State.Null);
-        await AwaitExpectedCancellation(_busTask);
-        DisconnectNativeHandlers();
+        void Cleanup(string operation, Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+                _logger.LogError(exception, "Media session cleanup failed while {Operation}.", operation);
+            }
+        }
 
-        _offerPromise?.Dispose();
-        _setLocalOfferPromise?.Dispose();
-        _setRemoteAnswerPromise?.Dispose();
-        _pipeline?.Dispose();
+        async Task CleanupAsync(string operation, Task? task)
+        {
+            try
+            {
+                await AwaitExpectedCancellation(task);
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+                _logger.LogError(exception, "Media session cleanup failed while {Operation}.", operation);
+            }
+        }
+
+        Cleanup("cancelling work", _stop.Cancel);
+        await CleanupAsync("draining frame production", _producerTask);
+        await CleanupAsync("draining WebSocket input", _receiveTask);
+        await CleanupAsync("stopping answer timeout", _answerTimeoutTask);
+
+        Cleanup("stopping the GStreamer pipeline", () =>
+        {
+            if (_pipeline?.SetState(State.Null) == StateChangeReturn.Failure)
+            {
+                throw new InvalidOperationException("The media pipeline refused to enter NULL.");
+            }
+        });
+        await CleanupAsync("draining the GStreamer bus", _busTask);
+        Cleanup("disconnecting native handlers", DisconnectNativeHandlers);
+
+        Cleanup("disposing the offer promise", () => _offerPromise?.Dispose());
+        Cleanup("disposing the local-description promise", () => _setLocalOfferPromise?.Dispose());
+        Cleanup("disposing the remote-description promise", () => _setRemoteAnswerPromise?.Dispose());
+        Cleanup("disposing the GStreamer bus", () => _bus?.Dispose());
+        Cleanup("disposing the GStreamer pipeline", () => _pipeline?.Dispose());
+        _bus = null;
         _pipeline = null;
 
         _outgoing.Writer.TryComplete();
-        await AwaitExpectedCancellation(_sendTask);
+        await CleanupAsync("draining WebSocket output", _sendTask);
 
         if (_socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
         {
@@ -192,12 +228,23 @@ internal sealed class WebRtcSession : IAsyncDisposable
             {
                 _logger.LogDebug(exception, "The browser disconnected before the close reply.");
             }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+                _logger.LogError(exception, "Media session cleanup failed while closing WebSocket output.");
+            }
         }
 
-        _socket.Dispose();
-        _stop.Dispose();
-        GstSharp.DrainPendingReleases();
-        _gpu?.Dispose();
+        Cleanup("disposing the WebSocket", _socket.Dispose);
+        Cleanup("draining native releases", GstSharp.DrainPendingReleases);
+        Cleanup("disposing GPU resources", () => _gpu?.Dispose());
+        _gpu = null;
+        Cleanup("disposing cancellation", _stop.Dispose);
+
+        if (failures.Count != 0)
+        {
+            throw new AggregateException("Media session cleanup failed.", failures);
+        }
     }
 
     private void InitializePipeline()
@@ -251,9 +298,6 @@ internal sealed class WebRtcSession : IAsyncDisposable
             Callback("on-ice-candidate", () => QueueLocalCandidate(arguments));
             return null;
         });
-
-        _exceptionTrap = exception => Fail("A native callback failed.", exception);
-        ExceptionTrap.UnhandledException += _exceptionTrap;
     }
 
     private async Task ProduceFramesAsync(CancellationToken cancellationToken)
@@ -270,7 +314,8 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
                 if (_hungry)
                 {
-                    await _gpu!.RenderAsync(_pixels!, elapsed.Elapsed, cancellationToken);
+                    PointerPosition pointer = Volatile.Read(ref _pointer);
+                    await _gpu!.RenderAsync(_pixels!, elapsed.Elapsed, pointer, cancellationToken);
                     FlowReturn result = _input!.Push(_pixels);
 
                     if (cancellationToken.IsCancellationRequested &&
@@ -462,6 +507,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
             {
                 "answer" => ProcessAnswer(root),
                 "ice" => ProcessRemoteCandidate(root),
+                "pointer" => ProcessPointer(root),
                 string type => throw new SignalException($"Unsupported signaling type \"{type}\"."),
                 null => throw new SignalException("The signaling type cannot be null."),
             };
@@ -545,7 +591,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
         lock (_remoteCandidateLock)
         {
-            if (!_remoteDescriptionSet)
+            if (Volatile.Read(ref _remoteDescriptionSet) == 0)
             {
                 _pendingRemoteCandidates.Add((mLineIndex, candidate));
                 return true;
@@ -567,7 +613,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
         lock (_remoteCandidateLock)
         {
-            _remoteDescriptionSet = true;
+            Volatile.Write(ref _remoteDescriptionSet, 1);
             pending = [.. _pendingRemoteCandidates];
             _pendingRemoteCandidates.Clear();
         }
@@ -578,6 +624,15 @@ internal sealed class WebRtcSession : IAsyncDisposable
         }
 
         TryQueue(JsonSerializer.Serialize(new { type = "status", message = "answer accepted" }));
+    }
+
+    private bool ProcessPointer(JsonElement root)
+    {
+        PointerPosition pointer = ParsePointer(
+            root,
+            Volatile.Read(ref _remoteDescriptionSet) != 0);
+        Volatile.Write(ref _pointer, pointer);
+        return true;
     }
 
     private WebRTCSessionDescription? TakeDescription(Promise? promise, string field)
@@ -669,7 +724,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
     {
         await Task.Delay(AnswerTimeout, cancellationToken);
 
-        if (!_remoteDescriptionSet)
+        if (Volatile.Read(ref _remoteDescriptionSet) == 0)
         {
             Fail($"No valid browser answer completed within {AnswerTimeout.TotalSeconds:F0} seconds.");
             return;
@@ -764,12 +819,6 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
     private void DisconnectNativeHandlers()
     {
-        if (_exceptionTrap is { } exceptionTrap)
-        {
-            ExceptionTrap.UnhandledException -= exceptionTrap;
-            _exceptionTrap = null;
-        }
-
         if (_source is { } source)
         {
             if (_needDataHandler is { } needData)
@@ -843,8 +892,77 @@ internal sealed class WebRtcSession : IAsyncDisposable
         {
             throw new InvalidOperationException("ICE end-of-candidates parsing failed.");
         }
-        Console.WriteLine("Native and browser ICE end-of-candidates parsing passed.");
+
+        foreach ((double x, double y) in new[] { (0d, 0d), (0.5, 0.5), (1d, 1d) })
+        {
+            using JsonDocument pointerDocument = JsonDocument.Parse(
+                JsonSerializer.Serialize(new { type = "pointer", x, y }));
+            if (ParsePointer(pointerDocument.RootElement, ready: true) != PointerPosition.Create(x, y))
+            {
+                throw new InvalidOperationException("Pointer JSON roundtrip failed.");
+            }
+        }
+
+        AssertInvalidPointer("""{"type":"pointer","x":0.5,"y":0.5}""", ready: false);
+        foreach (string json in new[]
+        {
+            """{"type":"pointer","x":-0.001,"y":0.5}""",
+            """{"type":"pointer","x":1.001,"y":0.5}""",
+            """{"type":"pointer","x":0.5,"y":"0.5"}""",
+            """{"type":"pointer","x":0.5}""",
+            """{"type":"pointer","x":0.5,"y":0.5,"target":"other"}""",
+            """{"type":"pointer","x":0.5,"x":0.6,"y":0.5}""",
+            """{"type":"pointer","x":1e999,"y":0.5}""",
+        })
+        {
+            AssertInvalidPointer(json, ready: true);
+        }
+
+        Console.WriteLine(
+            "Native/browser ICE parsing and pointer wire boundaries, readiness, and roundtrip passed.");
         return 0;
+    }
+
+    private static PointerPosition ParsePointer(JsonElement root, bool ready)
+    {
+        RequireProperties(root, "type", "x", "y");
+        if (!ready)
+        {
+            throw new SignalException("Pointer input arrived before the browser answer was accepted.");
+        }
+        JsonElement xElement = root.GetProperty("x");
+        JsonElement yElement = root.GetProperty("y");
+        if (root.GetProperty("type").GetString() != "pointer" ||
+            xElement.ValueKind != JsonValueKind.Number ||
+            yElement.ValueKind != JsonValueKind.Number ||
+            !xElement.TryGetDouble(out double x) ||
+            !yElement.TryGetDouble(out double y))
+        {
+            throw new SignalException(
+                "Pointer input must contain numeric normalized \"x\" and \"y\" coordinates.");
+        }
+
+        try
+        {
+            return PointerPosition.Create(x, y);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            throw new SignalException("Pointer coordinates must be finite numbers from 0 through 1.");
+        }
+    }
+
+    private static void AssertInvalidPointer(string json, bool ready)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        try
+        {
+            _ = ParsePointer(document.RootElement, ready);
+            throw new InvalidOperationException($"Invalid pointer input was accepted: {json}");
+        }
+        catch (SignalException)
+        {
+        }
     }
 
     private static void RequireProperties(JsonElement root, params string[] expected)

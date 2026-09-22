@@ -27,8 +27,8 @@ internal sealed class GpuFrames : IDisposable
             let p = positions[index];
             var result: Vertex;
             result.position = vec4<f32>(
-                (c * p.x - s * p.y) * animation.y,
-                s * p.x + c * p.y, 0.0, 1.0);
+                (c * p.x - s * p.y) * animation.y + animation.z,
+                s * p.x + c * p.y + animation.w, 0.0, 1.0);
             result.color = colors[index];
             return result;
         }
@@ -187,6 +187,7 @@ internal sealed class GpuFrames : IDisposable
     internal async Task RenderAsync(
         Memory<byte> destination,
         TimeSpan animationTime,
+        PointerPosition pointer,
         CancellationToken cancellation)
     {
         ObjectDisposedException.ThrowIf(_resources.Count == 0, this);
@@ -197,7 +198,10 @@ internal sealed class GpuFrames : IDisposable
         }
 
         float angle = (float)(animationTime.TotalSeconds % (2 * Math.PI));
-        _device.Queue.WriteBuffer<float>(_uniform, 0, stackalloc float[] { angle, (float)_height / _width, 0, 0 });
+        _device.Queue.WriteBuffer<float>(
+            _uniform,
+            0,
+            stackalloc float[] { angle, (float)_height / _width, pointer.ClipX, pointer.ClipY });
         using (var encoder = _device.CreateCommandEncoder(new()))
         {
             using (var pass = encoder.BeginRenderPass(new()
@@ -321,10 +325,17 @@ internal sealed class GpuFrames : IDisposable
         using GpuFrames frames = await CreateAsync(65, 49, deadline.Token);
         byte[] first = new byte[frames._frameBytes];
         byte[] second = new byte[frames._frameBytes];
+        byte[] translated = new byte[frames._frameBytes];
         byte[] repeated = new byte[frames._frameBytes];
-        await frames.RenderAsync(first, TimeSpan.Zero, deadline.Token);
-        await frames.RenderAsync(second, TimeSpan.FromSeconds(1), deadline.Token);
-        await frames.RenderAsync(repeated, TimeSpan.Zero, deadline.Token);
+        await frames.RenderAsync(first, TimeSpan.Zero, PointerPosition.Center, deadline.Token);
+        await frames.RenderAsync(
+            second,
+            TimeSpan.FromSeconds(1),
+            PointerPosition.Center,
+            deadline.Token);
+        PointerPosition translatedPosition = PointerPosition.Create(0.65, 0.4);
+        await frames.RenderAsync(translated, TimeSpan.Zero, translatedPosition, deadline.Token);
+        await frames.RenderAsync(repeated, TimeSpan.Zero, PointerPosition.Center, deadline.Token);
         int red = (35 * 65 + 18) * VideoSettings.BytesPerPixel;
         int blue = (10 * 65 + 31) * VideoSettings.BytesPerPixel;
         int changed = 0;
@@ -339,16 +350,45 @@ internal sealed class GpuFrames : IDisposable
                 changed++;
             }
         }
+        (double centerX, double centerY) = ForegroundCentroid(first, frames._width);
+        (double translatedX, double translatedY) = ForegroundCentroid(translated, frames._width);
+        double expectedX = translatedPosition.ClipX * frames._width / 2;
+        double expectedY = -translatedPosition.ClipY * frames._height / 2;
         if (first[red + 2] < 160 || first[red] > 80 || first[blue] < 160 || first[blue + 2] > 80 ||
             first[0] != 0 || first[1] != 0 || first[2] != 0 ||
-            changed < 200 || !first.AsSpan().SequenceEqual(repeated))
+            changed < 200 || !first.AsSpan().SequenceEqual(repeated) ||
+            Math.Abs(translatedX - centerX - expectedX) > 2 ||
+            Math.Abs(translatedY - centerY - expectedY) > 2)
         {
-            throw new InvalidOperationException("GPU BGRA colors, animation, or repeated readback were incorrect.");
+            throw new InvalidOperationException(
+                "GPU BGRA colors, animation, translated position, or reset readback were incorrect.");
         }
         Console.WriteLine(
             $"GPU_SELF_TEST PASS backend={frames.AdapterInfo.BackendType} type={frames.AdapterInfo.AdapterType} " +
             $"device=\"{frames.AdapterInfo.Device}\" rowBytes={frames._rowBytes} " +
-            $"paddedRowBytes={frames._paddedRowBytes} changedPixels={changed}");
+            $"paddedRowBytes={frames._paddedRowBytes} changedPixels={changed} " +
+            $"translation=({translatedX - centerX:F2},{translatedY - centerY:F2})");
         return 0;
+    }
+
+    private static (double X, double Y) ForegroundCentroid(byte[] pixels, uint width)
+    {
+        long xTotal = 0;
+        long yTotal = 0;
+        int count = 0;
+        for (int i = 0; i < pixels.Length; i += VideoSettings.BytesPerPixel)
+        {
+            if (pixels[i] == 0 && pixels[i + 1] == 0 && pixels[i + 2] == 0)
+            {
+                continue;
+            }
+            int pixel = i / VideoSettings.BytesPerPixel;
+            xTotal += pixel % width;
+            yTotal += pixel / width;
+            count++;
+        }
+        return count > 0
+            ? ((double)xTotal / count, (double)yTotal / count)
+            : throw new InvalidOperationException("The GPU frame had no foreground pixels.");
     }
 }
