@@ -358,7 +358,7 @@ public static class FunctionEffectAnalysis
             instruction.Payload));
     }
 
-    private static bool IsKnownPureOperation(IOperation operation)
+    public static bool IsKnownPureOperation(IOperation operation)
     {
         if (operation is LiteralOperation or NopOperation or AccessChainOperation or
             AddressOfMemberOperation or AddressOfVecComponentOperation or

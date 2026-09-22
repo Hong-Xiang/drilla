@@ -234,19 +234,19 @@ internal static class CooperationAdmission
                 closure,
                 calls,
                 entry.Function);
-            foreach (var builtin in uniformity.UniformBuiltinCalls)
+            foreach (var builtin in uniformity.DependencyBuiltinCalls)
             {
                 var targetName = builtin.Builtin.Name == "mix" ? "lerp" : builtin.Builtin.Name;
-                var uniformCollision = normalized.Declarations
+                var dependencyCollision = normalized.Declarations
                     .OfType<FunctionDeclaration>()
                     .FirstOrDefault(function =>
                         string.Equals(function.Name, targetName, StringComparison.Ordinal));
-                if (uniformCollision is not null)
+                if (dependencyCollision is not null)
                     throw new NotSupportedException(
                         $"PortableWgsl entry '{entry.Function.Name}', function '{builtin.Function.Name}', " +
                         $"block '{builtin.Label.Name}', operation 'call': numeric builtin " +
-                        $"'{builtin.Builtin.Name}' supporting a uniformity proof maps to target spelling " +
-                        $"'{targetName}', which collides with module declaration '{uniformCollision.Name}'.");
+                        $"'{builtin.Builtin.Name}' supporting a dependency proof maps to target spelling " +
+                        $"'{targetName}', which collides with module declaration '{dependencyCollision.Name}'.");
             }
 
             var callInheritance = closure.SelectMany(function => calls[function]).ToImmutableArray();
@@ -295,7 +295,7 @@ internal static class CooperationAdmission
         return stages.Length == 1 ? stages[0] : null;
     }
 
-    private static ImmutableArray<FunctionDeclaration> Closure(
+    internal static ImmutableArray<FunctionDeclaration> Closure(
         FunctionDeclaration entry,
         ImmutableDictionary<FunctionDeclaration, ImmutableArray<CooperationCallSite>> calls)
     {
@@ -321,7 +321,7 @@ internal static class CooperationAdmission
         return stages.Length == 0 ? "unowned" : string.Join("|", stages);
     }
 
-    private static ImmutableArray<CooperationCallSite> DirectCalls(
+    internal static ImmutableArray<CooperationCallSite> DirectCalls(
         FunctionDeclaration function,
         RegionFunctionBody body,
         ImmutableDictionary<FunctionDeclaration, RegionFunctionBody> definitions)
@@ -533,6 +533,14 @@ internal static class CooperationAdmission
                 }
 
                 var uniformity = participation.Uniformity[function];
+                var eligibleFormals = CooperationUniformity.EligibleFormalLoads(sourceBody)
+                    .Values.Order().ToImmutableArray();
+                if (!eligibleFormals.SequenceEqual(uniformity.EligibleFormalParameterPositions))
+                    throw PointerProofError(
+                        participation,
+                        function,
+                        sourceBody.Entry,
+                        "eligible formal parameter set changed");
                 if (sourceBody.Control.Transfers.Length != uniformity.OriginalTransfers.Length ||
                     pointerBody.Control.Transfers.Length != uniformity.OriginalTransfers.Length)
                     throw PointerProofError(
@@ -555,9 +563,9 @@ internal static class CooperationAdmission
                             transfer.Source,
                             $"original transfer arm {transfer.Arm} target/owner/kind/arguments changed");
 
-                foreach (var fact in uniformity.UniformValues)
+                foreach (var fact in uniformity.DependencyValues)
                 {
-                    if (fact.Kind is CooperationUniformValueKind.BlockParameter)
+                    if (fact.Kind is CooperationDependencyValueKind.BlockParameter)
                     {
                         var position = sourceBody[fact.Label].Parameters.IndexOf(fact.Value);
                         if (position < 0)
@@ -565,7 +573,7 @@ internal static class CooperationAdmission
                                 participation,
                                 function,
                                 fact.Label,
-                                "uniform block parameter identity changed");
+                                "dependency block parameter identity changed");
                         continue;
                     }
 
@@ -574,18 +582,18 @@ internal static class CooperationAdmission
                             participation,
                             function,
                             fact.Label,
-                            "uniform definition has no source instruction");
+                            "dependency definition has no source instruction");
                     var before = InstructionAt(sourceBody, fact.Label, ordinal);
                     var after = InstructionAt(pointerBody, fact.Label, ordinal);
-                    if (!MatchesUniformFact(before, fact) || !SameInstruction(before, after))
+                    if (!MatchesDependencyFact(before, fact) || !SameInstruction(before, after))
                         throw PointerProofError(
                             participation,
                             function,
                             fact.Label,
-                            "proof-relevant uniform definition changed");
+                            "proof-relevant dependency definition changed");
                 }
 
-                foreach (var binding in uniformity.UniformBindings)
+                foreach (var binding in uniformity.DependencyBindings)
                 {
                     var beforeJump = JumpAt(sourceBody[binding.Source].Body.Last, binding.Arm);
                     if (!ReferenceEquals(beforeJump.Label, binding.Target) ||
@@ -627,9 +635,9 @@ internal static class CooperationAdmission
         ReferenceEquals(before.Payload, after.Payload) &&
         before.Operands.SequenceEqual(after.Operands, ReferenceEqualityComparer.Instance);
 
-    private static bool MatchesUniformFact(
+    private static bool MatchesDependencyFact(
         Instruction<IShaderValue, IShaderValue> instruction,
-        CooperationUniformValueFact fact) =>
+        CooperationDependencyValueFact fact) =>
         ReferenceEquals(instruction.Operation, fact.Operation) &&
         ReferenceEquals(instruction.Result, fact.Value) &&
         ReferenceEquals(instruction.Payload, fact.Payload) &&
