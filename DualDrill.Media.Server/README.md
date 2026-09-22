@@ -60,9 +60,11 @@ NIXPKGS_ALLOW_UNFREE=1 nix develop --builders '' .#media --command \
   dotnet run --project DualDrill.Media.Server/DualDrill.Media.Server.csproj
 ```
 
-Open <http://127.0.0.1:5084/> and select **Start**. The acceptance harness may
-rely on stable element IDs `#video`, `#status`, `#stats`, `#start`, and `#stop`;
-signaling uses `ws://127.0.0.1:5084/ws`.
+Open <http://127.0.0.1:5084/> and select **Start**. Drag the video with a
+primary mouse or touch pointer to move that connection's triangle. The
+focusable video also accepts arrow keys. The acceptance harness may rely on
+stable element IDs `#video`, `#status`, `#stats`, `#start`, and `#stop`;
+signaling and input share `ws://127.0.0.1:5084/ws`.
 
 Width, height, frame rate, and an optional VP8 target bitrate are ordinary .NET
 configuration keys. Dimensions must be positive and even. Frame rate must be an
@@ -92,15 +94,30 @@ the simple rotating triangle can compress far below 8 Mbps.
 
 Admission is reserved before the WebSocket upgrade. A handshake above the
 configured limit receives HTTP 409. Each session logs its hardware adapter and
-owns its socket, GPU resources, frame buffer, pipeline, and cancellation.
+owns its socket, GPU resources, frame buffer, pipeline, cancellation, and latest
+normalized pointer position. New sessions start centered at `(0.5, 0.5)`.
 Stopping, disconnecting, or closing the page cancels and drains only that
 session's production, tears its pipeline down to `GST_STATE_NULL`, then releases
-the native owners and admission slot. Reconnect creates a fresh session,
-renderer, and pipeline.
+the native owners and admission slot. Reconnect creates a fresh centered
+session, renderer, and pipeline.
 
 The application validates signaling JSON and message sizes, queues trickled ICE
 until the corresponding remote description exists, bounds appsrc to two buffers,
 and fails negotiation if no valid browser answer completes within 20 seconds.
+Pointer input has exactly the shape
+`{"type":"pointer","x":number,"y":number}` with finite image coordinates in
+`[0,1]`. The server rejects pointer input before accepting the browser answer or
+with missing, duplicate, extra, nonnumeric, nonfinite, or out-of-range fields;
+that error closes only the originating session. Each frame reads one coherent
+latest position snapshot and translates after local aspect scaling while
+preserving rotation.
+
+The browser sends input only after the answer is accepted, the WebSocket is
+open, and connected media has a decoded frame. Pointer events use capture and
+image-relative clamped coordinates. Updates are coalesced to the latest
+animation-frame value and retained as at most one pending snapshot while the
+WebSocket buffered amount exceeds 64 KiB. Stop, cancellation, lost capture, or
+disconnect cancels scheduled input so it cannot reach a replacement session.
 
 The CPU diagnostic generator and signaling check do not initialize GStreamer or
 the GPU; production streaming never uses this generator:
@@ -125,8 +142,9 @@ dotnet run --project DualDrill.Media.Server/DualDrill.Media.Server.csproj -- --g
 ```
 
 It renders at width 65 to exercise 260-byte rows padded to 512 bytes, verifies
-BGRA channel order and opaque alpha, observes different animation frames, and
-renders the initial state again with the same resources.
+BGRA channel order and opaque alpha, observes different animation frames,
+checks the actual pixel centroid at a deterministic translated position, and
+renders the centered state again with the same resources.
 
 ## Browser acceptance
 
@@ -161,12 +179,14 @@ The optional final arguments select expected decoded dimensions, for example
 
 The dependency-free .NET script drives Chromium's DevTools protocol against the
 documented cap of 2. It checks two simultaneous decoded, animated colored
-triangles, HTTP 409 for a third handshake, survivor progress when its peer fails
-or closes, slot reuse, reconnect isolation, and finite positive receiver
-bitrate/frame-rate samples. Color and motion comparisons allow for VP8 loss. Its
-restore is isolated from the repository's unrelated central NuGet declarations.
-Browser software decoding/rendering is independent of the server's hardware GPU
-source.
+triangles, real CDP mouse/touch movement with independent visible positions,
+captured final mouse-up coordinates, HTTP 409 for a third handshake, malformed
+pointer isolation, survivor position/frame progress, slot reuse, centered
+reconnect, stale input teardown, the existing close/error and held-stats
+regressions, and finite positive receiver bitrate/frame-rate samples. Color,
+motion, and centroid comparisons allow for VP8 loss. Its restore is isolated
+from the repository's unrelated central NuGet declarations. Browser software
+decoding/rendering is independent of the server's hardware GPU source.
 
 This verifies the transport mechanics and exposes receiver measurements; the
 low-complexity triangle is not a network-capacity or complex-scene quality

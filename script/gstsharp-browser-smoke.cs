@@ -59,6 +59,32 @@ foreach (JsonElement sample in stable)
 }
 Console.WriteLine($"Two simultaneous decoded animated streams: A={initial[0]} B={initial[1]}");
 
+JsonElement[] initialPositions =
+[
+    await first.EvaluateForegroundAsync(BrowserScripts.Position, cancellation),
+    await second.EvaluateForegroundAsync(BrowserScripts.Position, cancellation),
+];
+await first.DragMouseAsync(1.05, 0.2, cancellation);
+JsonElement[] afterMouse =
+[
+    await first.EvaluateForegroundAsync(BrowserScripts.Position, cancellation),
+    await second.EvaluateForegroundAsync(BrowserScripts.Position, cancellation),
+];
+ValidateMoved(initialPositions[0], afterMouse[0], 0.2);
+ValidateRightEdge(afterMouse[0]);
+ValidateNear(initialPositions[1], afterMouse[1], 0.08);
+Console.WriteLine($"Captured mouse release moved only A: A={afterMouse[0]} B={afterMouse[1]}");
+
+await second.DragTouchAsync(0.15, 0.75, cancellation);
+JsonElement[] afterTouch =
+[
+    await first.EvaluateForegroundAsync(BrowserScripts.Position, cancellation),
+    await second.EvaluateForegroundAsync(BrowserScripts.Position, cancellation),
+];
+ValidateNear(afterMouse[0], afterTouch[0], 0.12);
+ValidateMoved(afterMouse[1], afterTouch[1], 0.2);
+Console.WriteLine($"Touch drag moved only B: A={afterTouch[0]} B={afterTouch[1]}");
+
 using (var extraViewer = new ClientWebSocket())
 {
     extraViewer.Options.CollectHttpResponseDetails = true;
@@ -74,18 +100,31 @@ using (var extraViewer = new ClientWebSocket())
     }
 }
 
+await first.EvaluateForegroundAsync(BrowserScripts.HoldPointerFrame, cancellation);
+await first.DragMouseAsync(0.25, 0.25, cancellation);
 JsonElement failed = await first.EvaluateForegroundAsync(
     BrowserScripts.FailMalformed, cancellation);
 JsonElement survivingFailure = await second.EvaluateForegroundAsync(
     BrowserScripts.Progress, cancellation);
 ValidateProgress(survivingFailure);
+JsonElement survivingPosition = await second.EvaluateForegroundAsync(
+    BrowserScripts.Position, cancellation);
+ValidateNear(afterTouch[1], survivingPosition, 0.08);
 Console.WriteLine($"Malformed session stopped without stopping its peer: failed={failed} survivor={survivingFailure}");
 
 JsonElement reconnected = await first.EvaluateAsync(BrowserScripts.Reconnect, cancellation);
 ValidateObservation(reconnected, expectedWidth, expectedHeight);
+if (!reconnected.GetProperty("stalePointerCancelled").GetBoolean() ||
+    reconnected.GetProperty("replacementPointerMessages").GetInt32() != 0)
+{
+    throw new InvalidOperationException($"Stale pointer work reached the replacement: {reconnected}");
+}
 JsonElement reconnectedStable = await first.EvaluateForegroundAsync(
     BrowserScripts.StableReceiver, cancellation);
 ValidateStable(reconnectedStable);
+JsonElement resetPosition = await first.EvaluateForegroundAsync(
+    BrowserScripts.Position, cancellation);
+ValidateNear(initialPositions[0], resetPosition, 0.08);
 JsonElement survivingReconnect = await second.EvaluateForegroundAsync(
     BrowserScripts.Progress, cancellation);
 ValidateProgress(survivingReconnect);
@@ -115,8 +154,9 @@ ValidateProgress(survivingInvalid);
 Console.WriteLine($"Invalid session stopped without stopping its peer: invalid={invalid} survivor={survivingInvalid}");
 
 Console.WriteLine(
-    "PASS: cap=2, concurrent decoded animation, HTTP 409, malformed/invalid/close isolation, " +
-    "slot reuse, reconnect, and receiver stats.");
+    "PASS: cap=2, concurrent decoded animation, mouse/touch input isolation, HTTP 409, " +
+    "malformed/invalid/close isolation, slot reuse, reconnect reset, stale input teardown, " +
+    "and receiver stats.");
 return 0;
 
 static void ValidateObservation(JsonElement observation, int expectedWidth, int expectedHeight)
@@ -156,17 +196,70 @@ static void ValidateProgress(JsonElement progress)
     }
 }
 
+static void ValidateMoved(JsonElement before, JsonElement after, double minimumDistance)
+{
+    double x = after.GetProperty("x").GetDouble() - before.GetProperty("x").GetDouble();
+    double y = after.GetProperty("y").GetDouble() - before.GetProperty("y").GetDouble();
+    if (Math.Sqrt(x * x + y * y) < minimumDistance)
+    {
+        throw new InvalidOperationException($"Decoded triangle position did not move enough: {before} -> {after}");
+    }
+}
+
+static void ValidateNear(JsonElement expected, JsonElement actual, double maximumDistance)
+{
+    double x = actual.GetProperty("x").GetDouble() - expected.GetProperty("x").GetDouble();
+    double y = actual.GetProperty("y").GetDouble() - expected.GetProperty("y").GetDouble();
+    if (Math.Sqrt(x * x + y * y) > maximumDistance)
+    {
+        throw new InvalidOperationException($"Decoded triangle position changed unexpectedly: {expected} -> {actual}");
+    }
+}
+
+static void ValidateRightEdge(JsonElement position)
+{
+    if (position.GetProperty("x").GetDouble() < 0.75)
+    {
+        throw new InvalidOperationException($"The final captured mouse-up position was lost: {position}");
+    }
+}
+
 static class BrowserScripts
 {
     internal const string Instrument = """
         globalThis.__mediaSockets = [];
+        globalThis.__mediaSent = new WeakMap();
         globalThis.__mediaStats = {
           activeByPeer: new WeakMap(), peers: [], nativeGetStats: null,
           holdNext: false, release: null, overlap: false
         };
+        globalThis.__mediaAnimation = {holdNext: false, held: null};
         const NativeWebSocket = globalThis.WebSocket;
         globalThis.WebSocket = class extends NativeWebSocket {
-          constructor(url) { super(url); globalThis.__mediaSockets.push(this); }
+          constructor(url) {
+            super(url);
+            globalThis.__mediaSockets.push(this);
+            globalThis.__mediaSent.set(this, []);
+          }
+          send(data) {
+            globalThis.__mediaSent.get(this).push(data);
+            super.send(data);
+          }
+        };
+        const nativeAnimationFrame = globalThis.requestAnimationFrame;
+        const nativeCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        globalThis.requestAnimationFrame = callback => {
+          const state = globalThis.__mediaAnimation;
+          if (!state.holdNext) return nativeAnimationFrame.call(globalThis, callback);
+          state.holdNext = false;
+          const id = nativeAnimationFrame.call(globalThis, () => {});
+          state.held = {id, callback, cancelled: false};
+          return id;
+        };
+        globalThis.cancelAnimationFrame = id => {
+          const held = globalThis.__mediaAnimation.held;
+          if (held?.id === id) held.cancelled = true;
+          nativeCancelAnimationFrame.call(globalThis, id);
         };
         const nativeGetStats = RTCPeerConnection.prototype.getStats;
         globalThis.__mediaStats.nativeGetStats = nativeGetStats;
@@ -202,6 +295,70 @@ static class BrowserScripts
           }
           throw new Error('Viewer did not start: '
             + document.getElementById('status')?.textContent);
+        })()
+        """;
+
+    internal const string Position = """
+        (async () => {
+          const video = document.getElementById('video');
+          if (!(video instanceof HTMLVideoElement)) throw new Error('Missing video');
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d', {willReadFrequently: true});
+          if (!context) throw new Error('Canvas unavailable');
+          canvas.width = Math.min(video.videoWidth, 320);
+          canvas.height = Math.max(1, Math.round(
+            video.videoHeight * canvas.width / video.videoWidth));
+          function nextFrame() {
+            return new Promise((resolve, reject) => {
+              const id = video.requestVideoFrameCallback(() => {
+                clearTimeout(timer);
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const pixels = context.getImageData(
+                  0, 0, canvas.width, canvas.height).data;
+                let count = 0, xTotal = 0, yTotal = 0;
+                for (let y = 0; y < canvas.height; y++) {
+                  for (let x = 0; x < canvas.width; x++) {
+                    const i = (y * canvas.width + x) * 4;
+                    const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+                    const maximum = Math.max(r, g, b);
+                    const minimum = Math.min(r, g, b);
+                    if (maximum > 80 && maximum - minimum > 35) {
+                      count++;
+                      xTotal += x;
+                      yTotal += y;
+                    }
+                  }
+                }
+                if (count < canvas.width * canvas.height * 0.005)
+                  reject(new Error('Decoded triangle foreground was too small'));
+                else
+                  resolve({
+                    x: xTotal / count / canvas.width,
+                    y: yTotal / count / canvas.height,
+                    foreground: count
+                  });
+              });
+              const timer = setTimeout(() => {
+                video.cancelVideoFrameCallback(id);
+                reject(new Error('Decoded position frame timed out'));
+              }, 5000);
+            });
+          }
+          const positions = [];
+          for (let i = 0; i < 4; i++) positions.push(await nextFrame());
+          return {
+            x: positions.reduce((sum, value) => sum + value.x, 0) / positions.length,
+            y: positions.reduce((sum, value) => sum + value.y, 0) / positions.length,
+            foreground: Math.min(...positions.map(value => value.foreground))
+          };
+        })()
+        """;
+
+    internal const string HoldPointerFrame = """
+        (() => {
+          globalThis.__mediaAnimation.holdNext = true;
+          globalThis.__mediaAnimation.held = null;
+          return true;
         })()
         """;
 
@@ -394,7 +551,7 @@ static class BrowserScripts
           for (let i = 0; i < 50 && !statsState.release; i++)
             await new Promise(resolve => setTimeout(resolve, 100));
           if (!statsState.release) throw new Error('Could not hold an old stats request');
-          socket.send('{');
+          socket.send('{"type":"pointer","x":2,"y":0.5}');
           for (let i = 0; i < 100; i++) {
             if (video.srcObject === null)
               return {status: document.getElementById('status')?.textContent};
@@ -426,7 +583,9 @@ static class BrowserScripts
           const stats = document.getElementById('stats');
           const stale = globalThis.__staleMedia;
           const statsState = globalThis.__mediaStats;
-          if (!(video instanceof HTMLVideoElement) || !(stats instanceof HTMLElement) || !stale)
+          const animation = globalThis.__mediaAnimation;
+          if (!(video instanceof HTMLVideoElement) || !(stats instanceof HTMLElement)
+              || !stale || !animation.held)
             throw new Error('Missing reconnect fixture');
           for (let i = 0; i < 200; i++) {
             const start = document.getElementById('start');
@@ -436,7 +595,22 @@ static class BrowserScripts
               stale.close.call(globalThis.__mediaSockets.at(-2), new CloseEvent('close'));
               stale.error.call(globalThis.__mediaSockets.at(-2), new Event('error'));
               statsState.release();
+              if (!animation.held.cancelled)
+                throw new Error('Old pointer animation frame was not cancelled');
+              const socket = globalThis.__mediaSockets.at(-1);
+              const sent = globalThis.__mediaSent.get(socket);
+              const before = sent.filter(value => {
+                try { return JSON.parse(value).type === 'pointer'; }
+                catch { return false; }
+              }).length;
+              animation.held.callback(performance.now());
               await new Promise(resolve => setTimeout(resolve, 100));
+              const after = sent.filter(value => {
+                try { return JSON.parse(value).type === 'pointer'; }
+                catch { return false; }
+              }).length;
+              if (after !== before)
+                throw new Error('Old pointer callback sent to the replacement session');
               for (let sample = 0; sample < 100; sample++) {
                 if (video.srcObject !== replacement)
                   throw new Error('Old callbacks terminated the replacement session');
@@ -448,7 +622,9 @@ static class BrowserScripts
                     throw new Error('A connection overlapped getStats calls');
                   return {
                     width: video.videoWidth, height: video.videoHeight,
-                    statsMbps: mbps, statsFps: fps
+                    statsMbps: mbps, statsFps: fps,
+                    stalePointerCancelled: animation.held.cancelled,
+                    replacementPointerMessages: after
                   };
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -524,6 +700,76 @@ sealed class BrowserTarget : IAsyncDisposable
     internal Task<JsonElement> EvaluateAsync(string expression, CancellationToken cancellation) =>
         browser.EvaluateAsync(expression, cancellation);
 
+    internal async Task DragMouseAsync(
+        double finalX,
+        double finalY,
+        CancellationToken cancellation)
+    {
+        await browser.CommandAsync("Page.bringToFront", new JsonObject(), cancellation);
+        (double left, double top, double width, double height) =
+            await GetVideoBoundsAsync(cancellation);
+        double startX = left + width / 2;
+        double startY = top + height / 2;
+        await DispatchMouseAsync("mouseMoved", startX, startY, 0, cancellation);
+        await DispatchMouseAsync("mousePressed", startX, startY, 1, cancellation);
+        await DispatchMouseAsync(
+            "mouseMoved",
+            left + width * 0.65,
+            top + height * 0.5,
+            1,
+            cancellation);
+        await DispatchMouseAsync(
+            "mouseReleased",
+            left + width * finalX,
+            top + height * finalY,
+            0,
+            cancellation);
+    }
+
+    internal async Task DragTouchAsync(
+        double finalX,
+        double finalY,
+        CancellationToken cancellation)
+    {
+        await browser.CommandAsync("Page.bringToFront", new JsonObject(), cancellation);
+        (double left, double top, double width, double height) =
+            await GetVideoBoundsAsync(cancellation);
+        JsonObject Point(double x, double y) => new()
+        {
+            ["x"] = x,
+            ["y"] = y,
+            ["id"] = 1,
+            ["radiusX"] = 1,
+            ["radiusY"] = 1,
+            ["force"] = 1,
+        };
+        await browser.CommandAsync(
+            "Input.dispatchTouchEvent",
+            new JsonObject
+            {
+                ["type"] = "touchStart",
+                ["touchPoints"] = new JsonArray(Point(left + width / 2, top + height / 2)),
+            },
+            cancellation);
+        await browser.CommandAsync(
+            "Input.dispatchTouchEvent",
+            new JsonObject
+            {
+                ["type"] = "touchMove",
+                ["touchPoints"] = new JsonArray(
+                    Point(left + width * finalX, top + height * finalY)),
+            },
+            cancellation);
+        await browser.CommandAsync(
+            "Input.dispatchTouchEvent",
+            new JsonObject
+            {
+                ["type"] = "touchEnd",
+                ["touchPoints"] = new JsonArray(),
+            },
+            cancellation);
+    }
+
     internal async Task<JsonElement> EvaluateForegroundAsync(
         string expression,
         CancellationToken cancellation)
@@ -531,6 +777,45 @@ sealed class BrowserTarget : IAsyncDisposable
         await browser.CommandAsync("Page.bringToFront", new JsonObject(), cancellation);
         return await browser.EvaluateAsync(expression, cancellation);
     }
+
+    private async Task<(double Left, double Top, double Width, double Height)> GetVideoBoundsAsync(
+        CancellationToken cancellation)
+    {
+        JsonElement bounds = await EvaluateAsync(
+            """
+            (() => {
+              const video = document.getElementById('video');
+              if (!(video instanceof HTMLVideoElement)) throw new Error('Missing video');
+              const bounds = video.getBoundingClientRect();
+              return {left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height};
+            })()
+            """,
+            cancellation);
+        return (
+            bounds.GetProperty("left").GetDouble(),
+            bounds.GetProperty("top").GetDouble(),
+            bounds.GetProperty("width").GetDouble(),
+            bounds.GetProperty("height").GetDouble());
+    }
+
+    private Task<JsonElement> DispatchMouseAsync(
+        string type,
+        double x,
+        double y,
+        int buttons,
+        CancellationToken cancellation) =>
+        browser.CommandAsync(
+            "Input.dispatchMouseEvent",
+            new JsonObject
+            {
+                ["type"] = type,
+                ["x"] = x,
+                ["y"] = y,
+                ["button"] = "left",
+                ["buttons"] = buttons,
+                ["clickCount"] = 1,
+            },
+            cancellation);
 
     public async ValueTask DisposeAsync()
     {
