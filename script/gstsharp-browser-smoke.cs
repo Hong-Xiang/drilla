@@ -7,29 +7,46 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-if (args.Length is not (2 or 4))
+bool raymarch = args.Length is 3 or 5 && args[2] == "--raymarch";
+if (args.Length is not (2 or 4) && !raymarch)
 {
     Console.Error.WriteLine(
         "Usage: dotnet run -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.cs -- " +
-        "<server-url> <chromium-debug-url> [expected-width expected-height]");
+        "<server-url> <chromium-debug-url> [expected-width expected-height]\n" +
+        "   or: dotnet run -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.cs -- " +
+        "<server-url> <chromium-debug-url> --raymarch [expected-width expected-height]");
     return 2;
 }
 
 var server = new Uri(args[0]);
 var debugger = new Uri(args[1]);
-var expectedWidth = args.Length == 4 && int.TryParse(args[2], out int width) && width > 0
+int dimensionsOffset = raymarch ? 3 : 2;
+var expectedWidth = args.Length == dimensionsOffset + 2 &&
+    int.TryParse(args[dimensionsOffset], out int width) && width > 0
     ? width
-    : args.Length == 2
+    : args.Length == dimensionsOffset
         ? 320
         : throw new ArgumentException("Expected width must be a positive integer.");
-var expectedHeight = args.Length == 4 && int.TryParse(args[3], out int height) && height > 0
+var expectedHeight = args.Length == dimensionsOffset + 2 &&
+    int.TryParse(args[dimensionsOffset + 1], out int height) && height > 0
     ? height
-    : args.Length == 2
+    : args.Length == dimensionsOffset
         ? 240
         : throw new ArgumentException("Expected height must be a positive integer.");
 using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 using var http = new HttpClient();
 CancellationToken cancellation = timeout.Token;
+
+if (raymarch)
+{
+    return await RunRaymarchAcceptanceAsync(
+        http,
+        debugger,
+        server,
+        expectedWidth,
+        expectedHeight,
+        cancellation);
+}
 
 await using BrowserTarget first = await BrowserTarget.OpenAsync(
     http, debugger, server, cancellation);
@@ -159,6 +176,170 @@ Console.WriteLine(
     "and receiver stats.");
 return 0;
 
+static async Task<int> RunRaymarchAcceptanceAsync(
+    HttpClient http,
+    Uri debugger,
+    Uri server,
+    int expectedWidth,
+    int expectedHeight,
+    CancellationToken cancellation)
+{
+    await using BrowserTarget first = await BrowserTarget.OpenAsync(
+        http, debugger, server, cancellation);
+    await using BrowserTarget second = await BrowserTarget.OpenAsync(
+        http, debugger, server, cancellation);
+    await second.SelectSceneAsync(BrowserScene.Raymarching, cancellation);
+    await first.StartAsync(cancellation);
+    await second.StartAsync(cancellation);
+
+    JsonElement triangle = await first.EvaluateForegroundAsync(
+        BrowserScripts.Observe, cancellation);
+    JsonElement raymarch = await second.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    ValidateObservation(triangle, expectedWidth, expectedHeight);
+    ValidateRaymarch(raymarch, expectedWidth, expectedHeight);
+    await ValidateActiveSceneAsync(first, BrowserScene.Triangle, cancellation);
+    await ValidateActiveSceneAsync(second, BrowserScene.Raymarching, cancellation);
+    ValidateStable(await first.EvaluateForegroundAsync(
+        BrowserScripts.StableReceiver, cancellation));
+    ValidateStable(await second.EvaluateForegroundAsync(
+        BrowserScripts.StableReceiver, cancellation));
+    Console.WriteLine($"Mixed scene choice: triangle={triangle} raymarch={RaymarchMetrics(raymarch)}");
+
+    foreach (string query in new[]
+    {
+        "?scene=",
+        "?scene=unknown",
+        "?scene=triangle&scene=raymarching",
+        "?scene=triangle&extra=value",
+    })
+    {
+        await ExpectHandshakeStatusAsync(
+            server,
+            query,
+            HttpStatusCode.BadRequest,
+            cancellation);
+    }
+    await ExpectHandshakeStatusAsync(server, "", HttpStatusCode.Conflict, cancellation);
+    Console.WriteLine("Invalid scene queries rejected with HTTP 400 before the full admission gate.");
+
+    await first.EvaluateForegroundAsync(BrowserScripts.HoldPointerFrame, cancellation);
+    await first.DragMouseAsync(0.25, 0.25, cancellation);
+    JsonElement failed = await first.EvaluateForegroundAsync(
+        BrowserScripts.FailMalformed, cancellation);
+    ValidateProgress(await second.EvaluateForegroundAsync(
+        BrowserScripts.Progress, cancellation));
+
+    await first.SelectSceneAsync(BrowserScene.Raymarching, cancellation);
+    JsonElement reconnected = await first.EvaluateAsync(
+        BrowserScripts.Reconnect, cancellation);
+    ValidateObservation(reconnected, expectedWidth, expectedHeight);
+    if (!reconnected.GetProperty("stalePointerCancelled").GetBoolean() ||
+        reconnected.GetProperty("replacementPointerMessages").GetInt32() != 0)
+    {
+        throw new InvalidOperationException($"Stale pointer work reached the replacement: {reconnected}");
+    }
+    await ValidateActiveSceneAsync(first, BrowserScene.Raymarching, cancellation);
+    JsonElement firstRaymarch = await first.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    ValidateRaymarch(firstRaymarch, expectedWidth, expectedHeight);
+    Console.WriteLine(
+        $"Triangle stopped and reconnected as raymarch while its peer survived: " +
+        $"failed={failed} replacement={RaymarchMetrics(firstRaymarch)}");
+
+    JsonElement secondBeforeMouse = await second.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    JsonElement firstBeforeMouse = await first.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    int firstPointerCount = await first.PointerMessageCountAsync(cancellation);
+    int secondPointerCount = await second.PointerMessageCountAsync(cancellation);
+    await first.DragMouseAsync(0.95, 0.2, cancellation);
+    await first.WaitForPointerMessageAsync(firstPointerCount, cancellation);
+    await Task.Delay(100, cancellation);
+    JsonElement firstAfterMouse = await first.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    JsonElement secondAfterMouse = await second.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    ValidateRaymarchInput(
+        firstBeforeMouse,
+        firstAfterMouse,
+        "mouse",
+        expectInputChange: true);
+    ValidateRaymarchInput(
+        secondBeforeMouse,
+        secondAfterMouse,
+        "mouse peer",
+        expectInputChange: false);
+    if (await first.PointerMessageCountAsync(cancellation) <= firstPointerCount ||
+        await second.PointerMessageCountAsync(cancellation) != secondPointerCount)
+    {
+        throw new InvalidOperationException("Mouse input crossed raymarch browser sessions.");
+    }
+
+    JsonElement firstBeforeTouch = await first.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    JsonElement secondBeforeTouch = await second.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    firstPointerCount = await first.PointerMessageCountAsync(cancellation);
+    secondPointerCount = await second.PointerMessageCountAsync(cancellation);
+    await second.DragTouchAsync(0.05, 0.8, cancellation);
+    await second.WaitForPointerMessageAsync(secondPointerCount, cancellation);
+    await Task.Delay(100, cancellation);
+    JsonElement secondAfterTouch = await second.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    JsonElement firstAfterTouch = await first.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    ValidateRaymarchInput(
+        secondBeforeTouch,
+        secondAfterTouch,
+        "touch",
+        expectInputChange: true);
+    ValidateRaymarchInput(
+        firstBeforeTouch,
+        firstAfterTouch,
+        "touch peer",
+        expectInputChange: false);
+    if (await second.PointerMessageCountAsync(cancellation) <= secondPointerCount ||
+        await first.PointerMessageCountAsync(cancellation) != firstPointerCount)
+    {
+        throw new InvalidOperationException("Touch input crossed raymarch browser sessions.");
+    }
+    Console.WriteLine(
+        $"Raymarch input exceeded natural drift without peer input: " +
+        $"mouse={RaymarchComparison(firstBeforeMouse, firstAfterMouse)} " +
+        $"mousePeer={RaymarchComparison(secondBeforeMouse, secondAfterMouse)} " +
+        $"touch={RaymarchComparison(secondBeforeTouch, secondAfterTouch)} " +
+        $"touchPeer={RaymarchComparison(firstBeforeTouch, firstAfterTouch)}");
+
+    await second.DisposeAsync();
+    JsonElement survivingClose = await first.EvaluateForegroundAsync(
+        BrowserScripts.Progress, cancellation);
+    ValidateProgress(survivingClose);
+
+    await using BrowserTarget replacement = await BrowserTarget.OpenAsync(
+        http, debugger, server, cancellation);
+    await replacement.SelectSceneAsync(BrowserScene.Raymarching, cancellation);
+    await replacement.StartAsync(cancellation);
+    ValidateRaymarch(
+        await replacement.EvaluateForegroundAsync(BrowserScripts.RaymarchFrames, cancellation),
+        expectedWidth,
+        expectedHeight);
+    JsonElement invalid = await replacement.EvaluateForegroundAsync(
+        BrowserScripts.FailInvalid, cancellation);
+    JsonElement survivingInvalid = await first.EvaluateForegroundAsync(
+        BrowserScripts.Progress, cancellation);
+    ValidateProgress(survivingInvalid);
+    Console.WriteLine(
+        $"Disconnect and invalid signaling stayed contained: close={survivingClose} " +
+        $"invalid={invalid} survivor={survivingInvalid}");
+
+    Console.WriteLine(
+        "PASS RAYMARCH: mixed fixed scenes, two-raymarch reconnect, temporal-drift-aware " +
+        "mouse/touch isolation, pre-admission HTTP 400, stale input teardown, disconnect/" +
+        "invalid containment, shared receiver stats, and cap=2.");
+    return 0;
+}
+
 static void ValidateObservation(JsonElement observation, int expectedWidth, int expectedHeight)
 {
     if (observation.GetProperty("width").GetInt32() != expectedWidth ||
@@ -170,6 +351,137 @@ static void ValidateObservation(JsonElement observation, int expectedWidth, int 
         observation.GetProperty("statsFps").GetDouble() <= 0)
     {
         throw new InvalidOperationException($"Receiver stats were not positive: {observation}");
+    }
+}
+
+static void ValidateRaymarch(JsonElement observation, int expectedWidth, int expectedHeight)
+{
+    ValidateObservation(observation, expectedWidth, expectedHeight);
+    if (observation.GetProperty("luminanceRange").GetInt32() < 40 ||
+        observation.GetProperty("varyingPixels").GetInt32() <
+        observation.GetProperty("samplePixels").GetInt32() / 4 ||
+        observation.GetProperty("naturalDrift").GetDouble() <= 0.2)
+    {
+        throw new InvalidOperationException($"Decoded raymarch structure was invalid: {observation}");
+    }
+}
+
+static void ValidateRaymarchInput(
+    JsonElement before,
+    JsonElement after,
+    string input,
+    bool expectInputChange)
+{
+    double comparison = FrameDifference(
+        before.GetProperty("second"),
+        after.GetProperty("first"));
+    double expectedNatural = ExpectedNaturalDifference(before, after);
+
+    if (expectInputChange
+        ? comparison <= expectedNatural * 1.25 + 1
+        : comparison > expectedNatural * 2 + 3)
+    {
+        double seconds =
+            after.GetProperty("firstMediaTime").GetDouble() -
+            before.GetProperty("secondMediaTime").GetDouble();
+        throw new InvalidOperationException(
+            $"Raymarch {input} comparison did not match temporal drift: " +
+            $"difference={comparison:F2}, expectedNatural={expectedNatural:F2}, " +
+            $"elapsed={seconds:F3}s.");
+    }
+}
+
+static double ExpectedNaturalDifference(JsonElement before, JsonElement after)
+{
+    double seconds =
+        after.GetProperty("firstMediaTime").GetDouble() -
+        before.GetProperty("secondMediaTime").GetDouble();
+    double naturalRate = Math.Max(
+        NaturalDriftRate(before),
+        NaturalDriftRate(after));
+    return naturalRate * Math.Max(seconds, 1.0 / 30);
+}
+
+static double NaturalDriftRate(JsonElement sample)
+{
+    double seconds =
+        sample.GetProperty("secondMediaTime").GetDouble() -
+        sample.GetProperty("firstMediaTime").GetDouble();
+    return sample.GetProperty("naturalDrift").GetDouble() / Math.Max(seconds, 0.001);
+}
+
+static double FrameDifference(JsonElement first, JsonElement second)
+{
+    if (first.GetArrayLength() != second.GetArrayLength() ||
+        first.GetArrayLength() == 0)
+    {
+        throw new InvalidOperationException("Raymarch frame samples had different shapes.");
+    }
+    JsonElement.ArrayEnumerator left = first.EnumerateArray();
+    JsonElement.ArrayEnumerator right = second.EnumerateArray();
+    long total = 0;
+    int channels = 0;
+    while (left.MoveNext() && right.MoveNext())
+    {
+        int a = left.Current.GetInt32();
+        int b = right.Current.GetInt32();
+        total += Math.Abs((a >> 16) - (b >> 16));
+        total += Math.Abs(((a >> 8) & 255) - ((b >> 8) & 255));
+        total += Math.Abs((a & 255) - (b & 255));
+        channels += 3;
+    }
+    return (double)total / channels;
+}
+
+static string RaymarchMetrics(JsonElement sample) =>
+    $"{{range={sample.GetProperty("luminanceRange")}, " +
+    $"varying={sample.GetProperty("varyingPixels")}, " +
+    $"drift={sample.GetProperty("naturalDrift").GetDouble():F2}, " +
+    $"mbps={sample.GetProperty("statsMbps").GetDouble():F2}, " +
+    $"fps={sample.GetProperty("statsFps").GetDouble():F2}}}";
+
+static string RaymarchComparison(JsonElement before, JsonElement after) =>
+    $"{{difference={FrameDifference(before.GetProperty("second"), after.GetProperty("first")):F2}, " +
+    $"expectedNatural={ExpectedNaturalDifference(before, after):F2}, " +
+    $"naturalBefore={before.GetProperty("naturalDrift").GetDouble():F2}, " +
+    $"naturalAfter={after.GetProperty("naturalDrift").GetDouble():F2}}}";
+
+static async Task ValidateActiveSceneAsync(
+    BrowserTarget target,
+    BrowserScene expected,
+    CancellationToken cancellation)
+{
+    JsonElement state = await target.EvaluateForegroundAsync(
+        BrowserScripts.SceneState, cancellation);
+    string value = expected == BrowserScene.Triangle ? "triangle" : "raymarching";
+    if (state.GetProperty("value").GetString() != value ||
+        !state.GetProperty("disabled").GetBoolean())
+    {
+        throw new InvalidOperationException($"Active scene selector was mutable or wrong: {state}");
+    }
+}
+
+static async Task ExpectHandshakeStatusAsync(
+    Uri server,
+    string query,
+    HttpStatusCode expected,
+    CancellationToken cancellation)
+{
+    using var socket = new ClientWebSocket();
+    socket.Options.CollectHttpResponseDetails = true;
+    var signaling = new UriBuilder(server)
+    {
+        Scheme = server.Scheme == "https" ? "wss" : "ws",
+        Path = "/ws",
+        Query = query.TrimStart('?'),
+    }.Uri;
+    try
+    {
+        await socket.ConnectAsync(signaling, cancellation);
+        throw new InvalidOperationException($"Unexpectedly accepted signaling URI {signaling}.");
+    }
+    catch (WebSocketException) when (socket.HttpStatusCode == expected)
+    {
     }
 }
 
@@ -295,6 +607,14 @@ static class BrowserScripts
           }
           throw new Error('Viewer did not start: '
             + document.getElementById('status')?.textContent);
+        })()
+        """;
+
+    internal const string SceneState = """
+        (() => {
+          const scene = document.getElementById('scene');
+          if (!(scene instanceof HTMLSelectElement)) throw new Error('Missing scene selector');
+          return {value: scene.value, disabled: scene.disabled};
         })()
         """;
 
@@ -452,6 +772,100 @@ static class BrowserScripts
         })()
         """;
 
+    internal const string RaymarchFrames = """
+        (async () => {
+          const video = document.getElementById('video');
+          const stats = document.getElementById('stats');
+          if (!(video instanceof HTMLVideoElement)) throw new Error('Missing video');
+          if (!(stats instanceof HTMLElement)) throw new Error('Missing receiver stats');
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d', {willReadFrequently: true});
+          if (!context) throw new Error('Canvas unavailable');
+          function capture() {
+            return new Promise((resolve, reject) => {
+              const id = video.requestVideoFrameCallback((_, metadata) => {
+                clearTimeout(timer);
+                try {
+                  canvas.width = Math.min(video.videoWidth, 80);
+                  canvas.height = Math.max(1, Math.round(
+                    video.videoHeight * canvas.width / video.videoWidth));
+                  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                  const rgba = context.getImageData(
+                    0, 0, canvas.width, canvas.height).data;
+                  const pixels = [], luminance = [];
+                  let minimum = 255, maximum = 0, total = 0;
+                  for (let i = 0; i < rgba.length; i += 4) {
+                    const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2];
+                    pixels.push((r << 16) | (g << 8) | b);
+                    const value = Math.round((r * 3 + g * 6 + b) / 10);
+                    luminance.push(value);
+                    minimum = Math.min(minimum, value);
+                    maximum = Math.max(maximum, value);
+                    total += value;
+                  }
+                  const mean = total / luminance.length;
+                  resolve({
+                    pixels,
+                    mediaTime: metadata.mediaTime,
+                    luminanceRange: maximum - minimum,
+                    varyingPixels: luminance.filter(value => Math.abs(value - mean) > 12).length
+                  });
+                } catch (error) {
+                  reject(error);
+                }
+              });
+              const timer = setTimeout(() => {
+                video.cancelVideoFrameCallback(id);
+                reject(new Error('Decoded raymarch frame timed out'));
+              }, 5000);
+            });
+          }
+          function difference(first, second) {
+            let total = 0;
+            for (let i = 0; i < first.length; i++) {
+              const a = first[i], b = second[i];
+              total += Math.abs((a >> 16) - (b >> 16));
+              total += Math.abs(((a >> 8) & 255) - ((b >> 8) & 255));
+              total += Math.abs((a & 255) - (b & 255));
+            }
+            return total / first.length / 3;
+          }
+          for (let attempt = 0; attempt < 200; attempt++) {
+            if (video.readyState >= 2 && video.videoWidth > 0) {
+              const first = await capture();
+              await new Promise(resolve => setTimeout(resolve, 250));
+              const second = await capture();
+              for (let sample = 0; sample < 100; sample++) {
+                const mbps = Number(stats.dataset.mbps);
+                const fps = Number(stats.dataset.fps);
+                if (Number.isFinite(mbps) && mbps > 0
+                    && Number.isFinite(fps) && fps > 0) {
+                  return {
+                    width: video.videoWidth,
+                    height: video.videoHeight,
+                    samplePixels: second.pixels.length,
+                    luminanceRange: second.luminanceRange,
+                    varyingPixels: second.varyingPixels,
+                    naturalDrift: difference(first.pixels, second.pixels),
+                    firstMediaTime: first.mediaTime,
+                    secondMediaTime: second.mediaTime,
+                    first: first.pixels,
+                    second: second.pixels,
+                    statsMbps: mbps,
+                    statsFps: fps
+                  };
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+              throw new Error('No finite raymarch receiver statistics: ' + stats.textContent);
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          throw new Error('No decoded raymarch video: '
+            + document.getElementById('status')?.textContent);
+        })()
+        """;
+
     internal const string StableReceiver = """
         (async () => {
           const state = globalThis.__mediaStats;
@@ -589,7 +1003,16 @@ static class BrowserScripts
             throw new Error('Missing reconnect fixture');
           for (let i = 0; i < 200; i++) {
             const start = document.getElementById('start');
-            if (!video.srcObject && start && !start.disabled) start.click();
+            const scene = document.getElementById('scene');
+            if (!video.srcObject && start && !start.disabled) {
+              if (globalThis.__nextMediaScene) {
+                if (!(scene instanceof HTMLSelectElement) || scene.disabled)
+                  throw new Error('Replacement scene selector was unavailable');
+                scene.value = globalThis.__nextMediaScene;
+                globalThis.__nextMediaScene = null;
+              }
+              start.click();
+            }
             if (video.srcObject && video.srcObject !== stale.stream && video.readyState >= 2) {
               const replacement = video.srcObject;
               stale.close.call(globalThis.__mediaSockets.at(-2), new CloseEvent('close'));
@@ -696,6 +1119,60 @@ sealed class BrowserTarget : IAsyncDisposable
 
     internal Task<JsonElement> StartAsync(CancellationToken cancellation) =>
         EvaluateAsync(BrowserScripts.Start, cancellation);
+
+    internal Task<JsonElement> SelectSceneAsync(
+        BrowserScene scene,
+        CancellationToken cancellation)
+    {
+        string value = scene == BrowserScene.Triangle ? "triangle" : "raymarching";
+        return EvaluateAsync(
+            $$"""
+            (() => {
+              const scene = document.getElementById('scene');
+              const video = document.getElementById('video');
+              if (!(scene instanceof HTMLSelectElement)
+                  || !(video instanceof HTMLVideoElement)
+                  || scene.disabled || video.srcObject)
+                throw new Error('Scene can only change while stopped');
+              scene.value = "{{value}}";
+              globalThis.__nextMediaScene = "{{value}}";
+              return scene.value;
+            })()
+            """,
+            cancellation);
+    }
+
+    internal async Task<int> PointerMessageCountAsync(CancellationToken cancellation)
+    {
+        JsonElement count = await EvaluateAsync(
+            """
+            (() => {
+              const socket = globalThis.__mediaSockets.at(-1);
+              const sent = globalThis.__mediaSent.get(socket) ?? [];
+              return sent.filter(value => {
+                try { return JSON.parse(value).type === 'pointer'; }
+                catch { return false; }
+              }).length;
+            })()
+            """,
+            cancellation);
+        return count.GetInt32();
+    }
+
+    internal async Task WaitForPointerMessageAsync(
+        int previousCount,
+        CancellationToken cancellation)
+    {
+        for (int attempt = 0; attempt < 100; attempt++)
+        {
+            if (await PointerMessageCountAsync(cancellation) > previousCount)
+            {
+                return;
+            }
+            await Task.Delay(20, cancellation);
+        }
+        throw new InvalidOperationException("Browser pointer input was not sent.");
+    }
 
     internal Task<JsonElement> EvaluateAsync(string expression, CancellationToken cancellation) =>
         browser.EvaluateAsync(expression, cancellation);
@@ -829,6 +1306,12 @@ sealed class BrowserTarget : IAsyncDisposable
             new Uri(debugger, $"/json/close/{targetId}"), cleanup.Token);
         close.EnsureSuccessStatusCode();
     }
+}
+
+enum BrowserScene
+{
+    Triangle,
+    Raymarching,
 }
 
 sealed class BrowserProtocol : IAsyncDisposable

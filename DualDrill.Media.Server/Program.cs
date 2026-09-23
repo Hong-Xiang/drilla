@@ -9,6 +9,7 @@ if (args is ["--self-test"])
     return CpuFrames.RunSelfTest() == 0 &&
         VideoSettings.RunSelfTest() == 0 &&
         SessionSettings.RunSelfTest() == 0 &&
+        SceneQuery.RunSelfTest() == 0 &&
         PointerPosition.RunSelfTest() == 0 &&
         GpuFrames.RunRaymarchUniformSelfTest() == 0
         ? WebRtcSession.RunSignalSelfTest()
@@ -39,6 +40,7 @@ if (builder.Configuration["urls"] is null)
     builder.WebHost.UseUrls("http://127.0.0.1:5084");
 }
 
+RaymarchProgram raymarch = RaymarchProgram.Compile();
 InitializeGStreamer();
 WebRtcSession.EnsureNativeElements();
 
@@ -54,9 +56,21 @@ app.UseWebSockets(new WebSocketOptions
 
 app.Map("/ws", async context =>
 {
+    if (!SceneQuery.TryParse(context.Request.Query, out Scene scene))
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsync(
+            "Query must be absent or exactly '?scene=triangle' or '?scene=raymarching'.",
+            context.RequestAborted);
+        return;
+    }
+
     if (!context.WebSockets.IsWebSocketRequest)
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsync(
+            "A WebSocket upgrade is required.",
+            context.RequestAborted);
         return;
     }
 
@@ -75,6 +89,8 @@ app.Map("/ws", async context =>
         socket,
         context.RequestServices.GetRequiredService<ILogger<WebRtcSession>>(),
         video,
+        scene,
+        raymarch,
         context.RequestAborted);
     await session.RunAsync();
 });
