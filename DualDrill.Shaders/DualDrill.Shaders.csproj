@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <WarningsAsErrors>true</WarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>portable</DebugType>
+    <!-- Shader uniforms are declarations consumed through reflection, not assigned by managed code. -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DualDrill.CLSL.Language\DualDrill.CLSL.Language.csproj" />
+    <ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
+    <ProjectReference Include="..\DualDrill.Mathematics\DualDrill.Mathematics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\Shaders\RaymarchingPrimitiveShader.cs"
+             Link="RaymarchingPrimitiveShader.cs" />
+  </ItemGroup>
+
+</Project>
