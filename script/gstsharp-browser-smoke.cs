@@ -194,6 +194,12 @@ static async Task<int> RunRaymarchAcceptanceAsync(
 
     JsonElement triangle = await first.EvaluateForegroundAsync(
         BrowserScripts.Observe, cancellation);
+    JsonElement triangleControl = await first.EvaluateForegroundAsync(
+        BrowserScripts.RaymarchFrames, cancellation);
+    if (HasRaymarchCoverage(triangleControl))
+    {
+        throw new InvalidOperationException("Raymarch classification accepted the triangle negative control.");
+    }
     JsonElement raymarch = await second.EvaluateForegroundAsync(
         BrowserScripts.RaymarchFrames, cancellation);
     ValidateObservation(triangle, expectedWidth, expectedHeight);
@@ -204,7 +210,10 @@ static async Task<int> RunRaymarchAcceptanceAsync(
         BrowserScripts.StableReceiver, cancellation));
     ValidateStable(await second.EvaluateForegroundAsync(
         BrowserScripts.StableReceiver, cancellation));
-    Console.WriteLine($"Mixed scene choice: triangle={triangle} raymarch={RaymarchMetrics(raymarch)}");
+    Console.WriteLine(
+        $"Mixed scene choice: triangle={triangle} " +
+        $"triangleDarkPixels={triangleControl.GetProperty("darkPixels")} " +
+        $"raymarch={RaymarchMetrics(raymarch)}");
 
     foreach (string query in new[]
     {
@@ -357,7 +366,8 @@ static void ValidateObservation(JsonElement observation, int expectedWidth, int 
 static void ValidateRaymarch(JsonElement observation, int expectedWidth, int expectedHeight)
 {
     ValidateObservation(observation, expectedWidth, expectedHeight);
-    if (observation.GetProperty("luminanceRange").GetInt32() < 40 ||
+    if (!HasRaymarchCoverage(observation) ||
+        observation.GetProperty("luminanceRange").GetInt32() < 40 ||
         observation.GetProperty("varyingPixels").GetInt32() <
         observation.GetProperty("samplePixels").GetInt32() / 4 ||
         observation.GetProperty("naturalDrift").GetDouble() <= 0.2)
@@ -366,12 +376,21 @@ static void ValidateRaymarch(JsonElement observation, int expectedWidth, int exp
     }
 }
 
+// The canonical scene fills the frame; the diagnostic triangle leaves a large near-black background.
+static bool HasRaymarchCoverage(JsonElement observation) =>
+    observation.GetProperty("darkPixels").GetInt32() <
+    observation.GetProperty("samplePixels").GetInt32() / 5;
+
 static void ValidateRaymarchInput(
     JsonElement before,
     JsonElement after,
     string input,
     bool expectInputChange)
 {
+    if (!HasRaymarchCoverage(before) || !HasRaymarchCoverage(after))
+    {
+        throw new InvalidOperationException($"Raymarch {input} produced a triangle-like background.");
+    }
     double comparison = FrameDifference(
         before.GetProperty("second"),
         after.GetProperty("first"));
@@ -435,6 +454,7 @@ static double FrameDifference(JsonElement first, JsonElement second)
 
 static string RaymarchMetrics(JsonElement sample) =>
     $"{{range={sample.GetProperty("luminanceRange")}, " +
+    $"dark={sample.GetProperty("darkPixels")}/{sample.GetProperty("samplePixels")}, " +
     $"varying={sample.GetProperty("varyingPixels")}, " +
     $"drift={sample.GetProperty("naturalDrift").GetDouble():F2}, " +
     $"mbps={sample.GetProperty("statsMbps").GetDouble():F2}, " +
@@ -793,9 +813,10 @@ static class BrowserScripts
                   const rgba = context.getImageData(
                     0, 0, canvas.width, canvas.height).data;
                   const pixels = [], luminance = [];
-                  let minimum = 255, maximum = 0, total = 0;
+                  let minimum = 255, maximum = 0, total = 0, dark = 0;
                   for (let i = 0; i < rgba.length; i += 4) {
                     const r = rgba[i], g = rgba[i + 1], b = rgba[i + 2];
+                    if (Math.max(r, g, b) <= 24) dark++;
                     pixels.push((r << 16) | (g << 8) | b);
                     const value = Math.round((r * 3 + g * 6 + b) / 10);
                     luminance.push(value);
@@ -807,6 +828,7 @@ static class BrowserScripts
                   resolve({
                     pixels,
                     mediaTime: metadata.mediaTime,
+                    darkPixels: dark,
                     luminanceRange: maximum - minimum,
                     varyingPixels: luminance.filter(value => Math.abs(value - mean) > 12).length
                   });
@@ -846,6 +868,7 @@ static class BrowserScripts
                     samplePixels: second.pixels.length,
                     luminanceRange: second.luminanceRange,
                     varyingPixels: second.varyingPixels,
+                    darkPixels: second.darkPixels,
                     naturalDrift: difference(first.pixels, second.pixels),
                     firstMediaTime: first.mediaTime,
                     secondMediaTime: second.mediaTime,
