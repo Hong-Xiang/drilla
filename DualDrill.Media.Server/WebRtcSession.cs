@@ -104,7 +104,7 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
         try
         {
-            _gpu = await GpuFrames.CreateAsync(_video, _stop.Token);
+            _gpu = await GpuFrames.CreateTriangleAsync(_video, _stop.Token);
             _logger.LogInformation(
                 "GPU source: {Device}, {Backend}, {AdapterType}",
                 _gpu.AdapterInfo.Device, _gpu.AdapterInfo.BackendType, _gpu.AdapterInfo.AdapterType);
