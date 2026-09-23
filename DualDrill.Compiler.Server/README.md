@@ -37,10 +37,13 @@ nix develop --command pnpm --dir DualDrill.JS run compiler:test
 `compiler:test` rebuilds the bundle and exercises animation/resource lifetimes
 with deterministic mocks. It is not a browser or GPU rendering test.
 
-The shared C# type is now `DualDrill.Shaders.RaymarchingPrimitiveShader`, sourced
-from `Shared/Shaders/RaymarchingPrimitiveShader.cs` and linked into the compiler
-server, tests, and Engine. Callers using the former test/Engine namespaces must
-update their imports. Vertex input remains location 0, `float32x2`.
+The shared C# type is `DualDrill.Shaders.RaymarchingPrimitiveShader`. Its
+canonical source remains `Shared/Shaders/RaymarchingPrimitiveShader.cs`, but
+only the non-Web `DualDrill.Shaders` class library compiles it. Consumers now
+reference that library instead of receiving consumer-local copies, so the type's
+assembly identity changes to `DualDrill.Shaders`; consumers must rebuild. The
+namespace, type, fields, and vertex input at location 0 (`float32x2`) are
+unchanged, so there is no field ABI change or compatibility shim.
 
 The raymarching fixture keeps its existing shader and entry-point names and uses
 these group 0 uniform bindings:
