@@ -4,7 +4,7 @@ Loopback-by-default .NET 10 proof of concept for:
 
 ```text
 C# -> Rust wgpu-native hardware GPU
-  -> animated triangle in a BGRA8Unorm texture
+  -> triangle or canonical CLSL raymarch in a BGRA8Unorm texture
   -> serial GPU-to-CPU readback
   -> appsrc
   -> videoconvert
@@ -14,34 +14,35 @@ C# -> Rust wgpu-native hardware GPU
   -> browser <video>
 ```
 
-This prototype references only the shared Graphics project, not the existing
-Engine, WebView, JavaScript, or server projects. It reuses one offscreen texture
-and staging buffer, then copies one tightly packed BGRA frame into a
-GStreamer-owned buffer. The default is 320x240 at 30 fps. This is not zero-copy.
-Software/unknown adapters are rejected rather than silently replacing GPU
-rendering.
+This prototype references the shared Graphics, CLSL compiler, and shader
+projects, not the existing Engine, WebView, JavaScript, or server projects. It
+reuses one offscreen texture and staging buffer, then copies one tightly packed
+BGRA frame into a GStreamer-owned buffer. The default is 320x240 at 30 fps. This
+is not zero-copy. Software/unknown adapters are rejected rather than silently
+replacing GPU rendering.
 
 The modern backend uses the matched Alimer managed/native packages and Rust
-wgpu-native, not Dawn. The demo deliberately uses a small standalone WGSL scene:
-the compiler now emits the canonical CLSL raymarch as a native-accepted shader
-module despite Naga's return-in-loop limitation, but the media demo remains the
-independent animated triangle. Native module acceptance does not establish
-raymarch image parity or integrate that scene into the stream.
+wgpu-native, not Dawn. Production frame creation now supports the canonical
+shared CLSL raymarch through the public WGSL compiler path, but streaming remains
+the independent animated triangle until browser/session scene selection is
+wired in the next migration slice.
 
 ## Requirements
 
 - .NET SDK 10
+- `slangc` for compiling the canonical CLSL raymarch to WGSL
 - A hardware GPU supported by wgpu-native and its OS driver/runtime
 - GStreamer 1.24 or newer (GstSharp.Net 1.28.13 targets the 1.24 API floor)
 - Plugins providing `appsrc`, `videoconvert`, `vp8enc`, `rtpvp8pay`,
   `webrtcbin`, `nicesrc`, and `dtlssrtpenc`
 - A browser with WebRTC support
 
-On x86-64 Linux, the pinned `media` Nix shell supplies .NET, the Vulkan loader,
-GStreamer, required plugins, and Chromium. The default compiler shell is unchanged.
-The graphics NuGet packages include the matched native wgpu library, but not the
-host GPU driver. GstSharp.Net includes managed bindings, not GStreamer itself.
-Outside the shell, install the native GStreamer runtime and plugins separately.
+On x86-64 Linux, the pinned `media` Nix shell supplies .NET, `slangc`, the
+Vulkan loader, GStreamer, required plugins, and Chromium. The default compiler
+shell is unchanged. The graphics NuGet packages include the matched native wgpu
+library, but not the host GPU driver. GstSharp.Net includes managed bindings,
+not GStreamer itself. Outside the shell, install the native GStreamer runtime
+and plugins separately.
 
 ## Run
 
@@ -145,6 +146,19 @@ It renders at width 65 to exercise 260-byte rows padded to 512 bytes, verifies
 BGRA channel order and opaque alpha, observes different animation frames,
 checks the actual pixel centroid at a deterministic translated position, and
 renders the centered state again with the same resources.
+
+The explicit raymarch GPU diagnostic compiles one immutable program through
+`CLSLCompiler(WGSL)`, creates two production raymarch frame sources from it, and
+checks opaque BGRA output, a nontrivial scene, fixed-time determinism, time and
+horizontal-input sensitivity, centered reset, and per-instance isolation:
+
+```sh
+dotnet run --project DualDrill.Media.Server/DualDrill.Media.Server.csproj -- --raymarch-self-test
+```
+
+Run it with the same real-GPU nixGL wrapper as `--gpu-self-test`. It is a
+production-frame diagnostic, not a replacement for the independent native
+raymarch image oracle.
 
 ## Browser acceptance
 

@@ -9,14 +9,20 @@ if (args is ["--self-test"])
     return CpuFrames.RunSelfTest() == 0 &&
         VideoSettings.RunSelfTest() == 0 &&
         SessionSettings.RunSelfTest() == 0 &&
-        PointerPosition.RunSelfTest() == 0
+        PointerPosition.RunSelfTest() == 0 &&
+        GpuFrames.RunRaymarchUniformSelfTest() == 0
         ? WebRtcSession.RunSignalSelfTest()
         : 1;
 }
 
 if (args is ["--gpu-self-test"])
 {
-    return await GpuFrames.RunSelfTestAsync();
+    return await GpuFrames.RunTriangleSelfTestAsync();
+}
+
+if (args is ["--raymarch-self-test"])
+{
+    return await GpuFrames.RunRaymarchSelfTestAsync();
 }
 
 if (args is ["--native-self-test"])

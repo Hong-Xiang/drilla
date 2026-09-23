@@ -48,6 +48,7 @@
             dotnetPkgs.dotnet-sdk_10
             gst.gstreamer
             dotnetPkgs.chromium
+            pkgs.shader-slang
           ]
           ++ mediaPlugins;
 

@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
+    <ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
+    <ProjectReference Include="..\DualDrill.Shaders\DualDrill.Shaders.csproj" />
     <PackageReference Include="GstSharp.Net" />
     <PackageReference Include="GstSharp.Net.App" />
     <PackageReference Include="GstSharp.Net.Sdp" />
