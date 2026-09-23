@@ -572,6 +572,12 @@ internal sealed class GpuFrames : IDisposable
         using GpuFrames secondInstance =
             await CreateRaymarchAsync(video, program, deadline.Token);
 
+        if (ReferenceEquals(firstInstance._draw, secondInstance._draw) ||
+            firstInstance._resources.Intersect(secondInstance._resources).Any())
+        {
+            throw new InvalidOperationException("Raymarch instances shared owned render resources.");
+        }
+
         byte[] baseline = new byte[video.FrameBytes];
         byte[] repeated = new byte[video.FrameBytes];
         byte[] later = new byte[video.FrameBytes];
@@ -611,22 +617,33 @@ internal sealed class GpuFrames : IDisposable
             TimeSpan.FromSeconds(0.5),
             PointerPosition.Center,
             deadline.Token);
-        await firstInstance.RenderAsync(
-            mutated,
-            TimeSpan.FromSeconds(2),
-            PointerPosition.Create(0.9, 0.5),
-            deadline.Token);
-        await secondInstance.RenderAsync(
-            isolatedAfter,
-            TimeSpan.FromSeconds(0.5),
-            PointerPosition.Center,
-            deadline.Token);
+        using var renderStart = new Barrier(2);
+        await Task.WhenAll(
+            Task.Run(async () =>
+            {
+                renderStart.SignalAndWait(deadline.Token);
+                await firstInstance.RenderAsync(
+                    mutated,
+                    TimeSpan.Zero,
+                    PointerPosition.Create(0.7, 0.5),
+                    deadline.Token);
+            }, deadline.Token),
+            Task.Run(async () =>
+            {
+                renderStart.SignalAndWait(deadline.Token);
+                await secondInstance.RenderAsync(
+                    isolatedAfter,
+                    TimeSpan.FromSeconds(0.5),
+                    PointerPosition.Center,
+                    deadline.Token);
+            }, deadline.Token));
 
         int timeChanged = CountChangedPixels(baseline, later);
         int inputChanged = CountChangedPixels(baseline, moved);
         FrameRange range = AnalyzeFrame(baseline);
         if (!baseline.AsSpan().SequenceEqual(repeated) ||
             !baseline.AsSpan().SequenceEqual(reset) ||
+            !moved.AsSpan().SequenceEqual(mutated) ||
             !isolatedBefore.AsSpan().SequenceEqual(isolatedAfter) ||
             timeChanged < video.Width * video.Height / 20 ||
             inputChanged < video.Width * video.Height / 20 ||
