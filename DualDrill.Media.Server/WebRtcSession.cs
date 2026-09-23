@@ -33,6 +33,8 @@ internal sealed class WebRtcSession : IAsyncDisposable
     private readonly WebSocket _socket;
     private readonly ILogger<WebRtcSession> _logger;
     private readonly VideoSettings _video;
+    private readonly Scene _scene;
+    private readonly RaymarchProgram _raymarch;
     private readonly CancellationTokenSource _stop;
     private readonly Channel<OutboundSignal> _outgoing = Channel.CreateBounded<OutboundSignal>(
         new BoundedChannelOptions(MaxQueuedSignals)
@@ -78,11 +80,15 @@ internal sealed class WebRtcSession : IAsyncDisposable
         WebSocket socket,
         ILogger<WebRtcSession> logger,
         VideoSettings video,
+        Scene scene,
+        RaymarchProgram raymarch,
         CancellationToken requestAborted)
     {
         _socket = socket;
         _logger = logger;
         _video = video;
+        _scene = scene;
+        _raymarch = raymarch;
         _stop = CancellationTokenSource.CreateLinkedTokenSource(requestAborted);
     }
 
@@ -104,9 +110,18 @@ internal sealed class WebRtcSession : IAsyncDisposable
 
         try
         {
-            _gpu = await GpuFrames.CreateTriangleAsync(_video, _stop.Token);
+            _gpu = await (_scene switch
+            {
+                Scene.Triangle => GpuFrames.CreateTriangleAsync(_video, _stop.Token),
+                Scene.Raymarching => GpuFrames.CreateRaymarchAsync(
+                    _video,
+                    _raymarch,
+                    _stop.Token),
+                _ => throw new UnreachableException(),
+            });
             _logger.LogInformation(
-                "GPU source: {Device}, {Backend}, {AdapterType}",
+                "GPU source: {Scene}, {Device}, {Backend}, {AdapterType}",
+                _scene,
                 _gpu.AdapterInfo.Device, _gpu.AdapterInfo.BackendType, _gpu.AdapterInfo.AdapterType);
             _logger.LogInformation(
                 "Video: {Width}x{Height} at {FramesPerSecond} fps; VP8 target bitrate: {TargetBitrate}",
