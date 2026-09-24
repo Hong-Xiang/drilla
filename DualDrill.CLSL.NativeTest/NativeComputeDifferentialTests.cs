@@ -6,7 +6,10 @@ using DualDrill.CLSL.Frontend;
 using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Reflection;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
@@ -20,6 +23,10 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
 {
     private static readonly int[] Inputs = [-2, 0, 1, 2, 3, 4];
     private static readonly int[] Goldens = [-9, 12, 16, 28, 1011, 56];
+    private static readonly int[] ResetGoldens = [-21, 1, 12, 23, 34, 45];
+    private static readonly uint[] Words =
+        [0u, 1u, 0x7fffffffu, 0x80000000u, 0x80000001u, uint.MaxValue];
+    private static readonly uint[] GreaterGoldens = [0u, 0u, 0u, 0u, 1u, 1u];
     private static readonly TimeSpan CallbackTimeout = TimeSpan.FromSeconds(30);
 
     [Fact]
@@ -57,6 +64,110 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
             instruction.Instruction.OpCode is var opcode &&
             (opcode == OpCodes.Bge_Un || opcode == OpCodes.Bge_Un_S || opcode == OpCodes.Clt_Un)));
         Assert.DoesNotContain(entry, instruction => instruction.Instruction.OpCode == OpCodes.Conv_I4);
+    }
+
+    [Fact]
+    public void Unsigned_comparison_and_reset_match_fixed_clr_goldens()
+    {
+        AssertLanes(GreaterGoldens, Words.Select(value => value > 0x80000000u ? 1u : 0u).ToArray());
+        AssertLanes(ResetGoldens, Inputs.Select(ResetShader.Reset).ToArray());
+    }
+
+    [Fact]
+    public void Corrupted_unsigned_high_bit_fails_exact_lane_comparison()
+    {
+        var corrupted = (uint[])Words.Clone();
+        corrupted[3] = 0u;
+
+        var error = Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => AssertLanes(Words, corrupted));
+        Assert.Contains("lane 3: expected 2147483648, actual 0", error.Message);
+    }
+
+    [Fact]
+    public void Actual_unsigned_comparison_cil_uses_unsigned_relational_op()
+    {
+        var cil = CilMethodDecoder.Decode(typeof(UnsignedShader).GetMethod(nameof(UnsignedShader.Compare))!)
+            .Instructions;
+        Assert.Contains(cil, instruction => instruction.Instruction.OpCode is var opcode &&
+            (opcode == OpCodes.Cgt_Un || opcode == OpCodes.Bgt_Un || opcode == OpCodes.Bgt_Un_S));
+    }
+
+    [Fact]
+    public void Reset_cil_and_ir_preserve_observable_initobj_and_exact_field_identity()
+    {
+        var method = ((Func<int, int>)ResetShader.Reset).Method;
+        var parser = new RuntimeReflectionParser();
+        var raw = parser.ParseMethod(method);
+        var cil = Assert.Single(raw.FunctionDefinitions.Values).Code.Instructions;
+        var countField = typeof(ResetShader.Acc).GetField(nameof(ResetShader.Acc.Count))!;
+        var sumField = typeof(ResetShader.Acc).GetField(nameof(ResetShader.Acc.Sum))!;
+        var count = parser.ParseField(countField);
+        var sum = parser.ParseField(sumField);
+        var fields = new[] { (Field: countField, Member: count), (Field: sumField, Member: sum) };
+        var reset = Assert.Single(cil.Where(instruction =>
+            instruction.Instruction.OpCode == OpCodes.Initobj &&
+            Equals(instruction.Instruction.Operand, typeof(ResetShader.Acc)) &&
+            fields.All(field => cil.Any(write =>
+                write.Index < instruction.Index &&
+                write.Instruction.OpCode == OpCodes.Stfld &&
+                Equals(write.Instruction.Operand, field.Field)))));
+
+        foreach (var (field, _) in fields)
+        {
+            Assert.Contains(cil, instruction => instruction.Index < reset.Index &&
+                instruction.Instruction.OpCode == OpCodes.Ldfld &&
+                Equals(instruction.Instruction.Operand, field));
+            Assert.Contains(cil, instruction => instruction.Index > reset.Index &&
+                instruction.Instruction.OpCode == OpCodes.Ldfld &&
+                Equals(instruction.Instruction.Operand, field));
+        }
+
+        var value = ShaderStackToValuePass.Run(ShaderStackControlFlowPass.Run(
+            CilToShaderStackPass.Run(CilBlockPartitionPass.Run(CilPreStackPass.Run(raw)))));
+        var instructions = Assert.Single(value.FunctionDefinitions.Values).Graph;
+        var operations = instructions.Labels().SelectMany(label => instructions[label].Body.Elements).ToArray();
+        var zeroStore = Assert.Single(operations, operation =>
+            operation.Operation is StoreOperation &&
+            operation.Payload is ShaderStackProvenance provenance &&
+            provenance.OriginalIndex == reset.Index);
+        Assert.Same(Assert.Single(raw.FunctionDefinitions.Values).DeclarationContext.LocalVariables[0].Value,
+            zeroStore.Operand0);
+        Assert.Contains(operations, operation =>
+            operation.Operation is StructureCompositeConstructionOperation &&
+            operation.Payload is ShaderStackProvenance provenance &&
+            provenance.OriginalIndex == reset.Index);
+
+        foreach (var (field, member) in fields)
+            foreach (var access in cil.Where(instruction =>
+                instruction.Instruction.OpCode is var opcode &&
+                (opcode == OpCodes.Stfld || opcode == OpCodes.Ldfld) &&
+                Equals(instruction.Instruction.Operand, field)))
+                Assert.Contains(operations, operation =>
+                    operation.Payload is ShaderStackProvenance provenance &&
+                    provenance.OriginalIndex == access.Index &&
+                    (operation.Operation is AddressOfMemberOperation address &&
+                     ReferenceEquals(address.Member, member) ||
+                     operation.Operation is StructureMemberGetOperation get &&
+                     ReferenceEquals(get.Member, member)));
+        Assert.NotEmpty(CilModuleCompiler.Compile(raw).FunctionDefinitions);
+    }
+
+    [Fact]
+    [Trait("Category", "GPU")]
+    public async Task Public_CSharp_unsigned_copy_and_comparison_match_exact_bits_on_hardware()
+    {
+        await RunCompiledAsync(new UnsignedShader(), nameof(UnsignedShader.Copy),
+            Words, Words, 0xD15EA5E0u);
+        await RunCompiledAsync(new UnsignedShader(), nameof(UnsignedShader.Compare),
+            Words, GreaterGoldens, 0xD15EA5E0u);
+    }
+
+    [Fact]
+    [Trait("Category", "GPU")]
+    public async Task Public_CSharp_reset_accumulator_matches_exact_signed_lanes_on_hardware()
+    {
+        await RunCompiledAsync(new ResetShader(), nameof(ResetShader.Run),
+            Inputs, ResetGoldens, int.MinValue);
     }
 
     [Fact]
@@ -141,7 +252,7 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
                 $"input=[{string.Join(", ", input)}]{Environment.NewLine}" +
                 $"expected=[{string.Join(", ", expected)}]");
 
-            var actual = await DispatchAsync(device, pipeline, bindGroupLayout, input, outputCount);
+            var actual = await DispatchAsync(device, pipeline, bindGroupLayout, input, outputCount, int.MinValue);
             File.WriteAllText(Path.Combine(artifactDirectory, $"{name}-candidate.txt"),
                 $"actual=[{string.Join(", ", actual)}]");
             AssertLanes(expected, actual);
@@ -171,12 +282,72 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
             }
     }
 
-    private static async Task<int[]> DispatchAsync(
-        IGPUDevice device, IGPUComputePipeline pipeline, IGPUBindGroupLayout layout,
-        int[] values, int outputCount)
+    private async Task RunCompiledAsync<T>(
+        ISharpShader source, string entryPoint, T[] values, T[] expected, T sentinel)
+        where T : unmanaged, IEquatable<T>
     {
-        var inputBytes = checked((ulong)values.Length * sizeof(int));
-        var outputBytes = checked((ulong)outputCount * sizeof(int));
+        var artifactDirectory = Directory.CreateDirectory(
+            Path.Combine(AppContext.BaseDirectory, "compute-differential", Guid.NewGuid().ToString("N"))).FullName;
+        output.WriteLine($"Artifacts: {artifactDirectory}");
+        var entry = source.GetType().GetMethod(entryPoint)
+            ?? throw new InvalidOperationException($"Missing C# compute entry {entryPoint}.");
+        File.WriteAllText(Path.Combine(artifactDirectory, "source.txt"),
+            $"{entry.Module.Assembly.FullName}{Environment.NewLine}" +
+            $"MVID={entry.Module.ModuleVersionId}, token={entry.MetadataToken}, entry={entryPoint}{Environment.NewLine}" +
+            $"input=[{string.Join(", ", values)}], expected=[{string.Join(", ", expected)}]");
+
+        var compiler = new CLSLCompiler(new(CLSLCompileTarget.WGSL));
+        var parsed = compiler.Parse(source);
+        var reflection = new ShaderModuleReflection();
+        var bindings = reflection.GetStorageBufferBindings(parsed);
+        Assert.Equal(
+            [(0, GPUBufferBindingType.ReadOnlyStorage, 4u), (1, GPUBufferBindingType.Storage, 4u)],
+            bindings.Select(binding => (binding.Binding, binding.Kind, binding.ElementStride)));
+        var wgsl = compiler.Emit(source);
+        File.WriteAllText(Path.Combine(artifactDirectory, "candidate.wgsl"), wgsl);
+        Assert.Contains("@compute", wgsl);
+        var scalar = typeof(T) == typeof(uint) ? "u32"
+            : typeof(T) == typeof(int) ? "i32"
+            : throw new NotSupportedException($"Unsupported compute buffer element {typeof(T)}.");
+        Assert.Contains($"array<{scalar}>", wgsl);
+
+        using var instance = WebGPUNETBackend.Instance.CreateGPUInstance();
+        using var adapter = await instance.RequestAdapterAsync(new()
+        {
+            PowerPreference = GPUPowerPreference.HighPerformance,
+            ForceFallbackAdapter = false,
+            BackendType = GPUBackendType.Vulkan,
+        }, CancellationToken.None);
+        var info = await adapter.RequestAdapterInfoAsync(CancellationToken.None);
+        File.WriteAllText(Path.Combine(artifactDirectory, "adapter.txt"),
+            $"{info.BackendType}, {info.AdapterType}, {info.Vendor}, {info.Device}");
+        Assert.Equal(GPUBackendType.Vulkan, info.BackendType);
+        Assert.True(info.AdapterType is GPUAdapterType.DiscreteGPU or GPUAdapterType.IntegratedGPU,
+            $"Expected hardware adapter, got {info.AdapterType}.");
+        using var device = await adapter.RequestDeviceAsync(new(), CancellationToken.None);
+        using var shader = device.CreateShaderModule(new() { Code = wgsl });
+        using var bindGroupLayout = device.CreateBindGroupLayout(
+            reflection.GetBindGroupLayoutDescriptor(parsed, 0));
+        using var pipelineLayout = device.CreatePipelineLayout(new() { BindGroupLayouts = [bindGroupLayout] });
+        using var pipeline = device.CreateComputePipeline(new()
+        {
+            Layout = pipelineLayout,
+            Compute = new() { Module = shader, EntryPoint = entryPoint },
+        });
+        var actual = await DispatchAsync(device, pipeline, bindGroupLayout, values, expected.Length, sentinel);
+        File.WriteAllText(Path.Combine(artifactDirectory, "candidate.txt"),
+            $"actual=[{string.Join(", ", actual)}]");
+        AssertLanes(expected, actual);
+    }
+
+    private static async Task<T[]> DispatchAsync<T>(
+        IGPUDevice device, IGPUComputePipeline pipeline, IGPUBindGroupLayout layout,
+        T[] values, int outputCount, T sentinelValue) where T : unmanaged
+    {
+        var sentinel = new T[outputCount];
+        Array.Fill(sentinel, sentinelValue);
+        var inputBytes = (ulong)MemoryMarshal.AsBytes(values.AsSpan()).Length;
+        var outputBytes = (ulong)MemoryMarshal.AsBytes(sentinel.AsSpan()).Length;
         using var input = device.CreateBuffer(new()
         {
             Size = inputBytes,
@@ -193,8 +364,6 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
             Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.MapRead,
         });
         device.Queue.WriteBuffer(input, 0, MemoryMarshal.AsBytes(values.AsSpan()));
-        var sentinel = new int[outputCount];
-        Array.Fill(sentinel, int.MinValue);
         device.Queue.WriteBuffer(result, 0, MemoryMarshal.AsBytes(sentinel.AsSpan()));
 
         using var bindGroup = device.CreateBindGroup(new()
@@ -225,7 +394,7 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
             readback.MapAsync(GPUMapMode.Read, 0, outputBytes, CancellationToken.None).AsTask());
         try
         {
-            return MemoryMarshal.Cast<byte, int>(readback.GetMappedRange(0, outputBytes)).ToArray();
+            return MemoryMarshal.Cast<byte, T>(readback.GetMappedRange(0, outputBytes)).ToArray();
         }
         finally
         {
@@ -246,12 +415,13 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
         await operation;
     }
 
-    private static void AssertLanes(ReadOnlySpan<int> expected, ReadOnlySpan<int> actual)
+    private static void AssertLanes<T>(ReadOnlySpan<T> expected, ReadOnlySpan<T> actual)
+        where T : IEquatable<T>
     {
         Assert.True(expected.Length == actual.Length,
             $"Expected {expected.Length} lanes, got {actual.Length}.");
         for (var lane = 0; lane < expected.Length; lane++)
-            Assert.True(expected[lane] == actual[lane],
+            Assert.True(expected[lane].Equals(actual[lane]),
                 $"lane {lane}: expected {expected[lane]}, actual {actual[lane]}");
     }
 
@@ -303,6 +473,70 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
                 default: acc += 19; break;
             }
             return acc;
+        }
+    }
+
+    private sealed class UnsignedShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<uint> Input;
+
+        [Group(0), Binding(1)]
+        private static RWStructuredBuffer<uint> Output;
+#pragma warning restore CS0649
+
+        [Compute, WorkgroupSize(64, 1, 1)]
+        public static void Copy([Builtin(BuiltinBinding.global_invocation_id)] vec3u32 id)
+        {
+            var i = id.x;
+            if (i < Input.Length && i < Output.Length)
+                Output[i] = Input[i];
+        }
+
+        [Compute, WorkgroupSize(64, 1, 1)]
+        public static void Compare([Builtin(BuiltinBinding.global_invocation_id)] vec3u32 id)
+        {
+            var i = id.x;
+            if (i < Input.Length && i < Output.Length)
+                Output[i] = Input[i] > 0x80000000u ? 1u : 0u;
+        }
+    }
+
+    private sealed class ResetShader : ISharpShader
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        public struct Acc
+        {
+            public int Count;
+            public int Sum;
+        }
+
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<int> Input;
+
+        [Group(0), Binding(1)]
+        private static RWStructuredBuffer<int> Output;
+#pragma warning restore CS0649
+
+        [Compute, WorkgroupSize(64, 1, 1)]
+        public static void Run([Builtin(BuiltinBinding.global_invocation_id)] vec3u32 id)
+        {
+            var i = id.x;
+            if (i < Input.Length && i < Output.Length)
+                Output[i] = Reset(Input[i]);
+        }
+
+        [ShaderMethod]
+        public static int Reset(int x)
+        {
+            Acc acc = default;
+            acc.Count = x;
+            acc.Sum = x + 1;
+            var before = 10 * acc.Count + acc.Sum;
+            acc = default;
+            return before + 100 * acc.Count + acc.Sum;
         }
     }
 }
