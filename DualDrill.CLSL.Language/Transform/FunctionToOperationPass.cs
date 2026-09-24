@@ -416,6 +416,10 @@ public sealed class FunctionToOperationPass
             Instruction<IShaderValue, IShaderValue> ctx, VectorCompositeConstructionOperation op, IShaderValue result,
             IReadOnlyList<IShaderValue> components) => [ctx];
 
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> StructureCompositeConstruction(
+            Instruction<IShaderValue, IShaderValue> ctx, StructureCompositeConstructionOperation op, IShaderValue result,
+            IReadOnlyList<IShaderValue> members) => [ctx];
+
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> VectorSwizzleSet(
             Instruction<IShaderValue, IShaderValue> ctx, IVectorSwizzleSetOperation op, IShaderValue ptr,

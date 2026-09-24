@@ -171,15 +171,13 @@ public sealed class CilPreStackAnalysisTests
     }
 
     [Fact]
-    public void UnsupportedDeadCalleeIsCollectedBeforeLaterCompilationFails()
+    public void DeadCallerStillCollectsAndCompilesItsReachableInitObjectCallee()
     {
         var module = CompilerTestPipeline.ParseRaw(Fixtures.DeadUnsupportedCalleeCaller);
 
         Assert.Contains(module.FunctionDefinitions.Values,
             body => body.Code.Environment.Method == Fixtures.DeadUnsupportedCallee);
-        var exception = Assert.Throws<ValidationException>(() => CilPreStackPass.Run(module));
-        Assert.Contains("initobj", exception.Message);
-        Assert.Contains(Fixtures.DeadUnsupportedCallee.Name, exception.Message);
+        Assert.NotEmpty(CilModuleCompiler.Compile(module).FunctionDefinitions);
     }
 
     [Fact]
@@ -244,7 +242,7 @@ public sealed class CilPreStackAnalysisTests
     }
 
     [Fact]
-    public void ReachableInitObjectIsRejectedInsteadOfDroppingTheZeroStore()
+    public void ReachableInitObjectStoresZeroInsteadOfDroppingTheStore()
     {
         Assert.Equal(0, ResetAfterWrite());
 
@@ -253,10 +251,10 @@ public sealed class CilPreStackAnalysisTests
         Assert.Contains(
             CilMethodDecoder.Decode(ordinary).Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
-        AssertInitObjectRejected(ordinary);
+        AssertInitObjectStored(ordinary);
 #endif
 
-        AssertInitObjectRejected(Fixtures.ReachableInitObject);
+        AssertInitObjectStored(Fixtures.ReachableInitObject);
     }
 
     [Fact]
@@ -456,17 +454,23 @@ public sealed class CilPreStackAnalysisTests
         return cell.Value;
     }
 
-    private static void AssertInitObjectRejected(MethodInfo method)
+    private static void AssertInitObjectStored(MethodInfo method)
     {
         var module = CompilerTestPipeline.ParseRaw(method);
         Assert.Contains(
             CompilerTestPipeline.RawBody(module, method).Code.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
-        var exception = Assert.Throws<ValidationException>(() => CilPreStackPass.Run(module));
-
-        Assert.Contains("initobj", exception.Message);
-        Assert.Contains("IL_", exception.Message);
-        Assert.Contains(method.Name, exception.Message);
+        var values = ShaderStackToValuePass.Run(
+            ShaderStackControlFlowPass.Run(
+                CilToShaderStackPass.Run(
+                    CilBlockPartitionPass.Run(CilPreStackPass.Run(module)))));
+        var body = Assert.Single(values.FunctionDefinitions.Values);
+        Assert.Contains(body.Graph.Labels().SelectMany(label => body.Graph[label].Body.Elements),
+            instruction => instruction.Operation is StoreOperation &&
+                           instruction.Payload is ShaderStackProvenance provenance &&
+                           body.Source.Source.Source.Raw.Code[provenance.OriginalIndex]
+                               .Instruction.OpCode == OpCodes.Initobj);
+        Assert.NotEmpty(CilModuleCompiler.Compile(module).FunctionDefinitions);
     }
 
     private static MethodInfo GetMethod(string name) =>

@@ -272,8 +272,9 @@ public readonly record struct CilInstructionInfo(int Index, int ByteOffset, int 
             ILOpCode.Unaligned => throw new NotImplementedException(),
             ILOpCode.Volatile => throw new NotImplementedException(),
             ILOpCode.Tail => throw new NotImplementedException(),
-            ILOpCode.Initobj => throw new NotSupportedException(
-                $"initobj at IL_{ByteOffset:X4} requires value zero-initialization semantics."),
+            ILOpCode.Initobj => visitor.VisitInitObject(this,
+                (Type)instruction.Operand,
+                table[(Type)instruction.Operand] ?? throw new KeyNotFoundException()),
             ILOpCode.Constrained => throw new NotImplementedException(),
             ILOpCode.Cpblk => throw new NotImplementedException(),
             ILOpCode.Initblk => throw new NotImplementedException(),

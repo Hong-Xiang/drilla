@@ -250,6 +250,8 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                     $"{Operand(0)}.{swizzle.Pattern.Name}",
                 IVectorComponentGetOperation component when operands.Length == 1 =>
                     $"{Operand(0)}.{component.Component.Name}",
+                StructureMemberGetOperation member when operands.Length == 1 =>
+                    $"{Operand(0)}.{member.Member.Name}",
                 IVectorFromScalarConstructOperation construction when operands.Length == 1 =>
                     $"{construction.ResultType.Name}({Operand(0)})",
                 LogicalNotOperation when operands.Length == 1 => $"!{Operand(0)}",
@@ -269,6 +271,8 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 VectorCompositeConstructionOperation vector =>
                     $"vector<{vector.ElementType.Name}, {vector.Size.Value}>" +
                     $"({string.Join(',', operands.Select(RenderOperand))})",
+                StructureCompositeConstructionOperation =>
+                    $"{{ {string.Join(", ", operands.Select(RenderOperand))} }}",
                 ZeroConstructorOperation { ResultType: IVecType } => "{}",
                 _ => throw MalformedInstruction(instruction)
             };

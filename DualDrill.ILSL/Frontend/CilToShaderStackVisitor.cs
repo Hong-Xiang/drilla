@@ -172,6 +172,56 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         return default;
     }
 
+    public Unit VisitInitObject(CilInstructionInfo inst, Type type, IShaderType mappedType)
+    {
+        if (TopType() is not IPtrType pointerType ||
+            pointerType.AddressSpace.Kind != AddressSpaceKind.Function ||
+            !pointerType.BaseType.Equals(mappedType))
+            throw Invalid($"initobj {type} requires a matching function-local pointer.");
+        EmitZero(mappedType);
+        Emit(new StoreOperation(), null, [Depth(1), Depth(0)], 2);
+        return default;
+    }
+
+    private void EmitZero(IShaderType type)
+    {
+        switch (type)
+        {
+            case BoolType:
+                ZeroLiteral(new BoolLiteral(false));
+                return;
+            case IntType<N32>:
+                ZeroLiteral(new I32Literal(0));
+                return;
+            case UIntType<N32>:
+                ZeroLiteral(new U32Literal(0u));
+                return;
+            case FloatType<N32>:
+                ZeroLiteral(new F32Literal(0.0f));
+                return;
+            case IVecType vector:
+                for (var index = 0; index < vector.Size.Value; index++)
+                    EmitZero(vector.ElementType);
+                var components = Enumerable.Range(0, vector.Size.Value).Select(index => (IShaderType)vector.ElementType);
+                var vectorOperation = VectorCompositeConstructionOperation.Get(vector, components);
+                Emit(vectorOperation, type,
+                    Enumerable.Range(0, vector.Size.Value).Reverse().Select(Depth), vector.Size.Value);
+                return;
+            case StructureType structure:
+                foreach (var member in structure.Declaration.Members)
+                    EmitZero(member.Type);
+                var count = structure.Declaration.Members.Length;
+                Emit(new StructureCompositeConstructionOperation(structure), type,
+                    Enumerable.Range(0, count).Reverse().Select(Depth), count);
+                return;
+            default:
+                throw Invalid($"initobj zero construction of {type.Name} is not supported.");
+        }
+    }
+
+    private void ZeroLiteral(ILiteral literal) =>
+        Emit(new LiteralOperation(), literal.Type, [Immediate(ShaderValue.Literal(literal))], 0);
+
     public Unit VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration variable)
     {
         Store(variable.Value);
@@ -180,6 +230,12 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
 
     public Unit VisitLoadField(CilInstructionInfo inst, MemberDeclaration member)
     {
+        if (TopType() is StructureType structure)
+        {
+            Emit(new StructureMemberGetOperation(structure, member), member.Type, [Depth(0)], 1);
+            NormalizeTop(member.Type);
+            return default;
+        }
         AddressOfMember(member, 1);
         LoadFromTop();
         return default;

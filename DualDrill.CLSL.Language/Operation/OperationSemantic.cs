@@ -35,5 +35,7 @@ public interface IOperationSemantic<in TX, in TV, in TR, out TO>
         TV lod);
     TO VectorCompositeConstruction(TX ctx, VectorCompositeConstructionOperation op, TR result,
         IReadOnlyList<TV> components);
+    TO StructureCompositeConstruction(TX ctx, StructureCompositeConstructionOperation op, TR result,
+        IReadOnlyList<TV> members);
     TO ZeroConstructorOperation(TX ctx, ZeroConstructorOperation op, TR result);
 }
