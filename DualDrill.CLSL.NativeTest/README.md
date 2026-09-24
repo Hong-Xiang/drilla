@@ -37,6 +37,14 @@ enums to Alimer enums by semantic member name and rejects unknown values or
 flag bits. `GPUAdapterInfo` reports typed backend and adapter classifications;
 callers do not need to infer hardware from vendor or device strings.
 
+Synchronous compute pipelines support automatic or explicit layouts and the
+native compute-pass encode/bind/dispatch path. Pipeline constants, compute
+timestamp writes, and dynamic bind-group offsets are not supported. A compute
+pass must be ended before its parent command encoder is finished; disposing an
+unended pass abandons that encoder. GPU resource use and disposal must be
+sequential: do not dispose a device or participating resource concurrently
+with an operation using it. Concurrent coordination is outside this contract.
+
 Buffer mapping retains the explicit `IGPUDevice.Poll()` contract. Cancellation
 claims only a still-pending map, asks native wgpu to abort it with `Unmap`, and
 completes the managed task only after the terminal native callback. If success

@@ -71,11 +71,13 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             new("Native WebGPU error callback failed before its diagnostic could be decoded.");
         private GCHandle _callbackHandle;
         private int _callbackFailed;
+        private bool _disposed;
 
         public InstanceState Instance { get; } = instance;
         public WGPUDevice Device { get; set; }
         public ConcurrentQueue<GraphicsApiException<Backend>> Errors { get; } = new();
         public object ValidationGate { get; } = new();
+        public bool IsDisposed => Volatile.Read(ref _disposed);
 
         public unsafe void* RegisterCallbacks()
         {
@@ -121,6 +123,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
         public void Dispose()
         {
+            Volatile.Write(ref _disposed, true);
             if (_callbackHandle.IsAllocated)
             {
                 _callbackHandle.Free();
@@ -292,6 +295,60 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
     private static DeviceState StateOf(GPUQueue<Backend> queue)
         => (DeviceState)(queue.Handle.Data
             ?? throw new GraphicsApiException<Backend>("GPU queue has no native state."));
+
+    private sealed class CommandEncoderState(DeviceState device)
+    {
+        public DeviceState Device { get; } = device;
+        public bool ActiveComputePass { get; set; }
+        public bool Abandoned { get; set; }
+        public bool Finished { get; set; }
+        public bool UsedCompute { get; set; }
+    }
+
+    private sealed class ComputePassState(GPUCommandEncoder<Backend> encoder, CommandEncoderState parent)
+    {
+        public GPUCommandEncoder<Backend> Encoder { get; } = encoder;
+        public CommandEncoderState Parent { get; } = parent;
+        public bool Ended { get; set; }
+    }
+
+    private static void RequireLive<T>(GPUHandle<Backend, T> handle, string name)
+    {
+        if (handle.IsReleased)
+            throw new ObjectDisposedException(name);
+    }
+
+    private static void RequireDevice<T>(GPUHandle<Backend, T> handle, DeviceState device, string name)
+    {
+        if (device.IsDisposed)
+            throw new ObjectDisposedException("GPU device");
+        RequireLive(handle, name);
+        if (handle.Data is not DeviceState owner)
+            throw new GraphicsApiException<Backend>($"{name} has no native device.");
+        if (!ReferenceEquals(owner, device))
+            throw new ArgumentException($"{name} belongs to another device.", name);
+    }
+
+    private static CommandEncoderState EncoderOf(GPUCommandEncoder<Backend> encoder)
+    {
+        RequireLive(encoder.Handle, nameof(encoder));
+        var state = encoder.Handle.Data as CommandEncoderState
+            ?? throw new GraphicsApiException<Backend>("Command encoder has no native device.");
+        if (state.Device.IsDisposed)
+            throw new ObjectDisposedException("GPU device");
+        return state;
+    }
+
+    private static ComputePassState PassOf(GPUComputePassEncoder<Backend> pass)
+    {
+        RequireLive(pass.Handle, nameof(pass));
+        var state = pass.Handle.Data as ComputePassState
+            ?? throw new GraphicsApiException<Backend>("Compute pass has no native state.");
+        _ = EncoderOf(state.Encoder);
+        if (state.Ended)
+            throw new InvalidOperationException("Compute pass has ended.");
+        return state;
+    }
 
     private static void EnsureNativeVersion()
     {
@@ -784,6 +841,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUBuffer<Backend> IBackend<Backend>.CreateBuffer(GPUDevice<Backend> device, GPUBufferDescriptor descriptor)
     {
+        RequireLive(device.Handle, nameof(device));
         var alignedSize = (descriptor.Size + 3UL) & ~3UL;
         //Debug.Assert(descriptor.Size == alignedSize, "Buffer byte size should be multiple of 4");
         WGPUBufferDescriptor nativeDescriptor = new()
@@ -820,6 +878,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUTexture<Backend> IBackend<Backend>.CreateTexture(GPUDevice<Backend> handle, GPUTextureDescriptor descriptor)
     {
+        RequireLive(handle.Handle, nameof(handle));
         using var label = NativeUtf8String.Create(descriptor.Label);
         WGPUTextureDescriptor desc = new();
         desc.usage = ToNative(descriptor.Usage);
@@ -845,7 +904,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             throw new GraphicsApiException<Backend>("wgpuDeviceCreateTexture returned null.");
         }
-        return new GPUTexture<Backend>(new GPUHandle<Backend, GPUTexture<Backend>>(h.Handle))
+        return new GPUTexture<Backend>(new GPUHandle<Backend, GPUTexture<Backend>>(h.Handle, StateOf(handle)))
         {
             Label = descriptor.Label,
             Width = checked((int)descriptor.Size.Width),
@@ -869,10 +928,11 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUSampler<Backend> IBackend<Backend>.CreateSampler(GPUDevice<Backend> handle, GPUSamplerDescriptor descriptor)
     {
+        RequireLive(handle.Handle, nameof(handle));
         using var label = NativeUtf8String.Create(descriptor.Label);
         var nativeDescriptor = ToNative(descriptor, label.View);
         var result = wgpuDeviceCreateSampler(ToNative(handle.Handle), &nativeDescriptor);
-        return new GPUSampler<Backend>(new(result.Handle));
+        return new GPUSampler<Backend>(new(result.Handle, StateOf(handle)));
     }
 
     private WGPUSamplerDescriptor ToNative(
@@ -898,6 +958,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUBindGroupLayout<Backend> IBackend<Backend>.CreateBindGroupLayout(GPUDevice<Backend> handle, GPUBindGroupLayoutDescriptor descriptor)
     {
+        RequireLive(handle.Handle, nameof(handle));
         using var label = NativeUtf8String.Create(descriptor.Label);
         var entries = stackalloc WGPUBindGroupLayoutEntry[descriptor.Entries.Length];
         var index = 0;
@@ -914,7 +975,28 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             entryCount = (nuint)descriptor.Entries.Length,
             entries = entries
         };
-        return new(new(wgpuDeviceCreateBindGroupLayout(ToNative(handle.Handle), &nativeDescriptor).Handle));
+        var device = StateOf(handle);
+        lock (device.ValidationGate)
+        {
+            ThrowPendingDeviceError(device);
+            wgpuDevicePushErrorScope(device.Device, WGPUErrorFilter.Validation);
+            var layout = wgpuDeviceCreateBindGroupLayout(device.Device, &nativeDescriptor);
+            try
+            {
+                var error = PopErrorScope(device);
+                if (error.ErrorType != WGPUErrorType.NoError || layout.IsNull)
+                    throw new GraphicsApiException<Backend>(
+                        $"WebGPU bind group layout creation failed: {error.ErrorType}: {error.Message}");
+                ThrowPendingDeviceError(device);
+                return new(new(layout.Handle, device));
+            }
+            catch
+            {
+                if (layout.IsNotNull)
+                    wgpuBindGroupLayoutRelease(layout);
+                throw;
+            }
+        }
     }
 
     private WGPUBindGroupLayoutEntry ToNative(GPUBindGroupLayoutEntry entry)
@@ -970,6 +1052,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUPipelineLayout<Backend> IBackend<Backend>.CreatePipelineLayout(GPUDevice<Backend> handle, GPUPipelineLayoutDescriptor descriptor)
     {
+        var device = StateOf(handle);
+        RequireLive(handle.Handle, nameof(handle));
+        ArgumentNullException.ThrowIfNull(descriptor.BindGroupLayouts);
         using var label = NativeUtf8String.Create(descriptor.Label);
         var bindGroupLayouts = stackalloc WGPUBindGroupLayout[descriptor.BindGroupLayouts.Count];
         var native = new WGPUPipelineLayoutDescriptor
@@ -981,11 +1066,34 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         var index = 0;
         foreach (var bindGroupLayout in descriptor.BindGroupLayouts)
         {
+            if (bindGroupLayout is not GPUBindGroupLayout<Backend> typed)
+                throw new ArgumentException("Bind group layout belongs to another backend.", nameof(descriptor));
+            RequireDevice(typed.Handle, device, nameof(descriptor.BindGroupLayouts));
             bindGroupLayouts[index] = ToNative(bindGroupLayout);
             index++;
         }
 
-        return new(new(wgpuDeviceCreatePipelineLayout(ToNative(handle.Handle), &native).Handle));
+        lock (device.ValidationGate)
+        {
+            ThrowPendingDeviceError(device);
+            wgpuDevicePushErrorScope(device.Device, WGPUErrorFilter.Validation);
+            var layout = wgpuDeviceCreatePipelineLayout(device.Device, &native);
+            try
+            {
+                var error = PopErrorScope(device);
+                if (error.ErrorType != WGPUErrorType.NoError || layout.IsNull)
+                    throw new GraphicsApiException<Backend>(
+                        $"WebGPU pipeline layout creation failed: {error.ErrorType}: {error.Message}");
+                ThrowPendingDeviceError(device);
+                return new(new(layout.Handle, device));
+            }
+            catch
+            {
+                if (layout.IsNotNull)
+                    wgpuPipelineLayoutRelease(layout);
+                throw;
+            }
+        }
     }
 
     WGPUBindGroupEntry ToNative(GPUBindGroupEntry value)
@@ -1023,11 +1131,35 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUBindGroup<Backend> IBackend<Backend>.CreateBindGroup(GPUDevice<Backend> handle, GPUBindGroupDescriptor descriptor)
     {
+        var device = StateOf(handle);
+        RequireLive(handle.Handle, nameof(handle));
+        if (descriptor.Layout is not GPUBindGroupLayout<Backend> layout)
+            throw new ArgumentException("Bind group layout belongs to another backend.", nameof(descriptor));
+        RequireDevice(layout.Handle, device, nameof(descriptor.Layout));
         var entries = stackalloc WGPUBindGroupEntry[descriptor.Entries.Length];
         using var label = NativeUtf8String.Create(descriptor.Label);
         for (var i = 0; i < descriptor.Entries.Length; i++)
         {
-            entries[i] = ToNative(descriptor.Entries.Span[i]);
+            var entry = descriptor.Entries.Span[i];
+            if (entry.Buffer is not null)
+            {
+                if (entry.Buffer is not GPUBuffer<Backend> buffer)
+                    throw new ArgumentException("Buffer belongs to another backend.", nameof(descriptor));
+                RequireDevice(buffer.Handle, device, nameof(entry.Buffer));
+            }
+            if (entry.Sampler is not null)
+            {
+                if (entry.Sampler is not GPUSampler<Backend> sampler)
+                    throw new ArgumentException("Sampler belongs to another backend.", nameof(descriptor));
+                RequireDevice(sampler.Handle, device, nameof(entry.Sampler));
+            }
+            if (entry.TextureView is not null)
+            {
+                if (entry.TextureView is not GPUTextureView<Backend> textureView)
+                    throw new ArgumentException("Texture view belongs to another backend.", nameof(descriptor));
+                RequireDevice(textureView.Handle, device, nameof(entry.TextureView));
+            }
+            entries[i] = ToNative(entry);
         }
 
         WGPUBindGroupDescriptor nativeDescriptor = new()
@@ -1037,7 +1169,27 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             entryCount = (nuint)descriptor.Entries.Length,
             entries = entries
         };
-        return new(new(wgpuDeviceCreateBindGroup(ToNative(handle.Handle), &nativeDescriptor).Handle));
+        lock (device.ValidationGate)
+        {
+            ThrowPendingDeviceError(device);
+            wgpuDevicePushErrorScope(device.Device, WGPUErrorFilter.Validation);
+            var bindGroup = wgpuDeviceCreateBindGroup(device.Device, &nativeDescriptor);
+            try
+            {
+                var error = PopErrorScope(device);
+                if (error.ErrorType != WGPUErrorType.NoError || bindGroup.IsNull)
+                    throw new GraphicsApiException<Backend>(
+                        $"WebGPU bind group creation failed: {error.ErrorType}: {error.Message}");
+                ThrowPendingDeviceError(device);
+                return new(new(bindGroup.Handle, device));
+            }
+            catch
+            {
+                if (bindGroup.IsNotNull)
+                    wgpuBindGroupRelease(bindGroup);
+                throw;
+            }
+        }
     }
 
     private WGPUBindGroupLayout ToNative(IGPUBindGroupLayout layout)
@@ -1047,6 +1199,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUShaderModule<Backend> IBackend<Backend>.CreateShaderModule(GPUDevice<Backend> handle, GPUShaderModuleDescriptor descriptor)
     {
+        RequireLive(handle.Handle, nameof(handle));
         var nativeDevice = ToNative(handle.Handle);
         var deviceState = StateOf(handle);
         lock (deviceState.ValidationGate)
@@ -1089,17 +1242,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
                 throw;
             }
 
-            return new(new(result.Handle));
+            return new(new(result.Handle, deviceState));
         }
     }
-
-    GPUComputePipeline<Backend> IBackend<Backend>.CreateComputePipeline(GPUDevice<Backend> handle, GPUComputePipelineDescriptor descriptor)
-    {
-        throw new NotImplementedException();
-    }
-
-
-
 
     unsafe GPURenderPipeline<Backend> IBackend<Backend>.CreateRenderPipeline(GPUDevice<Backend> handle, GPURenderPipelineDescriptor descriptor)
     {
@@ -1403,6 +1548,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUCommandEncoder<Backend> IBackend<Backend>.CreateCommandEncoder(GPUDevice<Backend> handle, GPUCommandEncoderDescriptor descriptor)
     {
+        RequireLive(handle.Handle, nameof(handle));
         using var label = NativeUtf8String.Create(descriptor.Label);
 
         WGPUCommandEncoderDescriptor nativeDescriptor = new()
@@ -1410,7 +1556,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             label = label.View
         };
         var h = wgpuDeviceCreateCommandEncoder(ToNative(handle.Handle), &nativeDescriptor);
-        return new(new(h.Handle));
+        if (h.IsNull)
+            throw new GraphicsApiException<Backend>("Could not create command encoder.");
+        return new(new(h.Handle, new CommandEncoderState(StateOf(handle))));
     }
 
     GPURenderBundleEncoder<Backend> IBackend<Backend>.CreateRenderBundleEncoder(GPUDevice<Backend> handle, GPURenderBundleEncoderDescriptor descriptor)
@@ -1497,6 +1645,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPURenderPassEncoder<Backend> IBackend<Backend>.BeginRenderPass(GPUCommandEncoder<Backend> handle, GPURenderPassDescriptor descriptor)
     {
+        var state = EncoderOf(handle);
+        if (state.ActiveComputePass || state.Abandoned || state.Finished)
+            throw new InvalidOperationException("Command encoder has an active or abandoned compute pass, or has finished.");
         WGPURenderPassDepthStencilAttachment depthStencilAttachment = new();
         if (descriptor.DepthStencilAttachment.HasValue)
         {
@@ -1516,12 +1667,6 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         var result = wgpuCommandEncoderBeginRenderPass(ToNative(handle.Handle), &nativeDescriptor);
         return new(new(result.Handle));
     }
-
-    GPUComputePassEncoder<Backend> IBackend<Backend>.BeginComputePass(GPUCommandEncoder<Backend> handle, GPUComputePassDescriptor descriptor)
-    {
-        throw new NotImplementedException();
-    }
-
 
     void IBackend<Backend>.CopyBufferToTexture(GPUCommandEncoder<Backend> handle, GPUImageCopyBuffer source, GPUImageCopyTexture destination, GPUExtent3D copySize)
     {
@@ -1618,20 +1763,46 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUCommandBuffer<Backend> IBackend<Backend>.Finish(GPUCommandEncoder<Backend> handle, GPUCommandBufferDescriptor descriptor)
     {
+        var state = EncoderOf(handle);
+        if (state.ActiveComputePass || state.Abandoned || state.Finished)
+            throw new InvalidOperationException("Command encoder has an active or abandoned compute pass, or has finished.");
         using var label = NativeUtf8String.Create(descriptor.Label);
         WGPUCommandBufferDescriptor d = new()
         {
             label = label.View
         };
+        if (state.UsedCompute)
+        {
+            lock (state.Device.ValidationGate)
+            {
+                ThrowPendingDeviceError(state.Device);
+                wgpuDevicePushErrorScope(state.Device.Device, WGPUErrorFilter.Validation);
+                var result = wgpuCommandEncoderFinish(ToNative(handle.Handle), &d);
+                try
+                {
+                    var error = PopErrorScope(state.Device);
+                    if (error.ErrorType != WGPUErrorType.NoError || result.IsNull)
+                        throw new GraphicsApiException<Backend>(
+                            $"WebGPU compute command buffer creation failed: {error.ErrorType}: {error.Message}");
+                    ThrowPendingDeviceError(state.Device);
+                    state.Finished = true;
+                    return new(new(result.Handle));
+                }
+                catch
+                {
+                    if (result.IsNotNull)
+                        wgpuCommandBufferRelease(result);
+                    throw;
+                }
+            }
+        }
         var h = wgpuCommandEncoderFinish(ToNative(handle.Handle), &d);
+        if (h.IsNull)
+            throw new GraphicsApiException<Backend>("Could not finish command encoder.");
+        state.Finished = true;
         return new(new(h.Handle));
     }
 
-
-    void IBackend<Backend>.SetBindGroup(GPUComputePassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsets)
-    {
-        throw new NotImplementedException();
-    }
 
     unsafe void IBackend<Backend>.Submit(GPUQueue<Backend> handle, IReadOnlyList<GPUCommandBuffer<Backend>> commandBuffers)
     {
@@ -1838,6 +2009,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe GPUTextureView<Backend> IBackend<Backend>.CreateView(GPUTexture<Backend> handle, GPUTextureViewDescriptor? descriptor)
     {
+        RequireLive(handle.Handle, nameof(handle));
         WGPUTextureView resultHandle;
         if (descriptor is null)
         {
@@ -1849,17 +2021,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             var nativeDescriptor = ToNative(descriptor.Value, label.View);
             resultHandle = wgpuTextureCreateView(ToNative(handle.Handle), &nativeDescriptor);
         }
-        return new GPUTextureView<Backend>(new GPUHandle<Backend, GPUTextureView<Backend>>(resultHandle.Handle));
-    }
-
-    void IBackend<Backend>.SetBindGroup(GPUComputePassEncoder<Backend> handle, int index, GPUBindGroup<Backend>? bindGroup, ReadOnlySpan<uint> dynamicOffsetsData, ulong dynamicOffsetsDataStart, uint dynamicOffsetsDataLength)
-    {
-        throw new NotImplementedException();
-    }
-
-    GPUBindGroupLayout<Backend> IBackend<Backend>.GetBindGroupLayout(GPUComputePipeline<Backend> handle, ulong index)
-    {
-        throw new NotImplementedException();
+        return new GPUTextureView<Backend>(new GPUHandle<Backend, GPUTextureView<Backend>>(resultHandle.Handle, handle.Handle.Data));
     }
 
     async ValueTask IBackend<Backend>.OnSubmittedWorkDoneAsync(

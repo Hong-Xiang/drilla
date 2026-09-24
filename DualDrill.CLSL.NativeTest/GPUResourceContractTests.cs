@@ -7,6 +7,7 @@ public sealed class GPUResourceContractTests
     [Theory]
     [InlineData(typeof(IGPURenderBundle))]
     [InlineData(typeof(IGPUComputePipeline))]
+    [InlineData(typeof(IGPUComputePassEncoder))]
     [InlineData(typeof(IGPUQuerySet))]
     [InlineData(typeof(IGPUSampler))]
     [InlineData(typeof(IGPUBindGroup))]

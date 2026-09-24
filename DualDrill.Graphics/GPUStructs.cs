@@ -30,3 +30,7 @@ public partial struct GPUTextureDescriptor()
     public ReadOnlyMemory<GPUTextureFormat> ViewFormats { get; set; }
 }
 
+public partial struct GPUComputePipelineDescriptor
+{
+    public IGPUPipelineLayout? Layout { get; set; }
+}
