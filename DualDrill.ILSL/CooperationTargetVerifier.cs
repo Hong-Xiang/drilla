@@ -74,6 +74,9 @@ internal static class CooperationTargetVerifier
                     throw Error(context, "target contains a read-write storage effect without a source operation");
                 continue;
             }
+            var requiredCaptures = RequiredCaptures(sourceBody, context);
+            VerifyOriginTables(sourceBody, targetBody.Origins, tree, requiredCaptures, context);
+            VerifySourceTransferWrites(sourceBody, targetBody.Origins, tree, context);
             VerifyAccountedCarrierWrites(
                 targetBody.Origins,
                 tree,
@@ -82,7 +85,6 @@ internal static class CooperationTargetVerifier
             var addressDefinitions = SourceDefinitions(sourceBody);
             var sourceValues = SourceValues(sourceBody, addressDefinitions);
             var carrierValues = CarrierValues(targetBody.Origins);
-            var requiredCaptures = RequiredCaptures(sourceBody, context);
             foreach (var (label, ordinal, instruction) in lengths)
             {
                 if (!ReadWriteStructuredBufferFamily.IsCanonicalLength(instruction.Operation))
@@ -168,6 +170,36 @@ internal static class CooperationTargetVerifier
                 IReadWriteStructuredBufferStoreOperation,
             _ => false
         };
+
+    private static void VerifySourceTransferWrites(
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context)
+    {
+        if (origins.Transfers.Length != source.Control.Transfers.Length)
+            throw Error(context, "transfer write origin count does not match checked source transfers");
+        foreach (var transfer in source.Control.Transfers)
+        {
+            var origin = Single(origins.Transfers,
+                item => ReferenceEquals(item.Source, transfer.Source) && item.Arm == transfer.Arm,
+                context, "source transfer write origin");
+            var jump = Jump(source[transfer.Source].Body.Last, transfer.Arm);
+            if (!ReferenceEquals(origin.Jump, jump) || !Same(origin.Continuation, transfer))
+                throw Error(context, "transfer write origin is not owned by its source control edge");
+            VerifyTransferArguments(source, origins, tree, context, transfer, origin, jump);
+
+            var token = origins.ControlToken;
+            if (token is null ||
+                origins.Captures.Values.Contains(token, ReferenceEqualityComparer.Instance) ||
+                origins.ParameterSlots.Values.Contains(token, ReferenceEqualityComparer.Instance) ||
+                origin.TokenAssignment.Target is not SlangVariablePlace { Variable: var targetToken } ||
+                !ReferenceEquals(targetToken, token) ||
+                !TryInt(origin.TokenAssignment.Value, out var tokenId) ||
+                tokenId != origin.TokenId)
+                throw Error(context, "transfer token write is not owned by its control carrier");
+        }
+    }
 
     private static void VerifyDependencyFacts(
         ShaderModuleDeclaration<RegionFunctionBody> source,
@@ -1380,35 +1412,7 @@ internal static class CooperationTargetVerifier
                 throw Error(context, "one token ID identifies multiple continuation identities");
             owners[origin.TokenId] = origin.Continuation;
 
-            if (origin.Arguments.Length != jump.Arguments.Length)
-                throw Error(context, "transfer argument origin count changed");
-            foreach (var (position, argument) in jump.Arguments.Index())
-            {
-                var parameter = source[jump.Label].Parameters[position];
-                var item = Single(
-                    origin.Arguments,
-                    candidate => candidate.Position == position,
-                    context,
-                    "transfer argument origin");
-                RequirePresent(tree, item.Definition, context);
-                RequirePresent(tree, item.Assignment, context);
-                if (!ReferenceEquals(item.Argument, argument) ||
-                    !ReferenceEquals(item.Parameter, parameter) ||
-                    !origins.ParameterSlots.TryGetValue(parameter, out var slot) ||
-                    !ReferenceEquals(slot, item.Slot) ||
-                    item.Definition.Instruction.Operation is not LoadOperation ||
-                    !ReferenceEquals(item.Definition.Instruction.Result, item.Snapshot) ||
-                    item.Definition.Instruction.Operands.Count() != 1 ||
-                    !OperandMatches(argument, item.Definition.Instruction.Operands.Single(), origins) ||
-                    item.Assignment.Target is not SlangVariablePlace { Variable: var assignedSlot } ||
-                    !ReferenceEquals(assignedSlot, slot) ||
-                    item.Assignment.Value is not SlangValueOperand { Value: var assignedValue } ||
-                    !ReferenceEquals(assignedValue, item.Snapshot))
-                    throw Error(
-                        context,
-                        $"transfer from '{transfer.Source.Name}', arm {transfer.Arm}, parameter {position} " +
-                        "does not preserve its parallel snapshot and slot assignment");
-            }
+            VerifyTransferArguments(source, origins, tree, context, transfer, origin, jump);
 
             RequirePresent(tree, origin.TokenAssignment, context);
             RequirePresent(tree, origin.Break, context);
@@ -1437,6 +1441,47 @@ internal static class CooperationTargetVerifier
                     .OfType<SlangScope>()
                     .Any(scope => ReferenceEquals(scope.OriginalLabel, transfer.Source)))
                 throw Error(context, "transfer break is not owned by its source-label carrier");
+        }
+    }
+
+    private static void VerifyTransferArguments(
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context,
+        ScopedTransfer<Label> transfer,
+        SlangTransferOrigin origin,
+        RegionJump<IShaderValue> jump)
+    {
+        if (origin.Arguments.Length != jump.Arguments.Length ||
+            source[jump.Label].Parameters.Length != jump.Arguments.Length)
+            throw Error(context, "transfer argument origin count changed");
+        foreach (var (position, argument) in jump.Arguments.Index())
+        {
+            var parameter = source[jump.Label].Parameters[position];
+            var item = Single(
+                origin.Arguments,
+                candidate => candidate.Position == position,
+                context,
+                "transfer argument origin");
+            RequirePresent(tree, item.Definition, context);
+            RequirePresent(tree, item.Assignment, context);
+            if (!ReferenceEquals(item.Argument, argument) ||
+                !ReferenceEquals(item.Parameter, parameter) ||
+                !origins.ParameterSlots.TryGetValue(parameter, out var slot) ||
+                !ReferenceEquals(slot, item.Slot) ||
+                item.Definition.Instruction.Operation is not LoadOperation ||
+                !ReferenceEquals(item.Definition.Instruction.Result, item.Snapshot) ||
+                item.Definition.Instruction.Operands.Count() != 1 ||
+                !OperandMatches(argument, item.Definition.Instruction.Operands.Single(), origins) ||
+                item.Assignment.Target is not SlangVariablePlace { Variable: var assignedSlot } ||
+                !ReferenceEquals(assignedSlot, slot) ||
+                item.Assignment.Value is not SlangValueOperand { Value: var assignedValue } ||
+                !ReferenceEquals(assignedValue, item.Snapshot))
+                throw Error(
+                    context,
+                    $"transfer from '{transfer.Source.Name}', arm {transfer.Arm}, parameter {position} " +
+                    "does not preserve its parallel snapshot and slot assignment");
         }
     }
 
@@ -1948,6 +1993,10 @@ internal static class CooperationTargetVerifier
             Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch when arm == 0 => branch.Target,
             Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch when arm == 0 => branch.TrueTarget,
             Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch when arm == 1 => branch.FalseTarget,
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch
+                when arm >= 0 && arm < branch.CaseTargets.Length => branch.CaseTargets[arm],
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch
+                when arm == branch.CaseTargets.Length => branch.DefaultTarget,
             _ => throw new InvalidOperationException($"No source control arm {arm}.")
         };
 

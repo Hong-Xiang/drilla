@@ -381,7 +381,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             target.Declarations, target.FunctionDefinitions.SetItem(function, stale));
         var staleError = Assert.Throws<NotSupportedException>(() =>
             CooperationAdmission.CheckTargetCorrespondence(pointer, staleTarget, facts));
-        Assert.Contains("store origin changed", staleError.Message);
+        Assert.Contains("instruction origin does not match its source instruction", staleError.Message);
 
         var dimensions = Assert.Single(body.Origins.Dimensions,
             candidate => candidate.Source.Operation is
@@ -459,6 +459,22 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
         Assert.Throws<NotSupportedException>(() =>
             CooperationAdmission.CheckTargetCorrespondence(source, corrupted, CLSLCooperationFacts.Empty));
+
+        var unrelatedDefinition = Assert.Single(body.Origins.Definitions, origin =>
+            origin.Source.Payload is string payload && payload == "rw-captured-value");
+        var forgedBody = new SlangFunctionBody(corruptedBody.Declaration, corruptedBody.Body,
+            corruptedBody.Origins with
+            {
+                Definitions =
+                [
+                    .. corruptedBody.Origins.Definitions,
+                    unrelatedDefinition with { Capture = overwrite }
+                ]
+            });
+        var forged = new ShaderModuleDeclaration<SlangFunctionBody>(
+            target.Declarations, target.FunctionDefinitions.SetItem(function, forgedBody));
+        Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(source, forged, CLSLCooperationFacts.Empty));
     }
 
     [Fact]
@@ -486,6 +502,36 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
         Assert.Throws<NotSupportedException>(() =>
             CooperationAdmission.CheckTargetCorrespondence(source, corrupted, CLSLCooperationFacts.Empty));
+
+        var forgedBody = new SlangFunctionBody(corruptedBody.Declaration, corruptedBody.Body,
+            corruptedBody.Origins with
+            {
+                Definitions =
+                [
+                    .. corruptedBody.Origins.Definitions,
+                    value with { Capture = overwrite }
+                ]
+            });
+        var forged = new ShaderModuleDeclaration<SlangFunctionBody>(
+            target.Declarations, target.FunctionDefinitions.SetItem(function, forgedBody));
+        Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(source, forged, CLSLCooperationFacts.Empty));
+
+        var transfer = Assert.Single(corruptedBody.Origins.Transfers);
+        var sourceValue = value.Source.Result ??
+            throw new InvalidOperationException("Captured value has no source result.");
+        var forgedArgument = new SlangTransferArgumentOrigin(
+            0, sourceValue, sourceValue, value.Definition, sourceValue,
+            Assert.IsType<SlangVariablePlace>(capture.Target).Variable, overwrite);
+        var forgedTransferBody = new SlangFunctionBody(corruptedBody.Declaration, corruptedBody.Body,
+            corruptedBody.Origins with
+            {
+                Transfers = [transfer with { Arguments = [.. transfer.Arguments, forgedArgument] }]
+            });
+        var forgedTransfer = new ShaderModuleDeclaration<SlangFunctionBody>(
+            target.Declarations, target.FunctionDefinitions.SetItem(function, forgedTransferBody));
+        Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(source, forgedTransfer, CLSLCooperationFacts.Empty));
     }
 
     [Fact]
