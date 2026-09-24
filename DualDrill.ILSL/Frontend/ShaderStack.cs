@@ -81,6 +81,9 @@ public sealed record ShaderStackProvenance
 
     internal static ShaderStackProvenance SyntheticFallThrough(CilInstructionInfo anchor) =>
         new(anchor.Index, anchor.ByteOffset, anchor.NextByteOffset, 0, true);
+
+    internal static ShaderStackProvenance SyntheticInitialization(CilInstructionInfo anchor, int ordinal) =>
+        new(anchor.Index, anchor.ByteOffset, anchor.NextByteOffset, ordinal, true);
 }
 
 public sealed record ShaderStackTransition
