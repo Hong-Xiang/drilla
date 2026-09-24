@@ -134,5 +134,7 @@ complete control-flow reconstruction algorithm. Shader compilation and manual
 browser rendering do not establish general semantic equivalence. The optional
 native project covers triangle readback, error reporting, and canonical
 raymarching image parity against a pinned independent GLSL reference. The media
-server demonstrates the wgpu-native GPU-to-WebRTC path; migration of the
-raymarching shader into that media path remains deferred.
+server demonstrates the wgpu-native GPU-to-WebRTC path with a fixed
+per-connection choice of the default triangle or canonical raymarching scene.
+Raymarch controls currently orbit horizontally because the canonical shader
+does not use vertical pointer input.
