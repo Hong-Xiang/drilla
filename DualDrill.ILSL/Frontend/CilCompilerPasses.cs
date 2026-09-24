@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Reflection.Metadata;
+using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
@@ -288,13 +289,118 @@ public static class CilLocalPromotionPass
                              ?? throw new InvalidOperationException(
                                  $"Cannot promote locals for {raw.Code.Environment.Method}: " +
                                  "MethodBody metadata is unavailable.");
-            return new CilValueControlFlowBody(
-                body.Source,
-                PromoteLocalsPass.Run(
-                    body.Graph,
-                    raw.DeclarationContext.LocalVariables,
-                    methodBody.InitLocals));
+            var promoted = PromoteLocalsPass.Run(
+                body.Graph,
+                raw.DeclarationContext.LocalVariables,
+                methodBody.InitLocals);
+            return new CilValueControlFlowBody(body.Source,
+                methodBody.InitLocals ? InitializeStorage(raw, promoted) : promoted);
         });
+
+    private static ControlFlowGraph<CilValueBasicBlock> InitializeStorage(
+        RawCilFunctionBody raw,
+        ControlFlowGraph<CilValueBasicBlock> graph)
+    {
+        var locals = raw.DeclarationContext.LocalVariables;
+        var used = graph.Labels()
+            .SelectMany(label => CilValueControlFlowBody.Values(graph[label]))
+            .ToHashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        var referenced = locals.Index().Where(item => used.Contains(item.Item.Value)).ToArray();
+        if (referenced.Length == 0)
+            return graph;
+
+        var metadata = raw.Code.Environment.LocalVariables;
+        if (metadata.Length != locals.Length)
+            throw new ValidationException("InitLocals local declaration count does not match method metadata.",
+                raw.Code.Environment.Method);
+
+        var selected = new List<VariableDeclaration>();
+        foreach (var (index, local) in referenced)
+        {
+            var info = metadata[index];
+            if (info.LocalIndex != index ||
+                local.AddressSpace.Kind != AddressSpaceKind.Function ||
+                !ReferenceEquals(raw.Symbols[Symbol.Variable(info)], local) ||
+                !ReferenceEquals(raw.Symbols[info.LocalType], local.Type))
+                throw new ValidationException(
+                    $"InitLocals local #{index} has mismatched CLR metadata, symbol, or declaration.",
+                    raw.Code.Environment.Method);
+
+            if (!InitObjectType.IsEligible(info.LocalType, local.Type, raw.Symbols))
+                continue;
+            _ = InitObjectType.Resolve(info.LocalType, raw.Symbols);
+            selected.Add(local);
+        }
+        if (selected.Count == 0)
+            return graph;
+
+        var anchor = raw.Code[0];
+        var ordinal = 0;
+        ShaderStackProvenance Origin() => ShaderStackProvenance.SyntheticInitialization(anchor, ordinal++);
+        var initialization = new List<Instruction<IShaderValue, IShaderValue>>();
+        foreach (var local in selected)
+        {
+            var values = new Stack<IShaderValue>();
+            foreach (var step in ZeroConstructionPlan.For(local.Type))
+            {
+                switch (step)
+                {
+                    case ZeroConstructionStep.Scalar scalar:
+                        var literal = ShaderValue.Intermediate(scalar.Literal.Type);
+                        initialization.Add(Instruction<IShaderValue, IShaderValue>.Create(
+                            new LiteralOperation(), literal, [ShaderValue.Literal(scalar.Literal)], Origin()));
+                        values.Push(literal);
+                        break;
+                    case ZeroConstructionStep.Composite composite:
+                        var arguments = new IShaderValue[composite.OperandCount];
+                        for (var index = arguments.Length - 1; index >= 0; index--)
+                            arguments[index] = values.Pop();
+                        var result = ShaderValue.Intermediate(composite.Type);
+                        initialization.Add(Instruction<IShaderValue, IShaderValue>.Create(
+                            composite.Operation, result, arguments, Origin()));
+                        values.Push(result);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unknown zero construction step {step.GetType().Name}.");
+                }
+            }
+            if (values.Count != 1 || !values.Peek().Type.Equals(local.Type))
+                throw new ValidationException(
+                    $"InitLocals zero for {local.Name} does not have its declared type.",
+                    raw.Code.Environment.Method);
+            initialization.Add(Instruction<IShaderValue, IShaderValue>.Create(
+                new StoreOperation(), null, [local.Value, values.Pop()], Origin()));
+        }
+
+        var entry = graph.EntryLabel;
+        var definitions = graph.Labels().ToDictionary(
+            label => label,
+            label => new ControlFlowGraph<CilValueBasicBlock>.NodeDefinition(
+                graph.Successor(label), graph[label]));
+        if (graph.Predecessor(entry).Count == 0)
+        {
+            var block = graph[entry];
+            var initialized = block with
+            {
+                Body = Seq.Create([.. initialization, .. block.Body.Elements], block.Body.Last)
+            };
+            definitions[entry] = new(initialized.Successor, initialized);
+        }
+        else
+        {
+            if (!graph[entry].Parameters.IsEmpty)
+                throw new ValidationException(
+                    "InitLocals preheader requires an empty original entry parameter stack.",
+                    raw.Code.Environment.Method);
+            var preheader = Label.Create("initlocals");
+            var branch = Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                new RegionJump<IShaderValue>(entry, []));
+            var block = new CilValueBasicBlock(preheader, [], Seq.Create(initialization, branch));
+            definitions.Add(preheader, new(block.Successor, block));
+            entry = preheader;
+        }
+        return new ControlFlowGraph<CilValueBasicBlock>(entry, definitions);
+    }
 }
 
 public static class CilBlockControlFactsPass
