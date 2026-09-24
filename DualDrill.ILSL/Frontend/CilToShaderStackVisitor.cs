@@ -350,10 +350,37 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         return default;
     }
 
-    public Unit VisitLoadIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType =>
-        throw new NotImplementedException();
-    public Unit VisitStoreIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType =>
-        throw new NotImplementedException();
+    public Unit VisitLoadIndirect<TShaderType>(CilInstructionInfo inst)
+        where TShaderType : ISingletonShaderType<TShaderType>
+    {
+        var requested = TShaderType.Instance;
+        if (requested is not (IntType<N32> or UIntType<N32> or FloatType<N32>) ||
+            TopType() is not IPtrType pointerType ||
+            pointerType.AddressSpace.Kind != AddressSpaceKind.Function ||
+            (requested is FloatType<N32>
+                ? pointerType.BaseType is not FloatType<N32>
+                : pointerType.BaseType is not (IntType<N32> or UIntType<N32>)))
+            throw Invalid($"Cannot load {requested.Name} indirectly from {TopType().Name}.");
+        LoadFromTop();
+        return default;
+    }
+
+    public Unit VisitStoreIndirect<TShaderType>(CilInstructionInfo inst)
+        where TShaderType : ISingletonShaderType<TShaderType>
+    {
+        var requested = TShaderType.Instance;
+        if (requested is not (IntType<N32> or FloatType<N32>) ||
+            TypeAtDepth(1) is not IPtrType pointerType ||
+            pointerType.AddressSpace.Kind != AddressSpaceKind.Function ||
+            (requested is FloatType<N32>
+                ? pointerType.BaseType is not FloatType<N32> || TopType() is not FloatType<N32>
+                : pointerType.BaseType is not (IntType<N32> or UIntType<N32>) ||
+                  TopType() is not IntType<N32>))
+            throw Invalid($"Cannot store {requested.Name} indirectly.");
+        ConvertTopForDeclaration(pointerType.BaseType);
+        Emit(new StoreOperation(), null, [Depth(1), Depth(0)], 2);
+        return default;
+    }
     public Unit VisitLoadIndirectNativeInt(CilInstructionInfo inst) => throw new NotImplementedException();
     public Unit VisitLoadIndirectRef(CilInstructionInfo inst) => throw new NotImplementedException();
     public Unit VisitStoreIndirectRef(CilInstructionInfo inst) => throw new NotImplementedException();
