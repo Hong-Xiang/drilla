@@ -4,7 +4,7 @@ Loopback-by-default .NET 10 proof of concept for:
 
 ```text
 C# -> Rust wgpu-native hardware GPU
-  -> animated triangle in a BGRA8Unorm texture
+  -> triangle or canonical CLSL raymarch in a BGRA8Unorm texture
   -> serial GPU-to-CPU readback
   -> appsrc
   -> videoconvert
@@ -14,34 +14,35 @@ C# -> Rust wgpu-native hardware GPU
   -> browser <video>
 ```
 
-This prototype references only the shared Graphics project, not the existing
-Engine, WebView, JavaScript, or server projects. It reuses one offscreen texture
-and staging buffer, then copies one tightly packed BGRA frame into a
-GStreamer-owned buffer. The default is 320x240 at 30 fps. This is not zero-copy.
-Software/unknown adapters are rejected rather than silently replacing GPU
-rendering.
+This prototype references the shared Graphics, CLSL compiler, and shader
+projects, not the existing Engine, WebView, JavaScript, or server projects. It
+reuses one offscreen texture and staging buffer, then copies one tightly packed
+BGRA frame into a GStreamer-owned buffer. The default is 320x240 at 30 fps. This
+is not zero-copy. Software/unknown adapters are rejected rather than silently
+replacing GPU rendering.
 
 The modern backend uses the matched Alimer managed/native packages and Rust
-wgpu-native, not Dawn. The demo deliberately uses a small standalone WGSL scene:
-the compiler now emits the canonical CLSL raymarch as a native-accepted shader
-module despite Naga's return-in-loop limitation, but the media demo remains the
-independent animated triangle. Native module acceptance does not establish
-raymarch image parity or integrate that scene into the stream.
+wgpu-native, not Dawn. At normal host startup, after diagnostic-only exits and
+before GStreamer startup, the server compiles the canonical shared CLSL
+raymarch once through the public WGSL compiler path. Compilation failure stops
+startup; it never falls back to the triangle.
 
 ## Requirements
 
 - .NET SDK 10
+- `slangc` for compiling the canonical CLSL raymarch to WGSL
 - A hardware GPU supported by wgpu-native and its OS driver/runtime
 - GStreamer 1.24 or newer (GstSharp.Net 1.28.13 targets the 1.24 API floor)
 - Plugins providing `appsrc`, `videoconvert`, `vp8enc`, `rtpvp8pay`,
   `webrtcbin`, `nicesrc`, and `dtlssrtpenc`
 - A browser with WebRTC support
 
-On x86-64 Linux, the pinned `media` Nix shell supplies .NET, the Vulkan loader,
-GStreamer, required plugins, and Chromium. The default compiler shell is unchanged.
-The graphics NuGet packages include the matched native wgpu library, but not the
-host GPU driver. GstSharp.Net includes managed bindings, not GStreamer itself.
-Outside the shell, install the native GStreamer runtime and plugins separately.
+On x86-64 Linux, the pinned `media` Nix shell supplies .NET, `slangc`, the
+Vulkan loader, GStreamer, required plugins, and Chromium. The default compiler
+shell is unchanged. The graphics NuGet packages include the matched native wgpu
+library, but not the host GPU driver. GstSharp.Net includes managed bindings,
+not GStreamer itself. Outside the shell, install the native GStreamer runtime
+and plugins separately.
 
 ## Run
 
@@ -60,11 +61,16 @@ NIXPKGS_ALLOW_UNFREE=1 nix develop --builders '' .#media --command \
   dotnet run --project DualDrill.Media.Server/DualDrill.Media.Server.csproj
 ```
 
-Open <http://127.0.0.1:5084/> and select **Start**. Drag the video with a
-primary mouse or touch pointer to move that connection's triangle. The
-focusable video also accepts arrow keys. The acceptance harness may rely on
-stable element IDs `#video`, `#status`, `#stats`, `#start`, and `#stop`;
-signaling and input share `ws://127.0.0.1:5084/ws`.
+Open <http://127.0.0.1:5084/>, choose **Triangle** (the default) or
+**Raymarching**, then select **Start**. The choice is fixed for that connection;
+the selector is disabled until **Stop**, and reconnecting creates a fresh
+session with the newly selected scene. Drag the video with a primary mouse or
+touch pointer. Triangle input moves the image in both axes. The canonical
+raymarch currently uses only horizontal input to orbit its fixed camera;
+vertical input has no effect. The focusable video also accepts arrow keys. The
+acceptance harness may rely on stable element IDs `#video`, `#scene`, `#status`,
+`#stats`, `#start`, and `#stop`; signaling and input share
+`ws://127.0.0.1:5084/ws`.
 
 Width, height, frame rate, and an optional VP8 target bitrate are ordinary .NET
 configuration keys. Dimensions must be positive and even. Frame rate must be an
@@ -92,14 +98,20 @@ bytes from successive WebRTC statistics snapshots. That measured rate excludes
 IP/UDP/ICE/DTLS and other wire overhead. It is not the configured encoder target:
 the simple rotating triangle can compress far below 8 Mbps.
 
-Admission is reserved before the WebSocket upgrade. A handshake above the
-configured limit receives HTTP 409. Each session logs its hardware adapter and
-owns its socket, GPU resources, frame buffer, pipeline, cancellation, and latest
-normalized pointer position. New sessions start centered at `(0.5, 0.5)`.
-Stopping, disconnecting, or closing the page cancels and drains only that
-session's production, tears its pipeline down to `GST_STATE_NULL`, then releases
-the native owners and admission slot. Reconnect creates a fresh centered
-session, renderer, and pipeline.
+`/ws` retains the triangle default. `/ws?scene=triangle` and
+`/ws?scene=raymarching` are the only parameterized forms. Empty, duplicate,
+unknown, or additional query parameters receive HTTP 400 before WebSocket
+upgrade or admission, so they cannot consume a session slot. A non-WebSocket
+request also receives an explicit HTTP 400 response. Admission is then reserved
+before the WebSocket upgrade; a valid handshake above the configured limit
+receives HTTP 409. Each session logs its fixed scene and hardware adapter and
+owns its socket, GPU resources, uniforms, frame buffer, pipeline, cancellation,
+clock, and latest normalized pointer position. New sessions start centered at
+`(0.5, 0.5)` and raymarch time starts at zero independently. Raymarching uses
+the actual configured render size and fixed AA=1. Stopping, disconnecting, or
+closing the page cancels and drains only that session's production, tears its
+pipeline down to `GST_STATE_NULL`, then releases the native owners and admission
+slot. Reconnect creates a fresh centered session, renderer, clock, and pipeline.
 
 The application validates signaling JSON and message sizes, queues trickled ICE
 until the corresponding remote description exists, bounds appsrc to two buffers,
@@ -146,19 +158,33 @@ BGRA channel order and opaque alpha, observes different animation frames,
 checks the actual pixel centroid at a deterministic translated position, and
 renders the centered state again with the same resources.
 
+The explicit raymarch GPU diagnostic compiles one immutable program through
+`CLSLCompiler(WGSL)`, creates two production raymarch frame sources from it, and
+checks opaque BGRA output, a nontrivial scene, fixed-time determinism, time and
+horizontal-input sensitivity, centered reset, and per-instance isolation:
+
+```sh
+dotnet run --project DualDrill.Media.Server/DualDrill.Media.Server.csproj -- --raymarch-self-test
+```
+
+Run it with the same real-GPU nixGL wrapper as `--gpu-self-test`. It is a
+production-frame diagnostic, not a replacement for the independent native
+raymarch image oracle.
+
 ## Browser acceptance
 
 Run the server with `--Sessions:MaxConcurrent=2`. In a separate terminal in the
 media shell, start Chromium:
 
 ```sh
+mkdir -p .drilla-media-browser-profile
 env -u LD_LIBRARY_PATH chromium \
   --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage \
   --no-proxy-server --password-store=basic \
   --disable-background-networking --disable-component-update \
   --autoplay-policy=no-user-gesture-required \
   --remote-debugging-address=127.0.0.1 --remote-debugging-port=19223 \
-  --user-data-dir="$(mktemp -d -t drilla-media-browser.XXXXXX)" about:blank
+  --user-data-dir="$PWD/.drilla-media-browser-profile" about:blank
 ```
 
 This browser profile is disposable and must not contain personal credentials.
@@ -177,6 +203,13 @@ dotnet run -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.c
 The optional final arguments select expected decoded dimensions, for example
 `1920 1080`; omitting them preserves the 320x240 default.
 
+The focused raymarch extension reuses the same browser protocol and helpers:
+
+```sh
+dotnet run -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.cs -- \
+  http://127.0.0.1:5084/ http://127.0.0.1:19223/ --raymarch
+```
+
 The dependency-free .NET script drives Chromium's DevTools protocol against the
 documented cap of 2. It checks two simultaneous decoded, animated colored
 triangles, real CDP mouse/touch movement with independent visible positions,
@@ -187,6 +220,17 @@ regressions, and finite positive receiver bitrate/frame-rate samples. Color,
 motion, and centroid comparisons allow for VP8 loss. Its restore is isolated
 from the repository's unrelated central NuGet declarations. Browser software
 decoding/rendering is independent of the server's hardware GPU source.
+
+The optional raymarch mode checks a simultaneous triangle/raymarch selection,
+then stops and reconnects the triangle browser as a second raymarch session. It
+checks raymarch image structure rather than triangle color/centroid predicates,
+and compares mouse/touch-induced image differences with measured natural
+temporal drift from the animated scene. It also exercises malformed scene
+queries while admission is full, stale pointer teardown, invalid input,
+disconnect/reconnect containment, cap reuse, and the shared receiver statistics.
+These browser frames demonstrate visible per-browser behavior, not byte-exact
+GPU state isolation; the deterministic same-time native diagnostic provides
+that exact evidence.
 
 This verifies the transport mechanics and exposes receiver measurements; the
 low-complexity triangle is not a network-capacity or complex-scene quality
