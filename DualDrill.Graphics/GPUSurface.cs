@@ -13,6 +13,7 @@ public sealed partial record class GPUSurface<TBackend>(GPUHandle<TBackend, GPUS
     : IGPUSurface, IDisposable
     where TBackend : IBackend<TBackend>
 {
+    internal GPUDevice<TBackend>? ConfiguredDevice { get; set; }
 
     public void Configure(
      GPUSurfaceConfiguration configuration
@@ -25,6 +26,7 @@ public sealed partial record class GPUSurface<TBackend>(GPUHandle<TBackend, GPUS
     )
     {
         TBackend.Instance.Unconfigure(this);
+        ConfiguredDevice = null;
     }
 
     public void Dispose()

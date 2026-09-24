@@ -90,48 +90,8 @@ public sealed partial class WebGPUNETBackend
         wgpuCommandEncoderResolveQuerySet(ToNative(handle.Handle), ToNative(querySet.Handle), firstQuery, queryCount, ToNative(destination.Handle), destinationOffset);
     }
 
-    void IGPUHandleDisposer<Backend, GPUComputePassEncoder<Backend>>.DisposeHandle(GPUHandle<Backend, GPUComputePassEncoder<Backend>> handle)
-    {
-        wgpuComputePassEncoderRelease(ToNative(handle));
-    }
-
     WGPUComputePassEncoder ToNative(GPUHandle<Backend, GPUComputePassEncoder<Backend>> instance)
         => new(instance.Pointer);
-
-    unsafe void IBackend<Backend>.DispatchWorkgroups(GPUComputePassEncoder<Backend> handle, uint workgroupCountX, uint workgroupCountY, uint workgroupCountZ)
-    {
-        wgpuComputePassEncoderDispatchWorkgroups(ToNative(handle.Handle), workgroupCountX, workgroupCountY, workgroupCountZ);
-    }
-
-    unsafe void IBackend<Backend>.DispatchWorkgroupsIndirect(GPUComputePassEncoder<Backend> handle, GPUBuffer<Backend> indirectBuffer, ulong indirectOffset)
-    {
-        wgpuComputePassEncoderDispatchWorkgroupsIndirect(ToNative(handle.Handle), ToNative(indirectBuffer.Handle), indirectOffset);
-    }
-
-    unsafe void IBackend<Backend>.End(GPUComputePassEncoder<Backend> handle)
-    {
-        wgpuComputePassEncoderEnd(ToNative(handle.Handle));
-    }
-
-    unsafe void IBackend<Backend>.InsertDebugMarker(GPUComputePassEncoder<Backend> handle, string markerLabel)
-    {
-        wgpuComputePassEncoderInsertDebugMarker(ToNative(handle.Handle), markerLabel);
-    }
-
-    unsafe void IBackend<Backend>.PopDebugGroup(GPUComputePassEncoder<Backend> handle)
-    {
-        wgpuComputePassEncoderPopDebugGroup(ToNative(handle.Handle));
-    }
-
-    unsafe void IBackend<Backend>.PushDebugGroup(GPUComputePassEncoder<Backend> handle, string groupLabel)
-    {
-        wgpuComputePassEncoderPushDebugGroup(ToNative(handle.Handle), groupLabel);
-    }
-
-    unsafe void IBackend<Backend>.SetPipeline(GPUComputePassEncoder<Backend> handle, GPUComputePipeline<Backend> pipeline)
-    {
-        wgpuComputePassEncoderSetPipeline(ToNative(handle.Handle), ToNative(pipeline.Handle));
-    }
 
     void IGPUHandleDisposer<Backend, GPUComputePipeline<Backend>>.DisposeHandle(GPUHandle<Backend, GPUComputePipeline<Backend>> handle)
     {
