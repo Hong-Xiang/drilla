@@ -47,6 +47,23 @@
         "resolved": "1.0.4",
         "contentHash": "NQmmbaBnC1OiNSsyHyuPdh57KJpaAiZ1vVJ4yyIT0KdGMDYAlGYTzBLAyE8hv44o+y4smxxLyLr4PNKWp08ZEg=="
       },
+      "ClangSharp": {
+        "type": "Transitive",
+        "resolved": "18.1.0.3",
+        "contentHash": "5HMfR6p7+H4Ms+AtLNKhvMI86bL6msGUCduTdv4dR/kh4zdLGjwue2YjwTY84wsZ+6zRU2K4TrbZHDhb0AqFgw==",
+        "dependencies": {
+          "ClangSharp.Interop": "18.1.0.3"
+        }
+      },
+      "ClangSharp.Interop": {
+        "type": "Transitive",
+        "resolved": "18.1.0.3",
+        "contentHash": "dWFwct5eLPr5aNqytfFqYOvEqNaKT7ntzH9QSs1m0lPzB/vwNXOkaoL8WUFdKJLC2iUuO5nJ0WGCStLAImqEsQ==",
+        "dependencies": {
+          "libClang": "18.1.3.2",
+          "libClangSharp": "18.1.3.1"
+        }
+      },
       "CommunityToolkit.HighPerformance": {
         "type": "Transitive",
         "resolved": "8.3.2",
@@ -75,6 +92,47 @@
         "dependencies": {
           "GstSharp.Net": "1.28.13"
         }
+      },
+      "ICSharpCode.Decompiler": {
+        "type": "Transitive",
+        "resolved": "9.1.0.7988",
+        "contentHash": "N5HEh7n/9GpnkH6ojwPbzWbO1Ma+SFZCKafz69uRLnkt/bWzPON7wf7NLxTdU/fGWPnG2TEXRsu5DnRyvIQSaQ=="
+      },
+      "libclang": {
+        "type": "Transitive",
+        "resolved": "18.1.3.2",
+        "contentHash": "ugV1RcbJ50D9QivPWoJ5qF14psjQQqiFmd9bTsUScfpcGUEJBE2qm8eIZzatEZOKUchW3wSHRXryBzTtapibwQ=="
+      },
+      "libClangSharp": {
+        "type": "Transitive",
+        "resolved": "18.1.3.1",
+        "contentHash": "HjHcNOxPFYvWk2vgqbLjmRW63b6ZQw2UgwlOAAb4XGWnLmOLDipoV2nWTA3T0orE4dleWw7lemGKhZwtvmFKQw=="
+      },
+      "libLLVM": {
+        "type": "Transitive",
+        "resolved": "16.0.6",
+        "contentHash": "ZlIpwHUVzNb9jeSzu6NQYKiVeiXRQuNzpx/zZNw4tCbAqUPWmZ8Dj8WL2IX7BenuT1fTBdbsPsYz23PBxGxIkA=="
+      },
+      "LLVMSharp": {
+        "type": "Transitive",
+        "resolved": "16.0.0",
+        "contentHash": "QIzFXzdVcvObPPXFAL6iA6g4imp8L5s/eDZYXteGgJvMi1tdUo7vLBF6axNDh9LSPqC8EMAILhXDlNR8VNE+kw==",
+        "dependencies": {
+          "LLVMSharp.Interop": "16.0.0"
+        }
+      },
+      "LLVMSharp.Interop": {
+        "type": "Transitive",
+        "resolved": "16.0.0",
+        "contentHash": "kzAGP489ixPUk0vcuS/100DZniGL23rpdBF2E5YBvl1P9KKOgdlcV11IjP/fU2GdMvte8teBcdhEU/NovsPjdA==",
+        "dependencies": {
+          "libLLVM": "16.0.6"
+        }
+      },
+      "Lokad.ILPack": {
+        "type": "Transitive",
+        "resolved": "0.2.0",
+        "contentHash": "V0IJGV9babksQEOBkp1PHgpUdkaMpSZIdywHFcfgAomzvnwAt/SX3Q0sySvraKYmn35Py0RMxthgft7162kegw=="
       },
       "Microsoft.DotNet.PlatformAbstractions": {
         "type": "Transitive",
@@ -244,6 +302,11 @@
           "Silk.NET.Windowing.Common": "2.22.0"
         }
       },
+      "System.CodeDom": {
+        "type": "Transitive",
+        "resolved": "9.0.9",
+        "contentHash": "Az4ngSi0MO3Qwu1+BJRHnc2C8e7+x0oXj+Q++C/wru0vM8J2oL3QlliiZPdwPnR0VbiL0lH7izSIGQssMaRiGQ=="
+      },
       "System.IO.Hashing": {
         "type": "Transitive",
         "resolved": "8.0.0",
@@ -268,6 +331,14 @@
         "type": "Transitive",
         "resolved": "1.2.0",
         "contentHash": "vOO6xNvx8u1qEn9LrIE+9msk9+BxO1lYL2zrjF6WdJbinMUrkx/+YckjnSOoN2iA8imqqAk+CqKiDDBg3//nFA=="
+      },
+      "dualdrill.clsl.language": {
+        "type": "Project",
+        "dependencies": {
+          "DotNext": "[5.16.1, )",
+          "DualDrill.Common": "[1.0.0, )",
+          "DualDrill.Graphics": "[1.0.0, )"
+        }
       },
       "dualdrill.common": {
         "type": "Project",
@@ -294,6 +365,34 @@
           "Silk.NET.Windowing": "[2.22.0, )",
           "System.Reactive": "[6.0.1, )",
           "Varena": "[1.2.0, )"
+        }
+      },
+      "dualdrill.ilsl": {
+        "type": "Project",
+        "dependencies": {
+          "ClangSharp": "[18.1.0.3, )",
+          "DualDrill.CLSL.Language": "[1.0.0, )",
+          "DualDrill.Common": "[1.0.0, )",
+          "DualDrill.Graphics": "[1.0.0, )",
+          "DualDrill.Mathematics": "[1.0.0, )",
+          "ICSharpCode.Decompiler": "[9.1.0.7988, )",
+          "LLVMSharp": "[16.0.0, )",
+          "Lokad.ILPack": "[0.2.0, )",
+          "System.CodeDom": "[9.0.9, )"
+        }
+      },
+      "dualdrill.mathematics": {
+        "type": "Project",
+        "dependencies": {
+          "DualDrill.CLSL.Language": "[1.0.0, )"
+        }
+      },
+      "dualdrill.shaders": {
+        "type": "Project",
+        "dependencies": {
+          "DualDrill.CLSL.Language": "[1.0.0, )",
+          "DualDrill.ILSL": "[1.0.0, )",
+          "DualDrill.Mathematics": "[1.0.0, )"
         }
       }
     }

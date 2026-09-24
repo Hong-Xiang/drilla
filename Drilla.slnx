@@ -17,6 +17,7 @@
   <Project Path="DualDrill.Mathematics/DualDrill.Mathematics.csproj" />
   <Project Path="DualDrill.Media.Server/DualDrill.Media.Server.csproj" />
   <Project Path="DualDrill.Server/DualDrill.Server.csproj" />
+  <Project Path="DualDrill.Shaders/DualDrill.Shaders.csproj" />
   <Project Path="DualDrill.WebView/DualDrill.WebView.csproj" />
   <Project Path="FunctionalExperiment/FunctionalExperiment.csproj" />
   <Project Path="SemanticAnalysisTest/SemanticAnalysisTest.csproj" />

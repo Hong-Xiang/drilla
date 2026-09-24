@@ -26,16 +26,18 @@ const status = document.querySelector("#status");
 const stats = document.querySelector("#stats");
 const start = document.querySelector("#start");
 const stop = document.querySelector("#stop");
+const scene = document.querySelector("#scene");
 if (
   !(video instanceof HTMLVideoElement) ||
   !(status instanceof HTMLElement) ||
   !(stats instanceof HTMLElement) ||
   !(start instanceof HTMLButtonElement) ||
-  !(stop instanceof HTMLButtonElement)
+  !(stop instanceof HTMLButtonElement) ||
+  !(scene instanceof HTMLSelectElement)
 ) {
   throw new Error("The viewer's required elements are missing.");
 }
-const ui = { video, status, stats, start, stop };
+const ui = { video, status, stats, start, stop, scene };
 /** @type {Attempt | null} */
 let active = null;
 
@@ -355,6 +357,7 @@ function stopSession(attempt, message) {
   ui.video.srcObject = null;
   ui.start.disabled = false;
   ui.stop.disabled = true;
+  ui.scene.disabled = false;
   ui.status.textContent = message;
   clearStats();
 }
@@ -418,9 +421,14 @@ async function handleSignal(attempt, signal) {
 
 start.addEventListener("click", () => {
   if (active) return;
+  const selectedScene = ui.scene.value;
+  if (!["triangle", "raymarching"].includes(selectedScene)) {
+    throw new Error("Invalid scene selection.");
+  }
   const peer = new RTCPeerConnection();
   const socket = new WebSocket(
-    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`,
+    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws` +
+      `?scene=${encodeURIComponent(selectedScene)}`,
   );
   /** @type {Attempt} */
   const attempt = {
@@ -440,6 +448,7 @@ start.addEventListener("click", () => {
   active = attempt;
   ui.start.disabled = true;
   ui.stop.disabled = false;
+  ui.scene.disabled = true;
   ui.status.textContent = "Opening signaling socket...";
   clearStats();
 

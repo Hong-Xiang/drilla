@@ -32,6 +32,7 @@
 		<ProjectReference Include="..\DualDrill.Engine\DualDrill.Engine.csproj" />
 		<ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
 		<ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
+		<ProjectReference Include="..\DualDrill.Shaders\DualDrill.Shaders.csproj" />
 		<ProjectReference Include="..\DualDrill.WebView\DualDrill.WebView.csproj" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
 		<PackageReference Include="System.Reactive" />
