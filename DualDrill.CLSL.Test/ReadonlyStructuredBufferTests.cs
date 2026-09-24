@@ -190,7 +190,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         Assert.Throws<NotSupportedException>(() =>
             new RuntimeReflectionParser().ParseType(typeof(StructuredBuffer<double>)));
         Assert.Throws<NotSupportedException>(() =>
-            new RuntimeReflectionParser().ParseType(typeof(RWStructuredBuffer<int>)));
+            new RuntimeReflectionParser().ParseType(typeof(RWStructuredBuffer<double>)));
         Assert.NotNull(StructuredBufferLoadOperation<FloatType<N32>>.Instance);
     }
 

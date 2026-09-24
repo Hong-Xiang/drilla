@@ -359,9 +359,9 @@ internal static class CooperationAdmission
                     if (instruction.Operation is
                         IReadOnlyStructuredBufferLengthOperation or
                         IReadOnlyStructuredBufferLoadOperation or
-                        ReadWriteStructuredBufferLengthOperation or
-                        ReadWriteStructuredBufferLoadOperation or
-                        ReadWriteStructuredBufferStoreOperation or
+                        IReadWriteStructuredBufferLengthOperation or
+                        IReadWriteStructuredBufferLoadOperation or
+                        IReadWriteStructuredBufferStoreOperation or
                         TextureSampleLevelOperation)
                         resourceSites.Add((function, label, ordinal));
                 return false;

@@ -78,7 +78,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
 
         if (ReadOnlyStructuredBufferFamily.IsCanonicalType(decl.Type))
             Writer.Write("var<storage, read> ");
-        else if (decl.Type is ReadWriteStructuredBufferType)
+        else if (ReadWriteStructuredBufferFamily.IsCanonicalType(decl.Type))
             Writer.Write("var<storage, read_write> ");
         Writer.Write(decl.Name);
         Writer.Write(": ");

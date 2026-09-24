@@ -18,7 +18,7 @@ public sealed class ReadOnlyStructuredBufferType<TElement>
     {
         get
         {
-            ReadOnlyStructuredBufferFamily.RequireElement<TElement>();
+            StructuredBufferScalarFamily.RequireElement<TElement>();
             return Holder.Instance;
         }
     }
@@ -43,15 +43,6 @@ public sealed class ReadOnlyStructuredBufferType<TElement>
 
 public static class ReadOnlyStructuredBufferFamily
 {
-    public static void RequireElement<TElement>() where TElement : IScalarType<TElement>
-    {
-        if (typeof(TElement) != typeof(FloatType<N32>) &&
-            typeof(TElement) != typeof(IntType<N32>) &&
-            typeof(TElement) != typeof(UIntType<N32>))
-            throw new NotSupportedException(
-                $"StructuredBuffer<{typeof(TElement).Name}> supports only f32, i32, and u32 elements.");
-    }
-
     public static bool IsCanonicalType(IShaderType type) =>
         ReferenceEquals(type, ReadOnlyStructuredBufferType<FloatType<N32>>.Instance) ||
         ReferenceEquals(type, ReadOnlyStructuredBufferType<IntType<N32>>.Instance) ||

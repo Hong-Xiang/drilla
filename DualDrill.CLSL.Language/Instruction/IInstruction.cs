@@ -132,14 +132,14 @@ public static class Instruction
 
         public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferLength(
             Unit ctx,
-            ReadWriteStructuredBufferLengthOperation op,
+            IReadWriteStructuredBufferLengthOperation op,
             IShaderValue result,
             IShaderValue buffer) =>
             Create(op, result, [buffer]);
 
         public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferLoad(
             Unit ctx,
-            ReadWriteStructuredBufferLoadOperation op,
+            IReadWriteStructuredBufferLoadOperation op,
             IShaderValue result,
             IShaderValue buffer,
             IShaderValue index) =>
@@ -147,7 +147,7 @@ public static class Instruction
 
         public Instruction<IShaderValue, IShaderValue> ReadWriteStructuredBufferStore(
             Unit ctx,
-            ReadWriteStructuredBufferStoreOperation op,
+            IReadWriteStructuredBufferStoreOperation op,
             IShaderValue buffer,
             IShaderValue index,
             IShaderValue value) =>
