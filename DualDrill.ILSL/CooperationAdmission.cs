@@ -357,11 +357,11 @@ internal static class CooperationAdmission
                 foreach (var (instruction, ordinal) in block.Body.Elements.Select(
                              static (instruction, ordinal) => (instruction, ordinal)))
                     if (instruction.Operation is
-                        StructuredBufferLengthOperation or
-                        StructuredBufferLoadOperation or
-                        ReadWriteStructuredBufferLengthOperation or
-                        ReadWriteStructuredBufferLoadOperation or
-                        ReadWriteStructuredBufferStoreOperation or
+                        IReadOnlyStructuredBufferLengthOperation or
+                        IReadOnlyStructuredBufferLoadOperation or
+                        IReadWriteStructuredBufferLengthOperation or
+                        IReadWriteStructuredBufferLoadOperation or
+                        IReadWriteStructuredBufferStoreOperation or
                         TextureSampleLevelOperation)
                         resourceSites.Add((function, label, ordinal));
                 return false;

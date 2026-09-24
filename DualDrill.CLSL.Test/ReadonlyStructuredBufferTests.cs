@@ -17,6 +17,7 @@ using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.CLSL.Reflection;
+using DualDrill.Common.Nat;
 using DualDrill.Graphics;
 using DualDrill.Mathematics;
 using Xunit.Abstractions;
@@ -43,11 +44,289 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         Assert.Null(indexer.SetMethod);
     }
 
+    [Theory]
+    [InlineData(typeof(int), typeof(SignedBufferShader), "int32", "i32")]
+    [InlineData(typeof(uint), typeof(UnsignedBufferShader), "uint32", "u32")]
+    public async Task IntegerBufferCompilesAndReflectsExactScalar(
+        Type element, Type shaderType, string scalar, string spelling)
+    {
+        var wrapper = typeof(StructuredBuffer<>).MakeGenericType(element);
+        var indexer = wrapper.GetProperty("Item")!;
+        Assert.Equal(element, indexer.PropertyType);
+        Assert.Equal(typeof(uint), Assert.Single(indexer.GetIndexParameters()).ParameterType);
+        Assert.Null(indexer.SetMethod);
+        Assert.Throws<TargetInvocationException>(() =>
+            indexer.GetMethod!.Invoke(Activator.CreateInstance(wrapper), [0u]));
+
+        var shader = (ISharpShader)Activator.CreateInstance(shaderType)!;
+        var raw = new RuntimeReflectionParser().ParseShaderModule(shader);
+        var field = shaderType.GetField("Input", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var declaration = Assert.Single(raw.Declarations.OfType<VariableDeclaration>(),
+            variable => variable.Name == "Input");
+        IShaderType expectedType = element == typeof(int)
+            ? ReadOnlyStructuredBufferType<IntType<N32>>.Instance
+            : ReadOnlyStructuredBufferType<UIntType<N32>>.Instance;
+        Assert.Same(expectedType, declaration.Type);
+        Assert.Equal(StorageAddressSpace.Instance, declaration.AddressSpace);
+        Assert.Equal($"StructuredBuffer<{spelling}>", declaration.Type.Name);
+        var body = Assert.Single(raw.FunctionDefinitions.Values);
+        Assert.Contains(body.Code.Instructions,
+            instruction => Equals(instruction.Instruction.Operand, indexer.GetMethod));
+        Assert.Contains(body.Code.Instructions,
+            instruction => Equals(instruction.Instruction.Operand,
+                wrapper.GetProperty(nameof(StructuredBuffer<int>.Length))!.GetMethod));
+        Assert.Contains(body.Code.Instructions,
+            instruction => instruction.Instruction.OpCode == OpCodes.Ldsflda &&
+                           Equals(instruction.Instruction.Operand, field));
+
+        var compiled = new CLSLCompiler(new(CLSLCompileTarget.IR)).Compile(shader);
+        var operations = Instructions(Function(compiled, "Shade")).ToArray();
+        var length = Assert.Single(operations, instruction =>
+            instruction.Operation is IReadOnlyStructuredBufferLengthOperation);
+        var loads = operations.Where(instruction =>
+            instruction.Operation is IReadOnlyStructuredBufferLoadOperation).ToArray();
+        Assert.NotEmpty(loads);
+        Assert.All(loads, load =>
+        {
+            var resource = Assert.IsAssignableFrom<IReadOnlyStructuredBufferLoadOperation>(load.Operation);
+            Assert.Equal(resource.ElementType, load.Result?.Type);
+            Assert.Equal(resource.BufferPointerType, load.Operand0?.Type);
+            Assert.Equal(ShaderType.U32, load.Operand1?.Type);
+            Assert.NotNull(load.Payload);
+            Assert.True(ReadOnlyStructuredBufferFamily.IsCanonicalLoad(load.Operation));
+        });
+        Assert.Equal(ShaderType.U32, length.Result?.Type);
+        Assert.NotNull(length.Payload);
+        Assert.True(ReadOnlyStructuredBufferFamily.IsCanonicalLength(length.Operation));
+        Assert.True(ReadOnlyStructuredBufferFamily.IsCanonicalType(declaration.Type));
+
+        var binding = Assert.Single(new ShaderModuleReflection().GetStorageBufferBindings(raw));
+        Assert.Equal(GPUBufferBindingType.ReadOnlyStorage, binding.Kind);
+        Assert.Equal(4u, binding.ElementStride);
+        Assert.Equal(4ul, binding.MinimumBindingSize);
+        Assert.Equal(GPUShaderStage.Vertex | GPUShaderStage.Fragment | GPUShaderStage.Compute,
+            binding.Visibility);
+        var entry = Assert.Single(new ShaderModuleReflection()
+            .GetBindGroupLayoutDescriptor(raw, 0).Entries.ToArray());
+        Assert.Equal(4ul, entry.Buffer.MinBindingSize);
+
+        var slang = new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(shader);
+        var wgsl = new CLSLCompiler(new(CLSLCompileTarget.WGSL)).Emit(shader);
+        var reflectionJson = await new SlangService().ReflectAsync(slang);
+        output.WriteLine(slang);
+        output.WriteLine(wgsl);
+        output.WriteLine(reflectionJson);
+        Assert.Contains($"StructuredBuffer<{spelling}>", slang);
+        Assert.Contains($"array<{spelling}>", wgsl);
+        Assert.Contains("var<storage, read>", wgsl);
+        Assert.Contains("arrayLength(", wgsl);
+        if (element == typeof(uint))
+            Assert.Matches(
+                @"u32\(i32\([^\n]*Input_0\[u32\(0\)\]\)\)\s*>\s*u32\(2147483648\)",
+                wgsl);
+        else
+            Assert.Matches(@"Input_0\[u32\(0\)\]\s*<\s*i32\(-3\)", wgsl);
+        using var reflection = JsonDocument.Parse(reflectionJson);
+        var parameter = Assert.Single(reflection.RootElement.GetProperty("parameters").EnumerateArray());
+        var targetType = parameter.GetProperty("type");
+        Assert.Equal("structuredBuffer", targetType.GetProperty("baseShape").GetString());
+        Assert.Equal(scalar, targetType.GetProperty("resultType").GetProperty("scalarType").GetString());
+    }
+
+    [Fact]
+    public void UnsignedLoadsUseCanonicalI32ThenUnsignedComparisonsAndReturns()
+    {
+        var raw = new RuntimeReflectionParser().ParseShaderModule(new UnsignedBufferShader());
+        var method = typeof(UnsignedBufferShader).GetMethod("Shade")!;
+        Assert.Contains(CompilerTestPipeline.RawBody(raw, method).Code.Instructions,
+            instruction => instruction.Instruction.OpCode == OpCodes.Ldc_I4 &&
+                           instruction.Instruction.Operand is int value &&
+                           value == int.MinValue);
+
+        var compiled = new CLSLCompiler(new(CLSLCompileTarget.IR)).Compile(raw);
+        var instructions = Instructions(Function(compiled, "Shade")).ToArray();
+        Assert.Contains(instructions, instruction =>
+            instruction.Operation is ScalarConversionOperation<UIntType<N32>, IntType<N32>>);
+        Assert.Contains(instructions, instruction =>
+            instruction.Operation is ScalarConversionOperation<IntType<N32>, UIntType<N32>>);
+        Assert.Contains(instructions, instruction =>
+            instruction.Operation is NumericBinaryRelationalOperation<UIntType<N32>, BinaryRelational.Gt> &&
+            instruction.Operand0?.Type == ShaderType.U32 &&
+            instruction.Operand1?.Type == ShaderType.U32);
+        var returnModule = new CLSLCompiler(new(CLSLCompileTarget.IR))
+            .Compile(new UnsignedReturnShader());
+        var returned = Instructions(Function(returnModule, "Shade")).ToArray();
+        Assert.Contains(returned, instruction =>
+            instruction.Operation is ScalarConversionOperation<UIntType<N32>, IntType<N32>>);
+        Assert.Contains(returned, instruction =>
+            instruction.Operation is ScalarConversionOperation<IntType<N32>, UIntType<N32>>);
+    }
+
+    [Theory]
+    [InlineData(0u, false)]
+    [InlineData(1u, false)]
+    [InlineData(0x7fffffffu, false)]
+    [InlineData(0x80000000u, false)]
+    [InlineData(0x80000001u, true)]
+    [InlineData(uint.MaxValue, true)]
+    public void UnsignedBoundaryOracleIncludesBothSidesOfSignBit(uint value, bool expected)
+    {
+        Assert.Equal(expected, value > 0x80000000u);
+        Assert.Equal(value, unchecked((uint)(int)value));
+    }
+
+    [Fact]
+    public void UnsupportedGenericInstancesFailBeforeStaticHolderInitialization()
+    {
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            Assert.Throws<NotSupportedException>(() =>
+                ReadOnlyStructuredBufferType<FloatType<N64>>.Instance);
+            Assert.Throws<NotSupportedException>(() =>
+                StructuredBufferLengthOperation<FloatType<N64>>.Instance);
+            Assert.Throws<NotSupportedException>(() =>
+                StructuredBufferLoadOperation<FloatType<N64>>.Instance);
+        }
+        Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseType(typeof(StructuredBuffer<double>)));
+        Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseType(typeof(RWStructuredBuffer<double>)));
+        Assert.NotNull(StructuredBufferLoadOperation<FloatType<N32>>.Instance);
+    }
+
+    [Fact]
+    public void ForgedReadOnlyOperationCannotClaimCanonicalInterface()
+    {
+        var canonical = StructuredBufferLoadOperation<UIntType<N32>>.Instance;
+        var fake = new ForgedBufferLoad(canonical);
+        var call = Instruction<IShaderValue, IShaderValue>.Create(
+            fake,
+            ShaderValue.Intermediate(ShaderType.U32),
+            [ShaderValue.Intermediate(fake.BufferPointerType), ShaderValue.Intermediate(ShaderType.U32)]);
+        var error = Assert.Throws<NotSupportedException>(() =>
+            new SlangTargetLowering().Lower(OperationModule(call)));
+        Assert.Contains("invalid read-only storage-buffer load", error.Message);
+    }
+
+    [Fact]
+    public void IntegerOperationsRejectMalformedDirectIrAndProxyCalls()
+    {
+        foreach (var operation in new IReadOnlyStructuredBufferLoadOperation[]
+                 {
+                     StructuredBufferLoadOperation<IntType<N32>>.Instance,
+                     StructuredBufferLoadOperation<UIntType<N32>>.Instance
+                 })
+        {
+            var receiver = ShaderValue.Intermediate(operation.BufferPointerType);
+            var index = ShaderValue.Intermediate(ShaderType.U32);
+            var result = ShaderValue.Intermediate(operation.ElementType);
+            var valid = Instruction<IShaderValue, IShaderValue>.Create(
+                operation, result, [receiver, index]);
+            var wrongAddress = ShaderValue.Intermediate(
+                operation.BufferPointerType.BaseType.GetPtrType(GenericAddressSpace.Instance));
+            var malformed = new[]
+            {
+                valid with { Operand0 = wrongAddress },
+                valid with { Operand1 = ShaderValue.Intermediate(ShaderType.I32) },
+                valid with { Result = ShaderValue.Intermediate(ShaderType.F32) },
+                Instruction<IShaderValue, IShaderValue>.Create(operation, result, [receiver])
+            };
+            Assert.All(malformed, instruction =>
+                Assert.Throws<NotSupportedException>(() =>
+                    new SlangTargetLowering().Lower(OperationModule(instruction))));
+
+            var proxy = TaggedProxy(
+                operation,
+                [new ParameterDeclaration("buffer", operation.BufferPointerType, [])],
+                operation.ElementType);
+            var call = ResourceCall(
+                proxy,
+                new FunctionType([operation.BufferPointerType], operation.ElementType),
+                result,
+                [receiver, index]);
+            var error = Record.Exception(() =>
+                OperationModule(call).RunPass(new FunctionToOperationPass()));
+            Assert.NotNull(error);
+            Assert.Equal("OperationFunctionNotMatchException", error.GetType().Name);
+        }
+
+        foreach (var operation in new IReadOnlyStructuredBufferLengthOperation[]
+                 {
+                     StructuredBufferLengthOperation<IntType<N32>>.Instance,
+                     StructuredBufferLengthOperation<UIntType<N32>>.Instance
+                 })
+        {
+            var receiver = ShaderValue.Intermediate(operation.BufferPointerType);
+            var count = ShaderValue.Intermediate(ShaderType.U32);
+            var valid = Instruction<IShaderValue, IShaderValue>.Create(
+                operation, count, [receiver]);
+            var malformed = new[]
+            {
+                valid with { Result = ShaderValue.Intermediate(ShaderType.I32) },
+                valid with
+                {
+                    Operand0 = ShaderValue.Intermediate(
+                        operation.BufferPointerType.BaseType.GetPtrType(GenericAddressSpace.Instance))
+                },
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    operation, count, [receiver, ShaderValue.Intermediate(ShaderType.U32)])
+            };
+            Assert.All(malformed, instruction =>
+                Assert.Throws<NotSupportedException>(() =>
+                    new SlangTargetLowering().Lower(OperationModule(instruction))));
+        }
+    }
+
+    [Theory]
+    [InlineData(typeof(StructuredBuffer<int>))]
+    [InlineData(typeof(StructuredBuffer<uint>))]
+    public void DuplicateRawMetadataRejectsIntegerBuffers(Type bufferType)
+    {
+        var (shaderType, _) = CreateRawDuplicateGroupBufferShader(bufferType);
+        var shader = (ISharpShader)Activator.CreateInstance(shaderType)!;
+        var error = Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseShaderModule(shader));
+        Assert.Contains("found 0, 2, and 1", error.Message);
+    }
+
+    [Fact]
+    public void IntegerResourcePlacementAndWholeValueCopiesReject()
+    {
+        Assert.Throws<NotSupportedException>(() =>
+            new RuntimeReflectionParser().ParseMethod(Method(nameof(IntegerResourceParameter))));
+        Assert.Throws<NotSupportedException>(() =>
+            new CLSLCompiler(new(CLSLCompileTarget.IR)).Parse(new IntegerBufferCopyShader()));
+        var pointer = ReadOnlyStructuredBufferType<UIntType<N32>>.Instance
+            .GetPtrType(StorageAddressSpace.Instance);
+        var resource = ShaderValue.Intermediate(pointer.BaseType);
+        var load = Instruction<IShaderValue, IShaderValue>.Create(
+            new LoadOperation(), resource, [ShaderValue.Intermediate(pointer)]);
+        Assert.Throws<NotSupportedException>(() =>
+            new SlangTargetLowering().Lower(OperationModule(load)));
+    }
+
+    [Fact]
+    public void IntegerLengthAndLoadCannotProveCooperationThroughArithmeticOrHelper()
+    {
+        foreach (var shader in new ISharpShader[]
+                 {
+                     new VaryingIntegerLoadShader(),
+                     new VaryingIntegerLengthShader()
+                 })
+        {
+            var error = Assert.Throws<NotSupportedException>(() =>
+                new CLSLCompiler(new(
+                    CLSLCompileTarget.WGSL,
+                    CLSLCooperationProfile.PortableWgsl)).Emit(shader));
+            Assert.Contains("varying", error.Message);
+        }
+    }
+
     [Fact]
     public void ExactClosedTypeAndAccessorsAreRegistered()
     {
         var parser = new RuntimeReflectionParser();
-        var type = Assert.IsType<ReadOnlyStructuredBufferType>(
+        var type = Assert.IsType<ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>>(
             parser.ParseType(typeof(StructuredBuffer<float>)));
         Assert.Equal(ShaderType.F32, type.ElementType);
         Assert.Equal(4u, type.ElementStride);
@@ -56,7 +335,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var input = Assert.Single(
             raw.Declarations.OfType<VariableDeclaration>(),
             declaration => declaration.Name == "Input");
-        Assert.Same(ReadOnlyStructuredBufferType.Instance, input.Type);
+        Assert.Same(ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance, input.Type);
         Assert.Same(StorageAddressSpace.Instance, input.AddressSpace);
 
         var methods = CompilerTestPipeline.RawBody(
@@ -102,14 +381,14 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var instructions = Instructions(Function(compiled, nameof(ReadOnlyBufferShader.Shade))).ToArray();
 
         var length = Assert.Single(instructions, instruction =>
-            instruction.Operation is StructuredBufferLengthOperation);
+            instruction.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Equal(ShaderType.U32, length.Result?.Type);
         Assert.Equal(
-            StructuredBufferLengthOperation.Instance.BufferPointerType,
+            StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance.BufferPointerType,
             length.Operand0?.Type);
 
         var load = Assert.Single(instructions, instruction =>
-            instruction.Operation is StructuredBufferLoadOperation);
+            instruction.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Equal(ShaderType.F32, load.Result?.Type);
         Assert.Equal(ShaderType.U32, load.Operand1?.Type);
 
@@ -194,19 +473,19 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var function = Function(module, nameof(ReadOnlyBufferShader.Shade));
         var instructions = Instructions(function).ToArray();
         var length = Assert.Single(instructions, instruction =>
-            instruction.Operation is StructuredBufferLengthOperation);
+            instruction.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var load = Assert.Single(instructions, instruction =>
-            instruction.Operation is StructuredBufferLoadOperation);
+            instruction.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
 
         var summary = FunctionEffectAnalysis.Analyze(module)[function.Declaration];
 
         Assert.True(summary.IsComplete);
         Assert.DoesNotContain(summary.UnknownSites, site =>
-            site.Operation is StructuredBufferLengthOperation or StructuredBufferLoadOperation);
+            site.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>> or StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.DoesNotContain(summary.RequirementSites, site =>
-            site.Operation is StructuredBufferLengthOperation);
+            site.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var site = Assert.Single(summary.RequirementSites, site =>
-            site.Operation is StructuredBufferLoadOperation);
+            site.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Equal(OperationRequirement.MemoryRead, site.Requirements);
         Assert.Same(load.Payload, site.Payload);
         Assert.NotNull(site.Payload);
@@ -230,7 +509,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         Assert.Empty(summary.RequirementSites);
         Assert.Empty(summary.UnknownSites);
         Assert.Single(Instructions(function), instruction =>
-            instruction.Operation is StructuredBufferLengthOperation);
+            instruction.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
     }
 
     [Fact]
@@ -251,7 +530,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
             instruction.Operation is ScalarConversionOperation<IntType<DualDrill.Common.Nat.N32>,
                 UIntType<DualDrill.Common.Nat.N32>>);
         var load = Assert.Single(instructions, instruction =>
-            instruction.Operation is StructuredBufferLoadOperation);
+            instruction.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Equal(ShaderType.U32, load.Operand1?.Type);
     }
 
@@ -276,7 +555,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
             .RunPass(new FunctionToOperationPass());
         var source = Function(compiled, nameof(ReadOnlyBufferShader.Shade));
         var length = Assert.Single(Instructions(source), instruction =>
-            instruction.Operation is StructuredBufferLengthOperation);
+            instruction.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var target = new SlangTargetLowering().Lower(compiled);
         var targetBody = Assert.Single(target.FunctionDefinitions, pair =>
             pair.Key.Name == nameof(ReadOnlyBufferShader.Shade)).Value;
@@ -290,7 +569,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         Assert.Equal(ShaderType.U32, dimensions.Stride.Type);
         Assert.IsType<IntermediateValue>(dimensions.Stride);
         Assert.NotSame(dimensions.Count, dimensions.Stride);
-        Assert.Equal(ReadOnlyStructuredBufferType.Instance, dimensions.Buffer.Type);
+        Assert.Equal(ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance, dimensions.Buffer.Type);
     }
 
     [Fact]
@@ -317,8 +596,8 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
 
     [Theory]
     [InlineData(typeof(MissingBufferMetadataShader), "exactly one [Group] and [Binding]")]
-    [InlineData(typeof(WrongElementShader), "only StructuredBuffer<float> is supported")]
-    [InlineData(typeof(UnannotatedWrongElementShader), "only StructuredBuffer<float> is supported")]
+    [InlineData(typeof(WrongElementShader), "only StructuredBuffer<float>, StructuredBuffer<int>, and StructuredBuffer<uint>")]
+    [InlineData(typeof(UnannotatedWrongElementShader), "only StructuredBuffer<float>, StructuredBuffer<int>, and StructuredBuffer<uint>")]
     [InlineData(typeof(ConflictingUniformShader), "requires no address-space attribute")]
     [InlineData(typeof(ConflictingReadShader), "attribute(s) [Read] are not supported")]
     [InlineData(typeof(InstanceBufferFieldShader), "must be static shader-module fields")]
@@ -416,7 +695,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var instructions = Instructions(Function(module, nameof(AccessorImpostorShader.Shade))).ToArray();
 
         Assert.DoesNotContain(instructions, instruction =>
-            instruction.Operation is StructuredBufferLengthOperation or StructuredBufferLoadOperation);
+            instruction.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>> or StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Contains(instructions, instruction => instruction.Operation is CallOperation);
 
         var intrinsicImpostor = Assert.Throws<NotSupportedException>(() =>
@@ -428,7 +707,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
     [Fact]
     public void FunctionCallNormalizationPreservesPayloadAndRequiresExactStoragePointer()
     {
-        var operation = StructuredBufferLoadOperation.Instance;
+        var operation = StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance;
         var payload = new object();
         var receiver = ShaderValue.Intermediate(operation.BufferPointerType);
         var index = ShaderValue.Intermediate(ShaderType.U32);
@@ -441,11 +720,11 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
 
         var normalized = OperationModule(call).RunPass(new FunctionToOperationPass());
         var replacement = Assert.Single(Instructions(Function(normalized, "Entry")));
-        Assert.IsType<StructuredBufferLoadOperation>(replacement.Operation);
+        Assert.IsType<StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>>(replacement.Operation);
         Assert.Same(payload, replacement.Payload);
 
         var wrongReceiver = ShaderValue.Intermediate(
-            ReadOnlyStructuredBufferType.Instance.GetPtrType(GenericAddressSpace.Instance));
+            ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(GenericAddressSpace.Instance));
         var malformed = call with { Operand1 = wrongReceiver };
         var exception = Record.Exception(() =>
             OperationModule(malformed).RunPass(new FunctionToOperationPass()));
@@ -457,25 +736,25 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
     [Fact]
     public void TargetLoweringRejectsMalformedAndWholeHandleOperations()
     {
-        var operation = StructuredBufferLoadOperation.Instance;
+        var operation = StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance;
         var storageReceiver = ShaderValue.Intermediate(operation.BufferPointerType);
         var genericReceiver = ShaderValue.Intermediate(
-            ReadOnlyStructuredBufferType.Instance.GetPtrType(GenericAddressSpace.Instance));
+            ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(GenericAddressSpace.Instance));
         var f32 = ShaderValue.Intermediate(ShaderType.F32);
         var u32 = ShaderValue.Intermediate(ShaderType.U32);
         var i32 = ShaderValue.Intermediate(ShaderType.I32);
-        var resource = ShaderValue.Intermediate(ReadOnlyStructuredBufferType.Instance);
+        var resource = ShaderValue.Intermediate(ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance);
         var indirectResource = ShaderValue.Intermediate(
             operation.BufferPointerType.GetPtrType(FunctionAddressSpace.Instance));
 
         var malformed = new[]
         {
             Instruction<IShaderValue, IShaderValue>.Create(
-                StructuredBufferLengthOperation.Instance,
+                StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance,
                 u32,
                 [genericReceiver]),
             Instruction<IShaderValue, IShaderValue>.Create(
-                StructuredBufferLengthOperation.Instance,
+                StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance,
                 f32,
                 [storageReceiver]),
             Instruction<IShaderValue, IShaderValue>.Create(operation, f32, [genericReceiver, u32]),
@@ -509,7 +788,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var missing = new VariableDeclaration(
             StorageAddressSpace.Instance,
             "Input",
-            ReadOnlyStructuredBufferType.Instance,
+            ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance,
             []);
         var missingModule = new ShaderModuleDeclaration<RegionFunctionBody>(
             [missing],
@@ -523,7 +802,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         var wrongAddress = new VariableDeclaration(
             GenericAddressSpace.Instance,
             "Input",
-            ReadOnlyStructuredBufferType.Instance,
+            ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance,
             [new GroupAttribute(0), new BindingAttribute(0)]);
         var wrongAddressModule = new ShaderModuleDeclaration<RegionFunctionBody>(
             [wrongAddress],
@@ -536,7 +815,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
     [Fact]
     public void DirectIrRejectsIndirectResourceSignatureAndLocalTypes()
     {
-        var resourcePointer = ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance);
+        var resourcePointer = ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance);
         var indirect = resourcePointer.GetPtrType(FunctionAddressSpace.Instance);
         var doublyIndirect = indirect.GetPtrType(FunctionAddressSpace.Instance);
 
@@ -620,8 +899,8 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
     [Fact]
     public void ResourceNormalizerRejectsProxyDeclarationsAndWrongCallTypes()
     {
-        var length = StructuredBufferLengthOperation.Instance;
-        var load = StructuredBufferLoadOperation.Instance;
+        var length = StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance;
+        var load = StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance;
         var receiver = ShaderValue.Intermediate(length.BufferPointerType);
         var index = ShaderValue.Intermediate(ShaderType.U32);
         var u32 = ShaderValue.Intermediate(ShaderType.U32);
@@ -681,6 +960,107 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         });
     }
 
+    private sealed class ForgedBufferLoad(IReadOnlyStructuredBufferLoadOperation canonical)
+        : IReadOnlyStructuredBufferLoadOperation
+    {
+        public FunctionDeclaration Function => canonical.Function;
+        public string Name => canonical.Name;
+        public IPtrType BufferPointerType => canonical.BufferPointerType;
+        public IShaderType ElementType => canonical.ElementType;
+
+        public IOperationMethodAttribute GetOperationMethodAttribute() =>
+            canonical.GetOperationMethodAttribute();
+
+        public TO EvaluateInstruction<TV, TR, TS, TO>(
+            Instruction<TV, TR> instruction, TS semantic)
+            where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
+            throw new NotSupportedException("Forged buffer operations have no evaluation semantics.");
+    }
+
+    private sealed class SignedBufferShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<int> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static int Shade() => Input.Length > 0u && Input[0u] < -3 ? Input[0u] : -1;
+    }
+
+    private sealed class UnsignedBufferShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<uint> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static uint Shade() =>
+            Input.Length > 0u && Input[0u] > 0x80000000u ? Input[0u] : 0u;
+    }
+
+    private sealed class UnsignedReturnShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<uint> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static uint Shade() => Input[0u];
+    }
+
+    private static uint IntegerResourceParameter(StructuredBuffer<uint> buffer) =>
+        buffer.Length;
+
+    private sealed class IntegerBufferCopyShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<uint> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static uint Shade()
+        {
+            var copy = Input;
+            return copy.Length;
+        }
+    }
+
+    private sealed class VaryingIntegerLoadShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<int> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Shade() =>
+            Input[0u] + 1 < 0 ? DMath.dpdx(1.0f) : 0.0f;
+    }
+
+    private sealed class VaryingIntegerLengthShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<uint> Input;
+#pragma warning restore CS0649
+
+        private static bool IsLong(uint length) => length + 1u > 2u;
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Shade() =>
+            IsLong(Input.Length) ? DMath.dpdx(1.0f) : 0.0f;
+    }
+
     private static MethodInfo Method(string name) =>
         typeof(ReadonlyStructuredBufferTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"Method {name} was not found.");
@@ -723,7 +1103,8 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
     private static int Count(string value, string fragment) =>
         value.Split(fragment, StringSplitOptions.None).Length - 1;
 
-    private static (Type ShaderType, FieldInfo Field) CreateRawDuplicateGroupBufferShader()
+    private static (Type ShaderType, FieldInfo Field) CreateRawDuplicateGroupBufferShader(
+        Type? bufferType = null)
     {
         var assembly = AssemblyBuilder.DefineDynamicAssembly(
             new AssemblyName($"ReadOnlyStorageRawMetadata_{Guid.NewGuid():N}"),
@@ -736,7 +1117,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
         type.DefineDefaultConstructor(MethodAttributes.Public);
         var field = type.DefineField(
             "Input",
-            typeof(StructuredBuffer<float>),
+            bufferType ?? typeof(StructuredBuffer<float>),
             FieldAttributes.Private | FieldAttributes.Static);
         var groupConstructor = typeof(GroupAttribute).GetConstructor([typeof(int)])
             ?? throw new InvalidOperationException("GroupAttribute constructor was not found.");
@@ -845,7 +1226,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
 
     private static float get_Length() => 1.0f;
 
-    [OperationMethod<StructuredBufferLoadOperation>]
+    [OperationMethod<StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>>]
     private static float ResourceIntrinsicImpostor(StructuredBuffer<float> buffer, uint index) => 1.0f;
 
     private static unsafe void ResourceFunctionPointerParameter(
@@ -946,7 +1327,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
     {
 #pragma warning disable CS0169
         [Group(0), Binding(0)]
-        private static StructuredBuffer<int> Input;
+        private static StructuredBuffer<double> Input;
 #pragma warning restore CS0169
 
         [Fragment]
@@ -957,7 +1338,7 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
     private sealed class UnannotatedWrongElementShader : ISharpShader
     {
 #pragma warning disable CS0169
-        private static StructuredBuffer<int> Input;
+        private static StructuredBuffer<double> Input;
 #pragma warning restore CS0169
 
         [Fragment]

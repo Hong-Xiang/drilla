@@ -268,7 +268,8 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
             .. module.Declarations
                      .OfType<VariableDeclaration>()
                      .Where(declaration =>
-                         declaration.Type is ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType)
+                         ReadOnlyStructuredBufferFamily.IsCanonicalType(declaration.Type) ||
+                         ReadWriteStructuredBufferFamily.IsCanonicalType(declaration.Type))
                      .Select(CreateStorageBufferBinding)
                      .OrderBy(binding => binding.Group)
                      .ThenBy(binding => binding.Binding)
@@ -442,11 +443,11 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
             declaration.Name,
             group,
             binding.Binding,
-            declaration.Type is ReadWriteStructuredBufferType
+            ReadWriteStructuredBufferFamily.IsCanonicalType(declaration.Type)
                 ? WritableVisibility(declaration)
                 : Visibility(declaration),
             binding.HasDynamicOffset,
-            declaration.Type is ReadWriteStructuredBufferType
+            ReadWriteStructuredBufferFamily.IsCanonicalType(declaration.Type)
                 ? GPUBufferBindingType.Storage
                 : GPUBufferBindingType.ReadOnlyStorage,
             4,

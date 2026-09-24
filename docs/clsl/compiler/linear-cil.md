@@ -177,10 +177,45 @@ independently of canonical `neg`. The emitter only spells the accepted target AS
 `dup` duplicates the already evaluated top stack value without re-evaluating
 its producer or creating a value-IR instruction. It preserves the exact
 canonical stack type and pointer identity; object-reference categories and an
-empty stack are rejected. Exception flow, `initobj`, indirect loads/stores, and
-`ldnull` remain unsupported. `initobj` is rejected at shared instruction
-dispatch because the value frontend does not yet emit its required
-zero-initialization store;
+empty stack are rejected. `initobj T` consumes a pointer to an original
+writable function-local variable of exactly type `T` while preserving any
+stack prefix. It explicitly constructs zero for bool/i32/u32/f32, their mapped
+2–4-component vectors, and nonempty sequential plain structs recursively
+containing those types, then issues one typed store to the original local.
+Plain structs require exact ordered CLR-field/shader-member correspondence,
+no properties, readonly fields, custom packing or size, or user-defined
+instance constructors. Projected, parameter, and carried-pointer destinations
+remain unsupported; the local-root proof happens after value lifting, before
+promotion. Field loads from a struct value are typed member expressions, so
+ordinary `default(S)` accumulator reads can use this path without indirect
+loads. With `MethodBody.InitLocals=true`, original function locals still
+referenced after promotion receive an explicit zero store before original
+effects if their complete CLR type meets this same zeroable profile. Existing
+promoted i32/bool values retain their SSA zero seeds instead. The new stores
+have synthetic provenance, not `initobj` provenance; a one-shot preheader
+initializes before a revisited entry block without resetting locals on a
+backedge. `InitLocals=false`, unused or promoted locals, and locals outside
+the bounded profile gain no new store or initialization guarantee.
+`ldind.i4` and `ldind.u4` both accept i32 or u32 pointees and preserve the
+same 32 bits on the canonical i32 CIL stack; `ldind.r4` accepts f32.
+`stind.i4` stores canonical i32 bits to i32 or u32 storage, and
+`stind.r4` stores f32. Every indirect effect resolves to an original
+function-local address or a checked `ldflda` chain within an eligible
+whole plain-struct root; source provenance and exact types are checked
+after value lifting, before promotion. This does not expand `initobj`'s
+unprojected-local constraint. `InitLocals=false` adds no zero: callers
+must explicitly write storage before reads to obtain defined results;
+this is not a definite-assignment proof.
+Stored managed-pointer locals and general ref/in/out calls remain
+unsupported; ordinary Debug C# ref-local code can produce such locals.
+The Slang **source** spelling for an f32 negative-zero literal is `-0.0f`,
+preserving the sign bit through compilation; diagnostic literal dumps keep
+their typed `_f32` suffix and other literal spellings are unchanged.
+External implementations of public `ICilInstructionVisitor<TResult>` must
+update their `VisitLoadIndirect<TShaderType>` and
+`VisitStoreIndirect<TShaderType>` constraints from `IShaderType` to
+`ISingletonShaderType<TShaderType>`; no compatibility adapter is provided.
+Exception flow, other indirect widths/references/native pointers, and `ldnull` remain unsupported;
 ordinary `pop` remains supported. Dead non-control instructions in one collected
 function remain absent from that function's Pre/CFG. A separately collected dead
 callee is nevertheless compiled by the module pipeline and may fail on its own

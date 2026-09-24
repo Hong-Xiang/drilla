@@ -7,6 +7,7 @@ using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Region;
+using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common.CodeTextWriter;
@@ -448,6 +449,27 @@ public sealed record SlangBind : SlangStatement
     {
         if (instruction.Result is null)
             throw new ArgumentException("A Slang binding requires an instruction result.", nameof(instruction));
+        if (instruction.Operation is StructureCompositeConstructionOperation composite &&
+            (instruction.OperandCount != composite.ResultType.Declaration.Members.Length ||
+             instruction.Operand0 is null ||
+             (instruction.OperandCount == 1
+                 ? instruction.Operand1 is not null
+                 : instruction.Operand1 is null) ||
+             instruction.RestOperands.IsDefault ||
+             instruction.RestOperands.Length != Math.Max(0, instruction.OperandCount - 2) ||
+             instruction.Operands.Any(operand => operand is null) ||
+             !composite.Matches(instruction.Result.Type, instruction.Operands.Select(operand => operand.Type))))
+            throw new ArgumentException("A structure composite binding requires ordered, typed fields.", nameof(instruction));
+        if (instruction.Operation is StructureMemberGetOperation get &&
+            (instruction.OperandCount != 1 ||
+             instruction.Operand0 is null ||
+             instruction.Operand1 is not null ||
+             instruction.RestOperands.IsDefault ||
+             !instruction.RestOperands.IsEmpty ||
+             !get.Owner.Declaration.Members.Contains(get.Member) ||
+             !instruction.Operand0.Type.Equals(get.Owner) ||
+             !instruction.Result.Type.Equals(get.Member.Type)))
+            throw new ArgumentException("A structure member read requires an owned, typed field.", nameof(instruction));
         Instruction = instruction;
     }
 
@@ -474,9 +496,26 @@ public sealed record SlangAssign : SlangStatement
             throw new ArgumentException(
                 $"Cannot assign {value.Type.Name} to {target.Type.Name}.",
                 nameof(value));
+        if (ReadOnlyRoot(target))
+            throw new ArgumentException("Cannot assign through a read-only shader place.", nameof(target));
         Target = target;
         Value = value;
     }
+
+    private static bool ReadOnlyRoot(SlangPlace place) =>
+        place switch
+        {
+            SlangVariablePlace variable =>
+                variable.Variable.AddressSpace.Kind is
+                    AddressSpaceKind.Uniform or AddressSpaceKind.Input or AddressSpaceKind.Handle,
+            SlangParameterPlace parameter =>
+                parameter.Parameter.Attributes.Any(attribute => attribute is ISemanticBindingAttribute),
+            SlangMemberPlace member => ReadOnlyRoot(member.Target),
+            SlangComponentPlace component => ReadOnlyRoot(component.Target),
+            SlangSwizzlePlace swizzle => ReadOnlyRoot(swizzle.Target),
+            SlangIndexedPlace indexed => ReadOnlyRoot(indexed.Target),
+            _ => false
+        };
 
     public SlangPlace Target { get; }
     public SlangOperand Value { get; }
@@ -557,7 +596,10 @@ public sealed record SlangIndexedPlace(
 
 internal static class SlangLiteralFormatter
 {
-    public static string Source(ILiteral literal) => Format(literal, string.Empty);
+    public static string Source(ILiteral literal) =>
+        literal is F32Literal value && BitConverter.SingleToInt32Bits(value.Value) == int.MinValue
+            ? "-0.0f"
+            : Format(literal, string.Empty);
 
     public static string Dump(ILiteral literal) => Format(literal, literal switch
     {

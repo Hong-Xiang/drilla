@@ -238,9 +238,9 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 CallOperation when operands.Length >= 1 =>
                     $"{Operand(0)}({string.Join(',', operands[1..].Select(RenderOperand))})",
                 LiteralOperation when operands.Length == 1 => Operand(0),
-                StructuredBufferLoadOperation when operands.Length == 2 =>
+                IReadOnlyStructuredBufferLoadOperation when operands.Length == 2 =>
                     $"{Operand(0)}[{Operand(1)}]",
-                ReadWriteStructuredBufferLoadOperation when operands.Length == 2 =>
+                IReadWriteStructuredBufferLoadOperation when operands.Length == 2 =>
                     $"{Operand(0)}[{Operand(1)}]",
                 TextureSampleLevelOperation when operands.Length == 4 =>
                     $"{Operand(0)}.SampleLevel({Operand(1)}, {Operand(2)}, {Operand(3)})",
@@ -250,6 +250,8 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                     $"{Operand(0)}.{swizzle.Pattern.Name}",
                 IVectorComponentGetOperation component when operands.Length == 1 =>
                     $"{Operand(0)}.{component.Component.Name}",
+                StructureMemberGetOperation member when operands.Length == 1 =>
+                    $"{Operand(0)}.{member.Member.Name}",
                 IVectorFromScalarConstructOperation construction when operands.Length == 1 =>
                     $"{construction.ResultType.Name}({Operand(0)})",
                 LogicalNotOperation when operands.Length == 1 => $"!{Operand(0)}",
@@ -269,6 +271,8 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 VectorCompositeConstructionOperation vector =>
                     $"vector<{vector.ElementType.Name}, {vector.Size.Value}>" +
                     $"({string.Join(',', operands.Select(RenderOperand))})",
+                StructureCompositeConstructionOperation =>
+                    $"{{ {string.Join(", ", operands.Select(RenderOperand))} }}",
                 ZeroConstructorOperation { ResultType: IVecType } => "{}",
                 _ => throw MalformedInstruction(instruction)
             };

@@ -172,6 +172,40 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         return default;
     }
 
+    public Unit VisitInitObject(CilInstructionInfo inst, Type type, IShaderType mappedType)
+    {
+        if (TopType() is not IPtrType pointerType ||
+            pointerType.AddressSpace.Kind != AddressSpaceKind.Function ||
+            !pointerType.BaseType.Equals(mappedType))
+            throw Invalid($"initobj {type} requires a matching function-local pointer.");
+        EmitZero(mappedType);
+        Emit(new StoreOperation(), null, [Depth(1), Depth(0)], 2);
+        return default;
+    }
+
+    private void EmitZero(IShaderType type)
+    {
+        foreach (var step in ZeroConstructionPlan.For(type))
+        {
+            switch (step)
+            {
+                case ZeroConstructionStep.Scalar scalar:
+                    ZeroLiteral(scalar.Literal);
+                    break;
+                case ZeroConstructionStep.Composite composite:
+                    Emit(composite.Operation, composite.Type,
+                        Enumerable.Range(0, composite.OperandCount).Reverse().Select(Depth),
+                        composite.OperandCount);
+                    break;
+                default:
+                    throw Invalid($"Unknown initobj zero construction step {step.GetType().Name}.");
+            }
+        }
+    }
+
+    private void ZeroLiteral(ILiteral literal) =>
+        Emit(new LiteralOperation(), literal.Type, [Immediate(ShaderValue.Literal(literal))], 0);
+
     public Unit VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration variable)
     {
         Store(variable.Value);
@@ -180,6 +214,12 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
 
     public Unit VisitLoadField(CilInstructionInfo inst, MemberDeclaration member)
     {
+        if (TopType() is StructureType structure)
+        {
+            Emit(new StructureMemberGetOperation(structure, member), member.Type, [Depth(0)], 1);
+            NormalizeTop(member.Type);
+            return default;
+        }
         AddressOfMember(member, 1);
         LoadFromTop();
         return default;
@@ -310,10 +350,37 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         return default;
     }
 
-    public Unit VisitLoadIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType =>
-        throw new NotImplementedException();
-    public Unit VisitStoreIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType =>
-        throw new NotImplementedException();
+    public Unit VisitLoadIndirect<TShaderType>(CilInstructionInfo inst)
+        where TShaderType : ISingletonShaderType<TShaderType>
+    {
+        var requested = TShaderType.Instance;
+        if (requested is not (IntType<N32> or UIntType<N32> or FloatType<N32>) ||
+            TopType() is not IPtrType pointerType ||
+            pointerType.AddressSpace.Kind != AddressSpaceKind.Function ||
+            (requested is FloatType<N32>
+                ? pointerType.BaseType is not FloatType<N32>
+                : pointerType.BaseType is not (IntType<N32> or UIntType<N32>)))
+            throw Invalid($"Cannot load {requested.Name} indirectly from {TopType().Name}.");
+        LoadFromTop();
+        return default;
+    }
+
+    public Unit VisitStoreIndirect<TShaderType>(CilInstructionInfo inst)
+        where TShaderType : ISingletonShaderType<TShaderType>
+    {
+        var requested = TShaderType.Instance;
+        if (requested is not (IntType<N32> or FloatType<N32>) ||
+            TypeAtDepth(1) is not IPtrType pointerType ||
+            pointerType.AddressSpace.Kind != AddressSpaceKind.Function ||
+            (requested is FloatType<N32>
+                ? pointerType.BaseType is not FloatType<N32> || TopType() is not FloatType<N32>
+                : pointerType.BaseType is not (IntType<N32> or UIntType<N32>) ||
+                  TopType() is not IntType<N32>))
+            throw Invalid($"Cannot store {requested.Name} indirectly.");
+        ConvertTopForDeclaration(pointerType.BaseType);
+        Emit(new StoreOperation(), null, [Depth(1), Depth(0)], 2);
+        return default;
+    }
     public Unit VisitLoadIndirectNativeInt(CilInstructionInfo inst) => throw new NotImplementedException();
     public Unit VisitLoadIndirectRef(CilInstructionInfo inst) => throw new NotImplementedException();
     public Unit VisitStoreIndirectRef(CilInstructionInfo inst) => throw new NotImplementedException();
@@ -447,11 +514,14 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         {
             var sourcePosition = firstArgument + index;
             var sourceType = stack[sourcePosition];
-            if (parameter.Type is BoolType && sourceType is IntType<N32>)
+            if (parameter.Type is BoolType or UIntType<N32> &&
+                sourceType is IntType<N32>)
             {
+                var conversion = DeclarationConversion(parameter.Type, sourceType)
+                    ?? throw Invalid($"Cannot convert call parameter {parameter.Name}.");
                 Emit(
-                    ScalarConversionOperation<IntType<N32>, BoolType>.Instance,
-                    ShaderType.Bool,
+                    conversion,
+                    parameter.Type,
                     [Depth(stack.Count - 1 - sourcePosition)],
                     0);
                 argumentPositions[index] = stack.Count - 1;
@@ -481,50 +551,68 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
     {
         switch (operation)
         {
-            case StructuredBufferLengthOperation length:
+            case IReadOnlyStructuredBufferLengthOperation length
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLength(length):
                 if (!TopType().Equals(length.BufferPointerType))
                     throw Invalid($"{length.Name} operation stack: {TopType().Name}.");
                 Emit(length, ShaderType.U32, [Depth(0)], 1);
                 NormalizeTop(ShaderType.U32);
                 return;
-            case StructuredBufferLoadOperation load:
+            case IReadOnlyStructuredBufferLoadOperation load
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLoad(load):
                 if (stack.Count < 2 || !TypeAtDepth(1).Equals(load.BufferPointerType))
                     throw Invalid($"{load.Name} requires an exact storage-buffer receiver.");
                 ConvertTopForDeclaration(ShaderType.U32);
                 if (!TypeAtDepth(0).Equals(ShaderType.U32))
                     throw Invalid($"{load.Name} index must be u32.");
-                Emit(load, ShaderType.F32, [Depth(1), Depth(0)], 2);
+                Emit(load, load.ElementType, [Depth(1), Depth(0)], 2);
+                NormalizeTop(load.ElementType);
                 return;
-            case ReadWriteStructuredBufferLengthOperation rwLength:
+            case IReadOnlyStructuredBufferLengthOperation or IReadOnlyStructuredBufferLoadOperation:
+                throw Invalid("Noncanonical read-only storage-buffer operation.");
+            case IReadWriteStructuredBufferLengthOperation rwLength
+                when ReadWriteStructuredBufferFamily.IsCanonicalLength(rwLength):
                 if (!TopType().Equals(rwLength.BufferPointerType))
                     throw Invalid($"{rwLength.Name} operation stack: {TopType().Name}.");
                 Emit(rwLength, ShaderType.U32, [Depth(0)], 1);
                 NormalizeTop(ShaderType.U32);
                 return;
-            case ReadWriteStructuredBufferLoadOperation rwLoad:
+            case IReadWriteStructuredBufferLoadOperation rwLoad
+                when ReadWriteStructuredBufferFamily.IsCanonicalLoad(rwLoad):
                 if (stack.Count < 2 || !TypeAtDepth(1).Equals(rwLoad.BufferPointerType))
                     throw Invalid($"{rwLoad.Name} requires an exact storage-buffer receiver.");
                 ConvertTopForDeclaration(ShaderType.U32);
                 if (!TypeAtDepth(0).Equals(ShaderType.U32))
                     throw Invalid($"{rwLoad.Name} index must be u32.");
-                Emit(rwLoad, ShaderType.F32, [Depth(1), Depth(0)], 2);
+                Emit(rwLoad, rwLoad.ElementType, [Depth(1), Depth(0)], 2);
+                NormalizeTop(rwLoad.ElementType);
                 return;
-            case ReadWriteStructuredBufferStoreOperation store:
+            case IReadWriteStructuredBufferStoreOperation store
+                when ReadWriteStructuredBufferFamily.IsCanonicalStore(store):
                 if (stack.Count < 3 ||
-                    !TypeAtDepth(2).Equals(store.BufferPointerType) ||
-                    !TypeAtDepth(0).Equals(ShaderType.F32))
-                    throw Invalid($"{store.Name} requires an exact writable storage-buffer receiver and f32 value.");
-                var converted = ConvertAtDepthForDeclaration(ShaderType.U32, 1);
-                if (!TypeAtDepth(0).Equals(ShaderType.U32))
-                    throw Invalid($"{store.Name} index must be u32.");
+                    !TypeAtDepth(2).Equals(store.BufferPointerType))
+                    throw Invalid($"{store.Name} requires an exact writable storage-buffer receiver.");
+                var receiverPosition = stack.Count - 3;
+                var indexPosition = stack.Count - 2;
+                var valuePosition = stack.Count - 1;
+                if (ConvertAtDepthForDeclaration(ShaderType.U32, 1))
+                    indexPosition = stack.Count - 1;
+                if (ConvertAtDepthForDeclaration(store.ElementType, stack.Count - 1 - valuePosition))
+                    valuePosition = stack.Count - 1;
+                var indexDepth = stack.Count - 1 - indexPosition;
+                var valueDepth = stack.Count - 1 - valuePosition;
+                if (!TypeAtDepth(indexDepth).Equals(ShaderType.U32) ||
+                    !TypeAtDepth(valueDepth).Equals(store.ElementType))
+                    throw Invalid($"{store.Name} requires a u32 index and {store.ElementType.Name} value.");
                 Emit(
                     store,
                     null,
-                    converted
-                        ? [Depth(3), Depth(0), Depth(1)]
-                        : [Depth(2), Depth(1), Depth(0)],
-                    converted ? 4 : 3);
+                    [Depth(stack.Count - 1 - receiverPosition), Depth(indexDepth), Depth(valueDepth)],
+                    stack.Count - receiverPosition);
                 return;
+            case IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or IReadWriteStructuredBufferStoreOperation:
+                throw Invalid("Noncanonical read-write storage-buffer operation.");
             case TextureSampleLevelOperation sample:
                 if (stack.Count < 4 ||
                     !TypeAtDepth(3).Equals(sample.TexturePointerType) ||

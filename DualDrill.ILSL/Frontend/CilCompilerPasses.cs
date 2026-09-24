@@ -1,13 +1,19 @@
 using System.Collections.Immutable;
+using System.Reflection;
+using System.Reflection.Metadata;
+using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
+using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using Lokad.ILPack.IL;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -285,13 +291,118 @@ public static class CilLocalPromotionPass
                              ?? throw new InvalidOperationException(
                                  $"Cannot promote locals for {raw.Code.Environment.Method}: " +
                                  "MethodBody metadata is unavailable.");
-            return new CilValueControlFlowBody(
-                body.Source,
-                PromoteLocalsPass.Run(
-                    body.Graph,
-                    raw.DeclarationContext.LocalVariables,
-                    methodBody.InitLocals));
+            var promoted = PromoteLocalsPass.Run(
+                body.Graph,
+                raw.DeclarationContext.LocalVariables,
+                methodBody.InitLocals);
+            return new CilValueControlFlowBody(body.Source,
+                methodBody.InitLocals ? InitializeStorage(raw, promoted) : promoted);
         });
+
+    private static ControlFlowGraph<CilValueBasicBlock> InitializeStorage(
+        RawCilFunctionBody raw,
+        ControlFlowGraph<CilValueBasicBlock> graph)
+    {
+        var locals = raw.DeclarationContext.LocalVariables;
+        var used = graph.Labels()
+            .SelectMany(label => CilValueControlFlowBody.Values(graph[label]))
+            .ToHashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        var referenced = locals.Index().Where(item => used.Contains(item.Item.Value)).ToArray();
+        if (referenced.Length == 0)
+            return graph;
+
+        var metadata = raw.Code.Environment.LocalVariables;
+        if (metadata.Length != locals.Length)
+            throw new ValidationException("InitLocals local declaration count does not match method metadata.",
+                raw.Code.Environment.Method);
+
+        var selected = new List<VariableDeclaration>();
+        foreach (var (index, local) in referenced)
+        {
+            var info = metadata[index];
+            if (info.LocalIndex != index ||
+                local.AddressSpace.Kind != AddressSpaceKind.Function ||
+                !ReferenceEquals(raw.Symbols[Symbol.Variable(info)], local) ||
+                !ReferenceEquals(raw.Symbols[info.LocalType], local.Type))
+                throw new ValidationException(
+                    $"InitLocals local #{index} has mismatched CLR metadata, symbol, or declaration.",
+                    raw.Code.Environment.Method);
+
+            if (!InitObjectType.IsEligible(info.LocalType, local.Type, raw.Symbols))
+                continue;
+            _ = InitObjectType.Resolve(info.LocalType, raw.Symbols);
+            selected.Add(local);
+        }
+        if (selected.Count == 0)
+            return graph;
+
+        var anchor = raw.Code[0];
+        var ordinal = 0;
+        ShaderStackProvenance Origin() => ShaderStackProvenance.SyntheticInitialization(anchor, ordinal++);
+        var initialization = new List<Instruction<IShaderValue, IShaderValue>>();
+        foreach (var local in selected)
+        {
+            var values = new Stack<IShaderValue>();
+            foreach (var step in ZeroConstructionPlan.For(local.Type))
+            {
+                switch (step)
+                {
+                    case ZeroConstructionStep.Scalar scalar:
+                        var literal = ShaderValue.Intermediate(scalar.Literal.Type);
+                        initialization.Add(Instruction<IShaderValue, IShaderValue>.Create(
+                            new LiteralOperation(), literal, [ShaderValue.Literal(scalar.Literal)], Origin()));
+                        values.Push(literal);
+                        break;
+                    case ZeroConstructionStep.Composite composite:
+                        var arguments = new IShaderValue[composite.OperandCount];
+                        for (var index = arguments.Length - 1; index >= 0; index--)
+                            arguments[index] = values.Pop();
+                        var result = ShaderValue.Intermediate(composite.Type);
+                        initialization.Add(Instruction<IShaderValue, IShaderValue>.Create(
+                            composite.Operation, result, arguments, Origin()));
+                        values.Push(result);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unknown zero construction step {step.GetType().Name}.");
+                }
+            }
+            if (values.Count != 1 || !values.Peek().Type.Equals(local.Type))
+                throw new ValidationException(
+                    $"InitLocals zero for {local.Name} does not have its declared type.",
+                    raw.Code.Environment.Method);
+            initialization.Add(Instruction<IShaderValue, IShaderValue>.Create(
+                new StoreOperation(), null, [local.Value, values.Pop()], Origin()));
+        }
+
+        var entry = graph.EntryLabel;
+        var definitions = graph.Labels().ToDictionary(
+            label => label,
+            label => new ControlFlowGraph<CilValueBasicBlock>.NodeDefinition(
+                graph.Successor(label), graph[label]));
+        if (graph.Predecessor(entry).Count == 0)
+        {
+            var block = graph[entry];
+            var initialized = block with
+            {
+                Body = Seq.Create([.. initialization, .. block.Body.Elements], block.Body.Last)
+            };
+            definitions[entry] = new(initialized.Successor, initialized);
+        }
+        else
+        {
+            if (!graph[entry].Parameters.IsEmpty)
+                throw new ValidationException(
+                    "InitLocals preheader requires an empty original entry parameter stack.",
+                    raw.Code.Environment.Method);
+            var preheader = Label.Create("initlocals");
+            var branch = Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(
+                new RegionJump<IShaderValue>(entry, []));
+            var block = new CilValueBasicBlock(preheader, [], Seq.Create(initialization, branch));
+            definitions.Add(preheader, new(block.Successor, block));
+            entry = preheader;
+        }
+        return new ControlFlowGraph<CilValueBasicBlock>(entry, definitions);
+    }
 }
 
 public static class CilBlockControlFactsPass
@@ -327,13 +438,184 @@ public static class CilRegionPass
 public static class CilModuleCompiler
 {
     public static ShaderModuleDeclaration<RegionFunctionBody> Compile(
-        ShaderModuleDeclaration<RawCilFunctionBody> module) =>
-        CilRegionPass.Run(
+        ShaderModuleDeclaration<RawCilFunctionBody> module)
+    {
+        var values = ShaderStackToValuePass.Run(
+            ShaderStackControlFlowPass.Run(
+                CilToShaderStackPass.Run(
+                    CilBlockPartitionPass.Run(
+                        CilPreStackPass.Run(module)))));
+        ValidateInitObjectStores(values);
+        ValidateIndirectAccesses(values);
+        return CilRegionPass.Run(
             CilBlockControlFactsPass.Run(
-                CilLocalPromotionPass.Run(
-                    ShaderStackToValuePass.Run(
-                        ShaderStackControlFlowPass.Run(
-                            CilToShaderStackPass.Run(
-                                CilBlockPartitionPass.Run(
-                                    CilPreStackPass.Run(module))))))));
+                CilLocalPromotionPass.Run(values)));
+    }
+
+    private static void ValidateInitObjectStores(ShaderModuleDeclaration<CilValueControlFlowBody> module)
+    {
+        foreach (var body in module.FunctionDefinitions.Values)
+        {
+            var raw = body.Source.Source.Source.Raw;
+            var locals = raw.DeclarationContext.LocalVariables;
+            var stores = body.Graph.Labels()
+                .SelectMany(label => body.Graph[label].Body.Elements)
+                .Where(instruction => instruction.Operation is StoreOperation)
+                .ToArray();
+            foreach (var item in body.Source.Source.Source.Pre.Code.Instructions)
+            {
+                var source = item.Node;
+                if (source.Instruction.OpCode.ToILOpCode() != ILOpCode.Initobj)
+                    continue;
+                var attributed = stores.Where(store =>
+                    store.Payload is ShaderStackProvenance provenance &&
+                    !provenance.Synthetic &&
+                    provenance.OriginalIndex == source.Index &&
+                    provenance.ByteStart == source.ByteOffset &&
+                    provenance.ByteEnd == source.NextByteOffset).ToArray();
+                if (attributed is not [var store] ||
+                    store.Operand0 is not VariablePointerValue pointer ||
+                    pointer.Declaration.AddressSpace.Kind != AddressSpaceKind.Function ||
+                    !locals.Any(local => ReferenceEquals(local.Value, pointer)) ||
+                    store.Operand1 is null ||
+                    !store.Operand1.Type.Equals(pointer.Declaration.Type))
+                    throw new ValidationException(
+                        $"initobj at IL_{source.ByteOffset:X4} requires exactly one typed store " +
+                        "to its original writable function-local address.",
+                        raw.Code.Environment.Method);
+            }
+        }
+    }
+
+    internal static void ValidateIndirectAccesses(ShaderModuleDeclaration<CilValueControlFlowBody> module)
+    {
+        foreach (var body in module.FunctionDefinitions.Values)
+        {
+            var raw = body.Source.Source.Source.Raw;
+            var reachable = body.Source.Source.Source.Pre.Code.Instructions
+                .Select(item => item.Node).ToArray();
+            var indirects = reachable.Where(source =>
+                source.Instruction.OpCode.ToILOpCode() is
+                    ILOpCode.Ldind_i4 or ILOpCode.Ldind_u4 or ILOpCode.Ldind_r4 or
+                    ILOpCode.Stind_i4 or ILOpCode.Stind_r4).ToArray();
+            if (indirects.Length == 0)
+                continue;
+            var indices = reachable.Select(instruction => instruction.Index).ToHashSet();
+            var instructions = body.Graph.Labels()
+                .SelectMany(label => body.Graph[label].Body.Elements).ToArray();
+            var projections = new Dictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>>(
+                ReferenceEqualityComparer.Instance);
+            foreach (var instruction in instructions.Where(instruction =>
+                         instruction.Operation is AddressOfMemberOperation &&
+                         instruction.Result?.Type is IPtrType))
+                if (!projections.TryAdd(instruction.Result!, instruction))
+                    throw new ValidationException("An indirect field address has multiple definitions.",
+                        raw.Code.Environment.Method);
+
+            foreach (var source in indirects)
+            {
+                var opcode = source.Instruction.OpCode.ToILOpCode();
+                var load = opcode is ILOpCode.Ldind_i4 or ILOpCode.Ldind_u4 or ILOpCode.Ldind_r4;
+                var attributed = instructions.Where(instruction =>
+                    (instruction.Operation is LoadOperation or StoreOperation) &&
+                    IsOriginalFrom(instruction, source)).ToArray();
+                if (attributed is not [var effect] ||
+                    (load ? effect.Operation is not LoadOperation : effect.Operation is not StoreOperation) ||
+                    effect.Operand0?.Type is not IPtrType pointer ||
+                    pointer.AddressSpace.Kind != AddressSpaceKind.Function ||
+                    (opcode is ILOpCode.Ldind_r4 or ILOpCode.Stind_r4
+                        ? !pointer.BaseType.Equals(ShaderType.F32)
+                        : !pointer.BaseType.Equals(ShaderType.I32) &&
+                          !pointer.BaseType.Equals(ShaderType.U32)) ||
+                    (load
+                        ? effect.OperandCount != 1 || effect.Result is null ||
+                          !effect.Result.Type.Equals(pointer.BaseType)
+                        : effect.OperandCount != 2 || effect.Result is not null ||
+                          effect.Operand1 is null || !effect.Operand1.Type.Equals(pointer.BaseType)))
+                    throw new ValidationException(
+                        $"Indirect access at IL_{source.ByteOffset:X4} ({source.Instruction.OpCode}) " +
+                        "requires exactly one typed load or resultless store.",
+                        raw.Code.Environment.Method);
+                ValidateAddress(effect.Operand0!, !load, raw, indices, projections, source);
+            }
+        }
+    }
+
+    private static void ValidateAddress(
+        IShaderValue address,
+        bool write,
+        RawCilFunctionBody raw,
+        IReadOnlySet<int> reachable,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> projections,
+        CilInstructionInfo source)
+    {
+        ValidationException Invalid(string reason) =>
+            new($"Indirect access at IL_{source.ByteOffset:X4} ({source.Instruction.OpCode}): {reason}.",
+                raw.Code.Environment.Method);
+        var visited = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        while (visited.Add(address))
+        {
+            if (address is VariablePointerValue root)
+            {
+                var locals = raw.DeclarationContext.LocalVariables;
+                var index = locals.IndexOf(root.Declaration);
+                if (index < 0 || !ReferenceEquals(locals[index].Value, root) ||
+                    root.Declaration.AddressSpace.Kind != AddressSpaceKind.Function ||
+                    index >= raw.Code.Environment.LocalVariables.Length)
+                    throw Invalid("address is not an original function-local root");
+                var info = raw.Code.Environment.LocalVariables[index];
+                if (info.LocalIndex != index ||
+                    !ReferenceEquals(raw.Symbols[Symbol.Variable(info)], root.Declaration) ||
+                    !ReferenceEquals(raw.Symbols[info.LocalType], root.Declaration.Type))
+                    throw Invalid("root CLR metadata and shader declaration do not match");
+                try
+                {
+                    if (!InitObjectType.IsEligible(info.LocalType, root.Declaration.Type, raw.Symbols))
+                        throw Invalid("whole root is outside the zeroable plain-local profile");
+                    _ = InitObjectType.Resolve(info.LocalType, raw.Symbols);
+                }
+                catch (NotSupportedException exception)
+                {
+                    throw new ValidationException(
+                        $"Indirect access at IL_{source.ByteOffset:X4}: {exception.Message}",
+                        raw.Code.Environment.Method,
+                        exception);
+                }
+                return;
+            }
+
+            if (!projections.TryGetValue(address, out var projection) ||
+                projection.Payload is not ShaderStackProvenance origin ||
+                origin.OriginalIndex >= raw.Code.Count ||
+                !reachable.Contains(origin.OriginalIndex) ||
+                !IsOriginalFrom(projection, raw.Code[origin.OriginalIndex]) ||
+                raw.Code[origin.OriginalIndex].Instruction.OpCode.ToILOpCode() != ILOpCode.Ldflda ||
+                raw.Code[origin.OriginalIndex].Instruction.Operand is not FieldInfo field ||
+                field.IsStatic ||
+                write && field.IsInitOnly ||
+                field.DeclaringType is null ||
+                projection.OperandCount != 1 ||
+                projection.Operand0?.Type is not IPtrType { BaseType: StructureType owner } ownerPointer ||
+                projection.Result?.Type is not IPtrType resultPointer ||
+                !resultPointer.AddressSpace.Equals(ownerPointer.AddressSpace) ||
+                projection.Operation is not AddressOfMemberOperation member ||
+                !owner.Declaration.Members.Contains(member.Member) ||
+                !resultPointer.BaseType.Equals(member.Member.Type) ||
+                !ReferenceEquals(raw.Symbols[field], member.Member) ||
+                !ReferenceEquals(raw.Symbols[field.DeclaringType], owner) ||
+                !ReferenceEquals(raw.Symbols[field.FieldType], member.Member.Type))
+                throw Invalid("address is not a valid writable local-field projection");
+            address = projection.Operand0;
+        }
+        throw Invalid("address projection contains a cycle");
+    }
+
+    private static bool IsOriginalFrom(
+        Instruction<IShaderValue, IShaderValue> instruction,
+        CilInstructionInfo source) =>
+        instruction.Payload is ShaderStackProvenance provenance &&
+        !provenance.Synthetic &&
+        provenance.OriginalIndex == source.Index &&
+        provenance.ByteStart == source.ByteOffset &&
+        provenance.ByteEnd == source.NextByteOffset;
 }
