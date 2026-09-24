@@ -115,11 +115,11 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
         var instructions = Instructions(Function(compiled, nameof(DoubleValuesShader.Run))).ToArray();
 
         Assert.Single(instructions, instruction =>
-            instruction.Operation is StructuredBufferLengthOperation);
+            instruction.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Single(instructions, instruction =>
             instruction.Operation is ReadWriteStructuredBufferLengthOperation);
         Assert.Single(instructions, instruction =>
-            instruction.Operation is StructuredBufferLoadOperation);
+            instruction.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var store = Assert.Single(instructions, instruction =>
             instruction.Operation is ReadWriteStructuredBufferStoreOperation);
         Assert.Null(store.Result);
@@ -482,8 +482,8 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
     [Fact]
     public void ResourceExpressionNormalizationRejectsMissingResultsWithoutNullReference()
     {
-        var roLength = StructuredBufferLengthOperation.Instance;
-        var roLoad = StructuredBufferLoadOperation.Instance;
+        var roLength = StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance;
+        var roLoad = StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance;
         var rwLength = ReadWriteStructuredBufferLengthOperation.Instance;
         var rwLoad = ReadWriteStructuredBufferLoadOperation.Instance;
         var u32 = ShaderValue.Intermediate(ShaderType.U32);
@@ -560,7 +560,7 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
             valid with
             {
                 Operand0 = ShaderValue.Intermediate(
-                    ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance))
+                    ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance))
             }
         };
         Assert.All(malformed, instruction =>

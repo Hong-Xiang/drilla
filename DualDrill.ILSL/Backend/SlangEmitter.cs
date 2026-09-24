@@ -238,7 +238,7 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 CallOperation when operands.Length >= 1 =>
                     $"{Operand(0)}({string.Join(',', operands[1..].Select(RenderOperand))})",
                 LiteralOperation when operands.Length == 1 => Operand(0),
-                StructuredBufferLoadOperation when operands.Length == 2 =>
+                IReadOnlyStructuredBufferLoadOperation when operands.Length == 2 =>
                     $"{Operand(0)}[{Operand(1)}]",
                 ReadWriteStructuredBufferLoadOperation when operands.Length == 2 =>
                     $"{Operand(0)}[{Operand(1)}]",

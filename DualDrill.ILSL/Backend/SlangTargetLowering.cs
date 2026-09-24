@@ -639,7 +639,7 @@ public sealed class SlangTargetLowering
         {
             switch (instruction.Operation)
             {
-                case StructuredBufferLengthOperation length:
+                case IReadOnlyStructuredBufferLengthOperation length:
                     ValidateStructuredBufferLength(instruction, length);
                     var count = instruction.Result!;
                     var stride = ShaderValue.Intermediate(ShaderType.U32);
@@ -651,7 +651,7 @@ public sealed class SlangTargetLowering
                     var capture = CaptureDefinition(count, statements);
                     dimensionsOrigins.Add(new(label, ordinal, instruction, dimensions, capture));
                     return;
-                case StructuredBufferLoadOperation load:
+                case IReadOnlyStructuredBufferLoadOperation load:
                     ValidateStructuredBufferLoad(instruction, load);
                     break;
                 case ReadWriteStructuredBufferLengthOperation rwLength:
@@ -784,7 +784,7 @@ public sealed class SlangTargetLowering
                 or LoadOperation
                 or CallOperation
                 or LiteralOperation
-                or StructuredBufferLoadOperation
+                or IReadOnlyStructuredBufferLoadOperation
                 or ReadWriteStructuredBufferLoadOperation
                 or TextureSampleLevelOperation
                 or IUnaryExpressionOperation
@@ -794,9 +794,10 @@ public sealed class SlangTargetLowering
 
         private void ValidateStructuredBufferLength(
             Instruction<IShaderValue, IShaderValue> instruction,
-            StructuredBufferLengthOperation operation)
+            IReadOnlyStructuredBufferLengthOperation operation)
         {
-            if (!HasPhysicalOperandShape(instruction, 1) ||
+            if (!ReadOnlyStructuredBufferFamily.IsCanonicalLength(operation) ||
+                !HasPhysicalOperandShape(instruction, 1) ||
                 instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
                 instruction.Result is null ||
@@ -806,14 +807,15 @@ public sealed class SlangTargetLowering
 
         private void ValidateStructuredBufferLoad(
             Instruction<IShaderValue, IShaderValue> instruction,
-            StructuredBufferLoadOperation operation)
+            IReadOnlyStructuredBufferLoadOperation operation)
         {
-            if (!HasPhysicalOperandShape(instruction, 2) ||
+            if (!ReadOnlyStructuredBufferFamily.IsCanonicalLoad(operation) ||
+                !HasPhysicalOperandShape(instruction, 2) ||
                 instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
                 !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
                 instruction.Result is null ||
-                !instruction.Result.Type.Equals(ShaderType.F32))
+                !instruction.Result.Type.Equals(operation.ElementType))
                 throw UnsupportedOperation(instruction, "invalid read-only storage-buffer load signature");
         }
 

@@ -43,7 +43,7 @@ public sealed class CilPreStackAnalysisTests
     public void SemanticFailureDoesNotInvalidateTheRawModuleOrParser()
     {
         var parser = new RuntimeReflectionParser();
-        var method = ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method;
+        var method = ((Func<ulong, ulong>)BooleanCallShader.ForwardUnsigned64).Method;
 
         var module = parser.ParseMethod(method);
         var model = CompilerTestPipeline.Labelled(module, method);
@@ -51,7 +51,7 @@ public sealed class CilPreStackAnalysisTests
             model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
 
-        Assert.IsType<CilStackType.Int32>(Assert.Single(Pre(model, call.Index).Types));
+        Assert.IsType<CilStackType.Int64>(Assert.Single(Pre(model, call.Index).Types));
         Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
         Assert.Same(model.RawCode, CompilerTestPipeline.Labelled(module, method).RawCode);
         _ = parser.ParseMethod(GetMethod(nameof(Diamond)));
@@ -66,7 +66,7 @@ public sealed class CilPreStackAnalysisTests
         Assert.Contains(module.FunctionDefinitions.Values,
             body => body.Code.Environment.Method == callerMethod);
         Assert.Contains(module.FunctionDefinitions.Values,
-            body => body.Code.Environment.Method == ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method);
+            body => body.Code.Environment.Method == ((Func<ulong, ulong>)BooleanCallShader.ForwardUnsigned64).Method);
         Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
     }
 
@@ -331,7 +331,6 @@ public sealed class CilPreStackAnalysisTests
     [Theory]
     [InlineData("CallSByte", false)]
     [InlineData("CallByte", false)]
-    [InlineData("CallUInt32", false)]
     [InlineData("CallUInt64", true)]
     public void NarrowAndUnsignedCallsHaveNormalizedPreBeforeExistingValueRejection(
         string methodName,
@@ -351,6 +350,26 @@ public sealed class CilPreStackAnalysisTests
             Assert.IsType<CilStackType.Int64>(type);
         else
             Assert.IsType<CilStackType.Int32>(type);
+    }
+
+    [Fact]
+    public void UInt32CallConvertsCanonicalI32AtItsDeclaredBoundary()
+    {
+        var method = Fixtures.Method("CallUInt32");
+        var module = CompilerTestPipeline.ParseRaw(method);
+        var model = CompilerTestPipeline.Labelled(module, method);
+        var call = Assert.Single(model.RawCode.Instructions,
+            instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
+        Assert.IsType<CilStackType.Int32>(Assert.Single(Pre(model, call.Index).Types));
+
+        var compiled = CilModuleCompiler.Compile(module);
+        var body = Assert.Single(compiled.FunctionDefinitions.Values,
+            candidate => candidate.Declaration.Name == method.Name);
+        var instructions = body.Labels.SelectMany(label => body[label].Body.Elements).ToArray();
+        Assert.Contains(instructions, instruction =>
+            instruction.Operation is ScalarConversionOperation<IntType<N32>, UIntType<N32>>);
+        Assert.Contains(instructions, instruction =>
+            instruction.Operation is ScalarConversionOperation<UIntType<N32>, IntType<N32>>);
     }
 
     [Fact]
@@ -415,7 +434,7 @@ public sealed class CilPreStackAnalysisTests
 
     private static int MutualB(int value) => value <= 0 ? 1 : MutualA(value - 1);
 
-    private static uint CallFailingCallee(uint value) => BooleanCallShader.ForwardUnsigned(value);
+    private static ulong CallFailingCallee(ulong value) => BooleanCallShader.ForwardUnsigned64(value);
 
     private static int WithFinally(int value)
     {

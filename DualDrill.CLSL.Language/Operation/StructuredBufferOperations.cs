@@ -7,9 +7,22 @@ using DualDrill.CLSL.Language.Types;
 
 namespace DualDrill.CLSL.Language.Operation;
 
-public sealed class StructuredBufferLengthOperation
-    : IOperation<StructuredBufferLengthOperation>,
+public interface IReadOnlyStructuredBufferLengthOperation : IOperation
+{
+    IPtrType BufferPointerType { get; }
+}
+
+public interface IReadOnlyStructuredBufferLoadOperation : IOperation
+{
+    IPtrType BufferPointerType { get; }
+    IShaderType ElementType { get; }
+}
+
+public sealed class StructuredBufferLengthOperation<TElement>
+    : IOperation<StructuredBufferLengthOperation<TElement>>,
+      IReadOnlyStructuredBufferLengthOperation,
       IOperationRequirementProvider
+    where TElement : IScalarType<TElement>
 {
     private StructuredBufferLengthOperation()
     {
@@ -17,29 +30,43 @@ public sealed class StructuredBufferLengthOperation
             Name,
             [new ParameterDeclaration("buffer", BufferPointerType, [])],
             new FunctionReturn(ShaderType.U32, []),
-            [new OperationMethodAttribute<StructuredBufferLengthOperation>()]);
+            [new OperationMethodAttribute<StructuredBufferLengthOperation<TElement>>()]);
     }
 
-    public static StructuredBufferLengthOperation Instance { get; } = new();
+    public static StructuredBufferLengthOperation<TElement> Instance
+    {
+        get
+        {
+            ReadOnlyStructuredBufferFamily.RequireElement<TElement>();
+            return Holder.Instance;
+        }
+    }
+
+    private static class Holder
+    {
+        internal static readonly StructuredBufferLengthOperation<TElement> Instance = new();
+    }
 
     public IPtrType BufferPointerType { get; } =
-        ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance);
+        ReadOnlyStructuredBufferType<TElement>.Instance.GetPtrType(StorageAddressSpace.Instance);
 
     public FunctionDeclaration Function { get; }
-    public string Name => "structured-buffer-length-f32";
+    public string Name => $"structured-buffer-length-{TElement.Instance.Name}";
     public OperationRequirement Requirements => OperationRequirement.None;
 
     public IOperationMethodAttribute GetOperationMethodAttribute() =>
-        new OperationMethodAttribute<StructuredBufferLengthOperation>();
+        new OperationMethodAttribute<StructuredBufferLengthOperation<TElement>>();
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> instruction, TS semantic)
         where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
         semantic.StructuredBufferLength(instruction, this, instruction.Result, instruction[0]);
 }
 
-public sealed class StructuredBufferLoadOperation
-    : IOperation<StructuredBufferLoadOperation>,
+public sealed class StructuredBufferLoadOperation<TElement>
+    : IOperation<StructuredBufferLoadOperation<TElement>>,
+      IReadOnlyStructuredBufferLoadOperation,
       IOperationRequirementProvider
+    where TElement : IScalarType<TElement>
 {
     private StructuredBufferLoadOperation()
     {
@@ -49,21 +76,34 @@ public sealed class StructuredBufferLoadOperation
                 new ParameterDeclaration("buffer", BufferPointerType, []),
                 new ParameterDeclaration("index", ShaderType.U32, [])
             ],
-            new FunctionReturn(ShaderType.F32, []),
-            [new OperationMethodAttribute<StructuredBufferLoadOperation>()]);
+            new FunctionReturn(TElement.Instance, []),
+            [new OperationMethodAttribute<StructuredBufferLoadOperation<TElement>>()]);
     }
 
-    public static StructuredBufferLoadOperation Instance { get; } = new();
+    public static StructuredBufferLoadOperation<TElement> Instance
+    {
+        get
+        {
+            ReadOnlyStructuredBufferFamily.RequireElement<TElement>();
+            return Holder.Instance;
+        }
+    }
+
+    private static class Holder
+    {
+        internal static readonly StructuredBufferLoadOperation<TElement> Instance = new();
+    }
 
     public IPtrType BufferPointerType { get; } =
-        ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance);
+        ReadOnlyStructuredBufferType<TElement>.Instance.GetPtrType(StorageAddressSpace.Instance);
 
     public FunctionDeclaration Function { get; }
-    public string Name => "structured-buffer-load-f32";
+    public IShaderType ElementType => TElement.Instance;
+    public string Name => $"structured-buffer-load-{TElement.Instance.Name}";
     public OperationRequirement Requirements => OperationRequirement.MemoryRead;
 
     public IOperationMethodAttribute GetOperationMethodAttribute() =>
-        new OperationMethodAttribute<StructuredBufferLoadOperation>();
+        new OperationMethodAttribute<StructuredBufferLoadOperation<TElement>>();
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> instruction, TS semantic)
         where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>

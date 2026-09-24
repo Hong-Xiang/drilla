@@ -268,7 +268,8 @@ public sealed class ShaderModuleReflection : IShaderModuleReflection
             .. module.Declarations
                      .OfType<VariableDeclaration>()
                      .Where(declaration =>
-                         declaration.Type is ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType)
+                         ReadOnlyStructuredBufferFamily.IsCanonicalType(declaration.Type) ||
+                         declaration.Type is ReadWriteStructuredBufferType)
                      .Select(CreateStorageBufferBinding)
                      .OrderBy(binding => binding.Group)
                      .ThenBy(binding => binding.Binding)
