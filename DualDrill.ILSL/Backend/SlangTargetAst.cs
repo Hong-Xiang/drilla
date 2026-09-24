@@ -596,7 +596,10 @@ public sealed record SlangIndexedPlace(
 
 internal static class SlangLiteralFormatter
 {
-    public static string Source(ILiteral literal) => Format(literal, string.Empty);
+    public static string Source(ILiteral literal) =>
+        literal is F32Literal value && BitConverter.SingleToInt32Bits(value.Value) == int.MinValue
+            ? "-0.0f"
+            : Format(literal, string.Empty);
 
     public static string Dump(ILiteral literal) => Format(literal, literal switch
     {

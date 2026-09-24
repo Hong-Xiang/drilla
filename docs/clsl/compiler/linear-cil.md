@@ -208,6 +208,13 @@ must explicitly write storage before reads to obtain defined results;
 this is not a definite-assignment proof.
 Stored managed-pointer locals and general ref/in/out calls remain
 unsupported; ordinary Debug C# ref-local code can produce such locals.
+The Slang **source** spelling for an f32 negative-zero literal is `-0.0f`,
+preserving the sign bit through compilation; diagnostic literal dumps keep
+their typed `_f32` suffix and other literal spellings are unchanged.
+External implementations of public `ICilInstructionVisitor<TResult>` must
+update their `VisitLoadIndirect<TShaderType>` and
+`VisitStoreIndirect<TShaderType>` constraints from `IShaderType` to
+`ISingletonShaderType<TShaderType>`; no compatibility adapter is provided.
 Exception flow, other indirect widths/references/native pointers, and `ldnull` remain unsupported;
 ordinary `pop` remains supported. Dead non-control instructions in one collected
 function remain absent from that function's Pre/CFG. A separately collected dead

@@ -33,6 +33,21 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         Terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
     [Fact]
+    public void SlangSourceSpellsNegativeFloatZeroWithoutChangingDiagnosticOrIntegerLiterals()
+    {
+        var negativeZero = new F32Literal(BitConverter.Int32BitsToSingle(int.MinValue));
+
+        Assert.Equal("-0.0f", SlangLiteralFormatter.Source(negativeZero));
+        Assert.Equal("-0_f32", SlangLiteralFormatter.Dump(negativeZero));
+        Assert.Equal("0", SlangLiteralFormatter.Source(new F32Literal(0.0f)));
+        Assert.Equal("1.5", SlangLiteralFormatter.Source(new F32Literal(1.5f)));
+        Assert.Equal("-1", SlangLiteralFormatter.Source(new I32Literal(-1)));
+        Assert.Equal(uint.MaxValue.ToString(CultureInfo.InvariantCulture),
+            SlangLiteralFormatter.Source(new U32Literal(uint.MaxValue)));
+        Assert.Equal("false", SlangLiteralFormatter.Source(new BoolLiteral(false)));
+    }
+
+    [Fact]
     public void SharedEffectfulTailHasOneAstPlacement()
     {
         var source = Lower(((Func<int, int>)ScalarControlFlowFixtures.SharedTail).Method);

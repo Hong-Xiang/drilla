@@ -94,6 +94,12 @@ Acceptance limits are MAE ≤ 1, RMSE ≤ 4, p99 ≤ 8, and max ≤ 64. Failures
 raw RGBA8 and dependency-free PPM reference/candidate/diff files under the test
 output's `oracle-failures/` directory.
 
+`CilIndirectNegativeZeroNativeTests` uses the same pinned NVIDIA wrapper and
+native compute/readback API. It compiles a forced-CIL, function-local `stind.r4`
+then `ldind.r4` shader through the public compiler and checks the mapped f32
+output bits are exactly `0x80000000`. This protects signed-zero literal
+spelling across Slang and WGSL; it does not add general C# ref-local support.
+
 Run source-integrity, comparator, and direct reference-compilation checks
 without initializing native WebGPU:
 
