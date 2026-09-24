@@ -61,6 +61,10 @@ public sealed record class WebGPUNativeBackendCodeGen(
 
     public void EmitDisposeHandleImpl(StringBuilder sb, HandleDeclaration handle)
     {
+        if (handle.Name == "GPUComputePassEncoder")
+        {
+            return;
+        }
         sb.AppendLine($"    void IGPUHandleDisposer<Backend, {handle.Name}<Backend>>.DisposeHandle(GPUHandle<Backend, {handle.Name}<Backend>> handle)");
         sb.AppendLine("    {");
         sb.AppendLine($"        wgpu{handle.Name[3..]}Release(ToNative(handle));");
@@ -180,6 +184,7 @@ public sealed record class WebGPUNativeBackendCodeGen(
     static readonly HashSet<string> SkipImplHandles = [
         "GPUInstance",
         "GPUDevice",
+        "GPUComputePassEncoder",
     ];
 
     public void EmitAll(StringBuilder sb)

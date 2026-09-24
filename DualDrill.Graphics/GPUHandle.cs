@@ -16,6 +16,8 @@ public readonly record struct GPUHandle<TBackend, TResource>
 
     public object? Data { get; }
 
+    internal bool IsReleased => ownership is null || Volatile.Read(ref ownership.IsReleased);
+
     public void Deconstruct(out nint Pointer, out object? Data)
     {
         Pointer = this.Pointer;
@@ -45,7 +47,7 @@ public readonly record struct GPUHandle<TBackend, TResource>
 
     private sealed class Ownership
     {
-        public bool IsReleased { get; set; }
+        public bool IsReleased;
     }
 }
 

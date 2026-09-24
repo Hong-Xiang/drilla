@@ -217,6 +217,19 @@ function. `RegionFunctionBody` combines typed instructions and parameterized ter
 `SlangTargetLowering` consumes that checked representation and produces the
 separate typed `SlangFunctionBody`; the emitter only formats it.
 
+### Read-only structured-buffer IR migration
+
+The CLR `StructuredBuffer<T>` authoring API is unchanged. Consumers of the
+compiler's public IR must replace `ReadOnlyStructuredBufferType.Instance`,
+`StructuredBufferLengthOperation.Instance`, and
+`StructuredBufferLoadOperation.Instance` with their generic forms
+`ReadOnlyStructuredBufferType<FloatType<N32>>.Instance`,
+`StructuredBufferLengthOperation<FloatType<N32>>.Instance`, and
+`StructuredBufferLoadOperation<FloatType<N32>>.Instance`. The same forms admit
+`IntType<N32>` and `UIntType<N32>`; other element types are unsupported.
+Implementations of `IOperationSemantic` must accept the corresponding narrow
+read-only length/load interfaces. No non-generic aliases remain.
+
 The `AbstractSyntaxTree` directory does not constitute a complete AST
 function-body stage in this pipeline. Older design examples and
 experimental backends must not be presented as additional active compilation

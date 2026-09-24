@@ -189,6 +189,18 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
     }
 
     [Fact]
+    public void RayMarchingUsesCanonicalConfigurationAssembly()
+    {
+        var shaderAssembly = typeof(RaymarchingPrimitiveShader).Assembly;
+        var testAssembly = typeof(RuntimeReflectionCompilerE2ETests).Assembly;
+
+        Assert.Equal("DualDrill.Shaders", shaderAssembly.GetName().Name);
+        Assert.Equal(
+            testAssembly.GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration,
+            shaderAssembly.GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration);
+    }
+
+    [Fact]
     public async Task RayMarchingCompilesThroughPublicWgslApi()
     {
         var shader = new RaymarchingPrimitiveShader();
@@ -251,7 +263,7 @@ public sealed class RuntimeReflectionCompilerE2ETests(ITestOutputHelper Output)
                 "sdCylinder1",
                 "sdHexPrism",
                 "sdPyramid",
-                "sdOctahedron0",
+                "sdOctahedron1",
                 "sdTriPrism",
                 "sdEllipsoid",
                 "sdHorseshoe",

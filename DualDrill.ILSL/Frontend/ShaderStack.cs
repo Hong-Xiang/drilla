@@ -334,6 +334,11 @@ internal static class OperationValidator
                     !result.AddressSpace.Equals(owner.AddressSpace))
                     throw Invalid(instruction);
                 return;
+            case StructureMemberGetOperation get:
+                if (!get.Owner.Declaration.Members.Contains(get.Member))
+                    throw Invalid(instruction);
+                Require(instruction, [get.Owner], get.Member.Type);
+                return;
             case IUnaryExpressionOperation unary:
                 Require(
                     instruction,
@@ -347,12 +352,16 @@ internal static class OperationValidator
             case IBinaryStatementOperation statement:
                 Require(instruction, [statement.LeftType, statement.RightType], null, allowPointerAddressSpace: true);
                 return;
-            case StructuredBufferLengthOperation length:
+            case IReadOnlyStructuredBufferLengthOperation length
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLength(length):
                 Require(instruction, [length.BufferPointerType], ShaderType.U32);
                 return;
-            case StructuredBufferLoadOperation load:
-                Require(instruction, [load.BufferPointerType, ShaderType.U32], ShaderType.F32);
+            case IReadOnlyStructuredBufferLoadOperation load
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLoad(load):
+                Require(instruction, [load.BufferPointerType, ShaderType.U32], load.ElementType);
                 return;
+            case IReadOnlyStructuredBufferLengthOperation or IReadOnlyStructuredBufferLoadOperation:
+                throw Invalid(instruction);
             case ReadWriteStructuredBufferLengthOperation rwLength:
                 Require(instruction, [rwLength.BufferPointerType], ShaderType.U32);
                 return;
@@ -375,6 +384,10 @@ internal static class OperationValidator
                 return;
             case VectorCompositeConstructionOperation vector:
                 Require(instruction, vector.ParameterTypes, vector.ResultType);
+                return;
+            case StructureCompositeConstructionOperation composite:
+                if (!composite.Matches(instruction.Result, instruction.Operands.Select(operand => operand.Type)))
+                    throw Invalid(instruction);
                 return;
             case ZeroConstructorOperation zero:
                 Require(instruction, [], zero.ResultType);

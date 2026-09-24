@@ -117,14 +117,14 @@ public static class Instruction
 
         public Instruction<IShaderValue, IShaderValue> StructuredBufferLength(
             Unit ctx,
-            StructuredBufferLengthOperation op,
+            IReadOnlyStructuredBufferLengthOperation op,
             IShaderValue result,
             IShaderValue buffer) =>
             Create(op, result, [buffer]);
 
         public Instruction<IShaderValue, IShaderValue> StructuredBufferLoad(
             Unit ctx,
-            StructuredBufferLoadOperation op,
+            IReadOnlyStructuredBufferLoadOperation op,
             IShaderValue result,
             IShaderValue buffer,
             IShaderValue index) =>
@@ -174,6 +174,10 @@ public static class Instruction
         public Instruction<IShaderValue, IShaderValue> VectorCompositeConstruction(Unit ctx,
             VectorCompositeConstructionOperation op, IShaderValue result, IReadOnlyList<IShaderValue> components) =>
             Create(op, result, components);
+
+        public Instruction<IShaderValue, IShaderValue> StructureCompositeConstruction(Unit ctx,
+            StructureCompositeConstructionOperation op, IShaderValue result, IReadOnlyList<IShaderValue> members) =>
+            Create(op, result, members);
 
 
         public Instruction<IShaderValue, IShaderValue> VectorSwizzleSet(Unit ctx, IVectorSwizzleSetOperation op,

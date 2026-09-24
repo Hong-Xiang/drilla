@@ -63,6 +63,10 @@ public sealed class FunctionToOperationPass
         }
 
         var operation = function.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault()?.Operation;
+        if (operation is IReadOnlyStructuredBufferLengthOperation or IReadOnlyStructuredBufferLoadOperation &&
+            !ReadOnlyStructuredBufferFamily.IsCanonicalLength(operation) &&
+            !ReadOnlyStructuredBufferFamily.IsCanonicalLoad(operation))
+            throw new OperationFunctionNotMatchException(function, operation);
         if (operation is not null && IsResourceOperation(operation))
         {
             var expectedOperands = operation.Function.Parameters.Length + 1;
@@ -76,8 +80,9 @@ public sealed class FunctionToOperationPass
     }
 
     private static bool IsResourceOperation(IOperation operation) =>
-        operation is StructuredBufferLengthOperation or
-            StructuredBufferLoadOperation or
+        ReadOnlyStructuredBufferFamily.IsCanonicalLength(operation) ||
+        ReadOnlyStructuredBufferFamily.IsCanonicalLoad(operation) ||
+        operation is
             ReadWriteStructuredBufferLengthOperation or
             ReadWriteStructuredBufferLoadOperation or
             ReadWriteStructuredBufferStoreOperation or
@@ -85,8 +90,8 @@ public sealed class FunctionToOperationPass
 
     private static IEnumerable<IOperation> ResourceOperations()
     {
-        yield return StructuredBufferLengthOperation.Instance;
-        yield return StructuredBufferLoadOperation.Instance;
+        foreach (var operation in ReadOnlyStructuredBufferFamily.CanonicalOperations)
+            yield return operation;
         yield return ReadWriteStructuredBufferLengthOperation.Instance;
         yield return ReadWriteStructuredBufferLoadOperation.Instance;
         yield return ReadWriteStructuredBufferStoreOperation.Instance;
@@ -136,9 +141,10 @@ public sealed class FunctionToOperationPass
             if (f.Attributes.OfType<IOperationMethodAttribute>().SingleOrDefault() is { } opAttr)
                 switch (opAttr.Operation)
                 {
-                    case StructuredBufferLengthOperation length:
+                    case IReadOnlyStructuredBufferLengthOperation length:
                         {
-                            if (!IsExactResourceFunction(op, f, length) ||
+                            if (!ReadOnlyStructuredBufferFamily.IsCanonicalLength(length) ||
+                                !IsExactResourceFunction(op, f, length) ||
                                 arguments is not [var buffer] ||
                                 !buffer.Type.Equals(length.BufferPointerType) ||
                                 ctx.Result is not { } lengthResult ||
@@ -151,14 +157,15 @@ public sealed class FunctionToOperationPass
                                     ctx)
                             ];
                         }
-                    case StructuredBufferLoadOperation load:
+                    case IReadOnlyStructuredBufferLoadOperation load:
                         {
-                            if (!IsExactResourceFunction(op, f, load) ||
+                            if (!ReadOnlyStructuredBufferFamily.IsCanonicalLoad(load) ||
+                                !IsExactResourceFunction(op, f, load) ||
                                 arguments is not [var buffer, var index] ||
                                 !buffer.Type.Equals(load.BufferPointerType) ||
                                 !index.Type.Equals(ShaderType.U32) ||
                                 ctx.Result is not { } loadResult ||
-                                !loadResult.Type.Equals(ShaderType.F32))
+                                !loadResult.Type.Equals(load.ElementType))
                                 throw new OperationFunctionNotMatchException(f, load);
                             return
                             [
@@ -358,14 +365,14 @@ public sealed class FunctionToOperationPass
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> StructuredBufferLength(
             Instruction<IShaderValue, IShaderValue> ctx,
-            StructuredBufferLengthOperation op,
+            IReadOnlyStructuredBufferLengthOperation op,
             IShaderValue result,
             IShaderValue buffer) =>
             [ctx];
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> StructuredBufferLoad(
             Instruction<IShaderValue, IShaderValue> ctx,
-            StructuredBufferLoadOperation op,
+            IReadOnlyStructuredBufferLoadOperation op,
             IShaderValue result,
             IShaderValue buffer,
             IShaderValue index) =>
@@ -415,6 +422,10 @@ public sealed class FunctionToOperationPass
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> VectorCompositeConstruction(
             Instruction<IShaderValue, IShaderValue> ctx, VectorCompositeConstructionOperation op, IShaderValue result,
             IReadOnlyList<IShaderValue> components) => [ctx];
+
+        public IEnumerable<Instruction<IShaderValue, IShaderValue>> StructureCompositeConstruction(
+            Instruction<IShaderValue, IShaderValue> ctx, StructureCompositeConstructionOperation op, IShaderValue result,
+            IReadOnlyList<IShaderValue> members) => [ctx];
 
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> VectorSwizzleSet(

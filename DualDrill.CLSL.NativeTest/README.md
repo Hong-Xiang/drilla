@@ -6,7 +6,7 @@ fixture through the public CLSL WGSL compiler, renders it with native wgpu to a
 surface, window, or browser.
 
 It also renders input-selected scalar/vector early-return paths, creates a
-native shader module from the canonical Compiler.Server raymarch source, and
+native shader module from the canonical `DualDrill.Shaders` raymarch assembly, and
 verifies that invalid WGSL reports a managed diagnostic instead of throwing
 across the native callback boundary. The smoke coverage remains a narrow
 baseline; the separate oracle below checks canonical raymarch image parity.
@@ -37,6 +37,16 @@ enums to Alimer enums by semantic member name and rejects unknown values or
 flag bits. `GPUAdapterInfo` reports typed backend and adapter classifications;
 callers do not need to infer hardware from vendor or device strings.
 
+Synchronous compute pipelines support automatic or explicit layouts and the
+native compute-pass encode/bind/dispatch path. Pipeline constants, compute
+timestamp writes, and dynamic bind-group offsets are not supported. A compute
+pass must be ended before its parent command encoder is finished; disposing an
+unended pass abandons that encoder. GPU resource use and disposal must be
+sequential: do not dispose a device or participating resource concurrently
+with an operation using it. Concurrent coordination is outside this contract.
+Native `Finish` consumes the command encoder even when it reports a validation
+error; create a new encoder rather than retrying.
+
 Buffer mapping retains the explicit `IGPUDevice.Poll()` contract. Cancellation
 claims only a still-pending map, asks native wgpu to abort it with `Unmap`, and
 completes the managed task only after the terminal native callback. If success
@@ -66,8 +76,8 @@ target path.
 
 ## Raymarch image parity oracle
 
-The parity test reuses `RaymarchingPrimitiveShader` from the
-`DualDrill.Compiler.Server` assembly and compiles it through the public
+The parity test reuses `RaymarchingPrimitiveShader` from the non-Web
+`DualDrill.Shaders` assembly and compiles it through the public
 `CLSLCompiler` CIL → Slang → WGSL path. It independently compiles the pinned,
 pristine MIT-licensed Xds3zN GLSL reference in `Reference/` directly to WGSL
 with `slangc`. Both pipelines execute on the same adapter/device with an

@@ -1253,6 +1253,54 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void DirectTargetStructureCompositeRejectsMissingOrMismatchedFields()
+    {
+        var structure = new StructureType(new StructureDeclaration
+        {
+            Name = "Pair",
+            Members =
+            [
+                new MemberDeclaration("Left", ShaderType.I32, []),
+                new MemberDeclaration("Right", ShaderType.U32, [])
+            ]
+        });
+        var operation = new StructureCompositeConstructionOperation(structure);
+        var result = ShaderValue.Intermediate(structure);
+        var missing = Instruction<SlangOperand, IShaderValue>.Create(
+            operation, result, [new SlangValueOperand(Int(0))]);
+        Assert.Throws<ArgumentException>(() => new SlangBind(missing));
+        var wrongOrder = Instruction<SlangOperand, IShaderValue>.Create(
+            operation, result,
+            [
+                new SlangValueOperand(ShaderValue.Literal(new U32Literal(0u))),
+                new SlangValueOperand(Int(0))
+            ]);
+        Assert.Throws<ArgumentException>(() => new SlangBind(wrongOrder));
+
+        var entry = Label.Create("entry");
+        var declaration = Function("MalformedComposite", ShaderType.Unit);
+        var forged = Instruction<IShaderValue, IShaderValue>.Create(
+            operation, result, [Int(0), Int(0)]);
+        var body = CreateFunctionBody(
+            declaration,
+            RegionTree.Block(entry, [], Body(entry, [], [forged], Terms.ReturnVoid()), null));
+        Assert.Contains("invalid ordered structure composite",
+            Assert.Throws<NotSupportedException>(() => Lower(body)).Message);
+
+        var readonlyLocal = new VariableDeclaration(UniformAddressSpace.Instance, "readonly", ShaderType.I32, []);
+        Assert.Throws<ArgumentException>(() => new SlangAssign(
+            new SlangVariablePlace(readonlyLocal),
+            new SlangValueOperand(Int(0))));
+        var readonlyStore = Instruction<IShaderValue, IShaderValue>.Create(
+            new StoreOperation(), null, [readonlyLocal.Value, Int(0)]);
+        var readonlyBody = CreateFunctionBody(
+            declaration,
+            RegionTree.Block(entry, [], Body(entry, [], [readonlyStore], Terms.ReturnVoid()), null));
+        Assert.Contains("read-only typed store",
+            Assert.Throws<NotSupportedException>(() => Lower(readonlyBody)).Message);
+    }
+
+    [Fact]
     public async Task RepresentativeControlFixturesCompileAndCanBeCaptured()
     {
         var fixtures = new (string Name, System.Reflection.MethodInfo Method)[]
