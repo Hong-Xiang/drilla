@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using DualDrill.CLSL.Frontend;
+using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
@@ -188,7 +189,8 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
         var source = new ScoreShader();
         var compiler = new CLSLCompiler(new(CLSLCompileTarget.WGSL));
         var parsed = compiler.Parse(source);
-        AssertEntryGuardsDominateAccesses(parsed);
+        CaptureCompilerStages(parsed, artifactDirectory);
+        AssertEntryBoundsGuardAccesses(parsed);
         var reflection = new ShaderModuleReflection();
         var storage = reflection.GetStorageBufferBindings(parsed);
         Assert.Collection(storage,
@@ -259,27 +261,70 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
         }
     }
 
-    private static void AssertEntryGuardsDominateAccesses(
+    private static void CaptureCompilerStages(
+        ShaderModuleDeclaration<RawCilFunctionBody> parsed, string artifactDirectory)
+    {
+        File.WriteAllText(Path.Combine(artifactDirectory, "source-cil.txt"),
+            string.Join(Environment.NewLine, parsed.FunctionDefinitions.Values
+                .OrderBy(body => body.Declaration.Name)
+                .Select(body => body.Code.PrettyPrint())));
+        var labelled = CilBlockPartitionPass.Run(CilPreStackPass.Run(parsed));
+        var values = ShaderStackToValuePass.Run(
+            ShaderStackControlFlowPass.Run(CilToShaderStackPass.Run(labelled)));
+        File.WriteAllText(Path.Combine(artifactDirectory, "source-value.ir"),
+            string.Join(Environment.NewLine, values.FunctionDefinitions.Values
+                .OrderBy(body => body.Declaration.Name)
+                .Select(body => body.PrettyPrint())));
+    }
+
+    private static void AssertEntryBoundsGuardAccesses(
         ShaderModuleDeclaration<RawCilFunctionBody> parsed)
     {
         var labelled = CilBlockPartitionPass.Run(CilPreStackPass.Run(parsed));
         var body = Assert.Single(labelled.FunctionDefinitions.Values,
             candidate => candidate.Declaration.Name == nameof(ScoreShader.Run));
+
         var graph = ControlFlowGraph.Create(body.Blocks, static block => block.Terminator.ToSuccessor());
         var dominators = graph.ControlFlowAnalysis().DominatorTree;
         var guards = body.Blocks.Blocks.Where(block => block.Instructions.Any(instruction =>
             instruction.Node.Instruction.OpCode is var opcode &&
-            (opcode == OpCodes.Bge_Un || opcode == OpCodes.Bge_Un_S || opcode == OpCodes.Clt_Un))).ToArray();
+            (opcode == OpCodes.Bge_Un || opcode == OpCodes.Bge_Un_S || opcode == OpCodes.Clt_Un)))
+            .OrderBy(block => block.InstructionIndex).ToArray();
         Assert.Equal(2, guards.Length);
+        Assert.Contains(guards[0].Instructions, instruction =>
+            instruction.Node.Instruction.Operand is MethodInfo { Name: "get_Length" } method &&
+            method.DeclaringType == typeof(StructuredBuffer<int>));
+        Assert.Contains(guards[1].Instructions, instruction =>
+            instruction.Node.Instruction.Operand is MethodInfo { Name: "get_Length" } method &&
+            method.DeclaringType == typeof(RWStructuredBuffer<int>));
         var accesses = body.Blocks.Blocks.Where(block => block.Instructions.Any(instruction =>
             instruction.Node.Instruction.Operand is MethodInfo { Name: "get_Item" or "set_Item" })).ToArray();
         Assert.NotEmpty(accesses);
         foreach (var access in accesses)
-            foreach (var guard in guards)
-            {
-                Assert.NotEqual(guard.Label, access.Label);
-                Assert.Contains(guard.Label, dominators.Dominators(access.Label));
-            }
+        {
+            Assert.NotEqual(guards[0].Label, access.Label);
+            Assert.Contains(guards[0].Label, dominators.Dominators(access.Label));
+        }
+        if (accesses.All(access => dominators.Dominators(access.Label).Contains(guards[1].Label)))
+            return;
+
+        // Debug CIL merges false from the first guard with the second unsigned comparison.
+        var first = Assert.IsType<CilControlFlow.ConditionalBranch>(guards[0].Terminator);
+        Assert.True(first.Instruction.Instruction.OpCode is var opcode &&
+            (opcode == OpCodes.Bge_Un || opcode == OpCodes.Bge_Un_S));
+        Assert.Same(guards[1].Label, first.FallThroughTarget);
+        var bypass = body[first.BranchTarget];
+        Assert.Equal(OpCodes.Ldc_I4_0, Assert.Single(bypass.Instructions).Node.Instruction.OpCode);
+        Assert.Equal(OpCodes.Clt_Un, guards[1].Instructions[^2].Node.Instruction.OpCode);
+        var join = Assert.IsType<CilControlFlow.Branch>(guards[1].Terminator).Target;
+        Assert.Same(join, Assert.Single(bypass.Terminator.ToSuccessor().AllTargets()));
+        var merged = body[join];
+        Assert.Equal([OpCodes.Stloc_1, OpCodes.Ldloc_1, OpCodes.Brfalse_S],
+            merged.Instructions.Select(instruction => instruction.Node.Instruction.OpCode));
+        var gate = Assert.IsType<CilControlFlow.ConditionalBranch>(merged.Terminator);
+        Assert.IsType<CilControlFlow.Return>(body[gate.BranchTarget].Terminator);
+        foreach (var access in accesses)
+            Assert.Contains(gate.FallThroughTarget, dominators.Dominators(access.Label));
     }
 
     private async Task RunCompiledAsync<T>(
@@ -298,6 +343,7 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
 
         var compiler = new CLSLCompiler(new(CLSLCompileTarget.WGSL));
         var parsed = compiler.Parse(source);
+        CaptureCompilerStages(parsed, artifactDirectory);
         var reflection = new ShaderModuleReflection();
         var bindings = reflection.GetStorageBufferBindings(parsed);
         Assert.Equal(
