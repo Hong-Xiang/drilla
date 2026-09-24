@@ -308,6 +308,134 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void WritableIntegerStoreTargetProofRejectsMutatedIndexValueRootAndElement()
+    {
+        var shader = new UnsignedWritableStoreProofShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var normalized = CilModuleCompiler.Compile(raw).RunPass(new FunctionToOperationPass());
+        var facts = CLSLCooperationAnalysis.Analyze(normalized);
+        Assert.Empty(facts.EntryUniformQuadParticipations);
+        var pointer = normalized.RunPass(new StablePointerRegionParameterPass());
+        var target = new SlangTargetLowering().Lower(pointer);
+        CooperationAdmission.CheckTargetCorrespondence(pointer, target, facts);
+
+        var function = Assert.Single(pointer.FunctionDefinitions.Keys,
+            declaration => declaration.Name == nameof(UnsignedWritableStoreProofShader.Run));
+        var body = target.GetBody(function);
+        var origin = Assert.Single(body.Origins.Instructions, candidate =>
+            candidate.Source.Operation is ReadWriteStructuredBufferStoreOperation<UIntType<N32>>);
+        var assignment = Assert.IsType<SlangAssign>(origin.Target);
+        var indexed = Assert.IsType<SlangIndexedPlace>(assignment.Target);
+        var output = Assert.IsType<SlangVariablePlace>(indexed.Target);
+        var other = new VariableDeclaration(StorageAddressSpace.Instance, "Other",
+            output.Variable.Type, [new GroupAttribute(0), new BindingAttribute(7)]);
+        var replacement = ShaderValue.Intermediate(ShaderType.U32);
+        var changedRoot = new SlangAssign(
+            indexed with { Target = new SlangVariablePlace(other) }, assignment.Value);
+        var changedIndex = new SlangAssign(
+            indexed with { Index = new SlangValueOperand(replacement) }, assignment.Value);
+        var changedValue = new SlangAssign(
+            indexed, new SlangValueOperand(replacement));
+        var changedType = new SlangAssign(
+            indexed with { ElementType = ShaderType.I32 },
+            new SlangValueOperand(ShaderValue.Intermediate(ShaderType.I32)));
+
+        foreach (var mutation in new[] { changedRoot, changedIndex, changedValue, changedType })
+        {
+            var corruptedBody = Rewrite(body, statement =>
+                ReferenceEquals(statement, assignment) ? mutation : statement);
+            var corruptedTarget = new ShaderModuleDeclaration<SlangFunctionBody>(
+                target.Declarations, target.FunctionDefinitions.SetItem(function, corruptedBody));
+            Assert.Throws<NotSupportedException>(() =>
+                CooperationAdmission.CheckTargetCorrespondence(pointer, corruptedTarget, facts));
+        }
+
+        var missing = Rewrite(body, statement =>
+            ReferenceEquals(statement, assignment) ? null : statement);
+        var missingTarget = new ShaderModuleDeclaration<SlangFunctionBody>(
+            target.Declarations, target.FunctionDefinitions.SetItem(function, missing));
+        Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(pointer, missingTarget, facts));
+
+        var duplicate = new SlangAssign(indexed, assignment.Value);
+        var duplicateBody = Rewrite(body, static statement => statement,
+            statements => InsertAfter(statements, assignment, duplicate));
+        var duplicateTarget = new ShaderModuleDeclaration<SlangFunctionBody>(
+            target.Declarations, target.FunctionDefinitions.SetItem(function, duplicateBody));
+        var duplicateError = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(pointer, duplicateTarget, facts));
+        Assert.Contains("unaccounted indexed store", duplicateError.Message);
+
+        var stale = new SlangFunctionBody(body.Declaration, body.Body,
+            body.Origins with
+            {
+                Instructions =
+                [
+                    .. body.Origins.Instructions.Select(candidate =>
+                            ReferenceEquals(candidate.Target, assignment)
+                                ? candidate with { Source = candidate.Source with { Payload = new object() } }
+                                : candidate)
+                ]
+            });
+        var staleTarget = new ShaderModuleDeclaration<SlangFunctionBody>(
+            target.Declarations, target.FunctionDefinitions.SetItem(function, stale));
+        var staleError = Assert.Throws<NotSupportedException>(() =>
+            CooperationAdmission.CheckTargetCorrespondence(pointer, staleTarget, facts));
+        Assert.Contains("store origin changed", staleError.Message);
+
+        var dimensions = Assert.Single(body.Origins.Dimensions,
+            candidate => candidate.Source.Operation is
+                ReadWriteStructuredBufferLengthOperation<UIntType<N32>> &&
+                ReferenceEquals(candidate.Label, origin.Label));
+        var wrongCount = Rewrite(body, statement =>
+            ReferenceEquals(statement, dimensions.Dimensions)
+                ? dimensions.Dimensions with { Count = ShaderValue.Intermediate(ShaderType.U32) }
+                : statement);
+        var wrongStride = Rewrite(body, statement =>
+            ReferenceEquals(statement, dimensions.Dimensions)
+                ? dimensions.Dimensions with { Stride = dimensions.Dimensions.Count }
+                : statement);
+        foreach (var changed in new[] { wrongCount, wrongStride })
+        {
+            var changedTarget = new ShaderModuleDeclaration<SlangFunctionBody>(
+                target.Declarations, target.FunctionDefinitions.SetItem(function, changed));
+            Assert.Throws<NotSupportedException>(() =>
+                CooperationAdmission.CheckTargetCorrespondence(pointer, changedTarget, facts));
+        }
+    }
+
+    [Fact]
+    public void WritableIntegerLoadTargetProofRejectsMutatedOperandsAndPayload()
+    {
+        var shader = new UnsignedWritableLoadStoreProofShader();
+        var raw = new RuntimeReflectionParser(CompilationContext.Create()).ParseShaderModule(shader);
+        var source = CilModuleCompiler.Compile(raw)
+            .RunPass(new FunctionToOperationPass())
+            .RunPass(new StablePointerRegionParameterPass());
+        var target = new SlangTargetLowering().Lower(source);
+        var function = Assert.Single(source.FunctionDefinitions.Keys);
+        var body = target.GetBody(function);
+        var origin = Assert.Single(body.Origins.Instructions, candidate =>
+            candidate.Source.Operation is ReadWriteStructuredBufferLoadOperation<UIntType<N32>>);
+        var binding = Assert.IsType<SlangBind>(origin.Target);
+        var badPayload = new SlangBind(binding.Instruction with { Payload = new object() });
+        var badIndex = new SlangBind(binding.Instruction with
+        {
+            Operand1 = new SlangValueOperand(ShaderValue.Intermediate(ShaderType.U32))
+        });
+        foreach (var changed in new[] { badPayload, badIndex })
+        {
+            var changedBody = Rewrite(body, statement =>
+                ReferenceEquals(statement, binding) ? changed : statement);
+            var changedTarget = new ShaderModuleDeclaration<SlangFunctionBody>(
+                target.Declarations, target.FunctionDefinitions.SetItem(function, changedBody));
+            Assert.Throws<NotSupportedException>(() =>
+                CooperationAdmission.CheckTargetCorrespondence(
+                    source, changedTarget, CLSLCooperationFacts.Empty));
+        }
+    }
+
+    [Fact]
     public void PortableUniformHelperCarriesReadonlyLengthAcrossBlocks()
     {
         var shader = new ReadonlyBufferLengthAcrossBlocksShader();
@@ -398,11 +526,11 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             candidate.Name == nameof(TextureToWritableComputeShader.Run));
         var operations = Instructions(source.GetBody(function)).ToArray();
         var length = Assert.Single(operations, instruction =>
-            instruction.Operation is ReadWriteStructuredBufferLengthOperation);
+            instruction.Operation is ReadWriteStructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var sample = Assert.Single(operations, instruction =>
             instruction.Operation is TextureSampleLevelOperation);
         var store = Assert.Single(operations, instruction =>
-            instruction.Operation is ReadWriteStructuredBufferStoreOperation);
+            instruction.Operation is ReadWriteStructuredBufferStoreOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var effects = FunctionEffectAnalysis.Analyze(source)[function];
         var reflection = new ShaderModuleReflection();
         var storage = Assert.Single(reflection.GetStorageBufferBindings(raw));
@@ -417,11 +545,11 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         output.WriteLine("source oracle: one sampled RGBA value contributes only its x channel to Output[0]");
 
         Assert.DoesNotContain(effects.RequirementSites, site =>
-            site.Operation is ReadWriteStructuredBufferLengthOperation);
+            site.Operation is ReadWriteStructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var read = Assert.Single(effects.RequirementSites, site =>
             site.Operation is TextureSampleLevelOperation);
         var write = Assert.Single(effects.RequirementSites, site =>
-            site.Operation is ReadWriteStructuredBufferStoreOperation);
+            site.Operation is ReadWriteStructuredBufferStoreOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Equal(OperationRequirement.MemoryRead, read.Requirements);
         Assert.Equal(OperationRequirement.MemoryWrite, write.Requirements);
         Assert.Same(sample.Payload, read.Payload);
@@ -3719,6 +3847,35 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         [Fragment]
         [return: Location(0)]
         public static float Fragment() => DMath.dpdx(Input[0u]);
+    }
+
+    private sealed class UnsignedWritableLoadStoreProofShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static RWStructuredBuffer<uint> Output;
+#pragma warning restore CS0649
+
+        [Compute, WorkgroupSize(1, 1, 1)]
+        public static void Run()
+        {
+            Output[0u] = Output[0u];
+        }
+    }
+
+    private sealed class UnsignedWritableStoreProofShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static RWStructuredBuffer<uint> Output;
+#pragma warning restore CS0649
+
+        [Compute, WorkgroupSize(1, 1, 1)]
+        public static void Run()
+        {
+            if (Output.Length > 0u)
+                Output[Output.Length - 1u] = 0xffffffffu;
+        }
     }
 
     private sealed class IntegerResourceDerivativeShader : ISharpShader

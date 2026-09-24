@@ -67,10 +67,16 @@ public sealed class FunctionToOperationPass
             !ReadOnlyStructuredBufferFamily.IsCanonicalLength(operation) &&
             !ReadOnlyStructuredBufferFamily.IsCanonicalLoad(operation))
             throw new OperationFunctionNotMatchException(function, operation);
+        if (operation is IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or IReadWriteStructuredBufferStoreOperation &&
+            !ReadWriteStructuredBufferFamily.IsCanonicalLength(operation) &&
+            !ReadWriteStructuredBufferFamily.IsCanonicalLoad(operation) &&
+            !ReadWriteStructuredBufferFamily.IsCanonicalStore(operation))
+            throw new OperationFunctionNotMatchException(function, operation);
         if (operation is not null && IsResourceOperation(operation))
         {
             var expectedOperands = operation.Function.Parameters.Length + 1;
-            var expectsResult = operation is not ReadWriteStructuredBufferStoreOperation;
+            var expectsResult = operation is not IReadWriteStructuredBufferStoreOperation;
             if (!HasPhysicalOperandShape(inst, expectedOperands) ||
                 expectsResult != (inst.Result is not null))
                 throw new OperationFunctionNotMatchException(function, operation);
@@ -82,19 +88,17 @@ public sealed class FunctionToOperationPass
     private static bool IsResourceOperation(IOperation operation) =>
         ReadOnlyStructuredBufferFamily.IsCanonicalLength(operation) ||
         ReadOnlyStructuredBufferFamily.IsCanonicalLoad(operation) ||
-        operation is
-            ReadWriteStructuredBufferLengthOperation or
-            ReadWriteStructuredBufferLoadOperation or
-            ReadWriteStructuredBufferStoreOperation or
-            TextureSampleLevelOperation;
+        ReadWriteStructuredBufferFamily.IsCanonicalLength(operation) ||
+        ReadWriteStructuredBufferFamily.IsCanonicalLoad(operation) ||
+        ReadWriteStructuredBufferFamily.IsCanonicalStore(operation) ||
+        operation is TextureSampleLevelOperation;
 
     private static IEnumerable<IOperation> ResourceOperations()
     {
         foreach (var operation in ReadOnlyStructuredBufferFamily.CanonicalOperations)
             yield return operation;
-        yield return ReadWriteStructuredBufferLengthOperation.Instance;
-        yield return ReadWriteStructuredBufferLoadOperation.Instance;
-        yield return ReadWriteStructuredBufferStoreOperation.Instance;
+        foreach (var operation in ReadWriteStructuredBufferFamily.CanonicalOperations)
+            yield return operation;
         yield return TextureSampleLevelOperation.Instance;
     }
 
@@ -174,9 +178,10 @@ public sealed class FunctionToOperationPass
                                     ctx)
                             ];
                         }
-                    case ReadWriteStructuredBufferLengthOperation length:
+                    case IReadWriteStructuredBufferLengthOperation length:
                         {
-                            if (!IsExactResourceFunction(op, f, length) ||
+                            if (!ReadWriteStructuredBufferFamily.IsCanonicalLength(length) ||
+                                !IsExactResourceFunction(op, f, length) ||
                                 arguments is not [var buffer] ||
                                 !buffer.Type.Equals(length.BufferPointerType) ||
                                 ctx.Result is not { } lengthResult ||
@@ -189,14 +194,15 @@ public sealed class FunctionToOperationPass
                                     ctx)
                             ];
                         }
-                    case ReadWriteStructuredBufferLoadOperation load:
+                    case IReadWriteStructuredBufferLoadOperation load:
                         {
-                            if (!IsExactResourceFunction(op, f, load) ||
+                            if (!ReadWriteStructuredBufferFamily.IsCanonicalLoad(load) ||
+                                !IsExactResourceFunction(op, f, load) ||
                                 arguments is not [var buffer, var index] ||
                                 !buffer.Type.Equals(load.BufferPointerType) ||
                                 !index.Type.Equals(ShaderType.U32) ||
                                 ctx.Result is not { } loadResult ||
-                                !loadResult.Type.Equals(ShaderType.F32))
+                                !loadResult.Type.Equals(load.ElementType))
                                 throw new OperationFunctionNotMatchException(f, load);
                             return
                             [
@@ -205,13 +211,14 @@ public sealed class FunctionToOperationPass
                                     ctx)
                             ];
                         }
-                    case ReadWriteStructuredBufferStoreOperation store:
+                    case IReadWriteStructuredBufferStoreOperation store:
                         {
-                            if (!IsExactResourceFunction(op, f, store) ||
+                            if (!ReadWriteStructuredBufferFamily.IsCanonicalStore(store) ||
+                                !IsExactResourceFunction(op, f, store) ||
                                 arguments is not [var buffer, var index, var value] ||
                                 !buffer.Type.Equals(store.BufferPointerType) ||
                                 !index.Type.Equals(ShaderType.U32) ||
-                                !value.Type.Equals(ShaderType.F32) ||
+                                !value.Type.Equals(store.ElementType) ||
                                 ctx.Result is not null)
                                 throw new OperationFunctionNotMatchException(f, store);
                             return
@@ -380,14 +387,14 @@ public sealed class FunctionToOperationPass
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReadWriteStructuredBufferLength(
             Instruction<IShaderValue, IShaderValue> ctx,
-            ReadWriteStructuredBufferLengthOperation op,
+            IReadWriteStructuredBufferLengthOperation op,
             IShaderValue result,
             IShaderValue buffer) =>
             [ctx];
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReadWriteStructuredBufferLoad(
             Instruction<IShaderValue, IShaderValue> ctx,
-            ReadWriteStructuredBufferLoadOperation op,
+            IReadWriteStructuredBufferLoadOperation op,
             IShaderValue result,
             IShaderValue buffer,
             IShaderValue index) =>
@@ -395,7 +402,7 @@ public sealed class FunctionToOperationPass
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> ReadWriteStructuredBufferStore(
             Instruction<IShaderValue, IShaderValue> ctx,
-            ReadWriteStructuredBufferStoreOperation op,
+            IReadWriteStructuredBufferStoreOperation op,
             IShaderValue buffer,
             IShaderValue index,
             IShaderValue value) =>

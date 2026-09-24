@@ -74,6 +74,6 @@ The source or host is responsible for bounds beyond element zero. Host bindings
 must contain at least one complete four-byte scalar element, have byte length
 divisible by four, and satisfy device binding-offset limits. Read-only access does not prove
 non-aliasing. Writable storage is documented in
-[Writable f32 structured buffers](./writable-structured-buffer.md); dispatch,
+[Writable f32/i32/u32 structured buffers](./writable-structured-buffer.md); dispatch,
 synchronization, allocation, and runtime resource management remain outside
 these compiler slices.
