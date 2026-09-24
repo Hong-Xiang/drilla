@@ -1291,7 +1291,7 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
             ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(function, body));
     }
 
-    private static ShaderModuleDeclaration<RegionFunctionBody> WritableDimensionsCaptureModule()
+    internal static ShaderModuleDeclaration<RegionFunctionBody> WritableDimensionsCaptureModule()
     {
         var output = new VariableDeclaration(
             StorageAddressSpace.Instance,
@@ -1306,6 +1306,7 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
         var entry = DualDrill.CLSL.Language.Symbol.Label.Create("entry");
         var store = DualDrill.CLSL.Language.Symbol.Label.Create("store");
         var count = ShaderValue.Intermediate(ShaderType.U32);
+        var value = ShaderValue.Intermediate(ShaderType.F32);
         var entryBody = RegionFixture.Body(
             entry,
             [],
@@ -1314,7 +1315,12 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
                     ReadWriteStructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance,
                     count,
                     [output.Value],
-                    "rw-captured-length")
+                    "rw-captured-length"),
+                Instruction<IShaderValue, IShaderValue>.Create(
+                    new LiteralOperation(),
+                    value,
+                    [ShaderValue.Literal(new F32Literal(1.0f))],
+                    "rw-captured-value")
             ],
             Terminator.B.Br<RegionJump<IShaderValue>, IShaderValue>(new(store, [])));
         var storeBody = RegionFixture.Body(
@@ -1324,7 +1330,7 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
                 Instruction<IShaderValue, IShaderValue>.Create(
                     ReadWriteStructuredBufferStoreOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance,
                     null,
-                    [output.Value, count, ShaderValue.Literal(new F32Literal(1.0f))],
+                    [output.Value, count, value],
                     "rw-captured-store")
             ],
             Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>());

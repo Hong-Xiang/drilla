@@ -42,6 +42,11 @@ internal static class CooperationTargetVerifier
         ShaderModuleDeclaration<RegionFunctionBody> source,
         ShaderModuleDeclaration<SlangFunctionBody> target)
     {
+        if (!source.FunctionDefinitions.Keys
+            .ToHashSet(ReferenceEqualityComparer.Instance)
+            .SetEquals(target.FunctionDefinitions.Keys))
+            throw Error("Read-write storage target correspondence", "target function set changed");
+
         foreach (var (function, sourceBody) in source.FunctionDefinitions)
         {
             var sites = new List<(Label Label, int Ordinal, Instruction<IShaderValue, IShaderValue> Instruction)>();
@@ -60,13 +65,20 @@ internal static class CooperationTargetVerifier
                 }
                 return false;
             });
-            if (sites.Count == 0 && lengths.Count == 0 && loads.Count == 0)
-                continue;
-
             var context = $"Read-write storage target correspondence for function '{function.Name}'";
-            if (!target.FunctionDefinitions.TryGetValue(function, out var targetBody))
-                throw Error(context, "missing target function");
+            var targetBody = target.FunctionDefinitions[function];
             var tree = TargetTree.Create(targetBody.Body, context);
+            if (sites.Count == 0 && lengths.Count == 0 && loads.Count == 0)
+            {
+                if (tree.Statements.Any(IsReadWriteTargetEffect))
+                    throw Error(context, "target contains a read-write storage effect without a source operation");
+                continue;
+            }
+            VerifyAccountedCarrierWrites(
+                targetBody.Origins,
+                tree,
+                targetBody.Origins.ParameterSlots.Values.Concat(targetBody.Origins.Captures.Values),
+                context);
             var addressDefinitions = SourceDefinitions(sourceBody);
             var sourceValues = SourceValues(sourceBody, addressDefinitions);
             var carrierValues = CarrierValues(targetBody.Origins);
@@ -130,10 +142,32 @@ internal static class CooperationTargetVerifier
                 RequireSourceScope(tree, assignment, label, context);
             }
             if (tree.Statements.OfType<SlangAssign>()
-                .Any(assignment => assignment.Target is SlangIndexedPlace && !accounted.Contains(assignment)))
+                .Any(assignment => assignment.Target is SlangIndexedPlace indexed &&
+                    ReadWriteStructuredBufferFamily.IsCanonicalType(indexed.Target.Type) &&
+                    !accounted.Contains(assignment)))
                 throw Error(context, "target contains an unaccounted indexed store");
         }
     }
+
+    private static bool IsReadWriteTargetEffect(SlangStatement statement) =>
+        statement switch
+        {
+            SlangAssign { Target: SlangIndexedPlace indexed } =>
+                ReadWriteStructuredBufferFamily.IsCanonicalType(indexed.Target.Type),
+            SlangAssign assignment when RootVariable(assignment.Target) is { } variable =>
+                ReadWriteStructuredBufferFamily.IsCanonicalType(variable.Type),
+            SlangGetDimensions dimensions =>
+                ReadWriteStructuredBufferFamily.IsCanonicalType(dimensions.Buffer.Type),
+            SlangBind binding => binding.Instruction.Operation is
+                IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or
+                IReadWriteStructuredBufferStoreOperation,
+            SlangEffect effect => effect.Instruction.Operation is
+                IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or
+                IReadWriteStructuredBufferStoreOperation,
+            _ => false
+        };
 
     private static void VerifyDependencyFacts(
         ShaderModuleDeclaration<RegionFunctionBody> source,
@@ -1514,16 +1548,12 @@ internal static class CooperationTargetVerifier
         TargetTree tree,
         string context)
     {
-        var allowedWrites = ControlledWrites(origins);
-        var controlled = origins.ParameterSlots.Values
-            .Concat(origins.Captures.Values)
-            .Concat(origins.ControlToken is null ? [] : [origins.ControlToken])
-            .ToHashSet(ReferenceEqualityComparer.Instance);
-        foreach (var assignment in tree.Statements.OfType<SlangAssign>())
-            if (RootVariable(assignment.Target) is { } variable &&
-                controlled.Contains(variable) &&
-                !allowedWrites.Contains(assignment))
-                throw Error(context, "target contains an unaccounted control/capture/slot write");
+        VerifyAccountedCarrierWrites(
+            origins,
+            tree,
+            origins.ParameterSlots.Values.Concat(origins.Captures.Values)
+                .Concat(origins.ControlToken is null ? [] : [origins.ControlToken]),
+            context);
 
         var allowedTokenReads = origins.Gates.Select(static item => item.Comparison)
             .ToHashSet(ReferenceEqualityComparer.Instance);
@@ -1537,6 +1567,21 @@ internal static class CooperationTargetVerifier
                         ReferenceEquals(variable, token)) &&
                     !allowedTokenReads.Contains(bind))
                     throw Error(context, "target contains an unaccounted control-token read");
+    }
+
+    private static void VerifyAccountedCarrierWrites(
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        IEnumerable<VariableDeclaration> controlledVariables,
+        string context)
+    {
+        var allowedWrites = ControlledWrites(origins);
+        var controlled = controlledVariables.ToHashSet(ReferenceEqualityComparer.Instance);
+        foreach (var assignment in tree.Statements.OfType<SlangAssign>())
+            if (RootVariable(assignment.Target) is { } variable &&
+                controlled.Contains(variable) &&
+                !allowedWrites.Contains(assignment))
+                throw Error(context, "target contains an unaccounted control/capture/slot write");
     }
 
     private static VariableDeclaration? RootVariable(SlangPlace place) =>
