@@ -447,11 +447,14 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         {
             var sourcePosition = firstArgument + index;
             var sourceType = stack[sourcePosition];
-            if (parameter.Type is BoolType && sourceType is IntType<N32>)
+            if (parameter.Type is BoolType or UIntType<N32> &&
+                sourceType is IntType<N32>)
             {
+                var conversion = DeclarationConversion(parameter.Type, sourceType)
+                    ?? throw Invalid($"Cannot convert call parameter {parameter.Name}.");
                 Emit(
-                    ScalarConversionOperation<IntType<N32>, BoolType>.Instance,
-                    ShaderType.Bool,
+                    conversion,
+                    parameter.Type,
                     [Depth(stack.Count - 1 - sourcePosition)],
                     0);
                 argumentPositions[index] = stack.Count - 1;
@@ -481,20 +484,25 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
     {
         switch (operation)
         {
-            case StructuredBufferLengthOperation length:
+            case IReadOnlyStructuredBufferLengthOperation length
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLength(length):
                 if (!TopType().Equals(length.BufferPointerType))
                     throw Invalid($"{length.Name} operation stack: {TopType().Name}.");
                 Emit(length, ShaderType.U32, [Depth(0)], 1);
                 NormalizeTop(ShaderType.U32);
                 return;
-            case StructuredBufferLoadOperation load:
+            case IReadOnlyStructuredBufferLoadOperation load
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLoad(load):
                 if (stack.Count < 2 || !TypeAtDepth(1).Equals(load.BufferPointerType))
                     throw Invalid($"{load.Name} requires an exact storage-buffer receiver.");
                 ConvertTopForDeclaration(ShaderType.U32);
                 if (!TypeAtDepth(0).Equals(ShaderType.U32))
                     throw Invalid($"{load.Name} index must be u32.");
-                Emit(load, ShaderType.F32, [Depth(1), Depth(0)], 2);
+                Emit(load, load.ElementType, [Depth(1), Depth(0)], 2);
+                NormalizeTop(load.ElementType);
                 return;
+            case IReadOnlyStructuredBufferLengthOperation or IReadOnlyStructuredBufferLoadOperation:
+                throw Invalid("Noncanonical read-only storage-buffer operation.");
             case ReadWriteStructuredBufferLengthOperation rwLength:
                 if (!TopType().Equals(rwLength.BufferPointerType))
                     throw Invalid($"{rwLength.Name} operation stack: {TopType().Name}.");

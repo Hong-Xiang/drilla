@@ -347,12 +347,16 @@ internal static class OperationValidator
             case IBinaryStatementOperation statement:
                 Require(instruction, [statement.LeftType, statement.RightType], null, allowPointerAddressSpace: true);
                 return;
-            case StructuredBufferLengthOperation length:
+            case IReadOnlyStructuredBufferLengthOperation length
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLength(length):
                 Require(instruction, [length.BufferPointerType], ShaderType.U32);
                 return;
-            case StructuredBufferLoadOperation load:
-                Require(instruction, [load.BufferPointerType, ShaderType.U32], ShaderType.F32);
+            case IReadOnlyStructuredBufferLoadOperation load
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLoad(load):
+                Require(instruction, [load.BufferPointerType, ShaderType.U32], load.ElementType);
                 return;
+            case IReadOnlyStructuredBufferLengthOperation or IReadOnlyStructuredBufferLoadOperation:
+                throw Invalid(instruction);
             case ReadWriteStructuredBufferLengthOperation rwLength:
                 Require(instruction, [rwLength.BufferPointerType], ShaderType.U32);
                 return;

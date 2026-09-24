@@ -25,7 +25,7 @@ internal static class ShaderModuleMetadataValidator
         var addressSpaces = attributes.OfType<IAddressSpaceAttribute>().ToArray();
         var groups = attributes.OfType<GroupAttribute>().ToArray();
         var bindings = attributes.OfType<BindingAttribute>().ToArray();
-        if (type is ReadOnlyStructuredBufferType)
+        if (ReadOnlyStructuredBufferFamily.IsCanonicalType(type))
             return ValidateStorageAttributes(
                 declaration,
                 attributes,
@@ -316,7 +316,8 @@ internal static class ShaderModuleMetadataValidator
     }
 
     internal static bool IsResourceType(IShaderType type) =>
-        type is ReadOnlyStructuredBufferType or
+        ReadOnlyStructuredBufferFamily.IsCanonicalType(type) ||
+        type is
             ReadWriteStructuredBufferType or
             SampledTexture2DF32Type or
             SamplerStateType;
@@ -357,11 +358,14 @@ internal static class ShaderModuleMetadataValidator
         if (IsResourceTypeOrPointer(type))
             throw Invalid(
                 declaration,
-                type is ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType ||
+                ReadOnlyStructuredBufferFamily.IsCanonicalType(type) ||
+                type is ReadWriteStructuredBufferType ||
                 type is IPtrType
                 {
-                    BaseType: ReadOnlyStructuredBufferType or ReadWriteStructuredBufferType
+                    BaseType: { } buffer
                 }
+                && (ReadOnlyStructuredBufferFamily.IsCanonicalType(buffer) ||
+                    buffer is ReadWriteStructuredBufferType)
                     ? "structured buffers are valid only as static shader-module fields."
                     : "texture and sampler handles are valid only as static shader-module fields.");
     }

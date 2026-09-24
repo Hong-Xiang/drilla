@@ -207,7 +207,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             candidate.Name == nameof(ReadonlyBufferLoadDerivativeShader.Fragment));
         var load = Assert.Single(
             Instructions(source.GetBody(function)),
-            instruction => instruction.Operation is StructuredBufferLoadOperation);
+            instruction => instruction.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var summary = FunctionEffectAnalysis.Analyze(source)[function];
         var participation = Assert.Single(CLSLCooperationAnalysis.Analyze(source).EntryUniformQuadParticipations);
         var storage = Assert.Single(new ShaderModuleReflection().GetStorageBufferBindings(raw));
@@ -219,12 +219,12 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         output.WriteLine(wgsl);
 
         var site = Assert.Single(summary.RequirementSites, candidate =>
-            candidate.Operation is StructuredBufferLoadOperation);
+            candidate.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Equal(OperationRequirement.MemoryRead, site.Requirements);
         Assert.Same(load.Payload, site.Payload);
         Assert.Contains(participation.OriginalRelevantInstructions, fact =>
             ReferenceEquals(fact.Function, function) &&
-            fact.Operation is StructuredBufferLoadOperation &&
+            fact.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>> &&
             ReferenceEquals(fact.Result, load.Result) &&
             ReferenceEquals(fact.Payload, load.Payload));
         Assert.Equal(4ul, storage.MinimumBindingSize);
@@ -244,7 +244,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             candidate.Name == nameof(ReadonlyBufferLengthDerivativeShader.Fragment));
         var length = Assert.Single(
             Instructions(source.GetBody(function)),
-            instruction => instruction.Operation is StructuredBufferLengthOperation);
+            instruction => instruction.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var summary = FunctionEffectAnalysis.Analyze(source)[function];
         var participation = Assert.Single(CLSLCooperationAnalysis.Analyze(source).EntryUniformQuadParticipations);
         var slang = Emit(shader, CLSLCompileTarget.SLang);
@@ -254,10 +254,10 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         output.WriteLine(wgsl);
 
         Assert.DoesNotContain(summary.RequirementSites, site =>
-            site.Operation is StructuredBufferLengthOperation);
+            site.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>);
         Assert.Contains(participation.OriginalRelevantInstructions, fact =>
             ReferenceEquals(fact.Function, function) &&
-            fact.Operation is StructuredBufferLengthOperation &&
+            fact.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>> &&
             ReferenceEquals(fact.Result, length.Result) &&
             ReferenceEquals(fact.Payload, length.Payload) &&
             fact.Operands.AsEnumerable().SequenceEqual(
@@ -267,6 +267,44 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         Assert.Contains("ddx(", slang);
         Assert.Contains("arrayLength(", wgsl);
         Assert.Contains("dpdx(", wgsl);
+    }
+
+    [Fact]
+    public void IntegerLoadAndLengthRetainExactCooperationOrigins()
+    {
+        var prepared = PrepareTarget(new IntegerResourceDerivativeShader());
+        CooperationAdmission.CheckTargetCorrespondence(
+            prepared.Pointer, prepared.Target, prepared.Facts);
+        var body = prepared.Target.GetBody(prepared.Function);
+        var load = Assert.Single(body.Origins.Instructions, origin =>
+            origin.Source.Operation is StructuredBufferLoadOperation<IntType<N32>>);
+        var dimensions = Assert.Single(body.Origins.Dimensions);
+        Assert.IsType<StructuredBufferLengthOperation<IntType<N32>>>(dimensions.Source.Operation);
+        var effect = FunctionEffectAnalysis.Analyze(prepared.Pointer)[prepared.Function];
+        Assert.True(effect.IsComplete);
+        Assert.DoesNotContain(effect.RequirementSites, site =>
+            site.Operation is StructuredBufferLengthOperation<IntType<N32>>);
+        Assert.Equal(OperationRequirement.MemoryRead, Assert.Single(
+            effect.RequirementSites, site =>
+                site.Operation is StructuredBufferLoadOperation<IntType<N32>>).Requirements);
+
+        var changedLoad = Rewrite(body, statement =>
+            ReferenceEquals(statement, load.Target) && statement is SlangBind bind
+                ? new SlangBind(bind.Instruction with { Payload = new object() })
+                : statement);
+        var changedCount = Rewrite(body, statement =>
+            ReferenceEquals(statement, dimensions.Dimensions)
+                ? dimensions.Dimensions with { Count = ShaderValue.Intermediate(ShaderType.U32) }
+                : statement);
+        foreach (var changed in new[] { changedLoad, changedCount })
+        {
+            var corrupted = new ShaderModuleDeclaration<SlangFunctionBody>(
+                prepared.Target.Declarations,
+                prepared.Target.FunctionDefinitions.SetItem(prepared.Function, changed));
+            Assert.Throws<NotSupportedException>(() =>
+                CooperationAdmission.CheckTargetCorrespondence(
+                    prepared.Pointer, corrupted, prepared.Facts));
+        }
     }
 
     [Fact]
@@ -893,7 +931,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         var wrongBuffer = new VariableDeclaration(
             StorageAddressSpace.Instance,
             "wrong_buffer",
-            ReadOnlyStructuredBufferType.Instance,
+            ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance,
             [new GroupAttribute(0), new BindingAttribute(7)]);
         var cases = new (string Name, Func<SlangFunctionBody> Mutate, string Expected)[]
         {
@@ -1234,7 +1272,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         var capture = Assert.IsType<SlangAssign>(origin.Capture);
         var carrier = Assert.IsType<SlangVariablePlace>(capture.Target).Variable;
         var load = Assert.Single(body.Origins.Definitions, candidate =>
-            candidate.Source.Operation is StructuredBufferLoadOperation);
+            candidate.Source.Operation is StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>);
         var changedLoad = new SlangBind(
             load.Definition.Instruction with
             {
@@ -1349,7 +1387,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             .SelectMany(label => body[label].Body.Elements.Select(
                 (instruction, ordinal) => (Label: label, Ordinal: ordinal, Instruction: instruction)))
             .Where(site =>
-                site.Instruction.Operation is StructuredBufferLengthOperation or StructuredBufferLoadOperation)
+                site.Instruction.Operation is StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>> or StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>)
             .ToArray();
         Assert.Equal(2, sites.Length);
 
@@ -2763,7 +2801,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         var input = new VariableDeclaration(
             StorageAddressSpace.Instance,
             "Input",
-            ReadOnlyStructuredBufferType.Instance,
+            ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance,
             [new GroupAttribute(0), new BindingAttribute(0)]);
         var declaration = new FunctionDeclaration(
             "Fragment",
@@ -2781,7 +2819,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             [],
             [
                 Instruction<IShaderValue, IShaderValue>.Create(
-                    StructuredBufferLengthOperation.Instance,
+                    StructuredBufferLengthOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance,
                     count,
                     [input.Value],
                     "captured-length")
@@ -2792,7 +2830,7 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             [],
             [
                 Instruction<IShaderValue, IShaderValue>.Create(
-                    StructuredBufferLoadOperation.Instance,
+                    StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance,
                     value,
                     [input.Value, count],
                     "captured-length-load"),
@@ -3681,6 +3719,18 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
         [Fragment]
         [return: Location(0)]
         public static float Fragment() => DMath.dpdx(Input[0u]);
+    }
+
+    private sealed class IntegerResourceDerivativeShader : ISharpShader
+    {
+#pragma warning disable CS0649
+        [Group(0), Binding(0)]
+        private static StructuredBuffer<int> Input;
+#pragma warning restore CS0649
+
+        [Fragment]
+        [return: Location(0)]
+        public static float Fragment() => DMath.dpdx((float)Input[Input.Length - 1u]);
     }
 
     private sealed class ReadonlyBufferLengthDerivativeShader : ISharpShader

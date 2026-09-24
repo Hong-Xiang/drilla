@@ -357,8 +357,8 @@ internal static class CooperationAdmission
                 foreach (var (instruction, ordinal) in block.Body.Elements.Select(
                              static (instruction, ordinal) => (instruction, ordinal)))
                     if (instruction.Operation is
-                        StructuredBufferLengthOperation or
-                        StructuredBufferLoadOperation or
+                        IReadOnlyStructuredBufferLengthOperation or
+                        IReadOnlyStructuredBufferLoadOperation or
                         ReadWriteStructuredBufferLengthOperation or
                         ReadWriteStructuredBufferLoadOperation or
                         ReadWriteStructuredBufferStoreOperation or

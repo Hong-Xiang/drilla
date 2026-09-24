@@ -626,7 +626,7 @@ internal static class CooperationTargetVerifier
         {
             foreach (var (ordinal, instruction) in block.Body.Elements.Index())
                 if (instruction.Operation is
-                    StructuredBufferLengthOperation or
+                    IReadOnlyStructuredBufferLengthOperation or
                     ReadWriteStructuredBufferLengthOperation)
                     sourceDimensions.Add((label, ordinal));
             return false;
@@ -652,13 +652,16 @@ internal static class CooperationTargetVerifier
         string context,
         bool requireOperands = false)
     {
+        if (source.Operation is IReadOnlyStructuredBufferLoadOperation &&
+            !ReadOnlyStructuredBufferFamily.IsCanonicalLoad(source.Operation))
+            throw Error(context, "source contains a noncanonical read-only storage-buffer load");
         if (!ReferenceEquals(target.Operation, source.Operation) ||
             !ReferenceEquals(target.Result, source.Result) ||
             !ReferenceEquals(target.Payload, source.Payload) ||
             (requireOperands ||
              source.Operation is
                  CallOperation or
-                 StructuredBufferLoadOperation or
+                 IReadOnlyStructuredBufferLoadOperation or
                  ReadWriteStructuredBufferLoadOperation or
                  TextureSampleLevelOperation) &&
             !OperandsMatch(source.Operands, target.Operands, origins, addressDefinitions))
@@ -678,7 +681,10 @@ internal static class CooperationTargetVerifier
         string context)
     {
         var dimensions = origin.Dimensions;
-        if (source.Operation is not (StructuredBufferLengthOperation or
+        if (source.Operation is IReadOnlyStructuredBufferLengthOperation &&
+            !ReadOnlyStructuredBufferFamily.IsCanonicalLength(source.Operation))
+            throw Error(context, "source contains a noncanonical read-only storage-buffer Length");
+        if (source.Operation is not (IReadOnlyStructuredBufferLengthOperation or
             ReadWriteStructuredBufferLengthOperation) ||
             source.OperandCount != 1 ||
             source.Result is null ||
@@ -1515,7 +1521,7 @@ internal static class CooperationTargetVerifier
                     $"relevant operation fact for block '{fact.Label.Name}', instruction " +
                     $"{fact.InstructionOrdinal} does not match the analyzed source");
             if (sourceInstruction.Operation is
-                StructuredBufferLengthOperation or
+                IReadOnlyStructuredBufferLengthOperation or
                 ReadWriteStructuredBufferLengthOperation)
             {
                 var dimensions = Single(

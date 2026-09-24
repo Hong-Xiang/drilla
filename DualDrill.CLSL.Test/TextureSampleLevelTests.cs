@@ -492,8 +492,8 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
             SampledTexture2DF32Type.Instance.GetPtrType(HandleAddressSpace.Instance),
             SampledTexture2DF32Type.Instance.GetPtrType(HandleAddressSpace.Instance)
                 .GetPtrType(GenericAddressSpace.Instance),
-            ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
-            ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance)
+            ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance),
+            ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance)
                 .GetPtrType(GenericAddressSpace.Instance),
             ReadWriteStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
             ReadWriteStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance)
@@ -529,7 +529,7 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
             new VariableDeclaration(
                 UniformAddressSpace.Instance,
                 "WrappedReadOnly",
-                ReadOnlyStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
+                ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance),
                 [new UniformAttribute(), new GroupAttribute(1), new BindingAttribute(0)]),
             new VariableDeclaration(
                 UniformAddressSpace.Instance,
@@ -560,7 +560,7 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
             new(
                 StorageAddressSpace.Instance,
                 "Input",
-                ReadOnlyStructuredBufferType.Instance,
+                ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance,
                 [new GroupAttribute(1), new BindingAttribute(0)]),
             new(
                 StorageAddressSpace.Instance,
@@ -674,7 +674,7 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
                 Operand0 = ShaderValue.Intermediate(
                     SampledTexture2DF32Type.Instance.GetPtrType(StorageAddressSpace.Instance))
             },
-            valid with { Operand0 = ShaderValue.Intermediate(StructuredBufferLoadOperation.Instance.BufferPointerType) },
+            valid with { Operand0 = ShaderValue.Intermediate(StructuredBufferLoadOperation<FloatType<DualDrill.Common.Nat.N32>>.Instance.BufferPointerType) },
             valid with { Operand1 = texture },
             valid with { RestOperands = [ShaderValue.Intermediate(ShaderType.I32), lod] },
             valid with { RestOperands = [uv, ShaderValue.Intermediate(ShaderType.U32)] },

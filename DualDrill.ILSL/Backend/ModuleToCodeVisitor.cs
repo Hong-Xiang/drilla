@@ -76,7 +76,7 @@ public sealed class ModuleToCodeVisitor<TBody>(
                     throw new NotSupportedException($"VisitVariableDeclaration attribute {a} not support ");
             }
 
-        if (decl.Type is ReadOnlyStructuredBufferType)
+        if (ReadOnlyStructuredBufferFamily.IsCanonicalType(decl.Type))
             Writer.Write("var<storage, read> ");
         else if (decl.Type is ReadWriteStructuredBufferType)
             Writer.Write("var<storage, read_write> ");
