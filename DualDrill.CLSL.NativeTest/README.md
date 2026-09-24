@@ -6,7 +6,7 @@ fixture through the public CLSL WGSL compiler, renders it with native wgpu to a
 surface, window, or browser.
 
 It also renders input-selected scalar/vector early-return paths, creates a
-native shader module from the canonical Compiler.Server raymarch source, and
+native shader module from the canonical `DualDrill.Shaders` raymarch assembly, and
 verifies that invalid WGSL reports a managed diagnostic instead of throwing
 across the native callback boundary. The smoke coverage remains a narrow
 baseline; the separate oracle below checks canonical raymarch image parity.
@@ -66,8 +66,8 @@ target path.
 
 ## Raymarch image parity oracle
 
-The parity test reuses `RaymarchingPrimitiveShader` from the
-`DualDrill.Compiler.Server` assembly and compiles it through the public
+The parity test reuses `RaymarchingPrimitiveShader` from the non-Web
+`DualDrill.Shaders` assembly and compiles it through the public
 `CLSLCompiler` CIL → Slang → WGSL path. It independently compiles the pinned,
 pristine MIT-licensed Xds3zN GLSL reference in `Reference/` directly to WGSL
 with `slangc`. Both pipelines execute on the same adapter/device with an
