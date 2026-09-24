@@ -1021,6 +1021,10 @@ public sealed class WritableStructuredBufferTests(ITestOutputHelper output)
         Assert.Equal(ReadWriteStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance, indexed.Target.Type);
         Assert.Equal(ShaderType.U32, indexed.Index.Type);
         Assert.Equal(ShaderType.F32, indexed.Type);
+        Assert.Same(outputResource, Assert.IsType<SlangVariablePlace>(indexed.Target).Variable);
+        Assert.Same(index, Assert.IsType<SlangValueOperand>(indexed.Index).Value);
+        Assert.Same(value, Assert.IsType<SlangValueOperand>(assignment.Value).Value);
+        Assert.Null(origin.Source.Result);
         Assert.Equal(valid, origin.Source);
         Assert.Same(assignment, origin.Target);
         Assert.Matches(
