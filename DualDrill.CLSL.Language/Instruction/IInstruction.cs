@@ -175,6 +175,10 @@ public static class Instruction
             VectorCompositeConstructionOperation op, IShaderValue result, IReadOnlyList<IShaderValue> components) =>
             Create(op, result, components);
 
+        public Instruction<IShaderValue, IShaderValue> StructureCompositeConstruction(Unit ctx,
+            StructureCompositeConstructionOperation op, IShaderValue result, IReadOnlyList<IShaderValue> members) =>
+            Create(op, result, members);
+
 
         public Instruction<IShaderValue, IShaderValue> VectorSwizzleSet(Unit ctx, IVectorSwizzleSetOperation op,
             IShaderValue ptr, IShaderValue value) =>
