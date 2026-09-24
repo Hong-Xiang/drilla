@@ -81,6 +81,9 @@ public sealed record ShaderStackProvenance
 
     internal static ShaderStackProvenance SyntheticFallThrough(CilInstructionInfo anchor) =>
         new(anchor.Index, anchor.ByteOffset, anchor.NextByteOffset, 0, true);
+
+    internal static ShaderStackProvenance SyntheticInitialization(CilInstructionInfo anchor, int ordinal) =>
+        new(anchor.Index, anchor.ByteOffset, anchor.NextByteOffset, ordinal, true);
 }
 
 public sealed record ShaderStackTransition
@@ -362,15 +365,21 @@ internal static class OperationValidator
                 return;
             case IReadOnlyStructuredBufferLengthOperation or IReadOnlyStructuredBufferLoadOperation:
                 throw Invalid(instruction);
-            case ReadWriteStructuredBufferLengthOperation rwLength:
+            case IReadWriteStructuredBufferLengthOperation rwLength
+                when ReadWriteStructuredBufferFamily.IsCanonicalLength(rwLength):
                 Require(instruction, [rwLength.BufferPointerType], ShaderType.U32);
                 return;
-            case ReadWriteStructuredBufferLoadOperation rwLoad:
-                Require(instruction, [rwLoad.BufferPointerType, ShaderType.U32], ShaderType.F32);
+            case IReadWriteStructuredBufferLoadOperation rwLoad
+                when ReadWriteStructuredBufferFamily.IsCanonicalLoad(rwLoad):
+                Require(instruction, [rwLoad.BufferPointerType, ShaderType.U32], rwLoad.ElementType);
                 return;
-            case ReadWriteStructuredBufferStoreOperation store:
-                Require(instruction, [store.BufferPointerType, ShaderType.U32, ShaderType.F32], null);
+            case IReadWriteStructuredBufferStoreOperation store
+                when ReadWriteStructuredBufferFamily.IsCanonicalStore(store):
+                Require(instruction, [store.BufferPointerType, ShaderType.U32, store.ElementType], null);
                 return;
+            case IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or IReadWriteStructuredBufferStoreOperation:
+                throw Invalid(instruction);
             case TextureSampleLevelOperation sample:
                 Require(
                     instruction,
