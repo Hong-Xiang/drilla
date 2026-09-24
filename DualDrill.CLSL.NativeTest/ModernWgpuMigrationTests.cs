@@ -11,11 +11,12 @@ using DualDrill.ApiGen.DrillLang.Types;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
 using WebGPU;
+using Xunit.Abstractions;
 using static WebGPU.WebGPU;
 
 namespace DualDrill.CLSL.NativeTest;
 
-public sealed class ModernWgpuMigrationTests
+public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
 {
     private const string NativeSha256 = "ae8cfdc91d436978762d75c56452b287368aff569daad68693de399731487f0b";
     private const uint Width = 65;
@@ -35,6 +36,7 @@ public sealed class ModernWgpuMigrationTests
         Assert.Equal(GPUBackendType.Vulkan, info.BackendType);
         Assert.Equal(GPUAdapterType.DiscreteGPU, info.AdapterType);
         Assert.Contains("NVIDIA", info.Vendor, StringComparison.OrdinalIgnoreCase);
+        output.WriteLine($"Compute adapter: {info.BackendType}, {info.AdapterType}, {info.Vendor}, {info.Device}");
 
         using var shader = context.Device.CreateShaderModule(new()
         {
@@ -340,6 +342,12 @@ public sealed class ModernWgpuMigrationTests
         var output = new StringBuilder();
         new WebGPUNativeBackendCodeGen(AlimerWebGPUApi.Create()).EmitAll(output);
         Assert.DoesNotContain("wgpuComputePassEncoder", output.ToString());
+
+        using var descriptorOutput = new StringWriter();
+        new GPUStructCodeGen(AlimerWebGPUApi.Create()).EmitStruct(
+            descriptorOutput,
+            new StructDeclaration("GPUComputePipelineDescriptor", []));
+        Assert.Contains("public IGPUPipelineLayout? Layout { get; set; }", descriptorOutput.ToString());
     }
 
     [Fact]
@@ -351,6 +359,22 @@ public sealed class ModernWgpuMigrationTests
 
         Assert.Throws<ObjectDisposedException>(() => context.Device.CreateComputePipeline(new()));
         Assert.Throws<ObjectDisposedException>(() => encoder.BeginComputePass(new()));
+    }
+
+    [Fact]
+    public async Task Failed_native_finish_consumes_compute_command_encoder()
+    {
+        using var context = await NativeContext.CreateAsync();
+        using var encoder = context.Device.CreateCommandEncoder(new());
+        using (var pass = encoder.BeginComputePass(new()))
+        {
+            pass.End();
+        }
+
+        Assert.IsType<GPUCommandEncoder<WebGPUNETBackend>>(encoder).PushDebugGroup("unbalanced");
+        Assert.ThrowsAny<GraphicsApiException>(() => encoder.Finish(new()));
+        Assert.Throws<InvalidOperationException>(() => encoder.Finish(new()));
+        Assert.Throws<InvalidOperationException>(() => encoder.BeginComputePass(new()));
     }
 
     private static T Foreign<T>() where T : class =>
@@ -726,6 +750,44 @@ public sealed class ModernWgpuMigrationTests
         Assert.Equal([0, 0, 255, 255], red);
         Assert.Equal([0, 255, 0, 255], green);
         Assert.NotEqual(red, green);
+
+        using var autoPipeline = context.Device.CreateRenderPipeline(new()
+        {
+            Vertex = new() { Module = shader, EntryPoint = "vs" },
+            Fragment = new()
+            {
+                Module = shader,
+                EntryPoint = "fs",
+                Targets = new GPUColorTargetState[]
+                {
+                    new() { Format = GPUTextureFormat.BGRA8Unorm, WriteMask = GPUColorWriteMask.All },
+                },
+            },
+        });
+        using var autoLayout = autoPipeline.GetBindGroupLayout(0);
+        using var autoBindGroup = context.Device.CreateBindGroup(new()
+        {
+            Layout = autoLayout,
+            Entries = new GPUBindGroupEntry[]
+            {
+                new() { Binding = 0, Buffer = uniform },
+            },
+        });
+        Assert.Equal([0, 0, 255, 255], await RenderFrameAsync(
+            context.Device, autoPipeline, autoBindGroup, uniform, texture, readback,
+            new Vector4(1, 0, 0, 1)));
+
+        using var other = await NativeContext.CreateAsync();
+        Assert.Throws<ArgumentException>(() => other.Device.CreateBindGroup(new()
+        {
+            Layout = autoLayout,
+        }));
+        var disposedAutoLayout = autoPipeline.GetBindGroupLayout(0);
+        disposedAutoLayout.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => context.Device.CreateBindGroup(new()
+        {
+            Layout = disposedAutoLayout,
+        }));
     }
 
     [Fact]

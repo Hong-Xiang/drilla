@@ -44,6 +44,8 @@ pass must be ended before its parent command encoder is finished; disposing an
 unended pass abandons that encoder. GPU resource use and disposal must be
 sequential: do not dispose a device or participating resource concurrently
 with an operation using it. Concurrent coordination is outside this contract.
+Native `Finish` consumes the command encoder even when it reports a validation
+error; create a new encoder rather than retrying.
 
 Buffer mapping retains the explicit `IGPUDevice.Poll()` contract. Cancellation
 claims only a still-pending map, asks native wgpu to abort it with `Unmap`, and
