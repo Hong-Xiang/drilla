@@ -45,7 +45,9 @@ public sealed class SlangTargetLowering
         if (missing.Length > 0)
             throw new NotSupportedException(
                 $"Slang target lowering requires bodies for functions: {string.Join(", ", missing)}.");
-        return new ShaderModuleDeclaration<SlangFunctionBody>(module.Declarations, definitions);
+        var target = new ShaderModuleDeclaration<SlangFunctionBody>(module.Declarations, definitions);
+        CooperationTargetVerifier.VerifyReadWriteResources(module, target);
+        return target;
     }
 
     private static void ValidateTextureSampleOperations(ShaderModuleDeclaration<RegionFunctionBody> module)
@@ -654,7 +656,7 @@ public sealed class SlangTargetLowering
                 case IReadOnlyStructuredBufferLoadOperation load:
                     ValidateStructuredBufferLoad(instruction, load);
                     break;
-                case ReadWriteStructuredBufferLengthOperation rwLength:
+                case IReadWriteStructuredBufferLengthOperation rwLength:
                     ValidateReadWriteStructuredBufferLength(instruction, rwLength);
                     var rwCount = instruction.Result!;
                     var rwStride = ShaderValue.Intermediate(ShaderType.U32);
@@ -666,16 +668,16 @@ public sealed class SlangTargetLowering
                     var rwCapture = CaptureDefinition(rwCount, statements);
                     dimensionsOrigins.Add(new(label, ordinal, instruction, rwDimensions, rwCapture));
                     return;
-                case ReadWriteStructuredBufferLoadOperation rwLoad:
+                case IReadWriteStructuredBufferLoadOperation rwLoad:
                     ValidateReadWriteStructuredBufferLoad(instruction, rwLoad);
                     break;
-                case ReadWriteStructuredBufferStoreOperation rwStore:
+                case IReadWriteStructuredBufferStoreOperation rwStore:
                     ValidateReadWriteStructuredBufferStore(instruction, rwStore);
                     var indexedStore = new SlangAssign(
                         new SlangIndexedPlace(
                             Place(instruction.Operand0, instruction.Operation.Name),
                             Operand(instruction.Operand1),
-                            ShaderType.F32),
+                            rwStore.ElementType),
                         Operand(instruction[2]));
                     statements.Add(indexedStore);
                     instructionOrigins.Add(new(label, ordinal, instruction, indexedStore));
@@ -820,7 +822,7 @@ public sealed class SlangTargetLowering
                 or CallOperation
                 or LiteralOperation
                 or IReadOnlyStructuredBufferLoadOperation
-                or ReadWriteStructuredBufferLoadOperation
+                or IReadWriteStructuredBufferLoadOperation
                 or TextureSampleLevelOperation
                 or IUnaryExpressionOperation
                 or IBinaryExpressionOperation
@@ -857,9 +859,10 @@ public sealed class SlangTargetLowering
 
         private void ValidateReadWriteStructuredBufferLength(
             Instruction<IShaderValue, IShaderValue> instruction,
-            ReadWriteStructuredBufferLengthOperation operation)
+            IReadWriteStructuredBufferLengthOperation operation)
         {
-            if (!HasPhysicalOperandShape(instruction, 1) ||
+            if (!ReadWriteStructuredBufferFamily.IsCanonicalLength(operation) ||
+                !HasPhysicalOperandShape(instruction, 1) ||
                 instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
                 instruction.Result is null ||
@@ -869,26 +872,28 @@ public sealed class SlangTargetLowering
 
         private void ValidateReadWriteStructuredBufferLoad(
             Instruction<IShaderValue, IShaderValue> instruction,
-            ReadWriteStructuredBufferLoadOperation operation)
+            IReadWriteStructuredBufferLoadOperation operation)
         {
-            if (!HasPhysicalOperandShape(instruction, 2) ||
+            if (!ReadWriteStructuredBufferFamily.IsCanonicalLoad(operation) ||
+                !HasPhysicalOperandShape(instruction, 2) ||
                 instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
                 !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
                 instruction.Result is null ||
-                !instruction.Result.Type.Equals(ShaderType.F32))
+                !instruction.Result.Type.Equals(operation.ElementType))
                 throw UnsupportedOperation(instruction, "invalid read-write storage-buffer load signature");
         }
 
         private void ValidateReadWriteStructuredBufferStore(
             Instruction<IShaderValue, IShaderValue> instruction,
-            ReadWriteStructuredBufferStoreOperation operation)
+            IReadWriteStructuredBufferStoreOperation operation)
         {
-            if (!HasPhysicalOperandShape(instruction, 3) ||
+            if (!ReadWriteStructuredBufferFamily.IsCanonicalStore(operation) ||
+                !HasPhysicalOperandShape(instruction, 3) ||
                 instruction.Operand0!.Type is not IPtrType ||
                 !instruction.Operand0.Type.Equals(operation.BufferPointerType) ||
                 !instruction.Operand1!.Type.Equals(ShaderType.U32) ||
-                !instruction.RestOperands[0].Type.Equals(ShaderType.F32) ||
+                !instruction.RestOperands[0].Type.Equals(operation.ElementType) ||
                 instruction.Result is not null)
                 throw UnsupportedOperation(instruction, "invalid read-write storage-buffer store signature");
         }

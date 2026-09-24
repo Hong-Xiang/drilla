@@ -495,8 +495,8 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
             ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance),
             ReadOnlyStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance)
                 .GetPtrType(GenericAddressSpace.Instance),
-            ReadWriteStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
-            ReadWriteStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance)
+            ReadWriteStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance),
+            ReadWriteStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance)
                 .GetPtrType(GenericAddressSpace.Instance)
         };
 
@@ -534,7 +534,7 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
             new VariableDeclaration(
                 UniformAddressSpace.Instance,
                 "WrappedWritable",
-                ReadWriteStructuredBufferType.Instance.GetPtrType(StorageAddressSpace.Instance),
+                ReadWriteStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance.GetPtrType(StorageAddressSpace.Instance),
                 [new UniformAttribute(), new GroupAttribute(1), new BindingAttribute(1)])
         };
 
@@ -565,7 +565,7 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
             new(
                 StorageAddressSpace.Instance,
                 "Output",
-                ReadWriteStructuredBufferType.Instance,
+                ReadWriteStructuredBufferType<FloatType<DualDrill.Common.Nat.N32>>.Instance,
                 [new GroupAttribute(1), new BindingAttribute(1)])
         };
         var resourceModule = Module(resources);

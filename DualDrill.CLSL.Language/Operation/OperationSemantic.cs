@@ -20,11 +20,11 @@ public interface IOperationSemantic<in TX, in TV, in TR, out TO>
     TO StructuredBufferLength(TX ctx, IReadOnlyStructuredBufferLengthOperation op, TR result, TV buffer);
     TO StructuredBufferLoad(TX ctx, IReadOnlyStructuredBufferLoadOperation op, TR result, TV buffer, TV index);
     TO ReadWriteStructuredBufferLength(
-        TX ctx, ReadWriteStructuredBufferLengthOperation op, TR result, TV buffer);
+        TX ctx, IReadWriteStructuredBufferLengthOperation op, TR result, TV buffer);
     TO ReadWriteStructuredBufferLoad(
-        TX ctx, ReadWriteStructuredBufferLoadOperation op, TR result, TV buffer, TV index);
+        TX ctx, IReadWriteStructuredBufferLoadOperation op, TR result, TV buffer, TV index);
     TO ReadWriteStructuredBufferStore(
-        TX ctx, ReadWriteStructuredBufferStoreOperation op, TV buffer, TV index, TV value);
+        TX ctx, IReadWriteStructuredBufferStoreOperation op, TV buffer, TV index, TV value);
     TO TextureSampleLevel(
         TX ctx,
         TextureSampleLevelOperation op,

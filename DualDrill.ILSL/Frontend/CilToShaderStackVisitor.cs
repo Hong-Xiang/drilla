@@ -570,36 +570,49 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
                 return;
             case IReadOnlyStructuredBufferLengthOperation or IReadOnlyStructuredBufferLoadOperation:
                 throw Invalid("Noncanonical read-only storage-buffer operation.");
-            case ReadWriteStructuredBufferLengthOperation rwLength:
+            case IReadWriteStructuredBufferLengthOperation rwLength
+                when ReadWriteStructuredBufferFamily.IsCanonicalLength(rwLength):
                 if (!TopType().Equals(rwLength.BufferPointerType))
                     throw Invalid($"{rwLength.Name} operation stack: {TopType().Name}.");
                 Emit(rwLength, ShaderType.U32, [Depth(0)], 1);
                 NormalizeTop(ShaderType.U32);
                 return;
-            case ReadWriteStructuredBufferLoadOperation rwLoad:
+            case IReadWriteStructuredBufferLoadOperation rwLoad
+                when ReadWriteStructuredBufferFamily.IsCanonicalLoad(rwLoad):
                 if (stack.Count < 2 || !TypeAtDepth(1).Equals(rwLoad.BufferPointerType))
                     throw Invalid($"{rwLoad.Name} requires an exact storage-buffer receiver.");
                 ConvertTopForDeclaration(ShaderType.U32);
                 if (!TypeAtDepth(0).Equals(ShaderType.U32))
                     throw Invalid($"{rwLoad.Name} index must be u32.");
-                Emit(rwLoad, ShaderType.F32, [Depth(1), Depth(0)], 2);
+                Emit(rwLoad, rwLoad.ElementType, [Depth(1), Depth(0)], 2);
+                NormalizeTop(rwLoad.ElementType);
                 return;
-            case ReadWriteStructuredBufferStoreOperation store:
+            case IReadWriteStructuredBufferStoreOperation store
+                when ReadWriteStructuredBufferFamily.IsCanonicalStore(store):
                 if (stack.Count < 3 ||
-                    !TypeAtDepth(2).Equals(store.BufferPointerType) ||
-                    !TypeAtDepth(0).Equals(ShaderType.F32))
-                    throw Invalid($"{store.Name} requires an exact writable storage-buffer receiver and f32 value.");
-                var converted = ConvertAtDepthForDeclaration(ShaderType.U32, 1);
-                if (!TypeAtDepth(0).Equals(ShaderType.U32))
-                    throw Invalid($"{store.Name} index must be u32.");
+                    !TypeAtDepth(2).Equals(store.BufferPointerType))
+                    throw Invalid($"{store.Name} requires an exact writable storage-buffer receiver.");
+                var receiverPosition = stack.Count - 3;
+                var indexPosition = stack.Count - 2;
+                var valuePosition = stack.Count - 1;
+                if (ConvertAtDepthForDeclaration(ShaderType.U32, 1))
+                    indexPosition = stack.Count - 1;
+                if (ConvertAtDepthForDeclaration(store.ElementType, stack.Count - 1 - valuePosition))
+                    valuePosition = stack.Count - 1;
+                var indexDepth = stack.Count - 1 - indexPosition;
+                var valueDepth = stack.Count - 1 - valuePosition;
+                if (!TypeAtDepth(indexDepth).Equals(ShaderType.U32) ||
+                    !TypeAtDepth(valueDepth).Equals(store.ElementType))
+                    throw Invalid($"{store.Name} requires a u32 index and {store.ElementType.Name} value.");
                 Emit(
                     store,
                     null,
-                    converted
-                        ? [Depth(3), Depth(0), Depth(1)]
-                        : [Depth(2), Depth(1), Depth(0)],
-                    converted ? 4 : 3);
+                    [Depth(stack.Count - 1 - receiverPosition), Depth(indexDepth), Depth(valueDepth)],
+                    stack.Count - receiverPosition);
                 return;
+            case IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or IReadWriteStructuredBufferStoreOperation:
+                throw Invalid("Noncanonical read-write storage-buffer operation.");
             case TextureSampleLevelOperation sample:
                 if (stack.Count < 4 ||
                     !TypeAtDepth(3).Equals(sample.TexturePointerType) ||

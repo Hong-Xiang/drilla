@@ -33,7 +33,7 @@ internal static class ShaderModuleMetadataValidator
                 groups,
                 bindings,
                 writable: false);
-        if (type is ReadWriteStructuredBufferType)
+        if (ReadWriteStructuredBufferFamily.IsCanonicalType(type))
             return ValidateStorageAttributes(
                 declaration,
                 attributes,
@@ -317,8 +317,8 @@ internal static class ShaderModuleMetadataValidator
 
     internal static bool IsResourceType(IShaderType type) =>
         ReadOnlyStructuredBufferFamily.IsCanonicalType(type) ||
+        ReadWriteStructuredBufferFamily.IsCanonicalType(type) ||
         type is
-            ReadWriteStructuredBufferType or
             SampledTexture2DF32Type or
             SamplerStateType;
 
@@ -350,7 +350,7 @@ internal static class ShaderModuleMetadataValidator
             declaration.Name,
             declaration.Attributes.OfType<GroupAttribute>().Single().Binding,
             declaration.Attributes.OfType<BindingAttribute>().Single().Binding,
-            declaration.Type is ReadWriteStructuredBufferType);
+            ReadWriteStructuredBufferFamily.IsCanonicalType(declaration.Type));
     }
 
     private static void RejectResourceValueType(string declaration, IShaderType type)
@@ -359,13 +359,13 @@ internal static class ShaderModuleMetadataValidator
             throw Invalid(
                 declaration,
                 ReadOnlyStructuredBufferFamily.IsCanonicalType(type) ||
-                type is ReadWriteStructuredBufferType ||
+                ReadWriteStructuredBufferFamily.IsCanonicalType(type) ||
                 type is IPtrType
                 {
                     BaseType: { } buffer
                 }
                 && (ReadOnlyStructuredBufferFamily.IsCanonicalType(buffer) ||
-                    buffer is ReadWriteStructuredBufferType)
+                    ReadWriteStructuredBufferFamily.IsCanonicalType(buffer))
                     ? "structured buffers are valid only as static shader-module fields."
                     : "texture and sampler handles are valid only as static shader-module fields.");
     }
