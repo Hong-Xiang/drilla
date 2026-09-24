@@ -177,10 +177,18 @@ independently of canonical `neg`. The emitter only spells the accepted target AS
 `dup` duplicates the already evaluated top stack value without re-evaluating
 its producer or creating a value-IR instruction. It preserves the exact
 canonical stack type and pointer identity; object-reference categories and an
-empty stack are rejected. Exception flow, `initobj`, indirect loads/stores, and
-`ldnull` remain unsupported. `initobj` is rejected at shared instruction
-dispatch because the value frontend does not yet emit its required
-zero-initialization store;
+empty stack are rejected. `initobj T` consumes a pointer to an original
+writable function-local variable of exactly type `T` while preserving any
+stack prefix. It explicitly constructs zero for bool/i32/u32/f32, their mapped
+2–4-component vectors, and nonempty sequential plain structs recursively
+containing those types, then issues one typed store to the original local.
+Plain structs require exact ordered CLR-field/shader-member correspondence,
+no properties, readonly fields, custom packing or size, or user-defined
+instance constructors. Projected, parameter, and carried-pointer destinations
+remain unsupported; the local-root proof happens after value lifting, before
+promotion. Field loads from a struct value are typed member expressions, so
+ordinary `default(S)` accumulator reads can use this path without indirect
+loads. Exception flow, indirect loads/stores, and `ldnull` remain unsupported;
 ordinary `pop` remains supported. Dead non-control instructions in one collected
 function remain absent from that function's Pre/CFG. A separately collected dead
 callee is nevertheless compiled by the module pipeline and may fail on its own

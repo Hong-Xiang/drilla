@@ -684,10 +684,22 @@ public sealed class SlangTargetLowering
                     ValidateTextureSampleLevel(source.Declaration, instruction, sample);
                     break;
                 case AddressOfMemberOperation member:
+                    if (!HasPhysicalOperandShape(instruction, 1) ||
+                        instruction.Operand0!.Type is not IPtrType { BaseType: StructureType owner } ||
+                        !owner.Declaration.Members.Contains(member.Member))
+                        throw UnsupportedOperation(instruction, "field does not belong to its structure");
                     DefineAlias(instruction, new SlangMemberPlace(
                         Place(instruction.Operand0, instruction.Operation.Name),
                         member.Member));
                     return;
+                case StructureMemberGetOperation get:
+                    if (!HasPhysicalOperandShape(instruction, 1) ||
+                        !get.Owner.Declaration.Members.Contains(get.Member) ||
+                        !instruction.Operand0!.Type.Equals(get.Owner) ||
+                        instruction.Result is null ||
+                        !instruction.Result.Type.Equals(get.Member.Type))
+                        throw UnsupportedOperation(instruction, "invalid typed structure member read");
+                    break;
                 case AddressOfVecComponentOperation component:
                     DefineAlias(instruction, new SlangComponentPlace(
                         Place(instruction.Operand0, instruction.Operation.Name),
@@ -712,6 +724,12 @@ public sealed class SlangTargetLowering
                         instruction,
                         "whole structured-buffer or texture/sampler handle stores are not supported");
                 case StoreOperation:
+                    if (!HasPhysicalOperandShape(instruction, 2) ||
+                        instruction.Result is not null ||
+                        instruction.Operand0!.Type is not IPtrType destination ||
+                        !destination.BaseType.Equals(instruction.Operand1!.Type) ||
+                        destination.AddressSpace.Kind is AddressSpaceKind.Uniform or AddressSpaceKind.Input or AddressSpaceKind.Handle)
+                        throw UnsupportedOperation(instruction, "invalid or read-only typed store");
                     var store = new SlangAssign(
                         Place(instruction.Operand0, instruction.Operation.Name),
                         Operand(instruction.Operand1));
@@ -740,6 +758,14 @@ public sealed class SlangTargetLowering
                     return;
                 case ZeroConstructorOperation zero when zero.ResultType is not IVecType:
                     throw UnsupportedOperation(instruction, $"zero construction of {zero.ResultType.Name}");
+                case StructureCompositeConstructionOperation composite:
+                    var members = composite.ResultType.Declaration.Members;
+                    if (!HasPhysicalOperandShape(instruction, members.Length) ||
+                        !composite.Matches(
+                            instruction.Result?.Type,
+                            instruction.Operands.Select(operand => operand.Type)))
+                        throw UnsupportedOperation(instruction, "invalid ordered structure composite");
+                    break;
             }
 
             if (!IsSupportedExpression(instruction.Operation))
@@ -790,6 +816,7 @@ public sealed class SlangTargetLowering
                 or IUnaryExpressionOperation
                 or IBinaryExpressionOperation
                 or VectorCompositeConstructionOperation
+                or StructureCompositeConstructionOperation
                 or ZeroConstructorOperation;
 
         private void ValidateStructuredBufferLength(

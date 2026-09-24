@@ -334,6 +334,11 @@ internal static class OperationValidator
                     !result.AddressSpace.Equals(owner.AddressSpace))
                     throw Invalid(instruction);
                 return;
+            case StructureMemberGetOperation get:
+                if (!get.Owner.Declaration.Members.Contains(get.Member))
+                    throw Invalid(instruction);
+                Require(instruction, [get.Owner], get.Member.Type);
+                return;
             case IUnaryExpressionOperation unary:
                 Require(
                     instruction,
@@ -379,6 +384,10 @@ internal static class OperationValidator
                 return;
             case VectorCompositeConstructionOperation vector:
                 Require(instruction, vector.ParameterTypes, vector.ResultType);
+                return;
+            case StructureCompositeConstructionOperation composite:
+                if (!composite.Matches(instruction.Result, instruction.Operands.Select(operand => operand.Type)))
+                    throw Invalid(instruction);
                 return;
             case ZeroConstructorOperation zero:
                 Require(instruction, [], zero.ResultType);

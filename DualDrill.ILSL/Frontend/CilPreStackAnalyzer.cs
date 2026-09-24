@@ -6,6 +6,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
@@ -177,9 +178,26 @@ internal static class CilPreStackAnalyzer
             return Stack;
         }
 
+        public ImmutableStack<CilStackType> VisitInitObject(CilInstructionInfo inst, Type type, IShaderType mappedType)
+        {
+            if (Pop() is not CilStackType.ManagedPointer pointer ||
+                pointer.Type.AddressSpace.Kind != AddressSpaceKind.Function ||
+                !pointer.Type.BaseType.Equals(mappedType))
+                throw Error($"initobj {type} requires a matching function-local pointer to {mappedType.Name}");
+            try
+            {
+                _ = InitObjectType.Resolve(type, table);
+            }
+            catch (NotSupportedException exception)
+            {
+                throw Error(exception.Message);
+            }
+            return Stack;
+        }
+
         public ImmutableStack<CilStackType> VisitLoadField(CilInstructionInfo inst, MemberDeclaration m)
         {
-            _ = PopFieldOwner();
+            PopFieldOwner(allowValue: true);
             return Push(CilStackType.FromShaderType(m.Type));
         }
 
@@ -371,6 +389,22 @@ internal static class CilPreStackAnalyzer
                 throw Error($"field owner does not match managed pointer {pointer}");
 
             return pointer;
+        }
+
+        private void PopFieldOwner(bool allowValue)
+        {
+            var owner = Pop();
+            var ownerType = owner switch
+            {
+                CilStackType.ManagedPointer pointer => pointer.Type.BaseType,
+                CilStackType.Value value when allowValue => value.Type,
+                _ => throw Error($"field access requires a structure value or managed pointer, got {owner}")
+            };
+            if (instruction.Instruction.Operand is not FieldInfo field ||
+                field.DeclaringType is null ||
+                table[field.DeclaringType] is not { } declaringType ||
+                !ownerType.Equals(declaringType))
+                throw Error($"field owner does not match {ownerType.Name}");
         }
 
         private ImmutableStack<CilStackType> Push(CilStackType value)

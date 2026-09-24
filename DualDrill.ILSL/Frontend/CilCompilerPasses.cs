@@ -1,13 +1,16 @@
 using System.Collections.Immutable;
+using System.Reflection.Metadata;
 using DualDrill.CLSL.Language;
 using DualDrill.CLSL.Language.Analysis;
 using DualDrill.CLSL.Language.ControlFlow;
 using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
+using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
+using Lokad.ILPack.IL;
 
 namespace DualDrill.CLSL.Frontend;
 
@@ -327,13 +330,51 @@ public static class CilRegionPass
 public static class CilModuleCompiler
 {
     public static ShaderModuleDeclaration<RegionFunctionBody> Compile(
-        ShaderModuleDeclaration<RawCilFunctionBody> module) =>
-        CilRegionPass.Run(
+        ShaderModuleDeclaration<RawCilFunctionBody> module)
+    {
+        var values = ShaderStackToValuePass.Run(
+            ShaderStackControlFlowPass.Run(
+                CilToShaderStackPass.Run(
+                    CilBlockPartitionPass.Run(
+                        CilPreStackPass.Run(module)))));
+        ValidateInitObjectStores(values);
+        return CilRegionPass.Run(
             CilBlockControlFactsPass.Run(
-                CilLocalPromotionPass.Run(
-                    ShaderStackToValuePass.Run(
-                        ShaderStackControlFlowPass.Run(
-                            CilToShaderStackPass.Run(
-                                CilBlockPartitionPass.Run(
-                                    CilPreStackPass.Run(module))))))));
+                CilLocalPromotionPass.Run(values)));
+    }
+
+    private static void ValidateInitObjectStores(ShaderModuleDeclaration<CilValueControlFlowBody> module)
+    {
+        foreach (var body in module.FunctionDefinitions.Values)
+        {
+            var raw = body.Source.Source.Source.Raw;
+            var locals = raw.DeclarationContext.LocalVariables;
+            var stores = body.Graph.Labels()
+                .SelectMany(label => body.Graph[label].Body.Elements)
+                .Where(instruction => instruction.Operation is StoreOperation)
+                .ToArray();
+            foreach (var item in body.Source.Source.Source.Pre.Code.Instructions)
+            {
+                var source = item.Node;
+                if (source.Instruction.OpCode.ToILOpCode() != ILOpCode.Initobj)
+                    continue;
+                var attributed = stores.Where(store =>
+                    store.Payload is ShaderStackProvenance provenance &&
+                    !provenance.Synthetic &&
+                    provenance.OriginalIndex == source.Index &&
+                    provenance.ByteStart == source.ByteOffset &&
+                    provenance.ByteEnd == source.NextByteOffset).ToArray();
+                if (attributed is not [var store] ||
+                    store.Operand0 is not VariablePointerValue pointer ||
+                    pointer.Declaration.AddressSpace.Kind != AddressSpaceKind.Function ||
+                    !locals.Any(local => ReferenceEquals(local.Value, pointer)) ||
+                    store.Operand1 is null ||
+                    !store.Operand1.Type.Equals(pointer.Declaration.Type))
+                    throw new ValidationException(
+                        $"initobj at IL_{source.ByteOffset:X4} requires exactly one typed store " +
+                        "to its original writable function-local address.",
+                        raw.Code.Environment.Method);
+            }
+        }
+    }
 }
