@@ -7,6 +7,32 @@ namespace DualDrill.CLSL.Frontend;
 
 internal static class InitObjectType
 {
+    internal static bool IsEligible(Type type, IShaderType mappedType, ISymbolTableView symbols)
+    {
+        if (!type.IsValueType || !StructureCompositeConstructionOperation.Supports(mappedType))
+            return false;
+        if (mappedType is not StructureType)
+            return true;
+
+        var layout = type.StructLayoutAttribute;
+        if (!type.IsLayoutSequential || type.IsExplicitLayout || type.IsAutoLayout ||
+            layout is null || layout.Size != 0 || layout.Pack is not (0 or 8) ||
+            type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Length > 0 ||
+            type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Length > 0)
+            return false;
+
+        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            if (field.IsInitOnly)
+                return false;
+            var fieldType = symbols[field.FieldType] ??
+                throw new NotSupportedException($"initobj structure {type} field {field.Name} has no mapped type.");
+            if (!IsEligible(field.FieldType, fieldType, symbols))
+                return false;
+        }
+        return true;
+    }
+
     internal static IShaderType Resolve(Type type, ISymbolTableView symbols)
     {
         var shaderType = symbols[type] ??

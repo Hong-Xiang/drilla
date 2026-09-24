@@ -185,37 +185,21 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
 
     private void EmitZero(IShaderType type)
     {
-        switch (type)
+        foreach (var step in ZeroConstructionPlan.For(type))
         {
-            case BoolType:
-                ZeroLiteral(new BoolLiteral(false));
-                return;
-            case IntType<N32>:
-                ZeroLiteral(new I32Literal(0));
-                return;
-            case UIntType<N32>:
-                ZeroLiteral(new U32Literal(0u));
-                return;
-            case FloatType<N32>:
-                ZeroLiteral(new F32Literal(0.0f));
-                return;
-            case IVecType vector:
-                for (var index = 0; index < vector.Size.Value; index++)
-                    EmitZero(vector.ElementType);
-                var components = Enumerable.Range(0, vector.Size.Value).Select(index => (IShaderType)vector.ElementType);
-                var vectorOperation = VectorCompositeConstructionOperation.Get(vector, components);
-                Emit(vectorOperation, type,
-                    Enumerable.Range(0, vector.Size.Value).Reverse().Select(Depth), vector.Size.Value);
-                return;
-            case StructureType structure:
-                foreach (var member in structure.Declaration.Members)
-                    EmitZero(member.Type);
-                var count = structure.Declaration.Members.Length;
-                Emit(new StructureCompositeConstructionOperation(structure), type,
-                    Enumerable.Range(0, count).Reverse().Select(Depth), count);
-                return;
-            default:
-                throw Invalid($"initobj zero construction of {type.Name} is not supported.");
+            switch (step)
+            {
+                case ZeroConstructionStep.Scalar scalar:
+                    ZeroLiteral(scalar.Literal);
+                    break;
+                case ZeroConstructionStep.Composite composite:
+                    Emit(composite.Operation, composite.Type,
+                        Enumerable.Range(0, composite.OperandCount).Reverse().Select(Depth),
+                        composite.OperandCount);
+                    break;
+                default:
+                    throw Invalid($"Unknown initobj zero construction step {step.GetType().Name}.");
+            }
         }
     }
 

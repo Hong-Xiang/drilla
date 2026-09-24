@@ -188,7 +188,15 @@ instance constructors. Projected, parameter, and carried-pointer destinations
 remain unsupported; the local-root proof happens after value lifting, before
 promotion. Field loads from a struct value are typed member expressions, so
 ordinary `default(S)` accumulator reads can use this path without indirect
-loads. Exception flow, indirect loads/stores, and `ldnull` remain unsupported;
+loads. With `MethodBody.InitLocals=true`, original function locals still
+referenced after promotion receive an explicit zero store before original
+effects if their complete CLR type meets this same zeroable profile. Existing
+promoted i32/bool values retain their SSA zero seeds instead. The new stores
+have synthetic provenance, not `initobj` provenance; a one-shot preheader
+initializes before a revisited entry block without resetting locals on a
+backedge. `InitLocals=false`, unused or promoted locals, and locals outside
+the bounded profile gain no new store or initialization guarantee.
+Exception flow, indirect loads/stores, and `ldnull` remain unsupported;
 ordinary `pop` remains supported. Dead non-control instructions in one collected
 function remain absent from that function's Pre/CFG. A separately collected dead
 callee is nevertheless compiled by the module pipeline and may fail on its own
