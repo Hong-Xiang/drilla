@@ -19,11 +19,7 @@
 		<ProjectReference Include="..\DualDrill.Common\DualDrill.Common.csproj" />
 		<ProjectReference Include="..\DualDrill.Graphics\DualDrill.Graphics.csproj" />
 		<ProjectReference Include="..\DualDrill.ILSL\DualDrill.ILSL.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Include="..\Shared\Shaders\RaymarchingPrimitiveShader.cs"
-		         Link="Shader\RaymarchingPrimitiveShader.cs" />
+		<ProjectReference Include="..\DualDrill.Shaders\DualDrill.Shaders.csproj" />
 	</ItemGroup>
 
 </Project>
