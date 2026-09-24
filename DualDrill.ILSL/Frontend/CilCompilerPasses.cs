@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Reflection;
 using System.Reflection.Metadata;
 using DualDrill.CLSL.Frontend.SymbolTable;
 using DualDrill.CLSL.Language;
@@ -8,6 +9,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Operation.Pointer;
 using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
@@ -444,6 +446,7 @@ public static class CilModuleCompiler
                     CilBlockPartitionPass.Run(
                         CilPreStackPass.Run(module)))));
         ValidateInitObjectStores(values);
+        ValidateIndirectAccesses(values);
         return CilRegionPass.Run(
             CilBlockControlFactsPass.Run(
                 CilLocalPromotionPass.Run(values)));
@@ -483,4 +486,136 @@ public static class CilModuleCompiler
             }
         }
     }
+
+    internal static void ValidateIndirectAccesses(ShaderModuleDeclaration<CilValueControlFlowBody> module)
+    {
+        foreach (var body in module.FunctionDefinitions.Values)
+        {
+            var raw = body.Source.Source.Source.Raw;
+            var reachable = body.Source.Source.Source.Pre.Code.Instructions
+                .Select(item => item.Node).ToArray();
+            var indirects = reachable.Where(source =>
+                source.Instruction.OpCode.ToILOpCode() is
+                    ILOpCode.Ldind_i4 or ILOpCode.Ldind_u4 or ILOpCode.Ldind_r4 or
+                    ILOpCode.Stind_i4 or ILOpCode.Stind_r4).ToArray();
+            if (indirects.Length == 0)
+                continue;
+            var indices = reachable.Select(instruction => instruction.Index).ToHashSet();
+            var instructions = body.Graph.Labels()
+                .SelectMany(label => body.Graph[label].Body.Elements).ToArray();
+            var projections = new Dictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>>(
+                ReferenceEqualityComparer.Instance);
+            foreach (var instruction in instructions.Where(instruction =>
+                         instruction.Operation is AddressOfMemberOperation &&
+                         instruction.Result?.Type is IPtrType))
+                if (!projections.TryAdd(instruction.Result!, instruction))
+                    throw new ValidationException("An indirect field address has multiple definitions.",
+                        raw.Code.Environment.Method);
+
+            foreach (var source in indirects)
+            {
+                var opcode = source.Instruction.OpCode.ToILOpCode();
+                var load = opcode is ILOpCode.Ldind_i4 or ILOpCode.Ldind_u4 or ILOpCode.Ldind_r4;
+                var attributed = instructions.Where(instruction =>
+                    (instruction.Operation is LoadOperation or StoreOperation) &&
+                    IsOriginalFrom(instruction, source)).ToArray();
+                if (attributed is not [var effect] ||
+                    (load ? effect.Operation is not LoadOperation : effect.Operation is not StoreOperation) ||
+                    effect.Operand0?.Type is not IPtrType pointer ||
+                    pointer.AddressSpace.Kind != AddressSpaceKind.Function ||
+                    (opcode is ILOpCode.Ldind_r4 or ILOpCode.Stind_r4
+                        ? !pointer.BaseType.Equals(ShaderType.F32)
+                        : !pointer.BaseType.Equals(ShaderType.I32) &&
+                          !pointer.BaseType.Equals(ShaderType.U32)) ||
+                    (load
+                        ? effect.OperandCount != 1 || effect.Result is null ||
+                          !effect.Result.Type.Equals(pointer.BaseType)
+                        : effect.OperandCount != 2 || effect.Result is not null ||
+                          effect.Operand1 is null || !effect.Operand1.Type.Equals(pointer.BaseType)))
+                    throw new ValidationException(
+                        $"Indirect access at IL_{source.ByteOffset:X4} ({source.Instruction.OpCode}) " +
+                        "requires exactly one typed load or resultless store.",
+                        raw.Code.Environment.Method);
+                ValidateAddress(effect.Operand0!, !load, raw, indices, projections, source);
+            }
+        }
+    }
+
+    private static void ValidateAddress(
+        IShaderValue address,
+        bool write,
+        RawCilFunctionBody raw,
+        IReadOnlySet<int> reachable,
+        IReadOnlyDictionary<IShaderValue, Instruction<IShaderValue, IShaderValue>> projections,
+        CilInstructionInfo source)
+    {
+        ValidationException Invalid(string reason) =>
+            new($"Indirect access at IL_{source.ByteOffset:X4} ({source.Instruction.OpCode}): {reason}.",
+                raw.Code.Environment.Method);
+        var visited = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
+        while (visited.Add(address))
+        {
+            if (address is VariablePointerValue root)
+            {
+                var locals = raw.DeclarationContext.LocalVariables;
+                var index = locals.IndexOf(root.Declaration);
+                if (index < 0 || !ReferenceEquals(locals[index].Value, root) ||
+                    root.Declaration.AddressSpace.Kind != AddressSpaceKind.Function ||
+                    index >= raw.Code.Environment.LocalVariables.Length)
+                    throw Invalid("address is not an original function-local root");
+                var info = raw.Code.Environment.LocalVariables[index];
+                if (info.LocalIndex != index ||
+                    !ReferenceEquals(raw.Symbols[Symbol.Variable(info)], root.Declaration) ||
+                    !ReferenceEquals(raw.Symbols[info.LocalType], root.Declaration.Type))
+                    throw Invalid("root CLR metadata and shader declaration do not match");
+                try
+                {
+                    if (!InitObjectType.IsEligible(info.LocalType, root.Declaration.Type, raw.Symbols))
+                        throw Invalid("whole root is outside the zeroable plain-local profile");
+                    _ = InitObjectType.Resolve(info.LocalType, raw.Symbols);
+                }
+                catch (NotSupportedException exception)
+                {
+                    throw new ValidationException(
+                        $"Indirect access at IL_{source.ByteOffset:X4}: {exception.Message}",
+                        raw.Code.Environment.Method,
+                        exception);
+                }
+                return;
+            }
+
+            if (!projections.TryGetValue(address, out var projection) ||
+                projection.Payload is not ShaderStackProvenance origin ||
+                origin.OriginalIndex >= raw.Code.Count ||
+                !reachable.Contains(origin.OriginalIndex) ||
+                !IsOriginalFrom(projection, raw.Code[origin.OriginalIndex]) ||
+                raw.Code[origin.OriginalIndex].Instruction.OpCode.ToILOpCode() != ILOpCode.Ldflda ||
+                raw.Code[origin.OriginalIndex].Instruction.Operand is not FieldInfo field ||
+                field.IsStatic ||
+                write && field.IsInitOnly ||
+                field.DeclaringType is null ||
+                projection.OperandCount != 1 ||
+                projection.Operand0?.Type is not IPtrType { BaseType: StructureType owner } ownerPointer ||
+                projection.Result?.Type is not IPtrType resultPointer ||
+                !resultPointer.AddressSpace.Equals(ownerPointer.AddressSpace) ||
+                projection.Operation is not AddressOfMemberOperation member ||
+                !owner.Declaration.Members.Contains(member.Member) ||
+                !resultPointer.BaseType.Equals(member.Member.Type) ||
+                !ReferenceEquals(raw.Symbols[field], member.Member) ||
+                !ReferenceEquals(raw.Symbols[field.DeclaringType], owner) ||
+                !ReferenceEquals(raw.Symbols[field.FieldType], member.Member.Type))
+                throw Invalid("address is not a valid writable local-field projection");
+            address = projection.Operand0;
+        }
+        throw Invalid("address projection contains a cycle");
+    }
+
+    private static bool IsOriginalFrom(
+        Instruction<IShaderValue, IShaderValue> instruction,
+        CilInstructionInfo source) =>
+        instruction.Payload is ShaderStackProvenance provenance &&
+        !provenance.Synthetic &&
+        provenance.OriginalIndex == source.Index &&
+        provenance.ByteStart == source.ByteOffset &&
+        provenance.ByteEnd == source.NextByteOffset;
 }

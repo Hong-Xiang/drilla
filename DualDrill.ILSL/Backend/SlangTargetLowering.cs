@@ -685,9 +685,11 @@ public sealed class SlangTargetLowering
                     break;
                 case AddressOfMemberOperation member:
                     if (!HasPhysicalOperandShape(instruction, 1) ||
-                        instruction.Operand0!.Type is not IPtrType { BaseType: StructureType owner } ||
-                        !owner.Declaration.Members.Contains(member.Member))
-                        throw UnsupportedOperation(instruction, "field does not belong to its structure");
+                        instruction.Operand0!.Type is not IPtrType { BaseType: StructureType owner } ownerPointer ||
+                        !owner.Declaration.Members.Contains(member.Member) ||
+                        instruction.Result?.Type is not IPtrType resultPointer ||
+                        !resultPointer.AddressSpace.Equals(ownerPointer.AddressSpace))
+                        throw UnsupportedOperation(instruction, "invalid field owner or projected address space");
                     DefineAlias(instruction, new SlangMemberPlace(
                         Place(instruction.Operand0, instruction.Operation.Name),
                         member.Member));
@@ -718,6 +720,13 @@ public sealed class SlangTargetLowering
                     throw UnsupportedOperation(
                         instruction,
                         "whole structured-buffer or texture/sampler handle loads are not supported");
+                case LoadOperation:
+                    if (!HasPhysicalOperandShape(instruction, 1) ||
+                        instruction.Operand0!.Type is not IPtrType loadPointer ||
+                        instruction.Result is null ||
+                        !instruction.Result.Type.Equals(loadPointer.BaseType))
+                        throw UnsupportedOperation(instruction, "invalid typed load arity or pointee/result type");
+                    break;
                 case StoreOperation when IsResourceValue(instruction.Operand0) ||
                                          IsResourceValue(instruction.Operand1):
                     throw UnsupportedOperation(

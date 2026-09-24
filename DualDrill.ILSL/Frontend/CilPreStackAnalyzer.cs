@@ -325,12 +325,40 @@ internal static class CilPreStackAnalyzer
         }
 
         public ImmutableStack<CilStackType> VisitLoadIndirect<TShaderType>(CilInstructionInfo inst)
-            where TShaderType : IShaderType =>
-            Unsupported("indirect load");
+            where TShaderType : ISingletonShaderType<TShaderType>
+        {
+            var requested = TShaderType.Instance;
+            if (requested is not (IntType<N32> or UIntType<N32> or FloatType<N32>))
+                return Unsupported("indirect load");
+            var actual = Pop();
+            if (actual is not CilStackType.ManagedPointer pointer ||
+                pointer.Type.AddressSpace.Kind != AddressSpaceKind.Function ||
+                (requested is FloatType<N32>
+                    ? pointer.Type.BaseType is not FloatType<N32>
+                    : pointer.Type.BaseType is not (IntType<N32> or UIntType<N32>)))
+                throw Error($"indirect load {requested.Name} requires a matching function-local i32/u32 or f32 pointer, got {actual}");
+            return Push(requested is FloatType<N32> ? CilStackType.Float32.Instance : CilStackType.Int32.Instance);
+        }
 
         public ImmutableStack<CilStackType> VisitStoreIndirect<TShaderType>(CilInstructionInfo inst)
-            where TShaderType : IShaderType =>
-            Unsupported("indirect store");
+            where TShaderType : ISingletonShaderType<TShaderType>
+        {
+            var requested = TShaderType.Instance;
+            if (requested is not (IntType<N32> or FloatType<N32>))
+                return Unsupported("indirect store");
+            var value = Pop();
+            var address = Pop();
+            if (value != (requested is FloatType<N32>
+                    ? CilStackType.Float32.Instance
+                    : CilStackType.Int32.Instance) ||
+                address is not CilStackType.ManagedPointer pointer ||
+                pointer.Type.AddressSpace.Kind != AddressSpaceKind.Function ||
+                (requested is FloatType<N32>
+                    ? pointer.Type.BaseType is not FloatType<N32>
+                    : pointer.Type.BaseType is not (IntType<N32> or UIntType<N32>)))
+                throw Error($"indirect store {requested.Name} requires a matching function-local pointer and canonical value, got {address}, {value}");
+            return Stack;
+        }
 
         public ImmutableStack<CilStackType> VisitLoadIndirectNativeInt(CilInstructionInfo inst) =>
             Unsupported("native integer indirect load");

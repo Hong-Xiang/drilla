@@ -845,7 +845,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             "holder",
             new StructureType(structure),
             []);
-        var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType());
+        var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType(FunctionAddressSpace.Instance));
         var declaration = Function("MemberProjection", ShaderType.Unit);
         var body = CreateFunctionBody(
             declaration,
@@ -1250,6 +1250,45 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                 entry, [], [zero], Terms.ReturnVoid()), null));
         Assert.Contains("zero construction of i32",
             Assert.Throws<NotSupportedException>(() => Lower(zeroBody)).Message);
+    }
+
+    [Fact]
+    public void DirectRegionLoadAndFieldProjectionRequireExactTypesAndAddressSpace()
+    {
+        var label = Label.Create("entry");
+        var function = Function("MalformedIndirect", ShaderType.Unit);
+        var local = new VariableDeclaration(FunctionAddressSpace.Instance, "value", ShaderType.I32, []);
+        var wrongResult = Instruction<IShaderValue, IShaderValue>.Create(
+            new LoadOperation(), ShaderValue.Intermediate(ShaderType.F32), [local.Value]);
+        var wrongResultBody = CreateFunctionBody(
+            function, RegionTree.Block(label, [],
+                Body(label, [], [wrongResult], Terms.ReturnVoid()), null));
+        Assert.Contains("invalid typed load",
+            Assert.Throws<NotSupportedException>(() => Lower(wrongResultBody)).Message);
+
+        var wrongArity = Instruction<IShaderValue, IShaderValue>.Create(
+            new LoadOperation(), ShaderValue.Intermediate(ShaderType.I32), [local.Value, Int(0)]);
+        var wrongArityBody = CreateFunctionBody(
+            function, RegionTree.Block(label, [],
+                Body(label, [], [wrongArity], Terms.ReturnVoid()), null));
+        Assert.Contains("invalid typed load",
+            Assert.Throws<NotSupportedException>(() => Lower(wrongArityBody)).Message);
+
+        var member = new MemberDeclaration("Field", ShaderType.I32, []);
+        var structure = new StructureType(new StructureDeclaration
+        {
+            Name = "Record",
+            Members = [member]
+        });
+        var structureLocal = new VariableDeclaration(FunctionAddressSpace.Instance, "record", structure, []);
+        var forgedPointer = ShaderValue.Intermediate(ShaderType.I32.GetPtrType(UniformAddressSpace.Instance));
+        var projection = Instruction<IShaderValue, IShaderValue>.Create(
+            new AddressOfMemberOperation(member), forgedPointer, [structureLocal.Value]);
+        var projectionBody = CreateFunctionBody(
+            function, RegionTree.Block(label, [],
+                Body(label, [], [projection], Terms.ReturnVoid()), null));
+        Assert.Contains("projected address space",
+            Assert.Throws<NotSupportedException>(() => Lower(projectionBody)).Message);
     }
 
     [Fact]

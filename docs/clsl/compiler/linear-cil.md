@@ -196,7 +196,19 @@ have synthetic provenance, not `initobj` provenance; a one-shot preheader
 initializes before a revisited entry block without resetting locals on a
 backedge. `InitLocals=false`, unused or promoted locals, and locals outside
 the bounded profile gain no new store or initialization guarantee.
-Exception flow, indirect loads/stores, and `ldnull` remain unsupported;
+`ldind.i4` and `ldind.u4` both accept i32 or u32 pointees and preserve the
+same 32 bits on the canonical i32 CIL stack; `ldind.r4` accepts f32.
+`stind.i4` stores canonical i32 bits to i32 or u32 storage, and
+`stind.r4` stores f32. Every indirect effect resolves to an original
+function-local address or a checked `ldflda` chain within an eligible
+whole plain-struct root; source provenance and exact types are checked
+after value lifting, before promotion. This does not expand `initobj`'s
+unprojected-local constraint. `InitLocals=false` adds no zero: callers
+must explicitly write storage before reads to obtain defined results;
+this is not a definite-assignment proof.
+Stored managed-pointer locals and general ref/in/out calls remain
+unsupported; ordinary Debug C# ref-local code can produce such locals.
+Exception flow, other indirect widths/references/native pointers, and `ldnull` remain unsupported;
 ordinary `pop` remains supported. Dead non-control instructions in one collected
 function remain absent from that function's Pre/CFG. A separately collected dead
 callee is nevertheless compiled by the module pipeline and may fail on its own
