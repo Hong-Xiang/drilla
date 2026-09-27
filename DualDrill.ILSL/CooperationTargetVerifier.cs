@@ -22,6 +22,7 @@ internal static class CooperationTargetVerifier
         ShaderModuleDeclaration<SlangFunctionBody> target,
         CLSLCooperationFacts facts)
     {
+        VerifyReadWriteResources(source, target);
         var moduleStorage = source.Declarations.OfType<VariableDeclaration>()
             .ToImmutableHashSet<VariableDeclaration>(ReferenceEqualityComparer.Instance);
         foreach (var participation in facts.EntryUniformQuadParticipations)
@@ -34,6 +35,169 @@ internal static class CooperationTargetVerifier
                     target.FunctionDefinitions[function],
                     labels,
                     moduleStorage);
+        }
+    }
+
+    internal static void VerifyReadWriteResources(
+        ShaderModuleDeclaration<RegionFunctionBody> source,
+        ShaderModuleDeclaration<SlangFunctionBody> target)
+    {
+        if (!source.FunctionDefinitions.Keys
+            .ToHashSet(ReferenceEqualityComparer.Instance)
+            .SetEquals(target.FunctionDefinitions.Keys))
+            throw Error("Read-write storage target correspondence", "target function set changed");
+
+        foreach (var (function, sourceBody) in source.FunctionDefinitions)
+        {
+            var sites = new List<(Label Label, int Ordinal, Instruction<IShaderValue, IShaderValue> Instruction)>();
+            var lengths = new List<(Label Label, int Ordinal, Instruction<IShaderValue, IShaderValue> Instruction)>();
+            var loads = new List<(Label Label, int Ordinal, Instruction<IShaderValue, IShaderValue> Instruction)>();
+            sourceBody.Body.Traverse((_, label, block) =>
+            {
+                foreach (var (ordinal, instruction) in block.Body.Elements.Index())
+                {
+                    if (instruction.Operation is IReadWriteStructuredBufferStoreOperation)
+                        sites.Add((label, ordinal, instruction));
+                    if (instruction.Operation is IReadWriteStructuredBufferLengthOperation)
+                        lengths.Add((label, ordinal, instruction));
+                    if (instruction.Operation is IReadWriteStructuredBufferLoadOperation)
+                        loads.Add((label, ordinal, instruction));
+                }
+                return false;
+            });
+            var context = $"Read-write storage target correspondence for function '{function.Name}'";
+            var targetBody = target.FunctionDefinitions[function];
+            var tree = TargetTree.Create(targetBody.Body, context);
+            if (sites.Count == 0 && lengths.Count == 0 && loads.Count == 0)
+            {
+                if (tree.Statements.Any(IsReadWriteTargetEffect))
+                    throw Error(context, "target contains a read-write storage effect without a source operation");
+                continue;
+            }
+            var requiredCaptures = RequiredCaptures(sourceBody, context);
+            VerifyOriginTables(sourceBody, targetBody.Origins, tree, requiredCaptures, context);
+            VerifySourceTransferWrites(sourceBody, targetBody.Origins, tree, context);
+            VerifyAccountedCarrierWrites(
+                targetBody.Origins,
+                tree,
+                targetBody.Origins.ParameterSlots.Values.Concat(targetBody.Origins.Captures.Values),
+                context);
+            var addressDefinitions = SourceDefinitions(sourceBody);
+            var sourceValues = SourceValues(sourceBody, addressDefinitions);
+            var carrierValues = CarrierValues(targetBody.Origins);
+            foreach (var (label, ordinal, instruction) in lengths)
+            {
+                if (!ReadWriteStructuredBufferFamily.IsCanonicalLength(instruction.Operation))
+                    throw Error(context, "source contains a noncanonical read-write storage-buffer Length");
+                var origins = targetBody.Origins.Dimensions.Where(origin =>
+                    ReferenceEquals(origin.Label, label) && origin.InstructionOrdinal == ordinal).ToArray();
+                if (origins.Length != 1)
+                    throw Error(context, "read-write dimensions origin count changed");
+                RequirePresent(tree, origins[0].Dimensions, context);
+                RequireSourceScope(tree, origins[0].Dimensions, label, context);
+                VerifyDimensionsOrigin(sourceBody, instruction, origins[0], addressDefinitions,
+                    sourceValues, carrierValues, targetBody.Origins, tree, requiredCaptures, context);
+            }
+            var accountedLoads = new HashSet<SlangBind>(ReferenceEqualityComparer.Instance);
+            foreach (var (label, ordinal, instruction) in loads)
+            {
+                if (!ReadWriteStructuredBufferFamily.IsCanonicalLoad(instruction.Operation))
+                    throw Error(context, "source contains a noncanonical read-write storage-buffer load");
+                var origins = targetBody.Origins.Instructions.Where(origin =>
+                    ReferenceEquals(origin.Label, label) && origin.InstructionOrdinal == ordinal).ToArray();
+                if (origins.Length != 1 || origins[0].Target is not SlangBind binding ||
+                    !accountedLoads.Add(binding))
+                    throw Error(context, "read-write load origin count changed");
+                RequirePresent(tree, binding, context);
+                RequireSourceScope(tree, binding, label, context);
+                VerifyTargetInstruction(instruction, binding.Instruction, addressDefinitions,
+                    targetBody.Origins, context, requireOperands: true);
+                var definition = targetBody.Origins.Definitions.Where(origin =>
+                    ReferenceEquals(origin.Label, label) && origin.InstructionOrdinal == ordinal).ToArray();
+                if (definition.Length != 1 || !ReferenceEquals(definition[0].Definition, binding))
+                    throw Error(context, "read-write load definition origin changed");
+                VerifyCapture(instruction.Result!, binding, definition[0].Capture,
+                    targetBody.Origins, tree, requiredCaptures, context);
+            }
+            if (tree.Statements.OfType<SlangBind>().Any(binding =>
+                    binding.Instruction.Operation is IReadWriteStructuredBufferLoadOperation &&
+                    !accountedLoads.Contains(binding)))
+                throw Error(context, "target contains an unaccounted read-write load");
+            var accounted = new HashSet<SlangAssign>(ReferenceEqualityComparer.Instance);
+            foreach (var (label, ordinal, instruction) in sites)
+            {
+                if (!ReadWriteStructuredBufferFamily.IsCanonicalStore(instruction.Operation))
+                    throw Error(context, "source contains a noncanonical read-write storage-buffer store");
+                var origins = targetBody.Origins.Instructions.Where(origin =>
+                    ReferenceEquals(origin.Label, label) && origin.InstructionOrdinal == ordinal).ToArray();
+                if (origins.Length != 1 ||
+                    origins[0].Target is not SlangAssign assignment ||
+                    !ReferenceEquals(origins[0].Source.Operation, instruction.Operation) ||
+                    !ReferenceEquals(origins[0].Source.Result, instruction.Result) ||
+                    !ReferenceEquals(origins[0].Source.Payload, instruction.Payload) ||
+                    !origins[0].Source.Operands.SequenceEqual(
+                        instruction.Operands, ReferenceEqualityComparer.Instance) ||
+                    !accounted.Add(assignment) ||
+                    !SourceAssignmentMatches(instruction, assignment, addressDefinitions, targetBody.Origins))
+                    throw Error(context, "store origin changed its operation/result/operand/payload/typed assignment");
+                RequirePresent(tree, assignment, context);
+                RequireSourceScope(tree, assignment, label, context);
+            }
+            if (tree.Statements.OfType<SlangAssign>()
+                .Any(assignment => assignment.Target is SlangIndexedPlace indexed &&
+                    ReadWriteStructuredBufferFamily.IsCanonicalType(indexed.Target.Type) &&
+                    !accounted.Contains(assignment)))
+                throw Error(context, "target contains an unaccounted indexed store");
+        }
+    }
+
+    private static bool IsReadWriteTargetEffect(SlangStatement statement) =>
+        statement switch
+        {
+            SlangAssign { Target: SlangIndexedPlace indexed } =>
+                ReadWriteStructuredBufferFamily.IsCanonicalType(indexed.Target.Type),
+            SlangAssign assignment when RootVariable(assignment.Target) is { } variable =>
+                ReadWriteStructuredBufferFamily.IsCanonicalType(variable.Type),
+            SlangGetDimensions dimensions =>
+                ReadWriteStructuredBufferFamily.IsCanonicalType(dimensions.Buffer.Type),
+            SlangBind binding => binding.Instruction.Operation is
+                IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or
+                IReadWriteStructuredBufferStoreOperation,
+            SlangEffect effect => effect.Instruction.Operation is
+                IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or
+                IReadWriteStructuredBufferStoreOperation,
+            _ => false
+        };
+
+    private static void VerifySourceTransferWrites(
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context)
+    {
+        if (origins.Transfers.Length != source.Control.Transfers.Length)
+            throw Error(context, "transfer write origin count does not match checked source transfers");
+        foreach (var transfer in source.Control.Transfers)
+        {
+            var origin = Single(origins.Transfers,
+                item => ReferenceEquals(item.Source, transfer.Source) && item.Arm == transfer.Arm,
+                context, "source transfer write origin");
+            var jump = Jump(source[transfer.Source].Body.Last, transfer.Arm);
+            if (!ReferenceEquals(origin.Jump, jump) || !Same(origin.Continuation, transfer))
+                throw Error(context, "transfer write origin is not owned by its source control edge");
+            VerifyTransferArguments(source, origins, tree, context, transfer, origin, jump);
+
+            var token = origins.ControlToken;
+            if (token is null ||
+                origins.Captures.Values.Contains(token, ReferenceEqualityComparer.Instance) ||
+                origins.ParameterSlots.Values.Contains(token, ReferenceEqualityComparer.Instance) ||
+                origin.TokenAssignment.Target is not SlangVariablePlace { Variable: var targetToken } ||
+                !ReferenceEquals(targetToken, token) ||
+                !TryInt(origin.TokenAssignment.Value, out var tokenId) ||
+                tokenId != origin.TokenId)
+                throw Error(context, "transfer token write is not owned by its control carrier");
         }
     }
 
@@ -626,8 +790,8 @@ internal static class CooperationTargetVerifier
         {
             foreach (var (ordinal, instruction) in block.Body.Elements.Index())
                 if (instruction.Operation is
-                    StructuredBufferLengthOperation or
-                    ReadWriteStructuredBufferLengthOperation)
+                    IReadOnlyStructuredBufferLengthOperation or
+                    IReadWriteStructuredBufferLengthOperation)
                     sourceDimensions.Add((label, ordinal));
             return false;
         });
@@ -652,14 +816,22 @@ internal static class CooperationTargetVerifier
         string context,
         bool requireOperands = false)
     {
+        if (source.Operation is IReadOnlyStructuredBufferLoadOperation &&
+            !ReadOnlyStructuredBufferFamily.IsCanonicalLoad(source.Operation))
+            throw Error(context, "source contains a noncanonical read-only storage-buffer load");
+        if (source.Operation is IReadWriteStructuredBufferLoadOperation &&
+            !ReadWriteStructuredBufferFamily.IsCanonicalLoad(source.Operation))
+            throw Error(context, "source contains a noncanonical read-write storage-buffer load");
+        if (source.Operation is IReadWriteStructuredBufferStoreOperation)
+            throw Error(context, "read-write storage-buffer store requires an indexed assignment");
         if (!ReferenceEquals(target.Operation, source.Operation) ||
             !ReferenceEquals(target.Result, source.Result) ||
             !ReferenceEquals(target.Payload, source.Payload) ||
             (requireOperands ||
              source.Operation is
                  CallOperation or
-                 StructuredBufferLoadOperation or
-                 ReadWriteStructuredBufferLoadOperation or
+                 IReadOnlyStructuredBufferLoadOperation or
+                 IReadWriteStructuredBufferLoadOperation or
                  TextureSampleLevelOperation) &&
             !OperandsMatch(source.Operands, target.Operands, origins, addressDefinitions))
             throw Error(context, "instruction origin changed its source operation/result/operand lineage");
@@ -678,8 +850,14 @@ internal static class CooperationTargetVerifier
         string context)
     {
         var dimensions = origin.Dimensions;
-        if (source.Operation is not (StructuredBufferLengthOperation or
-            ReadWriteStructuredBufferLengthOperation) ||
+        if (source.Operation is IReadOnlyStructuredBufferLengthOperation &&
+            !ReadOnlyStructuredBufferFamily.IsCanonicalLength(source.Operation))
+            throw Error(context, "source contains a noncanonical read-only storage-buffer Length");
+        if (source.Operation is IReadWriteStructuredBufferLengthOperation &&
+            !ReadWriteStructuredBufferFamily.IsCanonicalLength(source.Operation))
+            throw Error(context, "source contains a noncanonical read-write storage-buffer Length");
+        if (source.Operation is not (IReadOnlyStructuredBufferLengthOperation or
+            IReadWriteStructuredBufferLengthOperation) ||
             source.OperandCount != 1 ||
             source.Result is null ||
             !ReferenceEquals(origin.Source.Operation, source.Operation) ||
@@ -784,12 +962,20 @@ internal static class CooperationTargetVerifier
                         swizzle.ValueVecType),
                     target.Target) &&
                 OperandMatches(source.Operand1!, target.Value, origins),
-            ReadWriteStructuredBufferStoreOperation =>
+            IReadWriteStructuredBufferStoreOperation store
+                when ReadWriteStructuredBufferFamily.IsCanonicalStore(store) =>
+                source.OperandCount == 3 &&
+                source.Operand0 is not null &&
+                source.Operand1 is not null &&
+                !source.RestOperands.IsDefault &&
+                source.RestOperands.Length == 1 &&
+                source.RestOperands[0] is { } storedValue &&
                 target.Target is SlangIndexedPlace indexed &&
-                Equals(indexed.ElementType, ShaderType.F32) &&
+                Equals(indexed.ElementType, store.ElementType) &&
+                source.Result is null &&
                 PlaceMatches(SourcePlace(source.Operand0!, addressDefinitions), indexed.Target) &&
                 OperandMatches(source.Operand1!, indexed.Index, origins, addressDefinitions) &&
-                OperandMatches(source[2], target.Value, origins, addressDefinitions),
+                OperandMatches(storedValue, target.Value, origins, addressDefinitions),
             _ => false
         };
 
@@ -1226,35 +1412,7 @@ internal static class CooperationTargetVerifier
                 throw Error(context, "one token ID identifies multiple continuation identities");
             owners[origin.TokenId] = origin.Continuation;
 
-            if (origin.Arguments.Length != jump.Arguments.Length)
-                throw Error(context, "transfer argument origin count changed");
-            foreach (var (position, argument) in jump.Arguments.Index())
-            {
-                var parameter = source[jump.Label].Parameters[position];
-                var item = Single(
-                    origin.Arguments,
-                    candidate => candidate.Position == position,
-                    context,
-                    "transfer argument origin");
-                RequirePresent(tree, item.Definition, context);
-                RequirePresent(tree, item.Assignment, context);
-                if (!ReferenceEquals(item.Argument, argument) ||
-                    !ReferenceEquals(item.Parameter, parameter) ||
-                    !origins.ParameterSlots.TryGetValue(parameter, out var slot) ||
-                    !ReferenceEquals(slot, item.Slot) ||
-                    item.Definition.Instruction.Operation is not LoadOperation ||
-                    !ReferenceEquals(item.Definition.Instruction.Result, item.Snapshot) ||
-                    item.Definition.Instruction.Operands.Count() != 1 ||
-                    !OperandMatches(argument, item.Definition.Instruction.Operands.Single(), origins) ||
-                    item.Assignment.Target is not SlangVariablePlace { Variable: var assignedSlot } ||
-                    !ReferenceEquals(assignedSlot, slot) ||
-                    item.Assignment.Value is not SlangValueOperand { Value: var assignedValue } ||
-                    !ReferenceEquals(assignedValue, item.Snapshot))
-                    throw Error(
-                        context,
-                        $"transfer from '{transfer.Source.Name}', arm {transfer.Arm}, parameter {position} " +
-                        "does not preserve its parallel snapshot and slot assignment");
-            }
+            VerifyTransferArguments(source, origins, tree, context, transfer, origin, jump);
 
             RequirePresent(tree, origin.TokenAssignment, context);
             RequirePresent(tree, origin.Break, context);
@@ -1283,6 +1441,47 @@ internal static class CooperationTargetVerifier
                     .OfType<SlangScope>()
                     .Any(scope => ReferenceEquals(scope.OriginalLabel, transfer.Source)))
                 throw Error(context, "transfer break is not owned by its source-label carrier");
+        }
+    }
+
+    private static void VerifyTransferArguments(
+        RegionFunctionBody source,
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        string context,
+        ScopedTransfer<Label> transfer,
+        SlangTransferOrigin origin,
+        RegionJump<IShaderValue> jump)
+    {
+        if (origin.Arguments.Length != jump.Arguments.Length ||
+            source[jump.Label].Parameters.Length != jump.Arguments.Length)
+            throw Error(context, "transfer argument origin count changed");
+        foreach (var (position, argument) in jump.Arguments.Index())
+        {
+            var parameter = source[jump.Label].Parameters[position];
+            var item = Single(
+                origin.Arguments,
+                candidate => candidate.Position == position,
+                context,
+                "transfer argument origin");
+            RequirePresent(tree, item.Definition, context);
+            RequirePresent(tree, item.Assignment, context);
+            if (!ReferenceEquals(item.Argument, argument) ||
+                !ReferenceEquals(item.Parameter, parameter) ||
+                !origins.ParameterSlots.TryGetValue(parameter, out var slot) ||
+                !ReferenceEquals(slot, item.Slot) ||
+                item.Definition.Instruction.Operation is not LoadOperation ||
+                !ReferenceEquals(item.Definition.Instruction.Result, item.Snapshot) ||
+                item.Definition.Instruction.Operands.Count() != 1 ||
+                !OperandMatches(argument, item.Definition.Instruction.Operands.Single(), origins) ||
+                item.Assignment.Target is not SlangVariablePlace { Variable: var assignedSlot } ||
+                !ReferenceEquals(assignedSlot, slot) ||
+                item.Assignment.Value is not SlangValueOperand { Value: var assignedValue } ||
+                !ReferenceEquals(assignedValue, item.Snapshot))
+                throw Error(
+                    context,
+                    $"transfer from '{transfer.Source.Name}', arm {transfer.Arm}, parameter {position} " +
+                    "does not preserve its parallel snapshot and slot assignment");
         }
     }
 
@@ -1394,16 +1593,12 @@ internal static class CooperationTargetVerifier
         TargetTree tree,
         string context)
     {
-        var allowedWrites = ControlledWrites(origins);
-        var controlled = origins.ParameterSlots.Values
-            .Concat(origins.Captures.Values)
-            .Concat(origins.ControlToken is null ? [] : [origins.ControlToken])
-            .ToHashSet(ReferenceEqualityComparer.Instance);
-        foreach (var assignment in tree.Statements.OfType<SlangAssign>())
-            if (RootVariable(assignment.Target) is { } variable &&
-                controlled.Contains(variable) &&
-                !allowedWrites.Contains(assignment))
-                throw Error(context, "target contains an unaccounted control/capture/slot write");
+        VerifyAccountedCarrierWrites(
+            origins,
+            tree,
+            origins.ParameterSlots.Values.Concat(origins.Captures.Values)
+                .Concat(origins.ControlToken is null ? [] : [origins.ControlToken]),
+            context);
 
         var allowedTokenReads = origins.Gates.Select(static item => item.Comparison)
             .ToHashSet(ReferenceEqualityComparer.Instance);
@@ -1417,6 +1612,21 @@ internal static class CooperationTargetVerifier
                         ReferenceEquals(variable, token)) &&
                     !allowedTokenReads.Contains(bind))
                     throw Error(context, "target contains an unaccounted control-token read");
+    }
+
+    private static void VerifyAccountedCarrierWrites(
+        SlangLoweringOrigins origins,
+        TargetTree tree,
+        IEnumerable<VariableDeclaration> controlledVariables,
+        string context)
+    {
+        var allowedWrites = ControlledWrites(origins);
+        var controlled = controlledVariables.ToHashSet(ReferenceEqualityComparer.Instance);
+        foreach (var assignment in tree.Statements.OfType<SlangAssign>())
+            if (RootVariable(assignment.Target) is { } variable &&
+                controlled.Contains(variable) &&
+                !allowedWrites.Contains(assignment))
+                throw Error(context, "target contains an unaccounted control/capture/slot write");
     }
 
     private static VariableDeclaration? RootVariable(SlangPlace place) =>
@@ -1515,8 +1725,8 @@ internal static class CooperationTargetVerifier
                     $"relevant operation fact for block '{fact.Label.Name}', instruction " +
                     $"{fact.InstructionOrdinal} does not match the analyzed source");
             if (sourceInstruction.Operation is
-                StructuredBufferLengthOperation or
-                ReadWriteStructuredBufferLengthOperation)
+                IReadOnlyStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLengthOperation)
             {
                 var dimensions = Single(
                     origins.Dimensions,
@@ -1783,6 +1993,10 @@ internal static class CooperationTargetVerifier
             Terminator.D.Br<RegionJump<IShaderValue>, IShaderValue> branch when arm == 0 => branch.Target,
             Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch when arm == 0 => branch.TrueTarget,
             Terminator.D.BrIf<RegionJump<IShaderValue>, IShaderValue> branch when arm == 1 => branch.FalseTarget,
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch
+                when arm >= 0 && arm < branch.CaseTargets.Length => branch.CaseTargets[arm],
+            Terminator.D.Switch<RegionJump<IShaderValue>, IShaderValue> branch
+                when arm == branch.CaseTargets.Length => branch.DefaultTarget,
             _ => throw new InvalidOperationException($"No source control arm {arm}.")
         };
 

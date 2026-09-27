@@ -1,6 +1,6 @@
-# Writable f32 structured buffers
+# Writable f32/i32/u32 structured buffers
 
-CLSL supports one closed writable storage-buffer authoring type:
+CLSL supports three closed writable storage-buffer authoring types:
 
 ```csharp
 public readonly struct RWStructuredBuffer<T>
@@ -10,7 +10,8 @@ public readonly struct RWStructuredBuffer<T>
 }
 ```
 
-Only `RWStructuredBuffer<float>` is mapped. The zero-field readonly CLR value is
+Only `RWStructuredBuffer<float>`, `RWStructuredBuffer<int>`, and
+`RWStructuredBuffer<uint>` are mapped. The zero-field readonly CLR value is
 a shader handle; its accessors throw if executed. Resource values cannot be
 copied into locals, parameters, returns, members, properties, arrays, function
 pointers, or indirect pointer shells.
@@ -44,11 +45,16 @@ remains valid.
 `Length` has `OperationRequirement.None`, loads have `MemoryRead`, and stores
 have `MemoryWrite`. Store is a typed three-operand operation with no result.
 Indices and Length remain declared u32 while the CIL evaluation stack remains
-canonical i32, so conversions are explicit at intrinsic boundaries.
+canonical i32, so conversions are explicit at intrinsic boundaries. A u32 load
+returns to that canonical i32 stack; unsigned calls, comparisons, returns and
+stores convert back to u32 without losing the high bit. A u32 setter converts
+its index and value independently, retains their order, and produces no result.
 
-Slang uses `RWStructuredBuffer<float>`, `GetDimensions`, indexed reads and
-indexed assignments. WGSL uses `var<storage, read_write>`, `arrayLength`,
-indexed reads and stores.
+Slang uses `RWStructuredBuffer<f32>`, `RWStructuredBuffer<i32>`, or
+`RWStructuredBuffer<u32>` (with scalar aliases), `GetDimensions`, indexed reads
+and assignments. WGSL uses `var<storage, read_write>`, `arrayLength`, and typed
+indexed reads and stores. Slang reflection identifies the scalar as `float32`,
+`int32`, or `uint32`, with `readWrite` resource access.
 
 An explicit-LOD texture sample may supply the stored f32 value in compute code.
 This composes the existing typed sample `MemoryRead` and indexed store
@@ -61,8 +67,9 @@ policy. `ShaderStorageBufferBinding.Kind` is now constructor data rather than a
 fixed read-only computed property; callers should consume the returned kind
 without assuming all storage bindings are read-only.
 
-Hosts must provide bindings of at least four bytes whose lengths are divisible
-by four, satisfy device offset limits, dispatch the example with `y = z = 1`,
+Hosts must provide bindings of at least one complete four-byte scalar whose
+lengths are divisible by four, satisfy device offset limits, dispatch the
+example with `y = z = 1`,
 and ensure the separate input/output ranges do not overlap. The in-place example
 uses one writable binding and assumes one invocation per element. Runtime
 allocation, dispatch, synchronization, atomics and device admission remain

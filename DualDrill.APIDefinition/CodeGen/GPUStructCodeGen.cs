@@ -56,6 +56,12 @@ public sealed record class GPUStructCodeGen(
             tw.WriteLine();
         }
 
+        if (decl.Name == "GPUComputePipelineDescriptor"
+            && !decl.Properties.Any(property => property.Name == "Layout"))
+        {
+            tw.WriteLine("public IGPUPipelineLayout? Layout { get; set; }");
+        }
+
         tw.WriteLine("}");
         tw.WriteLine();
     }

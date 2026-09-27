@@ -6,6 +6,7 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Literal;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
+using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Types;
 using DualDrill.Common;
 using DualDrill.Common.Nat;
@@ -177,9 +178,26 @@ internal static class CilPreStackAnalyzer
             return Stack;
         }
 
+        public ImmutableStack<CilStackType> VisitInitObject(CilInstructionInfo inst, Type type, IShaderType mappedType)
+        {
+            if (Pop() is not CilStackType.ManagedPointer pointer ||
+                pointer.Type.AddressSpace.Kind != AddressSpaceKind.Function ||
+                !pointer.Type.BaseType.Equals(mappedType))
+                throw Error($"initobj {type} requires a matching function-local pointer to {mappedType.Name}");
+            try
+            {
+                _ = InitObjectType.Resolve(type, table);
+            }
+            catch (NotSupportedException exception)
+            {
+                throw Error(exception.Message);
+            }
+            return Stack;
+        }
+
         public ImmutableStack<CilStackType> VisitLoadField(CilInstructionInfo inst, MemberDeclaration m)
         {
-            _ = PopFieldOwner();
+            PopFieldOwner(allowValue: true);
             return Push(CilStackType.FromShaderType(m.Type));
         }
 
@@ -307,12 +325,40 @@ internal static class CilPreStackAnalyzer
         }
 
         public ImmutableStack<CilStackType> VisitLoadIndirect<TShaderType>(CilInstructionInfo inst)
-            where TShaderType : IShaderType =>
-            Unsupported("indirect load");
+            where TShaderType : ISingletonShaderType<TShaderType>
+        {
+            var requested = TShaderType.Instance;
+            if (requested is not (IntType<N32> or UIntType<N32> or FloatType<N32>))
+                return Unsupported("indirect load");
+            var actual = Pop();
+            if (actual is not CilStackType.ManagedPointer pointer ||
+                pointer.Type.AddressSpace.Kind != AddressSpaceKind.Function ||
+                (requested is FloatType<N32>
+                    ? pointer.Type.BaseType is not FloatType<N32>
+                    : pointer.Type.BaseType is not (IntType<N32> or UIntType<N32>)))
+                throw Error($"indirect load {requested.Name} requires a matching function-local i32/u32 or f32 pointer, got {actual}");
+            return Push(requested is FloatType<N32> ? CilStackType.Float32.Instance : CilStackType.Int32.Instance);
+        }
 
         public ImmutableStack<CilStackType> VisitStoreIndirect<TShaderType>(CilInstructionInfo inst)
-            where TShaderType : IShaderType =>
-            Unsupported("indirect store");
+            where TShaderType : ISingletonShaderType<TShaderType>
+        {
+            var requested = TShaderType.Instance;
+            if (requested is not (IntType<N32> or FloatType<N32>))
+                return Unsupported("indirect store");
+            var value = Pop();
+            var address = Pop();
+            if (value != (requested is FloatType<N32>
+                    ? CilStackType.Float32.Instance
+                    : CilStackType.Int32.Instance) ||
+                address is not CilStackType.ManagedPointer pointer ||
+                pointer.Type.AddressSpace.Kind != AddressSpaceKind.Function ||
+                (requested is FloatType<N32>
+                    ? pointer.Type.BaseType is not FloatType<N32>
+                    : pointer.Type.BaseType is not (IntType<N32> or UIntType<N32>)))
+                throw Error($"indirect store {requested.Name} requires a matching function-local pointer and canonical value, got {address}, {value}");
+            return Stack;
+        }
 
         public ImmutableStack<CilStackType> VisitLoadIndirectNativeInt(CilInstructionInfo inst) =>
             Unsupported("native integer indirect load");
@@ -371,6 +417,22 @@ internal static class CilPreStackAnalyzer
                 throw Error($"field owner does not match managed pointer {pointer}");
 
             return pointer;
+        }
+
+        private void PopFieldOwner(bool allowValue)
+        {
+            var owner = Pop();
+            var ownerType = owner switch
+            {
+                CilStackType.ManagedPointer pointer => pointer.Type.BaseType,
+                CilStackType.Value value when allowValue => value.Type,
+                _ => throw Error($"field access requires a structure value or managed pointer, got {owner}")
+            };
+            if (instruction.Instruction.Operand is not FieldInfo field ||
+                field.DeclaringType is null ||
+                table[field.DeclaringType] is not { } declaringType ||
+                !ownerType.Equals(declaringType))
+                throw Error($"field owner does not match {ownerType.Name}");
         }
 
         private ImmutableStack<CilStackType> Push(CilStackType value)

@@ -70,8 +70,15 @@ public sealed class BooleanCallTests
     public void OtherScalarMismatchesRemainRejected()
     {
         var unsigned = Assert.Throws<ValidationException>(() =>
-            CompilerTestPipeline.CompileBody(((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method));
-        Assert.Contains("parameter arg(value: u32) not match", unsigned.Message);
+            CompilerTestPipeline.CompileBody(((Func<ulong, ulong>)BooleanCallShader.ForwardUnsigned64).Method));
+        Assert.Contains("parameter arg(value: u64) not match", unsigned.Message);
+
+        var supported = CompilerTestPipeline.CompileBody(
+            ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method);
+        Assert.Contains(supported.Labels.SelectMany(label => supported[label].Body.Elements),
+            instruction => instruction.Operation is
+                ScalarConversionOperation<IntType<DualDrill.Common.Nat.N32>,
+                    UIntType<DualDrill.Common.Nat.N32>>);
 
         // Inject a malformed caller type: ordinary C# cannot pass a float to a bool parameter.
         var forwarded = ((Func<bool, int>)BooleanCallShader.Forwarded).Method;
@@ -115,4 +122,6 @@ internal sealed class BooleanCallShader : ISharpShader
     public static int Forwarded(bool choose) => Select(11, choose, 29);
     public static uint Unsigned(uint value) => value;
     public static uint ForwardUnsigned(uint value) => Unsigned(value);
+    public static ulong Unsigned64(ulong value) => value;
+    public static ulong ForwardUnsigned64(ulong value) => Unsigned64(value);
 }

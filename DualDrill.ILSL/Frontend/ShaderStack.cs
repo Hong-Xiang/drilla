@@ -81,6 +81,9 @@ public sealed record ShaderStackProvenance
 
     internal static ShaderStackProvenance SyntheticFallThrough(CilInstructionInfo anchor) =>
         new(anchor.Index, anchor.ByteOffset, anchor.NextByteOffset, 0, true);
+
+    internal static ShaderStackProvenance SyntheticInitialization(CilInstructionInfo anchor, int ordinal) =>
+        new(anchor.Index, anchor.ByteOffset, anchor.NextByteOffset, ordinal, true);
 }
 
 public sealed record ShaderStackTransition
@@ -334,6 +337,11 @@ internal static class OperationValidator
                     !result.AddressSpace.Equals(owner.AddressSpace))
                     throw Invalid(instruction);
                 return;
+            case StructureMemberGetOperation get:
+                if (!get.Owner.Declaration.Members.Contains(get.Member))
+                    throw Invalid(instruction);
+                Require(instruction, [get.Owner], get.Member.Type);
+                return;
             case IUnaryExpressionOperation unary:
                 Require(
                     instruction,
@@ -347,21 +355,31 @@ internal static class OperationValidator
             case IBinaryStatementOperation statement:
                 Require(instruction, [statement.LeftType, statement.RightType], null, allowPointerAddressSpace: true);
                 return;
-            case StructuredBufferLengthOperation length:
+            case IReadOnlyStructuredBufferLengthOperation length
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLength(length):
                 Require(instruction, [length.BufferPointerType], ShaderType.U32);
                 return;
-            case StructuredBufferLoadOperation load:
-                Require(instruction, [load.BufferPointerType, ShaderType.U32], ShaderType.F32);
+            case IReadOnlyStructuredBufferLoadOperation load
+                when ReadOnlyStructuredBufferFamily.IsCanonicalLoad(load):
+                Require(instruction, [load.BufferPointerType, ShaderType.U32], load.ElementType);
                 return;
-            case ReadWriteStructuredBufferLengthOperation rwLength:
+            case IReadOnlyStructuredBufferLengthOperation or IReadOnlyStructuredBufferLoadOperation:
+                throw Invalid(instruction);
+            case IReadWriteStructuredBufferLengthOperation rwLength
+                when ReadWriteStructuredBufferFamily.IsCanonicalLength(rwLength):
                 Require(instruction, [rwLength.BufferPointerType], ShaderType.U32);
                 return;
-            case ReadWriteStructuredBufferLoadOperation rwLoad:
-                Require(instruction, [rwLoad.BufferPointerType, ShaderType.U32], ShaderType.F32);
+            case IReadWriteStructuredBufferLoadOperation rwLoad
+                when ReadWriteStructuredBufferFamily.IsCanonicalLoad(rwLoad):
+                Require(instruction, [rwLoad.BufferPointerType, ShaderType.U32], rwLoad.ElementType);
                 return;
-            case ReadWriteStructuredBufferStoreOperation store:
-                Require(instruction, [store.BufferPointerType, ShaderType.U32, ShaderType.F32], null);
+            case IReadWriteStructuredBufferStoreOperation store
+                when ReadWriteStructuredBufferFamily.IsCanonicalStore(store):
+                Require(instruction, [store.BufferPointerType, ShaderType.U32, store.ElementType], null);
                 return;
+            case IReadWriteStructuredBufferLengthOperation or
+                IReadWriteStructuredBufferLoadOperation or IReadWriteStructuredBufferStoreOperation:
+                throw Invalid(instruction);
             case TextureSampleLevelOperation sample:
                 Require(
                     instruction,
@@ -375,6 +393,10 @@ internal static class OperationValidator
                 return;
             case VectorCompositeConstructionOperation vector:
                 Require(instruction, vector.ParameterTypes, vector.ResultType);
+                return;
+            case StructureCompositeConstructionOperation composite:
+                if (!composite.Matches(instruction.Result, instruction.Operands.Select(operand => operand.Type)))
+                    throw Invalid(instruction);
                 return;
             case ZeroConstructorOperation zero:
                 Require(instruction, [], zero.ResultType);

@@ -362,7 +362,8 @@ public static class FunctionEffectAnalysis
     {
         if (operation is LiteralOperation or NopOperation or AccessChainOperation or
             AddressOfMemberOperation or AddressOfVecComponentOperation or
-            VectorCompositeConstructionOperation or ZeroConstructorOperation or LogicalNotOperation)
+            VectorCompositeConstructionOperation or StructureCompositeConstructionOperation or StructureMemberGetOperation or
+            ZeroConstructorOperation or LogicalNotOperation)
             return true;
 
         var type = operation.GetType();

@@ -315,7 +315,7 @@ public sealed class CilValueControlFlowBody : IFunctionBody, IPrintable
     public void PrettyPrint(IndentedTextWriter writer, PrettyPrintOption option) =>
         CilStagePrettyPrinter.PrintValueControlFlow(this, writer);
 
-    private static IEnumerable<IShaderValue> Values(CilValueBasicBlock block)
+    internal static IEnumerable<IShaderValue> Values(CilValueBasicBlock block)
     {
         foreach (var value in block.Parameters)
             yield return value;

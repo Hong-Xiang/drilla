@@ -69,8 +69,12 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
             [typeof(Half)] = ShaderType.F16,
             [typeof(float)] = ShaderType.F32,
             [typeof(double)] = ShaderType.F64,
-            [typeof(StructuredBuffer<float>)] = ReadOnlyStructuredBufferType.Instance,
-            [typeof(RWStructuredBuffer<float>)] = ReadWriteStructuredBufferType.Instance,
+            [typeof(StructuredBuffer<float>)] = ReadOnlyStructuredBufferType<FloatType<N32>>.Instance,
+            [typeof(StructuredBuffer<int>)] = ReadOnlyStructuredBufferType<IntType<N32>>.Instance,
+            [typeof(StructuredBuffer<uint>)] = ReadOnlyStructuredBufferType<UIntType<N32>>.Instance,
+            [typeof(RWStructuredBuffer<float>)] = ReadWriteStructuredBufferType<FloatType<N32>>.Instance,
+            [typeof(RWStructuredBuffer<int>)] = ReadWriteStructuredBufferType<IntType<N32>>.Instance,
+            [typeof(RWStructuredBuffer<uint>)] = ReadWriteStructuredBufferType<UIntType<N32>>.Instance,
             [typeof(Texture2D<float>)] = SampledTexture2DF32Type.Instance,
             [typeof(SamplerState)] = SamplerStateType.Instance,
             [typeof(Vector4)] = VecType<N4, FloatType<N32>>.Instance,
@@ -152,31 +156,65 @@ internal sealed class SharedBuiltinSymbolTable : ISingleton<SharedBuiltinSymbolT
             if (m.Name == "Dot")
                 result.Add(m, ShaderFunction.Instance.GetFunction("dot", ShaderType.F32, vec4f32t, vec4f32t));
 
-        var buffer = typeof(StructuredBuffer<float>);
-        result.Add(
-            buffer.GetProperty(nameof(StructuredBuffer<float>.Length))?.GetMethod
-            ?? throw new MissingMethodException(buffer.FullName, "get_Length"),
-            StructuredBufferLengthOperation.Instance.Function);
-        result.Add(
-            buffer.GetProperty("Item")?.GetMethod
-            ?? throw new MissingMethodException(buffer.FullName, "get_Item"),
-            StructuredBufferLoadOperation.Instance.Function);
+        RegisterReadOnly(typeof(StructuredBuffer<float>),
+            StructuredBufferLengthOperation<FloatType<N32>>.Instance,
+            StructuredBufferLoadOperation<FloatType<N32>>.Instance);
+        RegisterReadOnly(typeof(StructuredBuffer<int>),
+            StructuredBufferLengthOperation<IntType<N32>>.Instance,
+            StructuredBufferLoadOperation<IntType<N32>>.Instance);
+        RegisterReadOnly(typeof(StructuredBuffer<uint>),
+            StructuredBufferLengthOperation<UIntType<N32>>.Instance,
+            StructuredBufferLoadOperation<UIntType<N32>>.Instance);
 
-        var writableBuffer = typeof(RWStructuredBuffer<float>);
-        var writableIndexer = writableBuffer.GetProperty("Item")
-            ?? throw new MissingMemberException(writableBuffer.FullName, "Item");
-        result.Add(
-            writableBuffer.GetProperty(nameof(RWStructuredBuffer<float>.Length))?.GetMethod
-            ?? throw new MissingMethodException(writableBuffer.FullName, "get_Length"),
-            ReadWriteStructuredBufferLengthOperation.Instance.Function);
-        result.Add(
-            writableIndexer.GetMethod
-            ?? throw new MissingMethodException(writableBuffer.FullName, "get_Item"),
-            ReadWriteStructuredBufferLoadOperation.Instance.Function);
-        result.Add(
-            writableIndexer.SetMethod
-            ?? throw new MissingMethodException(writableBuffer.FullName, "set_Item"),
-            ReadWriteStructuredBufferStoreOperation.Instance.Function);
+        void RegisterReadOnly(
+            Type buffer,
+            IReadOnlyStructuredBufferLengthOperation length,
+            IReadOnlyStructuredBufferLoadOperation load)
+        {
+            result.Add(
+                buffer.GetProperty(nameof(StructuredBuffer<float>.Length))?.GetMethod
+                ?? throw new MissingMethodException(buffer.FullName, "get_Length"),
+                length.Function);
+            result.Add(
+                buffer.GetProperty("Item")?.GetMethod
+                ?? throw new MissingMethodException(buffer.FullName, "get_Item"),
+                load.Function);
+        }
+
+        RegisterWritable(typeof(RWStructuredBuffer<float>),
+            ReadWriteStructuredBufferLengthOperation<FloatType<N32>>.Instance,
+            ReadWriteStructuredBufferLoadOperation<FloatType<N32>>.Instance,
+            ReadWriteStructuredBufferStoreOperation<FloatType<N32>>.Instance);
+        RegisterWritable(typeof(RWStructuredBuffer<int>),
+            ReadWriteStructuredBufferLengthOperation<IntType<N32>>.Instance,
+            ReadWriteStructuredBufferLoadOperation<IntType<N32>>.Instance,
+            ReadWriteStructuredBufferStoreOperation<IntType<N32>>.Instance);
+        RegisterWritable(typeof(RWStructuredBuffer<uint>),
+            ReadWriteStructuredBufferLengthOperation<UIntType<N32>>.Instance,
+            ReadWriteStructuredBufferLoadOperation<UIntType<N32>>.Instance,
+            ReadWriteStructuredBufferStoreOperation<UIntType<N32>>.Instance);
+
+        void RegisterWritable(
+            Type buffer,
+            IReadWriteStructuredBufferLengthOperation length,
+            IReadWriteStructuredBufferLoadOperation load,
+            IReadWriteStructuredBufferStoreOperation store)
+        {
+            var indexer = buffer.GetProperty("Item")
+                ?? throw new MissingMemberException(buffer.FullName, "Item");
+            result.Add(
+                buffer.GetProperty(nameof(RWStructuredBuffer<float>.Length))?.GetMethod
+                ?? throw new MissingMethodException(buffer.FullName, "get_Length"),
+                length.Function);
+            result.Add(
+                indexer.GetMethod
+                ?? throw new MissingMethodException(buffer.FullName, "get_Item"),
+                load.Function);
+            result.Add(
+                indexer.SetMethod
+                ?? throw new MissingMethodException(buffer.FullName, "set_Item"),
+                store.Function);
+        }
 
         result.Add(TextureSampleLevelMethod, TextureSampleLevelOperation.Instance.Function);
 

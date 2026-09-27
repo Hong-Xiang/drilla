@@ -96,6 +96,7 @@ public partial struct GPUComputePipelineDescriptor()
 {
     public string Label { get; set; }
     public GPUProgrammableStage Compute { get; set; }
+    public IGPUPipelineLayout? Layout { get; set; }
 }
 
 public partial struct GPUDepthStencilState()

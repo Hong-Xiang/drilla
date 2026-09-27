@@ -43,7 +43,7 @@ public sealed class CilPreStackAnalysisTests
     public void SemanticFailureDoesNotInvalidateTheRawModuleOrParser()
     {
         var parser = new RuntimeReflectionParser();
-        var method = ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method;
+        var method = ((Func<ulong, ulong>)BooleanCallShader.ForwardUnsigned64).Method;
 
         var module = parser.ParseMethod(method);
         var model = CompilerTestPipeline.Labelled(module, method);
@@ -51,7 +51,7 @@ public sealed class CilPreStackAnalysisTests
             model.RawCode.Instructions,
             instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
 
-        Assert.IsType<CilStackType.Int32>(Assert.Single(Pre(model, call.Index).Types));
+        Assert.IsType<CilStackType.Int64>(Assert.Single(Pre(model, call.Index).Types));
         Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
         Assert.Same(model.RawCode, CompilerTestPipeline.Labelled(module, method).RawCode);
         _ = parser.ParseMethod(GetMethod(nameof(Diamond)));
@@ -66,7 +66,7 @@ public sealed class CilPreStackAnalysisTests
         Assert.Contains(module.FunctionDefinitions.Values,
             body => body.Code.Environment.Method == callerMethod);
         Assert.Contains(module.FunctionDefinitions.Values,
-            body => body.Code.Environment.Method == ((Func<uint, uint>)BooleanCallShader.ForwardUnsigned).Method);
+            body => body.Code.Environment.Method == ((Func<ulong, ulong>)BooleanCallShader.ForwardUnsigned64).Method);
         Assert.Throws<ValidationException>(() => CilModuleCompiler.Compile(module));
     }
 
@@ -171,15 +171,13 @@ public sealed class CilPreStackAnalysisTests
     }
 
     [Fact]
-    public void UnsupportedDeadCalleeIsCollectedBeforeLaterCompilationFails()
+    public void DeadCallerStillCollectsAndCompilesItsReachableInitObjectCallee()
     {
         var module = CompilerTestPipeline.ParseRaw(Fixtures.DeadUnsupportedCalleeCaller);
 
         Assert.Contains(module.FunctionDefinitions.Values,
             body => body.Code.Environment.Method == Fixtures.DeadUnsupportedCallee);
-        var exception = Assert.Throws<ValidationException>(() => CilPreStackPass.Run(module));
-        Assert.Contains("initobj", exception.Message);
-        Assert.Contains(Fixtures.DeadUnsupportedCallee.Name, exception.Message);
+        Assert.NotEmpty(CilModuleCompiler.Compile(module).FunctionDefinitions);
     }
 
     [Fact]
@@ -244,7 +242,7 @@ public sealed class CilPreStackAnalysisTests
     }
 
     [Fact]
-    public void ReachableInitObjectIsRejectedInsteadOfDroppingTheZeroStore()
+    public void ReachableInitObjectStoresZeroInsteadOfDroppingTheStore()
     {
         Assert.Equal(0, ResetAfterWrite());
 
@@ -253,10 +251,10 @@ public sealed class CilPreStackAnalysisTests
         Assert.Contains(
             CilMethodDecoder.Decode(ordinary).Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
-        AssertInitObjectRejected(ordinary);
+        AssertInitObjectStored(ordinary);
 #endif
 
-        AssertInitObjectRejected(Fixtures.ReachableInitObject);
+        AssertInitObjectStored(Fixtures.ReachableInitObject);
     }
 
     [Fact]
@@ -331,7 +329,6 @@ public sealed class CilPreStackAnalysisTests
     [Theory]
     [InlineData("CallSByte", false)]
     [InlineData("CallByte", false)]
-    [InlineData("CallUInt32", false)]
     [InlineData("CallUInt64", true)]
     public void NarrowAndUnsignedCallsHaveNormalizedPreBeforeExistingValueRejection(
         string methodName,
@@ -351,6 +348,26 @@ public sealed class CilPreStackAnalysisTests
             Assert.IsType<CilStackType.Int64>(type);
         else
             Assert.IsType<CilStackType.Int32>(type);
+    }
+
+    [Fact]
+    public void UInt32CallConvertsCanonicalI32AtItsDeclaredBoundary()
+    {
+        var method = Fixtures.Method("CallUInt32");
+        var module = CompilerTestPipeline.ParseRaw(method);
+        var model = CompilerTestPipeline.Labelled(module, method);
+        var call = Assert.Single(model.RawCode.Instructions,
+            instruction => instruction.Instruction.OpCode.FlowControl == FlowControl.Call);
+        Assert.IsType<CilStackType.Int32>(Assert.Single(Pre(model, call.Index).Types));
+
+        var compiled = CilModuleCompiler.Compile(module);
+        var body = Assert.Single(compiled.FunctionDefinitions.Values,
+            candidate => candidate.Declaration.Name == method.Name);
+        var instructions = body.Labels.SelectMany(label => body[label].Body.Elements).ToArray();
+        Assert.Contains(instructions, instruction =>
+            instruction.Operation is ScalarConversionOperation<IntType<N32>, UIntType<N32>>);
+        Assert.Contains(instructions, instruction =>
+            instruction.Operation is ScalarConversionOperation<UIntType<N32>, IntType<N32>>);
     }
 
     [Fact]
@@ -415,7 +432,7 @@ public sealed class CilPreStackAnalysisTests
 
     private static int MutualB(int value) => value <= 0 ? 1 : MutualA(value - 1);
 
-    private static uint CallFailingCallee(uint value) => BooleanCallShader.ForwardUnsigned(value);
+    private static ulong CallFailingCallee(ulong value) => BooleanCallShader.ForwardUnsigned64(value);
 
     private static int WithFinally(int value)
     {
@@ -456,17 +473,23 @@ public sealed class CilPreStackAnalysisTests
         return cell.Value;
     }
 
-    private static void AssertInitObjectRejected(MethodInfo method)
+    private static void AssertInitObjectStored(MethodInfo method)
     {
         var module = CompilerTestPipeline.ParseRaw(method);
         Assert.Contains(
             CompilerTestPipeline.RawBody(module, method).Code.Instructions,
             instruction => instruction.Instruction.OpCode == OpCodes.Initobj);
-        var exception = Assert.Throws<ValidationException>(() => CilPreStackPass.Run(module));
-
-        Assert.Contains("initobj", exception.Message);
-        Assert.Contains("IL_", exception.Message);
-        Assert.Contains(method.Name, exception.Message);
+        var values = ShaderStackToValuePass.Run(
+            ShaderStackControlFlowPass.Run(
+                CilToShaderStackPass.Run(
+                    CilBlockPartitionPass.Run(CilPreStackPass.Run(module)))));
+        var body = Assert.Single(values.FunctionDefinitions.Values);
+        Assert.Contains(body.Graph.Labels().SelectMany(label => body.Graph[label].Body.Elements),
+            instruction => instruction.Operation is StoreOperation &&
+                           instruction.Payload is ShaderStackProvenance provenance &&
+                           body.Source.Source.Source.Raw.Code[provenance.OriginalIndex]
+                               .Instruction.OpCode == OpCodes.Initobj);
+        Assert.NotEmpty(CilModuleCompiler.Compile(module).FunctionDefinitions);
     }
 
     private static MethodInfo GetMethod(string name) =>

@@ -17,6 +17,7 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitLoadLocal(CilInstructionInfo inst, VariableDeclaration v);
     TResult VisitLoadLocalAddress(CilInstructionInfo inst, VariableDeclaration v);
     TResult VisitStoreLocal(CilInstructionInfo inst, VariableDeclaration v);
+    TResult VisitInitObject(CilInstructionInfo inst, Type type, IShaderType mappedType);
     TResult VisitLoadField(CilInstructionInfo inst, MemberDeclaration m);
     TResult VisitLoadFieldAddress(CilInstructionInfo inst, MemberDeclaration m);
     TResult VisitStoreField(CilInstructionInfo inst, MemberDeclaration m);
@@ -48,8 +49,10 @@ public interface ICilInstructionVisitor<TResult>
     TResult VisitLogicalNot(CilInstructionInfo inst);
     TResult VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>;
 
-    TResult VisitLoadIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;
-    TResult VisitStoreIndirect<TShaderType>(CilInstructionInfo inst) where TShaderType : IShaderType;
+    TResult VisitLoadIndirect<TShaderType>(CilInstructionInfo inst)
+        where TShaderType : ISingletonShaderType<TShaderType>;
+    TResult VisitStoreIndirect<TShaderType>(CilInstructionInfo inst)
+        where TShaderType : ISingletonShaderType<TShaderType>;
     TResult VisitLoadIndirectNativeInt(CilInstructionInfo inst);
     TResult VisitLoadIndirectRef(CilInstructionInfo inst);
     TResult VisitStoreIndirectRef(CilInstructionInfo inst);

@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Runtime.InteropServices;
+using System.Reflection;
 using DualDrill.ApiGen;
 using DualDrill.ApiGen.CodeGen;
 using DualDrill.ApiGen.DrillLang.Declaration;
@@ -9,11 +11,12 @@ using DualDrill.ApiGen.DrillLang.Types;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
 using WebGPU;
+using Xunit.Abstractions;
 using static WebGPU.WebGPU;
 
 namespace DualDrill.CLSL.NativeTest;
 
-public sealed class ModernWgpuMigrationTests
+public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
 {
     private const string NativeSha256 = "ae8cfdc91d436978762d75c56452b287368aff569daad68693de399731487f0b";
     private const uint Width = 65;
@@ -22,6 +25,367 @@ public sealed class ModernWgpuMigrationTests
     private const uint BytesPerRow = 512;
     private const ulong BufferSize = BytesPerRow * Height;
     private static readonly TimeSpan CallbackTimeout = TimeSpan.FromSeconds(10);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Compute_pipeline_dispatches_integer_buffers_on_hardware(bool explicitLayout)
+    {
+        using var context = await NativeContext.CreateAsync();
+        var info = await context.Adapter.RequestAdapterInfoAsync(CancellationToken.None);
+        Assert.Equal(GPUBackendType.Vulkan, info.BackendType);
+        Assert.Equal(GPUAdapterType.DiscreteGPU, info.AdapterType);
+        Assert.Contains("NVIDIA", info.Vendor, StringComparison.OrdinalIgnoreCase);
+        output.WriteLine($"Compute adapter: {info.BackendType}, {info.AdapterType}, {info.Vendor}, {info.Device}");
+
+        using var shader = context.Device.CreateShaderModule(new()
+        {
+            Code =
+                """
+                @group(0) @binding(0) var<storage, read> input: array<i32>;
+                @group(0) @binding(1) var<storage, read_write> output: array<i32>;
+
+                @compute @workgroup_size(4)
+                fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+                    output[id.x] = input[id.x] * 2 + 1;
+                }
+                """,
+        });
+        using var input = context.Device.CreateBuffer(new()
+        {
+            Size = 16,
+            Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.Storage,
+        });
+        using var result = context.Device.CreateBuffer(new()
+        {
+            Size = 16,
+            Usage = GPUBufferUsage.Storage | GPUBufferUsage.CopySrc,
+        });
+        using var readback = context.Device.CreateBuffer(new()
+        {
+            Size = 16,
+            Usage = GPUBufferUsage.CopyDst | GPUBufferUsage.MapRead,
+        });
+        int[] values = [-7, 0, 13, 99];
+        context.Device.Queue.WriteBuffer(input, 0, MemoryMarshal.AsBytes(values.AsSpan()));
+
+        IGPUBindGroupLayout? suppliedLayout = null;
+        IGPUPipelineLayout? suppliedPipelineLayout = null;
+        try
+        {
+            if (explicitLayout)
+            {
+                suppliedLayout = context.Device.CreateBindGroupLayout(new()
+                {
+                    Entries = new GPUBindGroupLayoutEntry[]
+                    {
+                        new()
+                        {
+                            Binding = 0,
+                            Visibility = GPUShaderStage.Compute,
+                            Buffer = new() { Type = GPUBufferBindingType.ReadOnlyStorage, MinBindingSize = 16 },
+                        },
+                        new()
+                        {
+                            Binding = 1,
+                            Visibility = GPUShaderStage.Compute,
+                            Buffer = new() { Type = GPUBufferBindingType.Storage, MinBindingSize = 16 },
+                        },
+                    },
+                });
+                suppliedPipelineLayout = context.Device.CreatePipelineLayout(new()
+                {
+                    BindGroupLayouts = [suppliedLayout],
+                });
+            }
+
+            using var pipeline = context.Device.CreateComputePipeline(new()
+            {
+                Layout = suppliedPipelineLayout,
+                Compute = new() { Module = shader, EntryPoint = "main" },
+            });
+            using var pipelineLayout = pipeline.GetBindGroupLayout(0);
+            using var bindGroup = context.Device.CreateBindGroup(new()
+            {
+                Layout = explicitLayout ? suppliedLayout! : pipelineLayout,
+                Entries = new GPUBindGroupEntry[]
+                {
+                    new() { Binding = 0, Buffer = input, Size = 16 },
+                    new() { Binding = 1, Buffer = result, Size = 16 },
+                },
+            });
+            using (var encoder = context.Device.CreateCommandEncoder(new()))
+            {
+                using (var pass = encoder.BeginComputePass(new()))
+                {
+                    pass.SetPipeline(pipeline);
+                    pass.SetBindGroup(0, bindGroup);
+                    pass.DispatchWorkgroups(1);
+                    pass.End();
+                }
+                encoder.CopyBufferToBuffer(result, 0, readback, 0, 16);
+                using var commands = encoder.Finish(new());
+                context.Device.Queue.Submit([commands]);
+            }
+
+            await WaitWithPollingAsync(
+                context.Device,
+                readback.MapAsync(GPUMapMode.Read, 0, 16, CancellationToken.None).AsTask());
+            try
+            {
+                Assert.Equal(new[] { -13, 1, 27, 199 },
+                    MemoryMarshal.Cast<byte, int>(readback.GetMappedRange(0, 16)).ToArray());
+            }
+            finally
+            {
+                readback.Unmap();
+            }
+        }
+        finally
+        {
+            suppliedPipelineLayout?.Dispose();
+            suppliedLayout?.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Compute_pass_rejects_unsupported_inputs_and_invalid_lifetimes()
+    {
+        using var context = await NativeContext.CreateAsync();
+        using var other = await NativeContext.CreateAsync();
+        using var shader = context.Device.CreateShaderModule(new()
+        {
+            Code = "@compute @workgroup_size(1) fn main() {}",
+        });
+        using var foreignShader = other.Device.CreateShaderModule(new()
+        {
+            Code = "@compute @workgroup_size(1) fn main() {}",
+        });
+        using var pipeline = context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = shader, EntryPoint = "main" },
+        });
+        using var foreignPipeline = other.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = foreignShader, EntryPoint = "main" },
+        });
+        using var layout = context.Device.CreateBindGroupLayout(new());
+        using var foreignLayout = other.Device.CreateBindGroupLayout(new());
+        using var foreignPipelineLayout = other.Device.CreatePipelineLayout(new()
+        {
+            BindGroupLayouts = [foreignLayout],
+        });
+        using var foreignBuffer = other.Device.CreateBuffer(new()
+        {
+            Size = 16,
+            Usage = GPUBufferUsage.Storage,
+        });
+        using var buffer = context.Device.CreateBuffer(new()
+        {
+            Size = 16,
+            Usage = GPUBufferUsage.Storage,
+        });
+        using var foreignBindGroup = other.Device.CreateBindGroup(new()
+        {
+            Layout = foreignLayout,
+        });
+        using var bindGroup = context.Device.CreateBindGroup(new()
+        {
+            Layout = layout,
+        });
+        var disposedBuffer = context.Device.CreateBuffer(new()
+        {
+            Size = 16,
+            Usage = GPUBufferUsage.Storage,
+        });
+        disposedBuffer.Dispose();
+
+        Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { EntryPoint = "main" },
+        }));
+        Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = shader },
+        }));
+        Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = Foreign<IGPUShaderModule>(), EntryPoint = "main" },
+        }));
+        var disposedShader = context.Device.CreateShaderModule(new()
+        {
+            Code = "@compute @workgroup_size(1) fn main() {}",
+        });
+        disposedShader.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = disposedShader, EntryPoint = "main" },
+        }));
+        Assert.Throws<NotSupportedException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = new()
+            {
+                Module = shader,
+                EntryPoint = "main",
+                Constants = new() { ["unused"] = "1" },
+            },
+        }));
+        Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = shader, EntryPoint = "main" },
+            Layout = foreignPipelineLayout,
+        }));
+        Assert.Throws<ArgumentException>(() => context.Device.CreatePipelineLayout(new()
+        {
+            BindGroupLayouts = [foreignLayout],
+        }));
+        var disposedLayout = context.Device.CreateBindGroupLayout(new());
+        disposedLayout.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => context.Device.CreatePipelineLayout(new()
+        {
+            BindGroupLayouts = [disposedLayout],
+        }));
+        Assert.Throws<ArgumentException>(() => context.Device.CreateBindGroup(new()
+        {
+            Layout = foreignLayout,
+        }));
+        Assert.Throws<ArgumentException>(() => context.Device.CreateBindGroup(new()
+        {
+            Layout = layout,
+            Entries = new GPUBindGroupEntry[] { new() { Buffer = foreignBuffer } },
+        }));
+        Assert.Throws<ObjectDisposedException>(() => context.Device.CreateBindGroup(new()
+        {
+            Layout = layout,
+            Entries = new GPUBindGroupEntry[] { new() { Buffer = disposedBuffer } },
+        }));
+        Assert.Throws<ArgumentException>(() => context.Device.CreateBindGroup(new()
+        {
+            Layout = Foreign<IGPUBindGroupLayout>(),
+        }));
+        Assert.ThrowsAny<GraphicsApiException>(() => context.Device.CreateBindGroup(new()
+        {
+            Layout = layout,
+            Entries = new GPUBindGroupEntry[] { new() { Binding = 1, Buffer = buffer, Size = 16 } },
+        }));
+        Assert.ThrowsAny<GraphicsApiException>(() => context.Device.CreateBindGroupLayout(new()
+        {
+            Entries = new GPUBindGroupLayoutEntry[]
+            {
+                new() { Binding = 0, Visibility = GPUShaderStage.Compute, Buffer = new() { Type = GPUBufferBindingType.Storage } },
+                new() { Binding = 0, Visibility = GPUShaderStage.Compute, Buffer = new() { Type = GPUBufferBindingType.Storage } },
+            },
+        }));
+        Assert.Throws<OverflowException>(() => pipeline.GetBindGroupLayout((ulong)uint.MaxValue + 1));
+        Assert.ThrowsAny<GraphicsApiException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = shader, EntryPoint = "missing" },
+        }));
+
+        using var encoder = context.Device.CreateCommandEncoder(new());
+        Assert.Throws<NotSupportedException>(() => encoder.BeginComputePass(new()
+        {
+            TimestampWrites = new() { BeginningOfPassWriteIndex = 1 },
+        }));
+        using (var pass = encoder.BeginComputePass(new()))
+        {
+            Assert.Throws<InvalidOperationException>(() => encoder.Finish(new()));
+            Assert.Throws<ArgumentException>(() => pass.SetPipeline(foreignPipeline));
+            Assert.Throws<ArgumentException>(() => pass.SetPipeline(Foreign<IGPUComputePipeline>()));
+            Assert.Throws<ArgumentException>(() => pass.SetBindGroup(0, Foreign<IGPUBindGroup>()));
+            Assert.Throws<ArgumentException>(() => pass.SetBindGroup(0, foreignBindGroup));
+            Assert.Throws<ArgumentNullException>(() => pass.SetPipeline(null!));
+            Assert.Throws<NotSupportedException>(() => pass.SetBindGroup(0, null, [1]));
+            var typed = Assert.IsType<GPUComputePassEncoder<WebGPUNETBackend>>(pass);
+            Assert.Throws<ArgumentException>(() => typed.SetPipeline(
+                Assert.IsType<GPUComputePipeline<WebGPUNETBackend>>(foreignPipeline)));
+            Assert.Throws<ArgumentException>(() => typed.SetBindGroup(
+                0, Assert.IsType<GPUBindGroup<WebGPUNETBackend>>(foreignBindGroup), default));
+            typed.SetBindGroup(0, Assert.IsType<GPUBindGroup<WebGPUNETBackend>>(bindGroup), default);
+            pass.SetPipeline(pipeline);
+            pass.End();
+            Assert.Throws<InvalidOperationException>(() => typed.DispatchWorkgroups(1, 1, 1));
+            Assert.Throws<InvalidOperationException>(() => pass.End());
+        }
+        using var commands = encoder.Finish(new());
+
+        using var abandoned = context.Device.CreateCommandEncoder(new());
+        var unended = abandoned.BeginComputePass(new());
+        unended.Dispose();
+        Assert.Throws<InvalidOperationException>(() => abandoned.Finish(new()));
+        Assert.Throws<InvalidOperationException>(() => abandoned.BeginComputePass(new()));
+        Assert.Throws<InvalidOperationException>(() => abandoned.BeginRenderPass(new()));
+        Assert.Throws<ObjectDisposedException>(() => unended.DispatchWorkgroups(1));
+
+        using var disposedEncoder = context.Device.CreateCommandEncoder(new());
+        using var parentPass = disposedEncoder.BeginComputePass(new());
+        disposedEncoder.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => parentPass.DispatchWorkgroups(1));
+        Assert.Throws<ObjectDisposedException>(() => parentPass.End());
+        parentPass.Dispose();
+
+        var disposedPipeline = context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = shader, EntryPoint = "main" },
+        });
+        disposedPipeline.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => disposedPipeline.GetBindGroupLayout(0));
+        using var liveEncoder = context.Device.CreateCommandEncoder(new());
+        using var livePass = liveEncoder.BeginComputePass(new());
+        Assert.Throws<ObjectDisposedException>(() => livePass.SetPipeline(disposedPipeline));
+        livePass.End();
+    }
+
+    [Fact]
+    public void Compute_pass_generator_excludes_native_bypasses()
+    {
+        var output = new StringBuilder();
+        new WebGPUNativeBackendCodeGen(AlimerWebGPUApi.Create()).EmitAll(output);
+        Assert.DoesNotContain("wgpuComputePassEncoder", output.ToString());
+
+        using var descriptorOutput = new StringWriter();
+        new GPUStructCodeGen(AlimerWebGPUApi.Create()).EmitStruct(
+            descriptorOutput,
+            new StructDeclaration("GPUComputePipelineDescriptor", []));
+        Assert.Contains("public IGPUPipelineLayout? Layout { get; set; }", descriptorOutput.ToString());
+    }
+
+    [Fact]
+    public async Task Compute_pass_rejects_a_disposed_device_before_native_use()
+    {
+        using var context = await NativeContext.CreateAsync();
+        using var encoder = context.Device.CreateCommandEncoder(new());
+        context.Device.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => context.Device.CreateComputePipeline(new()));
+        Assert.Throws<ObjectDisposedException>(() => encoder.BeginComputePass(new()));
+    }
+
+    [Fact]
+    public async Task Failed_native_finish_consumes_compute_command_encoder()
+    {
+        using var context = await NativeContext.CreateAsync();
+        using var encoder = context.Device.CreateCommandEncoder(new());
+        using (var pass = encoder.BeginComputePass(new()))
+        {
+            pass.End();
+        }
+
+        Assert.IsType<GPUCommandEncoder<WebGPUNETBackend>>(encoder).PushDebugGroup("unbalanced");
+        Assert.ThrowsAny<GraphicsApiException>(() => encoder.Finish(new()));
+        Assert.Throws<InvalidOperationException>(() => encoder.Finish(new()));
+        Assert.Throws<InvalidOperationException>(() => encoder.BeginComputePass(new()));
+    }
+
+    private static T Foreign<T>() where T : class =>
+        DispatchProxy.Create<T, ForeignProxy>();
+
+    public sealed class ForeignProxy : DispatchProxy
+    {
+        protected override object? Invoke(
+            System.Reflection.MethodInfo? targetMethod, object?[]? args) =>
+            throw new InvalidOperationException("Foreign resource was used.");
+    }
 
     [Fact]
     public void Loads_the_pinned_Alimer_wgpu_native_pair()
@@ -386,6 +750,44 @@ public sealed class ModernWgpuMigrationTests
         Assert.Equal([0, 0, 255, 255], red);
         Assert.Equal([0, 255, 0, 255], green);
         Assert.NotEqual(red, green);
+
+        using var autoPipeline = context.Device.CreateRenderPipeline(new()
+        {
+            Vertex = new() { Module = shader, EntryPoint = "vs" },
+            Fragment = new()
+            {
+                Module = shader,
+                EntryPoint = "fs",
+                Targets = new GPUColorTargetState[]
+                {
+                    new() { Format = GPUTextureFormat.BGRA8Unorm, WriteMask = GPUColorWriteMask.All },
+                },
+            },
+        });
+        using var autoLayout = autoPipeline.GetBindGroupLayout(0);
+        using var autoBindGroup = context.Device.CreateBindGroup(new()
+        {
+            Layout = autoLayout,
+            Entries = new GPUBindGroupEntry[]
+            {
+                new() { Binding = 0, Buffer = uniform },
+            },
+        });
+        Assert.Equal([0, 0, 255, 255], await RenderFrameAsync(
+            context.Device, autoPipeline, autoBindGroup, uniform, texture, readback,
+            new Vector4(1, 0, 0, 1)));
+
+        using var other = await NativeContext.CreateAsync();
+        Assert.Throws<ArgumentException>(() => other.Device.CreateBindGroup(new()
+        {
+            Layout = autoLayout,
+        }));
+        var disposedAutoLayout = autoPipeline.GetBindGroupLayout(0);
+        disposedAutoLayout.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => context.Device.CreateBindGroup(new()
+        {
+            Layout = disposedAutoLayout,
+        }));
     }
 
     [Fact]

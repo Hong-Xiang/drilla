@@ -33,6 +33,21 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
         Terms = Terminator.Factory<RegionJump<IShaderValue>, IShaderValue>();
 
     [Fact]
+    public void SlangSourceSpellsNegativeFloatZeroWithoutChangingDiagnosticOrIntegerLiterals()
+    {
+        var negativeZero = new F32Literal(BitConverter.Int32BitsToSingle(int.MinValue));
+
+        Assert.Equal("-0.0f", SlangLiteralFormatter.Source(negativeZero));
+        Assert.Equal("-0_f32", SlangLiteralFormatter.Dump(negativeZero));
+        Assert.Equal("0", SlangLiteralFormatter.Source(new F32Literal(0.0f)));
+        Assert.Equal("1.5", SlangLiteralFormatter.Source(new F32Literal(1.5f)));
+        Assert.Equal("-1", SlangLiteralFormatter.Source(new I32Literal(-1)));
+        Assert.Equal(uint.MaxValue.ToString(CultureInfo.InvariantCulture),
+            SlangLiteralFormatter.Source(new U32Literal(uint.MaxValue)));
+        Assert.Equal("false", SlangLiteralFormatter.Source(new BoolLiteral(false)));
+    }
+
+    [Fact]
     public void SharedEffectfulTailHasOneAstPlacement()
     {
         var source = Lower(((Func<int, int>)ScalarControlFlowFixtures.SharedTail).Method);
@@ -845,7 +860,7 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
             "holder",
             new StructureType(structure),
             []);
-        var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType());
+        var address = ShaderValue.Intermediate(ShaderType.F32.GetPtrType(FunctionAddressSpace.Instance));
         var declaration = Function("MemberProjection", ShaderType.Unit);
         var body = CreateFunctionBody(
             declaration,
@@ -1250,6 +1265,93 @@ public sealed class SlangTargetAstTests(ITestOutputHelper output)
                 entry, [], [zero], Terms.ReturnVoid()), null));
         Assert.Contains("zero construction of i32",
             Assert.Throws<NotSupportedException>(() => Lower(zeroBody)).Message);
+    }
+
+    [Fact]
+    public void DirectRegionLoadAndFieldProjectionRequireExactTypesAndAddressSpace()
+    {
+        var label = Label.Create("entry");
+        var function = Function("MalformedIndirect", ShaderType.Unit);
+        var local = new VariableDeclaration(FunctionAddressSpace.Instance, "value", ShaderType.I32, []);
+        var wrongResult = Instruction<IShaderValue, IShaderValue>.Create(
+            new LoadOperation(), ShaderValue.Intermediate(ShaderType.F32), [local.Value]);
+        var wrongResultBody = CreateFunctionBody(
+            function, RegionTree.Block(label, [],
+                Body(label, [], [wrongResult], Terms.ReturnVoid()), null));
+        Assert.Contains("invalid typed load",
+            Assert.Throws<NotSupportedException>(() => Lower(wrongResultBody)).Message);
+
+        var wrongArity = Instruction<IShaderValue, IShaderValue>.Create(
+            new LoadOperation(), ShaderValue.Intermediate(ShaderType.I32), [local.Value, Int(0)]);
+        var wrongArityBody = CreateFunctionBody(
+            function, RegionTree.Block(label, [],
+                Body(label, [], [wrongArity], Terms.ReturnVoid()), null));
+        Assert.Contains("invalid typed load",
+            Assert.Throws<NotSupportedException>(() => Lower(wrongArityBody)).Message);
+
+        var member = new MemberDeclaration("Field", ShaderType.I32, []);
+        var structure = new StructureType(new StructureDeclaration
+        {
+            Name = "Record",
+            Members = [member]
+        });
+        var structureLocal = new VariableDeclaration(FunctionAddressSpace.Instance, "record", structure, []);
+        var forgedPointer = ShaderValue.Intermediate(ShaderType.I32.GetPtrType(UniformAddressSpace.Instance));
+        var projection = Instruction<IShaderValue, IShaderValue>.Create(
+            new AddressOfMemberOperation(member), forgedPointer, [structureLocal.Value]);
+        var projectionBody = CreateFunctionBody(
+            function, RegionTree.Block(label, [],
+                Body(label, [], [projection], Terms.ReturnVoid()), null));
+        Assert.Contains("projected address space",
+            Assert.Throws<NotSupportedException>(() => Lower(projectionBody)).Message);
+    }
+
+    [Fact]
+    public void DirectTargetStructureCompositeRejectsMissingOrMismatchedFields()
+    {
+        var structure = new StructureType(new StructureDeclaration
+        {
+            Name = "Pair",
+            Members =
+            [
+                new MemberDeclaration("Left", ShaderType.I32, []),
+                new MemberDeclaration("Right", ShaderType.U32, [])
+            ]
+        });
+        var operation = new StructureCompositeConstructionOperation(structure);
+        var result = ShaderValue.Intermediate(structure);
+        var missing = Instruction<SlangOperand, IShaderValue>.Create(
+            operation, result, [new SlangValueOperand(Int(0))]);
+        Assert.Throws<ArgumentException>(() => new SlangBind(missing));
+        var wrongOrder = Instruction<SlangOperand, IShaderValue>.Create(
+            operation, result,
+            [
+                new SlangValueOperand(ShaderValue.Literal(new U32Literal(0u))),
+                new SlangValueOperand(Int(0))
+            ]);
+        Assert.Throws<ArgumentException>(() => new SlangBind(wrongOrder));
+
+        var entry = Label.Create("entry");
+        var declaration = Function("MalformedComposite", ShaderType.Unit);
+        var forged = Instruction<IShaderValue, IShaderValue>.Create(
+            operation, result, [Int(0), Int(0)]);
+        var body = CreateFunctionBody(
+            declaration,
+            RegionTree.Block(entry, [], Body(entry, [], [forged], Terms.ReturnVoid()), null));
+        Assert.Contains("invalid ordered structure composite",
+            Assert.Throws<NotSupportedException>(() => Lower(body)).Message);
+
+        var readonlyLocal = new VariableDeclaration(UniformAddressSpace.Instance, "readonly", ShaderType.I32, []);
+        Assert.Throws<ArgumentException>(() => new SlangAssign(
+            new SlangVariablePlace(readonlyLocal),
+            new SlangValueOperand(Int(0))));
+        var readonlyStore = Instruction<IShaderValue, IShaderValue>.Create(
+            new StoreOperation(), null, [readonlyLocal.Value, Int(0)]);
+        var readonlyBody = CreateFunctionBody(
+            declaration,
+            RegionTree.Block(entry, [], Body(entry, [], [readonlyStore], Terms.ReturnVoid()), null));
+        Assert.Contains("read-only typed store",
+            Assert.Throws<NotSupportedException>(() => Lower(readonlyBody)).Message);
     }
 
     [Fact]

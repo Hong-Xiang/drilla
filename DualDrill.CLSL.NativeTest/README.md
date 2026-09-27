@@ -37,6 +37,16 @@ enums to Alimer enums by semantic member name and rejects unknown values or
 flag bits. `GPUAdapterInfo` reports typed backend and adapter classifications;
 callers do not need to infer hardware from vendor or device strings.
 
+Synchronous compute pipelines support automatic or explicit layouts and the
+native compute-pass encode/bind/dispatch path. Pipeline constants, compute
+timestamp writes, and dynamic bind-group offsets are not supported. A compute
+pass must be ended before its parent command encoder is finished; disposing an
+unended pass abandons that encoder. GPU resource use and disposal must be
+sequential: do not dispose a device or participating resource concurrently
+with an operation using it. Concurrent coordination is outside this contract.
+Native `Finish` consumes the command encoder even when it reports a validation
+error; create a new encoder rather than retrying.
+
 Buffer mapping retains the explicit `IGPUDevice.Poll()` contract. Cancellation
 claims only a still-pending map, asks native wgpu to abort it with `Unmap`, and
 completes the managed task only after the terminal native callback. If success
@@ -83,6 +93,12 @@ Comparison is unmasked RGB over every pixel; alpha must be exactly 255.
 Acceptance limits are MAE ≤ 1, RMSE ≤ 4, p99 ≤ 8, and max ≤ 64. Failures retain
 raw RGBA8 and dependency-free PPM reference/candidate/diff files under the test
 output's `oracle-failures/` directory.
+
+`CilIndirectNegativeZeroNativeTests` uses the same pinned NVIDIA wrapper and
+native compute/readback API. It compiles a forced-CIL, function-local `stind.r4`
+then `ldind.r4` shader through the public compiler and checks the mapped f32
+output bits are exactly `0x80000000`. This protects signed-zero literal
+spelling across Slang and WGSL; it does not add general C# ref-local support.
 
 Run source-integrity, comparator, and direct reference-compilation checks
 without initializing native WebGPU:

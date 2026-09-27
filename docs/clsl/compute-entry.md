@@ -2,10 +2,10 @@
 
 CLSL supports a deliberately narrow compute-signature profile:
 
-Read-only f32 storage is documented separately in
-[Read-only f32 structured buffers](./readonly-structured-buffer.md); writable
+Read-only scalar storage is documented separately in
+[Read-only f32/i32/u32 structured buffers](./readonly-structured-buffer.md); writable
 compute storage is documented in
-[Writable f32 structured buffers](./writable-structured-buffer.md).
+[Writable f32/i32/u32 structured buffers](./writable-structured-buffer.md).
 
 Method, parameter and return metadata cardinality is checked from raw reflection
 metadata before conversion to declaration attribute sets. This includes
