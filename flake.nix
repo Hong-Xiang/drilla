@@ -27,8 +27,8 @@
           packages = with pkgs; [
             dotnetPkgs.dotnet-sdk_10
             llvm
+            dotnetPkgs.bun
             nodejs_22
-            pnpm
             shader-slang
             wabt
           ];
