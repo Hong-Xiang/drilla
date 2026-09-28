@@ -56,7 +56,7 @@ public sealed class ClearColorRenderer2
         {
             ColorAttachments = (GPURenderPassColorAttachment[])[
                 new GPURenderPassColorAttachment() {
-                    //View = view,
+                    View = view,
                     LoadOp = GPULoadOp.Clear,
                     StoreOp = GPUStoreOp.Store,
                     ClearValue = new GPUColor {
@@ -74,4 +74,3 @@ public sealed class ClearColorRenderer2
     }
 
 }
-
