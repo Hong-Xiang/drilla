@@ -1414,7 +1414,10 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
 
     private struct BufferContainer
     {
+        // The nested resource is inspected by metadata validation.
+#pragma warning disable CS0649
         public StructuredBuffer<float> Input;
+#pragma warning restore CS0649
     }
 
     private sealed class NestedBufferShader : ISharpShader
@@ -1442,9 +1445,10 @@ public sealed class ReadonlyStructuredBufferTests(ITestOutputHelper output)
 
     private sealed class BufferArrayShader : ISharpShader
     {
-#pragma warning disable CS0169
+        // The invalid array resource is inspected by the metadata validator.
+#pragma warning disable CS0169, CS8618
         private static StructuredBuffer<float>[] Input;
-#pragma warning restore CS0169
+#pragma warning restore CS0169, CS8618
 
         [Fragment]
         [return: Location(0)]

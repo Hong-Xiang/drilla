@@ -102,7 +102,7 @@ export async function createWebXRRenderService({
 export async function createWebXRService(
   WebXR: XRSystem,
   gl: WebGL2RenderingContext,
-  onPose: (pose: XRViewerPose) => void
+  onPose: (pose: XRViewerPose) => void,
 ) {
   console.log("create xr session");
   const session = await WebXR.requestSession("immersive-vr");
@@ -128,7 +128,7 @@ export async function createWebXRService(
     const height = baseLayer.framebufferHeight;
     gl.bindFramebuffer(
       gl.FRAMEBUFFER,
-      session.renderState.baseLayer?.framebuffer
+      session.renderState.baseLayer?.framebuffer,
     );
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(width / 4, height / 4, width / 2, height / 2);
@@ -136,7 +136,7 @@ export async function createWebXRService(
       Math.cos(time / 2000),
       Math.cos(time / 4000),
       Math.cos(time / 6000),
-      0.5
+      0.5,
     );
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -154,7 +154,7 @@ export async function createWebXRService(
     // });
   };
 
-  const f = session.requestAnimationFrame(onFrame);
+  session.requestAnimationFrame(onFrame);
   session.addEventListener("end", () => {
     isEnd = true;
   });

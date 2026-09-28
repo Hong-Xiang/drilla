@@ -90,6 +90,10 @@ the repository root:
 nix develop --builders '' -c node script/verify-wasm-reference-fixtures.mjs
 ```
 
+The pinned Bun frontend check (`cd DualDrill.JS && bun run check`) also
+type-checks this script under strict JavaScript settings. It does not execute
+the reference vectors; use the Node command above for the V8 oracle.
+
 The harness:
 
 1. checks the pinned Node major and records Node, V8, and WABT versions;

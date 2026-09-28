@@ -1,10 +1,9 @@
-import { mat4, vec2, vec3 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 import * as twgl from "twgl.js";
 import vsSrc from "./vs.glsl?raw";
 import fsSrc from "./fs.glsl?raw";
 import { ViewRenderer } from "../RenderService";
 
-type GL = WebGL2RenderingContext;
 export function CubeRenderer(gl: WebGL2RenderingContext): ViewRenderer {
   const programInfo = twgl.createProgramInfo(gl, [vsSrc, fsSrc], {
     attribLocations: {
@@ -55,20 +54,9 @@ export function CubeRenderer(gl: WebGL2RenderingContext): ViewRenderer {
     mag: gl.NEAREST,
   });
 
-  function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement) {
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    const needResize = width !== canvas.width || height !== canvas.height;
-    if (needResize) {
-      canvas.width = width;
-      canvas.height = height;
-    }
-    return needResize;
-  }
   return ({ time, view, proj, viewPort, target: { framebuffer } }) => {
     const state = time * 0.001;
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-    // resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(viewPort.x, viewPort.y, viewPort.width, viewPort.height);
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(viewPort.x, viewPort.y, viewPort.width, viewPort.height);
@@ -98,7 +86,7 @@ export function CubeRenderer(gl: WebGL2RenderingContext): ViewRenderer {
     twgl.setUniforms(programInfo, {
       u_lightDirection: vec3.normalize(
         vec3.create(),
-        vec3.fromValues(1, 8, -10)
+        vec3.fromValues(1, 8, -10),
       ),
       diffuseColor: tex,
       modelInverseTranspose,

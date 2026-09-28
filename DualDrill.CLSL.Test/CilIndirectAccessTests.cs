@@ -10,7 +10,6 @@ using DualDrill.CLSL.Language.Declaration;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Operation;
 using DualDrill.CLSL.Language.ShaderAttribute;
-using DualDrill.CLSL.Language.ShaderAttribute;
 using DualDrill.CLSL.Language.Symbol;
 using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
@@ -176,10 +175,10 @@ public sealed class CilIndirectAccessTests(ITestOutputHelper output)
         Assert.IsAssignableFrom<IPtrType>(projected.Operand0!.Type);
         var promoted = Assert.Single(stages.PromotedValueControlFlow.FunctionDefinitions.Values);
         Assert.Single(promoted.Graph.Labels()
-            .SelectMany(label => promoted.Graph[label].Body.Elements)
-            .Where(instruction => instruction.Operation is StoreOperation &&
-                                  instruction.Payload is ShaderStackProvenance { Synthetic: true } &&
-                                  ReferenceEquals(instruction.Operand0, raw.DeclarationContext.LocalVariables[0].Value)));
+            .SelectMany(label => promoted.Graph[label].Body.Elements),
+            instruction => instruction.Operation is StoreOperation &&
+                           instruction.Payload is ShaderStackProvenance { Synthetic: true } &&
+                           ReferenceEquals(instruction.Operand0, raw.DeclarationContext.LocalVariables[0].Value));
         Assert.NotEmpty(CilModuleCompiler.Compile(stages.Raw).FunctionDefinitions);
     }
 
@@ -197,9 +196,9 @@ public sealed class CilIndirectAccessTests(ITestOutputHelper output)
         var raw = CompilerTestPipeline.RawBody(stages.Raw, method);
         var promoted = Assert.Single(stages.PromotedValueControlFlow.FunctionDefinitions.Values);
         var synthetic = Assert.Single(promoted.Graph.Labels()
-            .SelectMany(label => promoted.Graph[label].Body.Elements)
-            .Where(instruction => instruction.Operation is StoreOperation &&
-                                  instruction.Payload is ShaderStackProvenance { Synthetic: true }));
+            .SelectMany(label => promoted.Graph[label].Body.Elements),
+            instruction => instruction.Operation is StoreOperation &&
+                           instruction.Payload is ShaderStackProvenance { Synthetic: true });
         Assert.Same(Assert.Single(raw.DeclarationContext.LocalVariables).Value, synthetic.Operand0);
         Assert.NotEmpty(CilModuleCompiler.Compile(stages.Raw).FunctionDefinitions);
     }
@@ -218,11 +217,10 @@ public sealed class CilIndirectAccessTests(ITestOutputHelper output)
         });
         Assert.Equal(uint.MaxValue, method.Invoke(null, null));
         var stages = CompilerTestPipeline.CompileStages(method);
-        Assert.Empty(Assert.Single(stages.PromotedValueControlFlow.FunctionDefinitions.Values)
-            .Graph.Labels().SelectMany(label =>
-                Assert.Single(stages.PromotedValueControlFlow.FunctionDefinitions.Values)
-                    .Graph[label].Body.Elements)
-            .Where(instruction => instruction.Payload is ShaderStackProvenance { Synthetic: true }));
+        var promoted = Assert.Single(stages.PromotedValueControlFlow.FunctionDefinitions.Values);
+        Assert.DoesNotContain(promoted.Graph.Labels()
+            .SelectMany(label => promoted.Graph[label].Body.Elements),
+            instruction => instruction.Payload is ShaderStackProvenance { Synthetic: true });
         Assert.NotEmpty(CilModuleCompiler.Compile(stages.Raw).FunctionDefinitions);
     }
 

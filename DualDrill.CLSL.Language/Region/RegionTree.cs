@@ -93,12 +93,12 @@ public sealed record class RegionTree<TL, TB>(IRegionDefinition<TL, Seq<RegionTr
         : IRegionDefinitionSemantic<TL, Seq<RegionTree<TL, TB>, TB>, T>
         , ISeqSemantic<RegionTree<TL, TB>, TB, Func<TS>, TS>
     {
-        public T Block(TL label, Seq<RegionTree<TL, TB>, TB> body, TL next)
+        public T Block(TL label, Seq<RegionTree<TL, TB>, TB> body, TL? next)
         {
             return semantic.Block(label, () => body.FoldLazy(this), next);
         }
 
-        public T Loop(TL label, Seq<RegionTree<TL, TB>, TB> body, TL next, TL breakNext)
+        public T Loop(TL label, Seq<RegionTree<TL, TB>, TB> body, TL? next, TL? breakNext)
         {
             return semantic.Loop(label, () => body.FoldLazy(this), next, breakNext);
         }

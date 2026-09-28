@@ -74,6 +74,8 @@ public class ShaderReflectionBasicVertexLayoutTest
 {
     struct Vertex
     {
+        // Vertex attributes are discovered from fields by reflection.
+#pragma warning disable CS0649
         [Location(0)] public Vector2 Position;
 
         [Location(1)] public Vector4 Color;
@@ -81,13 +83,17 @@ public class ShaderReflectionBasicVertexLayoutTest
         [Location(2)] public Vector2 Offset;
 
         [Location(3)] public Vector2 Scale;
+#pragma warning restore CS0649
     }
 
     struct VSOutput
     {
+        // Shader output is populated by the generated vertex method.
+#pragma warning disable CS0649
         [Builtin(BuiltinBinding.position)] public Vector4 Position;
 
         [Location(0)] public Vector4 Color;
+#pragma warning restore CS0649
     }
 
     struct ShaderModule
@@ -112,12 +118,17 @@ public class ShaderReflectionBasicVertexLayoutTest
 
     struct UserDefinedHostColorOffsetModel
     {
+        // The layout builder inspects these host buffer members.
+#pragma warning disable CS0649
         public Vector4 Color;
         public Vector2 Offset;
+#pragma warning restore CS0649
     }
 
     struct UserDefinedMeshModel
     {
+        // The layout builder inspects these host buffer members.
+#pragma warning disable CS0649
         // Ideally we should support
         // public IGPUBuffer<Vector2> PositionBuffer;
         [VertexStepMode(GPUVertexStepMode.Vertex)] // attribute could be omitted as default
@@ -132,6 +143,7 @@ public class ShaderReflectionBasicVertexLayoutTest
         [VertexStepMode(GPUVertexStepMode.Instance)]
         // buffer index 2
         public Vector2 Scale;
+#pragma warning restore CS0649
     }
 
     [Fact]
@@ -217,6 +229,8 @@ public class ShaderReflectionBasicDefaultVertexLayoutTest
 {
     struct Vertex
     {
+        // Vertex attributes are discovered from fields by reflection.
+#pragma warning disable CS0649
         [Location(0)] public Vector2 Position;
 
         [Location(1)] public Vector4 Color;
@@ -224,6 +238,7 @@ public class ShaderReflectionBasicDefaultVertexLayoutTest
         [Location(2)] public Vector2 Offset;
 
         [Location(3)] public Vector2 Scale;
+#pragma warning restore CS0649
     }
 
     struct VSOutput
