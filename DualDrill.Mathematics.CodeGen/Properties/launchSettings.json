@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "DualDrill.Mathematics.CodeGen": {
-      "commandName": "Project",
-      "commandLineArgs": "$(ProjectDir)\\..\\DualDrill.Mathematics"
-    }
-  }
-}
