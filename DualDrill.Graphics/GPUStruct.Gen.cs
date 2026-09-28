@@ -428,10 +428,10 @@ public partial struct GPUBindGroupEntry
 //}
 public partial struct GPUFragmentState
 {
-    public string EntryPoint { get; set; }
-    public ReadOnlyMemory<GPUConstantEntry> Constants { get; set; }
-    public ReadOnlyMemory<GPUColorTargetState> Targets { get; set; }
-    public IGPUShaderModule Module { get; set; }
+    public string? EntryPoint { get; set; }
+    public ReadOnlyMemory<GPUConstantEntry>? Constants { get; set; }
+    public required ReadOnlyMemory<GPUColorTargetState> Targets { get; set; }
+    public required IGPUShaderModule Module { get; set; }
 }
 //public partial struct GPUColorTargetState
 //{
@@ -473,8 +473,8 @@ public partial struct GPUFragmentState
 public partial struct GPUVertexState
 {
     public string? EntryPoint { get; set; }
-    public IGPUShaderModule Module { get; set; }
-    public ReadOnlyMemory<GPUConstantEntry> Constants { get; set; }
+    public required IGPUShaderModule Module { get; set; }
+    public ReadOnlyMemory<GPUConstantEntry>? Constants { get; set; }
     public ReadOnlyMemory<GPUVertexBufferLayout> Buffers { get; set; }
 }
 //public partial struct GPUVertexBufferLayout

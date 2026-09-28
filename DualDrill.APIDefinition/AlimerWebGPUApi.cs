@@ -35,6 +35,8 @@ public sealed class AlimerWebGPUApi
     }
     static string GetEnumMemberCSharpFriendlyName(string name)
     {
+        if (name.Any(char.IsUpper) && !name.Contains('-') && !name.Contains('_'))
+            return name;
         name = string.Join(string.Empty, name.Split('-', '_').Select(s => s.ToLower().Capitalize()));
         return name switch
         {

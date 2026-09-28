@@ -1,5 +1,6 @@
 ﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.DrillLang.Types;
+using DualDrill.ApiGen.DrillLang.Value;
 using System.Collections.Immutable;
 using System.Text.Json;
 
@@ -92,9 +93,24 @@ internal sealed record class WebIDLSpecParser(WebIDLSpecParser.ParseOption Optio
         return new PropertyDeclaration(decl.Name, ParseWebIDLType(decl.IdlType), false);
     }
 
-    public PropertyDeclaration? ParseFieldDeclaration(FieldDecl decl)
+    public PropertyDeclaration ParseFieldDeclaration(FieldDecl decl)
     {
-        return new PropertyDeclaration(decl.Name, ParseWebIDLType(decl.IdlType), true);
+        if (decl.Required && decl.Default is not null)
+            throw new JsonException($"Required WebIDL field {decl.Name} cannot have a default.");
+        var type = ParseWebIDLType(decl.IdlType);
+        IConstValue? defaultValue = decl.Default switch
+        {
+            null => null,
+            { Type: "boolean", Value: { } value } => new BooleanValue(value.GetBoolean()),
+            { Type: "number", Value: { } value } => new NumberValue(
+                value.GetString() ?? throw new JsonException("WebIDL number default must be a string.")),
+            { Type: "string", Value: { } value } => new StringValue(
+                value.GetString() ?? throw new JsonException("WebIDL string default must be a string.")),
+            { Type: "sequence", Value: { } value } when value.GetArrayLength() == 0 => new EmptySequenceValue(),
+            { Type: "dictionary" } => new EmptyDictionaryValue(),
+            _ => throw new NotSupportedException($"Unsupported WebIDL default for {decl.Name}: {decl.Default.Type}")
+        };
+        return new PropertyDeclaration(decl.Name, type, true, decl.Required, defaultValue);
     }
 
     ITypeReference ParseWebIDLType(JsonElement doc)
