@@ -13,7 +13,7 @@ public sealed class LoadOperation : IOperation
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
         where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
-        semantic.Load(inst, this, inst.Result, inst[0]);
+        semantic.Load(inst, this, inst.RequireResult(), inst[0]);
 
     public IOperationMethodAttribute GetOperationMethodAttribute() => throw new NotImplementedException();
 }

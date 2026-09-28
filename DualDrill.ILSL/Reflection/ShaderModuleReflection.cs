@@ -44,11 +44,6 @@ public interface IVertexBufferLayoutBuilder<TGPULayout> where TGPULayout : struc
     ImmutableArray<GPUVertexBufferLayout> Build();
 }
 
-internal sealed class HostBufferLayout<TBufferModel>(int Binding)
-    where TBufferModel : unmanaged
-{
-}
-
 internal sealed record VertexDataMapping<THostBufferModel, TShaderModel>(
     Expression<Func<THostBufferModel, TShaderModel>> Mapping)
 {
@@ -61,7 +56,8 @@ public class VertexBufferLayoutHelper
         switch (member.MemberType)
         {
             case MemberTypes.Event:
-                return ((EventInfo)member).EventHandlerType;
+                return ((EventInfo)member).EventHandlerType
+                    ?? throw new ArgumentException("Event has no handler type.", nameof(member));
             case MemberTypes.Field:
                 return ((FieldInfo)member).FieldType;
             case MemberTypes.Method:
@@ -182,10 +178,7 @@ public sealed class
         foreach (var userDefinedElement in LayoutMap)
         {
             var key = userDefinedElement.Key;
-            var gpuVertexBufferLayout = new GPUVertexBufferLayout
-            {
-                StepMode = key.GetCustomAttributes(false).OfType<VertexStepModeAttribute>().First().StepMode
-            };
+            var stepMode = key.GetCustomAttributes(false).OfType<VertexStepModeAttribute>().First().StepMode;
             var attributes = new List<GPUVertexAttribute>();
             var stride = 0;
             var locationList = new List<int>();
@@ -221,10 +214,13 @@ public sealed class
                 offset += (ulong)byteSizeDict[binding];
             }
 
-            gpuVertexBufferLayout.ArrayStride = (ulong)stride;
-            gpuVertexBufferLayout.Attributes = attributes.ToArray();
             vertexAttributeDict.Clear();
-            gpuVertexBufferLayouts.Add(gpuVertexBufferLayout);
+            gpuVertexBufferLayouts.Add(new GPUVertexBufferLayout
+            {
+                ArrayStride = (ulong)stride,
+                StepMode = stepMode,
+                Attributes = attributes.ToArray()
+            });
         }
 
         return gpuVertexBufferLayouts.ToImmutableArray();
