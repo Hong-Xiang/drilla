@@ -1,4 +1,4 @@
-import { mat4, vec2, vec4 } from "gl-matrix";
+import { mat4 } from "gl-matrix";
 
 export interface RenderPlatform {
   gl: WebGL2RenderingContext;
@@ -12,7 +12,7 @@ export type ViewRenderer = (viewContext: {
   proj: mat4;
   target: {
     framebuffer: WebGLFramebuffer | null;
-    extend: vec2;
+    extend: readonly [number, number];
   };
 }) => void;
 

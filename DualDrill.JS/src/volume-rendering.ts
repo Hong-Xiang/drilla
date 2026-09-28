@@ -14,9 +14,7 @@ export async function VolumeRenderingMain() {
   if (!device) {
     throw new Error(`Failed to request adapter`);
   }
-  const canvas = document.getElementById("target-canvas") as
-    | HTMLCanvasElement
-    | undefined;
+  const canvas = document.getElementById("target-canvas");
   if (!canvas || !(canvas instanceof HTMLCanvasElement)) {
     throw Error("Failed to get canvas");
   }
@@ -106,15 +104,8 @@ export async function VolumeRenderingMain() {
       width: 256,
       height: 256,
       depthOrArrayLayers: depth,
-    }
+    },
   );
-
-  const depthTexture = device.createTexture({
-    size: [canvas.width, canvas.height],
-    format: "depth24plus",
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  const depthView = depthTexture.createView();
 
   const uniformBufferSize = 4 * 16; // 4x4 matrix
   const uniformBuffer = device.createBuffer({
@@ -178,8 +169,7 @@ export async function VolumeRenderingMain() {
   gui.add(state, "z", -Math.sqrt(3), Math.sqrt(3));
   gui.add(state, "window", 0.01, Math.sqrt(3));
 
-  const frame = (index: number) => {
-    const period = 60 * 5;
+  const frame = () => {
     uniformBufferValue[0] = state.theta;
     uniformBufferValue[1] = state.phi;
     uniformBufferValue[2] = state.z;
@@ -189,7 +179,7 @@ export async function VolumeRenderingMain() {
       0,
       uniformBufferValue.buffer,
       0,
-      uniformBufferValue.byteLength
+      uniformBufferValue.byteLength,
     );
     const renderPassDescriptor: GPURenderPassDescriptor = {
       colorAttachments: [
@@ -200,12 +190,6 @@ export async function VolumeRenderingMain() {
           storeOp: "store",
         },
       ],
-      //   depthStencilAttachment: {
-      //     view: depthView,
-      //     depthClearValue: 0.0,
-      //     depthLoadOp: "clear",
-      //     depthStoreOp: "store",
-      //   },
     };
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
@@ -217,25 +201,18 @@ export async function VolumeRenderingMain() {
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
     requestAnimationFrame(() => {
-      frame(index + 1);
+      frame();
     });
   };
 
   requestAnimationFrame(() => {
-    frame(0);
+    frame();
   });
-}
-
-interface MeshMetaData {
-  readonly name: string;
-  readonly bufferLayout: GPUVertexBufferLayout;
-  readonly indexCount: number;
-  readonly indexFormat: GPUIndexFormat;
 }
 
 async function createGPUMesh(device: GPUDevice, name: string) {
   const baseUrl = `/api/mesh/${name}`;
-  const meta = (await (await fetch(baseUrl + "/meta")).json()) as MeshMetaData;
+  const meta: unknown = await (await fetch(baseUrl + "/meta")).json();
   const vertexData = await (await fetch(baseUrl + "/vertex")).arrayBuffer();
   const indexData = await (await fetch(baseUrl + "/index")).arrayBuffer();
   const vertexBuffer = device.createBuffer({
@@ -256,27 +233,4 @@ async function createGPUMesh(device: GPUDevice, name: string) {
     vertexBuffer,
     indexBuffer,
   };
-}
-
-function inputUI(name: string, value: number, min: number, max: number) {
-  const inputEl = document.getElementById(`${name}-input`) as HTMLInputElement;
-  inputEl.min = min.toString();
-  inputEl.max = max.toString();
-  inputEl.step = ((max - min) / 100).toString();
-  const valueEl = document.getElementById(`${name}-value`) as HTMLSpanElement;
-
-  const result = {
-    value,
-  };
-  inputEl.value = value.toString();
-  function update(v: number) {
-    valueEl.innerText = v.toString();
-    result.value = v;
-  }
-  update(value);
-  inputEl.oninput = (e) => {
-    const value = parseFloat(inputEl.value);
-    update(value);
-  };
-  return result;
 }

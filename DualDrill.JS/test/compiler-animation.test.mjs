@@ -3,9 +3,15 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 
+/** @typedef {{ destroyed: boolean, label: string, destroy(): void }} MockBuffer */
+/** @typedef {{ buffer: MockBuffer, data: Float32Array | Int32Array, values: number[] }} Write */
+/** @typedef {{ promise: Promise<unknown>, resolve(value?: unknown): void }} Deferred */
+
 class ClassList {
+  /** @type {Set<string>} */
   values = new Set();
 
+  /** @param {string} name @param {boolean} enabled */
   toggle(name, enabled) {
     if (enabled) {
       this.values.add(name);
@@ -16,30 +22,37 @@ class ClassList {
 }
 
 class Element {
+  /** @type {Map<string, string>} */
   attributes = new Map();
   classList = new ClassList();
+  /** @type {Record<string, string>} */
   dataset = {};
   disabled = false;
   hidden = false;
+  /** @type {Map<string, Array<(event: {persisted?: boolean}) => void>>} */
   listeners = new Map();
   textContent = "";
 
+  /** @param {string} type @param {(event: {persisted?: boolean}) => void} listener */
   addEventListener(type, listener) {
     const listeners = this.listeners.get(type) ?? [];
     listeners.push(listener);
     this.listeners.set(type, listeners);
   }
 
+  /** @param {string} type @param {{persisted?: boolean}} [event] */
   dispatch(type, event = {}) {
     for (const listener of this.listeners.get(type) ?? []) {
       listener(event);
     }
   }
 
+  /** @param {string} name */
   getAttribute(name) {
     return this.attributes.get(name) ?? null;
   }
 
+  /** @param {string} name @param {string} value */
   setAttribute(name, value) {
     this.attributes.set(name, value);
   }
@@ -53,22 +66,32 @@ class HTMLCanvasElement extends Element {
   height = 600;
   width = 800;
 
+  /** @param {{configure(): void, getCurrentTexture(): {createView(): object}}} context */
   constructor(context) {
     super();
     this.context = context;
   }
 
+  /** @param {string} type */
   getContext(type) {
     return type === "webgpu" ? this.context : null;
   }
 }
 
 function deferred() {
+  /** @type {((value: unknown) => void) | undefined} */
   let resolvePromise;
   const promise = new Promise((resolveValue) => {
     resolvePromise = resolveValue;
   });
+  if (!resolvePromise) throw new Error("Deferred promise was not initialized");
   return { promise, resolve: resolvePromise };
+}
+
+/** @param {Deferred | null} value @returns {Deferred} */
+function requireDeferred(value) {
+  if (!value) throw new Error("Expected a pending operation");
+  return value;
 }
 
 async function settle() {
@@ -79,9 +102,13 @@ async function settle() {
 
 test("compiler demo owns one time-based animation lifecycle", async () => {
   console.error = () => {};
+  /** @type {string[]} */
   const events = [];
+  /** @type {Write[]} */
   const writes = [];
+  /** @type {MockBuffer[]} */
   const buffers = [];
+  /** @type {Map<number, (timestamp: number) => void>} */
   const rafCallbacks = new Map();
   let nextRaf = 1;
   let maxPendingRaf = 0;
@@ -92,9 +119,12 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
   let errorScopeDepth = 0;
   let maxErrorScopeDepth = 0;
   let throwNextEncoder = false;
+  /** @type {string | null} */
   let deferredPipelineLabel = null;
+  /** @type {Deferred | null} */
   let deferredPipeline = null;
   let deferNextQueueWait = false;
+  /** @type {Deferred | null} */
   let deferredQueueWait = null;
   const lost = deferred();
 
@@ -106,6 +136,7 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
   };
   const device = {
     lost: lost.promise,
+    /** @type {null | ((event: {error: Error}) => void)} */
     onuncapturederror: null,
     queue: {
       onSubmittedWorkDone() {
@@ -120,6 +151,7 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
       submit() {
         submissions += 1;
       },
+      /** @param {MockBuffer} buffer @param {number} _offset @param {Float32Array | Int32Array} data */
       writeBuffer(buffer, _offset, data) {
         writes.push({
           buffer,
@@ -131,6 +163,7 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
     createBindGroup() {
       return {};
     },
+    /** @param {{label: string}} options */
     createBuffer({ label }) {
       const buffer = {
         destroyed: false,
@@ -165,6 +198,7 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
         },
       };
     },
+    /** @param {{label: string}} options */
     createRenderPipelineAsync({ label }) {
       const pipeline = {
         getBindGroupLayout() {
@@ -243,12 +277,14 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
     HTMLParagraphElement,
     HTMLPreElement,
     GPUBufferUsage: { COPY_DST: 1, UNIFORM: 2, VERTEX: 4 },
+    /** @param {number} id */
     cancelAnimationFrame(id) {
       if (rafCallbacks.delete(id)) {
         events.push("cancel");
       }
     },
     document: {
+      /** @param {string} id */
       getElementById(id) {
         return elements.get(id) ?? null;
       },
@@ -256,8 +292,10 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
         return buttons;
       },
     },
+    /** @param {string} url */
     fetch(url) {
       const profile = url.split("/").at(-2);
+      assert.ok(profile, `Invalid shader URL: ${url}`);
       events.push(`fetch:${profile}`);
       const response = {
         ok: true,
@@ -267,6 +305,7 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
       return Promise.resolve(response);
     },
     performance: { now: () => now },
+    /** @param {(timestamp: number) => void} callback */
     requestAnimationFrame(callback) {
       const id = nextRaf;
       nextRaf += 1;
@@ -286,18 +325,35 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
     },
   });
 
+  /** @param {number} timestamp */
   const runFrame = (timestamp) => {
     assert.equal(rafCallbacks.size, 1);
-    const [[id, callback]] = rafCallbacks;
+    const pending = rafCallbacks.entries().next().value;
+    assert.ok(pending);
+    const [id, callback] = pending;
     rafCallbacks.delete(id);
     callback(timestamp);
   };
+  /** @param {number} index */
+  const buttonAt = (index) => {
+    const button = buttons[index];
+    assert.ok(button, `Missing shader button ${index}`);
+    return button;
+  };
+  /** @param {string} shader */
   const click = async (shader) => {
-    buttons[shaderNames.indexOf(shader)].dispatch("click");
+    buttonAt(shaderNames.indexOf(shader)).dispatch("click");
     await settle();
   };
+  /** @param {string} label */
   const timeWrites = (label) =>
     writes.filter((write) => write.buffer.label === label);
+  /** @param {string} label */
+  const latestWrite = (label) => {
+    const write = timeWrites(label).at(-1);
+    assert.ok(write, `Missing ${label} write`);
+    return write;
+  };
 
   const bundle = pathToFileURL(
     resolve(
@@ -316,12 +372,12 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
   await click("MandelbrotDistanceShaderModule");
   assert.match(status.textContent, /^Animating Mandelbrot/);
   assert.equal(rafCallbacks.size, 1);
-  const beforeFrame = timeWrites("Mandelbrot uniform 0").at(-1);
+  const beforeFrame = latestWrite("Mandelbrot uniform 0");
   assert.deepEqual(beforeFrame.values, [0]);
   const waitsBeforeFrame = queueWaits;
   const scopesBeforeFrame = errorScopePushes;
   runFrame(2_500);
-  const afterFrame = timeWrites("Mandelbrot uniform 0").at(-1);
+  const afterFrame = latestWrite("Mandelbrot uniform 0");
   assert.deepEqual(afterFrame.values, [1.5]);
   assert.equal(afterFrame.data, beforeFrame.data);
   assert.equal(queueWaits, waitsBeforeFrame);
@@ -350,18 +406,18 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
   assert.ok(oldRaymarchBuffers.every((buffer) => buffer.destroyed));
   assert.equal(rafCallbacks.size, 1);
   runFrame(6_500);
-  assert.deepEqual(timeWrites("Raymarching uniform 1").at(-1).values, [1.5]);
+  assert.deepEqual(latestWrite("Raymarching uniform 1").values, [1.5]);
 
   deferredPipelineLabel = "Mandelbrot pipeline";
-  buttons[2].dispatch("click");
+  buttonAt(2).dispatch("click");
   await settle();
   const scopesDuringStaleSetup = errorScopePushes;
-  buttons[1].dispatch("click");
+  buttonAt(1).dispatch("click");
   await settle();
   assert.equal(errorScopePushes, scopesDuringStaleSetup);
   assert.equal(rafCallbacks.size, 0);
   deferredPipelineLabel = null;
-  deferredPipeline.resolve({
+  requireDeferred(deferredPipeline).resolve({
     getBindGroupLayout() {
       return {};
     },
@@ -387,13 +443,14 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
   const errorBuffers = buffers.filter(
     (buffer) => buffer.label.startsWith("Raymarching") && !buffer.destroyed,
   );
+  assert.ok(device.onuncapturederror);
   device.onuncapturederror({ error: new Error("validation failed") });
   assert.equal(rafCallbacks.size, 0);
   assert.ok(errorBuffers.every((buffer) => buffer.destroyed));
   assert.match(status.textContent, /uncaptured error: validation failed/);
 
   deferNextQueueWait = true;
-  buttons[2].dispatch("click");
+  buttonAt(2).dispatch("click");
   await settle();
   const pageBuffers = buffers.filter(
     (buffer) => buffer.label.startsWith("Mandelbrot") && !buffer.destroyed,
@@ -404,7 +461,7 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
   assert.ok(pageBuffers.every((buffer) => buffer.destroyed));
   assert.equal(buttonGroup.getAttribute("aria-busy"), "false");
   assert.ok(buttons.every((button) => !button.disabled));
-  deferredQueueWait.resolve();
+  requireDeferred(deferredQueueWait).resolve();
   await settle();
   assert.equal(rafCallbacks.size, 0);
   windowElement.dispatch("pageshow", { persisted: true });
@@ -434,6 +491,7 @@ test("compiler demo owns one time-based animation lifecycle", async () => {
     fetchesBeforeLostRestore,
   );
   assert.equal(status.textContent, lossStatus);
+  assert.ok(device.onuncapturederror);
   device.onuncapturederror({ error: new Error("late validation") });
   assert.equal(status.textContent, lossStatus);
   assert.ok(buttons.every((button) => button.disabled));
