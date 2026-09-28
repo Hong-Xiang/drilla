@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.scripts.json",
+  "include": ["../script/verify-wasm-reference-fixtures.mjs"]
+}

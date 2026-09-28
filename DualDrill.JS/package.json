@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "bun --bun vite",
     "compile": "bun --bun tsc --noEmit",
-    "check": "bun run compile && bun run compiler:check && bun --bun tsc -p tsconfig.node.json && bun --bun tsc -p tsconfig.scripts.json && bun run media:check",
+    "check": "bun run compile && bun run compiler:check && bun --bun tsc -p tsconfig.node.json && bun --bun tsc -p tsconfig.scripts.json && bun --bun tsc -p tsconfig.oracle.json && bun run media:check",
     "build": "bun esbuild.mjs",
     "compiler:check": "bun --bun tsc -p tsconfig.compiler.json",
     "compiler:build": "bun esbuild.compiler.mjs",
