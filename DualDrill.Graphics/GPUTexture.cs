@@ -18,7 +18,7 @@ public sealed partial record class GPUTexture<TBackend>(GPUHandle<TBackend, GPUT
     : IDisposable, IGPUTexture
     where TBackend : IBackend<TBackend>
 {
-    public string Label { get; init; }
+    public string Label { get; init; } = string.Empty;
 
     public int Width { get; init; }
 

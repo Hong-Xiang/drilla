@@ -18,6 +18,8 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 {
     private const uint ExpectedNativeVersion = 0x1B000400;
     private static int s_nativeVersionChecked;
+    // An absent shader entry point needs a null string view, not an empty name.
+    private static unsafe WGPUStringView OmittedEntryPoint => new(null, nuint.MaxValue);
 
     public static Backend Instance { get; } = new();
 
@@ -950,7 +952,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             mipmapFilter = ToNative(descriptor.MipmapFilter),
             lodMinClamp = descriptor.LodMinClamp,
             lodMaxClamp = descriptor.LodMaxClamp,
-            compare = ToNative(descriptor.Compare),
+            compare = descriptor.Compare is { } comparison
+                ? ToNative(comparison)
+                : WGPUCompareFunction.Undefined,
             maxAnisotropy = descriptor.MaxAnisotropy,
         };
         return nativeDescriptor;
@@ -1322,7 +1326,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe private WGPUFragmentState ToNative(GPUFragmentState fragment)
     {
-        if (fragment.Constants.Length > 0)
+        if (fragment.Constants is { Length: > 0 })
         {
             throw new NotSupportedException("Pipeline constants are not supported.");
         }
@@ -1330,13 +1334,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         var result = new WGPUFragmentState
         {
             module = ToNative(fragment.Module),
-            constantCount = (nuint)fragment.Constants.Length,
+            constantCount = (nuint)(fragment.Constants?.Length ?? 0),
             targetCount = (nuint)fragment.Targets.Length
         };
-        if (fragment.EntryPoint is not null)
-        {
-            result.entryPoint = MarshalString(fragment.EntryPoint);
-        }
+        result.entryPoint = fragment.EntryPoint is { } entryPoint
+            ? MarshalString(entryPoint)
+            : OmittedEntryPoint;
         if (fragment.Targets.Length > 0)
         {
             result.targets = Alloc<WGPUColorTargetState>(fragment.Targets.Length);
@@ -1354,8 +1357,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new()
         {
             format = ToNative(depthStencil.Format),
-            depthWriteEnabled = ToNativeOptional(depthStencil.DepthWriteEnabled),
-            depthCompare = ToNative(depthStencil.DepthCompare),
+            depthWriteEnabled = depthStencil.DepthWriteEnabled is { } writeEnabled
+                ? ToNativeOptional(writeEnabled)
+                : WGPUOptionalBool.Undefined,
+            depthCompare = depthStencil.DepthCompare is { } comparison
+                ? ToNative(comparison)
+                : WGPUCompareFunction.Undefined,
             stencilFront = ToNative(depthStencil.StencilFront),
             stencilBack = ToNative(depthStencil.StencilBack),
             stencilReadMask = depthStencil.StencilReadMask,
@@ -1410,7 +1417,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new()
         {
             topology = ToNative(primitive.Topology),
-            stripIndexFormat = ToNative(primitive.StripIndexFormat),
+            stripIndexFormat = primitive.StripIndexFormat is { } indexFormat
+                ? ToNative(indexFormat)
+                : WGPUIndexFormat.Undefined,
             frontFace = ToNative(primitive.FrontFace),
             cullMode = ToNative(primitive.CullMode)
         };
@@ -1452,7 +1461,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
 
     unsafe private WGPUVertexState ToNative(GPUVertexState vertex)
     {
-        if (vertex.Constants.Length > 0)
+        if (vertex.Constants is { Length: > 0 })
         {
             throw new NotImplementedException("Constant Entry is not support yet");
         }
@@ -1460,10 +1469,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             module = ToNative(vertex.Module),
         };
-        if (vertex.EntryPoint is not null)
-        {
-            result.entryPoint = MarshalString(vertex.EntryPoint);
-        }
+        result.entryPoint = vertex.EntryPoint is { } entryPoint
+            ? MarshalString(entryPoint)
+            : OmittedEntryPoint;
         if (vertex.Buffers.Length > 0)
         {
             result.buffers = Alloc<WGPUVertexBufferLayout>(vertex.Buffers.Length);
@@ -1635,10 +1643,10 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         var result = new WGPURenderPassColorAttachment
         {
             view = ToNative(((GPUTextureView<Backend>)c.View).Handle),
-            depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
+            depthSlice = c.DepthSlice ?? WGPU_DEPTH_SLICE_UNDEFINED,
             loadOp = ToNative(c.LoadOp),
             storeOp = ToNative(c.StoreOp),
-            clearValue = ToNative(c.ClearValue)
+            clearValue = ToNative(c.ClearValue.GetValueOrDefault())
         };
         if (c.ResolveTarget is not null)
         {
@@ -1652,6 +1660,10 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         var state = EncoderOf(handle);
         if (state.ActiveComputePass || state.Abandoned || state.Finished)
             throw new InvalidOperationException("Command encoder has an active or abandoned compute pass, or has finished.");
+        if (descriptor.OcclusionQuerySet is not null)
+            throw new NotSupportedException("Render-pass occlusion queries are not supported.");
+        if (descriptor.TimestampWrites is not null)
+            throw new NotSupportedException("Render-pass timestamp writes are not supported.");
         WGPURenderPassDepthStencilAttachment depthStencilAttachment = new();
         if (descriptor.DepthStencilAttachment.HasValue)
         {
@@ -1662,8 +1674,16 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             colorAttachments[i] = ToNative(descriptor.ColorAttachments.Span[i]);
         }
+        using var label = NativeUtf8String.Create(descriptor.Label);
+        WGPURenderPassMaxDrawCount drawLimit = new()
+        {
+            chain = new WGPUChainedStruct { sType = Native.WGPUSType.RenderPassMaxDrawCount },
+            maxDrawCount = descriptor.MaxDrawCount,
+        };
         WGPURenderPassDescriptor nativeDescriptor = new WGPURenderPassDescriptor
         {
+            nextInChain = descriptor.MaxDrawCount == 50_000_000UL ? null : &drawLimit.chain,
+            label = label.View,
             colorAttachmentCount = (uint)descriptor.ColorAttachments.Length,
             colorAttachments = colorAttachments,
             depthStencilAttachment = descriptor.DepthStencilAttachment.HasValue ? &depthStencilAttachment : null
@@ -2016,16 +2036,16 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             label = label,
         };
-        result.format = ToNative(descriptor.Format);
-        result.dimension = ToNative(descriptor.Dimension);
+        result.format = descriptor.Format is { } format
+            ? ToNative(format)
+            : WGPUTextureFormat.Undefined;
+        result.dimension = descriptor.Dimension is { } dimension
+            ? ToNative(dimension)
+            : WGPUTextureViewDimension.Undefined;
         result.baseMipLevel = (uint)descriptor.BaseMipLevel;
-        result.mipLevelCount = descriptor.MipLevelCount == 0
-            ? WGPU_MIP_LEVEL_COUNT_UNDEFINED
-            : (uint)descriptor.MipLevelCount;
+        result.mipLevelCount = descriptor.MipLevelCount ?? WGPU_MIP_LEVEL_COUNT_UNDEFINED;
         result.baseArrayLayer = (uint)descriptor.BaseArrayLayer;
-        result.arrayLayerCount = descriptor.ArrayLayerCount == 0
-            ? WGPU_ARRAY_LAYER_COUNT_UNDEFINED
-            : (uint)descriptor.ArrayLayerCount;
+        result.arrayLayerCount = descriptor.ArrayLayerCount ?? WGPU_ARRAY_LAYER_COUNT_UNDEFINED;
         result.aspect = ToNative(descriptor.Aspect);
         return result;
     }

@@ -176,24 +176,6 @@ internal sealed record class VectorSimdCodeGenerator(
     public void GenerateArithmeticOperatorBody(IVectorBinaryNumericOperation op)
     {
         Writer.WriteLine("throw new NotImplementedException();");
-        return;
-        if (op.BinaryOp is BinaryArithmetic.Rem)
-        {
-            var l = op.LeftType is IScalarType ? $"{SimdStaticDataTypeName}.Create(left)" : "left.Data";
-            var r = op.RightType is IScalarType ? $"{SimdStaticDataTypeName}.Create(right)" : "right.Data";
-            Writer.WriteLine($"return new() {{ Data = {l} {Config.OpName(op.BinaryOp)} {r} }};");
-        }
-        else
-        {
-            Writer.Write($"return vec{VecType.Size.Value}(");
-            List<string> args = [.. VecType.Size.Components().Select(c => {
-                var l = op.LeftType is IScalarType ? "left" : $"left.{c}";
-                var r = op.RightType is IScalarType ? "right" : $"right.{c}";
-                return $"({Config.GetCSharpTypeName(VecType.ElementType)})({l} % {r})";
-            })];
-            Writer.WriteSeparatedList(TextCodeSeparator.CommaSpace, [.. args]);
-            Writer.WriteLine(");");
-        }
     }
 }
 
@@ -443,7 +425,7 @@ public sealed record class VecCodeGenerator<TRank, TElement>
                         {
                             Writer.WriteLine($"{c.Name} = value.{sourceComponents[ic].Name};");
                         }
-                    };
+                    }
 
                 }
             }
@@ -459,4 +441,3 @@ public sealed record class VecCodeGenerator<TRank, TElement>
         //GenerateStaticMethods();
     }
 }
-

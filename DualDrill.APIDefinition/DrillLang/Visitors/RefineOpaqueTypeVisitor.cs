@@ -48,7 +48,7 @@ internal sealed class RefineOpaqueTypeVisitor(
         => type with
         {
             KeyType = type.KeyType.AcceptVisitor(this),
-            ValueType = type.KeyType.AcceptVisitor(this)
+            ValueType = type.ValueType.AcceptVisitor(this)
         };
 
     public ITypeReference VisitSequence(SequenceTypeReference type)
@@ -73,4 +73,3 @@ public static partial class TypeReferenceExtension
 
 
 }
-
