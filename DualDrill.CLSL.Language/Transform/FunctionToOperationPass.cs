@@ -81,6 +81,10 @@ public sealed class FunctionToOperationPass
                 expectsResult != (inst.Result is not null))
                 throw new OperationFunctionNotMatchException(function, operation);
         }
+        if (operation is not null &&
+            (!call.CalleeType.Equals(function.Type) ||
+             !HasPhysicalOperandShape(inst, call.CalleeType.ParameterTypes.Length + 1)))
+            throw new OperationFunctionNotMatchException(function, operation);
 
         return inst.Evaluate(new InstructionTransformSemantic());
     }

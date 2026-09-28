@@ -640,10 +640,14 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             ImmutableArray<SlangStatement>.Builder statements)
         {
-            if (instruction.Operation is CallOperation call &&
-                call.ResultType is not UnitType &&
-                instruction.Result is null)
-                throw UnsupportedOperation(instruction, "non-Unit call requires a result");
+            if (instruction.Operation is CallOperation call)
+            {
+                if (call.ResultType is not UnitType && instruction.Result is null)
+                    throw UnsupportedOperation(instruction, "non-Unit call requires a result");
+                if (!instruction.HasValidOperandLayout ||
+                    instruction.OperandCount != call.CalleeType.ParameterTypes.Length + 1)
+                    throw UnsupportedOperation(instruction, "invalid call operand arity or layout");
+            }
             switch (instruction.Operation)
             {
                 case IReadOnlyStructuredBufferLengthOperation length:

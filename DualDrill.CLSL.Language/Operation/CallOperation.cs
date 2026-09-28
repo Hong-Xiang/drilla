@@ -20,6 +20,8 @@ public sealed class CallOperation(FunctionType calleeType) : IOperation
     {
         if (ResultType is not UnitType && inst.Result is null)
             throw new ArgumentException("A non-Unit call requires a result.", nameof(inst));
+        if (inst.OperandCount != CalleeType.ParameterTypes.Length + 1)
+            throw new ArgumentException("Call operand count does not match the callee signature.", nameof(inst));
         return semantic.Call(inst, this, inst.Result, inst[0], [.. inst.Operands.ToImmutableArray()[1..]]);
     }
 

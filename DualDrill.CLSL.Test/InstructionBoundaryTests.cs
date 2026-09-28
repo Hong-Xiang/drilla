@@ -107,6 +107,56 @@ public sealed class InstructionBoundaryTests
     }
 
     [Fact]
+    public void SetterCallRewritePreservesExactReceiverAndValueArity()
+    {
+        IBinaryStatementOperation[] setters =
+        [
+            VectorComponentSetOperation<N2, VecType<N2, FloatType<N32>>, Swizzle.X>.Instance,
+            VectorSwizzleSetOperation<Swizzle.Pattern<N2, Swizzle.X, Swizzle.Y>, FloatType<N32>>.Instance
+        ];
+        foreach (var setter in setters)
+        {
+            var callee = setter.Function;
+            var ptr = ShaderValue.Intermediate(setter.LeftType);
+            var value = ShaderValue.Intermediate(setter.RightType);
+            var extra = ShaderValue.Intermediate(setter.RightType);
+            var call = new CallOperation((FunctionType)callee.Type);
+            var valid = Instruction<IShaderValue, IShaderValue>.Create(call, null, [callee, ptr, value]);
+
+            var normalized = Module(valid).RunPass(new FunctionToOperationPass());
+            var entry = Assert.Single(normalized.FunctionDefinitions).Value;
+            var rewritten = Assert.Single(entry[entry.Entry].Body.Elements);
+            Assert.Same(setter, rewritten.Operation);
+            Assert.Null(rewritten.Result);
+            Assert.Equal(2, rewritten.OperandCount);
+            Assert.Same(ptr, rewritten[0]);
+            Assert.Same(value, rewritten[1]);
+
+            foreach (var malformed in new[]
+                     {
+                         Instruction<IShaderValue, IShaderValue>.Create(call, null, [callee, ptr, value, extra]),
+                         Instruction<IShaderValue, IShaderValue>.Create(call, null, [callee, ptr]),
+                         valid with
+                         {
+                             Operation = new CallOperation(
+                                 new FunctionType([setter.LeftType, setter.RightType, setter.RightType], ShaderType.Unit)),
+                             OperandCount = 4,
+                             RestOperands = [value, extra]
+                         }
+                     })
+            {
+                var source = Module(malformed);
+                if (malformed.OperandCount == 4)
+                    Assert.Contains(extra, Assert.Single(source.FunctionDefinitions).Value.UsedValues());
+                var error = Record.Exception(() => source.RunPass(new FunctionToOperationPass()));
+                Assert.NotNull(error);
+                Assert.Equal("OperationFunctionNotMatchException", error.GetType().Name);
+                Assert.Contains("does not match operation", error.Message);
+            }
+        }
+    }
+
+    [Fact]
     public void ResultlessUnitCallLowersAsEffect()
     {
         var callee = new FunctionDeclaration(
