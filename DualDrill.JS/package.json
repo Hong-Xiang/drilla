@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "bun --bun vite",
     "compile": "bun --bun tsc --noEmit",
-    "check": "bun run compile && bun run compiler:check && bun --bun tsc -p tsconfig.node.json && bun run media:check",
+    "check": "bun run compile && bun run compiler:check && bun --bun tsc -p tsconfig.node.json && bun --bun tsc -p tsconfig.scripts.json && bun run media:check",
     "build": "bun esbuild.mjs",
     "compiler:check": "bun --bun tsc -p tsconfig.compiler.json",
     "compiler:build": "bun esbuild.compiler.mjs",
@@ -25,6 +25,7 @@
     "twgl.js": "^5.5.4"
   },
   "devDependencies": {
+    "@types/node": "22.20.4",
     "@types/react": "^18.2.71",
     "@types/react-dom": "^18.2.22",
     "@types/webxr": "^0.5.14",

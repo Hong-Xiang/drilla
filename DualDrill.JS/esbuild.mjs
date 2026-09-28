@@ -2,6 +2,7 @@ import * as esbuild from "esbuild";
 
 const isWatchMode = process.argv.indexOf("--watch") !== -1;
 
+/** @type {import("esbuild").Plugin[]} */
 const plugins = [
   {
     name: "watch-plugin",
@@ -14,6 +15,7 @@ const plugins = [
     },
   },
 ];
+/** @type {import("esbuild").BuildOptions} */
 const buildOptions = {
   entryPoints: {
     client: "src/client.ts",
