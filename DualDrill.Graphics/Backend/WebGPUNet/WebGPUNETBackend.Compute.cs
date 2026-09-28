@@ -69,9 +69,7 @@ public sealed partial class WebGPUNETBackend
         var state = EncoderOf(encoder);
         if (state.ActiveComputePass || state.Abandoned || state.Finished)
             throw new InvalidOperationException("Command encoder has an active or abandoned compute pass, or has finished.");
-        if (descriptor.TimestampWrites.QuerySet is not null
-            || descriptor.TimestampWrites.BeginningOfPassWriteIndex != 0
-            || descriptor.TimestampWrites.EndOfPassWriteIndex != 0)
+        if (descriptor.TimestampWrites is not null)
             throw new NotSupportedException("Compute pass timestamp writes are not supported.");
 
         using var label = NativeUtf8String.Create(descriptor.Label);

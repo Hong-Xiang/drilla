@@ -100,7 +100,9 @@ public sealed record class SetlikeMember
 
 public sealed record class FieldDecl(
     string Name,
-    JsonElement IdlType
+    JsonElement IdlType,
+    bool Required = false,
+    ConstValue? Default = null
 ) : IMember
 {
 }
@@ -186,7 +188,7 @@ public sealed record WebIDLSpec(
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-        return new([.. parsed]);
+        return new([.. parsed ?? throw new JsonException("WebIDL spec must be an array of declarations.")]);
     }
 
     public ModuleDeclaration ToModuleDeclaration()

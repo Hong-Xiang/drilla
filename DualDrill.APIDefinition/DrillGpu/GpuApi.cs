@@ -1,5 +1,6 @@
 ﻿using DualDrill.ApiGen.DrillLang.Declaration;
 using DualDrill.ApiGen.DrillLang.Types;
+using DualDrill.ApiGen.DrillLang.Value;
 using DualDrill.ApiGen.WebIDL;
 
 namespace DualDrill.ApiGen.DrillGpu;
@@ -47,7 +48,7 @@ public static class GPUApi
             Enums = [..module.Enums.Select(e => {
                 if(e.IsFlag){
                     return  e with {
-                        Values =  [new EnumMemberDeclaration("NONE", new(0, true)), ..e.Values]
+                        Values =  [new EnumMemberDeclaration("None", new(0, true)), ..e.Values]
                     };
                 }
                 if(e.Name == "GPUVertexStepMode"){
@@ -73,7 +74,7 @@ public static class GPUApi
                 var values = e.Values.Select(v => v with {
                     Value = new(Convert.ToInt32(Enum.Parse(managedType, AlimerWebGPUApi.GetManagedEnumMemberName(
                         e.Name,
-                        v.Name))))
+                        v.Name), ignoreCase: true)))
                 });
                 return e with {
                     Values = [..values] };
@@ -83,9 +84,20 @@ public static class GPUApi
         result = result with
         {
             Structs = [..result.Structs.Select(s => {
+                if (s.Name == "GPURenderPassDescriptor")
+                {
+                    // The native render-pass backend only supports populated color attachments.
+                    s = s with {
+                        Properties = [..s.Properties.Select(p =>
+                            p.Name == "colorAttachments"
+                            && p.Type is SequenceTypeReference { Type: NullableTypeReference { Type: var attachment } }
+                                ? p with { Type = new SequenceTypeReference(attachment) }
+                                : p)]
+                    };
+                }
                 if(s.Name.EndsWith("Descriptor") && !s.Properties.Any(p => p.Name == "label")){
                     return s with {
-                        Properties = [new PropertyDeclaration("label", new StringTypeReference(), false), ..s.Properties]
+                        Properties = [new PropertyDeclaration("label", new StringTypeReference(), false, false, new StringValue("")), ..s.Properties]
                     };
                 }else{
                     return s;
@@ -124,6 +136,8 @@ public static class GPUApi
             "GPUImageDataLayout" => new OpaqueTypeReference("GPUTextureDataLayout"),
             "GPUCanvasConfiguration" => new OpaqueTypeReference("GPUSurfaceConfiguration"),
             "GPUSampleMask" => new IntegerTypeReference(BitWidth._32, false),
+            // The backend rejects nonempty constant maps; preserve the current input shape until it supports them.
+            "GPUPipelineConstantValue" => new StringTypeReference(),
             "GPUDepthBias" => new IntegerTypeReference(BitWidth._32, true),
             _ => new OpaqueTypeReference(name)
         };

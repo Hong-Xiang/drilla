@@ -950,7 +950,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             mipmapFilter = ToNative(descriptor.MipmapFilter),
             lodMinClamp = descriptor.LodMinClamp,
             lodMaxClamp = descriptor.LodMaxClamp,
-            compare = ToNative(descriptor.Compare),
+            compare = descriptor.Compare is { } comparison
+                ? ToNative(comparison)
+                : WGPUCompareFunction.Undefined,
             maxAnisotropy = descriptor.MaxAnisotropy,
         };
         return nativeDescriptor;
@@ -1354,8 +1356,12 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new()
         {
             format = ToNative(depthStencil.Format),
-            depthWriteEnabled = ToNativeOptional(depthStencil.DepthWriteEnabled),
-            depthCompare = ToNative(depthStencil.DepthCompare),
+            depthWriteEnabled = depthStencil.DepthWriteEnabled is { } writeEnabled
+                ? ToNativeOptional(writeEnabled)
+                : WGPUOptionalBool.Undefined,
+            depthCompare = depthStencil.DepthCompare is { } comparison
+                ? ToNative(comparison)
+                : WGPUCompareFunction.Undefined,
             stencilFront = ToNative(depthStencil.StencilFront),
             stencilBack = ToNative(depthStencil.StencilBack),
             stencilReadMask = depthStencil.StencilReadMask,
@@ -1410,7 +1416,9 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         return new()
         {
             topology = ToNative(primitive.Topology),
-            stripIndexFormat = ToNative(primitive.StripIndexFormat),
+            stripIndexFormat = primitive.StripIndexFormat is { } indexFormat
+                ? ToNative(indexFormat)
+                : WGPUIndexFormat.Undefined,
             frontFace = ToNative(primitive.FrontFace),
             cullMode = ToNative(primitive.CullMode)
         };
@@ -1638,7 +1646,7 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
             depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
             loadOp = ToNative(c.LoadOp),
             storeOp = ToNative(c.StoreOp),
-            clearValue = ToNative(c.ClearValue)
+            clearValue = ToNative(c.ClearValue.GetValueOrDefault())
         };
         if (c.ResolveTarget is not null)
         {
@@ -2016,16 +2024,16 @@ public sealed partial class WebGPUNETBackend : IBackend<Backend>
         {
             label = label,
         };
-        result.format = ToNative(descriptor.Format);
-        result.dimension = ToNative(descriptor.Dimension);
+        result.format = descriptor.Format is { } format
+            ? ToNative(format)
+            : WGPUTextureFormat.Undefined;
+        result.dimension = descriptor.Dimension is { } dimension
+            ? ToNative(dimension)
+            : WGPUTextureViewDimension.Undefined;
         result.baseMipLevel = (uint)descriptor.BaseMipLevel;
-        result.mipLevelCount = descriptor.MipLevelCount == 0
-            ? WGPU_MIP_LEVEL_COUNT_UNDEFINED
-            : (uint)descriptor.MipLevelCount;
+        result.mipLevelCount = descriptor.MipLevelCount ?? WGPU_MIP_LEVEL_COUNT_UNDEFINED;
         result.baseArrayLayer = (uint)descriptor.BaseArrayLayer;
-        result.arrayLayerCount = descriptor.ArrayLayerCount == 0
-            ? WGPU_ARRAY_LAYER_COUNT_UNDEFINED
-            : (uint)descriptor.ArrayLayerCount;
+        result.arrayLayerCount = descriptor.ArrayLayerCount ?? WGPU_ARRAY_LAYER_COUNT_UNDEFINED;
         result.aspect = ToNative(descriptor.Aspect);
         return result;
     }
