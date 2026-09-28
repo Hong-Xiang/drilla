@@ -13,8 +13,6 @@ interface DMathTypeAlgebra<T> {
   mat(type: T, row: Rank, col: Rank): T;
 }
 
-type DMathType = <T>(algebra: DMathTypeAlgebra<T>) => T;
-
 export const DMathTypes = {
   bool: <T>($: DMathTypeAlgebra<T>) => $.b(),
   f16: <T>($: DMathTypeAlgebra<T>) => $.f(16),
@@ -47,10 +45,3 @@ export const DMathTypes = {
   mat4x3: <T>($: DMathTypeAlgebra<T>) => $.mat($.b(), 4, 3),
   mat4x4: <T>($: DMathTypeAlgebra<T>) => $.mat($.b(), 4, 4),
 };
-
-interface CodeGenContext {
-  emitLine(line: string): void;
-  newLine(): void;
-  indent(): void;
-  unindent(): void;
-}

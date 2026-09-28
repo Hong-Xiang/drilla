@@ -1,7 +1,7 @@
 import { editor } from "monaco-editor";
 export async function ILSLDevelopMain() {
   self.MonacoEnvironment = {
-    getWorker: (moduleId, label) => {
+    getWorker: (_moduleId, label) => {
       const getUrl = function () {
         const jsRoot = "/js/dist/";
         if (label === "json") {
@@ -24,28 +24,27 @@ export async function ILSLDevelopMain() {
     },
   };
   const shaderName = "MinimumTriangle";
-  const expected = await (await fetch(`ilsl/wgsl/${shaderName}/expected`)).text();
+  const expected = await (
+    await fetch(`ilsl/wgsl/${shaderName}/expected`)
+  ).text();
   const generated = await (await fetch(`ilsl/wgsl/${shaderName}`)).text();
   const ast = await (await fetch("ilsl/ast")).text();
-  const expectedEditor = editor.create(
-    document.getElementById("editor-expected") as HTMLDivElement,
-    {
-      value: expected,
-      language: "wgsl",
-    }
-  );
-  const generatedEditor = editor.create(
-    document.getElementById("editor-generated") as HTMLDivElement,
-    {
-      value: generated,
-      language: "wgsl",
-    }
-  );
-  const editorInstance = editor.create(
-    document.getElementById("editor-ast") as HTMLDivElement,
-    {
-      value: ast,
-      language: "json",
-    }
-  );
+  editor.create(editorElement("editor-expected"), {
+    value: expected,
+    language: "wgsl",
+  });
+  editor.create(editorElement("editor-generated"), {
+    value: generated,
+    language: "wgsl",
+  });
+  editor.create(editorElement("editor-ast"), {
+    value: ast,
+    language: "json",
+  });
+}
+
+function editorElement(id: string): HTMLElement {
+  const element = document.getElementById(id);
+  if (!element) throw new Error(`Missing editor element: ${id}`);
+  return element;
 }

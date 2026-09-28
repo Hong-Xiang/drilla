@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { createWebXRRenderService } from "./WebXRRenderService";
-import { ScissorClear } from "./scissor-clear/renderer";
 import { CubeRenderer } from "./cube/renderer";
 import { createSurfaceRenderService } from "./SurfaceRenderService";
 import { RenderPlatform } from "./RenderService";
@@ -19,7 +18,7 @@ export function RenderApp({ gl, canvas }: RenderPlatform) {
       </button>
       <button
         disabled={disabled}
-        onClick={(e) => {
+        onClick={() => {
           initSurface({ gl, canvas });
         }}
       >
@@ -31,7 +30,7 @@ export function RenderApp({ gl, canvas }: RenderPlatform) {
 
 async function initWebXR(
   platform: RenderPlatform,
-  setStartDisabled: (state: boolean) => void
+  setStartDisabled: (state: boolean) => void,
 ) {
   console.log("init");
   setStartDisabled(true);
