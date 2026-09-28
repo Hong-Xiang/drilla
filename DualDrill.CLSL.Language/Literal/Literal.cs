@@ -68,6 +68,6 @@ public static class Literal
     {
         var sw = new IndentedTextWriter(new StringWriter());
         literal.PrettyPrint(sw, PrettyPrintOption.Default);
-        return sw.InnerWriter.ToString();
+        return sw.InnerWriter.ToString() ?? throw new InvalidOperationException("Literal formatter returned no text.");
     }
 }

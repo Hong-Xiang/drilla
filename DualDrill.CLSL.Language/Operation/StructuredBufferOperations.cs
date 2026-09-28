@@ -59,7 +59,7 @@ public sealed class StructuredBufferLengthOperation<TElement>
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> instruction, TS semantic)
         where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
-        semantic.StructuredBufferLength(instruction, this, instruction.Result, instruction[0]);
+        semantic.StructuredBufferLength(instruction, this, instruction.RequireResult(), instruction[0]);
 }
 
 public sealed class StructuredBufferLoadOperation<TElement>
@@ -110,7 +110,7 @@ public sealed class StructuredBufferLoadOperation<TElement>
         semantic.StructuredBufferLoad(
             instruction,
             this,
-            instruction.Result,
+            instruction.RequireResult(),
             instruction[0],
             instruction[1]);
 }
@@ -173,7 +173,7 @@ public sealed class ReadWriteStructuredBufferLengthOperation<TElement>
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> instruction, TS semantic)
         where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
-        semantic.ReadWriteStructuredBufferLength(instruction, this, instruction.Result, instruction[0]);
+        semantic.ReadWriteStructuredBufferLength(instruction, this, instruction.RequireResult(), instruction[0]);
 }
 
 public sealed class ReadWriteStructuredBufferLoadOperation<TElement>
@@ -224,7 +224,7 @@ public sealed class ReadWriteStructuredBufferLoadOperation<TElement>
         semantic.ReadWriteStructuredBufferLoad(
             instruction,
             this,
-            instruction.Result,
+            instruction.RequireResult(),
             instruction[0],
             instruction[1]);
 }

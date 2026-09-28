@@ -291,7 +291,7 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<RegionFunctionBody> Mod
     }
 
 
-    private void EmitEntryFunction(FunctionDeclaration decl, RegionFunctionBody? body, IShaderStageAttribute stage)
+    private void EmitEntryFunction(FunctionDeclaration decl, RegionFunctionBody body, IShaderStageAttribute stage)
     {
         var voidType = GetTypeName(UnitType.Instance);
         var funcTypeId = GetTypeName(new FunctionType([], UnitType.Instance));
@@ -326,8 +326,7 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<RegionFunctionBody> Mod
 
         BodyWriter.WriteLine($"OpBranch {GetLabelName(body.Entry)}");
 
-        // Process the actual function body IR if available
-        if (body is not null) ProcessFunctionBody(body);
+        ProcessFunctionBody(body);
 
         BodyWriter.WriteLine("OpFunctionEnd");
     }
@@ -338,8 +337,8 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<RegionFunctionBody> Mod
         {
             BodyWriter.WriteLine($"{GetLabelName(l)} = OpLabel");
             var region = body[l];
-            foreach (var stmt in region.Body.Elements) throw new NotImplementedException();
-            //stmt.Evaluate(this);
+            if (region.Body.Elements.Any())
+                throw new NotImplementedException();
             region.Body.Last.Evaluate(this);
         }
     }
@@ -371,24 +370,23 @@ public sealed class SPIRVEmitter(ShaderModuleDeclaration<RegionFunctionBody> Mod
     {
         switch (operation)
         {
-            case IVectorBinaryNumericOperation op:
-            {
-                throw new NotImplementedException();
-            }
-                break;
-            default:
-            {
-                var opName = (operation.BinaryOp, operation.ResultType) switch
+            case IVectorBinaryNumericOperation:
                 {
-                    (BinaryArithmetic.Add, IntType<N32>) => "OpIAdd",
-                    (BinaryArithmetic.Sub, IntType<N32>) => "OpISub",
-                    (BinaryArithmetic.Mul, FloatType<N32>) => "OpFMul",
-                    (BinaryArithmetic.Mul, IntType<N32>) => "OpIMul",
-                    (BinaryArithmetic.BitwiseAnd, IntType<N32>) => "OpBitwiseAnd",
-                    _ => operation.Name
-                };
-                BodyWriter.Write(opName);
-            }
+                    throw new NotImplementedException();
+                }
+            default:
+                {
+                    var opName = (operation.BinaryOp, operation.ResultType) switch
+                    {
+                        (BinaryArithmetic.Add, IntType<N32>) => "OpIAdd",
+                        (BinaryArithmetic.Sub, IntType<N32>) => "OpISub",
+                        (BinaryArithmetic.Mul, FloatType<N32>) => "OpFMul",
+                        (BinaryArithmetic.Mul, IntType<N32>) => "OpIMul",
+                        (BinaryArithmetic.BitwiseAnd, IntType<N32>) => "OpBitwiseAnd",
+                        _ => operation.Name
+                    };
+                    BodyWriter.Write(opName);
+                }
                 break;
         }
 

@@ -24,7 +24,6 @@ public sealed class SemanticModel
     private readonly Stack<ITerminator<RegionJump<IShaderValue>, IShaderValue>> VisitingTerminator = [];
     private int LabelCount;
     private ImmutableStack<Label> Scope = [];
-    private int ValueCount = 0;
 
 
     public SemanticModel(RegionFunctionBody body)
