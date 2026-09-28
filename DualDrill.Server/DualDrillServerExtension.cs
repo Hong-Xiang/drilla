@@ -1,25 +1,13 @@
-﻿using DualDrill.Engine.Connection;
-using DualDrill.Engine.Headless;
-using DualDrill.Engine.Services;
+﻿using DualDrill.Engine.Services;
 using DualDrill.Graphics;
 using DualDrill.Graphics.Backend;
 using DualDrill.CLSL;
 using DualDrill.Server.Services;
-using DualDrill.WebView;
 
 namespace DualDrill.Server;
 
 public static class DualDrillServerExtension
 {
-    private static void AddConnectionServices(IServiceCollection services)
-    {
-        services.AddSingleton<ClientsManager>();
-        //services.AddSingleton<ISignalConnectionProviderService, SignalConnectionOverSignalRProvider>();
-        services.AddSingleton<ISignalConnectionProviderService, SignalConnectionOverWebViewWithWebSocketService>();
-        services.AddScoped<IClient>(sp => new ClientIdentity(Guid.NewGuid()));
-        services.AddWebViewConnectionServices();
-    }
-
     private static async ValueTask AddGraphicsServices(this IServiceCollection services, CancellationToken cancellation)
     {
         var instance = WebGPUNETBackend.Instance.CreateGPUInstance();
@@ -35,31 +23,12 @@ public static class DualDrillServerExtension
 
 
         services.AddSingleton(device);
-
-
-        //var adapterLegacy = await instanceLegacy.RequestAdapterAsync(new GPURequestAdapterOptions()
-        //{
-        //    PowerPreference = GPUPowerPreference.HighPerformance
-        //}, cancellation);
-        //var deviceLegacy = await (adapterLegacy as GPUAdapter<WGPUBackend>).RequestDeviceAsyncLegacy(new GPUDeviceDescriptor(), cancellation);
-        //services.AddSingleton(deviceLegacy);
-        //services.AddSingleton(sp => sp.GetRequiredService<GPUDevice>().GetQueue());
     }
 
-    private static void AddRealtimeSimulationServices(IServiceCollection services)
+    private static void AddFrameRenderServices(IServiceCollection services)
     {
-        services.AddSingleton<FrameInputService>();
-        services.AddSingleton<FrameSimulationService>();
         services.AddSingleton<IFrameRenderService, FrameRenderService>();
-
         services.AddSingletonHostedService<DevicePollHostedService>();
-        services.AddSingletonHostedService<RealtimeFrameHostableBackgroundService>();
-    }
-
-    private static void AddHeadlessServices(IServiceCollection services)
-    {
-        services.AddSingleton<HeadlessSurface>();
-        services.AddSingleton<IGPUSurface>(sp => sp.GetRequiredService<HeadlessSurface>());
     }
 
     private static void AddRenderService(IServiceCollection services)
@@ -69,7 +38,6 @@ public static class DualDrillServerExtension
         services.AddSingleton<DualDrill.Engine.Renderer.WebGPULogoRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.RotateCubeRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.ClearColorRenderer>();
-        services.AddSingleton<DualDrill.Engine.Renderer.VolumeRenderer>();
         services.AddSingleton<DualDrill.Engine.Renderer.StaticTriangleRenderer>();
     }
 
@@ -90,33 +58,8 @@ public static class DualDrillServerExtension
     public static async ValueTask AddDualDrillServerServices(this IServiceCollection services, CancellationToken cancellation)
     {
         await AddGraphicsServices(services, cancellation);
-        AddConnectionServices(services);
-        AddRealtimeSimulationServices(services);
+        AddFrameRenderServices(services);
         AddRenderService(services);
-        AddHeadlessServices(services);
         AddCLSLCompilerService(services);
-
-        //services.AddScoped<InitializedClientContext>();
-
-        //services.AddScoped(async sp =>
-        //{
-        //    var disposables = sp.GetRequiredService<ContextAsyncDisposableCollection>();
-        //    var client = await JSClientModule.CreateAsync(sp.GetRequiredService<IJSRuntime>());
-        //    disposables.Add(client);
-        //    return client;
-        //});
-
-        //services.AddKeyedScoped(typeof(InitializedClientContext), (sp, level) =>
-        //{
-        //    var context = sp.GetRequiredService<InitializedClientContext>();
-        //    return context.ClientModule ?? throw new NullReferenceException(nameof(context.ClientModule));
-        //});
-
-        //services.AddScoped<MediaDevices>();
-        //services.AddScoped<JSClientModule>();
-        //services.AddScoped<BrowserClient>();
-        //services.AddScoped<IClient>(sp => sp.GetRequiredService<BrowserClient>());
-        //services.AddScoped<CircuitService>();
-        //services.AddScoped<CircuitHandler>(sp => sp.GetRequiredService<CircuitService>());
     }
 }
