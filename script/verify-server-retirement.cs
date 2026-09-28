@@ -44,7 +44,9 @@ foreach (var (path, check) in retained)
 }
 
 const string pngPath = "/render/cube?width=64&height=48";
-byte[] png = await http.GetByteArrayAsync(pngPath);
+using var pngResponse = await http.GetAsync(pngPath);
+Require(pngResponse.StatusCode == HttpStatusCode.OK, $"{pngPath}: expected 200, got {pngResponse.StatusCode}");
+byte[] png = await pngResponse.Content.ReadAsByteArrayAsync();
 Require(Image.DetectFormat(png).Name == "PNG", "Renderer did not return PNG data.");
 using (Image<Rgba32> image = Image.Load<Rgba32>(png))
 {
