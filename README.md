@@ -75,6 +75,40 @@ This is a reproducible development shell, not a fully hermetic Nix build:
 NuGet restore still uses the configured package sources and cache.
 Use an existing browser for interactive development.
 
+### Repository checks
+
+All retained .NET projects inherit nullable checking and warnings-as-errors from
+`Directory.Build.props`. The canonical shader assembly retains its existing,
+documented CS0649 exception for GPU-bound uniform declarations; shader source
+and generated mathematics are not rewritten to initialize those fields.
+
+From the repository root inside the default Nix shell:
+
+```sh
+dotnet build Drilla.slnx -c Debug
+dotnet build Drilla.slnx -c Release
+dotnet build DualDrill.CLSL.NativeTest -c Release
+dotnet build DualDrill.JS/DualDrill.JS.esproj
+dotnet build -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.cs
+dotnet build -p:ImportDirectoryPackagesProps=false script/verify-server-retirement.cs
+cd DualDrill.JS
+bun install --frozen-lockfile
+bun run check
+bun run build
+bun run site:build
+bun run compiler:test
+```
+
+The native test project and frontend MSBuild project are outside the solution
+and are checked explicitly. The frontend gate covers retained TypeScript,
+build scripts, browser mocks, the media viewer, and the independent Node/V8
+oracle script. Node remains the oracle's execution runtime; Bun supplies its
+type-check tooling, not a substitute WebAssembly engine. Run the compiler tests
+in both configurations as shown above and the GPU/browser checks from the
+[native](DualDrill.CLSL.NativeTest/README.md),
+[media](DualDrill.Media.Server/README.md), and
+[API host](DualDrill.Server/README.md) guides.
+
 ### Development API host
 
 From the repository root, inside the default Nix shell:
