@@ -38,8 +38,9 @@ With the host running, check API responses, browser pages, retired 404s, and a
 decoded, non-uniform GPU PNG:
 
 ```sh
-uv run --python 3.13 script/verify-server-retirement.py http://127.0.0.1:58637
+dotnet run -p:ImportDirectoryPackagesProps=false \
+  script/verify-server-retirement.cs -- http://127.0.0.1:58637
 ```
 
-The dataset endpoint is deliberately excluded until the external data is
-available.
+The script uses the same ImageSharp package as the host to decode PNG output.
+The dataset endpoint is deliberately excluded until the external data is available.
