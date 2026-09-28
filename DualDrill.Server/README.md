@@ -38,7 +38,7 @@ With the host running, check API responses, browser pages, retired 404s, and a
 decoded, non-uniform GPU PNG:
 
 ```sh
-python3 script/verify-server-retirement.py http://127.0.0.1:58637
+uv run --python 3.13 script/verify-server-retirement.py http://127.0.0.1:58637
 ```
 
 The dataset endpoint is deliberately excluded until the external data is
