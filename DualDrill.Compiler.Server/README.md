@@ -8,9 +8,8 @@ a native GPU.
 From the repository root:
 
 ```sh
-nix develop --command pnpm --dir DualDrill.JS install --frozen-lockfile
-nix develop --command pnpm --dir DualDrill.JS run compiler:build
-nix develop --command dotnet run --project DualDrill.Compiler.Server
+nix develop --builders '' -c bash -c 'cd DualDrill.JS && bun install --frozen-lockfile && bun run compiler:build'
+nix develop --builders '' -c dotnet run --project DualDrill.Compiler.Server
 ```
 
 Open <http://127.0.0.1:5083/>. The frontend uses one browser WebGPU device to
@@ -30,8 +29,7 @@ the page (hard-refresh if the old bundle is cached).
 Frontend checks, after installing the locked dependencies above:
 
 ```sh
-nix develop --command pnpm --dir DualDrill.JS run compiler:check
-nix develop --command pnpm --dir DualDrill.JS run compiler:test
+nix develop --builders '' -c bash -c 'cd DualDrill.JS && bun run compiler:check && bun run compiler:test'
 ```
 
 `compiler:test` rebuilds the bundle and exercises animation/resource lifetimes

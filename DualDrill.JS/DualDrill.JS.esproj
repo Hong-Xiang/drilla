@@ -5,19 +5,20 @@
 
   <ItemGroup>
     <SourceFiles Include="src\**\*.ts" />
+    <SourceFiles Include="src\**\*.tsx" />
     <SourceFiles Include="esbuild.mjs" />
     <SourceFiles Include="package.json" />
-    <SourceFiles Include="pnpm-lock.yaml" />
+    <SourceFiles Include="bun.lock" />
   </ItemGroup>
 
-  <Target Name="PnpmRestore" AfterTargets="Restore">
-    <Exec Command="pnpm install" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  <Target Name="BunRestore" AfterTargets="Restore">
+    <Exec Command="bun install --frozen-lockfile" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
-  <Target Name="Build"
+  <Target Name="BuildFrontend" BeforeTargets="Build"
           Inputs="@(SourceFiles)"
-          Outputs="$(MSBuildProjectDirectory)\build.stamp">
-    <Exec Command="node esbuild.mjs" WorkingDirectory="$(MSBuildProjectDirectory)" />
-    <Touch Files="$(MSBuildProjectDirectory)\build.stamp" />
+          Outputs="$(MSBuildProjectDirectory)\node_modules\.build.stamp">
+    <Exec Command="bun run build" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Touch Files="$(MSBuildProjectDirectory)\node_modules\.build.stamp" AlwaysCreate="true" />
   </Target>
 </Project>

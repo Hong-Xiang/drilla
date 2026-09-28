@@ -15,7 +15,8 @@ GStreamer to a local browser without WebView.
 
 requirements:
 
-- [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
+- [Bun](https://bun.com/) 1.4.2 for frontend installs/scripts; Node.js 22 for
+  Vite/esbuild tools and the independent Node/V8 WebAssembly fixture harness
 - [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download)
 - [slangc](https://github.com/shader-slang/slang) on `PATH` (the Nix package
   is `shader-slang`; the unrelated `slang` package does not provide it), or
@@ -31,7 +32,7 @@ nix develop
 
 The shell supplies .NET SDK/runtime 10, Slang (`slangc`), LLVM 16 native
 libraries for LLVMSharp, the Vulkan loader needed by native WebGPU bindings,
-Node.js, and pnpm. It preserves the host Vulkan ICD/driver environment and
+Bun 1.4.2 and Node.js 22. It preserves the host Vulkan ICD/driver environment and
 any inherited `LD_LIBRARY_PATH`; it does not install or select Vulkan tools,
 an ICD, software renderer, browser, or Chromium.
 
@@ -79,7 +80,8 @@ host. For that development path:
 
 - Open `Drilla.slnx`, run `DualDrill.Server` project to start a backend server
 
-- _optional_ In `DualDrill.JS`, run `node .\esbuild.mjs --watch` to rebuild TypeScript on changes
+- First run `bun install --frozen-lockfile` in `DualDrill.JS`; optionally run
+  `bun esbuild.mjs --watch` there to rebuild TypeScript on changes
 
 - Open browser, visit `https://localhost:7117/desktop` for basic rendering.
 

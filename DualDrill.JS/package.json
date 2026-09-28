@@ -3,13 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "scripts": {
     "dev": "vite",
     "compile": "tsc --noEmit",
-    "build": "node esbuild.mjs",
+    "build": "bun esbuild.mjs",
     "compiler:check": "tsc -p tsconfig.compiler.json",
-    "compiler:build": "node esbuild.compiler.mjs",
-    "compiler:test": "pnpm run compiler:build && node --test test/compiler-animation.test.mjs",
+    "compiler:build": "bun esbuild.compiler.mjs",
+    "compiler:test": "bun run compiler:build && bun test test/compiler-animation.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

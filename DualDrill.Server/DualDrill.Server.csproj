@@ -9,11 +9,15 @@
 		<RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' AND '$(PackAsTool)' != 'true'">$(NETCoreSdkRuntimeIdentifier)</RuntimeIdentifier>
 	</PropertyGroup>
 
+	<Target Name="BunInstall" BeforeTargets="PreBuild"
+			Inputs="$(MSBuildProjectDirectory)/../DualDrill.JS/package.json;$(MSBuildProjectDirectory)/../DualDrill.JS/bun.lock"
+			Outputs="$(MSBuildProjectDirectory)/../DualDrill.JS/node_modules/.install.stamp">
+		<Exec Command="bun install --frozen-lockfile" WorkingDirectory="$(MSBuildProjectDirectory)/../DualDrill.JS" />
+		<Touch Files="$(MSBuildProjectDirectory)/../DualDrill.JS/node_modules/.install.stamp" AlwaysCreate="true" />
+	</Target>
+
 	<Target Name="PreBuild" BeforeTargets="Build">
-		<Exec Command="echo Running pnpm install" />
-		<Exec Command="pnpm install" WorkingDirectory="..\DualDrill.JS" />
-		<Exec Command="echo running node .\esbuild.mjs" />
-		<Exec Command="node .\esbuild.mjs" WorkingDirectory="..\DualDrill.JS" />
+		<Exec Command="bun run build" WorkingDirectory="$(MSBuildProjectDirectory)/../DualDrill.JS" />
 	</Target>
 
 	<ItemGroup>

@@ -237,7 +237,7 @@ low-complexity triangle is not a network-capacity or complex-scene quality
 benchmark. Neither Windows nor a real inter-host LAN path is claimed here.
 
 The browser module is plain JavaScript checked with the TypeScript version
-already pinned in `DualDrill.JS/pnpm-lock.yaml`:
+already pinned in `DualDrill.JS/bun.lock`:
 
 ```sh
 bun x --package typescript@5.3.3 tsc --allowJs --checkJs --noEmit --strict \
