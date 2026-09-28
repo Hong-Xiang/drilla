@@ -16,8 +16,12 @@ public sealed class CallOperation(FunctionType calleeType) : IOperation
     public FunctionDeclaration Function => throw new NotImplementedException();
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
-        where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
-        semantic.Call(inst, this, inst.Result, inst[0], [.. inst.Operands.ToImmutableArray()[1..]]);
+        where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO>
+    {
+        if (ResultType is not UnitType && inst.Result is null)
+            throw new ArgumentException("A non-Unit call requires a result.", nameof(inst));
+        return semantic.Call(inst, this, inst.Result, inst[0], [.. inst.Operands.ToImmutableArray()[1..]]);
+    }
 
     public IOperationMethodAttribute GetOperationMethodAttribute() => throw new NotImplementedException();
 }

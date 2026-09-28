@@ -23,10 +23,10 @@ internal class ValueUseAnalysis
 
     public IEnumerable<IShaderValue> Single(ShaderRegionBody value)
     {
-        // Invalid physical layouts are diagnosed by target passes; keep IR construction possible until then.
+        // Count/layout are diagnosed by target passes; index all physically present values during IR construction.
         return
         [
-            ..value.Body.Elements.SelectMany(s => s.HasValidOperandLayout ? s.Operands : []),
+            ..value.Body.Elements.SelectMany(s => s.StoredOperands),
             ..value.Body.Last.Evaluate(this)
         ];
     }

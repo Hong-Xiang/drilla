@@ -302,10 +302,8 @@ public sealed class SlangFunctionBody : IFunctionBody, ILocalDeclarationContext
         statement switch
         {
             SlangDeclare declare => [declare.Variable.Value],
-            SlangBind bind => [bind.Instruction.Result!, .. (bind.Instruction.HasValidOperandLayout
-                ? bind.Instruction.Operands.SelectMany(Values) : [])],
-            SlangEffect effect => effect.Instruction.HasValidOperandLayout
-                ? effect.Instruction.Operands.SelectMany(Values) : [],
+            SlangBind bind => [bind.Instruction.Result!, .. bind.Instruction.StoredOperands.SelectMany(Values)],
+            SlangEffect effect => effect.Instruction.StoredOperands.SelectMany(Values),
             SlangAssign assign => [.. Values(assign.Target), .. Values(assign.Value)],
             SlangGetDimensions dimensions =>
                 [dimensions.Count, dimensions.Stride, .. Values(dimensions.Buffer)],

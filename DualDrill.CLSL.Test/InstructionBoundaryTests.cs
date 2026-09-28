@@ -1,7 +1,15 @@
+using System.Collections.Immutable;
+using DualDrill.CLSL.Backend;
+using DualDrill.CLSL.Language;
+using DualDrill.CLSL.Language.Declaration;
+using DualDrill.CLSL.Language.FunctionBody;
 using DualDrill.CLSL.Language.Instruction;
 using DualDrill.CLSL.Language.Operation;
+using DualDrill.CLSL.Language.Region;
 using DualDrill.CLSL.Language.Symbol;
+using DualDrill.CLSL.Language.Transform;
 using DualDrill.CLSL.Language.Types;
+using DualDrill.Common.Nat;
 
 namespace DualDrill.CLSL.Test;
 
@@ -57,5 +65,93 @@ public sealed class InstructionBoundaryTests
             Assert.Throws<ArgumentException>(() => malformed.Operands.ToArray());
             Assert.Throws<ArgumentException>(() => _ = malformed[0]);
         }
+    }
+
+    [Fact]
+    public void DirectTargetRejectsMalformedVectorSetWithoutDroppingStoredValues()
+    {
+        var operation = VectorComponentSetOperation<N2, VecType<N2, FloatType<N32>>, Swizzle.X>.Instance;
+        var ptr = ShaderValue.Intermediate(operation.LeftType);
+        var value = ShaderValue.Intermediate(operation.RightType);
+        var extra = ShaderValue.Intermediate(operation.RightType);
+        var valid = Instruction<IShaderValue, IShaderValue>.Create(operation, null, [ptr, value]);
+        foreach (var malformed in new[]
+                 {
+                         valid with { OperandCount = 3, RestOperands = [] },
+                         valid with { RestOperands = [extra] }
+                     })
+        {
+            var module = Module(malformed);
+            var body = Assert.Single(module.FunctionDefinitions).Value;
+            Assert.Contains(ptr, body.UsedValues());
+            Assert.Contains(value, body.UsedValues());
+            if (!malformed.RestOperands.IsEmpty)
+                Assert.Contains(extra, body.UsedValues());
+            var error = Assert.Throws<NotSupportedException>(() => new SlangTargetLowering().Lower(module));
+            Assert.Contains("invalid vector component set signature", error.Message);
+        }
+    }
+
+    [Fact]
+    public void NonUnitCallWithoutResultIsRejectedAtEvaluationAndTarget()
+    {
+        var callee = new FunctionDeclaration(
+            "GetValue", [], new FunctionReturn(ShaderType.I32, []), []);
+        var call = Instruction<IShaderValue, IShaderValue>.Create(
+            new CallOperation((FunctionType)callee.Type), null, [callee]);
+
+        Assert.Throws<ArgumentException>(() => Module(call).RunPass(new FunctionToOperationPass()));
+        var error = Assert.Throws<NotSupportedException>(() =>
+            new SlangTargetLowering().Lower(Module(call)));
+        Assert.Contains("non-Unit call requires a result", error.Message);
+    }
+
+    [Fact]
+    public void ResultlessUnitCallLowersAsEffect()
+    {
+        var callee = new FunctionDeclaration(
+            "Observe", [], new FunctionReturn(ShaderType.Unit, []), []);
+        var call = Instruction<IShaderValue, IShaderValue>.Create(
+            new CallOperation((FunctionType)callee.Type), null, [callee]);
+        Assert.Null(call.Result);
+
+        var module = Module(call);
+        var calleeLabel = Label.Create("callee");
+        var calleeBody = RegionFixture.CreateFunctionBody(
+            callee,
+            RegionTree.Block(
+                calleeLabel, [],
+                RegionFixture.Body(
+                    calleeLabel, [], [],
+                    Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>()),
+                null));
+        module = module with
+        {
+            Declarations = [callee, .. module.Declarations],
+            FunctionDefinitions = module.FunctionDefinitions.Add(callee, calleeBody)
+        };
+        module = module.RunPass(new FunctionToOperationPass());
+        var target = new SlangTargetLowering().Lower(module);
+        var caller = Assert.Single(module.FunctionDefinitions.Keys, function => function.Name == "Entry");
+        Assert.Single(target.GetBody(caller).Origins.Instructions, origin => origin.Target is SlangEffect);
+    }
+
+    private static ShaderModuleDeclaration<RegionFunctionBody> Module(
+        Instruction<IShaderValue, IShaderValue> instruction)
+    {
+        var function = new FunctionDeclaration(
+            "Entry", [], new FunctionReturn(ShaderType.Unit, []), []);
+        var label = Label.Create("entry");
+        var body = RegionFixture.CreateFunctionBody(
+            function,
+            RegionTree.Block(
+                label, [],
+                RegionFixture.Body(
+                    label, [], [instruction],
+                    Terminator.B.ReturnVoid<RegionJump<IShaderValue>, IShaderValue>()),
+                null));
+        return new ShaderModuleDeclaration<RegionFunctionBody>(
+            [function],
+            ImmutableDictionary<FunctionDeclaration, RegionFunctionBody>.Empty.Add(function, body));
     }
 }

@@ -51,6 +51,20 @@ public readonly record struct Instruction<TV, TR>(
         }
     }
 
+    public IEnumerable<TV> StoredOperands
+    {
+        get
+        {
+            var stored = ImmutableArray.CreateBuilder<TV>();
+            if (Operand0 is { } first) stored.Add(first);
+            if (Operand1 is { } second) stored.Add(second);
+            if (!RestOperands.IsDefault)
+                foreach (var operand in RestOperands)
+                    if (operand is { } value) stored.Add(value);
+            return stored.ToImmutable();
+        }
+    }
+
     public bool HasValidOperandLayout =>
         OperandCount >= 0 &&
         (OperandCount == 0 ? Operand0 is null && Operand1 is null :
