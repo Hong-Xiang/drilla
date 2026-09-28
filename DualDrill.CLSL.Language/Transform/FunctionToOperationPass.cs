@@ -85,6 +85,9 @@ public sealed class FunctionToOperationPass
             (!call.CalleeType.Equals(function.Type) ||
              !HasPhysicalOperandShape(inst, call.CalleeType.ParameterTypes.Length + 1)))
             throw new OperationFunctionNotMatchException(function, operation);
+        if (operation is IBinaryExpressionOperation or IBinaryStatementOperation or IUnaryExpressionOperation &&
+            !HasPhysicalOperandShape(inst, operation.Function.Parameters.Length + 1))
+            throw new OperationFunctionNotMatchException(function, operation);
 
         return inst.Evaluate(new InstructionTransformSemantic());
     }

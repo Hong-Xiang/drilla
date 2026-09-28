@@ -122,6 +122,15 @@ public sealed class InstructionBoundaryTests
             var extra = ShaderValue.Intermediate(setter.RightType);
             var call = new CallOperation((FunctionType)callee.Type);
             var valid = Instruction<IShaderValue, IShaderValue>.Create(call, null, [callee, ptr, value]);
+            var forged = new FunctionDeclaration(
+                "ForgedSetter",
+                [
+                    new ParameterDeclaration("target", setter.LeftType, []),
+                    new ParameterDeclaration("value", setter.RightType, []),
+                    new ParameterDeclaration("extra", setter.RightType, [])
+                ],
+                new FunctionReturn(ShaderType.Unit, []),
+                [setter.GetOperationMethodAttribute()]);
 
             var normalized = Module(valid).RunPass(new FunctionToOperationPass());
             var entry = Assert.Single(normalized.FunctionDefinitions).Value;
@@ -136,6 +145,8 @@ public sealed class InstructionBoundaryTests
                      {
                          Instruction<IShaderValue, IShaderValue>.Create(call, null, [callee, ptr, value, extra]),
                          Instruction<IShaderValue, IShaderValue>.Create(call, null, [callee, ptr]),
+                         Instruction<IShaderValue, IShaderValue>.Create(
+                             new CallOperation((FunctionType)forged.Type), null, [forged, ptr, value, extra]),
                          valid with
                          {
                              Operation = new CallOperation(
