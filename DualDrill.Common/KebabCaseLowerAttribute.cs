@@ -14,9 +14,20 @@ namespace DualDrill.Common
     {
         public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            // Deserialize the enum value from the string
-            var enumString = reader.GetString();
-            return (T)Enum.Parse(typeof(T), enumString, true);
+            if (reader.TokenType != JsonTokenType.String)
+                throw new JsonException($"Expected a string for {typeof(T).Name}");
+
+            var enumString = reader.GetString() ?? throw new JsonException($"Expected a string for {typeof(T).Name}");
+            if (Enum.TryParse<T>(enumString, true, out var value))
+                return value;
+
+            foreach (var candidate in Enum.GetValues<T>())
+            {
+                if (string.Equals(ConvertToKebabCase(candidate.ToString()), enumString, StringComparison.OrdinalIgnoreCase))
+                    return candidate;
+            }
+
+            throw new JsonException($"Invalid {typeof(T).Name} value: {enumString}");
         }
 
         public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)

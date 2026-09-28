@@ -19,6 +19,13 @@ namespace DualDrill.Server.Controllers;
 public sealed class DuckDBConnectionService : IDisposable
 {
     DuckDBConnection Connection { get; }
+    internal IReadOnlyList<Type> EntryTypes { get; } = [
+        typeof(MandelbrotDistanceShader),
+        typeof(RaymarchingPrimitiveShader),
+        typeof(SimpleUniformShader),
+        typeof(MinimumTriangle)
+    ];
+
     public DuckDBConnectionService()
     {
         var connection = new DuckDBConnection($"Data Source=:memory:");
@@ -32,9 +39,7 @@ public sealed class DuckDBConnectionService : IDisposable
                 var handle = readers[0].GetValue<long>(index);
                 var type = Type.GetTypeFromHandle(RuntimeTypeHandle.FromIntPtr((nint)handle));
                 if (type is null)
-                {
-                    continue;
-                }
+                    throw new InvalidOperationException($"Type handle 0x{handle:X} could not be resolved");
                 var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
                 var info = new
                 {
@@ -83,14 +88,10 @@ public sealed class DuckDBConnectionService : IDisposable
                 var handle = readers[0].GetValue<long>(index);
                 var method = MethodBase.GetMethodFromHandle(RuntimeMethodHandle.FromIntPtr((nint)handle));
                 if (method is null)
-                {
-                    continue;
-                }
+                    throw new InvalidOperationException($"Method handle 0x{handle:X} could not be resolved");
                 var methodBody = method.GetMethodBody();
                 if (methodBody is null)
-                {
-                    continue;
-                }
+                    throw new InvalidOperationException($"Method {method.Name} has no IL body");
                 var local_variables = methodBody.LocalVariables.Select(lv => new
                 {
                     index = lv.LocalIndex,
@@ -165,7 +166,10 @@ public sealed class DuckDBConnectionService : IDisposable
             for (var index = 0ul; index < count; index++)
             {
                 var handle = readers[0].GetValue<long>(index);
-                var method = MethodBase.GetMethodFromHandle(RuntimeMethodHandle.FromIntPtr((nint)handle));
+                var method = MethodBase.GetMethodFromHandle(RuntimeMethodHandle.FromIntPtr((nint)handle))
+                    ?? throw new InvalidOperationException($"Method handle 0x{handle:X} could not be resolved");
+                var declaringType = method.DeclaringType
+                    ?? throw new InvalidOperationException($"Method {method.Name} has no declaring type");
                 var shaderAttributes = method.GetCustomAttributes().OfType<IShaderAttribute>().ToImmutableArray();
                 var is_entry_method = shaderAttributes.OfType<IShaderStageAttribute>().Any();
                 var is_runtime_method = shaderAttributes.OfType<IOperationMethodAttribute>().Any();
@@ -173,7 +177,7 @@ public sealed class DuckDBConnectionService : IDisposable
                 {
                     handle,
                     name = method.Name,
-                    decl_type = (long)method.DeclaringType.TypeHandle.Value,
+                    decl_type = (long)declaringType.TypeHandle.Value,
                     parameters = method.GetParameters().Select((p, pi) => new
                     {
                         index = pi,
@@ -196,12 +200,15 @@ public sealed class DuckDBConnectionService : IDisposable
             for (var index = 0ul; index < count; index++)
             {
                 var handle = readers[0].GetValue<long>(index);
-                var field = FieldInfo.GetFieldFromHandle(RuntimeFieldHandle.FromIntPtr((nint)handle));
+                var field = FieldInfo.GetFieldFromHandle(RuntimeFieldHandle.FromIntPtr((nint)handle))
+                    ?? throw new InvalidOperationException($"Field handle 0x{handle:X} could not be resolved");
+                var declaringType = field.DeclaringType
+                    ?? throw new InvalidOperationException($"Field {field.Name} has no declaring type");
                 var info = new
                 {
                     handle,
                     name = field.Name,
-                    decl_type = (long)field.DeclaringType.TypeHandle.Value,
+                    decl_type = (long)declaringType.TypeHandle.Value,
                 };
                 var result = JsonSerializer.Serialize(info);
                 writer.WriteValue(result, index);
@@ -213,15 +220,11 @@ public sealed class DuckDBConnectionService : IDisposable
             return new TableFunction([
                             new ColumnInfo("type_handle", typeof(long)),
                 new ColumnInfo("type_name", typeof(string)),
-                ], (IEnumerable<Type>)[
-                            typeof(MandelbrotDistanceShader),
-                            typeof(RaymarchingPrimitiveShader),
-                typeof(SimpleUniformShader),
-                typeof(MinimumTriangle)
-                        ]);
+                ], EntryTypes);
         }, (item, writers, index) =>
         {
-            var type = (Type)item;
+            if (item is not Type type)
+                throw new InvalidOperationException("Entry type was not a Type");
             writers[0].WriteValue((long)type.TypeHandle.Value, index);
             writers[1].WriteValue(type.Name, index);
         });
@@ -252,13 +255,7 @@ public class DotnetReflectionController(DuckDBConnectionService DuckDB) : Contro
     [HttpGet("entry-type")]
     public long[] GetEntryType()
     {
-        IEnumerable<Type> Entries = [
-               typeof(MandelbrotDistanceShader),
-                typeof(RaymarchingPrimitiveShader),
-                typeof(SimpleUniformShader),
-                typeof(MinimumTriangle)
-            ];
-        return [.. Entries.Select(t => (long)t.TypeHandle.Value)];
+        return [.. DuckDB.EntryTypes.Select(t => (long)t.TypeHandle.Value)];
     }
 
     [HttpGet("type/{handle}")]
@@ -266,6 +263,8 @@ public class DotnetReflectionController(DuckDBConnectionService DuckDB) : Contro
     {
         var rh = RuntimeTypeHandle.FromIntPtr((nint)handle);
         var type = Type.GetTypeFromHandle(rh);
+        if (type is null)
+            return NotFound($"Type handle 0x{handle:X} could not be resolved");
         return Ok(new
         {
             handle,
@@ -288,11 +287,15 @@ public class DotnetReflectionController(DuckDBConnectionService DuckDB) : Contro
     {
         var rh = RuntimeMethodHandle.FromIntPtr((nint)handle);
         var method = MethodBase.GetMethodFromHandle(rh);
+        if (method is null)
+            return NotFound($"Method handle 0x{handle:X} could not be resolved");
+        if (method.DeclaringType is not { } declaringType)
+            return BadRequest($"Method {method.Name} has no declaring type");
         return Ok(new
         {
             handle,
             name = method.Name,
-            decl_type = (long)method.DeclaringType.TypeHandle.Value,
+            decl_type = (long)declaringType.TypeHandle.Value,
             parameters = method.GetParameters().Select((p, pi) => new
             {
                 index = pi,
@@ -309,6 +312,8 @@ public class DotnetReflectionController(DuckDBConnectionService DuckDB) : Contro
     {
         var rh = RuntimeFieldHandle.FromIntPtr((nint)handle);
         var field = FieldInfo.GetFieldFromHandle(rh);
+        if (field is null)
+            return NotFound($"Field handle 0x{handle:X} could not be resolved");
         return Ok(new
         {
             handle,
@@ -372,7 +377,7 @@ public sealed record class ReflectionTypeInfo(
 
 public sealed record class ReflectionParameterInfo(
     int Index,
-    string Name,
+    string? Name,
     long Type
 )
 {
