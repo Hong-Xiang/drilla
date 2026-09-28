@@ -178,10 +178,7 @@ public sealed class
         foreach (var userDefinedElement in LayoutMap)
         {
             var key = userDefinedElement.Key;
-            var gpuVertexBufferLayout = new GPUVertexBufferLayout
-            {
-                StepMode = key.GetCustomAttributes(false).OfType<VertexStepModeAttribute>().First().StepMode
-            };
+            var stepMode = key.GetCustomAttributes(false).OfType<VertexStepModeAttribute>().First().StepMode;
             var attributes = new List<GPUVertexAttribute>();
             var stride = 0;
             var locationList = new List<int>();
@@ -217,10 +214,13 @@ public sealed class
                 offset += (ulong)byteSizeDict[binding];
             }
 
-            gpuVertexBufferLayout.ArrayStride = (ulong)stride;
-            gpuVertexBufferLayout.Attributes = attributes.ToArray();
             vertexAttributeDict.Clear();
-            gpuVertexBufferLayouts.Add(gpuVertexBufferLayout);
+            gpuVertexBufferLayouts.Add(new GPUVertexBufferLayout
+            {
+                ArrayStride = (ulong)stride,
+                StepMode = stepMode,
+                Attributes = attributes.ToArray()
+            });
         }
 
         return gpuVertexBufferLayouts.ToImmutableArray();
