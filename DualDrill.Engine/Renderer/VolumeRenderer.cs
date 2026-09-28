@@ -100,10 +100,6 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
     private IGPUSampler Sampler { get; }
     private ITexture DataTexture { get; }
 
-    private readonly int TextureWidth = 256;
-    private readonly int TextureHeight = 256;
-    private readonly int TextureDepth = 109;
-
     public VolumeRenderer(IGPUDevice device, TextureService textureService)
     {
         Device = device;
@@ -133,6 +129,7 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
         });
         BindGroupLayout = Pipeline.GetBindGroupLayout(0);
         DataTexture = textureService.GetTexture(Device, "head-volume");
+        Sampler = Device.CreateSampler(new());
 
         UniformBuffer = Device.CreateBuffer(new()
         {
@@ -169,6 +166,7 @@ public sealed class VolumeRenderer : IRenderer<VolumeRenderer.State>, IDisposabl
 
     public void Dispose()
     {
+        Sampler.Dispose();
         ShaderModule.Dispose();
     }
 
