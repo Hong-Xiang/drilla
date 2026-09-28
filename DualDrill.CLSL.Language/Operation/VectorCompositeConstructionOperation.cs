@@ -61,7 +61,7 @@ public sealed class VectorCompositeConstructionOperation : IOperation
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
         where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
-        semantic.VectorCompositeConstruction(inst, this, inst.Result, [..inst.Operands]);
+        semantic.VectorCompositeConstruction(inst, this, inst.RequireResult(), [.. inst.Operands]);
 
     private static FrozenDictionary<FunctionType, VectorCompositeConstructionOperation> GetAllOperations()
     {
@@ -79,11 +79,11 @@ public sealed class VectorCompositeConstructionOperation : IOperation
         }
 
         foreach (var v in ShaderType.GetVecTypes())
-        foreach (var p in ParameterPattern(v.Size.Value))
-        {
-            var op = new VectorCompositeConstructionOperation(v.Size, v.ElementType, p);
-            ops.Add((FunctionType)op.Function.Type, op);
-        }
+            foreach (var p in ParameterPattern(v.Size.Value))
+            {
+                var op = new VectorCompositeConstructionOperation(v.Size, v.ElementType, p);
+                ops.Add((FunctionType)op.Function.Type, op);
+            }
 
         return ops.ToFrozenDictionary();
     }

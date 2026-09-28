@@ -17,26 +17,54 @@ public readonly record struct Instruction<TV, TR>(
     object? Payload
 )
 {
-    public TV? this[int index] =>
-        index < OperandCount
-            ? index switch
+    public TR RequireResult() => Result is { } result
+        ? result
+        : throw new ArgumentException($"{Operation} requires a result.");
+
+    public TV this[int index]
+    {
+        get
+        {
+            if (index < 0 || index >= OperandCount)
+                throw new IndexOutOfRangeException(
+                    $"Accessing {index} operand while instruction has {OperandCount} operands");
+            ValidateOperandLayout();
+            return (index switch
             {
                 0 => Operand0,
                 1 => Operand1,
-                _ => index - 2 < RestOperands.Length ? RestOperands[index - 2] : default
-            }
-            : throw new IndexOutOfRangeException(
-                $"Accessing {index} operand while instruction has {OperandCount} operands");
+                _ when !RestOperands.IsDefault && index - 2 < RestOperands.Length => RestOperands[index - 2],
+                _ => default
+            }) is { } value
+                ? value
+                : throw new ArgumentException($"{Operation} is missing operand {index}.");
+        }
+    }
 
-    public IEnumerable<TV> Operands =>
-        OperandCount switch
+    public IEnumerable<TV> Operands
+    {
+        get
         {
-            0 => [],
-            1 => [Operand0!],
-            2 => [Operand0!, Operand1!],
-            _ when RestOperands.IsDefault => [Operand0!, Operand1!],
-            _ => [Operand0!, Operand1!, .. RestOperands]
-        };
+            ValidateOperandLayout();
+            var instruction = this;
+            return Enumerable.Range(0, OperandCount).Select(index => instruction[index]).ToImmutableArray();
+        }
+    }
+
+    public bool HasValidOperandLayout =>
+        OperandCount >= 0 &&
+        (OperandCount == 0 ? Operand0 is null && Operand1 is null :
+         OperandCount == 1 ? Operand0 is not null && Operand1 is null :
+         Operand0 is not null && Operand1 is not null) &&
+        !RestOperands.IsDefault &&
+        RestOperands.Length == Math.Max(0, OperandCount - 2) &&
+        RestOperands.All(static operand => operand is not null);
+
+    private void ValidateOperandLayout()
+    {
+        if (!HasValidOperandLayout)
+            throw new ArgumentException($"{Operation} has an invalid operand layout.");
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Evaluate<T>(IOperationSemantic<Instruction<TV, TR>, TV, TR, T> semantic) =>
@@ -52,19 +80,15 @@ public readonly record struct Instruction<TV, TR>(
             T>(this, semantic);
 
     public Instruction<TVR, TRR> Select<TVR, TRR>(Func<TV, TVR> fu, Func<TR, TRR> fd) =>
-        new(Operation,
-            OperandCount,
-            Result is not null ? fd(Result) : default,
-            Operand0 is not null ? fu(Operand0) : default,
-            Operand1 is not null ? fu(Operand1) : default,
-            RestOperands.IsDefault ? [] : [.. RestOperands.Select(fu)],
-            Payload
-        );
+        Instruction<TVR, TRR>.Create(
+            Operation, Result is { } result ? fd(result) : default, Operands.Select(fu), Payload);
 
     public static Instruction<TV, TR> Create(IOperation op, TR? result, IEnumerable<TV> operands,
         object? payload = null)
     {
         var ops = operands.ToImmutableArray();
+        if (ops.Any(static operand => operand is null))
+            throw new ArgumentException("Instruction operands cannot be null.", nameof(operands));
         return ops.Length switch
         {
             0 => new Instruction<TV, TR>(op, 0, result, default, default, [], payload),
@@ -93,7 +117,7 @@ public static class Instruction
             IShaderValue result, IShaderValue target, IShaderValue index) =>
             Create(op, result, [target, index]);
 
-        public Instruction<IShaderValue, IShaderValue> Call(Unit ctx, CallOperation op, IShaderValue result,
+        public Instruction<IShaderValue, IShaderValue> Call(Unit ctx, CallOperation op, IShaderValue? result,
             IShaderValue f, IReadOnlyList<IShaderValue> arguments) =>
             Create(op, result, [f, .. arguments]);
 

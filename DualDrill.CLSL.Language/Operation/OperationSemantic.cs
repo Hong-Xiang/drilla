@@ -10,7 +10,7 @@ public interface IOperationSemantic<in TX, in TV, in TR, out TO>
     TO Store(TX ctx, StoreOperation op, TV ptr, TV value);
     TO VectorSwizzleSet(TX ctx, IVectorSwizzleSetOperation op, TV ptr, TV value);
     TO VectorComponentSet(TX ctx, IVectorComponentSetOperation op, TV ptr, TV value);
-    TO Call(TX ctx, CallOperation op, TR result, TV f, IReadOnlyList<TV> arguments);
+    TO Call(TX ctx, CallOperation op, TR? result, TV f, IReadOnlyList<TV> arguments);
     TO Literal(TX ctx, LiteralOperation op, TR result, TV value);
     TO AddressOfChain(TX ctx, IAddressOfOperation op, TR result, TV target);
     TO AddressOfChain(TX ctx, IAddressOfOperation op, TR result, TV target, TV index);

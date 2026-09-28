@@ -45,7 +45,7 @@ public sealed class TextureSampleLevelOperation
         semantic.TextureSampleLevel(
             instruction,
             this,
-            instruction.Result,
+            instruction.RequireResult(),
             instruction[0],
             instruction[1],
             instruction[2],

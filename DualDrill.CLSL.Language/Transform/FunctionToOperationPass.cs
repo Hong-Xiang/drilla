@@ -137,7 +137,7 @@ public sealed class FunctionToOperationPass
             IShaderValue target, IShaderValue index) => [ctx];
 
         public IEnumerable<Instruction<IShaderValue, IShaderValue>> Call(Instruction<IShaderValue, IShaderValue> ctx,
-            CallOperation op, IShaderValue result, IShaderValue fv, IReadOnlyList<IShaderValue> arguments)
+            CallOperation op, IShaderValue? result, IShaderValue fv, IReadOnlyList<IShaderValue> arguments)
         {
             if (fv is not FunctionDeclaration f)
                 return [ctx];
@@ -259,7 +259,7 @@ public sealed class FunctionToOperationPass
                             var l = arguments[0];
                             if (!l.Type.Equals(be.LeftType) || !r.Type.Equals(be.RightType))
                                 throw new OperationFunctionNotMatchException(f, be);
-                            return [WithPayload(InstF.Operation2(default, be, result, l, r), ctx)];
+                            return [WithPayload(InstF.Operation2(default, be, ctx.RequireResult(), l, r), ctx)];
                         }
                     case IBinaryStatementOperation bs:
                         {
@@ -311,7 +311,7 @@ public sealed class FunctionToOperationPass
 
                             return
                             [
-                                WithPayload(InstF.Operation1(default, ue, result, s), ctx)
+                                WithPayload(InstF.Operation1(default, ue, ctx.RequireResult(), s), ctx)
                             ];
                         }
                 }
@@ -319,7 +319,7 @@ public sealed class FunctionToOperationPass
             if (f.Attributes.OfType<ZeroConstructorMethodAttribute>().Any() && f.ReturnType is IVecType vt)
             {
                 return [
-                    WithPayload(InstF.ZeroConstructorOperation(default, new ZeroConstructorOperation(vt), result), ctx)
+                    WithPayload(InstF.ZeroConstructorOperation(default, new ZeroConstructorOperation(vt), ctx.RequireResult()), ctx)
                 ];
             }
 
@@ -329,7 +329,7 @@ public sealed class FunctionToOperationPass
                     f.Parameters.Select(p => p.Type));
                 return
                 [
-                    WithPayload(InstF.VectorCompositeConstruction(default, op_, result, arguments), ctx)
+                    WithPayload(InstF.VectorCompositeConstruction(default, op_, ctx.RequireResult(), arguments), ctx)
                 ];
             }
 

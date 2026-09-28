@@ -592,7 +592,8 @@ public sealed class SlangTargetLowering
             }
 
             foreach (var block in blockOrder)
-                foreach (var value in block.Body.Body.Elements.SelectMany(instruction => instruction.Operands)
+                foreach (var value in block.Body.Body.Elements.SelectMany(instruction =>
+                             instruction.HasValidOperandLayout ? instruction.Operands : [])
                              .Concat(TerminatorValues(block.Body.Body.Last)))
                 {
                     if (!definitions.TryGetValue(value, out var definition) ||

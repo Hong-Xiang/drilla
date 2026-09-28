@@ -12,7 +12,7 @@ public interface IBinaryExpressionOperation : IOperation
     public IBinaryOp BinaryOp { get; }
 
     TO IOperation.EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic) =>
-        semantic.Operation2(inst, this, inst.Result, inst[0], inst[1]);
+        semantic.Operation2(inst, this, inst.RequireResult(), inst[0], inst[1]);
 }
 
 public interface IBinaryExpressionOperation<TSelf>

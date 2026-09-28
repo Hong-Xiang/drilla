@@ -44,11 +44,6 @@ public interface IVertexBufferLayoutBuilder<TGPULayout> where TGPULayout : struc
     ImmutableArray<GPUVertexBufferLayout> Build();
 }
 
-internal sealed class HostBufferLayout<TBufferModel>(int Binding)
-    where TBufferModel : unmanaged
-{
-}
-
 internal sealed record VertexDataMapping<THostBufferModel, TShaderModel>(
     Expression<Func<THostBufferModel, TShaderModel>> Mapping)
 {
@@ -61,7 +56,8 @@ public class VertexBufferLayoutHelper
         switch (member.MemberType)
         {
             case MemberTypes.Event:
-                return ((EventInfo)member).EventHandlerType;
+                return ((EventInfo)member).EventHandlerType
+                    ?? throw new ArgumentException("Event has no handler type.", nameof(member));
             case MemberTypes.Field:
                 return ((FieldInfo)member).FieldType;
             case MemberTypes.Method:
