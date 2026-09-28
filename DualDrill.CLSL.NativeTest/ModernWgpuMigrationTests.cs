@@ -169,8 +169,14 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         {
             Compute = new() { Module = foreignShader, EntryPoint = "main" },
         });
-        using var layout = context.Device.CreateBindGroupLayout(new());
-        using var foreignLayout = other.Device.CreateBindGroupLayout(new());
+        using var layout = context.Device.CreateBindGroupLayout(new()
+        {
+            Entries = Array.Empty<GPUBindGroupLayoutEntry>(),
+        });
+        using var foreignLayout = other.Device.CreateBindGroupLayout(new()
+        {
+            Entries = Array.Empty<GPUBindGroupLayoutEntry>(),
+        });
         using var foreignPipelineLayout = other.Device.CreatePipelineLayout(new()
         {
             BindGroupLayouts = [foreignLayout],
@@ -188,10 +194,12 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         using var foreignBindGroup = other.Device.CreateBindGroup(new()
         {
             Layout = foreignLayout,
+            Entries = Array.Empty<GPUBindGroupEntry>(),
         });
         using var bindGroup = context.Device.CreateBindGroup(new()
         {
             Layout = layout,
+            Entries = Array.Empty<GPUBindGroupEntry>(),
         });
         var disposedBuffer = context.Device.CreateBuffer(new()
         {
@@ -202,7 +210,7 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
 
         Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
         {
-            Compute = new() { EntryPoint = "main" },
+            Compute = default,
         }));
         Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
         {
@@ -239,7 +247,10 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         {
             BindGroupLayouts = [foreignLayout],
         }));
-        var disposedLayout = context.Device.CreateBindGroupLayout(new());
+        var disposedLayout = context.Device.CreateBindGroupLayout(new()
+        {
+            Entries = Array.Empty<GPUBindGroupLayoutEntry>(),
+        });
         disposedLayout.Dispose();
         Assert.Throws<ObjectDisposedException>(() => context.Device.CreatePipelineLayout(new()
         {
@@ -248,6 +259,7 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         Assert.Throws<ArgumentException>(() => context.Device.CreateBindGroup(new()
         {
             Layout = foreignLayout,
+            Entries = Array.Empty<GPUBindGroupEntry>(),
         }));
         Assert.Throws<ArgumentException>(() => context.Device.CreateBindGroup(new()
         {
@@ -262,6 +274,7 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         Assert.Throws<ArgumentException>(() => context.Device.CreateBindGroup(new()
         {
             Layout = Foreign<IGPUBindGroupLayout>(),
+            Entries = Array.Empty<GPUBindGroupEntry>(),
         }));
         Assert.ThrowsAny<GraphicsApiException>(() => context.Device.CreateBindGroup(new()
         {
@@ -285,7 +298,11 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         using var encoder = context.Device.CreateCommandEncoder(new());
         Assert.Throws<NotSupportedException>(() => encoder.BeginComputePass(new()
         {
-            TimestampWrites = new() { BeginningOfPassWriteIndex = 1 },
+            TimestampWrites = new()
+            {
+                QuerySet = Foreign<IGPUQuerySet>(),
+                BeginningOfPassWriteIndex = 1,
+            },
         }));
         using (var pass = encoder.BeginComputePass(new()))
         {
@@ -314,7 +331,10 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         unended.Dispose();
         Assert.Throws<InvalidOperationException>(() => abandoned.Finish(new()));
         Assert.Throws<InvalidOperationException>(() => abandoned.BeginComputePass(new()));
-        Assert.Throws<InvalidOperationException>(() => abandoned.BeginRenderPass(new()));
+        Assert.Throws<InvalidOperationException>(() => abandoned.BeginRenderPass(new()
+        {
+            ColorAttachments = Array.Empty<GPURenderPassColorAttachment>(),
+        }));
         Assert.Throws<ObjectDisposedException>(() => unended.DispatchWorkgroups(1));
 
         using var disposedEncoder = context.Device.CreateCommandEncoder(new());
@@ -357,7 +377,10 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         using var encoder = context.Device.CreateCommandEncoder(new());
         context.Device.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() => context.Device.CreateComputePipeline(new()));
+        Assert.Throws<ObjectDisposedException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = default,
+        }));
         Assert.Throws<ObjectDisposedException>(() => encoder.BeginComputePass(new()));
     }
 
@@ -380,7 +403,7 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
     private static T Foreign<T>() where T : class =>
         DispatchProxy.Create<T, ForeignProxy>();
 
-    public sealed class ForeignProxy : DispatchProxy
+    public class ForeignProxy : DispatchProxy
     {
         protected override object? Invoke(
             System.Reflection.MethodInfo? targetMethod, object?[]? args) =>
@@ -781,12 +804,14 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         Assert.Throws<ArgumentException>(() => other.Device.CreateBindGroup(new()
         {
             Layout = autoLayout,
+            Entries = Array.Empty<GPUBindGroupEntry>(),
         }));
         var disposedAutoLayout = autoPipeline.GetBindGroupLayout(0);
         disposedAutoLayout.Dispose();
         Assert.Throws<ObjectDisposedException>(() => context.Device.CreateBindGroup(new()
         {
             Layout = disposedAutoLayout,
+            Entries = Array.Empty<GPUBindGroupEntry>(),
         }));
     }
 
@@ -943,7 +968,7 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
                     new()
                     {
                         View = view,
-                        ClearValue = new() { A = 1 },
+                        ClearValue = new() { R = 0, G = 0, B = 0, A = 1 },
                         LoadOp = GPULoadOp.Clear,
                         StoreOp = GPUStoreOp.Store,
                     },
