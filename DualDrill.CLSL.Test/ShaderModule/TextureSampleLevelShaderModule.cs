@@ -5,11 +5,14 @@ namespace DualDrill.CLSL.Test.ShaderModule;
 
 internal sealed class TextureSampleLevelShaderModule : ISharpShader
 {
+    // Resource bindings are supplied by the GPU and inspected by reflection.
+#pragma warning disable CS0649
     [Group(0), Binding(2)]
     private static readonly Texture2D<float> Color;
 
     [Group(0), Binding(3)]
     private static readonly SamplerState Linear;
+#pragma warning restore CS0649
 
     [Fragment]
     [return: Location(0)]

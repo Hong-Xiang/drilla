@@ -132,9 +132,9 @@ public sealed class CilInitLocalsStorageTests
         Assert.IsType<VecType<DualDrill.Common.Nat.N2, FloatType<DualDrill.Common.Nat.N32>>>(
             store.Operand1!.Type);
         Assert.Single(promoted.Graph.Labels()
-            .SelectMany(label => promoted.Graph[label].Body.Elements)
-            .Where(instruction => instruction.Operation is VectorCompositeConstructionOperation &&
-                                  instruction.Payload is ShaderStackProvenance { Synthetic: true }));
+            .SelectMany(label => promoted.Graph[label].Body.Elements),
+            instruction => instruction.Operation is VectorCompositeConstructionOperation &&
+                           instruction.Payload is ShaderStackProvenance { Synthetic: true });
     }
 
     [Fact]
@@ -151,10 +151,10 @@ public sealed class CilInitLocalsStorageTests
         var init = Assert.Single(raw.Code.Instructions, instruction =>
             instruction.Instruction.OpCode == OpCodes.Initobj);
         var native = Assert.Single(promoted.Graph.Labels()
-            .SelectMany(label => promoted.Graph[label].Body.Elements)
-            .Where(instruction => instruction.Operation is StoreOperation &&
-                                  instruction.Payload is ShaderStackProvenance provenance &&
-                                  !provenance.Synthetic && provenance.OriginalIndex == init.Index));
+            .SelectMany(label => promoted.Graph[label].Body.Elements),
+            instruction => instruction.Operation is StoreOperation &&
+                           instruction.Payload is ShaderStackProvenance provenance &&
+                           !provenance.Synthetic && provenance.OriginalIndex == init.Index);
         Assert.Same(synthetic.Operand0, native.Operand0);
         Assert.NotEmpty(CilModuleCompiler.Compile(CompilerTestPipeline.ParseRaw(method)).FunctionDefinitions);
     }

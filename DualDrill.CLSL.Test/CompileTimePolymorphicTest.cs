@@ -55,7 +55,8 @@ public class CompileTimePolymorphicTest
     sealed class LitFragmentShader<T>
         where T : INormalShaderSource
     {
-
+        // These shader inputs are supplied by the renderer, not the CLR constructor.
+#pragma warning disable CS8618
         [Group(0)]
         [Binding(0)]
         ISampler Sampler { get; }
@@ -75,6 +76,7 @@ public class CompileTimePolymorphicTest
         Vector4 DiffuseColor { get; }
 
         T NormalData { get; }
+#pragma warning restore CS8618
 
         [Fragment]
         Vector4 LitPixel(VSToFS data)

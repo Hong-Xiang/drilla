@@ -968,11 +968,14 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class RepeatedTextureSampleShader : ISharpShader
     {
+        // These GPU resources are supplied by bindings and parsed from CIL.
+#pragma warning disable CS0649
         [Group(0), Binding(2)]
         private static readonly Texture2D<float> Color;
 
         [Group(0), Binding(3)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0649
 
         [Fragment]
         [return: Location(0)]
@@ -985,11 +988,14 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class PrefixTextureSampleShader : ISharpShader
     {
+        // These GPU resources are supplied by bindings and parsed from CIL.
+#pragma warning disable CS0649
         [Group(0), Binding(2)]
         private static readonly Texture2D<float> Color;
 
         [Group(0), Binding(3)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0649
 
         [Fragment]
         [return: Location(0)]
@@ -1002,11 +1008,14 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class CrossBlockTextureSampleShader : ISharpShader
     {
+        // These GPU resources are supplied by bindings and parsed from CIL.
+#pragma warning disable CS0649
         [Group(0), Binding(2)]
         private static readonly Texture2D<float> Color;
 
         [Group(0), Binding(3)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0649
 
         [Fragment]
         [return: Location(0)]
@@ -1023,11 +1032,14 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class VertexTextureSampleShader : ISharpShader
     {
+        // These GPU resources are supplied by bindings and parsed from CIL.
+#pragma warning disable CS0649
         [Group(0), Binding(2)]
         private static readonly Texture2D<float> Color;
 
         [Group(0), Binding(3)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0649
 
         [Vertex]
         [return: Builtin(BuiltinBinding.position)]
@@ -1037,6 +1049,8 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class ComputeTextureSampleShader : ISharpShader
     {
+        // These GPU resources are supplied by bindings and parsed from CIL.
+#pragma warning disable CS0649
         [Group(0), Binding(0)]
         private static readonly RWStructuredBuffer<float> Output;
 
@@ -1045,6 +1059,7 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
         [Group(0), Binding(3)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0649
 
         [Compute]
         [WorkgroupSize(1, 1, 1)]
@@ -1056,6 +1071,8 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class MixedTextureResourcesShader : ISharpShader
     {
+        // These GPU resources are supplied by bindings and parsed from CIL.
+#pragma warning disable CS0649
         [Uniform, Group(0), Binding(0)]
         private static readonly float Scale;
 
@@ -1070,6 +1087,7 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
         [Group(1), Binding(0)]
         private static readonly StructuredBuffer<float> Other;
+#pragma warning restore CS0649
 
         [Fragment]
         [return: Location(0)]
@@ -1080,7 +1098,10 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class MissingTextureMetadataShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         private static readonly Texture2D<float> Color;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1089,7 +1110,10 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class MissingSamplerMetadataShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         private static readonly SamplerState Linear;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1098,8 +1122,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class NegativeTextureGroupShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         [Group(-1), Binding(2)]
         private static readonly Texture2D<float> Color;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1108,8 +1135,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class WrongTextureElementShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         [Group(0), Binding(2)]
         private static readonly Texture2D<int> Color;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1118,8 +1148,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class NegativeSamplerBindingShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         [Group(0), Binding(-1)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1128,8 +1161,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class ConflictingUniformTextureShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         [Uniform, Group(0), Binding(2)]
         private static readonly Texture2D<float> Color;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1138,8 +1174,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class ConflictingReadSamplerShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         [Read, Group(0), Binding(3)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1148,8 +1187,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class ConflictingReadWriteTextureShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         [ReadWrite, Group(0), Binding(2)]
         private static readonly Texture2D<float> Color;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1158,8 +1200,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class DynamicTextureShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         [Group(0), Binding(2, true)]
         private static readonly Texture2D<float> Color;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1168,8 +1213,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class DynamicSamplerShader : ISharpShader
     {
+        // The deliberately invalid resource is read by metadata validation.
+#pragma warning disable CS0169
         [Group(0), Binding(3, true)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1178,11 +1226,14 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class DuplicateTextureSamplerBindingShader : ISharpShader
     {
+        // Both colliding resources must remain visible to metadata validation.
+#pragma warning disable CS0169
         [Group(0), Binding(2)]
         private static readonly Texture2D<float> Color;
 
         [Group(0), Binding(2)]
         private static readonly SamplerState Linear;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1202,11 +1253,17 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
     {
         private struct Resources
         {
+            // This unsupported nested resource is inspected by metadata validation.
+#pragma warning disable CS0649
             public Texture2D<float> Color;
+#pragma warning restore CS0649
         }
 
+        // This unsupported nested resource is inspected by metadata validation.
+#pragma warning disable CS0169
         [Group(0), Binding(2)]
         private static readonly Resources Data;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -1239,8 +1296,11 @@ public sealed class TextureSampleLevelTests(ITestOutputHelper output)
 
     private sealed class TextureInstanceFieldShader : ISharpShader
     {
+        // This unsupported instance resource is inspected by metadata validation.
+#pragma warning disable CS0169
         [Group(0), Binding(2)]
         private readonly Texture2D<float> Color;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
