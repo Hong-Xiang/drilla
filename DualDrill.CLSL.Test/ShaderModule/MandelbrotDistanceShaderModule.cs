@@ -6,10 +6,13 @@ namespace DualDrill.CLSL.Test.ShaderModule;
 
 public struct MandelbrotDistanceShaderModule : ISharpShader
 {
+    // The compiler reads this GPU uniform; the CLR never initializes it.
+#pragma warning disable CS0649
     [Uniform]
     [Group(0)]
     [Binding(0)]
     static readonly float iTime;
+#pragma warning restore CS0649
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]
@@ -61,5 +64,4 @@ public struct MandelbrotDistanceShaderModule : ISharpShader
         return vec4(col, 1.0f);
     }
 }
-
 

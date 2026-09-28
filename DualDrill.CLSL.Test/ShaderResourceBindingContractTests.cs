@@ -756,11 +756,14 @@ public sealed class ShaderResourceBindingContractTests
     [NonShaderMetadata]
     private readonly struct ValidBindingsShader : ISharpShader
     {
+        // Binding validation reads the initialized fields through reflection.
+#pragma warning disable CS0414
         [Uniform, Group(1), Binding(2)]
         private static readonly float First = 0;
 
         [Uniform, Group(2), Binding(2)]
         private static readonly float SameBindingDifferentGroup = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -768,8 +771,11 @@ public sealed class ShaderResourceBindingContractTests
 
     private readonly struct MissingGroupShader : ISharpShader
     {
+        // The intentionally malformed binding is inspected as metadata.
+#pragma warning disable CS0414
         [Uniform, Binding(2)]
         private static readonly float Data = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -777,8 +783,11 @@ public sealed class ShaderResourceBindingContractTests
 
     private readonly struct MissingBindingShader : ISharpShader
     {
+        // The intentionally malformed binding is inspected as metadata.
+#pragma warning disable CS0414
         [Uniform, Group(1)]
         private static readonly float Data = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -786,8 +795,11 @@ public sealed class ShaderResourceBindingContractTests
 
     private readonly struct MissingBothCoordinatesShader : ISharpShader
     {
+        // The intentionally malformed binding is inspected as metadata.
+#pragma warning disable CS0414
         [Uniform]
         private static readonly float Data = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -795,8 +807,11 @@ public sealed class ShaderResourceBindingContractTests
 
     private readonly struct NegativeGroupShader : ISharpShader
     {
+        // The intentionally malformed binding is inspected as metadata.
+#pragma warning disable CS0414
         [Uniform, Group(-1), Binding(2)]
         private static readonly float Data = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -804,8 +819,11 @@ public sealed class ShaderResourceBindingContractTests
 
     private readonly struct NegativeBindingShader : ISharpShader
     {
+        // The intentionally malformed binding is inspected as metadata.
+#pragma warning disable CS0414
         [Uniform, Group(1), Binding(-1)]
         private static readonly float Data = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -813,11 +831,14 @@ public sealed class ShaderResourceBindingContractTests
 
     private readonly struct DuplicateBindingShader : ISharpShader
     {
+        // Both colliding fields must remain visible to metadata validation.
+#pragma warning disable CS0414
         [Uniform, Group(1), Binding(2)]
         private static readonly float First = 0;
 
         [Uniform, Group(1), Binding(2)]
         private static readonly float Second = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -825,8 +846,11 @@ public sealed class ShaderResourceBindingContractTests
 
     private readonly struct AnnotatedOrdinaryFieldShader : ISharpShader
     {
+        // The invalid attribute is inspected as field metadata.
+#pragma warning disable CS0414
         [Location(0)]
         private static readonly float Data = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -882,8 +906,11 @@ public sealed class ShaderResourceBindingContractTests
 
     private readonly struct VisibilityHintsShader : ISharpShader
     {
+        // Entry-point visibility is inspected as field metadata.
+#pragma warning disable CS0414
         [Uniform, Group(1), Binding(2), Vertex, Fragment, Compute]
         private static readonly float Data = 0;
+#pragma warning restore CS0414
 
         [Vertex]
         public static int Entry() => 1;
@@ -899,7 +926,10 @@ public sealed class ShaderResourceBindingContractTests
     [Align(16)]
     private struct AnnotatedPayload
     {
+        // The invalid alignment is inspected as field metadata.
+#pragma warning disable CS0649
         public float Value;
+#pragma warning restore CS0649
     }
 
     private sealed class AnnotatedPayloadShader : ISharpShader

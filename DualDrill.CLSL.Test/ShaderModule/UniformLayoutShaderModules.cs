@@ -7,6 +7,8 @@ namespace DualDrill.CLSL.Test.ShaderModule;
 
 internal sealed class UniformLayoutReferenceShaderModule : ISharpShader
 {
+    // Uniform layout and bindings are discovered from fields by reflection.
+#pragma warning disable CS0649
     public struct Params
     {
         public vec4f32 Tint;
@@ -33,6 +35,7 @@ internal sealed class UniformLayoutReferenceShaderModule : ISharpShader
     [Binding(3)]
     [Uniform]
     private static readonly Tail Extra;
+#pragma warning restore CS0649
 
     [Fragment]
     [return: Location(0)]
@@ -44,6 +47,8 @@ internal sealed class UniformLayoutReferenceShaderModule : ISharpShader
 
 internal sealed class UniformLayoutProfileShaderModule : ISharpShader
 {
+    // These fields define the reflected GPU uniform layout.
+#pragma warning disable CS0649
     public struct ScalarOnly
     {
         public float Value;
@@ -69,6 +74,7 @@ internal sealed class UniformLayoutProfileShaderModule : ISharpShader
     [Group(2)][Binding(3)][Uniform] private static readonly vec4u32 U32x4;
     [Group(2)][Binding(4)][Uniform] private static readonly ScalarOnly ScalarStruct;
     [Group(2)][Binding(5)][Uniform] private static readonly Vec3ThenScalar PackedStruct;
+#pragma warning restore CS0649
 
     [Fragment]
     [return: Location(0)]
@@ -93,6 +99,8 @@ internal sealed class UniformLayoutProfileShaderModule : ISharpShader
 
 internal sealed class UniformEffectiveAlignmentShaderModule : ISharpShader
 {
+    // Uniform offsets are derived from these field declarations.
+#pragma warning disable CS0649
     public struct Vec2ThenScalars
     {
         public vec2f32 Position;
@@ -118,6 +126,7 @@ internal sealed class UniformEffectiveAlignmentShaderModule : ISharpShader
     [Binding(1)]
     [Uniform]
     private static readonly ScalarPositions Scalars;
+#pragma warning restore CS0649
 
     [Fragment]
     [return: Location(0)]
@@ -129,6 +138,8 @@ internal sealed class UniformEffectiveAlignmentShaderModule : ISharpShader
 
 internal static class UnsupportedUniformShaders
 {
+    // Invalid layouts are tested through reflected field metadata.
+#pragma warning disable CS0649
     internal struct NestedInner
     {
         public float Value;
@@ -165,14 +176,18 @@ internal static class UnsupportedUniformShaders
     {
         [FieldOffset(0)] public float Field;
     }
+#pragma warning restore CS0649
 
     internal sealed class VariableAlign : ISharpShader
     {
+        // The invalid attribute is inspected, not accessed at runtime.
+#pragma warning disable CS0169
         [Group(0)]
         [Binding(0)]
         [Uniform]
         [Align(16)]
         private static readonly float Value;
+#pragma warning restore CS0169
 
         [Fragment]
         [return: Location(0)]
@@ -181,10 +196,13 @@ internal static class UnsupportedUniformShaders
 
     internal sealed class Shader<T> : ISharpShader
     {
+        // This initialized field exists to exercise unsupported generic metadata.
+#pragma warning disable CS0414
         [Group(0)]
         [Binding(0)]
         [Uniform]
         private static readonly T Value = default!;
+#pragma warning restore CS0414
 
         [Fragment]
         [return: Location(0)]

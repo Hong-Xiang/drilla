@@ -785,12 +785,11 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
             .ToArray();
         var sample = Assert.Single(sites, site =>
             site.Instruction.Operation is TextureSampleLevelOperation);
-        var definitions = sites
-            .Where(site => site.Instruction.Result is not null)
-            .ToDictionary(
-                site => site.Instruction.Result!,
-                site => site,
-                ReferenceEqualityComparer.Instance);
+        var definitions = new Dictionary<IShaderValue, (Label Label, int Ordinal, Instruction<IShaderValue, IShaderValue> Instruction)>(
+            ReferenceEqualityComparer.Instance);
+        foreach (var site in sites)
+            if (site.Instruction.Result is { } result)
+                definitions.Add(result, site);
         bool IsSampledData(IShaderValue value)
         {
             var visited = new HashSet<IShaderValue>(ReferenceEqualityComparer.Instance);
@@ -3959,15 +3958,21 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
     private struct CooperationGlobals
     {
+        // The GPU populates this reflected uniform member.
+#pragma warning disable CS0649
         public float value;
+#pragma warning restore CS0649
     }
 
     private sealed class UniformStorageDerivativeShader : ISharpShader
     {
+        // The shader compiler reads this GPU uniform, not the CLR.
+#pragma warning disable CS0649
         [Uniform]
         [Group(0)]
         [Binding(0)]
         private static readonly CooperationGlobals globals;
+#pragma warning restore CS0649
 
         [Fragment]
         [return: Location(0)]
@@ -4074,10 +4079,13 @@ public sealed class CooperationAdmissionTests(ITestOutputHelper output)
 
     private sealed class UniformStorageConditionalShader : ISharpShader
     {
+        // The shader compiler reads this GPU uniform, not the CLR.
+#pragma warning disable CS0649
         [Uniform]
         [Group(0)]
         [Binding(0)]
         private static readonly CooperationGlobals globals;
+#pragma warning restore CS0649
 
         [Fragment]
         [return: Location(0)]

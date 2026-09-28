@@ -129,11 +129,14 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 
     private struct VertexOut
     {
+        // Entry-point interface fields are discovered by shader reflection.
+#pragma warning disable CS0649
         [Builtin(BuiltinBinding.position)]
         public vec4f32 Position;
 
         [Location(0)]
         public vec2f32 Uv;
+#pragma warning restore CS0649
     }
 
     private sealed class StructInterfaceShader : ISharpShader
@@ -144,8 +147,11 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 
     private struct LocationOnly
     {
+        // This location is validated from field metadata.
+#pragma warning disable CS0649
         [Location(0)]
         public vec2f32 Uv;
+#pragma warning restore CS0649
     }
 
     private sealed class StructLocationShader : ISharpShader
@@ -156,8 +162,11 @@ public sealed class ShaderFeatureCharacterizationTests(ITestOutputHelper output)
 
     private struct ExplicitlyAligned
     {
+        // Invalid alignment is validated from field metadata.
+#pragma warning disable CS0649
         [Align(16)]
         public float Value;
+#pragma warning restore CS0649
     }
 
     private sealed class StructAlignmentShader : ISharpShader
