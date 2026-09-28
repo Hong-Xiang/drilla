@@ -84,6 +84,26 @@ public static class GPUApi
         result = result with
         {
             Structs = [..result.Structs.Select(s => {
+                if (s.Name is "GPUComputePipelineDescriptor" or "GPURenderPipelineDescriptor")
+                {
+                    // An omitted managed layout selects WebGPU's "auto" member of the required IDL union.
+                    var layout = s.Properties.Single(p => p.Name == "layout") with { IsRequired = false };
+                    s = s with { Properties = [..s.Properties.Where(p => p.Name != "layout"), layout] };
+                }
+                if (s.Name is "GPUVertexState" or "GPUFragmentState")
+                {
+                    s = s with {
+                        Properties = [..s.Properties.Select(p => p switch {
+                            { Name: "constants" } => p with {
+                                Type = new SequenceTypeReference(new OpaqueTypeReference("GPUConstantEntry"))
+                            },
+                            { Name: "buffers" or "targets",
+                              Type: SequenceTypeReference { Type: NullableTypeReference { Type: var item } } }
+                                => p with { Type = new SequenceTypeReference(item) },
+                            _ => p
+                        })]
+                    };
+                }
                 if (s.Name == "GPURenderPassDescriptor")
                 {
                     // The native render-pass backend only supports populated color attachments.
@@ -95,13 +115,11 @@ public static class GPUApi
                                 : p)]
                     };
                 }
-                if(s.Name.EndsWith("Descriptor") && !s.Properties.Any(p => p.Name == "label")){
-                    return s with {
-                        Properties = [new PropertyDeclaration("label", new StringTypeReference(), false, false, new StringValue("")), ..s.Properties]
-                    };
-                }else{
+                if (!s.Name.EndsWith("Descriptor"))
                     return s;
-                }
+                var label = s.Properties.FirstOrDefault(p => p.Name == "label")
+                    ?? new PropertyDeclaration("label", new StringTypeReference(), false, false, new StringValue(""));
+                return s with { Properties = [label, ..s.Properties.Where(p => p.Name != "label")] };
             })]
         };
 

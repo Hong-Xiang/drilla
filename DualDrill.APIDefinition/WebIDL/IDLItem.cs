@@ -133,7 +133,8 @@ public sealed record class InterfaceDecl(
 
 public sealed record class DictionaryDeclaration(
     string Name,
-    ImmutableArray<IMember> Members
+    ImmutableArray<IMember> Members,
+    string? Inheritance = null
 ) : IDeclaration, IWebIDLMemberContainer
 {
     public IEnumerable<IMember> GetMemebers() => Members;
@@ -198,15 +199,32 @@ public sealed record WebIDLSpec(
     }
 
     public IEnumerable<IMember> GetAllMembers(IWebIDLMemberContainer decl)
+        => GetAllMembers(decl, ImmutableHashSet<string>.Empty);
+
+    private IEnumerable<IMember> GetAllMembers(
+        IWebIDLMemberContainer decl, ImmutableHashSet<string> ancestors)
     {
-        IEnumerable<IMember> result = decl.GetMemebers();
+        if (ancestors.Contains(decl.Name))
+            throw new InvalidOperationException($"Cyclic WebIDL inheritance or includes at {decl.Name}.");
+        ancestors = ancestors.Add(decl.Name);
+        IEnumerable<IMember> inherited = [];
+        if (decl is DictionaryDeclaration { Inheritance: { } baseName })
+        {
+            var parent = Declarations.OfType<DictionaryDeclaration>()
+                .SingleOrDefault(d => d.Name == baseName);
+            // EventInit is defined by the browser WebIDL, outside the bundled GPU spec.
+            if (parent is not null)
+                inherited = GetAllMembers(parent, ancestors);
+            else if (baseName != "EventInit")
+                throw new InvalidOperationException($"Unknown WebIDL dictionary base {baseName} for {decl.Name}.");
+        }
         var mixins = from d in Declarations.OfType<IncludeDecl>()
                      where d.Target == decl.Name
                      from included in Declarations.OfType<IWebIDLMemberContainer>()
                                                   .Where(v => v.Name == d.Includes)
-                     from m in GetAllMembers(included)
+                     from m in GetAllMembers(included, ancestors)
                      select m;
-        return result.Concat(mixins).OrderBy(m => m.Name);
+        return decl.GetMemebers().Concat(inherited).Concat(mixins).OrderBy(m => m.Name);
     }
 
 }

@@ -15,8 +15,9 @@ public sealed partial class WebGPUNETBackend
         if (descriptor.Compute.Module is not GPUShaderModule<Backend> module)
             throw new ArgumentException("Compute shader module belongs to another backend or is missing.", nameof(descriptor));
         RequireDevice(module.Handle, owner, nameof(descriptor.Compute.Module));
-        if (string.IsNullOrWhiteSpace(descriptor.Compute.EntryPoint))
-            throw new ArgumentException("A compute entry point is required.", nameof(descriptor));
+        if (descriptor.Compute.EntryPoint is { } entryPointName
+            && string.IsNullOrWhiteSpace(entryPointName))
+            throw new ArgumentException("A compute entry point cannot be blank.", nameof(descriptor));
         if (descriptor.Compute.Constants is { Count: > 0 })
             throw new NotSupportedException("Compute pipeline constants are not supported.");
         WGPUPipelineLayout layout = default;
@@ -30,6 +31,9 @@ public sealed partial class WebGPUNETBackend
 
         using var label = NativeUtf8String.Create(descriptor.Label);
         using var entryPoint = NativeUtf8String.Create(descriptor.Compute.EntryPoint);
+        var nativeEntryPoint = descriptor.Compute.EntryPoint is null
+            ? OmittedEntryPoint
+            : entryPoint.View;
         var native = new WGPUComputePipelineDescriptor
         {
             label = label.View,
@@ -37,7 +41,7 @@ public sealed partial class WebGPUNETBackend
             compute = new()
             {
                 module = ToNative(module.Handle),
-                entryPoint = entryPoint.View,
+                entryPoint = nativeEntryPoint,
             },
         };
         lock (owner.ValidationGate)

@@ -121,11 +121,6 @@ public partial struct GPUDeviceDescriptor()
     public Dictionary<string, ulong> RequiredLimits { get; set; } = new();
 }
 
-//public partial struct GPUFragmentState()
-//{
-//    public ReadOnlyMemory<GPUColorTargetState?> Targets { get; set; }
-//}
-
 public partial record struct GPUImageCopyBuffer()
 {
     public GPUImageDataLayout Layout { get; set; }
@@ -212,7 +207,10 @@ public partial struct GPURenderBundleDescriptor()
 public partial struct GPURenderBundleEncoderDescriptor()
 {
     public string Label { get; set; } = string.Empty;
+    public required ReadOnlyMemory<GPUTextureFormat?> ColorFormats { get; set; }
     public bool DepthReadOnly { get; set; } = false;
+    public GPUTextureFormat? DepthStencilFormat { get; set; }
+    public uint SampleCount { get; set; } = 1;
     public bool StencilReadOnly { get; set; } = false;
 }
 
@@ -253,6 +251,7 @@ public partial struct GPURenderPassLayout()
 {
     public required ReadOnlyMemory<GPUTextureFormat?> ColorFormats { get; set; }
     public GPUTextureFormat? DepthStencilFormat { get; set; }
+    public string Label { get; set; } = string.Empty;
     public uint SampleCount { get; set; } = 1;
 }
 
@@ -388,8 +387,3 @@ public partial struct GPUVertexBufferLayout()
     public required ReadOnlyMemory<GPUVertexAttribute> Attributes { get; set; }
     public GPUVertexStepMode StepMode { get; set; } = GPUVertexStepMode.Vertex;
 }
-
-//public partial struct GPUVertexState()
-//{
-//    public ReadOnlyMemory<GPUVertexBufferLayout?> Buffers { get; set; }
-//}

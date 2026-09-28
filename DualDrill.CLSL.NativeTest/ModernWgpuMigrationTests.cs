@@ -212,9 +212,14 @@ public sealed class ModernWgpuMigrationTests(ITestOutputHelper output)
         {
             Compute = default,
         }));
-        Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
+        using var inferredPipeline = context.Device.CreateComputePipeline(new()
         {
             Compute = new() { Module = shader },
+        });
+        Assert.NotNull(inferredPipeline);
+        Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
+        {
+            Compute = new() { Module = shader, EntryPoint = " " },
         }));
         Assert.Throws<ArgumentException>(() => context.Device.CreateComputePipeline(new()
         {
