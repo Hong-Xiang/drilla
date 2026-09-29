@@ -2,20 +2,24 @@
 
 Drilla engine for HPC and visualization
 
-For compiler development on Linux without WebView2, use the
+For browser-side shader development, use the
 [compiler-only server](DualDrill.Compiler.Server/README.md). Its browser demo
 offers Triangle, Uniform, animated Mandelbrot, and animated Raymarching shaders
 compiled from C# through Slang to WGSL.
 
 The isolated [.NET GPU-to-WebRTC proof of concept](DualDrill.Media.Server/README.md)
 renders with Rust wgpu-native, reads back BGRA frames, and streams them through
-GStreamer to a local browser without WebView.
+GStreamer to a local browser. The separate
+[development API host](DualDrill.Server/README.md) retains mesh/data,
+code-generation, reflection, and GPU-rendered PNG endpoints.
+All three hosts target plain .NET 10; the WPF/WebView desktop host has been removed.
 
 ## develop
 
 requirements:
 
-- [Node.js](https://nodejs.org/en) and [pnpm](https://pnpm.io/)
+- [Bun](https://bun.com/) 1.4.2 for frontend installs/scripts; Node.js 22 for
+  Vite/esbuild tools and the independent Node/V8 WebAssembly fixture harness
 - [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download)
 - [slangc](https://github.com/shader-slang/slang) on `PATH` (the Nix package
   is `shader-slang`; the unrelated `slang` package does not provide it), or
@@ -31,14 +35,14 @@ nix develop
 
 The shell supplies .NET SDK/runtime 10, Slang (`slangc`), LLVM 16 native
 libraries for LLVMSharp, the Vulkan loader needed by native WebGPU bindings,
-Node.js, and pnpm. It preserves the host Vulkan ICD/driver environment and
+Bun 1.4.2 and Node.js 22. It preserves the host Vulkan ICD/driver environment and
 any inherited `LD_LIBRARY_PATH`; it does not install or select Vulkan tools,
 an ICD, software renderer, browser, or Chromium.
 
 The shared MSBuild settings use the canonical `Directory.Build.props` filename
 so they are discovered on case-sensitive filesystems as well as Windows.
 
-The default shell is the compiler-only environment. On the tested Ubuntu
+The default shell supports compiler and development API work. On the tested Ubuntu
 NVIDIA host, run the optional native graphics smoke through nixGL so the
 Nix-built process can use the existing proprietary Vulkan driver:
 
@@ -68,27 +72,88 @@ dotnet test DualDrill.CLSL.Test/DualDrill.CLSL.Test.csproj -c Release
 ```
 
 This is a reproducible development shell, not a fully hermetic Nix build:
-NuGet restore still uses the configured package sources and cache. The
-Windows-only solution projects are intentionally outside this Linux workflow;
-use an existing browser for interactive development.
+NuGet restore still uses the configured package sources and cache.
+Use an existing browser for interactive development.
 
-### Windows server development
+### Repository checks
 
-The original Windows/WebView server remains separate from the Linux compiler
-host. For that development path:
+All retained .NET projects inherit nullable checking and warnings-as-errors from
+`Directory.Build.props`. The canonical shader assembly retains its existing,
+documented CS0649 exception for GPU-bound uniform declarations; shader source
+and generated mathematics are not rewritten to initialize those fields.
 
-- Open `Drilla.slnx`, run `DualDrill.Server` project to start a backend server
+From the repository root inside the default Nix shell:
 
-- _optional_ In `DualDrill.JS`, run `node .\esbuild.mjs --watch` to rebuild TypeScript on changes
+```sh
+dotnet build Drilla.slnx -c Debug
+dotnet build Drilla.slnx -c Release
+dotnet build DualDrill.CLSL.NativeTest -c Release
+dotnet build DualDrill.JS/DualDrill.JS.esproj
+dotnet build -p:ImportDirectoryPackagesProps=false script/gstsharp-browser-smoke.cs
+dotnet build -p:ImportDirectoryPackagesProps=false script/verify-server-retirement.cs
+cd DualDrill.JS
+bun install --frozen-lockfile
+bun run check
+bun run build
+bun run site:build
+bun run compiler:test
+```
 
-- Open browser, visit `https://localhost:7117/desktop` for basic rendering.
+The native test project and frontend MSBuild project are outside the solution
+and are checked explicitly. The frontend gate covers retained TypeScript,
+build scripts, browser mocks, the media viewer, and the independent Node/V8
+oracle script. Node remains the oracle's execution runtime; Bun supplies its
+type-check tooling, not a substitute WebAssembly engine. Run the compiler tests
+in both configurations as shown above and the GPU/browser checks from the
+[native](DualDrill.CLSL.NativeTest/README.md),
+[media](DualDrill.Media.Server/README.md), and
+[API host](DualDrill.Server/README.md) guides.
 
-- visit `https://localhost:7117/ilsl` for basic C# IL to shader translation development
+### Development API host
 
-- _optional_ add `DUALDRILL_DATA_ROOT` to environment variable for mesh/texture data
+From the repository root, inside the default Nix shell:
 
-When specifying a .NET runtime identifier, use a RID such as `win-x64`.
-`x64` and `Any CPU` are platform settings, not runtime identifiers.
+```sh
+dotnet build Drilla.slnx
+dotnet run --project DualDrill.Server --no-launch-profile -- --urls http://127.0.0.1:5268
+```
+
+The build uses a frozen Bun install and the existing esbuild frontend bundle.
+The API host initializes a native GPU at startup, even for `/health`; on the
+NVIDIA Linux host, wrap its launch in the same nixGL command shown above.
+The compiler-only host does not need a server-side GPU.
+
+Open `/swagger` for the retained API surface. `/render/cube` renders a PNG;
+interactive streaming and per-session input now belong to
+`DualDrill.Media.Server`, not this host. The former `/home/desktop`,
+`/home/webview2`, old signaling endpoints, and shared-buffer APIs return 404.
+There is no compatibility redirect or shared desktop session.
+
+`/home/volume` requires the external dataset described in the
+[API host guide](DualDrill.Server/README.md). The retained ILSL editor and
+reflection experiments are not all complete; use the compiler-only browser
+demo for the supported shader-development path.
+
+### Mathematics generation
+
+The active C# generator is `DualDrill.Mathematics.CodeGen`. It references
+`DualDrill.APIDefinition/DualDrill.ApiGen.csproj` and its `DMath` generators,
+using CLSL type/operation definitions to produce `DualDrill.Mathematics/*.gen.cs`.
+It is unrelated to the removed, obsolete `DualDrill.ApiGen/` directory.
+The generator and checked-in mathematical types are retained.
+
+Pass a target directory explicitly; it must contain `DualDrill.Mathematics.csproj`.
+To inspect generation without overwriting the checked-in math, copy that project
+file into an isolated scratch directory and run:
+
+```sh
+dotnet run --project DualDrill.Mathematics.CodeGen --no-launch-profile -- /path/to/scratch
+```
+
+Compare the output before replacing any checked-in files. Current generation has
+pre-existing metadata differences from the checked-in sources, including vector
+type/swizzle attributes; regeneration is not currently a byte-for-byte rebuild.
+This migration does not overwrite those sources or remove their metadata.
 
 ## CLSL (previously ILSL)
 
@@ -124,8 +189,8 @@ Features:
 
 ## Current scope and limitations
 
-The Linux compiler host and animated browser demos are available without the
-Windows server. The canonical raymarching shader lives in
+The compiler host and animated browser demos run independently of the
+GPU-backed API and media hosts. The canonical raymarching shader lives in
 `Shared/Shaders/RaymarchingPrimitiveShader.cs`; see the compiler-server guide for
 its namespace and uniform-binding migration.
 

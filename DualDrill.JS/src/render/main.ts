@@ -17,14 +17,12 @@ interface RealtimeState {
 }
 
 export async function BatchRenderMain() {
-  const canvas = document.getElementById("render-root") as
-    | HTMLCanvasElement
-    | undefined;
+  const canvas = document.getElementById("render-root");
   if (!canvas || !(canvas instanceof HTMLCanvasElement)) {
     throw Error("Failed to get canvas");
   }
 
-  const ui = document.getElementById("ui-root") as HTMLDivElement | undefined;
+  const ui = document.getElementById("ui-root");
   if (!ui || !(ui instanceof HTMLDivElement)) {
     throw Error("Failed to get ui root");
   }
@@ -263,14 +261,13 @@ export async function BatchRenderMain() {
     },
   });
 
-  const render = (f: number) => {
+  const render = () => {
     if (!interactiveState.loop && !needOneTimeRender) {
       console.log("skip rendering");
       requestAnimationFrame(render);
       return;
     }
     needOneTimeRender = false;
-    const aspect = canvas.width / canvas.height;
 
     const view = context.getCurrentTexture().createView();
 
@@ -293,7 +290,7 @@ export async function BatchRenderMain() {
     device.queue.writeBuffer(timeBuffer, 0, time);
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup!);
+    pass.setBindGroup(0, bindGroup);
     pass.setVertexBuffer(0, vertexBuffer);
     pass.setIndexBuffer(indexBuffer, "uint16");
     pass.drawIndexed(indices.length);

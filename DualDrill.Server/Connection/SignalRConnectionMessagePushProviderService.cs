@@ -1,2 +1,0 @@
-﻿namespace DualDrill.Server.Connection;
-

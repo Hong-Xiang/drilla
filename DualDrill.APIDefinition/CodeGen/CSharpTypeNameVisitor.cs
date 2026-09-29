@@ -119,5 +119,5 @@ public sealed record class CSharpTypeNameVisitor(
 
     public string VisitVoid(VoidTypeReference type) => "void";
 
-    public string VisitRecord(RecordTypeReference type) => $"Dictionary<{type.KeyType.AcceptVisitor(this)}, {type.KeyType.AcceptVisitor(this)}>";
+    public string VisitRecord(RecordTypeReference type) => $"Dictionary<{type.KeyType.AcceptVisitor(this)}, {type.ValueType.AcceptVisitor(this)}>";
 }

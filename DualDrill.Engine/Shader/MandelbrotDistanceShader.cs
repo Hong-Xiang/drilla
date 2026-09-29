@@ -75,7 +75,10 @@ public struct MandelbrotDistanceShader : CLSL.ISharpShader
     [Uniform]
     [Group(0)]
     [Binding(0)]
+    // The shader compiler reads this uniform from metadata/CIL; CPU code never assigns it.
+#pragma warning disable CS0649
     static float iTime;
+#pragma warning restore CS0649
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]

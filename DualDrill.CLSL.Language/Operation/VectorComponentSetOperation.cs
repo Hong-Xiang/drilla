@@ -54,5 +54,5 @@ public sealed class VectorComponentSetOperation<TRank, TVector, TComponent>
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
         where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
-        semantic.VectorComponentSet(inst, this, inst.Operand0, inst.Operand1);
+        semantic.VectorComponentSet(inst, this, inst[0], inst[1]);
 }

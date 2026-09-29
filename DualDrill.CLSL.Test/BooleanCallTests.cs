@@ -36,7 +36,7 @@ public sealed class BooleanCallTests
                     var conversion = Assert.Single(instructions, instruction => instruction.Result == argument);
                     var operation = Assert.IsAssignableFrom<IConversionOperation>(conversion.Operation);
                     Assert.Equal(ShaderType.I32, operation.SourceType);
-                    Assert.Equal(ShaderType.I32, conversion.Operand0.Type);
+                    Assert.Equal(ShaderType.I32, Assert.IsAssignableFrom<IShaderValue>(conversion.Operand0).Type);
                     Assert.Equal(ShaderType.Bool, operation.ResultType);
                 }
                 if (function.ReturnType is BoolType)

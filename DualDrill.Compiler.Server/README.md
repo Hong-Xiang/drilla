@@ -1,16 +1,15 @@
 # DualDrill compiler server
 
-This local-only host is separate from `DualDrill.Server` and its Windows/WebView
-setup. It references only `DualDrill.ILSL`, provides a small triangle fixture,
-and links the other three C# shader sources into the host. It does not initialize
-a native GPU.
+This local-only host is separate from the GPU-backed development API and media
+hosts. It references `DualDrill.ILSL` and the shared `DualDrill.Shaders` assembly,
+provides a small triangle fixture, and links the uniform and Mandelbrot fixture
+sources into the host. It does not initialize a native GPU.
 
 From the repository root:
 
 ```sh
-nix develop --command pnpm --dir DualDrill.JS install --frozen-lockfile
-nix develop --command pnpm --dir DualDrill.JS run compiler:build
-nix develop --command dotnet run --project DualDrill.Compiler.Server
+nix develop --builders '' -c bash -c 'cd DualDrill.JS && bun install --frozen-lockfile && bun run compiler:build'
+nix develop --builders '' -c dotnet run --project DualDrill.Compiler.Server
 ```
 
 Open <http://127.0.0.1:5083/>. The frontend uses one browser WebGPU device to
@@ -30,8 +29,7 @@ the page (hard-refresh if the old bundle is cached).
 Frontend checks, after installing the locked dependencies above:
 
 ```sh
-nix develop --command pnpm --dir DualDrill.JS run compiler:check
-nix develop --command pnpm --dir DualDrill.JS run compiler:test
+nix develop --builders '' -c bash -c 'cd DualDrill.JS && bun run compiler:check && bun run compiler:test'
 ```
 
 `compiler:test` rebuilds the bundle and exercises animation/resource lifetimes
@@ -63,20 +61,16 @@ the demo UI.
 The shader defensively bounds AA to 1–3; AA1 has no subpixel offset, while AA2
 and AA3 use the reference sample offsets. The complete 22-primitive scene and
 reference AO, shadow, back-light, and subsurface-lighting paths are restored,
-but quantitative image parity against the independent GLSL reference is deferred.
+with quantitative image parity covered by the
+[native oracle](../DualDrill.CLSL.NativeTest/README.md).
 
 The optional native project retains white `MinimumHelloTriangleShaderModule`
 triangle readback and an invalid-WGSL diagnostic regression; the native triangle
-is distinct from the orange host `MinimumTriangleShader`. The non-triangle
-examples have no native execution-equivalence coverage. Their current WGSL uses
-numeric `bool(...)` conversions permitted by the WGSL specification and accepted
-by the bundled Naga 0.19.2 consumer.
-Raymarching's generated shader and reflection paths are covered in both Debug
-and Release. The bundled native Naga lacks required current-WGSL features;
-modern native integration and independent image-parity validation are deferred.
-The unmerged oracle is tracked in [#92](https://github.com/Hong-Xiang/drilla/pull/92)
-and provider investigation in [#93](https://github.com/Hong-Xiang/drilla/pull/93);
-neither is required for manual browser testing.
+is distinct from the orange host `MinimumTriangleShader`. The native backend uses matched Alimer/wgpu-native packages. Raymarching's
+generated shader and reflection paths are covered in Debug and Release, and the
+native oracle compares four input profiles against an independent GLSL reference.
+That evidence is specific to the exercised profiles, not a general equivalence
+claim for every shader. Native execution is not required for manual browser testing.
 
 Generated IR, Slang, and WGSL are available at
 `/ilsl/compile/{shader-name}/{target}`. Reflection is at

@@ -592,7 +592,8 @@ public sealed class SlangTargetLowering
             }
 
             foreach (var block in blockOrder)
-                foreach (var value in block.Body.Body.Elements.SelectMany(instruction => instruction.Operands)
+                foreach (var value in block.Body.Body.Elements.SelectMany(instruction =>
+                             instruction.StoredOperands)
                              .Concat(TerminatorValues(block.Body.Body.Last)))
                 {
                     if (!definitions.TryGetValue(value, out var definition) ||
@@ -639,6 +640,14 @@ public sealed class SlangTargetLowering
             Instruction<IShaderValue, IShaderValue> instruction,
             ImmutableArray<SlangStatement>.Builder statements)
         {
+            if (instruction.Operation is CallOperation call)
+            {
+                if (call.ResultType is not UnitType && instruction.Result is null)
+                    throw UnsupportedOperation(instruction, "non-Unit call requires a result");
+                if (!instruction.HasValidOperandLayout ||
+                    instruction.OperandCount != call.CalleeType.ParameterTypes.Length + 1)
+                    throw UnsupportedOperation(instruction, "invalid call operand arity or layout");
+            }
             switch (instruction.Operation)
             {
                 case IReadOnlyStructuredBufferLengthOperation length:
@@ -705,6 +714,8 @@ public sealed class SlangTargetLowering
                         throw UnsupportedOperation(instruction, "invalid typed structure member read");
                     break;
                 case AddressOfVecComponentOperation component:
+                    if (!HasPhysicalOperandShape(instruction, 1) || instruction.Result is null)
+                        throw UnsupportedOperation(instruction, "invalid vector component address");
                     DefineAlias(instruction, new SlangComponentPlace(
                         Place(instruction.Operand0, instruction.Operation.Name),
                         component.Component.Name,
@@ -748,6 +759,8 @@ public sealed class SlangTargetLowering
                     instructionOrigins.Add(new(label, ordinal, instruction, store));
                     return;
                 case IVectorComponentSetOperation component:
+                    if (!HasPhysicalOperandShape(instruction, 2) || instruction.Result is not null)
+                        throw UnsupportedOperation(instruction, "invalid vector component set signature");
                     var componentSet = new SlangAssign(
                         new SlangComponentPlace(
                             Place(instruction.Operand0, instruction.Operation.Name),
@@ -758,6 +771,8 @@ public sealed class SlangTargetLowering
                     instructionOrigins.Add(new(label, ordinal, instruction, componentSet));
                     return;
                 case IVectorSwizzleSetOperation swizzle:
+                    if (!HasPhysicalOperandShape(instruction, 2) || instruction.Result is not null)
+                        throw UnsupportedOperation(instruction, "invalid vector swizzle set signature");
                     var swizzleSet = new SlangAssign(
                         new SlangSwizzlePlace(
                             Place(instruction.Operand0, instruction.Operation.Name),
@@ -782,6 +797,9 @@ public sealed class SlangTargetLowering
             if (!IsSupportedExpression(instruction.Operation))
                 throw UnsupportedOperation(instruction, "operation has no Slang expression spelling");
             var lowered = instruction.Select(Operand, static result => result);
+            if (lowered.Result is null &&
+                instruction.Operation is not (NopOperation or CallOperation { ResultType: UnitType }))
+                throw UnsupportedOperation(instruction, "expression requires a result");
             if (lowered.Result is null ||
                 instruction.Operation is CallOperation { ResultType: UnitType })
             {

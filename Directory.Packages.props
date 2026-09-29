@@ -20,33 +20,19 @@
     <PackageVersion Include="Silk.NET.Vulkan.Extensions.EXT" Version="$(SilkNETVersion)" />
     <PackageVersion Include="Silk.NET.Windowing" Version="$(SilkNETVersion)" />
     <PackageVersion Include="System.CodeDom" Version="9.0.9" />
-    <PackageVersion Include="System.ServiceModel.Primitives" Version="8.1.0" />
     <PackageVersion Include="System.Reactive" Version="6.0.1" />
     <PackageVersion Include="Alimer.Bindings.WebGPU" Version="1.6.0" />
     <PackageVersion Include="Alimer.WebGPU.Native" Version="1.0.4" />
-    <PackageVersion Include="MessagePipe" Version="1.8.1" />
-    <PackageVersion Include="R3" Version="1.2.9" />
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.4" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageVersion Include="ICSharpCode.Decompiler" Version="9.1.0.7988" />
     <PackageVersion Include="Lokad.ILPack" Version="0.2.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.v3" Version="0.3.0-pre.18" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.0-pre.30" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.JSInterop" Version="9.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.11.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Hosting.Server.Abstractions" Version="2.2.0" />
-    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.2535.41" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0" />
-    <PackageVersion Include="AngleSharp" Version="1.1.2" />
-    <PackageVersion Include="Autofac" Version="8.1.1" />
-    <PackageVersion Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageVersion Include="HtmlAgilityPack" Version="1.11.71" />
-    <PackageVersion Include="pythonnet" Version="3.0.4" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.1.0" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
     <PackageVersion Include="Varena" Version="1.2.0" />

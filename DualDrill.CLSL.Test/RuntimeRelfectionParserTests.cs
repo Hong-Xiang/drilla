@@ -33,9 +33,12 @@ public class RuntimeRelfectionParserTests
 
     struct StructDeclTest
     {
+        // Parser.ParseType inspects members without constructing this fixture.
+#pragma warning disable CS0649
         public static int Value;
         public int DA { get; set; }
         public int DB;
+#pragma warning restore CS0649
     }
 
     [Fact]

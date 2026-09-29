@@ -16,5 +16,5 @@ public sealed class LiteralOperation : IOperation
 
     public TO EvaluateInstruction<TV, TR, TS, TO>(Instruction<TV, TR> inst, TS semantic)
         where TS : IOperationSemantic<Instruction<TV, TR>, TV, TR, TO> =>
-        semantic.Literal(inst, this, inst.Result, inst[0]);
+        semantic.Literal(inst, this, inst.RequireResult(), inst[0]);
 }

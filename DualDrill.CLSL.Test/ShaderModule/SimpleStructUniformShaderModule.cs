@@ -10,15 +10,21 @@ sealed class SimpleStructUniformShaderModule : ISharpShader
 {
     public struct OurStruct
     {
+        // Shader reflection reads the uniform layout from these members.
+#pragma warning disable CS0649
         public vec4f32 color;
         public vec2f32 scale;
         public vec2f32 offset;
+#pragma warning restore CS0649
     }
 
+    // The GPU supplies this uniform rather than the CLR.
+#pragma warning disable CS0649
     [Group(0)]
     [Binding(0)]
     [Uniform]
     static readonly OurStruct ourStruct;
+#pragma warning restore CS0649
 
     [Vertex]
     [return: Builtin(BuiltinBinding.position)]

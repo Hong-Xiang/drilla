@@ -15,7 +15,7 @@ C# -> Rust wgpu-native hardware GPU
 ```
 
 This prototype references the shared Graphics, CLSL compiler, and shader
-projects, not the existing Engine, WebView, JavaScript, or server projects. It
+projects, not the Engine, JavaScript, or other server projects. It
 reuses one offscreen texture and staging buffer, then copies one tightly packed
 BGRA frame into a GStreamer-owned buffer. The default is 320x240 at 30 fps. This
 is not zero-copy. Software/unknown adapters are rejected rather than silently
@@ -237,7 +237,7 @@ low-complexity triangle is not a network-capacity or complex-scene quality
 benchmark. Neither Windows nor a real inter-host LAN path is claimed here.
 
 The browser module is plain JavaScript checked with the TypeScript version
-already pinned in `DualDrill.JS/pnpm-lock.yaml`:
+already pinned in `DualDrill.JS/bun.lock`:
 
 ```sh
 bun x --package typescript@5.3.3 tsc --allowJs --checkJs --noEmit --strict \

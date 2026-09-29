@@ -44,7 +44,10 @@ public struct SimpleUniformShader : CLSL.ISharpShader
     [Binding(0)]
     //[StageAttribute(GPUShaderStage.Vertex)]
     [Uniform]
+    // The shader compiler reads this uniform from metadata/CIL; CPU code never assigns it.
+#pragma warning disable CS0649
     VertexOutput uniformData;
+#pragma warning restore CS0649
 
 
     [Vertex]

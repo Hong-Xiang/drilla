@@ -15,8 +15,9 @@ public sealed partial class WebGPUNETBackend
         if (descriptor.Compute.Module is not GPUShaderModule<Backend> module)
             throw new ArgumentException("Compute shader module belongs to another backend or is missing.", nameof(descriptor));
         RequireDevice(module.Handle, owner, nameof(descriptor.Compute.Module));
-        if (string.IsNullOrWhiteSpace(descriptor.Compute.EntryPoint))
-            throw new ArgumentException("A compute entry point is required.", nameof(descriptor));
+        if (descriptor.Compute.EntryPoint is { } entryPointName
+            && string.IsNullOrWhiteSpace(entryPointName))
+            throw new ArgumentException("A compute entry point cannot be blank.", nameof(descriptor));
         if (descriptor.Compute.Constants is { Count: > 0 })
             throw new NotSupportedException("Compute pipeline constants are not supported.");
         WGPUPipelineLayout layout = default;
@@ -30,6 +31,9 @@ public sealed partial class WebGPUNETBackend
 
         using var label = NativeUtf8String.Create(descriptor.Label);
         using var entryPoint = NativeUtf8String.Create(descriptor.Compute.EntryPoint);
+        var nativeEntryPoint = descriptor.Compute.EntryPoint is null
+            ? OmittedEntryPoint
+            : entryPoint.View;
         var native = new WGPUComputePipelineDescriptor
         {
             label = label.View,
@@ -37,7 +41,7 @@ public sealed partial class WebGPUNETBackend
             compute = new()
             {
                 module = ToNative(module.Handle),
-                entryPoint = entryPoint.View,
+                entryPoint = nativeEntryPoint,
             },
         };
         lock (owner.ValidationGate)
@@ -69,9 +73,7 @@ public sealed partial class WebGPUNETBackend
         var state = EncoderOf(encoder);
         if (state.ActiveComputePass || state.Abandoned || state.Finished)
             throw new InvalidOperationException("Command encoder has an active or abandoned compute pass, or has finished.");
-        if (descriptor.TimestampWrites.QuerySet is not null
-            || descriptor.TimestampWrites.BeginningOfPassWriteIndex != 0
-            || descriptor.TimestampWrites.EndOfPassWriteIndex != 0)
+        if (descriptor.TimestampWrites is not null)
             throw new NotSupportedException("Compute pass timestamp writes are not supported.");
 
         using var label = NativeUtf8String.Create(descriptor.Label);

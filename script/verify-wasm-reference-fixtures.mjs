@@ -16,10 +16,24 @@ const repositoryRoot = resolve(import.meta.dirname, "..");
 const fixtureDirectory = join(repositoryRoot, "tests", "wasm", "fixtures");
 const manifestPath = join(fixtureDirectory, "scalar-i32-vectors.json");
 
+/** @typedef {{input: number[], expected: number}} FixtureCase */
+/** @typedef {{parameter: number, minimum: number, maximum: number}} Domain */
+/** @typedef {{export: string, parameters: number, domain?: Domain, cases: FixtureCase[]}} FixtureFunction */
+/** @typedef {{source: string, binary: string, malformedBinary: string, nodeMajor: number, functions: FixtureFunction[]}} Manifest */
+/** @typedef {{export: string, input: number[], actual: number}} ExecutionResult */
+/** @typedef {{exports: string[], results: ExecutionResult[]}} Execution */
+
+/**
+ * @param {unknown} value
+ * @param {readonly string[]} expected
+ * @param {string} label
+ * @returns {asserts value is Record<string, unknown>}
+ */
 function exactKeys(value, expected, label) {
-  assert.equal(typeof value, "object", `${label} must be an object`);
-  assert.notEqual(value, null, `${label} must be an object`);
-  assert.equal(Array.isArray(value), false, `${label} must be an object`);
+  assert.ok(
+    typeof value === "object" && value !== null && !Array.isArray(value),
+    `${label} must be an object`,
+  );
   assert.deepEqual(
     Object.keys(value).sort(),
     [...expected].sort(),
@@ -27,10 +41,15 @@ function exactKeys(value, expected, label) {
   );
 }
 
+/** @param {unknown} value @param {string} label @returns {asserts value is number} */
 function assertInteger(value, label) {
-  assert.equal(Number.isInteger(value), true, `${label} must be an integer`);
+  assert.ok(
+    typeof value === "number" && Number.isInteger(value),
+    `${label} must be an integer`,
+  );
 }
 
+/** @param {unknown} value @param {string} label @returns {asserts value is number} */
 function assertInt32(value, label) {
   assertInteger(value, label);
   assert.ok(
@@ -39,13 +58,115 @@ function assertInt32(value, label) {
   );
 }
 
+/** @param {unknown} value @param {string} label @returns {asserts value is string} */
+function assertString(value, label) {
+  assert.ok(typeof value === "string", `${label} must be a string`);
+}
+
+/** @param {unknown} value @param {string} label @returns {asserts value is unknown[]} */
+function assertArray(value, label) {
+  assert.ok(Array.isArray(value), `${label} must be an array`);
+}
+
+/** @param {unknown} value @param {string} label @returns {asserts value is unknown[]} */
+function assertNonEmptyArray(value, label) {
+  assert.ok(
+    Array.isArray(value) && value.length > 0,
+    `${label} must be a non-empty array`,
+  );
+}
+
+/** @param {unknown} value @param {string} extension @param {string} label @returns {asserts value is string} */
 function assertFixtureName(value, extension, label) {
-  assert.equal(typeof value, "string", `${label} must be a string`);
+  assertString(value, label);
   assert.ok(value.length > 0, `${label} must not be empty`);
   assert.equal(basename(value), value, `${label} must be a file name`);
   assert.ok(value.endsWith(extension), `${label} must end with ${extension}`);
 }
 
+/** @param {unknown} value @returns {asserts value is FixtureFunction[]} */
+function validateFunctions(value) {
+  assertNonEmptyArray(value, "manifest.functions");
+  const exportNames = new Set();
+  for (const [functionIndex, item] of value.entries()) {
+    const label = `manifest.functions[${functionIndex}]`;
+    const hasDomain =
+      typeof item === "object" &&
+      item !== null &&
+      !Array.isArray(item) &&
+      Object.hasOwn(item, "domain");
+    exactKeys(
+      item,
+      hasDomain
+        ? ["export", "parameters", "domain", "cases"]
+        : ["export", "parameters", "cases"],
+      label,
+    );
+    assertString(item.export, `${label}.export`);
+    assert.ok(item.export.length > 0, `${label}.export is empty`);
+    assert.equal(
+      exportNames.has(item.export),
+      false,
+      `${label}.export must be unique`,
+    );
+    exportNames.add(item.export);
+    assertInteger(item.parameters, `${label}.parameters`);
+    assert.ok(item.parameters >= 0, `${label}.parameters must be nonnegative`);
+    assertNonEmptyArray(item.cases, `${label}.cases`);
+
+    /** @type {Domain | null} */
+    let domain = null;
+    if (hasDomain) {
+      const candidate = item.domain;
+      exactKeys(
+        candidate,
+        ["parameter", "minimum", "maximum"],
+        `${label}.domain`,
+      );
+      assertInteger(candidate.parameter, `${label}.domain.parameter`);
+      assert.ok(
+        candidate.parameter >= 0 && candidate.parameter < item.parameters,
+        `${label}.domain.parameter is out of range`,
+      );
+      assertInt32(candidate.minimum, `${label}.domain.minimum`);
+      assertInt32(candidate.maximum, `${label}.domain.maximum`);
+      assert.ok(
+        candidate.minimum <= candidate.maximum,
+        `${label}.domain is empty`,
+      );
+      domain = {
+        parameter: candidate.parameter,
+        minimum: candidate.minimum,
+        maximum: candidate.maximum,
+      };
+    }
+
+    for (const [caseIndex, fixtureCase] of item.cases.entries()) {
+      const caseLabel = `${label}.cases[${caseIndex}]`;
+      exactKeys(fixtureCase, ["input", "expected"], caseLabel);
+      assertArray(fixtureCase.input, `${caseLabel}.input`);
+      assert.equal(
+        fixtureCase.input.length,
+        item.parameters,
+        `${caseLabel}.input has the wrong arity`,
+      );
+      fixtureCase.input.forEach((argument, argumentIndex) =>
+        assertInt32(argument, `${caseLabel}.input[${argumentIndex}]`),
+      );
+      assertInt32(fixtureCase.expected, `${caseLabel}.expected`);
+      if (domain) {
+        const argument = fixtureCase.input[domain.parameter];
+        assertInt32(argument, `${caseLabel}.input[${domain.parameter}]`);
+        assert.ok(
+          argument >= domain.minimum && argument <= domain.maximum,
+          `${caseLabel}.input is outside the reference execution domain`,
+        );
+      }
+    }
+  }
+}
+
+/** @param {unknown} manifest @returns {asserts manifest is Manifest} */
 function validateManifest(manifest) {
   exactKeys(
     manifest,
@@ -60,115 +181,51 @@ function validateManifest(manifest) {
     "manifest.malformedBinary",
   );
   assert.equal(
-    new Set([
-      manifest.source,
-      manifest.binary,
-      manifest.malformedBinary,
-    ]).size,
+    new Set([manifest.source, manifest.binary, manifest.malformedBinary]).size,
     3,
     "manifest fixture names must be distinct",
   );
   assertInteger(manifest.nodeMajor, "manifest.nodeMajor");
   assert.ok(manifest.nodeMajor > 0, "manifest.nodeMajor must be positive");
-  assert.ok(
-    Array.isArray(manifest.functions) && manifest.functions.length > 0,
-    "manifest.functions must be a non-empty array",
+  validateFunctions(manifest.functions);
+}
+
+/** @param {unknown} value @returns {asserts value is {binaryPath: string, functions: FixtureFunction[]}} */
+function validateWorkerRequest(value) {
+  exactKeys(value, ["binaryPath", "functions"], "worker request");
+  assertString(value.binaryPath, "worker request.binaryPath");
+  validateFunctions(value.functions);
+}
+
+/** @param {unknown} value @returns {asserts value is Execution} */
+function validateExecution(value) {
+  exactKeys(value, ["exports", "results"], "worker response");
+  assertArray(value.exports, "worker response.exports");
+  value.exports.forEach((name, index) =>
+    assertString(name, `worker response.exports[${index}]`),
   );
-
-  const exportNames = new Set();
-  for (const [functionIndex, fixtureFunction] of manifest.functions.entries()) {
-    const label = `manifest.functions[${functionIndex}]`;
-    const hasDomain =
-      typeof fixtureFunction === "object" &&
-      fixtureFunction !== null &&
-      !Array.isArray(fixtureFunction) &&
-      Object.hasOwn(fixtureFunction, "domain");
-    exactKeys(
-      fixtureFunction,
-      hasDomain
-        ? ["export", "parameters", "domain", "cases"]
-        : ["export", "parameters", "cases"],
-      label,
+  assertArray(value.results, "worker response.results");
+  for (const [index, result] of value.results.entries()) {
+    const label = `worker response.results[${index}]`;
+    exactKeys(result, ["export", "input", "actual"], label);
+    assertString(result.export, `${label}.export`);
+    assertArray(result.input, `${label}.input`);
+    result.input.forEach((argument, argumentIndex) =>
+      assertInt32(argument, `${label}.input[${argumentIndex}]`),
     );
-    assert.equal(
-      typeof fixtureFunction.export,
-      "string",
-      `${label}.export must be a string`,
-    );
-    assert.ok(fixtureFunction.export.length > 0, `${label}.export is empty`);
-    assert.equal(
-      exportNames.has(fixtureFunction.export),
-      false,
-      `${label}.export must be unique`,
-    );
-    exportNames.add(fixtureFunction.export);
-    assertInteger(fixtureFunction.parameters, `${label}.parameters`);
-    assert.ok(
-      fixtureFunction.parameters >= 0,
-      `${label}.parameters must be nonnegative`,
-    );
-    assert.ok(
-      Array.isArray(fixtureFunction.cases) &&
-        fixtureFunction.cases.length > 0,
-      `${label}.cases must be a non-empty array`,
-    );
-
-    if (hasDomain) {
-      exactKeys(
-        fixtureFunction.domain,
-        ["parameter", "minimum", "maximum"],
-        `${label}.domain`,
-      );
-      assertInteger(
-        fixtureFunction.domain.parameter,
-        `${label}.domain.parameter`,
-      );
-      assert.ok(
-        fixtureFunction.domain.parameter >= 0 &&
-          fixtureFunction.domain.parameter < fixtureFunction.parameters,
-        `${label}.domain.parameter is out of range`,
-      );
-      assertInt32(fixtureFunction.domain.minimum, `${label}.domain.minimum`);
-      assertInt32(fixtureFunction.domain.maximum, `${label}.domain.maximum`);
-      assert.ok(
-        fixtureFunction.domain.minimum <= fixtureFunction.domain.maximum,
-        `${label}.domain is empty`,
-      );
-    }
-
-    for (const [caseIndex, fixtureCase] of fixtureFunction.cases.entries()) {
-      const caseLabel = `${label}.cases[${caseIndex}]`;
-      exactKeys(fixtureCase, ["input", "expected"], caseLabel);
-      assert.equal(
-        Array.isArray(fixtureCase.input),
-        true,
-        `${caseLabel}.input must be an array`,
-      );
-      assert.equal(
-        fixtureCase.input.length,
-        fixtureFunction.parameters,
-        `${caseLabel}.input has the wrong arity`,
-      );
-      fixtureCase.input.forEach((argument, argumentIndex) =>
-        assertInt32(argument, `${caseLabel}.input[${argumentIndex}]`),
-      );
-      assertInt32(fixtureCase.expected, `${caseLabel}.expected`);
-      if (hasDomain) {
-        const value = fixtureCase.input[fixtureFunction.domain.parameter];
-        assert.ok(
-          value >= fixtureFunction.domain.minimum &&
-            value <= fixtureFunction.domain.maximum,
-          `${caseLabel}.input is outside the reference execution domain`,
-        );
-      }
-    }
+    assertInt32(result.actual, `${label}.actual`);
   }
 }
 
+/** @param {string} command @param {string[]} arguments_ @param {number} [expectedStatus] */
 function run(command, arguments_, expectedStatus = 0) {
   console.log(`$ ${[command, ...arguments_].join(" ")}`);
   const result = spawnSync(command, arguments_, { encoding: "utf8" });
-  if (result.error?.code === "ENOENT") {
+  if (
+    result.error &&
+    "code" in result.error &&
+    result.error.code === "ENOENT"
+  ) {
     throw new Error(`missing required tool: ${command}`);
   }
   if (result.error) {
@@ -186,12 +243,14 @@ function run(command, arguments_, expectedStatus = 0) {
   );
 }
 
+/** @param {string} binaryPath @param {FixtureFunction[]} functions @returns {Promise<Execution>} */
 async function executeWithDeadline(binaryPath, functions) {
   const worker = new Worker(new URL(import.meta.url), {
     workerData: { binaryPath, functions },
   });
-  return new Promise((resolveValue, reject) => {
+  const response = await new Promise((resolveValue, reject) => {
     let settled = false;
+    /** @template T @param {(value: T) => void} complete @param {T} value */
     const finish = (complete, value) => {
       if (!settled) {
         settled = true;
@@ -212,20 +271,27 @@ async function executeWithDeadline(binaryPath, functions) {
     worker.once("error", (error) => finish(reject, error));
     worker.once("exit", (code) => {
       if (code !== 0) {
-        finish(reject, new Error(`WebAssembly worker exited with code ${code}`));
+        finish(
+          reject,
+          new Error(`WebAssembly worker exited with code ${code}`),
+        );
       }
     });
   });
+  validateExecution(response);
+  return response;
 }
 
 async function executeFixtures() {
-  const binary = await readFile(workerData.binaryPath);
+  /** @type {unknown} */
+  const request = workerData;
+  validateWorkerRequest(request);
+  const binary = await readFile(request.binaryPath);
   const { instance } = await WebAssembly.instantiate(binary);
-  const results = workerData.functions.flatMap((fixtureFunction) => {
+  const results = request.functions.flatMap((fixtureFunction) => {
     const exportedFunction = instance.exports[fixtureFunction.export];
-    assert.equal(
-      typeof exportedFunction,
-      "function",
+    assert.ok(
+      typeof exportedFunction === "function",
       `${fixtureFunction.export} must be a function export`,
     );
     assert.equal(
@@ -233,12 +299,14 @@ async function executeFixtures() {
       fixtureFunction.parameters,
       `${fixtureFunction.export} has the wrong parameter count`,
     );
-    return fixtureFunction.cases.map(({ input }) => ({
-      export: fixtureFunction.export,
-      input,
-      actual: exportedFunction(...input),
-    }));
+    return fixtureFunction.cases.map(({ input }) => {
+      /** @type {unknown} */
+      const actual = exportedFunction(...input);
+      assertInt32(actual, `${fixtureFunction.export} result`);
+      return { export: fixtureFunction.export, input, actual };
+    });
   });
+  assert.ok(parentPort, "worker must have a parent port");
   parentPort.postMessage({
     exports: Object.keys(instance.exports).sort(),
     results,
@@ -246,6 +314,7 @@ async function executeFixtures() {
 }
 
 async function verify() {
+  /** @type {unknown} */
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   validateManifest(manifest);
   assert.equal(
@@ -277,7 +346,11 @@ async function verify() {
       readFile(binaryPath),
       readFile(malformedPath),
     ]);
-    assert.deepEqual(generated, committed, "generated and committed bytes differ");
+    assert.deepEqual(
+      generated,
+      committed,
+      "generated and committed bytes differ",
+    );
     assert.equal(
       malformed.length,
       committed.length - 1,
@@ -326,6 +399,7 @@ async function verify() {
     );
     for (const [index, result] of execution.results.entries()) {
       const expected = expectedResults[index];
+      assert.ok(expected, `worker result ${index} is unexpected`);
       assert.deepEqual(
         { export: result.export, input: result.input },
         { export: expected.export, input: expected.input },

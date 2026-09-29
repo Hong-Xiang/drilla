@@ -35,7 +35,7 @@ public sealed record class ShaderModuleDeclaration<TBody>(
 
     public TBody GetBody(FunctionDeclaration func) => FunctionDefinitions[func];
 
-    public bool TryGetBody(FunctionDeclaration func, [NotNullWhen(true)] out TBody body) =>
+    public bool TryGetBody(FunctionDeclaration func, [NotNullWhen(true)] out TBody? body) =>
         FunctionDefinitions.TryGetValue(func, out body);
 
     public ShaderModuleDeclaration<TResult> MapBody<TResult>(

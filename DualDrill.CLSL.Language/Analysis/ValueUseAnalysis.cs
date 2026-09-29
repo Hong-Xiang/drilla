@@ -23,9 +23,10 @@ internal class ValueUseAnalysis
 
     public IEnumerable<IShaderValue> Single(ShaderRegionBody value)
     {
+        // Count/layout are diagnosed by target passes; index all physically present values during IR construction.
         return
         [
-            ..value.Body.Elements.SelectMany(s => s.Operands),
+            ..value.Body.Elements.SelectMany(s => s.StoredOperands),
             ..value.Body.Last.Evaluate(this)
         ];
     }
