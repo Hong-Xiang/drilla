@@ -80,7 +80,9 @@ public static class FunctionEffectAnalysis
         typeof(BinaryArithmetic.Max),
         typeof(BinaryArithmetic.BitwiseAnd),
         typeof(BinaryArithmetic.BitwiseOr),
-        typeof(BinaryArithmetic.BitwiseXor)
+        typeof(BinaryArithmetic.BitwiseXor),
+        typeof(BinaryArithmetic.ShiftLeft),
+        typeof(BinaryArithmetic.ShiftRight)
     ];
 
     private static readonly FrozenSet<Type> BinaryRelationalOperators =
@@ -379,7 +381,8 @@ public static class FunctionEffectAnalysis
                definition == typeof(LogicalBinaryOperation<>) &&
                BinaryLogicalOperators.Contains(arguments[0]) ||
                definition == typeof(UnaryNumericArithmeticExpressionOperation<,>) &&
-               arguments[1] == typeof(UnaryArithmetic.Negate) ||
+               (arguments[1] == typeof(UnaryArithmetic.Negate) ||
+                arguments[1] == typeof(UnaryArithmetic.BitwiseNot)) ||
                definition == typeof(ScalarConversionOperation<,>) ||
                definition == typeof(ScalarBitCastOperation<,>) ||
                definition == typeof(VectorNumericUnaryOperation<,,>) &&

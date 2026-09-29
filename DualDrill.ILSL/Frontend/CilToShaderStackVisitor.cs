@@ -119,6 +119,16 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         if (isChecked)
             throw new NotSupportedException($"Checked arithmetic is not supported at IL_{inst.ByteOffset:X4}.");
         var (left, right) = TopBinaryTypes();
+        if (TOp.Instance is BinaryArithmetic.ShiftLeft or BinaryArithmetic.ShiftRight)
+        {
+            if (!left.Equals(ShaderType.I32) || !right.Equals(ShaderType.I32))
+                throw Invalid($"Shift requires canonical i32 value and count, got {left.Name}, {right.Name}.");
+            // Raw int32 CIL counts outside 0..31 follow this compiler's low-five policy.
+            Emit(new LiteralOperation(), ShaderType.I32,
+                [Immediate(ShaderValue.Literal(new I32Literal(31)))], 0);
+            Emit(NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.BitwiseAnd>.Instance,
+                ShaderType.I32, [Depth(1), Depth(0)], 2);
+        }
         if (!left.Equals(right))
             throw Invalid($"Binary operation type mismatch: {left.Name} != {right.Name}.");
 
@@ -337,7 +347,14 @@ internal sealed class CilToShaderStackVisitor : ICilInstructionVisitor<Unit>
         return default;
     }
 
-    public Unit VisitLogicalNot(CilInstructionInfo inst) => throw new NotImplementedException();
+    public Unit VisitBitwiseNot(CilInstructionInfo inst)
+    {
+        if (!TopType().Equals(ShaderType.I32))
+            throw Invalid($"Bitwise not requires canonical i32, got {TopType().Name}.");
+        Emit(UnaryNumericArithmeticExpressionOperation<IntType<N32>, UnaryArithmetic.BitwiseNot>.Instance,
+            ShaderType.I32, [Depth(0)], 1);
+        return default;
+    }
 
     public Unit VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>
     {

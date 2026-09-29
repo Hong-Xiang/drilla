@@ -34,6 +34,7 @@ public sealed class SlangTargetLowering
         ShaderModuleMetadataValidator.Validate(module);
         WgslUniformLayoutValidator.Validate(module);
         ValidateTextureSampleOperations(module);
+        ValidateBitOperations(module);
         PortableDerivativeTarget.ValidateModuleBindings(module);
         var definitions = module.FunctionDefinitions.ToImmutableDictionary(
             definition => definition.Key,
@@ -91,6 +92,48 @@ public sealed class SlangTargetLowering
         !instruction.RestOperands.IsDefault &&
         instruction.RestOperands.Length == Math.Max(0, expectedCount - 2) &&
         instruction.RestOperands.All(static operand => operand is not null);
+
+    private static void ValidateBitOperations(ShaderModuleDeclaration<RegionFunctionBody> module)
+    {
+        // Direct IR shift counts have a portable 0..31 precondition; CIL lowering masks its raw i32 counts.
+        foreach (var (function, body) in module.FunctionDefinitions)
+            body.Body.Traverse(region =>
+            {
+                foreach (var instruction in region.Body.Body.Elements)
+                {
+                    switch (instruction.Operation)
+                    {
+                        case IBinaryExpressionOperation binary
+                            when binary.BinaryOp is BinaryArithmetic.ShiftLeft or BinaryArithmetic.ShiftRight:
+                            if (instruction.Operation is (
+                                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.ShiftLeft> or
+                                    NumericBinaryArithmeticOperation<UIntType<N32>, BinaryArithmetic.ShiftLeft> or
+                                    NumericBinaryArithmeticOperation<IntType<N32>, BinaryArithmetic.ShiftRight> or
+                                    NumericBinaryArithmeticOperation<UIntType<N32>, BinaryArithmetic.ShiftRight>) &&
+                                HasPhysicalOperandShape(instruction, 2) &&
+                                instruction.Operand0!.Type.Equals(binary.LeftType) &&
+                                instruction.Operand1!.Type.Equals(binary.RightType) &&
+                                instruction.Result is not null &&
+                                instruction.Result.Type.Equals(binary.ResultType))
+                                break;
+                            throw new NotSupportedException(
+                                $"Function '{function.Name}': shift requires exact i32/u32 operands and result.");
+                        case IUnaryExpressionOperation unary
+                            when unary.GetType().IsGenericType &&
+                                 unary.GetType().GetGenericArguments().Contains(typeof(UnaryArithmetic.BitwiseNot)):
+                            if (instruction.Operation is UnaryNumericArithmeticExpressionOperation<
+                                    IntType<N32>, UnaryArithmetic.BitwiseNot> &&
+                                HasPhysicalOperandShape(instruction, 1) &&
+                                instruction.Operand0!.Type.Equals(ShaderType.I32) &&
+                                instruction.Result is not null &&
+                                instruction.Result.Type.Equals(ShaderType.I32))
+                                break;
+                            throw new NotSupportedException(
+                                $"Function '{function.Name}': bitwise not requires exact i32 operand and result.");
+                    }
+                }
+            });
+    }
 
     private sealed class FunctionLowerer
     {
