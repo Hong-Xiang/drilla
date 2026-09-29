@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 
 namespace DualDrill.CLSL.NativeTest;
 
-public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
+public sealed partial class NativeComputeDifferentialTests(ITestOutputHelper output)
 {
     private static readonly int[] Inputs = [-2, 0, 1, 2, 3, 4];
     private static readonly int[] Goldens = [-9, 12, 16, 28, 1011, 56];
@@ -327,7 +327,7 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
             Assert.Contains(gate.FallThroughTarget, dominators.Dominators(access.Label));
     }
 
-    private async Task RunCompiledAsync<T>(
+    private async Task<T[]> RunCompiledAsync<T>(
         ISharpShader source, string entryPoint, T[] values, T[] expected, T sentinel)
         where T : unmanaged, IEquatable<T>
     {
@@ -344,6 +344,8 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
         var compiler = new CLSLCompiler(new(CLSLCompileTarget.WGSL));
         var parsed = compiler.Parse(source);
         CaptureCompilerStages(parsed, artifactDirectory);
+        File.WriteAllText(Path.Combine(artifactDirectory, "candidate.slang"),
+            new CLSLCompiler(new(CLSLCompileTarget.SLang)).Emit(source));
         var reflection = new ShaderModuleReflection();
         var bindings = reflection.GetStorageBufferBindings(parsed);
         Assert.Equal(
@@ -384,6 +386,7 @@ public sealed class NativeComputeDifferentialTests(ITestOutputHelper output)
         File.WriteAllText(Path.Combine(artifactDirectory, "candidate.txt"),
             $"actual=[{string.Join(", ", actual)}]");
         AssertLanes(expected, actual);
+        return actual;
     }
 
     private static async Task<T[]> DispatchAsync<T>(

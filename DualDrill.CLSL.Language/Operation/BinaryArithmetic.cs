@@ -19,7 +19,9 @@ public static class BinaryArithmetic
         copysign,
         and,
         or,
-        xor
+        xor,
+        shl,
+        shr
     }
 
     public static IOp GetInstance(OpKind op)
@@ -34,6 +36,8 @@ public static class BinaryArithmetic
             OpKind.and => BitwiseAnd.Instance,
             OpKind.or => BitwiseOr.Instance,
             OpKind.xor => BitwiseXor.Instance,
+            OpKind.shl => ShiftLeft.Instance,
+            OpKind.shr => ShiftRight.Instance,
             _ => throw new InvalidEnumArgumentException(nameof(op), (int)op, typeof(OpKind))
         };
     }
@@ -177,5 +181,19 @@ public static class BinaryArithmetic
         public static OpKind Kind => OpKind.xor;
         public static BitwiseXor Instance { get; } = new();
         public string Symbol => "^";
+    }
+
+    public sealed class ShiftLeft : IOp<ShiftLeft>, IIntegerOp<ShiftLeft>, ISymbolOp<ShiftLeft>
+    {
+        public static OpKind Kind => OpKind.shl;
+        public static ShiftLeft Instance { get; } = new();
+        public string Symbol => "<<";
+    }
+
+    public sealed class ShiftRight : IOp<ShiftRight>, IIntegerOp<ShiftRight>, ISymbolOp<ShiftRight>
+    {
+        public static OpKind Kind => OpKind.shr;
+        public static ShiftRight Instance { get; } = new();
+        public string Symbol => ">>";
     }
 }

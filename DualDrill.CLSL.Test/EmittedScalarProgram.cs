@@ -183,13 +183,13 @@ internal sealed class EmittedScalarProgram
                 var value = Expression(returned.Groups[1].Value);
                 return state => new Flow.Return(value(state));
             }
-            if (Regex.Match(line, @"^var (\w+) : (i32|i64|f32|f64|bool);$") is { Success: true } variable)
+            if (Regex.Match(line, @"^var (\w+) : (i32|u32|i64|f32|f64|bool);$") is { Success: true } variable)
                 return state =>
                 {
                     state.Declare(variable.Groups[1].Value, new Slot(Type(variable.Groups[2].Value), false, null));
                     return new Flow.Next();
                 };
-            if (Regex.Match(line, @"^let (\w+) : (i32|i64|f32|f64|bool) = (.+);$") is { Success: true } local)
+            if (Regex.Match(line, @"^let (\w+) : (i32|u32|i64|f32|f64|bool) = (.+);$") is { Success: true } local)
             {
                 var value = Expression(local.Groups[3].Value);
                 return state =>
@@ -227,6 +227,7 @@ internal sealed class EmittedScalarProgram
     private static IShaderType Type(string type) => type switch
     {
         "i32" => ShaderType.I32,
+        "u32" => ShaderType.U32,
         "i64" => ShaderType.I64,
         "f32" => ShaderType.F32,
         "f64" => ShaderType.F64,
@@ -238,6 +239,8 @@ internal sealed class EmittedScalarProgram
     {
         if (int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var integer))
             return _ => new Value.Integer(integer);
+        if (uint.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var unsigned))
+            return _ => new Value.UnsignedInteger(unsigned);
         if (text is "True" or "true") return _ => new Value.Boolean(true);
         if (text is "False" or "false") return _ => new Value.Boolean(false);
         if (Regex.IsMatch(text, @"^[A-Za-z_]\w*$")) return state => state.Read(text);
@@ -246,7 +249,7 @@ internal sealed class EmittedScalarProgram
 
     private static Func<State, Value> Expression(string text)
     {
-        if (Regex.Match(text, @"^(i32|i64|f32|f64|bool)\(([^()]+)\)$") is { Success: true } conversion)
+        if (Regex.Match(text, @"^(i32|u32|i64|f32|f64|bool)\(([^()]+)\)$") is { Success: true } conversion)
         {
             var atom = Atom(conversion.Groups[2].Value);
             var type = Type(conversion.Groups[1].Value);
@@ -265,6 +268,15 @@ internal sealed class EmittedScalarProgram
                     $"Unsupported emitted scalar unary negation for {value}.")
             };
         }
+        if (Regex.Match(text, @"^~(\w+)$") is { Success: true } complement)
+        {
+            var operand = Atom(complement.Groups[1].Value);
+            return state => operand(state) switch
+            {
+                Value.Integer value => new Value.Integer(~value.Data),
+                var value => throw new NotSupportedException($"Unsupported emitted complement for {value}.")
+            };
+        }
         var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 1) return Atom(text);
         if (parts.Length != 3)
@@ -277,6 +289,8 @@ internal sealed class EmittedScalarProgram
             "-" => BinaryArithmetic.Sub.Instance,
             "*" => BinaryArithmetic.Mul.Instance,
             "&" => BinaryArithmetic.BitwiseAnd.Instance,
+            "<<" => BinaryArithmetic.ShiftLeft.Instance,
+            ">>" => BinaryArithmetic.ShiftRight.Instance,
             "==" => BinaryRelational.Eq.Instance,
             "!=" => BinaryRelational.Ne.Instance,
             "<" => BinaryRelational.Lt.Instance,

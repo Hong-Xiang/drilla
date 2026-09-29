@@ -74,6 +74,46 @@ or claim that loop-return lowering is checked by the cooperation verifier.
 Loop-free supported cooperative shaders continue through the existing verified
 target path.
 
+## Exact 32-bit integer operations
+
+`NativeComputeDifferentialTests` includes public C# signed/unsigned shifts and
+bitwise complement. Dynamic counts come from integer storage buffers, and mapped
+integer results are compared to literal bit-pattern goldens, independently of
+CLR execution. The unsigned left-shift test also corrupts an actual GPU high-bit
+lane and requires the same exact comparator to reject it.
+
+C# `int`/`uint` shift counts use their low five bits. The tests assert the actual
+Roslyn `ldc.i4.s 31; and; shl/shr/shr.un` sequence in each build configuration.
+Raw CIL portable shift conformance is limited to counts 0 through 31; the
+compiler explicitly masks other int32 counts as its own supported policy, not
+as a claim about ECMA-defined behavior. Wider/native-int operands and counts
+are outside this slice. Typed IR shift primitives require counts in 0 through
+31; CIL lowering establishes that precondition. Arithmetic `shr` and logical
+`shr.un` retain distinct signed/unsigned operations, and `not` complements bits
+rather than performing Boolean negation.
+
+WGSL runtime concrete shifts use the count modulo the operand width and require
+an unsigned count; constant/override oversized counts instead cause creation
+errors. The source mask keeps Slang and WGSL counts in range, without relying
+on backend-specific oversized-shift behavior.
+
+Custom `ICilInstructionVisitor` implementations must rename the former
+`VisitLogicalNot` placeholder to `VisitBitwiseNot` and implement integer
+complement. Boolean logical negation still uses `LogicalNotOperation`.
+
+Eight words (including `0x80000000`, `0x80000001`, `0xffffffff`, -7 and -2)
+cross counts `-1, 0, 1, 31, 32, 33, 63, 64, int.MinValue, int.MaxValue`.
+The candidates remain in their owning native-test assembly. Each dispatch
+retains assembly identity, input/goldens, CIL, value IR, Slang, WGSL, adapter
+and readback under the reported `compute-differential/` artifact directory.
+
+Run the existing NVIDIA command above in both Debug and Release, replacing its
+test selector with:
+
+```sh
+--filter 'FullyQualifiedName~Integer_bitops' --logger 'console;verbosity=detailed'
+```
+
 ## Raymarch image parity oracle
 
 The parity test reuses `RaymarchingPrimitiveShader` from the non-Web

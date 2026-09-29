@@ -46,7 +46,7 @@ public interface ICilInstructionVisitor<TResult>
         where TOp : BinaryRelational.IOp<TOp>;
 
     TResult VisitConversion<TTarget>(CilInstructionInfo inst) where TTarget : IScalarType<TTarget>;
-    TResult VisitLogicalNot(CilInstructionInfo inst);
+    TResult VisitBitwiseNot(CilInstructionInfo inst);
     TResult VisitUnaryArithmetic<TOp>(CilInstructionInfo inst) where TOp : UnaryArithmetic.IOp<TOp>;
 
     TResult VisitLoadIndirect<TShaderType>(CilInstructionInfo inst)

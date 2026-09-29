@@ -6,7 +6,8 @@ public static class UnaryArithmetic
 {
     public enum OpKind
     {
-        neg
+        neg,
+        not
     }
 
     public interface IOp<TSelf> : IOpKind<TSelf, OpKind>, IUnaryOp<TSelf>
@@ -21,6 +22,13 @@ public static class UnaryArithmetic
         public static Negate Instance { get; } = new();
 
         public string Symbol => "-";
+    }
+
+    public sealed class BitwiseNot : IOp<BitwiseNot>, ISymbolOp<BitwiseNot>
+    {
+        public static OpKind Kind => OpKind.not;
+        public static BitwiseNot Instance { get; } = new();
+        public string Symbol => "~";
     }
 }
 

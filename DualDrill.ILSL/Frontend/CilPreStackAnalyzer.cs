@@ -283,6 +283,12 @@ internal static class CilPreStackAnalyzer
         {
             var right = Pop();
             var left = Pop();
+            if (TOp.Instance is BinaryArithmetic.ShiftLeft or BinaryArithmetic.ShiftRight)
+            {
+                Require(CilStackType.Int32.Instance, right, "shift count");
+                Require(CilStackType.Int32.Instance, left, "shift value");
+                return Push(CilStackType.Int32.Instance);
+            }
             RequireEqualNumeric(left, right, $"binary arithmetic {TOp.Instance.Name}");
             return Push(left);
         }
@@ -314,7 +320,11 @@ internal static class CilPreStackAnalyzer
             return Push(CilStackType.FromShaderType(TTarget.Instance));
         }
 
-        public ImmutableStack<CilStackType> VisitLogicalNot(CilInstructionInfo inst) => Unsupported("not");
+        public ImmutableStack<CilStackType> VisitBitwiseNot(CilInstructionInfo inst)
+        {
+            Require(CilStackType.Int32.Instance, Pop(), "bitwise not operand");
+            return Push(CilStackType.Int32.Instance);
+        }
 
         public ImmutableStack<CilStackType> VisitUnaryArithmetic<TOp>(CilInstructionInfo inst)
             where TOp : UnaryArithmetic.IOp<TOp>

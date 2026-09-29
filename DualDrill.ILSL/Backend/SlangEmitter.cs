@@ -255,6 +255,8 @@ public sealed class SlangEmitter(ShaderModuleDeclaration<SlangFunctionBody> modu
                 IVectorFromScalarConstructOperation construction when operands.Length == 1 =>
                     $"{construction.ResultType.Name}({Operand(0)})",
                 LogicalNotOperation when operands.Length == 1 => $"!{Operand(0)}",
+                UnaryNumericArithmeticExpressionOperation<IntType<N32>, UnaryArithmetic.BitwiseNot>
+                    when operands.Length == 1 => $"~{Operand(0)}",
                 UnaryNumericArithmeticExpressionOperation<IntType<N32>, UnaryArithmetic.Negate> or
                 UnaryNumericArithmeticExpressionOperation<IntType<N64>, UnaryArithmetic.Negate> or
                 UnaryNumericArithmeticExpressionOperation<FloatType<N32>, UnaryArithmetic.Negate> or

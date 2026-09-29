@@ -318,6 +318,10 @@ internal static class ScalarControlFlowOracle
                 new Value.Integer(unchecked(l.Data * r.Data)),
             (Value.Integer l, Value.Integer r, BinaryArithmetic.BitwiseAnd) =>
                 new Value.Integer(l.Data & r.Data),
+            (Value.Integer l, Value.Integer r, BinaryArithmetic.ShiftLeft) =>
+                new Value.Integer(unchecked(l.Data << r.Data)),
+            (Value.Integer l, Value.Integer r, BinaryArithmetic.ShiftRight) =>
+                new Value.Integer(l.Data >> r.Data),
             (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Eq) =>
                 new Value.Boolean(l.Data == r.Data),
             (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryRelational.Ne) =>
@@ -334,6 +338,12 @@ internal static class ScalarControlFlowOracle
                 new Value.UnsignedInteger(l.Data / r.Data),
             (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryArithmetic.Rem) =>
                 new Value.UnsignedInteger(l.Data % r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryArithmetic.ShiftLeft) =>
+                new Value.UnsignedInteger(unchecked(l.Data << (int)r.Data)),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryArithmetic.ShiftRight) =>
+                new Value.UnsignedInteger(l.Data >> (int)r.Data),
+            (Value.UnsignedInteger l, Value.UnsignedInteger r, BinaryArithmetic.BitwiseAnd) =>
+                new Value.UnsignedInteger(l.Data & r.Data),
             (Value.Float32 l, Value.Float32 r, BinaryRelational.Eq) => new Value.Boolean(l.Data == r.Data),
             (Value.Float32 l, Value.Float32 r, BinaryRelational.Ne) => new Value.Boolean(l.Data != r.Data),
             (Value.Float32 l, Value.Float32 r, BinaryRelational.Lt) => new Value.Boolean(l.Data < r.Data),
@@ -358,6 +368,9 @@ internal static class ScalarControlFlowOracle
             (UnaryNumericArithmeticExpressionOperation<IntType<DualDrill.Common.Nat.N32>,
                 UnaryArithmetic.Negate>, Value.Integer value) =>
                 new Value.Integer(unchecked(-value.Data)),
+            (UnaryNumericArithmeticExpressionOperation<IntType<DualDrill.Common.Nat.N32>,
+                UnaryArithmetic.BitwiseNot>, Value.Integer value) =>
+                new Value.Integer(~value.Data),
             (UnaryNumericArithmeticExpressionOperation<IntType<DualDrill.Common.Nat.N64>,
                 UnaryArithmetic.Negate>, Value.LongInteger value) =>
                 new Value.LongInteger(unchecked(-value.Data)),
