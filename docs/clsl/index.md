@@ -16,6 +16,10 @@ resource/type/annotation evidence and the
 [typed resource proposals](./shader-feature-proposals.md) for unimplemented API
 examples and layout/binding decisions.
 
+Open architecture discussion: [language, IR, and primitive encoding design](./language-encoding-design.md).
+This living record inventories language boundaries and tracks candidate encodings;
+it does not change the production contracts below.
+
 Current production contracts:
 
 - [Shader metadata validation](./shader-metadata.md)
