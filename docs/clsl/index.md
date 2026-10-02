@@ -17,8 +17,9 @@ resource/type/annotation evidence and the
 examples and layout/binding decisions.
 
 Open architecture discussion: [language, IR, and primitive encoding design](./language-encoding-design.md).
-This living record inventories language boundaries and tracks candidate encodings;
-it does not change the production contracts below.
+This living record specifies candidate type/operation algebras and IR boundaries,
+with an isolated executable contract specimen. It does not change the production
+contracts below.
 
 Current production contracts:
 
